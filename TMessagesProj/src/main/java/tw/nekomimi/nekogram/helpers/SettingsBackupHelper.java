@@ -62,79 +62,53 @@ public final class SettingsBackupHelper {
         userconfig.add("saveIncomingPhotos");
         userconfig.add("passcodeHash");
         userconfig.add("passcodeType");
-        userconfig.add("passcodeHash");
         userconfig.add("autoLockIn");
         userconfig.add("useFingerprint");
         spToJSON("userconfing", configJson, userconfig::contains, isCloud);
 
-        ArrayList<String> mainconfig = new ArrayList<>();
-        mainconfig.add("saveToGallery");
-        mainconfig.add("autoplayGifs");
-        mainconfig.add("autoplayVideo");
-        mainconfig.add("mapPreviewType");
-        mainconfig.add("raiseToSpeak");
-        mainconfig.add("customTabs");
-        mainconfig.add("directShare");
-        mainconfig.add("shuffleMusic");
-        mainconfig.add("playOrderReversed");
-        mainconfig.add("inappCamera");
-        mainconfig.add("repeatMode");
-        mainconfig.add("fontSize");
-        mainconfig.add("bubbleRadius");
-        mainconfig.add("ivFontSize");
-        mainconfig.add("allowBigEmoji");
-        mainconfig.add("streamMedia");
-        mainconfig.add("saveStreamMedia");
-        mainconfig.add("smoothKeyboard");
-        mainconfig.add("pauseMusicOnRecord");
-        mainconfig.add("streamAllVideo");
-        mainconfig.add("streamMkv");
-        mainconfig.add("suggestStickers");
-        mainconfig.add("sortContactsByName");
-        mainconfig.add("sortFilesByName");
-        mainconfig.add("noSoundHintShowed");
-        mainconfig.add("directShareHash");
-        mainconfig.add("useThreeLinesLayout");
-        mainconfig.add("archiveHidden");
-        mainconfig.add("distanceSystemType");
-        mainconfig.add("loopStickers");
-        mainconfig.add("keepMedia");
-        mainconfig.add("noStatusBar");
-        mainconfig.add("lastKeepMediaCheckTime");
-        mainconfig.add("searchMessagesAsListHintShows");
-        mainconfig.add("searchMessagesAsListUsed");
-        mainconfig.add("stickersReorderingHintUsed");
-        mainconfig.add("textSelectionHintShows");
-        mainconfig.add("scheduledOrNoSoundHintShows");
-        mainconfig.add("lockRecordAudioVideoHint");
-        mainconfig.add("disableVoiceAudioEffects");
-        mainconfig.add("chatSwipeAction");
-        mainconfig.add("ChatSwipeAction");
+        // Telegram main settings - save all settings except device-specific push secrets
+        spToJSON("mainconfig", configJson, key -> !isDeviceSpecificPushKey(key), includeApiKeys);
 
-        if (!isCloud) mainconfig.add("theme");
-        mainconfig.add("selectedAutoNightType");
-        mainconfig.add("autoNightScheduleByLocation");
-        mainconfig.add("autoNightBrighnessThreshold");
-        mainconfig.add("autoNightDayStartTime");
-        mainconfig.add("autoNightDayEndTime");
-        mainconfig.add("autoNightSunriseTime");
-        mainconfig.add("autoNightCityName");
-        mainconfig.add("autoNightSunsetTime");
-        mainconfig.add("autoNightLocationLatitude3");
-        mainconfig.add("autoNightLocationLongitude3");
-        mainconfig.add("autoNightLastSunCheckDay");
+        // Themes
+        spToJSON("themeconfig", configJson, null);
 
-        mainconfig.add("lang_code");
+        // Notifications
+        spToJSON("Notifications", configJson, null);
 
-        mainconfig.add("web_restricted_domains2");
+        // Shizuku settings (silent updates, state)
+        spToJSON("shizuku_config", configJson, null, includeApiKeys);
 
-        spToJSON("mainconfig", configJson, mainconfig::contains);
-        if (!isCloud) spToJSON("themeconfig", configJson, null);
-        spToJSON("nkmrcfg", configJson, null, includeApiKeys);
-        spToJSON("exteraconfig", configJson, null, includeApiKeys);
+        // Tor / Orbot settings (bridges, exit country, bridge type, enabled status)
         spToJSON("tor_config", configJson, null, includeApiKeys);
+
+        // Plugin Store settings (sort order, channels, auto-update)
+        spToJSON("plugin_store_config", configJson, null, includeApiKeys);
+
+        // Audio/Video player saved positions
+        spToJSON("media_saved_pos", configJson, null);
+
+        // Neko/Nagram + openExtera Appearance (Player styles, lyrics, avatar rounding, text anim, chips)
+        spToJSON("nkmrcfg", configJson, null, includeApiKeys);
+
+        // openExtera main settings
+        spToJSON("exteraconfig", configJson, null, includeApiKeys);
+
+        // Plugins engine and grants
         spToJSON(app.exteraless.plugins.PluginsConstants.PREFS_NAME, configJson, null, includeApiKeys);
+        spToJSON("exteraless_plugins_metadata", configJson, null, includeApiKeys);
         spToJSON("exteraless_plugin_grants", configJson, null, includeApiKeys);
+
+        // Per-plugin preferences
+        try {
+            for (app.exteraless.plugins.Plugin p : app.exteraless.plugins.PluginsController.getInstance().getPluginsSnapshot()) {
+                if (p != null && p.id != null) {
+                    String pluginSp = app.exteraless.plugins.PluginsConstants.SETTINGS_PREFS_PREFIX + p.id;
+                    spToJSON(pluginSp, configJson, null, includeApiKeys);
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+
         if (includeApiKeys) {
             spToJSON("aiConfig", configJson, key -> !"history".equals(key));
         } else {
@@ -248,6 +222,9 @@ public final class SettingsBackupHelper {
                             break;
                         }
                     }
+                    if (key.startsWith("OE") || key.startsWith("Neko") || key.startsWith("Na") || key.startsWith("pref_")) {
+                        shouldSkip = false;
+                    }
                     if (shouldSkip) {
                         String actualKey = key;
                         if (key.endsWith("_long")) {
@@ -289,6 +266,23 @@ public final class SettingsBackupHelper {
         }
         try {
             com.exteragram.messenger.ExteraConfig.reloadConfig();
+        } catch (Throwable ignore) {
+        }
+        try {
+            app.exteraless.tor.TorController.getInstance();
+        } catch (Throwable ignore) {
+        }
+        try {
+            app.exteraless.shizuku.ShizukuConfig.getInstance();
+        } catch (Throwable ignore) {
+        }
+        try {
+            app.exteraless.plugins.ui.PluginStoreConfig.getInstance();
+        } catch (Throwable ignore) {
+        }
+        try {
+            app.exteraless.plugins.PluginsController.getInstance().loadPluginSettings();
+            app.exteraless.plugins.PluginsController.getInstance().notifyPluginsChanged();
         } catch (Throwable ignore) {
         }
         PushListenerController.reconcilePushRegistration();

@@ -6,6 +6,7 @@ import android.app.Activity;
 import android.content.Context;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -122,6 +123,52 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
             headerView.addView(createTrustedBadge(context), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT,
                     LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 12, 0, 0));
         }
+
+        // Aurora Store style stats chips row
+        LinearLayout chipsRow = new LinearLayout(context);
+        chipsRow.setOrientation(LinearLayout.HORIZONTAL);
+        chipsRow.setGravity(Gravity.CENTER_HORIZONTAL);
+
+        TextView chip1 = new TextView(context);
+        chip1.setText("★ 5.0 • " + getString(R.string.PluginsStoreOpenSource));
+        chip1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+        chip1.setTypeface(AndroidUtilities.bold());
+        chip1.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        GradientDrawable cBg1 = new GradientDrawable();
+        cBg1.setCornerRadius(AndroidUtilities.dp(12));
+        cBg1.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        chip1.setBackground(cBg1);
+        chip1.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(5), AndroidUtilities.dp(10), AndroidUtilities.dp(5));
+        chipsRow.addView(chip1, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 6, 0));
+
+        if (file != null && file.exists()) {
+            TextView chip2 = new TextView(context);
+            chip2.setText("📄 " + AndroidUtilities.formatFileSize(file.length()));
+            chip2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            chip2.setTypeface(AndroidUtilities.bold());
+            chip2.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            GradientDrawable cBg2 = new GradientDrawable();
+            cBg2.setCornerRadius(AndroidUtilities.dp(12));
+            cBg2.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            chip2.setBackground(cBg2);
+            chip2.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(5), AndroidUtilities.dp(10), AndroidUtilities.dp(5));
+            chipsRow.addView(chip2, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 6, 0));
+        }
+
+        TextView chip3 = new TextView(context);
+        String ext = file != null && file.getName().endsWith(".py") ? ".py" : ".plugin";
+        chip3.setText("✓ " + ext);
+        chip3.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+        chip3.setTypeface(AndroidUtilities.bold());
+        chip3.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        GradientDrawable cBg3 = new GradientDrawable();
+        cBg3.setCornerRadius(AndroidUtilities.dp(12));
+        cBg3.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        chip3.setBackground(cBg3);
+        chip3.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(5), AndroidUtilities.dp(10), AndroidUtilities.dp(5));
+        chipsRow.addView(chip3, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+        headerView.addView(chipsRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 10, 0, 0));
 
         if (plugin != null && !TextUtils.isEmpty(plugin.description)) {
             LinkSpanDrawable.LinksTextView description =

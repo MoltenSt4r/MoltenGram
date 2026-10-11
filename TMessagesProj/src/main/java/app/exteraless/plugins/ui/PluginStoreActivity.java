@@ -172,6 +172,7 @@ public class PluginStoreActivity extends BaseFragment {
     private boolean loading = false;
     private boolean loadingNextPage = false;
     private Runnable deepSearchRunnable;
+    private ActionBarMenuItem searchItem;
 
     private final StorePluginDelegate pluginDelegate = new StorePluginDelegate() {
         @Override
@@ -198,6 +199,11 @@ public class PluginStoreActivity extends BaseFragment {
                     Browser.openUrl(getParentActivity(), "https://t.me/" + clean);
                 }
             }
+        }
+
+        @Override
+        public void onCardClick(StorePlugin plugin) {
+            new PluginDetailsBottomSheet(getParentActivity(), plugin, PluginStoreActivity.this, allPlugins).show();
         }
     };
 
@@ -240,8 +246,8 @@ public class PluginStoreActivity extends BaseFragment {
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        ActionBarMenuItem search = menu.addItem(MENU_SEARCH, R.drawable.ic_ab_search_solar)
-                .setIsSearchField(true)
+        searchItem = menu.addItem(MENU_SEARCH, R.drawable.ic_ab_search_solar);
+        searchItem.setIsSearchField(true)
                 .setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
                     @Override
                     public void onSearchCollapse() {
@@ -256,7 +262,7 @@ public class PluginStoreActivity extends BaseFragment {
                         scheduleDeepSearch(searchQuery);
                     }
                 });
-        search.setSearchFieldHint(getString(R.string.PluginsStoreSearch));
+        searchItem.setSearchFieldHint(getString(R.string.PluginsStoreSearch));
 
         ActionBarMenuItem sortItem = menu.addItem(MENU_SORT, R.drawable.contacts_sort_time);
         sortItem.addSubItem(SUB_SORT_DATE_DESC, R.drawable.contacts_sort_time, getString(R.string.PluginsStoreSortDateDesc));
@@ -307,9 +313,33 @@ public class PluginStoreActivity extends BaseFragment {
         contentView.addView(listView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         actionBar.setAdaptiveBackground(listView);
 
+        FrameLayout rootLayout = new FrameLayout(context);
+        rootLayout.addView(contentView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+        // Aurora Store squircle search FAB
+        FrameLayout fab = new FrameLayout(context);
+        GradientDrawable fabBg = new GradientDrawable();
+        fabBg.setCornerRadius(dp(16));
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xff00d2b4;
+        fabBg.setColor(accent);
+        fab.setBackground(fabBg);
+
+        ImageView fabIcon = new ImageView(context);
+        fabIcon.setImageResource(R.drawable.ic_ab_search_solar);
+        fabIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        fabIcon.setColorFilter(new PorterDuffColorFilter(0xffffffff, PorterDuff.Mode.SRC_IN));
+        fab.addView(fabIcon, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
+
+        fab.setOnClickListener(v -> {
+            if (searchItem != null) {
+                searchItem.openSearch(true);
+            }
+        });
+        rootLayout.addView(fab, LayoutHelper.createFrame(56, 56, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, 16, 0, 16, 20));
         loadInitialCatalog();
 
-        fragmentView = contentView;
+        fragmentView = rootLayout;
         return fragmentView;
     }
 
@@ -1321,12 +1351,10 @@ public class PluginStoreActivity extends BaseFragment {
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         List<StorePlugin> list = getFilteredPlugins();
         if (list.isEmpty()) {
-            if (!TextUtils.isEmpty(searchQuery)) {
-                items.add(UItem.asShadow(getString(R.string.PluginsNotFound)));
-            } else if (loading) {
+            if (loading) {
                 items.add(UItem.asShadow(getString(R.string.PluginsStoreLoading)));
             } else {
-                items.add(UItem.asShadow(getString(R.string.PluginsNotFound)));
+                items.add(UItem.asCustom(createAuroraEmptyCell(getContext())));
             }
             return;
         }
@@ -1334,14 +1362,70 @@ public class PluginStoreActivity extends BaseFragment {
         for (StorePlugin p : list) {
             StorePluginCell cell = new StorePluginCell(getContext());
             cell.bind(p, pluginDelegate);
-            items.add(UItem.asCustom(cell));
+            UItem item = UItem.asCustom(cell);
+            item.object = p;
+            items.add(item);
         }
     }
 
-    private void onItemClick(UItem item, View view, int position, float x, float y) {
+    private View createAuroraEmptyCell(Context context) {
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setGravity(Gravity.CENTER);
+        layout.setPadding(dp(32), dp(64), dp(32), dp(64));
+
+        ImageView iconView = new ImageView(context);
+        iconView.setImageResource(R.drawable.msg_retry);
+        iconView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        iconView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+        layout.addView(iconView, LayoutHelper.createLinear(56, 56, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+        TextView textView = new TextView(context);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        textView.setTypeface(AndroidUtilities.bold());
+        textView.setGravity(Gravity.CENTER);
+        textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        textView.setText(!TextUtils.isEmpty(searchQuery) ? getString(R.string.PluginsNotFound) : "Нет доступных обновлений");
+        layout.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+        TextView button = new TextView(context);
+        button.setText(!TextUtils.isEmpty(searchQuery) ? "Сбросить поиск" : "Проверить обновления");
+        button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        button.setTypeface(AndroidUtilities.bold());
+        button.setGravity(Gravity.CENTER);
+        button.setTextColor(0xffffffff);
+        GradientDrawable btnBg = new GradientDrawable();
+        btnBg.setCornerRadius(dp(20));
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xff00d2b4;
+        btnBg.setColor(accent);
+        button.setBackground(btnBg);
+        button.setPadding(dp(24), dp(10), dp(24), dp(10));
+        button.setOnClickListener(v -> {
+            if (!TextUtils.isEmpty(searchQuery)) {
+                searchQuery = null;
+                if (actionBar != null) {
+                    actionBar.closeSearchField(true);
+                }
+                updateRows();
+            } else {
+                channelMinMsgId.clear();
+                channelsAtEnd.clear();
+                checkFolderChannelsOnline();
+            }
+        });
+        layout.addView(button, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 40, Gravity.CENTER_HORIZONTAL));
+
+        return layout;
     }
 
-    private void downloadAndInstall(StorePlugin plugin) {
+    private void onItemClick(UItem item, View view, int position, float x, float y) {
+        if (item != null && item.object instanceof StorePlugin) {
+            new PluginDetailsBottomSheet(getParentActivity(), (StorePlugin) item.object, PluginStoreActivity.this, allPlugins).show();
+        }
+    }
+
+    void downloadAndInstall(StorePlugin plugin) {
         Activity activity = getParentActivity();
         if (activity == null) return;
 
@@ -1654,6 +1738,7 @@ public class PluginStoreActivity extends BaseFragment {
         void onInstallClick(StorePlugin plugin);
         void onInstalledClick(StorePlugin plugin);
         void onAuthorClick(StorePlugin plugin);
+        void onCardClick(StorePlugin plugin);
     }
 
     public static class StorePluginCell extends FrameLayout {
@@ -1680,6 +1765,11 @@ public class PluginStoreActivity extends BaseFragment {
             int radius = app.exteraless.appearance.AppearanceConfig.sectionRadius();
             card.setBackground(Theme.createRoundRectDrawable(dp(radius), Theme.getColor(Theme.key_windowBackgroundWhite)));
             card.setPadding(dp(14), dp(14), dp(14), dp(14));
+            card.setOnClickListener(v -> {
+                if (delegate != null && plugin != null) {
+                    delegate.onCardClick(plugin);
+                }
+            });
             addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             // Header row

@@ -64,6 +64,7 @@ public class Switch extends View {
     private final Drawable checkDrawable;
 
     private RectF rectF;
+    private final android.graphics.Path checkPath = new android.graphics.Path();
 
     private float progress;
     private static final FloatPropertyCompat<Switch> PROGRESS_PROPERTY = new FloatPropertyCompat<Switch>("progress") {
@@ -201,7 +202,7 @@ public class Switch extends View {
      * за measuredWidth/Height (exteraGram: {@code Switch.getOverlayPadding()} = dp(5)).
      */
     private int getOverlayPadding() {
-        return isExteraSwitchStyle() ? dp(5) : 0;
+        return isExteraSwitchStyle() ? dp(12) : 0;
     }
 
     private void cancelIconAnimator() {
@@ -475,8 +476,8 @@ public class Switch extends View {
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
-        int defaultWidth = AndroidUtilities.dp(37);
-        int defaultHeight = AndroidUtilities.dp(24);
+        int defaultWidth = AndroidUtilities.dp(50);
+        int defaultHeight = AndroidUtilities.dp(32);
 
         int measuredWidth;
         int measuredHeight;
@@ -880,100 +881,152 @@ public class Switch extends View {
     }
 
     /**
-     * exteraGram "new switch" style, reversed from exteraGram 12.9.0 Switch.onDraw
-     * (tools/exteraSwitch.smali, method onDraw, ExteraConfig.getNewSwitchStyle()==true branch).
-     *
-     * All const/high16 float values below were decoded as Float.intBitsToFloat(N << 16):
-     *   16888->31  16848->26  16736->14  16640->8  16768->16  16608->7  16448->3
-     *   16656->9   16672->10  16784->18
-     *
-     * Geometry (smali line refs):
-     *   trackW  dp(31)      [591]  used only to center the thumb travel
-     *   trackH  dp(26)      [595]  full capsule height
-     *   trackTop = H/2 - trackH/2  [611-613]
-     *   radius  dpf2(14)    [602/665 -> 959]  capsule corner radius
-     *   track rect: left = -dp(2) [903], right = W + dp(3) [909], top = trackTop, bottom = H/2 + trackH/2 [913-919]
-     *   thumb cx = (W-dp31)/2 + dp(8) + dp(16)*progress  [641-655]
-     *   thumb cy = H/2  [657-659]
-     *   thumb radius: dp(7) off -> dp(9) on  [1252 v17=7, 1255 v4=9, interp 1280-1285]
-     *   thumb horizontal stretch during transition: dpf2(3) * (1 - |2p-1|)  [1307-1316]
-     *   ripple radius dp(18)  [1013]
-     * Colors: track lerp(trackColorKey -> trackCheckedColorKey), thumb lerp(thumbColorKey -> thumbCheckedColorKey).
-     * No googleBorderPaint stroke and no drawIconType lines are emitted here (screenshot shows a plain toggle).
+     * Material Design 3 Switch (2026 Material You standard).
+     * Matches Material 3 specifications and reference screenshots:
+     * - Track: 50dp x 32dp pill capsule (corner radius 16dp).
+     * - OFF: 2dp outline stroke (trackColorKey / outline), dark/surface inner fill,
+     *        24dp thumb (radius 12dp) with centered '✕' cross icon.
+     * - ON: Bright accent filled track (trackCheckedColorKey),
+     *       24dp thumb (radius 12dp) with dark surface color and accent '✓' checkmark icon.
      */
     private void drawExteraSwitch(Canvas canvas) {
         final int measuredWidth = getMeasuredWidth();
         final int measuredHeight = getMeasuredHeight();
 
-        // overrideAlpha: при новом стиле View-альфа не используется (см. setAlpha)
         final int alphaSave;
         if (overrideAlpha < 1f) {
-            final int pad = dp(8);
+            final int pad = dp(12);
             alphaSave = canvas.saveLayerAlpha(-pad, -pad, measuredWidth + pad, measuredHeight + pad,
                     (int) (255 * Utilities.clamp01(overrideAlpha)));
         } else {
             alphaSave = -1;
         }
 
-        // smali 633-638: position uses clamp01(progress); color uses raw progress.
         final float pp = Utilities.clamp01(progress);
-        final float colorProgress = progress;
 
-        // Track capsule (smali 903-964).
-        final int trackH = dp(26);                                   // smali 595 (v4)
-        final float trackTop = measuredHeight / 2f - trackH / 2f;    // smali 611-613 (v9)
-        final float trackBottom = measuredHeight / 2f + trackH / 2f; // smali 913-919
-        final float trackLeft = -dp(2);                              // smali 903-906 (v5=0, minus dp(2))
-        final float trackRight = measuredWidth + dp(3);              // smali 907-912
-        final float trackRadius = dpf2(14);                          // smali 959 (dpf2 of v19=14)
+        // Center switch on the view
+        final float midX = measuredWidth / 2f;
+        final float midY = measuredHeight / 2f;
 
-        int trackColor = processColor(Theme.getColor(trackColorKey, resourcesProvider));
-        int md3OffTrackFillColor = processColor(Theme.blendOver(
-                Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider),
-                Theme.multAlpha(trackColor, Theme.isCurrentThemeDay() ? 0.2f : 0.1f)
+        final float trackW = dpf2(50f);
+        final float trackH = dpf2(32f);
+        final float trackRadius = trackH / 2f;
+
+        final float trackLeft = midX - trackW / 2f;
+        final float trackRight = midX + trackW / 2f;
+        final float trackTop = midY - trackH / 2f;
+        final float trackBottom = midY + trackH / 2f;
+
+        int trackCheckedFillKey = trackCheckedColorKey;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && MonetHelper.useMonetMd3Colors()) {
+            trackCheckedFillKey = Theme.key_dialogRoundCheckBox;
+        }
+
+        int outlineColor = processColor(Theme.getColor(trackColorKey, resourcesProvider));
+        int accentColor = processColor(Theme.getColor(trackCheckedFillKey, resourcesProvider));
+
+        // Surface / container color
+        int surfaceBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        int trackOffFill = processColor(Theme.blendOver(
+                surfaceBg,
+                Theme.multAlpha(outlineColor, Theme.isCurrentThemeDay() ? 0.08f : 0.14f)
         ));
-        int trackOn = processColor(Theme.getColor(trackCheckedColorKey, resourcesProvider));
-        paint.setColor(lerpColor(md3OffTrackFillColor, trackOn, colorProgress));
+
+        // Track fill
+        int currentTrackColor = lerpColor(trackOffFill, accentColor, pp);
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(currentTrackColor);
         rectF.set(trackLeft, trackTop, trackRight, trackBottom);
         canvas.drawRoundRect(rectF, trackRadius, trackRadius, paint);
 
-        // Outline / обводка тумблера как в exteraGram
-        if (colorProgress < 1f) {
-            googleBorderPaint.setStrokeWidth(dpf2(1.5f));
-            googleBorderPaint.setColor(trackColor);
-            googleBorderPaint.setAlpha((int) (255 * (1f - colorProgress)));
-            final float inset = dpf2(0.75f);
+        // Track outline when OFF (fades out as switch turns ON)
+        if (pp < 1f) {
+            final float strokeWidth = dpf2(2f);
+            googleBorderPaint.setStyle(Paint.Style.STROKE);
+            googleBorderPaint.setStrokeWidth(strokeWidth);
+            googleBorderPaint.setColor(outlineColor);
+            googleBorderPaint.setAlpha((int) (255 * (1f - pp)));
+            final float inset = strokeWidth / 2f;
             rectF.set(trackLeft + inset, trackTop + inset, trackRight - inset, trackBottom - inset);
             canvas.drawRoundRect(rectF, trackRadius - inset, trackRadius - inset, googleBorderPaint);
         }
 
-        // Thumb centre (smali 641-659).
-        final int cx = (measuredWidth - dp(31)) / 2 + dp(8) + (int) (dp(16) * pp);
-        final int cy = measuredHeight / 2;
+        // Thumb metrics
+        final float thumbR = dpf2(12f); // 24dp diameter
+        final float margin = dpf2(4f);
+        final float thumbMinX = trackLeft + margin + thumbR;
+        final float thumbMaxX = trackRight - margin - thumbR;
+        final float thumbX = thumbMinX + (thumbMaxX - thumbMinX) * pp;
+        final float thumbY = midY;
 
-        // Ripple (touch feedback) drawn under/around the thumb (smali 1009-1030).
+        // Ripple feedback
         if (rippleDrawable != null) {
-            rippleDrawable.setBounds(cx - dp(18), cy - dp(18), cx + dp(18), cy + dp(18));
+            int ripR = dp(18);
+            rippleDrawable.setBounds((int) (thumbX - ripR), (int) (thumbY - ripR), (int) (thumbX + ripR), (int) (thumbY + ripR));
             rippleDrawable.draw(canvas);
         }
 
-        // Thumb colour (smali 1130-1246): lerp(trackColor -> thumbCheckedColorKey).
-        int thumbOff = trackColor;
-        int thumbOn = processColor(Theme.getColor(thumbCheckedColorKey, resourcesProvider));
-        paint.setColor(lerpColor(thumbOff, thumbOn, colorProgress));
+        // Thumb colors:
+        // OFF: outline / muted color
+        // ON: surface / background color (dark surface in dark theme, white in light theme)
+        int thumbOffColor = outlineColor;
+        int thumbOnColor = surfaceBg;
+        int currentThumbColor = lerpColor(thumbOffColor, thumbOnColor, pp);
 
-        // Thumb radius dp(7)->dp(9) (smali 1252/1255, interp 1280-1285).
-        final float baseR = dp(7) + (dp(9) - dp(7)) * pp;
-        final float thumbR = baseR + (dp(9) - baseR) * pp;
-        // Squash/stretch: horizontal-only bulge, peaks at the mid-point of the animation (smali 1307-1316).
-        final float stretch = dpf2(3) * (1f - Math.abs(pp * 2f - 1f));
+        paint.setStyle(Paint.Style.FILL);
+        paint.setColor(currentThumbColor);
 
-        rectF.set(cx - thumbR - stretch, cy - thumbR, cx + thumbR + stretch, cy + thumbR); // smali 1318-1325
-        canvas.drawRoundRect(rectF, thumbR, thumbR, paint);                                // smali 1329
+        // Subtle stretch during fast movement
+        final float stretch = dpf2(1.5f) * (1f - Math.abs(pp * 2f - 1f));
+        rectF.set(thumbX - thumbR - stretch, thumbY - thumbR, thumbX + thumbR + stretch, thumbY + thumbR);
+        canvas.drawRoundRect(rectF, thumbR, thumbR, paint);
+
+        // Icons inside thumb:
+        if (iconDrawable != null && animatorIconVisibility.getFloatValue() > 0) {
+            float factor = animatorIconVisibility.getFloatValue();
+            drawCenteredDrawable(canvas, iconDrawable, (int) thumbX, (int) thumbY, factor * 0.8f, (int) (255 * factor));
+        } else {
+            // OFF icon: Cross '✕'
+            if (pp < 0.7f) {
+                float crossAlpha = Utilities.clamp01((0.7f - pp) / 0.7f);
+                int crossColor = surfaceBg;
+                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.8f);
+            }
+            // ON icon: Checkmark '✓'
+            if (pp > 0.3f) {
+                float checkAlpha = Utilities.clamp01((pp - 0.3f) / 0.7f);
+                drawCheckmark(canvas, thumbX, thumbY, accentColor, checkAlpha);
+            }
+        }
 
         if (alphaSave != -1) {
             canvas.restoreToCount(alphaSave);
         }
+    }
+
+    private void drawCheckmark(Canvas canvas, float cx, float cy, int color, float alpha) {
+        int oldAlpha = paint2.getAlpha();
+        float oldStrokeWidth = paint2.getStrokeWidth();
+        Paint.Cap oldCap = paint2.getStrokeCap();
+        Paint.Join oldJoin = paint2.getStrokeJoin();
+
+        paint2.setColor(color);
+        paint2.setAlpha((int) (255 * alpha));
+        paint2.setStrokeWidth(dpf2(2.2f));
+        paint2.setStrokeCap(Paint.Cap.ROUND);
+        paint2.setStrokeJoin(Paint.Join.ROUND);
+
+        checkPath.reset();
+        checkPath.moveTo(cx - dpf2(3.6f), cy - dpf2(0.2f));
+        checkPath.lineTo(cx - dpf2(0.9f), cy + dpf2(3.2f));
+        checkPath.lineTo(cx + dpf2(4.2f), cy - dpf2(3.2f));
+
+        canvas.drawPath(checkPath, paint2);
+
+        paint2.setStrokeCap(oldCap);
+        paint2.setStrokeJoin(oldJoin);
+        paint2.setStrokeWidth(oldStrokeWidth);
+        paint2.setAlpha(oldAlpha);
     }
 
     private float getLayerColorProgress(int layer) {
@@ -1005,12 +1058,15 @@ public class Switch extends View {
     private void drawCross(Canvas canvas, int cx, int cy, int color, float alpha, float sizeDp) {
         int oldAlpha = paint2.getAlpha();
         float oldStrokeWidth = paint2.getStrokeWidth();
+        Paint.Cap oldCap = paint2.getStrokeCap();
         paint2.setColor(color);
         paint2.setAlpha((int) (255 * alpha));
-        paint2.setStrokeWidth(dpf2(1.5f));
-        int crossSize = dp(sizeDp);
+        paint2.setStrokeWidth(dpf2(2.0f));
+        paint2.setStrokeCap(Paint.Cap.ROUND);
+        float crossSize = dpf2(sizeDp);
         canvas.drawLine(cx - crossSize, cy - crossSize, cx + crossSize, cy + crossSize, paint2);
         canvas.drawLine(cx + crossSize, cy - crossSize, cx - crossSize, cy + crossSize, paint2);
+        paint2.setStrokeCap(oldCap);
         paint2.setStrokeWidth(oldStrokeWidth);
         paint2.setAlpha(oldAlpha);
     }
