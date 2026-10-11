@@ -130,7 +130,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
         chipsRow.setGravity(Gravity.CENTER_HORIZONTAL);
 
         TextView chip1 = new TextView(context);
-        chip1.setText("★ 5.0 • " + getString(R.string.PluginsStoreOpenSource));
+        chip1.setText(getString(R.string.PluginsStoreOpenSource));
         chip1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
         chip1.setTypeface(AndroidUtilities.bold());
         chip1.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
@@ -143,7 +143,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
 
         if (file != null && file.exists()) {
             TextView chip2 = new TextView(context);
-            chip2.setText("📄 " + AndroidUtilities.formatFileSize(file.length()));
+            chip2.setText(AndroidUtilities.formatFileSize(file.length()));
             chip2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
             chip2.setTypeface(AndroidUtilities.bold());
             chip2.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
@@ -156,8 +156,8 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
         }
 
         TextView chip3 = new TextView(context);
-        String ext = file != null && file.getName().endsWith(".py") ? ".py" : ".plugin";
-        chip3.setText("✓ " + ext);
+        String ext = file != null && file.getName().endsWith(".py") ? ".py" : (file != null && file.getName().endsWith(".eaf") ? ".eaf" : ".plugin");
+        chip3.setText(ext);
         chip3.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
         chip3.setTypeface(AndroidUtilities.bold());
         chip3.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));

@@ -908,7 +908,7 @@ public class Switch extends View {
         final float midX = measuredWidth / 2f;
         final float midY = measuredHeight / 2f;
 
-        final float trackW = dpf2(50f);
+        final float trackW = dpf2(52f);
         final float trackH = dpf2(32f);
         final float trackRadius = trackH / 2f;
 
@@ -929,7 +929,7 @@ public class Switch extends View {
         int surfaceBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
         int trackOffFill = processColor(Theme.blendOver(
                 surfaceBg,
-                Theme.multAlpha(outlineColor, Theme.isCurrentThemeDay() ? 0.08f : 0.14f)
+                Theme.multAlpha(outlineColor, Theme.isCurrentThemeDay() ? 0.08f : 0.20f)
         ));
 
         // Track fill
@@ -951,8 +951,8 @@ public class Switch extends View {
             canvas.drawRoundRect(rectF, trackRadius - inset, trackRadius - inset, googleBorderPaint);
         }
 
-        // Thumb metrics
-        final float thumbR = dpf2(12f); // 24dp diameter
+        // Thumb metrics: 24dp diameter (12dp radius), 4dp margin from edges in 52dp track
+        final float thumbR = dpf2(12f);
         final float margin = dpf2(4f);
         final float thumbMinX = trackLeft + margin + thumbR;
         final float thumbMaxX = trackRight - margin - thumbR;
@@ -990,7 +990,7 @@ public class Switch extends View {
             if (pp < 0.7f) {
                 float crossAlpha = Utilities.clamp01((0.7f - pp) / 0.7f);
                 int crossColor = surfaceBg;
-                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.8f);
+                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.6f);
             }
             // ON icon: Checkmark '✓'
             if (pp > 0.3f) {
@@ -1012,14 +1012,14 @@ public class Switch extends View {
 
         paint2.setColor(color);
         paint2.setAlpha((int) (255 * alpha));
-        paint2.setStrokeWidth(dpf2(2.2f));
+        paint2.setStrokeWidth(dpf2(2.0f));
         paint2.setStrokeCap(Paint.Cap.ROUND);
         paint2.setStrokeJoin(Paint.Join.ROUND);
 
         checkPath.reset();
-        checkPath.moveTo(cx - dpf2(3.6f), cy - dpf2(0.2f));
-        checkPath.lineTo(cx - dpf2(0.9f), cy + dpf2(3.2f));
-        checkPath.lineTo(cx + dpf2(4.2f), cy - dpf2(3.2f));
+        checkPath.moveTo(cx - dpf2(4.5f), cy + dpf2(0.5f));
+        checkPath.lineTo(cx - dpf2(1.5f), cy + dpf2(3.5f));
+        checkPath.lineTo(cx + dpf2(4.8f), cy - dpf2(2.8f));
 
         canvas.drawPath(checkPath, paint2);
 
@@ -1061,7 +1061,7 @@ public class Switch extends View {
         Paint.Cap oldCap = paint2.getStrokeCap();
         paint2.setColor(color);
         paint2.setAlpha((int) (255 * alpha));
-        paint2.setStrokeWidth(dpf2(2.0f));
+        paint2.setStrokeWidth(dpf2(1.5f));
         paint2.setStrokeCap(Paint.Cap.ROUND);
         float crossSize = dpf2(sizeDp);
         canvas.drawLine(cx - crossSize, cy - crossSize, cx + crossSize, cy + crossSize, paint2);

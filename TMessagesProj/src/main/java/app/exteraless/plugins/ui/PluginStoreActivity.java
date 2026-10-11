@@ -94,6 +94,7 @@ public class PluginStoreActivity extends BaseFragment {
     private static final int MENU_SORT = 1;
     private static final int MENU_SETTINGS = 2;
     private static final int MENU_REFRESH = 3;
+    private static final int MENU_MORE = 4;
 
     private static final int SUB_SORT_DATE_DESC = 10;
     private static final int SUB_SORT_DATE_ASC = 11;
@@ -129,6 +130,7 @@ public class PluginStoreActivity extends BaseFragment {
         public TLRPC.Document document;
         public TLRPC.Message message;
         public TLRPC.Chat chat;
+        public final List<StorePlugin> versions = new ArrayList<>();
 
         public boolean isInstalled() {
             String norm = normalizePluginId(id);
@@ -271,8 +273,9 @@ public class PluginStoreActivity extends BaseFragment {
         sortItem.addSubItem(SUB_SORT_NAME_DESC, R.drawable.contacts_sort_name, getString(R.string.PluginsStoreSortNameDesc));
         sortItem.addSubItem(SUB_SORT_SIZE_DESC, R.drawable.msg_media, getString(R.string.PluginsStoreSortSizeDesc));
 
-        menu.addItem(MENU_SETTINGS, R.drawable.msg_settings_old);
-        menu.addItem(MENU_REFRESH, R.drawable.msg_retry);
+        ActionBarMenuItem moreItem = menu.addItem(MENU_MORE, R.drawable.ic_ab_other);
+        moreItem.addSubItem(MENU_REFRESH, R.drawable.msg_retry, getString(R.string.PluginsStoreRetry));
+        moreItem.addSubItem(MENU_SETTINGS, R.drawable.msg_settings_old, getString(R.string.PluginsStoreSettings));
 
         LinearLayout contentView = new LinearLayout(context);
         contentView.setOrientation(LinearLayout.VERTICAL);
@@ -292,9 +295,11 @@ public class PluginStoreActivity extends BaseFragment {
         buildChips(context);
 
         // RecyclerView
-        listView = new UniversalRecyclerView(this, this::fillItems, this::onItemClick, null);
+        listView = new UniversalRecyclerView(this, this::fillItems, null, null);
         listView.setSections();
         listView.adapter.setApplyBackground(false);
+        listView.setClipToPadding(false);
+        listView.setPadding(0, dp(4), 0, dp(88));
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -1146,9 +1151,20 @@ public class PluginStoreActivity extends BaseFragment {
                     if (existing.id.equalsIgnoreCase(np.id) || (hideOld && normExistingId.equalsIgnoreCase(normNpId))) {
                         found = true;
                         if (isNewer(np, existing)) {
+                            if (!containsVersion(np.versions, existing)) {
+                                np.versions.add(existing);
+                            }
+                            for (StorePlugin v : existing.versions) {
+                                if (!containsVersion(np.versions, v)) {
+                                    np.versions.add(v);
+                                }
+                            }
                             allPlugins.set(i, np);
                             changed = true;
                         } else {
+                            if (!containsVersion(existing.versions, np)) {
+                                existing.versions.add(np);
+                            }
                             if (existing.document == null && np.document != null) existing.document = np.document;
                             if (existing.message == null && np.message != null) existing.message = np.message;
                             if (existing.chat == null && np.chat != null) existing.chat = np.chat;
@@ -1179,6 +1195,48 @@ public class PluginStoreActivity extends BaseFragment {
                 }
             }
         }
+    }
+
+    public List<StorePlugin> getPluginVersions(StorePlugin plugin) {
+        List<StorePlugin> list = new ArrayList<>();
+        if (plugin == null) return list;
+        list.add(plugin);
+        for (StorePlugin v : plugin.versions) {
+            if (v != null && !containsVersion(list, v)) {
+                list.add(v);
+            }
+        }
+        String normId = normalizePluginId(plugin.id);
+        synchronized (allPlugins) {
+            for (StorePlugin p : allPlugins) {
+                if (p != null && normalizePluginId(p.id).equalsIgnoreCase(normId)) {
+                    if (!containsVersion(list, p)) {
+                        list.add(p);
+                    }
+                    for (StorePlugin pv : p.versions) {
+                        if (pv != null && !containsVersion(list, pv)) {
+                            list.add(pv);
+                        }
+                    }
+                }
+            }
+        }
+        list.sort((a, b) -> {
+            if (isNewer(a, b)) return -1;
+            if (isNewer(b, a)) return 1;
+            return 0;
+        });
+        return list;
+    }
+
+    private static boolean containsVersion(List<StorePlugin> list, StorePlugin item) {
+        if (list == null || item == null) return false;
+        for (StorePlugin p : list) {
+            if (p == item) return true;
+            if (p.message != null && item.message != null && p.message.id == item.message.id && p.chat != null && item.chat != null && p.chat.id == item.chat.id) return true;
+            if (!TextUtils.isEmpty(p.version) && !TextUtils.isEmpty(item.version) && p.version.equalsIgnoreCase(item.version) && TextUtils.equals(p.link, item.link)) return true;
+        }
+        return false;
     }
 
     private void mergeCatalogJson(String jsonStr) {
@@ -1873,7 +1931,7 @@ public class PluginStoreActivity extends BaseFragment {
             if (p.isOpenSource) {
                 tbBg.setColor(0x2200c853);
                 typeBadge.setTextColor(0xff00c853);
-                typeBadge.setText("✓ " + getString(R.string.PluginsStoreOpenSource) + " (" + (p.format != null ? p.format : ".plugin") + ")");
+                typeBadge.setText(getString(R.string.PluginsStoreOpenSource) + " (" + (p.format != null ? p.format : ".plugin") + ")");
             } else {
                 tbBg.setColor(0x22888888);
                 typeBadge.setTextColor(0xff888888);
@@ -1944,7 +2002,7 @@ public class PluginStoreActivity extends BaseFragment {
                     btnBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
                     actionButton.setBackground(btnBg);
                     actionButton.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
-                    actionButton.setText("✓ " + getString(R.string.PluginsStoreInstalled));
+                    actionButton.setText(getString(R.string.PluginsStoreInstalled));
                     actionButton.setEnabled(true);
                     actionButton.setOnClickListener(v -> {
                         if (delegate != null) delegate.onInstalledClick(p);

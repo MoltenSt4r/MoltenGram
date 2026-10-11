@@ -15,6 +15,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
@@ -32,23 +33,31 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.LinkSpanDrawable;
 
+import java.io.File;
+import java.util.ArrayList;
 import java.util.List;
 
 import app.exteraless.plugins.Plugin;
 import app.exteraless.plugins.PluginsController;
 
 /**
- * Aurora Store inspired Plugin Details bottom sheet.
- * Presents app icon, title, developer, version badge, dual action pills,
- * stats chips row, and modern rounded card sections (Changelog, Description,
- * Compatibility, Permissions, Developer, and Similar plugins).
+ * Clean, verified Plugin Details bottom sheet.
+ * Presents real plugin data without fake sections or emojis:
+ * - App icon, title, author, version badge
+ * - Dual action pills: "Ручная загрузка" (version selection) & "Установить"
+ * - Stat chips with real vector drawables (license/open source, channel, size, date)
+ * - Plugin description and tags
+ * - Source channel/post link
+ * - Similar plugins with individual avatars
  */
 public class PluginDetailsBottomSheet extends BottomSheet {
 
@@ -73,6 +82,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         LinearLayout content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(16), dp(12), dp(16), dp(32));
+        content.setFocusable(true);
+        content.setFocusableInTouchMode(true);
+        content.setDescendantFocusability(ViewGroup.FOCUS_BEFORE_DESCENDANTS);
 
         // Drag handle pill at top
         View handle = new View(context);
@@ -88,28 +100,20 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         // 2. Action buttons row (Dual pills: "Ручная загрузка" / "Установить")
         buildActionButtons(context, content);
 
-        // 3. Stat chips row (Rating, Channel/Downloads, Size, Date)
+        // 3. Stat chips row (Vector icons: OpenSource, Channel, Size, Date)
         buildStatChips(context, content);
 
-        // 4. Section: Журнал изменений (Changelog)
-        buildChangelogSection(context, content);
-
-        // 5. Section: Больше о плагине (Description)
+        // 4. Section: Описание
         buildDescriptionSection(context, content);
 
-        // 6. Section: Совместимость (Compatibility)
-        buildCompatibilitySection(context, content);
+        // 5. Section: Источник / Публикация
+        buildSourceSection(context, content);
 
-        // 7. Section: Разрешения (Permissions)
-        buildPermissionsSection(context, content);
-
-        // 8. Section: Связь с разработчиком (Developer links)
-        buildDeveloperSection(context, content);
-
-        // 9. Section: Похожие плагины (Similar plugins)
+        // 6. Section: Похожие плагины
         buildSimilarSection(context, content);
 
         scrollView.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        scrollView.post(() -> scrollView.scrollTo(0, 0));
         setCustomView(scrollView);
     }
 
@@ -119,7 +123,6 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         headerRow.setGravity(Gravity.CENTER_VERTICAL);
         content.addView(headerRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 14));
 
-        // 64dp squircle icon
         FrameLayout iconContainer = new FrameLayout(context);
         GradientDrawable iconBg = new GradientDrawable();
         iconBg.setCornerRadius(dp(18));
@@ -138,9 +141,8 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         iconContainer.addView(iconView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         headerRow.addView(iconContainer, LayoutHelper.createLinear(68, 68));
 
-        bindIcon(iconView, defaultIconView);
+        bindIcon(iconView, defaultIconView, plugin);
 
-        // Title and author column
         LinearLayout titleCol = new LinearLayout(context);
         titleCol.setOrientation(LinearLayout.VERTICAL);
         headerRow.addView(titleCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 14, 0, 0, 0));
@@ -161,7 +163,6 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         authorView.setOnClickListener(v -> openAuthorLink());
         titleCol.addView(authorView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
-        // Version pill badge
         TextView versionBadge = new TextView(context);
         versionBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
         versionBadge.setTypeface(AndroidUtilities.bold());
@@ -185,7 +186,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         buttonsRow.setGravity(Gravity.CENTER_VERTICAL);
         content.addView(buttonsRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
 
-        // 1. Left button: "Ручная загрузка" / "Файл" (Tonal pill)
+        // 1. Left button: "Ручная загрузка" (Version picker)
         TextView manualButton = new TextView(context);
         manualButton.setText("Ручная загрузка");
         manualButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -200,7 +201,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         manualButton.setOnClickListener(v -> openManualDownload());
         buttonsRow.addView(manualButton, LayoutHelper.createLinear(0, 44, 1f, 0, 0, 8, 0));
 
-        // 2. Right button: "Установить" / "Обновить" (Filled accent pill)
+        // 2. Right button: "Установить" / "Обновить" / "Установлено"
         TextView installButton = new TextView(context);
         installButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         installButton.setTypeface(AndroidUtilities.bold());
@@ -216,22 +217,18 @@ public class PluginDetailsBottomSheet extends BottomSheet {
 
         if (plugin.isInstalled()) {
             if (plugin.hasUpdate()) {
-                installButton.setText("Обновить");
+                installButton.setText(getString(R.string.PluginsStoreUpdate));
             } else {
-                installButton.setText("✓ Установлено");
+                installButton.setText(getString(R.string.PluginsStoreInstalled));
             }
         } else {
-            installButton.setText("Установить");
+            installButton.setText(getString(R.string.PluginsStoreInstall));
         }
 
         installButton.setOnClickListener(v -> {
             dismiss();
             if (parentActivity != null) {
-                if (plugin.isInstalled() && !plugin.hasUpdate()) {
-                    parentActivity.downloadAndInstall(plugin);
-                } else {
-                    parentActivity.downloadAndInstall(plugin);
-                }
+                parentActivity.downloadAndInstall(plugin);
             }
         });
         buttonsRow.addView(installButton, LayoutHelper.createLinear(0, 44, 1f, 8, 0, 0, 0));
@@ -240,6 +237,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
     private void buildStatChips(Context context, LinearLayout content) {
         HorizontalScrollView scroll = new HorizontalScrollView(context);
         scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setClipToPadding(false);
 
         LinearLayout chipsRow = new LinearLayout(context);
         chipsRow.setOrientation(LinearLayout.HORIZONTAL);
@@ -247,52 +245,62 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         scroll.addView(chipsRow, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
         content.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
-        // Chip 1: Rating / Open Source
-        String ratingText = plugin.isOpenSource ? "★ Открытый" : "★ 5,0";
-        chipsRow.addView(createStatChip(context, ratingText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+        // Chip 1: License / Open Source
+        int licIcon = plugin.isOpenSource ? R.drawable.msg_check : R.drawable.baseline_extension_24;
+        String licText = plugin.isOpenSource ? getString(R.string.PluginsStoreOpenSource) : (plugin.format != null ? plugin.format : ".plugin");
+        chipsRow.addView(createStatChip(context, licIcon, licText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
 
-        // Chip 2: Source channel / downloads
-        String srcText = !TextUtils.isEmpty(plugin.sourceChannel) ? "⇣ " + plugin.sourceChannel : "⇣ 1K+";
-        chipsRow.addView(createStatChip(context, srcText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+        // Chip 2: Source channel / author
+        String srcText = !TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel :
+                (!TextUtils.isEmpty(plugin.author) ? plugin.author : "Community");
+        chipsRow.addView(createStatChip(context, R.drawable.msg_channel, srcText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
 
         // Chip 3: File size
-        String sizeText = !TextUtils.isEmpty(plugin.size) ? "📄 " + plugin.size : "📄 50 КБ";
-        chipsRow.addView(createStatChip(context, sizeText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+        if (!TextUtils.isEmpty(plugin.size)) {
+            chipsRow.addView(createStatChip(context, R.drawable.msg_media, plugin.size), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+        }
 
         // Chip 4: Date
-        String dateText = !TextUtils.isEmpty(plugin.updateDate) ? "🕒 " + plugin.updateDate : "🕒 2026";
-        chipsRow.addView(createStatChip(context, dateText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        String dateText = !TextUtils.isEmpty(plugin.updateDate) ? plugin.updateDate : null;
+        if (dateText == null && plugin.message != null && plugin.message.date > 0) {
+            dateText = LocaleController.formatDateChat(plugin.message.date);
+        }
+        if (!TextUtils.isEmpty(dateText)) {
+            chipsRow.addView(createStatChip(context, R.drawable.contacts_sort_time, dateText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        }
     }
 
-    private View createStatChip(Context context, String text) {
-        TextView chip = new TextView(context);
-        chip.setText(text);
-        chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        chip.setTypeface(AndroidUtilities.bold());
-        chip.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+    private View createStatChip(Context context, int iconResId, String text) {
+        LinearLayout chip = new LinearLayout(context);
+        chip.setOrientation(LinearLayout.HORIZONTAL);
+        chip.setGravity(Gravity.CENTER_VERTICAL);
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(16));
         bg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
         chip.setBackground(bg);
-        chip.setPadding(dp(12), dp(7), dp(12), dp(7));
+        chip.setPadding(dp(10), dp(7), dp(12), dp(7));
+
+        if (iconResId != 0) {
+            ImageView icon = new ImageView(context);
+            icon.setImageResource(iconResId);
+            icon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            icon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+            chip.addView(icon, LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL, 0, 0, 6, 0));
+        }
+
+        TextView tv = new TextView(context);
+        tv.setText(text);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        tv.setTypeface(AndroidUtilities.bold());
+        tv.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        tv.setSingleLine(true);
+        chip.addView(tv, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
         return chip;
     }
 
-    private void buildChangelogSection(Context context, LinearLayout content) {
-        TextView title = createSectionTitle(context, "Журнал изменений");
-        content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
-
-        LinearLayout card = createCard(context);
-        TextView clText = new TextView(context);
-        clText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        clText.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        clText.setText("Журнал изменений не представлен");
-        card.addView(clText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
-    }
-
     private void buildDescriptionSection(Context context, LinearLayout content) {
-        TextView title = createSectionTitle(context, "Больше о плагине ›");
+        TextView title = createSectionTitle(context, "Описание");
         content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
 
         LinearLayout card = createCard(context);
@@ -320,83 +328,35 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
     }
 
-    private void buildCompatibilitySection(Context context, LinearLayout content) {
-        TextView title = createSectionTitle(context, "Совместимость");
-        content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 2));
+    private void buildSourceSection(Context context, LinearLayout content) {
+        String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
+                (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author);
+        if (TextUtils.isEmpty(target)) return;
 
-        TextView subtitle = new TextView(context);
-        subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        subtitle.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        subtitle.setText("Работает на ExteraMS / Android");
-        content.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+        TextView title = createSectionTitle(context, "Источник");
+        content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
 
         LinearLayout card = createCard(context);
-        card.addView(createCompatRow(context, "ⓘ", "Формат плагина", plugin.format != null ? plugin.format : ".plugin (Python SDK)"));
-        card.addView(createCompatRow(context, "✓", "Сервисы Google Play", "Не требуются (полная автономность)"));
-        card.addView(createCompatRow(context, "✓", "Shizuku / Root", "Не требуются для базовых хуков"));
-        content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
-    }
-
-    private View createCompatRow(Context context, String symbol, String mainText, String subText) {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(0, dp(4), 0, dp(4));
 
-        TextView symView = new TextView(context);
-        symView.setText(symbol);
-        symView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        symView.setTypeface(AndroidUtilities.bold());
-        symView.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-        row.addView(symView, LayoutHelper.createLinear(24, LayoutHelper.WRAP_CONTENT));
+        ImageView linkIcon = new ImageView(context);
+        linkIcon.setImageResource(R.drawable.msg_link);
+        linkIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+        linkIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_dialogTextLink), PorterDuff.Mode.SRC_IN));
+        row.addView(linkIcon, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
 
-        LinearLayout col = new LinearLayout(context);
-        col.setOrientation(LinearLayout.VERTICAL);
-
-        TextView mText = new TextView(context);
-        mText.setText(mainText);
-        mText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        mText.setTypeface(AndroidUtilities.bold());
-        mText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        col.addView(mText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        TextView sText = new TextView(context);
-        sText.setText(subText);
-        sText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        sText.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        col.addView(sText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 1, 0, 0));
-
-        row.addView(col, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        return row;
-    }
-
-    private void buildPermissionsSection(Context context, LinearLayout content) {
-        TextView title = createSectionTitle(context, "Разрешения ›");
-        content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
-
-        LinearLayout card = createCard(context);
-        TextView pText = new TextView(context);
-        pText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        pText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        pText.setText("• Модификация интерфейса (UI)\n• Доступ к локальным настройкам\n• Безопасная песочница Python SDK");
-        pText.setLineSpacing(0, 1.25f);
-        card.addView(pText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
-    }
-
-    private void buildDeveloperSection(Context context, LinearLayout content) {
-        TextView title = createSectionTitle(context, "Связь с разработчиком");
-        content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
-
-        LinearLayout card = createCard(context);
         TextView linkRow = new TextView(context);
         linkRow.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         linkRow.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
-        String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
-                (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : "@exteragram");
-        linkRow.setText("🌐 " + target);
-        linkRow.setOnClickListener(v -> openAuthorLink());
-        card.addView(linkRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        linkRow.setText(target);
+        linkRow.setSingleLine(true);
+        linkRow.setEllipsize(TextUtils.TruncateAt.END);
+        row.addView(linkRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        card.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        card.setOnClickListener(v -> openAuthorLink());
         content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
     }
 
@@ -408,6 +368,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
 
         HorizontalScrollView scroll = new HorizontalScrollView(context);
         scroll.setHorizontalScrollBarEnabled(false);
+        scroll.setClipToPadding(false);
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
@@ -415,8 +376,8 @@ public class PluginDetailsBottomSheet extends BottomSheet {
 
         int added = 0;
         for (PluginStoreActivity.StorePlugin other : allPlugins) {
-            if (other == plugin || (other.id != null && other.id.equals(plugin.id))) continue;
-            if (added >= 8) break;
+            if (other == plugin || (other.id != null && other.id.equalsIgnoreCase(plugin.id))) continue;
+            if (added >= 10) break;
 
             LinearLayout item = new LinearLayout(context);
             item.setOrientation(LinearLayout.VERTICAL);
@@ -434,6 +395,13 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             dIc.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
             dIc.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
             ic.addView(dIc, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+            BackupImageView oIconView = new BackupImageView(context);
+            oIconView.setRoundRadius(dp(14));
+            oIconView.setVisibility(View.GONE);
+            ic.addView(oIconView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+            bindIcon(oIconView, dIc, other);
+
             item.addView(ic, LayoutHelper.createLinear(52, 52));
 
             TextView nView = new TextView(context);
@@ -443,7 +411,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             nView.setEllipsize(TextUtils.TruncateAt.END);
             nView.setGravity(Gravity.CENTER);
             nView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-            item.addView(nView, LayoutHelper.createLinear(64, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
+            item.addView(nView, LayoutHelper.createLinear(68, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
 
             item.setOnClickListener(v -> {
                 dismiss();
@@ -456,7 +424,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             added++;
         }
 
-        content.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+        if (added > 0) {
+            content.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+        }
     }
 
     private TextView createSectionTitle(Context context, String title) {
@@ -479,22 +449,22 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         return card;
     }
 
-    private void bindIcon(BackupImageView iconView, ImageView defaultIconView) {
+    private void bindIcon(BackupImageView iconView, ImageView defaultIconView, PluginStoreActivity.StorePlugin target) {
         iconView.setTag(null);
         iconView.setImageDrawable(null);
 
         boolean iconApplied = false;
-        if (!TextUtils.isEmpty(plugin.icon)) {
-            iconApplied = PluginIcons.apply(iconView, plugin.icon, () -> {
+        if (!TextUtils.isEmpty(target.icon)) {
+            iconApplied = PluginIcons.apply(iconView, target.icon, () -> {
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
             });
         }
 
-        if (!iconApplied && plugin.document != null && plugin.document.thumbs != null && !plugin.document.thumbs.isEmpty()) {
-            TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(plugin.document.thumbs, 120);
+        if (!iconApplied && target.document != null && target.document.thumbs != null && !target.document.thumbs.isEmpty()) {
+            TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(target.document.thumbs, 120);
             if (thumbSize != null) {
-                iconView.setImage(ImageLocation.getForDocument(thumbSize, plugin.document), "64_64", null, null, plugin.document);
+                iconView.setImage(ImageLocation.getForDocument(thumbSize, target.document), "64_64", null, null, target.document);
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
                 iconApplied = true;
@@ -502,9 +472,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         }
 
         if (!iconApplied) {
-            TLRPC.Chat chat = plugin.chat;
-            if (chat == null && !TextUtils.isEmpty(plugin.sourceChannel)) {
-                String u = plugin.sourceChannel.startsWith("@") ? plugin.sourceChannel.substring(1) : plugin.sourceChannel;
+            TLRPC.Chat chat = target.chat;
+            if (chat == null && !TextUtils.isEmpty(target.sourceChannel)) {
+                String u = target.sourceChannel.startsWith("@") ? target.sourceChannel.substring(1) : target.sourceChannel;
                 TLObject obj = MessagesController.getInstance(UserConfig.selectedAccount).getUserOrChat(u);
                 if (obj instanceof TLRPC.Chat) {
                     chat = (TLRPC.Chat) obj;
@@ -517,8 +487,8 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                 avatar.setInfo(chat);
                 iconView.setForUserOrChat(chat, avatar);
             } else {
-                int seed = plugin.id != null ? plugin.id.hashCode() : 0;
-                avatar.setInfo(seed, plugin.name != null ? plugin.name : "Plugin", null);
+                int seed = target.id != null ? target.id.hashCode() : 0;
+                avatar.setInfo(seed, target.name != null ? target.name : "Plugin", null);
                 iconView.setImage(null, null, avatar, null);
             }
             iconView.setVisibility(View.VISIBLE);
@@ -544,22 +514,197 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         }
     }
 
+    /**
+     * "Ручная загрузка" — диалог выбора версии плагина или ручного ввода ссылки.
+     */
     private void openManualDownload() {
-        if (!TextUtils.isEmpty(plugin.channelPost)) {
-            Activity act = parentActivity != null ? parentActivity.getParentActivity() : null;
-            if (act != null) {
-                Browser.openUrl(act, plugin.channelPost);
+        Context context = getContext();
+        if (context == null) return;
+
+        List<PluginStoreActivity.StorePlugin> versions = parentActivity != null ?
+                parentActivity.getPluginVersions(plugin) : new ArrayList<>();
+        if (versions.isEmpty()) {
+            versions.add(plugin);
+        }
+
+        VersionPickerBottomSheet picker = new VersionPickerBottomSheet(context, plugin, versions, parentActivity, this);
+        picker.show();
+    }
+
+    /**
+     * BottomSheet со списком доступных версий плагина для ручной загрузки.
+     */
+    public static class VersionPickerBottomSheet extends BottomSheet {
+
+        public VersionPickerBottomSheet(Context context,
+                                        PluginStoreActivity.StorePlugin currentPlugin,
+                                        List<PluginStoreActivity.StorePlugin> versions,
+                                        PluginStoreActivity storeActivity,
+                                        PluginDetailsBottomSheet parentSheet) {
+            super(context, true);
+            setApplyBottomPadding(false);
+            setApplyTopPadding(false);
+
+            ScrollView scroll = new ScrollView(context);
+            scroll.setVerticalScrollBarEnabled(false);
+
+            LinearLayout content = new LinearLayout(context);
+            content.setOrientation(LinearLayout.VERTICAL);
+            content.setPadding(dp(16), dp(12), dp(16), dp(28));
+
+            // Drag handle
+            View handle = new View(context);
+            GradientDrawable handleBg = new GradientDrawable();
+            handleBg.setCornerRadius(dp(3));
+            handleBg.setColor(Theme.getColor(Theme.key_sheet_scrollUp));
+            handle.setBackground(handleBg);
+            content.addView(handle, LayoutHelper.createLinear(36, 4, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+            TextView title = new TextView(context);
+            title.setText("Ручная загрузка: выбор версии");
+            title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+            title.setTypeface(AndroidUtilities.bold());
+            title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
+
+            TextView subtitle = new TextView(context);
+            subtitle.setText(currentPlugin.name != null ? currentPlugin.name : currentPlugin.id);
+            subtitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            subtitle.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+            content.addView(subtitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accent == 0) accent = 0xff00d2b4;
+
+            for (PluginStoreActivity.StorePlugin ver : versions) {
+                LinearLayout card = new LinearLayout(context);
+                card.setOrientation(LinearLayout.HORIZONTAL);
+                card.setGravity(Gravity.CENTER_VERTICAL);
+                GradientDrawable cBg = new GradientDrawable();
+                cBg.setCornerRadius(dp(14));
+                cBg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                card.setBackground(cBg);
+                card.setPadding(dp(14), dp(10), dp(14), dp(10));
+
+                LinearLayout textCol = new LinearLayout(context);
+                textCol.setOrientation(LinearLayout.VERTICAL);
+
+                TextView vName = new TextView(context);
+                String verStr = !TextUtils.isEmpty(ver.version) ? "v" + ver.version : "Релиз";
+                vName.setText(verStr + (ver == currentPlugin ? " (текущая)" : ""));
+                vName.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                vName.setTypeface(AndroidUtilities.bold());
+                vName.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+                textCol.addView(vName, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                StringBuilder details = new StringBuilder();
+                if (!TextUtils.isEmpty(ver.size)) details.append(ver.size);
+                if (!TextUtils.isEmpty(ver.sourceChannel)) {
+                    if (details.length() > 0) details.append(" • ");
+                    details.append(ver.sourceChannel);
+                }
+                if (ver.message != null && ver.message.date > 0) {
+                    if (details.length() > 0) details.append(" • ");
+                    details.append(LocaleController.formatDateChat(ver.message.date));
+                }
+
+                TextView vDetails = new TextView(context);
+                vDetails.setText(details.toString());
+                vDetails.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+                vDetails.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+                textCol.addView(vDetails, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+                card.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+
+                // Кнопка скачать / установить эту версию
+                TextView dlBtn = new TextView(context);
+                dlBtn.setText(getString(R.string.PluginsStoreInstall));
+                dlBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+                dlBtn.setTypeface(AndroidUtilities.bold());
+                dlBtn.setGravity(Gravity.CENTER);
+                dlBtn.setTextColor(0xffffffff);
+                GradientDrawable dlBg = new GradientDrawable();
+                dlBg.setCornerRadius(dp(16));
+                dlBg.setColor(accent);
+                dlBtn.setBackground(dlBg);
+                dlBtn.setPadding(dp(14), dp(6), dp(14), dp(6));
+                dlBtn.setOnClickListener(v -> {
+                    dismiss();
+                    if (parentSheet != null) parentSheet.dismiss();
+                    if (storeActivity != null) {
+                        storeActivity.downloadAndInstall(ver);
+                    }
+                });
+                card.addView(dlBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 0, 0));
+
+                content.addView(card, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
             }
-        } else if (!TextUtils.isEmpty(plugin.link)) {
-            Activity act = parentActivity != null ? parentActivity.getParentActivity() : null;
-            if (act != null) {
-                Browser.openUrl(act, plugin.link);
-            }
-        } else {
-            dismiss();
-            if (parentActivity != null) {
-                parentActivity.downloadAndInstall(plugin);
-            }
+
+            // Дополнительная опция: Ввести ссылку или открыть публикацию
+            LinearLayout manualOption = new LinearLayout(context);
+            manualOption.setOrientation(LinearLayout.HORIZONTAL);
+            manualOption.setGravity(Gravity.CENTER_VERTICAL);
+            GradientDrawable mBg = new GradientDrawable();
+            mBg.setCornerRadius(dp(14));
+            mBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            manualOption.setBackground(mBg);
+            manualOption.setPadding(dp(14), dp(12), dp(14), dp(12));
+
+            ImageView mIcon = new ImageView(context);
+            mIcon.setImageResource(R.drawable.msg_link);
+            mIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            mIcon.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_dialogTextLink), PorterDuff.Mode.SRC_IN));
+            manualOption.addView(mIcon, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+
+            TextView mText = new TextView(context);
+            mText.setText("Указать ссылку на файл / пост вручную");
+            mText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            mText.setTypeface(AndroidUtilities.bold());
+            mText.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
+            manualOption.addView(mText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            manualOption.setOnClickListener(v -> {
+                dismiss();
+                if (storeActivity != null && storeActivity.getParentActivity() != null) {
+                    showCustomUrlDialog(storeActivity.getParentActivity(), storeActivity);
+                }
+            });
+            content.addView(manualOption, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 6, 0, 0));
+
+            scroll.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            setCustomView(scroll);
+        }
+
+        private void showCustomUrlDialog(Activity activity, PluginStoreActivity storeActivity) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+            builder.setTitle("Установка по ссылке");
+            builder.setMessage("Введите ссылку на пост Telegram (https://t.me/channel/123) или прямую ссылку на файл плагина:");
+
+            final EditText input = new EditText(activity);
+            input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            input.setHint("https://t.me/...");
+            input.setSingleLine(true);
+            FrameLayout container = new FrameLayout(activity);
+            container.setPadding(dp(22), dp(8), dp(22), dp(8));
+            container.addView(input, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            builder.setView(container);
+
+            builder.setPositiveButton(getString(R.string.PluginsStoreInstall), (dialog, which) -> {
+                String text = input.getText().toString().trim();
+                if (!TextUtils.isEmpty(text)) {
+                    PluginStoreActivity.StorePlugin customPlugin = new PluginStoreActivity.StorePlugin();
+                    customPlugin.id = "custom_" + System.currentTimeMillis();
+                    customPlugin.name = "Загруженный плагин";
+                    if (text.startsWith("https://t.me/")) {
+                        customPlugin.channelPost = text;
+                    } else {
+                        customPlugin.link = text;
+                    }
+                    storeActivity.downloadAndInstall(customPlugin);
+                }
+            });
+            builder.setNegativeButton(getString(R.string.Cancel), null);
+            builder.show();
         }
     }
 }
