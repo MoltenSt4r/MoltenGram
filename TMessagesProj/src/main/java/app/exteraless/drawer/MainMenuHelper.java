@@ -134,6 +134,9 @@ public final class MainMenuHelper {
         if (item == MainMenuItem.ARCHIVE && !hasArchivedChats(ctx.currentAccount())) {
             return false;
         }
+        if (item == MainMenuItem.FEED && !app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool()) {
+            return false;
+        }
         if (item == MainMenuItem.BOTS) {
             return addAttachMenuBotMenuItems(io, ctx);
         }
@@ -223,6 +226,9 @@ public final class MainMenuHelper {
         }
         if (item == MainMenuItem.ARCHIVE && !hasArchivedChats(ctx.currentAccount())) {
             // Пустой архив в шторке не показывается.
+            return Collections.emptyList();
+        }
+        if (item == MainMenuItem.FEED && !app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool()) {
             return Collections.emptyList();
         }
         final MenuItemInfo info = resolveMenuItem(id, ctx);

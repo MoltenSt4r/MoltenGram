@@ -2808,9 +2808,22 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             FileLog.e(e);
                                         }
                                         checkAppUpdate(true, null, updateAlways);
-                                    } else if (url.startsWith("tg:neko") || url.startsWith("tg://neko")) {
-                                        url = url.replace("tg:neko", "tg://t.me/nasettings").replace("tg://neko", "tg://t.me/nasettings");
-                                        data = Uri.parse(url);
+                                    } else if (url.startsWith("tg:neko") || url.startsWith("tg://neko")
+                                            || url.startsWith("tg:nasettings") || url.startsWith("tg://nasettings")
+                                            || url.startsWith("tg:moltengram") || url.startsWith("tg://moltengram")
+                                            || url.startsWith("tg:ms") || url.startsWith("tg://ms")) {
+                                        String prefix;
+                                        if (url.startsWith("tg://")) {
+                                            prefix = url.substring(5);
+                                        } else {
+                                            prefix = url.substring(3);
+                                        }
+                                        if (prefix.startsWith("neko")) {
+                                            prefix = "moltengram" + prefix.substring(4);
+                                        } else if (prefix.startsWith("ms")) {
+                                            prefix = "moltengram" + prefix.substring(2);
+                                        }
+                                        data = Uri.parse("https://t.me/" + prefix);
                                         SettingsHelper.processDeepLink(this, data, fragment -> {
                                             AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
                                             if (AndroidUtilities.isTablet()) {
@@ -7300,6 +7313,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             showUpdateActivity(UserConfig.selectedAccount, SharedConfig.pendingAppUpdate, true);
         }
         checkAppUpdate(false, null);
+        app.exteraless.ota.MoltenGramOtaManager.getInstance().checkShowChangelog(this);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
             ApplicationLoader.canDrawOverlays = Settings.canDrawOverlays(this);

@@ -131,6 +131,20 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("DisableSystemAccount", "privacy");
         NAGRAM_ROWS.put("PerformanceClass", "powersaving");
         NAGRAM_ROWS.put("VideoPlayerDecoder", "chats");
+        NAGRAM_ROWS.put("playerSettings", "appearance");
+        NAGRAM_ROWS.put("md3Player", "appearance");
+        NAGRAM_ROWS.put("mediaGroupCarousel", "appearance");
+        NAGRAM_ROWS.put("md3AvatarShapes", "appearance");
+        NAGRAM_ROWS.put("appIcon", "appearance");
+        NAGRAM_ROWS.put("shizuku", "shizuku_settings");
+        NAGRAM_ROWS.put("chip_folders", "chip_folders_settings");
+        NAGRAM_ROWS.put("text_animation", "text_animation_settings");
+        NAGRAM_ROWS.put("updates", "ota_updates");
+        NAGRAM_ROWS.put("ota_updates", "ota_updates");
+        NAGRAM_ROWS.put("feedInChatMenu", "chats");
+        NAGRAM_ROWS.put("feedSettings", "chats");
+        NAGRAM_ROWS.put("feed", "chats");
+        NAGRAM_ROWS.put("wideFeedPosts", "chats");
     }
 
     private static void moveRows(String from, String to, String... rows) {
@@ -158,7 +172,8 @@ public class SettingsHelper {
         if (path == null) {
             return false;
         }
-        if (path.startsWith(HOST_NAGRAM + "/") || path.startsWith(HOST_MOLTENGRAM + "/")) {
+        if (path.startsWith(HOST_NAGRAM + "/") || path.startsWith(HOST_MOLTENGRAM + "/")
+                || path.equals(HOST_MOLTENGRAM) || path.equals(HOST_NAGRAM)) {
             return true;
         }
         if (path.startsWith(HOST_EXTERAMS + "/")) {
@@ -208,7 +223,7 @@ public class SettingsHelper {
             case "ota_updates":
             case "updates":
             case "update":
-                return HOST_MOLTENGRAM + "/settings";
+                return HOST_MOLTENGRAM + "/updates";
             default:
                 return HOST_MOLTENGRAM + "/" + key;
         }
@@ -229,13 +244,16 @@ public class SettingsHelper {
             unknown.run();
             return;
         }
-        if (exteraless && segments.size() < 2) {
-            unknown.run();
-            return;
-        }
         var row = uri.getQueryParameter("r");
         if (TextUtils.isEmpty(row)) {
             row = uri.getQueryParameter("row");
+        }
+        if (exteraless && segments.size() < 2 && TextUtils.isEmpty(row)) {
+            unknown.run();
+            return;
+        }
+        if ("playerSettings".equals(row)) {
+            row = "md3Player";
         }
         BaseFragment fragment;
         BaseNekoSettingsActivity neko_fragment = null;
@@ -441,7 +459,8 @@ public class SettingsHelper {
 
     private static String nagramScreen(String segment, String row) {
         if (segment == null) {
-            return "settings";
+            String moved = row == null ? null : NAGRAM_ROWS.get(row);
+            return moved != null ? moved : "settings";
         }
         String fallback;
         switch (segment) {

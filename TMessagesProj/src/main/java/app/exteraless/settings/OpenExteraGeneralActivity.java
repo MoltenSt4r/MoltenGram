@@ -126,6 +126,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
     private int archiveHeaderRow;
     private int sortByUnreadRow;
     private int hideArchiveRow;
+    private int feedInChatMenuRow;
     private int archiveOnPullRow;
     private int disableUnarchiveSwipeRow;
     private int archiveDividerRow;
@@ -196,6 +197,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
         archiveHeaderRow = addRow("archiveHeader");
         sortByUnreadRow = addRow("sortByUnread", "SortByUnread");
         hideArchiveRow = addRow("hideArchive");
+        feedInChatMenuRow = addRow("feedInChatMenu");
         // Когда архив скрыт, строка уходит целиком: «открывать архив потягиванием»
         // нечего, если папки архива нет в списке.
         archiveOnPullRow = NaConfig.INSTANCE.getHideArchive().Bool() ? -1 : addRow("archiveOnPull");
@@ -362,6 +364,8 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
             item = NekoConfig.hidePhone;
         } else if (position == hideArchiveRow) {
             item = NaConfig.INSTANCE.getHideArchive();
+        } else if (position == feedInChatMenuRow) {
+            item = app.exteraless.chats.ChatsConfig.showFeedInChatMenu;
         } else if (position == archiveOnPullRow) {
             item = NekoConfig.openArchiveOnPull;
         } else if (position == disableUnarchiveSwipeRow) {
@@ -386,6 +390,11 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
         boolean shown = inverted != raw;
         if (view instanceof TextCheckCell) {
             ((TextCheckCell) view).setChecked(shown);
+        }
+
+        if (position == feedInChatMenuRow) {
+            getNotificationCenter().postNotificationName(NotificationCenter.dialogsNeedReload, true);
+            rebuildAll();
         }
 
         if (position == translateButtonRow || position == translateChatButtonRow) {
@@ -1164,6 +1173,10 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
                     } else if (position == hideArchiveRow) {
                         cell.setTextAndCheck(getString(R.string.OEGeneralHideArchive),
                                 NaConfig.INSTANCE.getHideArchive().Bool(), true);
+                    } else if (position == feedInChatMenuRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.FeedInChatMenu),
+                                getString(R.string.FeedInChatMenuInfo),
+                                app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool(), true, true);
                     } else if (position == archiveOnPullRow) {
                         cell.setTextAndCheck(getString(R.string.OEGeneralArchiveOnPull),
                                 NekoConfig.openArchiveOnPull.Bool(), true);

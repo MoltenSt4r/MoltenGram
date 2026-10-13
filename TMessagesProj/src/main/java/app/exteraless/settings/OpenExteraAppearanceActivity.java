@@ -246,7 +246,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
             md3ListItemsRow = addRow("md3ListItems");
-            md3PlayerRow = addRow("md3Player");
+            md3PlayerRow = addRow("md3Player", "playerSettings");
             md3MiniPlayerRow = addRow("md3MiniPlayer");
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {

@@ -8,6 +8,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.widget.Toast;
 
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
@@ -20,6 +21,7 @@ import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildConfig;
+import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
@@ -697,7 +699,13 @@ public class MoltenGramOtaManager {
                                 progressDialog.dismiss();
                             }
                         } catch (Throwable ignored) {}
+                        prefs.edit()
+                                .putBoolean("show_update_changelog_on_launch", true)
+                                .putString("last_update_version", pendingUpdate != null ? pendingUpdate.version : "")
+                                .putString("last_update_changelog", pendingUpdate != null ? pendingUpdate.changelog : "")
+                                .apply();
                         Toast.makeText(activity, LocaleController.getString("ShizukuInstallSuccess", R.string.ShizukuInstallSuccess), Toast.LENGTH_SHORT).show();
+                        relaunchApp(activity);
                     });
                 }
 
@@ -719,6 +727,14 @@ public class MoltenGramOtaManager {
 
     private void installApkStandard(Activity activity, File apkFile) {
         try {
+            if (pendingUpdate != null) {
+                prefs.edit()
+                        .putBoolean("show_update_changelog_on_launch", true)
+                        .putString("last_update_version", pendingUpdate.version)
+                        .putString("last_update_changelog", pendingUpdate.changelog)
+                        .apply();
+            }
+
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!activity.getPackageManager().canRequestPackageInstalls()) {
                     Intent permIntent = new Intent(Settings.ACTION_MANAGE_UNKNOWN_APP_SOURCES);
@@ -742,6 +758,54 @@ public class MoltenGramOtaManager {
             activity.startActivity(intent);
         } catch (Exception e) {
             FileLog.e(e);
+        }
+    }
+
+    public static void relaunchApp(Activity activity) {
+        if (activity == null) {
+            return;
+        }
+        try {
+            Context context = activity.getApplicationContext();
+            Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
+            if (launchIntent != null) {
+                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
+                launchIntent.putExtra("from_app_update", true);
+                context.startActivity(launchIntent);
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+        try {
+            activity.finishAffinity();
+        } catch (Throwable ignored) {}
+        Runtime.getRuntime().exit(0);
+    }
+
+    public void checkShowChangelog(Activity activity) {
+        if (activity == null || activity.isFinishing()) {
+            return;
+        }
+        int lastRunVersion = prefs.getInt("last_run_version_code", 0);
+        int currentVersion = BuildConfig.VERSION_CODE;
+        boolean shouldShow = prefs.getBoolean("show_update_changelog_on_launch", false);
+
+        if (lastRunVersion != 0 && currentVersion > lastRunVersion) {
+            shouldShow = true;
+        }
+        prefs.edit().putInt("last_run_version_code", currentVersion).apply();
+
+        if (shouldShow) {
+            prefs.edit().putBoolean("show_update_changelog_on_launch", false).apply();
+            String version = prefs.getString("last_update_version", "");
+            String changelog = prefs.getString("last_update_changelog", "");
+            AndroidUtilities.runOnUIThread(() -> {
+                try {
+                    new MoltenGramChangelogBottomSheet(activity, version, changelog, null).show();
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            }, 600);
         }
     }
 
