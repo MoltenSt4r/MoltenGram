@@ -40532,7 +40532,7 @@ public class ChatActivity extends BaseFragment implements
                     if (groupedMessages != null) {
                         MessageObject.GroupedMessagePosition pos = groupedMessages.getPosition(message);
                         if (pos != null) {
-                            if (groupedMessages.isDocuments) {
+                            if (groupedMessages.isDocuments || (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && groupedMessages.messages.size() > 1)) {
                                 prevPosition = position + groupedMessages.posArray.indexOf(pos) + 1;
                                 nextPosition = position - groupedMessages.posArray.size() + groupedMessages.posArray.indexOf(pos);
                             } else {

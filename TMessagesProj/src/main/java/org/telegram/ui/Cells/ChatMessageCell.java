@@ -7085,7 +7085,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     md3MediaCarouselView.setVisibility(GONE);
                 }
             }
-            if (currentMessagesGroup == null || currentMessagesGroup.isDocuments || isMediaCarouselMessage()) {
+            if (isMediaCarouselMessage()) {
+                drawPinnedTop = pinnedTop;
+                drawPinnedBottom = false;
+                pinnedBottom = false;
+            } else if (currentMessagesGroup == null || currentMessagesGroup.isDocuments) {
                 drawPinnedTop = pinnedTop;
                 drawPinnedBottom = pinnedBottom;
             } else {
@@ -10357,13 +10361,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         }
                         photoHeight = h;
                         if (isMediaCarouselMessage()) {
-                            int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(16)), (int) (AndroidUtilities.displaySize.x * 0.92f));
+                            int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(24)), (int) (AndroidUtilities.displaySize.x * 0.88f));
                             if (availableWidth <= 0) {
                                 availableWidth = AndroidUtilities.dp(300);
                             }
                             photoWidth = availableWidth;
                             photoHeight = AndroidUtilities.dp(220);
-                            backgroundWidth = photoWidth + dp(8);
+                            mediaBackground = false;
+                            backgroundWidth = photoWidth + dp(17);
                         }
                         if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
                             widthForCaption += photoWidth - dp(15);
@@ -10794,7 +10799,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     namesOffset += dp(7);
                 }
                 if (isMediaCarouselMessage()) {
-                    totalHeight = photoHeight + namesOffset + dp(18) + additionHeight;
+                    int footerHeight = (currentCaption != null || captionLayout != null) ? dp(14) : dp(36);
+                    totalHeight = photoHeight + namesOffset + footerHeight + additionHeight;
                 } else {
                     totalHeight = photoHeight + dp(14) + namesOffset + additionHeight;
                 }
@@ -14064,7 +14070,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             resultHeight = botDraftHeightController.getOverrideMeasureHeight(currentMessageObject, normHeight);
         }
         if (isMediaCarouselMessage()) {
-            int minNeeded = (int) photoImage.getImageY() + (int) photoImage.getImageHeight() + dp(14);
+            int footerHeight = (currentCaption != null || captionLayout != null) ? dp(14) : dp(36);
+            int minNeeded = (int) photoImage.getImageY() + (int) photoImage.getImageHeight() + footerHeight;
+            if (captionLayout != null) {
+                minNeeded += captionLayout.textHeight() + dp(14);
+            }
             if (resultHeight < minNeeded) {
                 resultHeight = minNeeded;
             }
@@ -14578,9 +14588,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             int cw = (int) photoImage.getImageWidth();
             int ch = (int) photoImage.getImageHeight();
             md3MediaCarouselView.layout(cx, cy, cx + cw, cy + ch);
-            if (shouldDrawTimeOnMedia()) {
-                timeX = (int) (cx + cw - timeWidth - dp(14));
-            }
         }
     }
 
@@ -20772,12 +20779,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     @Override
     protected void dispatchDraw(Canvas canvas) {
-        super.dispatchDraw(canvas);
-        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE && shouldDrawTimeOnMedia()) {
-            if ((drawTime || !mediaBackground) && !forceNotDrawTime && (!currentMessageObject.isQuickReply() || currentMessageObject.isSendError())) {
-                drawTime(canvas, 1f, false);
-            }
+        if (isSiblingGroupCarouselMessage()) {
+            return;
         }
+        super.dispatchDraw(canvas);
     }
     @SuppressLint("WrongCall")
     public void drawInternal(Canvas canvas) {
@@ -24567,6 +24572,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean shouldDrawTimeOnMedia() {
+        if (isMediaCarouselMessage()) {
+            return false;
+        }
         if (overideShouldDrawTimeOnMedia != 0) {
             return overideShouldDrawTimeOnMedia == 1;
         }
@@ -24721,10 +24729,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (transitionParams.animateEditedEnter) {
             timeTitleTimeX -= transitionParams.animateEditedWidthDiff * (1f - transitionParams.animateChangeProgress);
         }
-        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
-            timeX = (int) (photoImage.getImageX() + photoImage.getImageWidth() - timeWidth - dp(14));
-            timeTitleTimeX = timeX;
-        }
+
 
         int timeYOffset;
         if (shouldDrawTimeOnMedia()) {
