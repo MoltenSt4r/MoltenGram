@@ -6487,6 +6487,25 @@ public class ChatActivity extends BaseFragment implements
                                 continue;
                             }
 
+                            if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !group.isDocuments && group.messages.size() > 1) {
+                                if (cell.isSiblingGroupCarouselMessage()) {
+                                    continue;
+                                }
+                                if (cell.isMediaCarouselMessage()) {
+                                    if (!drawingGroups.contains(group)) {
+                                        drawingGroups.add(group);
+                                    }
+                                    group.transitionParams.cell = cell;
+                                    group.transitionParams.pinnedTop = cell.isPinnedTop();
+                                    group.transitionParams.pinnedBotton = cell.isPinnedBottom();
+                                    group.transitionParams.left = cell.getLeft() + cell.getBackgroundDrawableLeft();
+                                    group.transitionParams.right = cell.getLeft() + cell.getBackgroundDrawableRight();
+                                    group.transitionParams.top = cell.getTop() + cell.getPaddingTop() + cell.getBackgroundDrawableTop();
+                                    group.transitionParams.bottom = cell.getTop() + cell.getPaddingTop() + cell.getBackgroundDrawableBottom();
+                                    continue;
+                                }
+                            }
+
                             if (!drawingGroups.contains(group)) {
                                 group.transitionParams.left = 0;
                                 group.transitionParams.top = 0;
@@ -7395,8 +7414,7 @@ public class ChatActivity extends BaseFragment implements
                 if (view instanceof ChatMessageCell) {
                     ChatMessageCell cell = (ChatMessageCell) view;
                     if (cell.isSiblingGroupCarouselMessage()) {
-                        outRect.bottom = 0;
-                        outRect.top = 0;
+                        outRect.set(0, 0, 0, 0);
                         return;
                     }
                     MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
