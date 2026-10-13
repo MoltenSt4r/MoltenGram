@@ -289,4 +289,10 @@ Source:
     <string name="Features">Features</string>
     <string name="Actions">Actions</string>
     <string name="Custom">Custom</string>
+
+    <string name="ShizukuInstallingUpdate">Installing update via Shizuku…</string>
+    <string name="ShizukuCopyingApk">Streaming APK to system: %d%%</string>
+    <string name="ShizukuApplyingUpdate">Applying update… App will restart</string>
+    <string name="ShizukuInstallSuccess">Update installed successfully!</string>
+    <string name="ShizukuInstallFailed">Shizuku install failed: %s</string>
 </resources>

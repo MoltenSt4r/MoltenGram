@@ -284,4 +284,10 @@
     <string name="Features">Возможности</string>
     <string name="Actions">Действия</string>
     <string name="Custom">Пользовательский</string>
+
+    <string name="ShizukuInstallingUpdate">Установка обновления через Shizuku…</string>
+    <string name="ShizukuCopyingApk">Передача APK в систему: %d%%</string>
+    <string name="ShizukuApplyingUpdate">Применение обновления… Приложение сейчас перезапустится</string>
+    <string name="ShizukuInstallSuccess">Обновление успешно установлено!</string>
+    <string name="ShizukuInstallFailed">Ошибка установки через Shizuku: %s</string>
 </resources>

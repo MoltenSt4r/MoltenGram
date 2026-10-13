@@ -137,30 +137,112 @@ public class ShizukuController {
         }
     }
 
-    public boolean silentInstallApk(File apkFile) {
-        if (apkFile == null || !apkFile.exists()) return false;
-        try {
-            String tmpName = "/data/local/tmp/shizuku_install_" + System.currentTimeMillis() + ".apk";
-            String shCmd = "cat > " + tmpName + " && pm install -r -d " + tmpName + "; rm -f " + tmpName;
-            Process p = exec(new String[]{"sh", "-c", shCmd});
-            if (p == null) return false;
+    public interface InstallListener {
+        void onProgress(int percent);
+        void onInstalling();
+        void onSuccess();
+        void onError(String message);
+    }
 
-            try (OutputStream os = p.getOutputStream();
+    public boolean silentInstallApk(File apkFile, InstallListener listener) {
+        if (apkFile == null || !apkFile.exists() || apkFile.length() <= 0) {
+            if (listener != null) listener.onError("APK file not found or empty");
+            return false;
+        }
+        String tmpName = "/data/local/tmp/shizuku_install_" + System.currentTimeMillis() + ".apk";
+        try {
+            Process catProcess = exec(new String[]{"sh", "-c", "cat > " + tmpName});
+            if (catProcess == null) {
+                if (listener != null) listener.onError("Failed to start Shizuku process");
+                return false;
+            }
+
+            long totalBytes = apkFile.length();
+            long written = 0;
+            int lastPercent = -1;
+
+            try (OutputStream os = catProcess.getOutputStream();
                  FileInputStream fis = new FileInputStream(apkFile)) {
                 byte[] buf = new byte[65536];
                 int read;
                 while ((read = fis.read(buf)) != -1) {
                     os.write(buf, 0, read);
+                    written += read;
+                    int percent = (int) (written * 100 / totalBytes);
+                    if (percent != lastPercent && listener != null) {
+                        lastPercent = percent;
+                        listener.onProgress(percent);
+                    }
                 }
                 os.flush();
             }
 
-            int exitCode = p.waitFor();
-            return exitCode == 0;
+            int catExit = catProcess.waitFor();
+            if (catExit != 0) {
+                exec(new String[]{"rm", "-f", tmpName});
+                if (listener != null) listener.onError("Failed to copy APK (exit code: " + catExit + ")");
+                return false;
+            }
+
+            if (listener != null) {
+                listener.onInstalling();
+            }
+
+            String installCmd = "pm install -r -d --bypass-low-target-sdk-block " + tmpName + "; RES=$?; rm -f " + tmpName + "; exit $RES";
+            Process pmProcess = exec(new String[]{"sh", "-c", installCmd});
+            if (pmProcess == null) {
+                exec(new String[]{"rm", "-f", tmpName});
+                if (listener != null) listener.onError("Failed to start pm install via Shizuku");
+                return false;
+            }
+
+            StringBuilder out = new StringBuilder();
+            StringBuilder err = new StringBuilder();
+            Thread tOut = new Thread(() -> {
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(pmProcess.getInputStream()))) {
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        out.append(line).append("\n");
+                    }
+                } catch (Throwable ignored) {}
+            });
+            Thread tErr = new Thread(() -> {
+                try (BufferedReader r = new BufferedReader(new InputStreamReader(pmProcess.getErrorStream()))) {
+                    String line;
+                    while ((line = r.readLine()) != null) {
+                        err.append(line).append("\n");
+                    }
+                } catch (Throwable ignored) {}
+            });
+            tOut.start();
+            tErr.start();
+
+            int exitCode = pmProcess.waitFor();
+            try { tOut.join(1000); } catch (InterruptedException ignored) {}
+            try { tErr.join(1000); } catch (InterruptedException ignored) {}
+
+            String output = out.toString().trim();
+            String error = err.toString().trim();
+
+            if (exitCode == 0 || output.contains("Success")) {
+                if (listener != null) listener.onSuccess();
+                return true;
+            } else {
+                String failMsg = !TextUtils.isEmpty(error) ? error : (!TextUtils.isEmpty(output) ? output : "Exit code " + exitCode);
+                FileLog.e("Shizuku pm install failed: " + failMsg);
+                if (listener != null) listener.onError(failMsg);
+                return false;
+            }
         } catch (Throwable t) {
-            FileLog.e(t);
+            FileLog.e("Shizuku install exception", t);
+            try { exec(new String[]{"rm", "-f", tmpName}); } catch (Throwable ignored) {}
+            if (listener != null) listener.onError(t.getMessage());
             return false;
         }
+    }
+
+    public boolean silentInstallApk(File apkFile) {
+        return silentInstallApk(apkFile, null);
     }
 
     public boolean setUnrestrictedBackground() {

@@ -8,6 +8,7 @@ import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.ViewParent;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -46,20 +47,76 @@ public class Md3MediaCarouselView extends FrameLayout {
     private final ArrayList<MessageObject> messages = new ArrayList<>();
     private ChatMessageCell parentCell;
     private long currentGroupId = 0;
+    private boolean isHorizontalDrag;
+
+    public boolean isScrollingOrDragging() {
+        return isHorizontalDrag || recyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE;
+    }
 
     public Md3MediaCarouselView(@NonNull Context context) {
         super(context);
 
         recyclerView = new RecyclerView(context) {
+            private float startX;
+            private float startY;
+
             @Override
             public boolean onInterceptTouchEvent(MotionEvent e) {
-                // Allow horizontal swipe in chat without triggering parent scroll/drag
-                if (e.getAction() == MotionEvent.ACTION_DOWN) {
-                    getParent().requestDisallowInterceptTouchEvent(true);
-                } else if (e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_CANCEL) {
-                    getParent().requestDisallowInterceptTouchEvent(false);
+                int action = e.getActionMasked();
+                if (action == MotionEvent.ACTION_DOWN) {
+                    startX = e.getX();
+                    startY = e.getY();
+                    isHorizontalDrag = false;
+                    ViewParent p = getParent();
+                    if (p != null) {
+                        p.requestDisallowInterceptTouchEvent(true);
+                    }
+                } else if (action == MotionEvent.ACTION_MOVE) {
+                    float dx = Math.abs(e.getX() - startX);
+                    float dy = Math.abs(e.getY() - startY);
+                    if (dx > dy && dx > AndroidUtilities.touchSlop) {
+                        isHorizontalDrag = true;
+                        ViewParent p = getParent();
+                        if (p != null) {
+                            p.requestDisallowInterceptTouchEvent(true);
+                        }
+                    } else if (dy > dx && dy > AndroidUtilities.touchSlop && !isHorizontalDrag) {
+                        ViewParent p = getParent();
+                        if (p != null) {
+                            p.requestDisallowInterceptTouchEvent(false);
+                        }
+                    }
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    isHorizontalDrag = false;
+                    ViewParent p = getParent();
+                    if (p != null) {
+                        p.requestDisallowInterceptTouchEvent(false);
+                    }
                 }
                 return super.onInterceptTouchEvent(e);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent e) {
+                int action = e.getActionMasked();
+                if (action == MotionEvent.ACTION_MOVE) {
+                    float dx = Math.abs(e.getX() - startX);
+                    float dy = Math.abs(e.getY() - startY);
+                    if (dx > dy && dx > AndroidUtilities.touchSlop) {
+                        isHorizontalDrag = true;
+                        ViewParent p = getParent();
+                        if (p != null) {
+                            p.requestDisallowInterceptTouchEvent(true);
+                        }
+                    }
+                } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                    isHorizontalDrag = false;
+                    ViewParent p = getParent();
+                    if (p != null) {
+                        p.requestDisallowInterceptTouchEvent(false);
+                    }
+                }
+                return super.onTouchEvent(e);
             }
         };
         recyclerView.setClipToPadding(false);
@@ -178,7 +235,7 @@ public class Md3MediaCarouselView extends FrameLayout {
             });
 
             itemView.setOnLongClickListener(v -> {
-                if (parentCell != null) {
+                if (!isScrollingOrDragging() && parentCell != null) {
                     return parentCell.performLongClick();
                 }
                 return false;

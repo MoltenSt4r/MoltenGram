@@ -9,6 +9,8 @@ import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
 
+import android.widget.Toast;
+
 import androidx.core.content.FileProvider;
 
 import org.json.JSONArray;
@@ -17,8 +19,11 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
+import org.telegram.ui.ActionBar.AlertDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -633,15 +638,81 @@ public class MoltenGramOtaManager {
 
         if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
                 && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
-            org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
-                boolean ok = app.exteraless.shizuku.ShizukuController.getInstance().silentInstallApk(apkFile);
-                if (!ok) {
-                    AndroidUtilities.runOnUIThread(() -> installApkFile(activity, apkFile));
-                }
-            });
+            installWithShizuku(activity, apkFile);
             return;
         }
 
+        installApkStandard(activity, apkFile);
+    }
+
+    private void installWithShizuku(Activity activity, File apkFile) {
+        AlertDialog progressDialog = new AlertDialog(activity, AlertDialog.ALERT_TYPE_LOADING);
+        progressDialog.setTitle(LocaleController.getString("ShizukuInstallingUpdate", R.string.ShizukuInstallingUpdate));
+        progressDialog.setMessage(String.format(LocaleController.getString("ShizukuCopyingApk", R.string.ShizukuCopyingApk), 0));
+        progressDialog.setProgress(0);
+        progressDialog.setCanceledOnTouchOutside(false);
+        progressDialog.setCancelable(false);
+        try {
+            progressDialog.show();
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            app.exteraless.shizuku.ShizukuController.getInstance().silentInstallApk(apkFile, new app.exteraless.shizuku.ShizukuController.InstallListener() {
+                @Override
+                public void onProgress(int percent) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            if (progressDialog.isShowing()) {
+                                progressDialog.setProgress(percent);
+                                progressDialog.setMessage(String.format(LocaleController.getString("ShizukuCopyingApk", R.string.ShizukuCopyingApk), percent));
+                            }
+                        } catch (Throwable ignored) {}
+                    });
+                }
+
+                @Override
+                public void onInstalling() {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            if (progressDialog.isShowing()) {
+                                progressDialog.setProgress(100);
+                                progressDialog.setMessage(LocaleController.getString("ShizukuApplyingUpdate", R.string.ShizukuApplyingUpdate));
+                            }
+                        } catch (Throwable ignored) {}
+                    });
+                }
+
+                @Override
+                public void onSuccess() {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            if (progressDialog.isShowing()) {
+                                progressDialog.dismiss();
+                            }
+                        } catch (Throwable ignored) {}
+                        Toast.makeText(activity, LocaleController.getString("ShizukuInstallSuccess", R.string.ShizukuInstallSuccess), Toast.LENGTH_SHORT).show();
+                    });
+                }
+
+                @Override
+                public void onError(String error) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        try {
+                            if (progressDialog.isShowing()) {
+                                progressDialog.dismiss();
+                            }
+                        } catch (Throwable ignored) {}
+                        Toast.makeText(activity, String.format(LocaleController.getString("ShizukuInstallFailed", R.string.ShizukuInstallFailed), error), Toast.LENGTH_LONG).show();
+                        installApkStandard(activity, apkFile);
+                    });
+                }
+            });
+        });
+    }
+
+    private void installApkStandard(Activity activity, File apkFile) {
         try {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
                 if (!activity.getPackageManager().canRequestPackageInstalls()) {

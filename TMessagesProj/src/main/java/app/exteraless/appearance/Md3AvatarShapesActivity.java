@@ -22,7 +22,6 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
@@ -31,6 +30,7 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
+import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 /**
  * Settings screen for Material Design 3 Expressive avatar shapes.
@@ -271,8 +271,12 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             }
         });
 
+        gridView.setNestedScrollingEnabled(false);
         contentLayout.addView(gridView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        builder.setCustomView(contentLayout);
+
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(getParentActivity());
+        scrollView.addView(contentLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        builder.setCustomView(scrollView);
         sheetRef[0] = builder.create();
         showDialog(sheetRef[0]);
     }
