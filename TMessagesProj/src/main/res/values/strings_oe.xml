@@ -43,6 +43,9 @@
     <string name="AppIconMoltenGramCoffee">Coffee</string>
     <string name="AppIconMoltenGramGlacier">Glacier</string>
     <string name="AppIconMoltenGramGoogle">Google style</string>
+    <string name="AppIconMoltenGramBeer">Beer</string>
+    <string name="AppIconMoltenGramMagma">Magma</string>
+    <string name="AppIconMoltenGramHolo">Holo</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>
     <string name="OpenExteraPreferences">MoltenGram Preferences</string>

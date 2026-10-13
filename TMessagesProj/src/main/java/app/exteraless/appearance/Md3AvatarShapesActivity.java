@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -218,7 +219,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         contentLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
 
         RecyclerListView gridView = new RecyclerListView(getParentActivity());
-        int columns = AndroidUtilities.isTablet() ? 6 : 5;
+        int columns = AndroidUtilities.isTablet() ? 6 : 4;
         gridView.setLayoutManager(new GridLayoutManager(getParentActivity(), columns));
 
         final BottomSheet[] sheetRef = new BottomSheet[1];
@@ -284,9 +285,13 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
     private void notifyAvatarsChanged() {
         NotificationCenter.getInstance(currentAccount).postNotificationName(
                 NotificationCenter.updateInterfaces,
+                MessagesController.UPDATE_MASK_AVATAR | MessagesController.UPDATE_MASK_CHAT_AVATAR | MessagesController.UPDATE_MASK_NAME
+        );
+        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.dialogsNeedReload);
+        NotificationCenter.getGlobalInstance().postNotificationName(
+                NotificationCenter.updateInterfaces,
                 MessagesController.UPDATE_MASK_AVATAR | MessagesController.UPDATE_MASK_CHAT_AVATAR
         );
-        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.didSetNewTheme);
     }
 
     private String getShapeName(int shapeId) {
@@ -303,23 +308,35 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
 
         private final ShapePreviewView previewView;
         private final TextView textView;
+        private final GradientDrawable bgDrawable;
 
         public ShapeItemCell(Context context) {
             super(context);
             setOrientation(VERTICAL);
-            setGravity(Gravity.CENTER_HORIZONTAL);
-            setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8));
+            setGravity(Gravity.CENTER);
+            setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(10), AndroidUtilities.dp(6), AndroidUtilities.dp(8));
+
+            bgDrawable = new GradientDrawable();
+            bgDrawable.setCornerRadius(AndroidUtilities.dp(16));
+            setBackground(bgDrawable);
+
+            RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
+                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    ViewGroup.LayoutParams.WRAP_CONTENT
+            );
+            lp.setMargins(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+            setLayoutParams(lp);
 
             previewView = new ShapePreviewView(context);
-            addView(previewView, LayoutHelper.createLinear(48, 48, Gravity.CENTER_HORIZONTAL));
+            addView(previewView, LayoutHelper.createLinear(44, 44, Gravity.CENTER_HORIZONTAL));
 
             textView = new TextView(context);
-            textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             textView.setGravity(Gravity.CENTER);
             textView.setSingleLine(true);
             textView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 4, 0, 0));
+            addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 6, 0, 0));
         }
 
         public void setShape(int shapeId, boolean isSelected) {
@@ -327,11 +344,22 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             if (shapeId >= 0 && shapeId < Md3AvatarShapes.SHAPE_NAMES.length) {
                 textView.setText(Md3AvatarShapes.SHAPE_NAMES[shapeId]);
             }
+
+            int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accentColor == 0) {
+                accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText);
+            }
+
             if (isSelected) {
-                textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
+                bgDrawable.setColor(Theme.multAlpha(accentColor, 0.14f));
+                bgDrawable.setStroke(AndroidUtilities.dp(2), accentColor);
+                textView.setTextColor(accentColor);
                 textView.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
             } else {
-                textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+                int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+                bgDrawable.setColor(Theme.multAlpha(textColor, 0.04f));
+                bgDrawable.setStroke(AndroidUtilities.dp(1), Theme.multAlpha(textColor, 0.08f));
+                textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
                 textView.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_REGULAR));
             }
         }
@@ -345,12 +373,9 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         private int shapeId;
         private boolean isSelected;
         private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
         public ShapePreviewView(Context context) {
             super(context);
-            strokePaint.setStyle(Paint.Style.STROKE);
-            strokePaint.setStrokeWidth(AndroidUtilities.dp(2.5f));
         }
 
         public void setShape(int shapeId, boolean isSelected) {
@@ -366,24 +391,25 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             int h = getHeight();
             if (w <= 0 || h <= 0) return;
 
-            float padding = isSelected ? AndroidUtilities.dp(4) : AndroidUtilities.dp(2);
+            float padding = AndroidUtilities.dp(2);
             float drawW = w - padding * 2;
             float drawH = h - padding * 2;
 
-            int accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText);
-            int inactiveColor = Theme.getColor(Theme.key_avatar_backgroundBlue);
+            int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accentColor == 0) {
+                accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText);
+            }
 
-            fillPaint.setColor(isSelected ? accentColor : inactiveColor);
-            fillPaint.setAlpha(isSelected ? 255 : 200);
+            if (isSelected) {
+                fillPaint.setColor(accentColor);
+                fillPaint.setAlpha(255);
+            } else {
+                fillPaint.setColor(accentColor);
+                fillPaint.setAlpha(110);
+            }
 
             Path path = Md3AvatarShapes.getShapePath(shapeId, padding, padding, drawW, drawH);
             canvas.drawPath(path, fillPaint);
-
-            if (isSelected) {
-                strokePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
-                strokePaint.setAlpha(180);
-                canvas.drawPath(path, strokePaint);
-            }
         }
     }
 }
