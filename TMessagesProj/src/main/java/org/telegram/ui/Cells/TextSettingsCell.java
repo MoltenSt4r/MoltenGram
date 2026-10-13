@@ -148,30 +148,56 @@ public class TextSettingsCell extends FrameLayout {
         setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), cellHeight + (needDivider ? 1 : 0));
 
         int availableWidth = getMeasuredWidth() - getPaddingLeft() - getPaddingRight() - AndroidUtilities.dp(34);
-        int width = betterLayout ? availableWidth : availableWidth / 2;
-        if (valueImageView.getVisibility() == VISIBLE) {
-            valueImageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
-        }
+        int contentWidth = availableWidth;
 
         if (imageView.getVisibility() == VISIBLE) {
             if (imageViewIsColorful) {
                 imageView.measure(MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(28), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(28), MeasureSpec.EXACTLY));
             } else {
-                imageView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.AT_MOST));
+                imageView.measure(MeasureSpec.makeMeasureSpec(availableWidth / 2, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.AT_MOST));
             }
-            if (betterLayout) width -= imageView.getMeasuredWidth() + AndroidUtilities.dp(8);
+            contentWidth -= (imageView.getMeasuredWidth() > 0 ? imageView.getMeasuredWidth() : AndroidUtilities.dp(28)) + AndroidUtilities.dp(16);
         }
 
         if (valueBackupImageView != null) {
             valueBackupImageView.measure(MeasureSpec.makeMeasureSpec(valueBackupImageView.getLayoutParams().height, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(valueBackupImageView.getLayoutParams().width, MeasureSpec.EXACTLY));
-            if (betterLayout) width -= valueBackupImageView.getMeasuredWidth() + AndroidUtilities.dp(8);
+            contentWidth -= valueBackupImageView.getMeasuredWidth() + AndroidUtilities.dp(8);
         }
+
+        if (valueImageView.getVisibility() == VISIBLE) {
+            valueImageView.measure(MeasureSpec.makeMeasureSpec(contentWidth / 2, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+            contentWidth -= valueImageView.getMeasuredWidth() + AndroidUtilities.dp(8);
+        }
+
+        if (contentWidth < AndroidUtilities.dp(32)) {
+            contentWidth = AndroidUtilities.dp(32);
+        }
+
         if (valueTextView.getVisibility() == VISIBLE) {
-            valueTextView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
-            if (betterLayout) {
-                width -= valueTextView.getMeasuredWidth() + AndroidUtilities.dp(8);
+            textView.measure(MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+            int titleWanted = textView.getMeasuredWidth();
+
+            valueTextView.measure(MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+            int valueWanted = valueTextView.getMeasuredWidth();
+
+            int spacing = AndroidUtilities.dp(12);
+            if (titleWanted + valueWanted + spacing <= contentWidth) {
+                textView.measure(MeasureSpec.makeMeasureSpec(titleWanted, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
             } else {
-                width = availableWidth - valueTextView.getMeasuredWidth() - AndroidUtilities.dp(8);
+                int maxTitleWidth = (int) (contentWidth * 0.58f);
+                int maxValueWidth = contentWidth - maxTitleWidth - spacing;
+
+                if (titleWanted <= maxTitleWidth) {
+                    int remValue = contentWidth - titleWanted - spacing;
+                    valueTextView.measure(MeasureSpec.makeMeasureSpec(remValue, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+                    textView.measure(MeasureSpec.makeMeasureSpec(titleWanted, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+                } else if (valueWanted <= maxValueWidth) {
+                    int remTitle = contentWidth - valueWanted - spacing;
+                    textView.measure(MeasureSpec.makeMeasureSpec(remTitle, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+                } else {
+                    textView.measure(MeasureSpec.makeMeasureSpec(maxTitleWidth, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+                    valueTextView.measure(MeasureSpec.makeMeasureSpec(maxValueWidth, MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
+                }
             }
 
             if (valueImageView.getVisibility() == VISIBLE) {
@@ -183,9 +209,8 @@ public class TextSettingsCell extends FrameLayout {
                 }
             }
         } else {
-            width = availableWidth;
+            textView.measure(MeasureSpec.makeMeasureSpec(contentWidth, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
         }
-        textView.measure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(getMeasuredHeight(), MeasureSpec.EXACTLY));
     }
 
     @Override

@@ -121,7 +121,8 @@ public class TextCheckCell extends FrameLayout {
         textView.setTextColor(Theme.getColor(dialog ? Theme.key_dialogTextBlack : Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 70 : padding, 0, LocaleController.isRTL ? padding : 70, 0));
+        textView.setEllipsize(TextUtils.TruncateAt.END);
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 80 : padding, 0, LocaleController.isRTL ? padding : 80, 0));
 
         valueTextView = new TextView(context);
         valueTextView.setTypeface(AndroidUtilities.regular());
@@ -133,7 +134,7 @@ public class TextCheckCell extends FrameLayout {
         valueTextView.setSingleLine(true);
         valueTextView.setPadding(0, 0, 0, 0);
         valueTextView.setEllipsize(TextUtils.TruncateAt.END);
-        addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 70 : padding, 35, LocaleController.isRTL ? padding : 70, 0));
+        addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 80 : padding, 35, LocaleController.isRTL ? padding : 80, 0));
 
         checkBox = new Switch(context, resourcesProvider);
         checkBox.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
@@ -236,10 +237,12 @@ public class TextCheckCell extends FrameLayout {
             textView.setLines(0);
             textView.setMaxLines(0);
             textView.setSingleLine(false);
+            textView.setEllipsize(null);
         } else {
             textView.setLines(1);
             textView.setMaxLines(1);
             textView.setSingleLine(true);
+            textView.setEllipsize(TextUtils.TruncateAt.END);
         }
         wrapText = isNekoCell;
         isMultiline = false;
@@ -275,11 +278,11 @@ public class TextCheckCell extends FrameLayout {
 
         textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
         removeView(textView);
-        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 70 : textPadding, 0, LocaleController.isRTL ? textPadding : 70, 0));
+        addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 80 : textPadding, 0, LocaleController.isRTL ? textPadding : 80, 0));
 
         valueTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         removeView(valueTextView);
-        addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 70 : textPadding, 35, LocaleController.isRTL ? textPadding : 70, 0));
+        addView(valueTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, LocaleController.isRTL ? 80 : textPadding, 35, LocaleController.isRTL ? textPadding : 80, 0));
 
         removeView(checkBox);
         addView(checkBox, LayoutHelper.createFrame(37, 20, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 22, 0, 22, 0));
@@ -586,11 +589,11 @@ public class TextCheckCell extends FrameLayout {
             int restored = AndroidUtilities.dp(defaultPaddingDp);
             padding = defaultPaddingDp;
             MarginLayoutParams textParams = (MarginLayoutParams) textView.getLayoutParams();
-            textParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(70) : restored;
-            textParams.rightMargin = LocaleController.isRTL ? restored : AndroidUtilities.dp(70);
+            textParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(80) : restored;
+            textParams.rightMargin = LocaleController.isRTL ? restored : AndroidUtilities.dp(80);
             MarginLayoutParams valueParams = (MarginLayoutParams) valueTextView.getLayoutParams();
-            valueParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(70) : restored;
-            valueParams.rightMargin = LocaleController.isRTL ? restored : AndroidUtilities.dp(70);
+            valueParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(80) : restored;
+            valueParams.rightMargin = LocaleController.isRTL ? restored : AndroidUtilities.dp(80);
             return;
         }
         if (imageView == null) {
@@ -603,11 +606,11 @@ public class TextCheckCell extends FrameLayout {
         int iconPadding = AndroidUtilities.dp(71);
         padding = iconPadding;
         MarginLayoutParams textParams = (MarginLayoutParams) textView.getLayoutParams();
-        textParams.leftMargin = LocaleController.isRTL ? textParams.leftMargin : iconPadding;
-        textParams.rightMargin = LocaleController.isRTL ? iconPadding : textParams.rightMargin;
+        textParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(80) : iconPadding;
+        textParams.rightMargin = LocaleController.isRTL ? iconPadding : AndroidUtilities.dp(80);
         MarginLayoutParams valueParams = (MarginLayoutParams) valueTextView.getLayoutParams();
-        valueParams.leftMargin = LocaleController.isRTL ? valueParams.leftMargin : iconPadding;
-        valueParams.rightMargin = LocaleController.isRTL ? iconPadding : valueParams.rightMargin;
+        valueParams.leftMargin = LocaleController.isRTL ? AndroidUtilities.dp(80) : iconPadding;
+        valueParams.rightMargin = LocaleController.isRTL ? iconPadding : AndroidUtilities.dp(80);
 
         imageView.setVisibility(VISIBLE);
         imageView.setImageResource(resId);

@@ -271,6 +271,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int wideChannelPostsPreviewRow;
     private int wideChannelPostsRow;
     private int wideFeedPostsRow;
+    private int feedSettingsRow;
     private int channelPostsDividerRow;
 
     // Camera
@@ -549,6 +550,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         wideChannelPostsPreviewRow = addRow("wideChannelPostsPreview");
         wideChannelPostsRow = addRow("wideChannelPosts");
         wideFeedPostsRow = addRow("wideFeedPosts");
+        feedSettingsRow = addRow("feedSettings");
         channelPostsDividerRow = addRow();
 
         cameraHeaderRow = addRow("cameraHeader");
@@ -1520,6 +1522,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else if (position == aiChatRow) {
             presentFragment(new app.exteraless.ai.ui.AiSettingsActivity());
             return;
+        } else if (position == feedSettingsRow) {
+            presentFragment(new app.exteraless.feed.ui.FeedChannelsActivity());
+            return;
         } else if (position == openLinkConfirmationRow) {
             showOptions(view, openLinkConfirmationOptions(), index -> {
                 setOpenLinkConfirmation(index);
@@ -2451,7 +2456,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                         ChatsConfig.wideChannelPosts.Bool(), true, true);
             } else if (position == wideFeedPostsRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsWideFeedPosts),
-                        ChatsConfig.wideFeedPosts.Bool(), false, true);
+                        ChatsConfig.wideFeedPosts.Bool(), true, true);
             } else if (position == groupedMessageMenuRow) {
                 cell.setTextAndCheck(getString(R.string.GroupedMessageMenu), NaConfig.INSTANCE.getGroupedMessageMenu().Bool(), false);
             } else if (position == rememberLastUsedCameraRow) {
@@ -2517,6 +2522,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == chatSettingsRow) {
                 cell.setTextAndIcon(getString(R.string.OEChatsChatSettings), R.drawable.msg_discussion, false);
                 cell.setSubtitle(getString(R.string.OEChatsChatSettingsInfo));
+            } else if (position == feedSettingsRow) {
+                cell.setTextAndIcon(getString(R.string.FeedSettings), R.drawable.ic_feed, false);
+                cell.setSubtitle(getString(R.string.FeedChannelsInfo));
             }
             // Обе строки двухстрочные: подпись под заголовком, высота 64,
             // отступ текста от иконки 60. Ставится после setTextAndIcon —
@@ -2617,7 +2625,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
-            if (position == aiChatRow || position == chatSettingsRow) return TYPE_TEXT;
+            if (position == aiChatRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
             if (isGroupHeader(position)) return TYPE_EXPANDABLE_SWITCH;
             if (groupHeaderFor(position) != -1) return TYPE_ROUND_CHECK;
             if (isSettings(position)) return TYPE_SETTINGS;

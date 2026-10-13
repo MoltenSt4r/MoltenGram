@@ -31,9 +31,12 @@ import org.telegram.ui.LaunchActivity;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 
 import kotlin.text.StringsKt;
@@ -54,6 +57,30 @@ public final class SettingsBackupHelper {
         return backupSettingsJson(isCloud, indentSpaces, true);
     }
 
+    private static final Set<String> SAFE_MAINCONFIG_KEYS = new HashSet<>(Arrays.asList(
+            "saveIncomingPhotos", "noSoundHintShowed", "directShareHash",
+            "useThreeLinesLayout", "archiveHidden", "distanceSystemType",
+            "loopStickers", "keepMedia", "noStatusBar", "lastKeepMediaCheckTime",
+            "searchMessagesAsListHintShows", "searchMessagesAsListUsed",
+            "stickersReorderingHintUsed", "textSelectionHintShows",
+            "scheduledOrNoSoundHintShows", "lockRecordAudioVideoHint",
+            "disableVoiceAudioEffects", "chatSwipeAction", "ChatSwipeAction",
+            "selectedAutoNightType", "lang_code", "web_restricted_domains2",
+            "fons_size", "bubbleRadius", "iv_font_size", "allowBigEmoji",
+            "useSystemEmoji", "useSystemBoldFont", "forceForumTabs",
+            "suggestStickers", "suggestAnimatedEmoji", "repeatMode"
+    ));
+
+    private static boolean isKnownLongKey(String key) {
+        return "scheduledOrNoSoundHintSeenAt".equals(key)
+                || "scheduledHintSeenAt".equals(key)
+                || "lastUpdateCheckTime".equals(key)
+                || "appUpdateCheckTime".equals(key)
+                || "pushLastReceivedTime".equals(key)
+                || "passcodeRetryInMs".equals(key)
+                || "lastUptimeMillis".equals(key);
+    }
+
     public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys) throws JSONException {
 
         JSONObject configJson = new JSONObject();
@@ -66,11 +93,13 @@ public final class SettingsBackupHelper {
         userconfig.add("useFingerprint");
         spToJSON("userconfing", configJson, userconfig::contains, isCloud);
 
-        // Telegram main settings - save all settings except device-specific push secrets
-        spToJSON("mainconfig", configJson, key -> !isDeviceSpecificPushKey(key), includeApiKeys);
+        // Telegram main settings - save safe UI settings
+        spToJSON("mainconfig", configJson, SAFE_MAINCONFIG_KEYS::contains, includeApiKeys);
 
-        // Themes
-        spToJSON("themeconfig", configJson, null);
+        // Themes - only local backups, not cloud
+        if (!isCloud) {
+            spToJSON("themeconfig", configJson, null);
+        }
 
         // Notifications
         spToJSON("Notifications", configJson, null);
@@ -251,7 +280,7 @@ public final class SettingsBackupHelper {
                         key = StringsKt.substringBeforeLast(key, "_float", key);
                         isFloat = true;
                     }
-                    if (isLong) {
+                    if (isLong || isKnownLongKey(key)) {
                         editor.putLong(key, value.getAsLong());
                     } else if (isFloat) {
                         editor.putFloat(key, value.getAsFloat());

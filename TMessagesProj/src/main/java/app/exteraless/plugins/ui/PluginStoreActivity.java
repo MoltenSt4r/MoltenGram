@@ -1407,18 +1407,29 @@ public class PluginStoreActivity extends BaseFragment {
     }
 
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
+        Context context = getContext();
+        if (context == null) {
+            context = getParentActivity();
+        }
+        if (context == null) {
+            return;
+        }
+
         List<StorePlugin> list = getFilteredPlugins();
         if (list.isEmpty()) {
             if (loading) {
                 items.add(UItem.asShadow(getString(R.string.PluginsStoreLoading)));
             } else {
-                items.add(UItem.asCustom(createAuroraEmptyCell(getContext())));
+                View emptyView = createAuroraEmptyCell(context);
+                if (emptyView != null) {
+                    items.add(UItem.asCustom(emptyView));
+                }
             }
             return;
         }
 
         for (StorePlugin p : list) {
-            StorePluginCell cell = new StorePluginCell(getContext());
+            StorePluginCell cell = new StorePluginCell(context);
             cell.bind(p, pluginDelegate);
             UItem item = UItem.asCustom(cell);
             item.object = p;
@@ -1427,6 +1438,9 @@ public class PluginStoreActivity extends BaseFragment {
     }
 
     private View createAuroraEmptyCell(Context context) {
+        if (context == null) {
+            return null;
+        }
         LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setGravity(Gravity.CENTER);
@@ -1770,6 +1784,9 @@ public class PluginStoreActivity extends BaseFragment {
     }
 
     private void updateRows() {
+        if (getContext() == null && getParentActivity() == null) {
+            return;
+        }
         if (listView != null && listView.adapter != null) {
             listView.adapter.update(true);
         }

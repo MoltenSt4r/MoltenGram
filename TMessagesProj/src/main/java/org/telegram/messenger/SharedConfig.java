@@ -636,6 +636,23 @@ public class SharedConfig {
         return value;
     }
 
+    public static long getLongSafe(SharedPreferences preferences, String key, long defValue) {
+        try {
+            return preferences.getLong(key, defValue);
+        } catch (ClassCastException e) {
+            try {
+                Object val = preferences.getAll().get(key);
+                if (val instanceof Number) {
+                    long lVal = ((Number) val).longValue();
+                    preferences.edit().remove(key).putLong(key, lVal).apply();
+                    return lVal;
+                }
+            } catch (Exception ignore) {
+            }
+            return defValue;
+        }
+    }
+
     public static void loadConfig() {
         synchronized (sync) {
             if (configLoaded || ApplicationLoader.applicationContext == null) {
@@ -649,8 +666,8 @@ public class SharedConfig {
             passcodeHash = preferences.getString("passcodeHash1", "");
             appLocked = preferences.getBoolean("appLocked", false);
             passcodeType = preferences.getInt("passcodeType", 0);
-            passcodeRetryInMs = preferences.getLong("passcodeRetryInMs", 0);
-            lastUptimeMillis = preferences.getLong("lastUptimeMillis", 0);
+            passcodeRetryInMs = getLongSafe(preferences, "passcodeRetryInMs", 0);
+            lastUptimeMillis = getLongSafe(preferences, "lastUptimeMillis", 0);
             badPasscodeTries = preferences.getInt("badPasscodeTries", 0);
             autoLockIn = preferences.getInt("autoLockIn", 60 * 60);
             lastPauseTime = preferences.getInt("lastPauseTime", 0);
@@ -660,7 +677,7 @@ public class SharedConfig {
             pushString = preferences.getString("pushString2", "");
             pushType = preferences.getInt("pushType", PushListenerController.PUSH_TYPE_FIREBASE);
             pushStatSent = preferences.getBoolean("pushStatSent", false);
-            pushLastReceivedTime = preferences.getLong("pushLastReceivedTime", 0);
+            pushLastReceivedTime = getLongSafe(preferences, "pushLastReceivedTime", 0);
             passportConfigJson = preferences.getString("passportConfigJson", "");
             passportConfigHash = preferences.getInt("passportConfigHash", 0);
             storageCacheDir = preferences.getString("storageCacheDir", null);
@@ -681,7 +698,7 @@ public class SharedConfig {
             } else {
                 passcodeSalt = new byte[0];
             }
-            lastUpdateCheckTime = preferences.getLong("appUpdateCheckTime", System.currentTimeMillis());
+            lastUpdateCheckTime = getLongSafe(preferences, "appUpdateCheckTime", System.currentTimeMillis());
             try {
                 String update = preferences.getString("appUpdate", null);
                 if (update != null) {
@@ -777,9 +794,9 @@ public class SharedConfig {
             storiesIntroShown = preferences.getBoolean("storiesIntroShown", false);
             textSelectionHintShows = preferences.getInt("textSelectionHintShows", 0);
             scheduledOrNoSoundHintShows = preferences.getInt("scheduledOrNoSoundHintShows", 0);
-            scheduledOrNoSoundHintSeenAt = preferences.getLong("scheduledOrNoSoundHintSeenAt", 0);
+            scheduledOrNoSoundHintSeenAt = getLongSafe(preferences, "scheduledOrNoSoundHintSeenAt", 0);
             scheduledHintShows = preferences.getInt("scheduledHintShows", 0);
-            scheduledHintSeenAt = preferences.getLong("scheduledHintSeenAt", 0);
+            scheduledHintSeenAt = getLongSafe(preferences, "scheduledHintSeenAt", 0);
             forwardingOptionsHintShown = preferences.getBoolean("forwardingOptionsHintShown", false);
             replyingOptionsHintShown = preferences.getBoolean("replyingOptionsHintShown", false);
             lockRecordAudioVideoHint = preferences.getInt("lockRecordAudioVideoHint", 0);
