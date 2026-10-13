@@ -1047,6 +1047,31 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private MessageObject.GroupedMessages currentMessagesGroup;
     private MessageObject.GroupedMessagePosition currentPosition;
     private boolean groupPhotoInvisible;
+    private app.exteraless.appearance.Md3MediaCarouselView md3MediaCarouselView;
+
+    public boolean isSiblingGroupCarouselMessage() {
+        if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
+            MessageObject primary = currentMessagesGroup.findPrimaryMessageObject();
+            if (primary != null && currentMessageObject != null) {
+                return primary.getId() != currentMessageObject.getId();
+            }
+            return !currentMessagesGroup.messages.isEmpty() && currentMessagesGroup.messages.get(0).getId() != currentMessageObject.getId();
+        }
+        return false;
+    }
+
+    public void didPressCarouselItem(MessageObject message) {
+        if (delegate != null && message != null) {
+            MessageObject oldMsg = currentMessageObject;
+            currentMessageObject = message;
+            try {
+                delegate.didPressImage(this, 0, 0, false);
+            } finally {
+                currentMessageObject = oldMsg;
+            }
+        }
+    }
+
     public final ReactionsLayoutInBubble reactionsLayoutInBubble = new ReactionsLayoutInBubble(this);
     public final GiveawayMessageCell giveawayMessageCell = new GiveawayMessageCell(this);
     public final GiveawayResultsMessageCell giveawayResultsMessageCell = new GiveawayResultsMessageCell(this);
@@ -7026,6 +7051,24 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentMessagesGroup = null;
                 currentPosition = null;
             }
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
+                if (!isSiblingGroupCarouselMessage()) {
+                    if (md3MediaCarouselView == null) {
+                        md3MediaCarouselView = new app.exteraless.appearance.Md3MediaCarouselView(getContext());
+                        addView(md3MediaCarouselView);
+                    }
+                    md3MediaCarouselView.setVisibility(VISIBLE);
+                    md3MediaCarouselView.setGroup(currentMessagesGroup, this);
+                } else {
+                    if (md3MediaCarouselView != null) {
+                        md3MediaCarouselView.setVisibility(GONE);
+                    }
+                }
+            } else {
+                if (md3MediaCarouselView != null) {
+                    md3MediaCarouselView.setVisibility(GONE);
+                }
+            }
             if (currentMessagesGroup == null || currentMessagesGroup.isDocuments) {
                 drawPinnedTop = pinnedTop;
                 drawPinnedBottom = pinnedBottom;
@@ -10297,6 +10340,15 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             photoWidth += dp(10);
                         }
                         photoHeight = h;
+                        if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
+                            int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(16)), (int) (AndroidUtilities.displaySize.x * 0.92f));
+                            if (availableWidth <= 0) {
+                                availableWidth = AndroidUtilities.dp(300);
+                            }
+                            photoWidth = availableWidth;
+                            photoHeight = AndroidUtilities.dp(240);
+                            backgroundWidth = photoWidth + dp(8);
+                        }
                         if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
                             widthForCaption += photoWidth - dp(15);
                         }
@@ -10735,6 +10787,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (currentMessageObject.isDice()) {
                     totalHeight += dp(21);
                     additionalTimeOffsetY = dp(21);
+                }
+                if (isSiblingGroupCarouselMessage()) {
+                    totalHeight = 0;
                 }
 
                 int additionalTop = 0;
@@ -13967,6 +14022,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        if (isSiblingGroupCarouselMessage()) {
+            setMeasuredDimension(0, 0);
+            return;
+        }
         if (currentMessageObject != null && (currentMessageObject.checkLayout() || lastHeight != AndroidUtilities.displaySize.y)) {
             inLayout = true;
             MessageObject messageObject = currentMessageObject;
@@ -13989,6 +14048,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             isWidthAdaptive() ? getBoundsRight() - getBoundsLeft() : MeasureSpec.getSize(widthMeasureSpec),
             resultHeight
         );
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            md3MediaCarouselView.measure(
+                MeasureSpec.makeMeasureSpec((int) photoImage.getImageWidth(), MeasureSpec.EXACTLY),
+                MeasureSpec.makeMeasureSpec((int) photoImage.getImageHeight(), MeasureSpec.EXACTLY)
+            );
+        }
     }
 
     private int additionalPaddingHeight;
@@ -14478,6 +14543,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 videoButtonY = (int) (photoImage.getImageY() + dp(8));
                 videoRadialProgress.setProgressRect(videoButtonX, videoButtonY, videoButtonX + dp(24), videoButtonY + dp(24));
             }
+        }
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            int cx = (int) photoImage.getImageX();
+            int cy = (int) photoImage.getImageY();
+            int cw = (int) photoImage.getImageWidth();
+            int ch = (int) photoImage.getImageHeight();
+            md3MediaCarouselView.layout(cx, cy, cx + cw, cy + ch);
         }
     }
 
@@ -17003,6 +17075,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private boolean allowDrawPhotoImage() {
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            return false;
+        }
         return !currentMessageObject.hasMediaSpoilers() || currentMessageObject.isMediaSpoilersRevealed || mediaSpoilerRevealProgress != 0f || blurredPhotoImage.getBitmap() == null;
     }
 
@@ -20665,7 +20740,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
     @SuppressLint("WrongCall")
     public void drawInternal(Canvas canvas) {
-        if (currentMessageObject == null) {
+        if (currentMessageObject == null || isSiblingGroupCarouselMessage()) {
             return;
         }
         if (shouldTranslucentDeleted() && ayuDeleted) {

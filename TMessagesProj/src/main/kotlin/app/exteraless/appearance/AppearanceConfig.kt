@@ -58,6 +58,33 @@ object AppearanceConfig {
     val singleCornerRadius =
         addConfig("OEAppearanceSingleCornerRadius", ConfigItem.configTypeBool, false)
 
+    // ---- MD3 Avatar Shapes per chat type ----
+
+    @JvmField
+    val avatarShapeUsers =
+        addConfig("OEAppearanceAvatarShapeUsers", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val avatarShapeBots =
+        addConfig("OEAppearanceAvatarShapeBots", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val avatarShapeGroups =
+        addConfig("OEAppearanceAvatarShapeGroups", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val avatarShapeChannels =
+        addConfig("OEAppearanceAvatarShapeChannels", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val avatarShapeSelf =
+        addConfig("OEAppearanceAvatarShapeSelf", ConfigItem.configTypeInt, 0)
+
+    /** Отображать группы фотографий/видео как карусель Material 3. */
+    @JvmField
+    val mediaGroupCarousel =
+        addConfig("OEAppearanceMediaGroupCarousel", ConfigItem.configTypeBool, false)
+
     // ---- Список чатов ----
 
     /** Мини-аватарки отправителей в списке чатов. */
@@ -754,6 +781,64 @@ object AppearanceConfig {
     fun singleCornerRadius(): Boolean {
         ensureLoaded()
         return singleCornerRadius.Bool()
+    }
+
+    @JvmStatic
+    fun avatarShapeUsers(): Int {
+        ensureLoaded()
+        return avatarShapeUsers.Int()
+    }
+
+    @JvmStatic
+    fun avatarShapeBots(): Int {
+        ensureLoaded()
+        return avatarShapeBots.Int()
+    }
+
+    @JvmStatic
+    fun avatarShapeGroups(): Int {
+        ensureLoaded()
+        return avatarShapeGroups.Int()
+    }
+
+    @JvmStatic
+    fun avatarShapeChannels(): Int {
+        ensureLoaded()
+        return avatarShapeChannels.Int()
+    }
+
+    @JvmStatic
+    fun avatarShapeSelf(): Int {
+        ensureLoaded()
+        return avatarShapeSelf.Int()
+    }
+
+    @JvmStatic
+    fun mediaGroupCarousel(): Boolean {
+        ensureLoaded()
+        return mediaGroupCarousel.Bool()
+    }
+
+    @JvmStatic
+    fun getAvatarShape(peerType: Int): Int {
+        ensureLoaded()
+        return when (peerType) {
+            Md3AvatarShapes.PEER_TYPE_BOT -> avatarShapeBots.Int()
+            Md3AvatarShapes.PEER_TYPE_GROUP -> avatarShapeGroups.Int()
+            Md3AvatarShapes.PEER_TYPE_CHANNEL -> avatarShapeChannels.Int()
+            Md3AvatarShapes.PEER_TYPE_SELF -> avatarShapeSelf.Int()
+            else -> avatarShapeUsers.Int()
+        }
+    }
+
+    @JvmStatic
+    fun hasAnyCustomAvatarShape(): Boolean {
+        ensureLoaded()
+        return avatarShapeUsers.Int() != 0 ||
+                avatarShapeBots.Int() != 0 ||
+                avatarShapeGroups.Int() != 0 ||
+                avatarShapeChannels.Int() != 0 ||
+                avatarShapeSelf.Int() != 0
     }
 
     @JvmStatic

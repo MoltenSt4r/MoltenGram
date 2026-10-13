@@ -103,6 +103,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     // Avatar corners
     private int avatarCornersPreviewRow;
     private int singleCornerRadiusRow;
+    private int md3AvatarShapesRow;
     private int avatarsDividerRow;
 
     // Chat list
@@ -121,6 +122,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3ListItemsRow;
     private int md3PlayerRow;
     private int md3MiniPlayerRow;
+    private int mediaGroupCarouselRow;
     private boolean md3Expanded;
     private int iosGroupRow;
     private int iosNavBarRow;
@@ -197,6 +199,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
 
         avatarCornersPreviewRow = addRow("avatarCorners");
         singleCornerRadiusRow = addRow("singleCornerRadius");
+        md3AvatarShapesRow = addRow("md3AvatarShapes");
         avatarsDividerRow = addRow();
 
         chatListHeaderRow = addRow("chatListHeader");
@@ -245,9 +248,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ListItemsRow = addRow("md3ListItems");
             md3PlayerRow = addRow("md3Player");
             md3MiniPlayerRow = addRow("md3MiniPlayer");
+            mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
-            md3PlayerRow = md3MiniPlayerRow = -1;
+            md3PlayerRow = md3MiniPlayerRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -576,7 +580,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == iconPacksRow) {
+        if (position == md3AvatarShapesRow) {
+            presentFragment(new app.exteraless.appearance.Md3AvatarShapesActivity());
+            return;
+        } else if (position == iconPacksRow) {
             presentFragment(new IconPacksActivity());
             return;
         } else if (position == appIconRow) {
@@ -652,6 +659,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == md3MiniPlayerRow) {
             AppearanceConfig.md3MiniPlayer.setConfigBool(!AppearanceConfig.md3MiniPlayer.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.md3MiniPlayer.Bool());
+            return;
+        } else if (position == mediaGroupCarouselRow) {
+            AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
+            rebuildAllAndSelf(view, AppearanceConfig.mediaGroupCarousel.Bool());
             return;
         } else if (position == iosGroupRow) {
             iosExpanded = !iosExpanded;
@@ -1094,6 +1105,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3MiniPlayerRow) {
                         cell.setText(getString(R.string.OEAppearanceMd3MiniPlayer), "",
                                 AppearanceConfig.md3MiniPlayer.Bool(), true, true);
+                    } else if (position == mediaGroupCarouselRow) {
+                        cell.setText(getString(R.string.media_group_carousel), "",
+                                AppearanceConfig.mediaGroupCarousel.Bool(), true, true);
                     } else if (position == iosNavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceIosNavigationBarStyle), "",
                                 AppearanceConfig.iosNavigationBarStyle.Bool(), true, true);
@@ -1124,7 +1138,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_SETTINGS: {
                     TextSettingsCell cell = (TextSettingsCell) holder.itemView;
-                    if (position == dividerStyleRow) {
+                    if (position == md3AvatarShapesRow) {
+                        String v = AppearanceConfig.hasAnyCustomAvatarShape()
+                                ? getString(R.string.md3_avatar_shape_custom)
+                                : getString(R.string.md3_avatar_shape_circle);
+                        cell.setTextAndValue(getString(R.string.md3_avatar_shapes), v, true);
+                    } else if (position == dividerStyleRow) {
                         String[] v = {getString(R.string.OEAppearanceDividerHidden), getString(R.string.OEAppearanceDividerLine), getString(R.string.OEAppearanceDividerSegments)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceDividerStyle), v[clamp(AppearanceConfig.dividerStyle.Int(), v.length)], false);
                     } else if (position == glassOutlineRow) {
@@ -1248,6 +1267,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3SwitchRow || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow
                     || position == md3PlayerRow || position == md3MiniPlayerRow
+                    || position == mediaGroupCarouselRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosChatHeaderRow
@@ -1256,7 +1276,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
-                    || position == chipFoldersRow) {
+                    || position == chipFoldersRow || position == md3AvatarShapesRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;

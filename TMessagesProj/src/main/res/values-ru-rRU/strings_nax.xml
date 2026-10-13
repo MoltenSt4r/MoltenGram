@@ -160,6 +160,8 @@
     <string name="AIChatSummary">Саммари чата (ИИ)</string>
     <string name="AIChatSummaryLoading">Генерация саммари...</string>
     <string name="AIChatSummaryNoMessages">Нет сообщений для саммари</string>
+    <string name="AIChatSummarySetupNotice">Для генерации саммари чатов настройте ИИ-модель в настройках ИИ MoltenGram.</string>
+    <string name="AIChatSummaryOpenSettings">Настройки ИИ</string>
     <string name="ConnectFastestProxy">Подключить самый быстрый прокси</string>
     <string name="ConnectedToFastestProxy">Подключен самый быстрый прокси: %1$s (%2$d мс)</string>
     <string name="CloudflareCredentials">Учётные данные Cloudflare</string>
@@ -392,4 +394,16 @@
     <string name="TorExitIpPing">%1$d мс</string>
     <string name="TorExitIpCheckTap">Нажмите для проверки IP</string>
     <string name="TorInfoPrivacy">Встроенный Tor обеспечивает анонимность и стабильный обход блокировок. При активном подключении весь сетевой трафик приложения шифруется и маршрутизируется через распределённую сеть Tor.</string>
+    <string name="md3_avatar_shapes">Формы аватарок Material 3</string>
+    <string name="md3_avatar_shape_users">Пользователи</string>
+    <string name="md3_avatar_shape_bots">Боты</string>
+    <string name="md3_avatar_shape_groups">Группы</string>
+    <string name="md3_avatar_shape_channels">Каналы</string>
+    <string name="md3_avatar_shape_self">Избранное / Мой профиль</string>
+    <string name="md3_avatar_shape_desc">Выберите экспрессивные формы Material Design 3 для аватарок отдельно для каждого типа чатов.</string>
+    <string name="md3_avatar_shape_reset">Сбросить все формы по умолчанию</string>
+    <string name="md3_avatar_shape_circle">Круг</string>
+    <string name="md3_avatar_shape_custom">Настроено</string>
+    <string name="media_group_carousel">Альбомы медиа как карусель</string>
+    <string name="media_group_carousel_desc">Отображать сгруппированные фото и видео в чатах в виде горизонтальной карусели Material Design 3.</string>
 </resources>

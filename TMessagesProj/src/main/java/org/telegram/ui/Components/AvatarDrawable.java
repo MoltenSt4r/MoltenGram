@@ -118,6 +118,16 @@ public class AvatarDrawable extends Drawable {
 
     private int alpha = 255;
     private Theme.ResourcesProvider resourcesProvider;
+
+    public int peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+
+    public void setPeerType(int type) {
+        this.peerType = type;
+    }
+
+    public int getPeerType() {
+        return this.peerType;
+    }
     private boolean invalidateTextLayout;
 
     public AvatarDrawable() {
@@ -221,6 +231,13 @@ public class AvatarDrawable extends Drawable {
 
     public void setInfo(int currentAccount, TLRPC.User user) {
         if (user != null) {
+            if (UserObject.isUserSelf(user)) {
+                peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+            } else if (user.bot) {
+                peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT;
+            } else {
+                peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+            }
             setInfo(user.id, user.first_name, user.last_name, null, user != null && user.color != null ? UserObject.getColorId(user) : null, UserObject.getPeerColorForAvatar(currentAccount, user));
             drawDeleted = UserObject.isDeleted(user);
         }
@@ -252,6 +269,15 @@ public class AvatarDrawable extends Drawable {
 
     public void setAvatarType(int value) {
         avatarType = value;
+        if (avatarType == AVATAR_TYPE_SAVED) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+        } else if (avatarType == AVATAR_TYPE_FILTER_GROUPS) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+        } else if (avatarType == AVATAR_TYPE_FILTER_CHANNELS) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_CHANNEL;
+        } else if (avatarType == AVATAR_TYPE_FILTER_BOTS) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT;
+        }
         rotate45Background = false;
         hasAdvancedGradient = false;
         hasGradient = false;
@@ -345,6 +371,11 @@ public class AvatarDrawable extends Drawable {
     }
     public void setInfo(int currentAccount, TLRPC.Chat chat) {
         if (chat != null) {
+            if (ChatObject.isChannel(chat) && !chat.megagroup) {
+                peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_CHANNEL;
+            } else {
+                peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+            }
             setInfo(chat.id, chat.title, null, null, chat != null && chat.color != null ? ChatObject.getColorId(chat) : null, ChatObject.getPeerColorForAvatar(currentAccount, chat));
         }
     }
@@ -354,6 +385,7 @@ public class AvatarDrawable extends Drawable {
     }
     public void setInfo(int currentAccount, TLRPC.ChatInvite chat) {
         if (chat != null) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
             setInfo(0, chat.title, null, null, chat.chat != null && chat.chat.color != null ? ChatObject.getColorId(chat.chat) : null, ChatObject.getPeerColorForAvatar(currentAccount, chat.chat));
         }
     }
@@ -778,6 +810,13 @@ public class AvatarDrawable extends Drawable {
      */
     private void drawBackgroundShape(Canvas canvas, int size, float scale, Paint paint) {
         final float half = size / 2.0f;
+        int shapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(peerType);
+        if (shapeId > 0) {
+            final float inset = half * (1f - scale);
+            android.graphics.Path path = app.exteraless.appearance.Md3AvatarShapes.getShapePath(shapeId, inset, inset, size - inset * 2, size - inset * 2);
+            canvas.drawPath(path, paint);
+            return;
+        }
         int radius = roundRadius;
         if (radius <= 0 && !app.exteraless.appearance.AppearanceConfig.avatarCornersDefault()) {
             radius = app.exteraless.appearance.AppearanceConfig.getAvatarCorners(size);

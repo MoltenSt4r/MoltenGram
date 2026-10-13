@@ -7362,6 +7362,9 @@ public class ChatActivity extends BaseFragment implements
                         MessageObject message = chatAdapter.getMessages().get(idx);
                         MessageObject.GroupedMessages groupedMessages = getValidGroupedMessage(message);
                         if (groupedMessages != null) {
+                            if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !groupedMessages.isDocuments && groupedMessages.messages.size() > 1) {
+                                return 1000;
+                            }
                             return groupedMessages.getPosition(message).spanSize;
                         }
                     }
@@ -7376,8 +7379,16 @@ public class ChatActivity extends BaseFragment implements
                 outRect.bottom = 0;
                 if (view instanceof ChatMessageCell) {
                     ChatMessageCell cell = (ChatMessageCell) view;
+                    if (cell.isSiblingGroupCarouselMessage()) {
+                        outRect.bottom = 0;
+                        outRect.top = 0;
+                        return;
+                    }
                     MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
                     if (group != null) {
+                        if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !group.isDocuments && group.messages.size() > 1) {
+                            return;
+                        }
                         MessageObject.GroupedMessagePosition position = cell.getCurrentPosition();
                         if (position != null && position.siblingHeights != null) {
                             float maxHeight = Math.max(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y) * 0.5f;
@@ -47838,33 +47849,57 @@ public class ChatActivity extends BaseFragment implements
             return;
         }
 
+        if (!app.exteraless.ai.AiController.canUseAI()) {
+            AlertDialog.Builder setupBuilder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+            setupBuilder.setTitle(LocaleController.getString("AIChatSummary", R.string.AIChatSummary));
+            setupBuilder.setMessage(LocaleController.getString("AIChatSummarySetupNotice", R.string.AIChatSummarySetupNotice));
+            setupBuilder.setPositiveButton(LocaleController.getString("AIChatSummaryOpenSettings", R.string.AIChatSummaryOpenSettings), (d, w) -> {
+                presentFragment(new app.exteraless.ai.ui.AiSettingsActivity());
+            });
+            setupBuilder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(setupBuilder.create());
+            return;
+        }
+
         Bulletin loadingBulletin = BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString("AIChatSummaryLoading", R.string.AIChatSummaryLoading));
         loadingBulletin.show();
 
-        tw.nekomimi.nekogram.translate.source.LLMTranslator.summarizeChat(sb.toString(), (summary, err) -> {
-            if (loadingBulletin != null) {
-                loadingBulletin.hide();
+        String prompt = "Ты персональный помощник. Сделай краткое и понятное саммари следующей переписки в Telegram чате на языке диалога. Выдели главные темы, ключевые решения, важные вопросы и итоги списком по пунктам:\n\n" + sb.toString();
+
+        app.exteraless.ai.network.Client aiClient = new app.exteraless.ai.network.Client.Builder().build();
+        aiClient.getResponse(prompt, false, false, null, new app.exteraless.ai.network.GenerationCallback() {
+            @Override
+            public void onChunk(String chunk) {
             }
-            if (err != null) {
-                String msg = err.getMessage();
-                if (err instanceof UnsupportedOperationException) {
-                    BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString(R.string.ApiKeyNotSet)).show();
-                    tw.nekomimi.nekogram.helpers.TranscribeHelper.openSetup(this);
-                } else {
-                    BulletinFactory.of(this).createErrorBulletin(msg != null ? msg : "AI error").show();
-                }
-                return;
-            }
-            if (summary != null && !summary.isEmpty()) {
-                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
-                builder.setTitle(LocaleController.getString("AIChatSummary", R.string.AIChatSummary));
-                builder.setMessage(AndroidUtilities.replaceTags(summary));
-                builder.setPositiveButton(LocaleController.getString("Copy", R.string.Copy), (dialog, which) -> {
-                    AndroidUtilities.addToClipboard(summary);
-                    BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+
+            @Override
+            public void onResponse(String response) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (loadingBulletin != null) {
+                        loadingBulletin.hide();
+                    }
+                    if (!TextUtils.isEmpty(response)) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+                        builder.setTitle(LocaleController.getString("AIChatSummary", R.string.AIChatSummary));
+                        builder.setMessage(AndroidUtilities.replaceTags(response));
+                        builder.setPositiveButton(LocaleController.getString("Copy", R.string.Copy), (dialog, which) -> {
+                            AndroidUtilities.addToClipboard(response);
+                            BulletinFactory.of(ChatActivity.this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+                        });
+                        builder.setNegativeButton(LocaleController.getString("Close", R.string.Close), null);
+                        showDialog(builder.create());
+                    }
                 });
-                builder.setNegativeButton(LocaleController.getString("Close", R.string.Close), null);
-                showDialog(builder.create());
+            }
+
+            @Override
+            public void onError(int code, String message) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (loadingBulletin != null) {
+                        loadingBulletin.hide();
+                    }
+                    BulletinFactory.of(ChatActivity.this).createErrorBulletin(message != null ? message : "AI error").show();
+                });
             }
         });
     }

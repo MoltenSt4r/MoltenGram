@@ -439,6 +439,27 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             }
             applyRoundRadiusInternal();
         }
+        if (object instanceof TLRPC.User) {
+            TLRPC.User user = (TLRPC.User) object;
+            if (UserObject.isUserSelf(user)) {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+            } else if (user.bot) {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT;
+            } else {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+            }
+        } else if (object instanceof TLRPC.Chat) {
+            TLRPC.Chat chat = (TLRPC.Chat) object;
+            if (ChatObject.isChannel(chat) && !chat.megagroup) {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_CHANNEL;
+            } else {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+            }
+        } else if (object instanceof TLRPC.ChatInvite) {
+            oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+        } else if (avatarDrawable instanceof AvatarDrawable) {
+            oePeerType = ((AvatarDrawable) avatarDrawable).peerType;
+        }
         BitmapDrawable strippedBitmap = null;
         boolean hasStripped = false;
         ImageLocation videoLocation = null;
@@ -1409,7 +1430,18 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                         roundPaint.setAlpha(alpha);
                         roundRect.set(drawRegion);
 
-                        if (isRoundRect && useRoundRadius) {
+                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) : 0;
+                        if (md3ShapeId > 0) {
+                            try {
+                                if (canvas != null) {
+                                    Path shapePath = app.exteraless.appearance.Md3AvatarShapes.getShapePath(md3ShapeId, roundRect.left, roundRect.top, roundRect.width(), roundRect.height());
+                                    canvas.drawPath(shapePath, roundPaint);
+                                }
+                            } catch (Exception e) {
+                                onBitmapException(bitmapDrawable);
+                                FileLog.e(e);
+                            }
+                        } else if (isRoundRect && useRoundRadius) {
                             try {
                                 if (canvas != null) {
                                     if (roundRadius[0] == 0) {
@@ -1519,7 +1551,20 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
 
                         roundPaint.setAlpha(alpha);
 
-                        if (isRoundRect && useRoundRadius) {
+                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) : 0;
+                        if (md3ShapeId > 0) {
+                            try {
+                                if (canvas != null) {
+                                    Path shapePath = app.exteraless.appearance.Md3AvatarShapes.getShapePath(md3ShapeId, roundRect.left, roundRect.top, roundRect.width(), roundRect.height());
+                                    canvas.drawPath(shapePath, roundPaint);
+                                }
+                            } catch (Exception e) {
+                                if (backgroundThreadDrawHolder == null) {
+                                    onBitmapException(bitmapDrawable);
+                                }
+                                FileLog.e(e);
+                            }
+                        } else if (isRoundRect && useRoundRadius) {
                             try {
                                 if (canvas != null) {
                                     if (roundRadius[0] == 0) {
@@ -2009,6 +2054,12 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 currentAlpha = Math.min(currentAlpha + crossfadeByScale * currentAlpha, 1);
             }
 
+            boolean md3Clip = oeIsAvatar && canvas != null && app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) > 0;
+            if (md3Clip) {
+                canvas.save();
+                canvas.clipPath(app.exteraless.appearance.Md3AvatarShapes.getShapePath(app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType), imageX, imageY, imageW, imageH));
+            }
+
             if (drawable != null) {
                 if (crossfadeAlpha != 0) {
                     if (previousAlpha != 1f && (drawable == currentImageDrawable || drawable == currentMediaDrawable) && staticThumbDrawable != null) {
@@ -2102,6 +2153,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 result = true;
             } else {
                 checkAlphaAnimation(animationNotReady, backgroundThreadDrawHolder);
+            }
+
+            if (md3Clip) {
+                canvas.restore();
             }
 
             if (drawable == null && animationNotReady && !drawInBackground) {
@@ -2555,10 +2610,19 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     // когда ресивер уже после setRoundRadius узнает, что рисует аватарку.
     private final int[] oeRequestedRoundRadius = new int[4];
     private boolean oeIsAvatar;
+    private int oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
     private float oeRadiusWidth;
     // openExtera: радиус посчитан вызывающим через AppearanceConfig.getAvatarCorners(сторона) —
     // масштабировать его второй раз нельзя. См. setAvatarCornersApplied.
     private boolean oeAvatarCornersApplied;
+
+    public void setPeerType(int type) {
+        this.oePeerType = type;
+    }
+
+    public int getPeerType() {
+        return this.oePeerType;
+    }
 
     public void setRoundRadius(int[] value) {
         System.arraycopy(value, 0, oeRequestedRoundRadius, 0, Math.min(4, value.length));
