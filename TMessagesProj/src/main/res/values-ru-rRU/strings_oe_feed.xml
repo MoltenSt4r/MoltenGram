@@ -22,4 +22,6 @@
     <string name="FeedAddNewChannels">Добавлять новые каналы</string>
     <string name="FeedAddNewChannelsOnInfo">Новые каналы, на которые вы подписаны, сразу появляются в ленте.</string>
     <string name="FeedAddNewChannelsOffInfo">Новые каналы скрыты, пока вы не отметите их ниже.</string>
+    <string name="FeedInChatMenu">Лента в списке чатов</string>
+    <string name="FeedInChatMenuInfo">Показывать пункт «Лента» наряду с «Избранным» и «Архивом» в меню списка чатов.</string>
 </resources>

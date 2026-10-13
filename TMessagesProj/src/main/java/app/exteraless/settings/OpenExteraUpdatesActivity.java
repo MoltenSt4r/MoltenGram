@@ -59,6 +59,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
     @Override
     public boolean onFragmentCreate() {
+        otaManager.dismissUpdateNotification();
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.appUpdateAvailable);
         return super.onFragmentCreate();
     }

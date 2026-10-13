@@ -271,6 +271,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int wideChannelPostsPreviewRow;
     private int wideChannelPostsRow;
     private int wideFeedPostsRow;
+    private int feedInChatMenuRow;
     private int feedSettingsRow;
     private int channelPostsDividerRow;
 
@@ -550,6 +551,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         wideChannelPostsPreviewRow = addRow("wideChannelPostsPreview");
         wideChannelPostsRow = addRow("wideChannelPosts");
         wideFeedPostsRow = addRow("wideFeedPosts");
+        feedInChatMenuRow = addRow("feedInChatMenu");
         feedSettingsRow = addRow("feedSettings");
         channelPostsDividerRow = addRow();
 
@@ -1615,7 +1617,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 wideChannelPostsPreviewCell.setWide(value, true);
             }
             rebuildChats();
-        } else if (position == wideFeedPostsRow) {
+        } else if (position == wideFeedPostsRow || position == feedInChatMenuRow) {
             rebuildChats();
         } else if (position == showSmallGifRow || position == dateOfForwardedMsgRow) {
             rebuildChats();
@@ -1825,6 +1827,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == groupedMessageMenuRow) return NaConfig.INSTANCE.getGroupedMessageMenu();
         if (position == wideChannelPostsRow) return ChatsConfig.wideChannelPosts;
         if (position == wideFeedPostsRow) return ChatsConfig.wideFeedPosts;
+        if (position == feedInChatMenuRow) return ChatsConfig.showFeedInChatMenu;
         if (position == extendedFpsRow) return ChatsConfig.extendedFramesPerSecond;
         if (position == cameraStabilizationRow) return ChatsConfig.cameraStabilization;
         if (position == cameraMirrorModeRow) return ChatsConfig.cameraMirrorMode;
@@ -2457,6 +2460,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == wideFeedPostsRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsWideFeedPosts),
                         ChatsConfig.wideFeedPosts.Bool(), true, true);
+            } else if (position == feedInChatMenuRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.FeedInChatMenu),
+                        getString(R.string.FeedInChatMenuInfo),
+                        ChatsConfig.showFeedInChatMenu.Bool(), true, true);
             } else if (position == groupedMessageMenuRow) {
                 cell.setTextAndCheck(getString(R.string.GroupedMessageMenu), NaConfig.INSTANCE.getGroupedMessageMenu().Bool(), false);
             } else if (position == rememberLastUsedCameraRow) {

@@ -14199,7 +14199,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                     BackButtonMenuRecent.show(currentAccount, this, optionsItem);
                 });
             }
-            if (hideBottomNavigationBar && NaConfig.INSTANCE.getHideArchive().Bool()) {
+            if (NaConfig.INSTANCE.getHideArchive().Bool()) {
                 io.add(R.drawable.msg_archive, getString(R.string.ArchivedChats), () -> {
                     Bundle args = new Bundle();
                     args.putInt("folderId", 1);
@@ -14211,9 +14211,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 args.putLong("user_id", UserConfig.getInstance(currentAccount).getClientUserId());
                 presentFragment(new ChatActivity(args));
             });
-            io.add(R.drawable.ic_feed, getString(R.string.Feed), () -> {
-                app.exteraless.feed.ui.FeedActivity.presentFeed(this);
-            });
+            if (app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool()) {
+                io.add(R.drawable.ic_feed, getString(R.string.Feed), () -> {
+                    app.exteraless.feed.ui.FeedActivity.presentFeed(this);
+                });
+            }
             }
             if (hideBottomNavigationBar && NaConfig.INSTANCE.getShowAddToBookmark().Bool()) {
                 io.add(R.drawable.msg_fave, getString(R.string.BookmarksManager), () -> presentFragment(new BookmarkManagerActivity()));

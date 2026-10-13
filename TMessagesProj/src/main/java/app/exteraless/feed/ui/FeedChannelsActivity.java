@@ -27,6 +27,7 @@ import java.util.Comparator;
 import java.util.Locale;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.chats.ChatsConfig;
 import app.exteraless.feed.FeedConfig;
 import app.exteraless.feed.FeedController;
 
@@ -51,6 +52,7 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
 
     private static final int ID_BOTTOM_TAB = Integer.MAX_VALUE - 1;
     private static final int ID_UNREAD_COUNTER = Integer.MAX_VALUE - 2;
+    private static final int ID_FEED_IN_CHAT_MENU = Integer.MAX_VALUE - 4;
     private static final int ID_INCLUDE_ARCHIVED = Integer.MAX_VALUE;
     private static final int ID_ADD_NEW_CHANNELS = Integer.MAX_VALUE - 3;
 
@@ -224,6 +226,9 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
             items.add(UItem.asCheck(ID_BOTTOM_TAB, getString(R.string.FeedBottomTab),
                     getString(R.string.FeedBottomTabInfo), true)
                     .setChecked(AppearanceConfig.showFeedTab()));
+            items.add(UItem.asCheck(ID_FEED_IN_CHAT_MENU, getString(R.string.FeedInChatMenu),
+                    getString(R.string.FeedInChatMenuInfo), true)
+                    .setChecked(ChatsConfig.showFeedInChatMenu.Bool()));
             items.add(UItem.asCheck(ID_UNREAD_COUNTER, getString(R.string.FeedUnreadCounter))
                     .setChecked(AppearanceConfig.showFeedUnreadCounter()));
             items.add(UItem.asCheck(ID_INCLUDE_ARCHIVED, getString(R.string.FeedIncludeArchived),
@@ -269,6 +274,9 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
             update();
             NotificationCenter.getInstance(currentAccount)
                     .postNotificationName(NotificationCenter.feedTabVisibleToggled);
+        } else if (item.id == ID_FEED_IN_CHAT_MENU) {
+            ChatsConfig.showFeedInChatMenu.toggleConfigBool();
+            update();
         } else if (item.id == ID_UNREAD_COUNTER) {
             AppearanceConfig.showFeedUnreadCounter.toggleConfigBool();
             update();

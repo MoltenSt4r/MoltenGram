@@ -158,11 +158,8 @@ public class SettingsHelper {
         if (path == null) {
             return false;
         }
-        if (path.startsWith(HOST_NAGRAM + "/")) {
+        if (path.startsWith(HOST_NAGRAM + "/") || path.startsWith(HOST_MOLTENGRAM + "/")) {
             return true;
-        }
-        if (path.startsWith(HOST_MOLTENGRAM + "/")) {
-            return EXTERALESS_SCREENS.contains(path.substring(HOST_MOLTENGRAM.length() + 1));
         }
         if (path.startsWith(HOST_EXTERAMS + "/")) {
             return EXTERALESS_SCREENS.contains(path.substring(HOST_EXTERAMS.length() + 1));
@@ -181,35 +178,39 @@ public class SettingsHelper {
             case "moltengram":
             case "exteraless":
             case "exterams":
-                return HOST_NAGRAM + "/settings";
+                return HOST_MOLTENGRAM + "/settings";
             case "moltengram_general":
             case "exteraless_general":
             case "exterams_general":
-                return HOST_NAGRAM + "/general";
+                return HOST_MOLTENGRAM + "/general";
             case "moltengram_appearance":
             case "exteraless_appearance":
             case "exterams_appearance":
-                return HOST_NAGRAM + "/appearance";
+                return HOST_MOLTENGRAM + "/appearance";
             case "moltengram_chats":
             case "exteraless_chats":
             case "exterams_chats":
-                return HOST_NAGRAM + "/chats";
+                return HOST_MOLTENGRAM + "/chats";
             case "moltengram_other":
             case "exteraless_other":
             case "exterams_other":
-                return HOST_NAGRAM + "/other";
+                return HOST_MOLTENGRAM + "/other";
             case "moltengram_ayumoments":
             case "exteraless_ayumoments":
             case "exterams_ayumoments":
-                return HOST_NAGRAM + "/ayumoments";
+                return HOST_MOLTENGRAM + "/ayumoments";
             case "pillstack":
-                return HOST_NAGRAM + "/pillstack";
+                return HOST_MOLTENGRAM + "/pillstack";
             case "moltengram_navigation":
             case "exteraless_navigation":
             case "exterams_navigation":
-                return HOST_NAGRAM + "/navigation";
+                return HOST_MOLTENGRAM + "/navigation";
+            case "ota_updates":
+            case "updates":
+            case "update":
+                return HOST_MOLTENGRAM + "/settings";
             default:
-                return HOST_NAGRAM + "/" + key;
+                return HOST_MOLTENGRAM + "/" + key;
         }
     }
 

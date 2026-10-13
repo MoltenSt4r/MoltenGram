@@ -66,6 +66,10 @@ public class NotificationsService extends Service {
     @Override
     public int onStartCommand(Intent intent, int flags, int startId) {
         goForeground();
+        try {
+            app.exteraless.ota.MoltenGramOtaManager.getInstance().checkUpdatesInBackground();
+        } catch (Throwable ignore) {
+        }
         return START_STICKY;
     }
 

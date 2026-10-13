@@ -9,8 +9,10 @@ import android.os.Build;
 import android.provider.Settings;
 import android.text.TextUtils;
 
-import android.widget.Toast;
-
+import android.app.NotificationChannel;
+import android.app.NotificationManager;
+import android.app.PendingIntent;
+import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
 
 import org.json.JSONArray;
@@ -169,6 +171,7 @@ public class MoltenGramOtaManager {
         }
         pendingUpdate = null;
         savePendingUpdateToPrefs(null);
+        dismissUpdateNotification();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
     }
 
@@ -345,6 +348,8 @@ public class MoltenGramOtaManager {
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
                     if (resultUpdate != null) {
+                        showUpdateNotification(resultUpdate);
+
                         // Check if we should auto-download
                         int autoMode = getAutoDownloadMode();
                         if (autoMode == AUTO_DOWNLOAD_ALWAYS || (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi())) {
@@ -738,5 +743,93 @@ public class MoltenGramOtaManager {
         } catch (Exception e) {
             FileLog.e(e);
         }
+    }
+
+    private static final String NOTIFICATION_CHANNEL_UPDATES = "moltengram_updates";
+    private static final int NOTIFICATION_ID_UPDATE = 126101;
+
+    public void showUpdateNotification(OtaUpdate update) {
+        if (update == null || ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        if (!isOtaEnabled()) {
+            return;
+        }
+        Context context = ApplicationLoader.applicationContext;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    NOTIFICATION_CHANNEL_UPDATES,
+                    "MoltenGram Updates",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("Notifications about new MoltenGram versions");
+            nm.createNotificationChannel(channel);
+        }
+
+        Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, NOTIFICATION_ID_UPDATE, intent, flags);
+
+        String title = "Доступно обновление MoltenGram";
+        String contentText = TextUtils.isEmpty(update.title) ? ("Новая версия: " + update.version) : (update.title + " (" + update.version + ")");
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
+                .setSmallIcon(R.drawable.sync_outline_28)
+                .setContentTitle(title)
+                .setContentText(contentText)
+                .setContentIntent(pendingIntent)
+                .setAutoCancel(true)
+                .setColor(0xFF1E713B)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT);
+
+        if (!TextUtils.isEmpty(update.changelog)) {
+            builder.setStyle(new androidx.core.app.NotificationCompat.BigTextStyle()
+                    .setBigContentTitle(title)
+                    .bigText(contentText + "\n\n" + update.changelog));
+        }
+
+        builder.addAction(R.drawable.sync_outline_28, "Обновить", pendingIntent);
+
+        try {
+            nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public void dismissUpdateNotification() {
+        if (ApplicationLoader.applicationContext == null) {
+            return;
+        }
+        try {
+            NotificationManager nm = (NotificationManager) ApplicationLoader.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE);
+            if (nm != null) {
+                nm.cancel(NOTIFICATION_ID_UPDATE);
+            }
+        } catch (Exception ignored) {}
+    }
+
+    public void checkUpdatesInBackground() {
+        if (!isOtaEnabled()) {
+            return;
+        }
+        long lastCheck = getLastCheckTime();
+        long now = System.currentTimeMillis();
+        // Check at most once every 3 hours in background
+        if (now - lastCheck < 3 * 3600 * 1000L) {
+            return;
+        }
+        checkUpdates(false, null, null);
     }
 }

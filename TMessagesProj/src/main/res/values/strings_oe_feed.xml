@@ -22,4 +22,6 @@
     <string name="FeedAddNewChannels">Add New Channels</string>
     <string name="FeedAddNewChannelsOnInfo">New channels you follow appear in the feed automatically.</string>
     <string name="FeedAddNewChannelsOffInfo">New channels stay hidden until you check them below.</string>
+    <string name="FeedInChatMenu">Show in Chat Menu</string>
+    <string name="FeedInChatMenuInfo">Show the Feed shortcut alongside Saved Messages and Archive in the chat list menu.</string>
 </resources>

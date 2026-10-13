@@ -403,6 +403,10 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
                 super.onActivityStarted(activity);
                 if (wasInBackground) {
                     ensureCurrentNetworkGet(true);
+                    try {
+                        app.exteraless.ota.MoltenGramOtaManager.getInstance().checkUpdatesInBackground();
+                    } catch (Throwable ignore) {
+                    }
                 }
             }
         };
