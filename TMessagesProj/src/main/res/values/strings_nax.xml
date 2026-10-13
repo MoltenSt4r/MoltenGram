@@ -29,11 +29,13 @@
     <string name="LlmProviderCerebrasModel" translatable="false">gpt-oss-120b</string>
     <string name="LlmProviderOllamaCloudModel" translatable="false">gemma4:31b</string>
     <string name="LlmProviderOpenRouterModel" translatable="false">openrouter/free</string>
+    <string name="LlmProviderRequestyModel" translatable="false">openai/gpt-4o-mini</string>
     <string name="LlmProviderVercelAIGatewayModel" translatable="false">google/gemma-4-31b-it</string>
     <string name="LlmProviderPreset">Model Provider</string>
     <string name="LlmProviderCustom">Custom</string>
     <string name="LlmProviderOpenAIKey">OpenAI API Key</string>
     <string name="LlmProviderGeminiKey">Gemini API Key</string>
+    <string name="LlmProviderGroqKey">Groq API Key</string>
     <string name="LlmSystemPrompt">System Prompt</string>
     <string name="LlmSystemPromptHint">You are a professional translator.</string>
     <string name="LlmSystemPromptNotice">Define the AI\'s role and behavior.\n\nThis prompt sets the tone, personality, and limitations for the AI. Consider describing what type of assistant the AI should be.</string>
@@ -168,6 +170,12 @@
     <string name="TranscribeProviderAuto">Auto-select</string>
     <string name="TranscribeProviderWorkersAI">Whisper (Workers AI)</string>
     <string name="TranscribeProviderGemini">Gemini</string>
+    <string name="TranscribeProviderGroq">Groq Whisper (Free API)</string>
+    <string name="AIChatSummary">AI Chat Summary</string>
+    <string name="AIChatSummaryLoading">Generating summary...</string>
+    <string name="AIChatSummaryNoMessages">No recent messages to summarize</string>
+    <string name="ConnectFastestProxy">Connect to Fastest Proxy</string>
+    <string name="ConnectedToFastestProxy">Connected to fastest proxy: %1$s (%2$d ms)</string>
     <string name="CloudflareCredentials">Cloudflare Credentials</string>
     <string name="CloudflareCredentialsNotSet">Cloudflare credentials are not configured.</string>
     <string name="CloudflareAccountID">Account ID</string>

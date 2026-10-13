@@ -164,7 +164,7 @@ public abstract class BasePill extends FrameLayout {
         if (loadingDrawable == null) {
             return;
         }
-        if (loadingDrawable.getAlpha() > 0 || !loadingDrawable.isDisappearing()) {
+        if (loading || loadingDrawable.isDisappearing()) {
             View target = loadingTargetView != null ? loadingTargetView : this;
             rectF.set(target.getLeft(), target.getTop(), target.getRight(), target.getBottom());
             loadingDrawable.setBounds(rectF);

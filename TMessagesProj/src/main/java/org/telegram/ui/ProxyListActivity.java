@@ -62,6 +62,7 @@ import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CheckBox2;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
@@ -375,6 +376,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
     private final static int na_menu_retest_ping = 1004;
     private final static int na_menu_delete_all = 1005;
     private final static int na_menu_delete_unavailable = 1006;
+    private final static int na_menu_connect_fastest = 1007;
 
     @Override
     public View createView(Context context) {
@@ -410,6 +412,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                 }
             }
         });
+        otherItem.addSubItem(na_menu_connect_fastest, LocaleController.getString("ConnectFastestProxy", R.string.ConnectFastestProxy)).setOnClickListener((v) -> autoConnectFastestProxy());
         otherItem.addSubItem(na_menu_delete_all, LocaleController.getString("DeleteAllServer", R.string.DeleteAllServer)).setOnClickListener((v) -> AlertUtil.showConfirm(getParentActivity(),
                 LocaleController.getString("DeleteAllServer", R.string.DeleteAllServer),
                 R.drawable.msg_delete, LocaleController.getString("Delete", R.string.Delete),
@@ -532,31 +535,7 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
                     return;
                 }
                 SharedConfig.ProxyInfo info = proxyList.get(position - proxyStartRow);
-                useProxySettings = true;
-                SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
-                info.settings.toSharedPreferences(editor);
-                editor.putBoolean("proxy_enabled", useProxySettings);
-                if (!info.settings.getSecret().isEmpty()) {
-                    useProxyForCalls = false;
-                    editor.putBoolean("proxy_enabled_calls", false);
-                }
-                editor.commit();
-                SharedConfig.currentProxy = info;
-                for (int a = proxyStartRow; a < proxyEndRow; a++) {
-                    RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(a);
-                    if (holder != null) {
-                        TextDetailProxyCell cell = (TextDetailProxyCell) holder.itemView;
-                        cell.setChecked(cell.currentInfo == info);
-                        cell.updateStatus();
-                    }
-                }
-                updateRows(false);
-                RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(useProxyRow);
-                if (holder != null) {
-                    TextCheckCell textCheckCell = (TextCheckCell) holder.itemView;
-                    textCheckCell.setChecked(true);
-                }
-                ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
+                connectToProxy(info);
             } else if (position == proxyAddRow) {
                 presentFragment(new ProxySettingsActivity());
             } else if (position == torRow) {
@@ -679,6 +658,69 @@ public class ProxyListActivity extends BaseFragment implements NotificationCente
         });
 
         return fragmentView;
+    }
+
+    private void connectToProxy(SharedConfig.ProxyInfo info) {
+        if (info == null) return;
+        useProxySettings = true;
+        SharedPreferences.Editor editor = MessagesController.getGlobalMainSettings().edit();
+        info.settings.toSharedPreferences(editor);
+        editor.putBoolean("proxy_enabled", useProxySettings);
+        if (!info.settings.getSecret().isEmpty()) {
+            useProxyForCalls = false;
+            editor.putBoolean("proxy_enabled_calls", false);
+        }
+        editor.commit();
+        SharedConfig.currentProxy = info;
+        for (int a = proxyStartRow; a < proxyEndRow; a++) {
+            RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(a);
+            if (holder != null) {
+                TextDetailProxyCell cell = (TextDetailProxyCell) holder.itemView;
+                cell.setChecked(cell.currentInfo == info);
+                cell.updateStatus();
+            }
+        }
+        updateRows(false);
+        RecyclerListView.Holder holder = (RecyclerListView.Holder) listView.findViewHolderForAdapterPosition(useProxyRow);
+        if (holder != null) {
+            TextCheckCell textCheckCell = (TextCheckCell) holder.itemView;
+            textCheckCell.setChecked(true);
+        }
+        ConnectionsManager.setProxySettings(useProxySettings, SharedConfig.currentProxy.settings);
+    }
+
+    private void autoConnectFastestProxy() {
+        if (proxyList == null || proxyList.isEmpty()) {
+            return;
+        }
+        SharedConfig.ProxyInfo best = null;
+        long minPing = Long.MAX_VALUE;
+        for (SharedConfig.ProxyInfo info : proxyList) {
+            if (info.available && info.ping > 0 && info.ping < minPing) {
+                minPing = info.ping;
+                best = info;
+            }
+        }
+        if (best != null) {
+            connectToProxy(best);
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.done, LocaleController.formatString("ConnectedToFastestProxy", R.string.ConnectedToFastestProxy, best.settings.getAddress(), minPing)).show();
+        } else {
+            checkProxyList(true);
+            AndroidUtilities.runOnUIThread(() -> {
+                SharedConfig.ProxyInfo fastest = null;
+                long lowestPing = Long.MAX_VALUE;
+                for (SharedConfig.ProxyInfo info : proxyList) {
+                    if (info.available && info.ping > 0 && info.ping < lowestPing) {
+                        lowestPing = info.ping;
+                        fastest = info;
+                    }
+                }
+                if (fastest != null) {
+                    connectToProxy(fastest);
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.done, LocaleController.formatString("ConnectedToFastestProxy", R.string.ConnectedToFastestProxy, fastest.settings.getAddress(), lowestPing)).show();
+                }
+            }, 2000);
+        }
     }
 
     @Override

@@ -1,5 +1,6 @@
 package app.exteraless.notifications
 
+import android.app.NotificationManager
 import android.content.Context
 import androidx.collection.LongSparseArray
 import androidx.core.content.edit
@@ -45,12 +46,21 @@ object NotificationsHelper {
         maxId: Int,
         locked: Boolean,
         hasAvatar: Boolean,
+        grouped: Boolean,
     ): String = buildString {
         append(channelId).append('|').append(name).append('|').append(storyCount).append('|')
-        append(maxId).append('|').append(locked).append('|').append(hasAvatar)
+        append(maxId).append('|').append(locked).append('|').append(hasAvatar).append('|').append(grouped)
         messages?.forEach {
             append('|').append(it.id).append(':').append(it.messageOwner?.edit_date ?: 0)
         }
+    }
+
+    @JvmStatic
+    fun isSummaryPosted(summaryId: Int): Boolean = try {
+        val manager = ApplicationLoader.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.activeNotifications.any { it.id == summaryId && it.tag == null }
+    } catch (e: Exception) {
+        false
     }
 
     @JvmStatic

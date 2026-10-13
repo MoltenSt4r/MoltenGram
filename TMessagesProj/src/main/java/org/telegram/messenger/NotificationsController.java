@@ -5034,7 +5034,7 @@ public class NotificationsController extends BaseController implements Notificat
         ArrayList<NotificationHolder> holders = new ArrayList<>();
         SparseArray<String> signatures = new SparseArray<>();
 
-        boolean useSummaryNotification = Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1 || sortedDialogs.size() > (storyPushMessages.isEmpty() ? 1 : 2);
+        boolean useSummaryNotification = Build.VERSION.SDK_INT <= Build.VERSION_CODES.O_MR1 || sortedDialogs.size() > (storyPushMessages.isEmpty() ? 1 : 2) || !sortedDialogs.isEmpty() && NotificationsHelper.isSummaryPosted(notificationId);
         if (useSummaryNotification && Build.VERSION.SDK_INT >= 26) {
             checkOtherNotificationsChannel();
         }
@@ -5847,7 +5847,7 @@ public class NotificationsController extends BaseController implements Notificat
             FileLog.d("showExtraNotifications: holders.add " + dialogId);
             holders.add(new NotificationHolder(internalId, dialogId, dialogKey.story, topicId, name, user, chat, builder));
             wearNotificationsIds.put(dialogId, internalId);
-            signatures.put(internalId, NotificationsHelper.computeNotificationSignature(channelId, name, dialogKey.story ? null : messageObjects, dialogKey.story ? storyPushMessages.size() : 0, maxId, waitingForPasscode, avatarBitmap != null));
+            signatures.put(internalId, NotificationsHelper.computeNotificationSignature(channelId, name, dialogKey.story ? null : messageObjects, dialogKey.story ? storyPushMessages.size() : 0, maxId, waitingForPasscode, avatarBitmap != null || avatarFile != null && avatarFile.exists(), useSummaryNotification));
         }
 
         if (useSummaryNotification) {

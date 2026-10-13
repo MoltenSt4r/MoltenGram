@@ -287,4 +287,46 @@ object LLMTranslator : Translator {
     }
 
     class RateLimitException(message: String) : Exception(message)
+
+    fun interface SummarizeCallback {
+        fun onResult(summary: String?, error: Throwable?)
+    }
+
+    @JvmStatic
+    fun summarizeChat(chatText: String, callback: SummarizeCallback) {
+        org.telegram.messenger.Utilities.globalQueue.postRunnable {
+            try {
+                val apiKey = getNextApiKey() ?: throw UnsupportedOperationException(getString(R.string.ApiKeyNotSet))
+                val llmProviderPreset = NaConfig.llmProviderPreset.Int()
+                val apiUrl = LlmConfig.getEffectiveBaseUrl(llmProviderPreset)
+                val model = LlmConfig.getEffectiveModelName(llmProviderPreset)
+                val messages = JSONArray().apply {
+                    put(JSONObject().apply {
+                        put("role", "system")
+                        put("content", "You are a helpful assistant. Summarize the provided Telegram chat conversation into concise key bullet points. Highlight key discussions, decisions, and news. Reply in the predominant language of the conversation.")
+                    })
+                    put(JSONObject().apply {
+                        put("role", "user")
+                        put("content", chatText)
+                    })
+                }
+                val response = if (llmProviderPreset == PresetRegistry.GOOGLE_AGENT_PLATFORM) {
+                    VertexGeminiClient.generateContent(apiUrl, apiKey, model, messages)
+                } else {
+                    OpenAICompatClient.chatCompletions(apiUrl, apiKey, model, messages)
+                }
+                if (!response.isSuccess) {
+                    throw IOException(response.error() ?: "LLM request failed (${response.httpCode()})")
+                }
+                val result = response.data() ?: throw IOException("Empty LLM response")
+                org.telegram.messenger.AndroidUtilities.runOnUIThread {
+                    callback.onResult(result, null)
+                }
+            } catch (e: Throwable) {
+                org.telegram.messenger.AndroidUtilities.runOnUIThread {
+                    callback.onResult(null, e)
+                }
+            }
+        }
+    }
 }

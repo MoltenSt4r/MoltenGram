@@ -508,6 +508,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int nkbtn_bookmark = 2039;
     private final static int nkbtn_bookmarks_manager = 2040;
     private final static int nkbtn_report = 2041;
+    private final static int nkbtn_chat_ai_summary = 2042;
     private final static int nkbtn_clearDeleted = 2100;
     private final static int nkbtn_viewDeleted = 2101;
 
@@ -5038,6 +5039,7 @@ public class ChatActivity extends BaseFragment implements
                 bookmarksItem = headerItem.lazilyAddSubItem(nkbtn_bookmarks_manager, R.drawable.msg_fave, getString(R.string.BookmarksManager));
                 headerItem.setSubItemShown(nkbtn_bookmarks_manager, BookmarksHelper.getBookmarkedMessageIds(currentAccount, dialog_id).length > 0);
             }
+            headerItem.lazilyAddSubItem(nkbtn_chat_ai_summary, R.drawable.msg_bot, LocaleController.getString("AIChatSummary", R.string.AIChatSummary));
             hideTitleItem = NaConfig.INSTANCE.getChatMenuItemHideTitle().Bool() ? headerItem.lazilyAddSubItem(nkheaderbtn_hide_title, R.drawable.hide_title, getString(R.string.HideTitle)) : null;
             if (NaConfig.INSTANCE.getChatMenuItemViewDeleted().Bool() && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_viewDeleted, R.drawable.msg_view_file, getString(R.string.ViewDeleted));
             if (NaConfig.INSTANCE.getChatMenuItemClearDeleted().Bool() && NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool()) headerItem.lazilyAddSubItem(nkbtn_clearDeleted, R.drawable.msg_clear, getString(R.string.ClearDeleted));
@@ -26681,6 +26683,7 @@ public class ChatActivity extends BaseFragment implements
                 chatAdapter.notifyItemInserted(0);
             }
             newUnreadMessageCount = differenceTooLong.dialog.unread_count;
+            differenceTooLong.dialog.unread_mentions_count = com.radolyn.ayugram.utils.AyuGhostUtils.clampUnreadMentions(differenceTooLong.dialog);
             newMentionsCount = differenceTooLong.dialog.unread_mentions_count;
             if (prevSetUnreadCount != newUnreadMessageCount) {
                 if (sideControlsButtonsLayout != null) {
@@ -47714,6 +47717,8 @@ public class ChatActivity extends BaseFragment implements
             if (button != null) {
                 button.setTextColor(Theme.getColor(Theme.key_dialogTextRed));
             }
+        } else if (id == nkbtn_chat_ai_summary) {
+            summarizeCurrentChat();
         } else if (id == nkbtn_viewDeleted) {
             presentFragment(new AyuViewDeleted(dialog_id));
         } else if (id == nkbtn_bookmarks_manager) {
@@ -47808,6 +47813,60 @@ public class ChatActivity extends BaseFragment implements
                 clearSelectionMode();
             });
         }
+    }
+
+    private void summarizeCurrentChat() {
+        if (messages == null || messages.isEmpty()) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString("AIChatSummaryNoMessages", R.string.AIChatSummaryNoMessages)).show();
+            return;
+        }
+        StringBuilder sb = new StringBuilder();
+        int count = 0;
+        for (int a = Math.min(messages.size() - 1, 35); a >= 0; a--) {
+            MessageObject msg = messages.get(a);
+            if (msg != null && !TextUtils.isEmpty(msg.messageText)) {
+                String sender = getMessagesController().getPeerName(msg.getSenderId());
+                if (TextUtils.isEmpty(sender)) {
+                    sender = "User";
+                }
+                sb.append(sender).append(": ").append(msg.messageText.toString().trim()).append("\n");
+                count++;
+            }
+        }
+        if (count == 0) {
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString("AIChatSummaryNoMessages", R.string.AIChatSummaryNoMessages)).show();
+            return;
+        }
+
+        Bulletin loadingBulletin = BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString("AIChatSummaryLoading", R.string.AIChatSummaryLoading));
+        loadingBulletin.show();
+
+        tw.nekomimi.nekogram.translate.source.LLMTranslator.summarizeChat(sb.toString(), (summary, err) -> {
+            if (loadingBulletin != null) {
+                loadingBulletin.hide();
+            }
+            if (err != null) {
+                String msg = err.getMessage();
+                if (err instanceof UnsupportedOperationException) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.info, LocaleController.getString(R.string.ApiKeyNotSet)).show();
+                    tw.nekomimi.nekogram.helpers.TranscribeHelper.openSetup(this);
+                } else {
+                    BulletinFactory.of(this).createErrorBulletin(msg != null ? msg : "AI error").show();
+                }
+                return;
+            }
+            if (summary != null && !summary.isEmpty()) {
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+                builder.setTitle(LocaleController.getString("AIChatSummary", R.string.AIChatSummary));
+                builder.setMessage(AndroidUtilities.replaceTags(summary));
+                builder.setPositiveButton(LocaleController.getString("Copy", R.string.Copy), (dialog, which) -> {
+                    AndroidUtilities.addToClipboard(summary);
+                    BulletinFactory.of(this).createCopyBulletin(LocaleController.getString("TextCopied", R.string.TextCopied)).show();
+                });
+                builder.setNegativeButton(LocaleController.getString("Close", R.string.Close), null);
+                showDialog(builder.create());
+            }
+        });
     }
 
     private void nkbtn_onclick(int id) {
@@ -51241,6 +51300,13 @@ public class ChatActivity extends BaseFragment implements
             req.add_offset = newMentionsCount - 1;
             getConnectionsManager().sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
                 TLRPC.messages_Messages res = (TLRPC.messages_Messages) response;
+                if (com.radolyn.ayugram.utils.AyuGhostUtils.isReadBlockedFor(dialog_id)) {
+                    newMentionsCount = 0;
+                    hasAllMentionsLocal = true;
+                    messagesStorage.resetMentionsCount(dialog_id, getTopicId(), 0);
+                    showMentionDownButton(false, true);
+                    return;
+                }
                 if (error != null || res.messages.isEmpty()) {
                     if (res != null) {
                         newMentionsCount = res.count;

@@ -152,6 +152,7 @@ import xyz.nextalone.nagram.helper.LocalPremiumStatusHelper;
 import com.radolyn.ayugram.AyuConstants;
 import com.radolyn.ayugram.messages.AyuSavePreferences;
 import com.radolyn.ayugram.messages.AyuMessagesController;
+import com.radolyn.ayugram.utils.AyuGhostUtils;
 import com.radolyn.ayugram.utils.AyuState;
 import com.radolyn.ayugram.utils.LastSeenHelper;
 
@@ -2220,6 +2221,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         continue;
                     }
                 }
+                d.unread_mentions_count = AyuGhostUtils.clampUnreadMentions(d);
                 new_dialogs_dict.put(d.id, d);
 
                 Integer value = dialogs_read_inbox_max.get(d.id);
@@ -13252,6 +13254,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         continue;
                     }
                 }
+                d.unread_mentions_count = AyuGhostUtils.clampUnreadMentions(d);
                 new_dialogs_dict.put(d.id, d);
 
                 Integer value = dialogs_read_inbox_max.get(d.id);
@@ -13803,6 +13806,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         continue;
                     }
                 }
+                d.unread_mentions_count = AyuGhostUtils.clampUnreadMentions(d);
                 new_dialogs_dict.put(d.id, d);
 
                 if (allowCheck && loadType == DIALOGS_LOAD_TYPE_CACHE && (d.read_outbox_max_id == 0 || d.read_inbox_max_id == 0) && d.top_message != 0) {
@@ -14107,6 +14111,12 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public void reloadMentionsCountForChannel(TLRPC.InputPeer peer, long taskId) {
+        if (AyuGhostUtils.isReadBlockedFor(-peer.channel_id)) {
+            if (taskId != 0) {
+                getMessagesStorage().removePendingTask(taskId);
+            }
+            return;
+        }
         long newTaskId;
         if (taskId == 0) {
             NativeByteBuffer data = null;
@@ -14421,6 +14431,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     }
                 }
+                d.unread_mentions_count = AyuGhostUtils.clampUnreadMentions(d);
                 new_dialogs_dict.put(d.id, d);
                 dialogsToUpdate.put(d.id, d.unread_count);
 
@@ -14995,6 +15006,9 @@ public class MessagesController extends BaseController implements NotificationCe
                         int prevCount = dialog.unread_count;
                         if (countDiff == 0 || maxPositiveId >= dialog.top_message) {
                             dialog.unread_count = 0;
+                            if (dialog.unread_mentions_count != 0 && AyuGhostUtils.isReadBlockedFor(dialogId)) {
+                                getMessagesStorage().resetMentionsCount(dialogId, 0, 0);
+                            }
                         } else {
                             dialog.unread_count = Math.max(dialog.unread_count - countDiff, 0);
                             if (maxPositiveId != Integer.MIN_VALUE && dialog.unread_count > dialog.top_message - maxPositiveId) {
@@ -17826,6 +17840,7 @@ public class MessagesController extends BaseController implements NotificationCe
                                 pinned.add(dialog.pinnedNum);
                             } else {
                                 added = true;
+                                dialog.unread_mentions_count = AyuGhostUtils.clampUnreadMentions(dialog);
                                 dialogs_dict.put(dialog.id, dialog);
                                 ArrayList<MessageObject> messageObjects = new_dialogMessage.get(dialog.id);
                                 dialogMessage.put(dialog.id, messageObjects);

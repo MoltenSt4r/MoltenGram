@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
 import com.google.gson.Gson;
+import com.google.gson.JsonObject;
 import com.google.gson.annotations.Expose;
 import com.google.gson.annotations.SerializedName;
 
@@ -46,6 +47,7 @@ import java.util.concurrent.Executors;
 import java.util.function.BiConsumer;
 
 import okhttp3.MediaType;
+import okhttp3.MultipartBody;
 import okhttp3.OkHttpClient;
 import okhttp3.Request;
 import okhttp3.RequestBody;
@@ -63,6 +65,7 @@ public class TranscribeHelper {
     public static final int TRANSCRIBE_GEMINI = 3;
     public static final int TRANSCRIBE_OPENAI = 4;
     public static final int TRANSCRIBE_VOSK = 5;
+    public static final int TRANSCRIBE_GROQ = 6;
     private static final String GEMINI_API_ENDPOINT = "https://generativelanguage.googleapis.com/v1beta/models/" + getString(R.string.LlmModelNameDefault) + ":generateContent?key=%s";
     private static final String GEMINI_PROMPT = """
     Your task is to create a detailed, verbatim transcription of the provided audio, formatted like closed captions for the hard of hearing. Follow these instructions strictly:
@@ -105,7 +108,7 @@ public class TranscribeHelper {
     public static boolean useTranscribeAI(int account) {
         int provider = NaConfig.INSTANCE.getTranscribeProvider().Int();
         return provider == TRANSCRIBE_WORKERSAI || provider == TRANSCRIBE_GEMINI || provider == TRANSCRIBE_OPENAI ||
-                provider == TRANSCRIBE_VOSK ||
+                provider == TRANSCRIBE_VOSK || provider == TRANSCRIBE_GROQ ||
                 (!UserConfig.getInstance(account).isPremium() && provider == TRANSCRIBE_AUTO);
     }
 
@@ -261,6 +264,43 @@ public class TranscribeHelper {
                 dialog.dismiss();
             });
         }
+    }
+
+    public static void showGroqApiKeyDialog(BaseFragment fragment) {
+        var resourcesProvider = fragment.getResourceProvider();
+        var context = fragment.getParentActivity();
+        var builder = new AlertDialog.Builder(context, resourcesProvider);
+        builder.setTitle(getString(R.string.LlmProviderGroqKey));
+        builder.setMessage(AndroidUtilities.replaceSingleTag("Set Groq API key for Whisper transcription.\n**Get API key**\n",
+                -1,
+                AndroidUtilities.REPLACING_TAG_TYPE_LINKBOLD,
+                () -> {
+                    fragment.dismissCurrentDialog();
+                    Browser.openUrl(context, "https://console.groq.com/keys");
+                },
+                resourcesProvider));
+        builder.setCustomViewOffset(0);
+
+        var ll = new LinearLayout(context);
+        ll.setOrientation(LinearLayout.VERTICAL);
+
+        var editTextApiKey = createAndSetupEditText(
+                context,
+                resourcesProvider,
+                NaConfig.INSTANCE.getTranscribeProviderGroqApiKey().String(),
+                getString(R.string.LlmApiKeyNotice),
+                EditorInfo.IME_ACTION_DONE,
+                true
+        );
+        ll.addView(editTextApiKey, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 24, 0, 24, 0));
+
+        builder.setView(ll);
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
+            var apiKey = editTextApiKey.getText();
+            NaConfig.INSTANCE.getTranscribeProviderGroqApiKey().setConfigString(apiKey == null ? "" : apiKey.toString().trim());
+        });
+        fragment.showDialog(builder.create());
     }
 
     public static void showOpenAiCredentialsDialog(BaseFragment fragment) {
@@ -420,12 +460,85 @@ public class TranscribeHelper {
             case TRANSCRIBE_OPENAI:
                 requestOpenAiCompatible(path, video, callback);
                 break;
+            case TRANSCRIBE_GROQ:
+                requestGroqWhisper(path, video, callback);
+                break;
             case TRANSCRIBE_VOSK:
                 requestVosk(path, callback);
                 break;
             default:
                 requestWorkersAi(path, video, callback);
         }
+    }
+
+    private static void requestGroqWhisper(String path, boolean video, BiConsumer<String, Exception> callback) {
+        String apiKey = NaConfig.INSTANCE.getTranscribeProviderGroqApiKey().String();
+        if (TextUtils.isEmpty(apiKey)) {
+            apiKey = NaConfig.INSTANCE.getLlmProviderGroqKey().String().split(",")[0].trim();
+        }
+        if (TextUtils.isEmpty(apiKey)) {
+            callback.accept(null, new SetupRequiredException(getString(R.string.TranscribeSetupCredentials)));
+            return;
+        }
+        final String finalApiKey = apiKey;
+        executorService.submit(() -> {
+            String audioPath;
+            try {
+                if (video) {
+                    var audioFile = new File(path + ".m4a");
+                    try {
+                        extractAudio(path, audioFile.getAbsolutePath());
+                    } catch (IOException e) {
+                        FileLog.e(e);
+                    }
+                    audioPath = audioFile.exists() ? audioFile.getAbsolutePath() : path;
+                } else {
+                    audioPath = path;
+                }
+                File audioFile = new File(audioPath);
+                if (!audioFile.exists()) {
+                    throw new IOException("Audio file not found: " + audioPath);
+                }
+
+                String mime = video ? "audio/m4a" : "audio/ogg";
+                String fileName = audioFile.getName();
+                if (!fileName.contains(".")) {
+                    fileName += video ? ".m4a" : ".ogg";
+                }
+
+                RequestBody fileBody = RequestBody.create(audioFile, MediaType.parse(mime));
+                MultipartBody requestBody = new MultipartBody.Builder()
+                        .setType(MultipartBody.FORM)
+                        .addFormDataPart("file", fileName, fileBody)
+                        .addFormDataPart("model", "whisper-large-v3-turbo")
+                        .addFormDataPart("response_format", "json")
+                        .build();
+
+                Request request = new Request.Builder()
+                        .url("https://api.groq.com/openai/v1/audio/transcriptions")
+                        .header("Authorization", "Bearer " + finalApiKey)
+                        .post(requestBody)
+                        .build();
+
+                OkHttpClient client = getOkHttpClient();
+                try (Response response = client.newCall(request).execute()) {
+                    String responseBody = response.body().string();
+                    if (!response.isSuccessful()) {
+                        throw new IOException("Groq Whisper API failed (" + response.code() + "): " + responseBody);
+                    }
+                    JsonObject obj = gson.fromJson(responseBody, JsonObject.class);
+                    if (obj != null && obj.has("text")) {
+                        String transcribed = obj.get("text").getAsString();
+                        callback.accept(transcribed.trim(), null);
+                    } else {
+                        callback.accept(null, new Exception("Groq Whisper empty response: " + responseBody));
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e("Groq Whisper transcription error", e);
+                callback.accept(null, e);
+            }
+        });
     }
 
     private static void requestVosk(String path, BiConsumer<String, Exception> callback) {

@@ -318,6 +318,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int geminiApiKeyRow;
     private int openAiCredentialsRow;
     private int voskModelsRow;
+    private int groqApiKeyRow;
     private int transcribeDividerRow;
 
     public OpenExteraChatsActivity() {
@@ -623,6 +624,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 ? addRow("transcribeProviderOpenAI", "TranscribeProviderOpenAI") : -1;
         voskModelsRow = NaConfig.INSTANCE.getTranscribeProvider().Int() == TranscribeHelper.TRANSCRIBE_VOSK
                 ? addRow("voskModels", "VoskModelsShort") : -1;
+        groqApiKeyRow = NaConfig.INSTANCE.getTranscribeProvider().Int() == TranscribeHelper.TRANSCRIBE_GROQ
+                ? addRow("groqApiKey", "LlmProviderGroqKey") : -1;
         transcribeDividerRow = addRow();
     }
 
@@ -1182,7 +1185,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 getString(R.string.TranscribeProviderWorkersAI),
                 getString(R.string.TranscribeProviderGemini),
                 getString(R.string.TranscribeProviderOpenAI),
-                getString(R.string.TranscribeProviderVosk)
+                getString(R.string.TranscribeProviderVosk),
+                getString(R.string.TranscribeProviderGroq)
         };
     }
 
@@ -1539,6 +1543,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == voskModelsRow) {
             presentFragment(new app.exteraless.speech.VoskSettingsActivity());
+            return;
+        } else if (position == groqApiKeyRow) {
+            TranscribeHelper.showGroqApiKeyDialog(this);
             return;
         } else if (position == textAnimationRow) {
             presentFragment(new app.exteraless.chats.TextAnimationSettingsActivity());

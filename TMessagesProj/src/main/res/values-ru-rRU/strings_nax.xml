@@ -21,6 +21,7 @@
     <string name="LlmProviderCustom">Пользовательский</string>
     <string name="LlmProviderOpenAIKey">Ключ API OpenAI</string>
     <string name="LlmProviderGeminiKey">Ключ API Gemini</string>
+    <string name="LlmProviderGroqKey">Ключ API Groq</string>
     <string name="LlmSystemPrompt">Системный промпт</string>
     <string name="LlmSystemPromptHint">Ты профессиональный переводчик.</string>
     <string name="LlmSystemPromptNotice">Определите роль и поведение ИИ.\n\nЭтот промпт задаёт тон, индивидуальность и ограничения для ИИ. Подумайте о том, каким типом помощника должен быть ИИ.</string>
@@ -155,6 +156,12 @@
     <string name="TranscribeProviderAuto">Автовыбор</string>
     <string name="TranscribeProviderWorkersAI">Whisper (Workers AI)</string>
     <string name="TranscribeProviderGemini">Gemini</string>
+    <string name="TranscribeProviderGroq">Groq Whisper (бесплатно)</string>
+    <string name="AIChatSummary">Саммари чата (ИИ)</string>
+    <string name="AIChatSummaryLoading">Генерация саммари...</string>
+    <string name="AIChatSummaryNoMessages">Нет сообщений для саммари</string>
+    <string name="ConnectFastestProxy">Подключить самый быстрый прокси</string>
+    <string name="ConnectedToFastestProxy">Подключен самый быстрый прокси: %1$s (%2$d мс)</string>
     <string name="CloudflareCredentials">Учётные данные Cloudflare</string>
     <string name="CloudflareCredentialsNotSet">Учётные данные Cloudflare не настроены.</string>
     <string name="CloudflareAccountID">ID аккаунта</string>
