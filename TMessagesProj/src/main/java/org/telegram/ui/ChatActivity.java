@@ -6744,20 +6744,35 @@ public class ChatActivity extends BaseFragment implements
                     final MessageObject.GroupedMessagePosition position = cell.getCurrentPosition();
                     if (!skipDraw) {
                         if (position != null || cell.getTransitionParams().animateBackgroundBoundsInner) {
-                            if (position == null || (position.last || position.minX == 0 && position.minY == 0)) {
-                                if (position == null || position.last) {
-                                    drawTimeAfter.add(cell);
-                                }
-                                if ((position == null || (position.minX == 0 && position.minY == 0)) && cell.hasNameLayout()) {
+                            if (cell.isSiblingGroupCarouselMessage()) {
+                                // Sibling cells of carousel must NEVER draw foreground elements
+                            } else if (cell.isMediaCarouselMessage()) {
+                                drawTimeAfter.add(cell);
+                                if (cell.hasNameLayout()) {
                                     drawNamesAfter.add(cell);
                                 }
-                            }
-                            if (position != null || cell.getTransitionParams().transformGroupToSingleMessage || cell.getTransitionParams().animateBackgroundBoundsInner) {
-                                if (position == null || (position.flags & cell.captionFlag()) != 0) {
+                                if (cell.hasCaptionLayout()) {
                                     drawCaptionAfter.add(cell);
                                 }
-                                if (position == null || (position.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (position.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
+                                if (message != null && message.hasReactions()) {
                                     drawReactionsAfter.add(cell);
+                                }
+                            } else {
+                                if (position == null || (position.last || position.minX == 0 && position.minY == 0)) {
+                                    if (position == null || position.last) {
+                                        drawTimeAfter.add(cell);
+                                    }
+                                    if ((position == null || (position.minX == 0 && position.minY == 0)) && cell.hasNameLayout()) {
+                                        drawNamesAfter.add(cell);
+                                    }
+                                }
+                                if (position != null || cell.getTransitionParams().transformGroupToSingleMessage || cell.getTransitionParams().animateBackgroundBoundsInner) {
+                                    if (position == null || (position.flags & cell.captionFlag()) != 0) {
+                                        drawCaptionAfter.add(cell);
+                                    }
+                                    if (position == null || (position.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (position.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
+                                        drawReactionsAfter.add(cell);
+                                    }
                                 }
                             }
                         }
@@ -7387,6 +7402,8 @@ public class ChatActivity extends BaseFragment implements
                     MessageObject.GroupedMessages group = cell.getCurrentMessagesGroup();
                     if (group != null) {
                         if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !group.isDocuments && group.messages.size() > 1) {
+                            outRect.bottom = AndroidUtilities.dp(4);
+                            outRect.top = 0;
                             return;
                         }
                         MessageObject.GroupedMessagePosition position = cell.getCurrentPosition();
@@ -40530,12 +40547,36 @@ public class ChatActivity extends BaseFragment implements
                     int prevPrevPosition = position + 2;;
                     int nextPosition;
                     if (groupedMessages != null) {
-                        MessageObject.GroupedMessagePosition pos = groupedMessages.getPosition(message);
-                        if (pos != null) {
-                            if (groupedMessages.isDocuments || (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && groupedMessages.messages.size() > 1)) {
-                                prevPosition = position + groupedMessages.posArray.indexOf(pos) + 1;
-                                nextPosition = position - groupedMessages.posArray.size() + groupedMessages.posArray.indexOf(pos);
-                            } else {
+                        if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !groupedMessages.isDocuments && groupedMessages.messages.size() > 1) {
+                            int firstGroupPos = position;
+                            while (firstGroupPos > messagesStartRow) {
+                                MessageObject prevM = messages.get(firstGroupPos - 1 - messagesStartRow);
+                                if (prevM != null && prevM.getGroupId() == message.getGroupId()) {
+                                    firstGroupPos--;
+                                } else {
+                                    break;
+                                }
+                            }
+                            int lastGroupPos = position;
+                            while (lastGroupPos < messagesEndRow - 1 && lastGroupPos + 1 - messagesStartRow < messages.size()) {
+                                MessageObject nextM = messages.get(lastGroupPos + 1 - messagesStartRow);
+                                if (nextM != null && nextM.getGroupId() == message.getGroupId()) {
+                                    lastGroupPos++;
+                                } else {
+                                    break;
+                                }
+                            }
+                            nextPosition = firstGroupPos - 1;
+                            prevPosition = lastGroupPos + 1;
+                            pinnedBottom = false;
+                            pinnedTop = false;
+                        } else {
+                            MessageObject.GroupedMessagePosition pos = groupedMessages.getPosition(message);
+                            if (pos != null) {
+                                if (groupedMessages.isDocuments) {
+                                    prevPosition = position + groupedMessages.posArray.indexOf(pos) + 1;
+                                    nextPosition = position - groupedMessages.posArray.size() + groupedMessages.posArray.indexOf(pos);
+                                } else {
                                 if ((pos.flags & MessageObject.POSITION_FLAG_TOP) != 0) {
                                     if (groupedMessages.reversed) {
                                         prevPosition = position - groupedMessages.posArray.size() + groupedMessages.posArray.indexOf(pos);
@@ -40563,6 +40604,7 @@ public class ChatActivity extends BaseFragment implements
                             prevPosition = -100;
                             nextPosition = -100;
                         }
+                    }
                     } else {
                         nextPosition = position - 1;
                         prevPosition = position + 1;
@@ -40610,6 +40652,18 @@ public class ChatActivity extends BaseFragment implements
                                 pinnedBottom = MessageObject.getPeerId(message.messageOwner.peer_id) == MessageObject.getPeerId(nextMessage.messageOwner.peer_id);
                             }
                             if (DialogObject.getPeerDialogId(nextMessage.messageOwner.guestchat_via_from) != DialogObject.getPeerDialogId(message.messageOwner.guestchat_via_from)) {
+                                pinnedBottom = false;
+                            }
+                        }
+                    }
+                    if (groupedMessages != null && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !groupedMessages.isDocuments && groupedMessages.messages.size() > 1) {
+                        pinnedBottom = false;
+                    }
+                    if (nextType == holder.getItemViewType() && nextPosition - messagesStartRow >= 0 && nextPosition - messagesStartRow < messages.size()) {
+                        MessageObject nextMessage = messages.get(nextPosition - messagesStartRow);
+                        if (nextMessage != null && nextMessage.getGroupId() != 0) {
+                            MessageObject.GroupedMessages nextGroup = getValidGroupedMessage(nextMessage);
+                            if (nextGroup != null && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !nextGroup.isDocuments && nextGroup.messages.size() > 1) {
                                 pinnedBottom = false;
                             }
                         }
@@ -40674,6 +40728,18 @@ public class ChatActivity extends BaseFragment implements
                                 pinnedTop = MessageObject.getPeerId(message.messageOwner.peer_id) == MessageObject.getPeerId(prevMessage.messageOwner.peer_id);
                             }
                             if (DialogObject.getPeerDialogId(prevMessage.messageOwner.guestchat_via_from) != DialogObject.getPeerDialogId(message.messageOwner.guestchat_via_from)) {
+                                pinnedTop = false;
+                            }
+                        }
+                    }
+                    if (groupedMessages != null && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !groupedMessages.isDocuments && groupedMessages.messages.size() > 1) {
+                        pinnedTop = false;
+                    }
+                    if (prevType == holder.getItemViewType() && prevPosition - messagesStartRow >= 0 && prevPosition - messagesStartRow < messages.size()) {
+                        MessageObject prevMessage = messages.get(prevPosition - messagesStartRow);
+                        if (prevMessage != null && prevMessage.getGroupId() != 0) {
+                            MessageObject.GroupedMessages prevGroup = getValidGroupedMessage(prevMessage);
+                            if (prevGroup != null && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !prevGroup.isDocuments && prevGroup.messages.size() > 1) {
                                 pinnedTop = false;
                             }
                         }

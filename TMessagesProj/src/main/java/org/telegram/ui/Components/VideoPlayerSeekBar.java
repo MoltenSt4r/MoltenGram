@@ -85,6 +85,31 @@ public class VideoPlayerSeekBar {
     private AnimatedFloat animateThumbLoopBackProgress;
     private float loopBackWasThumbX;
 
+    private Path md3Path = new Path();
+    private RectF md3Rect = new RectF();
+    private float md3ThumbHeightCurrent;
+
+    public boolean isMd3() {
+        return xyz.nextalone.nagram.NaConfig.INSTANCE.getSliderStyle().Int() == SeekBarView.SLIDER_STYLE_MD3;
+    }
+
+    private void updatePath(Path path, RectF rect, float radiusLeft, float radiusRight) {
+        float maxR = rect.width() / 2f;
+        float rL = Math.min(radiusLeft, maxR);
+        float rR = Math.min(radiusRight, maxR);
+        path.reset();
+        path.moveTo(rect.left + rL, rect.top);
+        path.lineTo(rect.right - rR, rect.top);
+        path.quadTo(rect.right, rect.top, rect.right, rect.top + rR);
+        path.lineTo(rect.right, rect.bottom - rR);
+        path.quadTo(rect.right, rect.bottom, rect.right - rR, rect.bottom);
+        path.lineTo(rect.left + rL, rect.bottom);
+        path.quadTo(rect.left, rect.bottom, rect.left, rect.bottom - rL);
+        path.lineTo(rect.left, rect.top + rL);
+        path.quadTo(rect.left, rect.top, rect.left + rL, rect.top);
+        path.close();
+    }
+
     public VideoPlayerSeekBar(View parent) {
         if (paint == null) {
             paint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -340,9 +365,11 @@ public class VideoPlayerSeekBar {
     }
 
     public void draw(Canvas canvas, View view) {
+        final boolean md3 = isMd3();
+        final int currentLineHeight = md3 ? AndroidUtilities.dp(6) : lineHeight;
         rect.left = horizontalPadding + AndroidUtilities.lerp(thumbWidth / 2f, 0, transitionProgress);
-        rect.top = AndroidUtilities.lerp((height - lineHeight) / 2f, height - AndroidUtilities.dp(3) - smallLineHeight, transitionProgress);
-        rect.bottom = AndroidUtilities.lerp((height + lineHeight) / 2f, height - AndroidUtilities.dp(3), transitionProgress);
+        rect.top = AndroidUtilities.lerp((height - currentLineHeight) / 2f, height - AndroidUtilities.dp(3) - smallLineHeight, transitionProgress);
+        rect.bottom = AndroidUtilities.lerp((height + currentLineHeight) / 2f, height - AndroidUtilities.dp(3), transitionProgress);
 
         float thumbX = this.thumbX;
         animatedThumbX = Math.min(animatedThumbX, thumbX);
@@ -367,6 +394,115 @@ public class VideoPlayerSeekBar {
         float loopBack = animateThumbLoopBackProgress.set(0);
         if (pressed) {
             loopBack = 0;
+        }
+
+        if (md3 && (timestamps == null || timestamps.isEmpty())) {
+            float effectiveLineHeight = AndroidUtilities.lerp(currentLineHeight, smallLineHeight, transitionProgress);
+            float centerY = AndroidUtilities.lerp(height / 2f, height - AndroidUtilities.dp(3) - smallLineHeight / 2f, transitionProgress);
+            float trackTop = centerY - effectiveLineHeight / 2f;
+            float trackBottom = centerY + effectiveLineHeight / 2f;
+
+            float trackLeft = horizontalPadding + AndroidUtilities.lerp(thumbWidth / 2f, 0, transitionProgress);
+            float trackRight = horizontalPadding + AndroidUtilities.lerp(width - thumbWidth / 2f, parentView.getWidth() - horizontalPadding * 2f, transitionProgress);
+            float thumbCenter = horizontalPadding + AndroidUtilities.lerp(thumbWidth / 2f + (pressed ? draggingThumbX : currentThumbX), (parentView.getWidth() - horizontalPadding * 2f) * getProgress(), transitionProgress);
+
+            float md3ThumbWidth = AndroidUtilities.dp(3.5f);
+            float targetThumbHeight = AndroidUtilities.dp(pressed ? 34 : 28);
+            if (md3ThumbHeightCurrent == 0) {
+                md3ThumbHeightCurrent = targetThumbHeight;
+            } else {
+                md3ThumbHeightCurrent = AndroidUtilities.lerp(md3ThumbHeightCurrent, targetThumbHeight, 0.25f);
+                if (Math.abs(md3ThumbHeightCurrent - targetThumbHeight) > 0.05f && parentView != null) {
+                    parentView.invalidate();
+                }
+            }
+            float md3ThumbHeight = md3ThumbHeightCurrent * (1f - transitionProgress);
+            float md3Gap = AndroidUtilities.dp(4) * (1f - transitionProgress);
+
+            float md3OuterRadius = effectiveLineHeight / 2f;
+            float md3InnerRadius = AndroidUtilities.dp(2) * (1f - transitionProgress);
+            float md3ThumbRadius = md3ThumbWidth / 2f;
+
+            // Inactive track (right side)
+            float inactiveLeft = thumbCenter + md3ThumbWidth / 2f + md3Gap;
+            float inactiveRight = trackRight;
+            if (inactiveRight > inactiveLeft) {
+                md3Rect.set(inactiveLeft, trackTop, inactiveRight, trackBottom);
+                setPaintColor(selected ? backgroundSelectedColor : backgroundColor, 1f - transitionProgress);
+                if (md3Rect.width() < md3OuterRadius + md3InnerRadius) {
+                    canvas.drawRoundRect(md3Rect, md3InnerRadius, md3InnerRadius, paint);
+                } else {
+                    updatePath(md3Path, md3Rect, md3InnerRadius, md3OuterRadius);
+                    canvas.drawPath(md3Path, paint);
+                }
+
+                if (bufferedAnimationValue != 1f) {
+                    bufferedAnimationValue += 16 / 100f;
+                    if (bufferedAnimationValue > 1) {
+                        bufferedAnimationValue = 1f;
+                    } else if (parentView != null) {
+                        parentView.invalidate();
+                    }
+                }
+                float currentBufferedProgress = animateResetBuffering ? bufferedProgress : (animateFromBufferedProgress * (1f - bufferedAnimationValue) + bufferedProgress * bufferedAnimationValue);
+                if (currentBufferedProgress > 0) {
+                    float bufferedRight = trackLeft + currentBufferedProgress * (trackRight - trackLeft);
+                    if (bufferedRight > inactiveLeft) {
+                        md3Rect.set(inactiveLeft, trackTop, Math.min(bufferedRight, inactiveRight), trackBottom);
+                        setPaintColor(selected ? backgroundSelectedColor : cacheColor, 1f - transitionProgress);
+                        if (md3Rect.width() < md3OuterRadius + md3InnerRadius) {
+                            canvas.drawRoundRect(md3Rect, md3InnerRadius, md3InnerRadius, paint);
+                        } else {
+                            updatePath(md3Path, md3Rect, md3InnerRadius, md3OuterRadius);
+                            canvas.drawPath(md3Path, paint);
+                        }
+                    }
+                }
+
+                // Stop indicator at right end of inactive track
+                float stopX = inactiveRight - md3OuterRadius;
+                if (transitionProgress < 1f && stopX > inactiveLeft + md3InnerRadius) {
+                    setPaintColor(Color.WHITE, 1f - transitionProgress);
+                    canvas.drawCircle(stopX, centerY, AndroidUtilities.dp(1.5f) * (1f - transitionProgress), paint);
+                }
+            }
+
+            // Active track (left side)
+            float activeLeft = trackLeft;
+            float activeRight = thumbCenter - md3ThumbWidth / 2f - md3Gap;
+            if (activeRight > activeLeft) {
+                md3Rect.set(activeLeft, trackTop, activeRight, trackBottom);
+                if (transitionProgress > 0f && md3Rect.width() > 0) {
+                    strokePaint.setAlpha((int) (transitionProgress * 255 * 0.2f));
+                    if (md3Rect.width() < md3OuterRadius + md3InnerRadius) {
+                        canvas.drawRoundRect(md3Rect, md3InnerRadius, md3InnerRadius, strokePaint);
+                    } else {
+                        updatePath(md3Path, md3Rect, md3OuterRadius, md3InnerRadius);
+                        canvas.drawPath(md3Path, strokePaint);
+                    }
+                }
+                setPaintColor(ColorUtils.blendARGB(progressColor, smallLineColor, transitionProgress), 1f);
+                if (md3Rect.width() < md3OuterRadius + md3InnerRadius) {
+                    canvas.drawRoundRect(md3Rect, md3InnerRadius, md3InnerRadius, paint);
+                } else {
+                    updatePath(md3Path, md3Rect, md3OuterRadius, md3InnerRadius);
+                    canvas.drawPath(md3Path, paint);
+                }
+            }
+
+            // Thumb (vertical capsule)
+            if (transitionProgress < 1f && md3ThumbHeight > 0) {
+                float thumbLeft = thumbCenter - md3ThumbWidth / 2f;
+                float thumbRight = thumbCenter + md3ThumbWidth / 2f;
+                float thumbTop = centerY - md3ThumbHeight / 2f;
+                float thumbBottom = centerY + md3ThumbHeight / 2f;
+                md3Rect.set(thumbLeft, thumbTop, thumbRight, thumbBottom);
+                setPaintColor(ColorUtils.blendARGB(circleColor, Color.TRANSPARENT, transitionProgress), 1f - transitionProgress);
+                canvas.drawRoundRect(md3Rect, md3ThumbRadius, md3ThumbRadius, paint);
+            }
+
+            drawTimestampLabel(canvas);
+            return;
         }
 
         // background
@@ -458,9 +594,26 @@ public class VideoPlayerSeekBar {
         setPaintColor(ColorUtils.blendARGB(progressColor, smallLineColor, transitionProgress), 1f);
         drawProgressBar(canvas, rect, paint);
 
-        // circle
+        // thumb / circle
         setPaintColor(ColorUtils.blendARGB(circleColor, getProgress() == 0 ? Color.TRANSPARENT : smallLineColor, transitionProgress), 1f - transitionProgress);
-        canvas.drawCircle(rect.right, rect.centerY(), circleRadius * (1f - loopBack), paint);
+        if (md3) {
+            float md3ThumbWidth = AndroidUtilities.dp(3.5f);
+            float targetThumbHeight = AndroidUtilities.dp(pressed ? 34 : 28);
+            if (md3ThumbHeightCurrent == 0) {
+                md3ThumbHeightCurrent = targetThumbHeight;
+            } else {
+                md3ThumbHeightCurrent = AndroidUtilities.lerp(md3ThumbHeightCurrent, targetThumbHeight, 0.25f);
+            }
+            float md3ThumbHeight = md3ThumbHeightCurrent * (1f - transitionProgress);
+            float thumbLeft = rect.right - md3ThumbWidth / 2f;
+            float thumbRight = rect.right + md3ThumbWidth / 2f;
+            float thumbTop = rect.centerY() - md3ThumbHeight / 2f;
+            float thumbBottom = rect.centerY() + md3ThumbHeight / 2f;
+            md3Rect.set(thumbLeft, thumbTop, thumbRight, thumbBottom);
+            canvas.drawRoundRect(md3Rect, md3ThumbWidth / 2f, md3ThumbWidth / 2f, paint);
+        } else {
+            canvas.drawCircle(rect.right, rect.centerY(), circleRadius * (1f - loopBack), paint);
+        }
 
         drawTimestampLabel(canvas);
     }

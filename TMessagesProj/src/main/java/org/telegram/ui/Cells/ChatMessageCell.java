@@ -1049,13 +1049,28 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean groupPhotoInvisible;
     private app.exteraless.appearance.Md3MediaCarouselView md3MediaCarouselView;
 
+    public static MessageObject getCarouselPrimaryMessage(MessageObject.GroupedMessages group) {
+        if (group == null || group.messages == null || group.messages.isEmpty()) {
+            return null;
+        }
+        MessageObject captionMsg = group.findCaptionMessageObject();
+        if (captionMsg != null) {
+            return captionMsg;
+        }
+        MessageObject primary = group.findPrimaryMessageObject();
+        if (primary != null) {
+            return primary;
+        }
+        return group.messages.get(0);
+    }
+
     public boolean isSiblingGroupCarouselMessage() {
         if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
-            MessageObject primary = currentMessagesGroup.findPrimaryMessageObject();
+            MessageObject primary = getCarouselPrimaryMessage(currentMessagesGroup);
             if (primary != null && currentMessageObject != null) {
                 return primary.getId() != currentMessageObject.getId();
             }
-            return !currentMessagesGroup.messages.isEmpty() && currentMessagesGroup.messages.get(0).getId() != currentMessageObject.getId();
+            return false;
         }
         return false;
     }
@@ -7435,7 +7450,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 linked = messageObject.isLinkedToChat(linkedChatId);
             }
-            if ((hasDiscussion && linked || isRepliesChat && !messageObject.isOutOwner()) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0) && (messageObject.searchType == 0 || messageObject.searchType == FeedMessageUtils.SEARCH_TYPE_FEED) && !messageObject.isEphemeral()) {
+            if ((hasDiscussion && linked || isRepliesChat && !messageObject.isOutOwner()) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 || isMediaCarouselMessage()) && (messageObject.searchType == 0 || messageObject.searchType == FeedMessageUtils.SEARCH_TYPE_FEED) && !messageObject.isEphemeral()) {
                 int commentCount = getRepliesCount();
                 if (!messageObject.shouldDrawWithoutBackground() && !messageObject.isAnimatedEmoji()) {
                     drawCommentButton = true;
@@ -10799,8 +10814,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     namesOffset += dp(7);
                 }
                 if (isMediaCarouselMessage()) {
-                    int footerHeight = (currentCaption != null || captionLayout != null) ? dp(14) : dp(36);
-                    totalHeight = photoHeight + namesOffset + footerHeight + additionHeight;
+                    int yOffset = namesOffset > 0 ? dp(7) : dp(5);
+                    int footerHeight = (currentCaption != null || captionLayout != null) ? dp(12) : dp(26);
+                    totalHeight = photoHeight + yOffset + namesOffset + footerHeight + additionHeight;
                 } else {
                     totalHeight = photoHeight + dp(14) + namesOffset + additionHeight;
                 }
@@ -14070,10 +14086,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             resultHeight = botDraftHeightController.getOverrideMeasureHeight(currentMessageObject, normHeight);
         }
         if (isMediaCarouselMessage()) {
-            int footerHeight = (currentCaption != null || captionLayout != null) ? dp(14) : dp(36);
+            int footerHeight = (currentCaption != null || captionLayout != null) ? dp(12) : dp(26);
             int minNeeded = (int) photoImage.getImageY() + (int) photoImage.getImageHeight() + footerHeight;
             if (captionLayout != null) {
                 minNeeded += captionLayout.textHeight() + dp(14);
+            }
+            if (drawCommentButton) {
+                minNeeded += dp(43);
             }
             if (resultHeight < minNeeded) {
                 resultHeight = minNeeded;
@@ -14232,7 +14251,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     @SuppressLint("DrawAllocation")
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
-        if (currentMessageObject == null) {
+        if (currentMessageObject == null || isSiblingGroupCarouselMessage()) {
             return;
         }
         int currentSize = getMeasuredHeight() + (getMeasuredWidth() << 16);
@@ -24572,7 +24591,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean shouldDrawTimeOnMedia() {
-        if (isMediaCarouselMessage()) {
+        if (isMediaCarouselMessage() || isSiblingGroupCarouselMessage()) {
             return false;
         }
         if (overideShouldDrawTimeOnMedia != 0) {
@@ -24582,6 +24601,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public void drawTime(Canvas canvas, float alpha, boolean fromParent) {
+        if (isSiblingGroupCarouselMessage()) {
+            return;
+        }
         if (!drawFromPinchToZoom && delegate != null && delegate.getPinchToZoomHelper() != null && delegate.getPinchToZoomHelper().isInOverlayModeFor(this) && shouldDrawTimeOnMedia()) {
             return;
         }
