@@ -225,4 +225,5 @@ jobs:
           token: ${{ secrets.GITHUB_TOKEN }}
           branch: gh-pages
           folder: deploy
-          clean: false
+          clean: true
+          single-commit: true

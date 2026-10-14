@@ -86,8 +86,8 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
                 holderView.bind(icon);
                 holderView.iconView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(ICONS_ROUND_RADIUS), Color.TRANSPARENT, Theme.getColor(Theme.key_listSelector), Color.BLACK));
                 holderView.iconView.setForeground(icon.foreground);
-                holderView.iconView.setIsNekoXIcon(icon.group == LauncherIconController.IconGroup.MOLTENGRAM);
-                holderView.iconView.setAdaptiveIconMode(icon.group != LauncherIconController.IconGroup.TELEGRAM);
+                holderView.iconView.setIsNekoXIcon(false);
+                holderView.iconView.setAdaptiveIconMode(true);
             }
 
             @Override
@@ -370,23 +370,10 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
         public void draw(Canvas canvas) {
             canvas.save();
             canvas.clipPath(path);
-            if (!this.isNekoXIcon) {
-                canvas.scale(1f + backgroundOuterPadding / (float) getWidth(), 1f + backgroundOuterPadding / (float) getHeight(), getWidth() / 2f, getHeight() / 2f);
-            }
-            super.draw(canvas);
+            int size = Math.min(getWidth() - getPaddingLeft() - getPaddingRight(), getHeight() - getPaddingTop() - getPaddingBottom());
+            canvas.translate(getPaddingLeft(), getPaddingTop());
+            app.exteraless.appicons.AppIcons.draw(canvas, getDrawable(), foreground, size);
             canvas.restore();
-
-            if (foreground != null) {
-                canvas.save();
-                canvas.clipPath(path);
-                if (this.isNekoXIcon) {
-                    foreground.setBounds(0, 0, getWidth(), getHeight());
-                } else {
-                    foreground.setBounds(-outerPadding, -outerPadding, getWidth() + outerPadding, getHeight() + outerPadding);
-                }
-                foreground.draw(canvas);
-                canvas.restore();
-            }
         }
 
         private void updatePath() {
