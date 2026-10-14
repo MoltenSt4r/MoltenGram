@@ -801,7 +801,7 @@ public class MoltenGramOtaManager {
             String changelog = prefs.getString("last_update_changelog", "");
             AndroidUtilities.runOnUIThread(() -> {
                 try {
-                    new MoltenGramChangelogBottomSheet(activity, version, changelog, null).show();
+                    MoltenGramChangelogDialog.show(activity, version, changelog, null);
                 } catch (Throwable t) {
                     FileLog.e(t);
                 }
