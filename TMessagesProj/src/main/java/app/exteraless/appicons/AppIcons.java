@@ -96,17 +96,23 @@ public final class AppIcons {
         });
     }
 
-    // слои 108dp, а видно только 72dp в центре
+    // Для одиночных иконок (без foreground) рисуем без приближения 1:1, точно в круг.
+    // Для адаптивных иконок с отдельным foreground масштабируем безопасную зону (72dp -> 108dp).
     public static void draw(Canvas canvas, Drawable background, Drawable foreground, int size) {
+        if (foreground == null) {
+            if (background != null) {
+                background.setBounds(0, 0, size, size);
+                background.draw(canvas);
+            }
+            return;
+        }
         int bleed = Math.round(size * 0.25f);
         if (background != null) {
             background.setBounds(-bleed, -bleed, size + bleed, size + bleed);
             background.draw(canvas);
         }
-        if (foreground != null) {
-            foreground.setBounds(-bleed, -bleed, size + bleed, size + bleed);
-            foreground.draw(canvas);
-        }
+        foreground.setBounds(-bleed, -bleed, size + bleed, size + bleed);
+        foreground.draw(canvas);
     }
 
     static int accent(Context context, LauncherIcon icon) {
