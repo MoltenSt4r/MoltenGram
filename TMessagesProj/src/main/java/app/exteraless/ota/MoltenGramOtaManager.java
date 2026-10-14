@@ -366,7 +366,7 @@ public class MoltenGramOtaManager {
                         boolean canShizukuSilent = app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
                                 && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission();
                         if (resultUpdate.isDownloaded()) {
-                            if (canShizukuSilent) {
+                            if (canShizukuSilent && ApplicationLoader.mainInterfacePaused) {
                                 dismissUpdateNotification();
                                 installWithShizuku(null, resultUpdate.getFile(), null);
                             } else if (ApplicationLoader.mainInterfacePaused) {
@@ -660,8 +660,9 @@ public class MoltenGramOtaManager {
                     if (callback != null) {
                         callback.onComplete(completedFile);
                     }
-                    if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
-                            && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
+                    boolean canShizukuSilent = app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                            && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission();
+                    if (canShizukuSilent && ApplicationLoader.mainInterfacePaused && callback == null) {
                         dismissUpdateNotification();
                         installWithShizuku(null, completedFile, null);
                     } else if (ApplicationLoader.mainInterfacePaused) {
@@ -755,6 +756,9 @@ public class MoltenGramOtaManager {
         if (isInstalling) {
             return;
         }
+        if (apkFile == null || !apkFile.exists()) {
+            return;
+        }
         isInstalling = true;
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
@@ -824,7 +828,17 @@ public class MoltenGramOtaManager {
         });
     }
 
-    private void installApkStandard(Activity activity, File apkFile) {
+    public void installUpdateStandard(Activity activity) {
+        if (pendingUpdate == null) {
+            return;
+        }
+        File apkFile = pendingUpdate.getFile();
+        if (apkFile != null && apkFile.exists()) {
+            installApkStandard(activity, apkFile);
+        }
+    }
+
+    public void installApkStandard(Activity activity, File apkFile) {
         try {
             if (pendingUpdate != null) {
                 prefs.edit()
@@ -1103,15 +1117,18 @@ public class MoltenGramOtaManager {
         if (!isOtaEnabled()) {
             return;
         }
+        boolean canShizukuSilent = app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission();
         if (isDownloaded() && pendingUpdate != null && !isInstalling) {
-            if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
-                    && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
+            if (canShizukuSilent) {
                 File f = pendingUpdate.getFile();
                 if (f != null && f.exists()) {
                     dismissUpdateNotification();
                     installWithShizuku(null, f, null);
                 }
             }
+        } else if (canShizukuSilent && pendingUpdate != null && !isDownloading && !isInstalling) {
+            startDownload(null);
         }
     }
 }
