@@ -17,7 +17,9 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.content.pm.ServiceInfo;
 import android.os.Build;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Looper;
 import android.util.Log;
 
 import androidx.core.app.NotificationCompat;
@@ -29,11 +31,27 @@ public class NotificationsService extends Service {
     private static final String CHANNEL_ID = "push_service_channel";
     private static final String CHANNEL_ID_QUIET = "push_service_channel_min";
 
+    private Handler otaHandler;
+    private final Runnable otaRunnable = new Runnable() {
+        @Override
+        public void run() {
+            try {
+                app.exteraless.ota.MoltenGramOtaManager.getInstance().checkUpdatesInBackground();
+            } catch (Throwable ignore) {
+            }
+            if (otaHandler != null) {
+                otaHandler.postDelayed(this, 15 * 60 * 1000L);
+            }
+        }
+    };
+
     @Override
     public void onCreate() {
         super.onCreate();
         ApplicationLoader.postInitApplication();
         goForeground();
+        otaHandler = new Handler(Looper.getMainLooper());
+        otaHandler.postDelayed(otaRunnable, 15 * 60 * 1000L);
     }
 
     private void goForeground() {
@@ -86,6 +104,10 @@ public class NotificationsService extends Service {
 
     public void onDestroy() {
         super.onDestroy();
+        if (otaHandler != null) {
+            otaHandler.removeCallbacks(otaRunnable);
+            otaHandler = null;
+        }
         try {
             stopForeground(true);
         } catch (Throwable ignore) {

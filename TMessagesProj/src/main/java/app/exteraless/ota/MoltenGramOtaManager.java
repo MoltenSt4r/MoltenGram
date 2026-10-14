@@ -10,9 +10,14 @@ import android.provider.Settings;
 import android.text.TextUtils;
 import android.widget.Toast;
 
+import android.app.AlarmManager;
 import android.app.NotificationChannel;
 import android.app.NotificationManager;
 import android.app.PendingIntent;
+import android.app.job.JobInfo;
+import android.app.job.JobScheduler;
+import android.content.ComponentName;
+import android.os.SystemClock;
 import androidx.core.app.NotificationCompat;
 import androidx.core.content.FileProvider;
 
@@ -108,6 +113,9 @@ public class MoltenGramOtaManager {
         prefs = ApplicationLoader.applicationContext.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
         loadPendingUpdateFromPrefs();
         cleanupOldIfUpdated();
+        if (isOtaEnabled()) {
+            schedulePeriodicCheck();
+        }
     }
 
     private void loadPendingUpdateFromPrefs() {
@@ -184,6 +192,11 @@ public class MoltenGramOtaManager {
 
     public void setOtaEnabled(boolean enabled) {
         prefs.edit().putBoolean("ota_enabled", enabled).apply();
+        if (enabled) {
+            schedulePeriodicCheck();
+        } else {
+            cancelPeriodicCheck();
+        }
     }
 
     public boolean isIncludeCanary() {
@@ -373,10 +386,7 @@ public class MoltenGramOtaManager {
                                 showDownloadCompleteNotification(resultUpdate.getFile(), resultUpdate);
                             }
                         } else {
-                            int autoMode = getAutoDownloadMode();
-                            boolean shouldAutoDownload = canShizukuSilent || autoMode == AUTO_DOWNLOAD_ALWAYS ||
-                                    (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi());
-                            if (shouldAutoDownload && !isDownloading) {
+                            if (!isDownloading) {
                                 startDownload(null);
                             } else if (ApplicationLoader.mainInterfacePaused) {
                                 showUpdateNotification(resultUpdate);
@@ -1097,13 +1107,84 @@ public class MoltenGramOtaManager {
         } catch (Exception ignored) {}
     }
 
+    public static final int JOB_ID_OTA = 7701;
+
+    public void schedulePeriodicCheck() {
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null || !isOtaEnabled()) {
+            return;
+        }
+        try {
+            JobScheduler js = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            if (js != null) {
+                ComponentName serviceComponent = new ComponentName(context, MoltenGramOtaJobService.class);
+                JobInfo.Builder builder = new JobInfo.Builder(JOB_ID_OTA, serviceComponent)
+                        .setPeriodic(15 * 60 * 1000L)
+                        .setRequiredNetworkType(JobInfo.NETWORK_TYPE_ANY)
+                        .setPersisted(true);
+                js.schedule(builder.build());
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+
+        try {
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am != null) {
+                Intent intent = new Intent(context, MoltenGramOtaReceiver.class);
+                intent.setAction(MoltenGramOtaReceiver.ACTION_CHECK_UPDATES);
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    flags |= PendingIntent.FLAG_IMMUTABLE;
+                }
+                PendingIntent pi = PendingIntent.getBroadcast(context, 7702, intent, flags);
+                am.setInexactRepeating(AlarmManager.ELAPSED_REALTIME_WAKEUP,
+                        SystemClock.elapsedRealtime() + 15 * 60 * 1000L,
+                        15 * 60 * 1000L,
+                        pi);
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
+    public void cancelPeriodicCheck() {
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) {
+            return;
+        }
+        try {
+            JobScheduler js = (JobScheduler) context.getSystemService(Context.JOB_SCHEDULER_SERVICE);
+            if (js != null) {
+                js.cancel(JOB_ID_OTA);
+            }
+            AlarmManager am = (AlarmManager) context.getSystemService(Context.ALARM_SERVICE);
+            if (am != null) {
+                Intent intent = new Intent(context, MoltenGramOtaReceiver.class);
+                intent.setAction(MoltenGramOtaReceiver.ACTION_CHECK_UPDATES);
+                int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    flags |= PendingIntent.FLAG_IMMUTABLE;
+                }
+                PendingIntent pi = PendingIntent.getBroadcast(context, 7702, intent, flags);
+                am.cancel(pi);
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+    }
+
     public void checkUpdatesInBackground() {
+        checkUpdatesInBackground(false);
+    }
+
+    public void checkUpdatesInBackground(boolean force) {
         if (!isOtaEnabled()) {
             return;
         }
         long lastCheck = getLastCheckTime();
         long now = System.currentTimeMillis();
-        if (now - lastCheck < 3 * 3600 * 1000L) {
+        if (!force && (now - lastCheck < 15 * 60 * 1000L)) {
             checkBackgroundSilentInstall();
             return;
         }
@@ -1127,7 +1208,7 @@ public class MoltenGramOtaManager {
                     installWithShizuku(null, f, null);
                 }
             }
-        } else if (canShizukuSilent && pendingUpdate != null && !isDownloading && !isInstalling) {
+        } else if (pendingUpdate != null && !isDownloading && !isInstalling) {
             startDownload(null);
         }
     }

@@ -431,6 +431,7 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
         if (app.exteraless.tor.TorController.getInstance().isEnabled()) {
             app.exteraless.tor.TorController.getInstance().start();
         }
+        app.exteraless.ota.MoltenGramOtaManager.getInstance().schedulePeriodicCheck();
     }
 
     // Local Push Service, TFoss implementation

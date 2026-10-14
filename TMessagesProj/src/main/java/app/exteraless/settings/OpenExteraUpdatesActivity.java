@@ -163,9 +163,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         }
         hasOwnBackground = true;
 
-        final int accentColor = Theme.getColor((Theme.getActiveTheme() != null && Theme.getActiveTheme().isMonetNight())
-                ? Theme.key_featuredStickers_unread
-                : Theme.key_featuredStickers_addButton);
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
         final int primaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         final int secondaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
@@ -340,12 +338,10 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         aboutSection.removeAllViews();
         settingsSection.removeAllViews();
 
-        final int accentColor = Theme.getColor((Theme.getActiveTheme() != null && Theme.getActiveTheme().isMonetNight())
-                ? Theme.key_featuredStickers_unread
-                : Theme.key_featuredStickers_addButton);
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
         int cardBgColor = Theme.getColor(Theme.key_windowBackgroundGray);
-        if (cardBgColor == surfaceColor || (Theme.isCurrentThemeDark() && ColorUtils.calculateLuminance(cardBgColor) <= ColorUtils.calculateLuminance(surfaceColor))) {
+        if (cardBgColor == surfaceColor) {
             cardBgColor = Theme.isCurrentThemeDark()
                     ? ColorUtils.blendARGB(surfaceColor, 0xFFFFFFFF, 0.08f)
                     : ColorUtils.blendARGB(surfaceColor, 0xFF000000, 0.05f);
@@ -477,13 +473,6 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             statusSubtitleView.setTextColor(secondaryTextColor);
         }
 
-        if (wavyProgressView != null) {
-            final int accent = Theme.getColor((Theme.getActiveTheme() != null && Theme.getActiveTheme().isMonetNight())
-                    ? Theme.key_featuredStickers_unread
-                    : Theme.key_featuredStickers_addButton);
-            wavyProgressView.setColors(accent, ColorUtils.setAlphaComponent(accent, Theme.isCurrentThemeDark() ? 65 : 45));
-        }
-
         buildCards(context);
         updateUiState();
     }
@@ -610,7 +599,6 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
         org.telegram.ui.Components.Switch sw = new org.telegram.ui.Components.Switch(context);
         sw.setChecked(checked, false);
-        sw.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
         row.addView(sw, LayoutHelper.createLinear(56, 34, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
         card.addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
@@ -629,9 +617,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     private void updateUiState() {
         if (fragmentView == null) return;
 
-        final int accentColor = Theme.getColor((Theme.getActiveTheme() != null && Theme.getActiveTheme().isMonetNight())
-                ? Theme.key_featuredStickers_unread
-                : Theme.key_featuredStickers_addButton);
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int primaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         final int secondaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
         final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
@@ -641,7 +627,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         final int disabledText = secondaryTextColor;
 
         int cardBgColor = Theme.getColor(Theme.key_windowBackgroundGray);
-        if (cardBgColor == surfaceColor || (Theme.isCurrentThemeDark() && ColorUtils.calculateLuminance(cardBgColor) <= ColorUtils.calculateLuminance(surfaceColor))) {
+        if (cardBgColor == surfaceColor) {
             cardBgColor = Theme.isCurrentThemeDark()
                     ? ColorUtils.blendARGB(surfaceColor, 0xFFFFFFFF, 0.08f)
                     : ColorUtils.blendARGB(surfaceColor, 0xFF000000, 0.05f);
@@ -759,12 +745,12 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
                 if (isDownloaded) {
                     actionButton.setEnabled(true);
-                    actionButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(28), accentColor, Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+                    setButtonBackground(actionButton, accentColor, 28);
                     actionButtonText.setText("Установить");
                     actionButtonText.setTextColor(onAccentColor);
                 } else if (hasUpdate) {
                     actionButton.setEnabled(true);
-                    actionButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(28), accentColor, Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+                    setButtonBackground(actionButton, accentColor, 28);
                     actionButtonText.setText("Скачать");
                     actionButtonText.setTextColor(onAccentColor);
                 } else if (isChecking) {
@@ -774,12 +760,12 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                     actionButtonText.setTextColor(disabledText);
                 } else if (!TextUtils.isEmpty(lastErrorMessage)) {
                     actionButton.setEnabled(true);
-                    actionButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(28), accentColor, Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+                    setButtonBackground(actionButton, accentColor, 28);
                     actionButtonText.setText("Повторить попытку");
                     actionButtonText.setTextColor(onAccentColor);
                 } else {
                     actionButton.setEnabled(true);
-                    actionButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(28), accentColor, Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
+                    setButtonBackground(actionButton, accentColor, 28);
                     actionButtonText.setText("Проверить");
                     actionButtonText.setTextColor(onAccentColor);
                 }

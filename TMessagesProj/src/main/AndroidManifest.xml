@@ -1059,6 +1059,21 @@
             </intent-filter>
         </receiver>
 
+        <service
+            android:name="app.exteraless.ota.MoltenGramOtaJobService"
+            android:permission="android.permission.BIND_JOB_SERVICE"
+            android:exported="true" />
+
+        <receiver
+            android:name="app.exteraless.ota.MoltenGramOtaReceiver"
+            android:exported="true">
+            <intent-filter>
+                <action android:name="android.intent.action.BOOT_COMPLETED" />
+                <action android:name="android.intent.action.MY_PACKAGE_REPLACED" />
+                <action android:name="app.exteraless.ota.ACTION_CHECK_UPDATES" />
+            </intent-filter>
+        </receiver>
+
         <receiver android:name=".RefererReceiver" android:exported="true" android:permission="android.permission.INSTALL_PACKAGES">
             <intent-filter>
                 <action android:name="com.android.vending.INSTALL_REFERRER" />
