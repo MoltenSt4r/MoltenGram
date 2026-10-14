@@ -86,7 +86,7 @@ public class LauncherIconController {
         canvas.clipPath(path);
         android.graphics.drawable.Drawable bg = icon.background != 0 ? androidx.core.content.ContextCompat.getDrawable(context, icon.background) : null;
         android.graphics.drawable.Drawable fg = icon.foreground != 0 ? androidx.core.content.ContextCompat.getDrawable(context, icon.foreground) : null;
-        app.exteraless.appicons.AppIcons.draw(canvas, bg, fg, size);
+        app.exteraless.appicons.AppIcons.draw(canvas, bg, fg, size, icon.hasBleed);
         return new android.graphics.drawable.BitmapDrawable(context.getResources(), bitmap);
     }
 
@@ -100,7 +100,7 @@ public class LauncherIconController {
         MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
                 R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF1E713B),
         MOLTENGRAM_CLASSIC("MoltenGramClassicIcon", R.drawable.moltengram_icon_background,
-                0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature emerald flame", 0xFF1E713B),
+                0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature emerald flame", 0xFF1E713B, false),
         MOLTENGRAM_PROTON("MoltenGramProtonIcon", R.drawable.moltengram_proton_icon_background,
                 0, R.string.AppIconMoltenGramProton, IconGroup.MOLTENGRAM, "@moltenst4r", "Proton cyber aesthetics", 0xFF6D4AFF),
         MOLTENGRAM_SAD("MoltenGramSadIcon", R.drawable.moltengram_sad_icon_background,
@@ -112,19 +112,19 @@ public class LauncherIconController {
         MOLTENGRAM_ANOTHERCHANCE("MoltenGramAnotherChanceIcon", R.drawable.moltengram_anotherchance_icon_background,
                 0, R.string.AppIconMoltenGramAnotherChance, IconGroup.MOLTENGRAM, "@moltenst4r", "Another chance renewal", 0xFF00897B),
         MOLTENGRAM_DOTTED("MoltenGramDottedIcon", R.drawable.moltengram_dotted_icon_background,
-                0, R.string.AppIconMoltenGramDotted, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS glyph dot matrix", 0xFFFFFFFF),
+                0, R.string.AppIconMoltenGramDotted, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS glyph dot matrix", 0xFFFFFFFF, false),
         MOLTENGRAM_ENDEAVOUROS("MoltenGramEndeavourOSIcon", R.drawable.moltengram_endeavouros_icon_background,
                 0, R.string.AppIconMoltenGramEndeavourOS, IconGroup.MOLTENGRAM, "@moltenst4r", "EndeavourOS indigo violet", 0xFF7B52AB),
         MOLTENGRAM_SUNRISE("MoltenGramSunriseIcon", R.drawable.moltengram_sunrise_icon_background,
                 0, R.string.AppIconMoltenGramSunrise, IconGroup.MOLTENGRAM, "@moltenst4r", "Morning twilight gradient", 0xFFE06C53),
         MOLTENGRAM_STAR("MoltenGramStarIcon", R.drawable.moltengram_star_icon_background,
-                0, R.string.AppIconMoltenGramStar, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep cosmic space starlight", 0xFFFFD700),
+                0, R.string.AppIconMoltenGramStar, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep cosmic space starlight", 0xFFFFD700, false),
         MOLTENGRAM_COFFEE("MoltenGramCoffeeIcon", R.drawable.moltengram_coffee_icon_background,
                 0, R.string.AppIconMoltenGramCoffee, IconGroup.MOLTENGRAM, "@moltenst4r", "Warm marble mocha coffee", 0xFF8B5A2B),
         MOLTENGRAM_GLACIER("MoltenGramGlacierIcon", R.drawable.moltengram_glacier_icon_background,
-                0, R.string.AppIconMoltenGramGlacier, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep ocean glacier cyan", 0xFF00B4D8),
+                0, R.string.AppIconMoltenGramGlacier, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep ocean glacier cyan", 0xFF00B4D8, false),
         MOLTENGRAM_GOOGLE("MoltenGramGoogleIcon", R.drawable.moltengram_google_icon_background,
-                0, R.string.AppIconMoltenGramGoogle, IconGroup.MOLTENGRAM, "@moltenst4r", "Material 3 Expressive", 0xFF4285F4),
+                0, R.string.AppIconMoltenGramGoogle, IconGroup.MOLTENGRAM, "@moltenst4r", "Material 3 Expressive", 0xFF4285F4, false),
         MOLTENGRAM_BEER("MoltenGramBeerIcon", R.drawable.moltengram_beer_icon_background,
                 0, R.string.AppIconMoltenGramBeer, IconGroup.MOLTENGRAM, "@moltenst4r", "Golden craft beer foam", 0xFFEC9401),
         MOLTENGRAM_MAGMA("MoltenGramMagmaIcon", R.drawable.moltengram_magma_icon_background,
@@ -159,6 +159,7 @@ public class LauncherIconController {
         public final String author;
         public final String description;
         public final int glowColor;
+        public final boolean hasBleed;
 
         private ComponentName componentName;
 
@@ -170,10 +171,18 @@ public class LauncherIconController {
         }
 
         LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author, String description, int glowColor) {
-            this(key, background, foreground, title, false, group, author, description, glowColor);
+            this(key, background, foreground, title, false, group, author, description, glowColor, true);
+        }
+
+        LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author, String description, int glowColor, boolean hasBleed) {
+            this(key, background, foreground, title, false, group, author, description, glowColor, hasBleed);
         }
 
         LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author, String description, int glowColor) {
+            this(key, background, foreground, title, premium, group, author, description, glowColor, true);
+        }
+
+        LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author, String description, int glowColor, boolean hasBleed) {
             this.key = key;
             this.background = background;
             this.foreground = foreground;
@@ -183,14 +192,15 @@ public class LauncherIconController {
             this.author = author;
             this.description = description;
             this.glowColor = glowColor;
+            this.hasBleed = hasBleed;
         }
 
         LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author) {
-            this(key, background, foreground, title, false, group, author, null, 0xFF202020);
+            this(key, background, foreground, title, false, group, author, null, 0xFF202020, true);
         }
 
         LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author) {
-            this(key, background, foreground, title, premium, group, author, null, 0xFF202020);
+            this(key, background, foreground, title, premium, group, author, null, 0xFF202020, true);
         }
 
     }

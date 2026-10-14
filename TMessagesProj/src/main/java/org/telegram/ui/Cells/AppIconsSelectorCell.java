@@ -86,6 +86,7 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
                 holderView.bind(icon);
                 holderView.iconView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(ICONS_ROUND_RADIUS), Color.TRANSPARENT, Theme.getColor(Theme.key_listSelector), Color.BLACK));
                 holderView.iconView.setForeground(icon.foreground);
+                holderView.iconView.setHasBleed(icon.hasBleed);
                 holderView.iconView.setIsNekoXIcon(false);
                 holderView.iconView.setAdaptiveIconMode(true);
             }
@@ -325,6 +326,7 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
 
     public static class AdaptiveIconImageView extends ImageView {
         private boolean isNekoXIcon = false;
+        private boolean hasBleed = true;
         private Drawable foreground;
         private Path path = new Path();
         private int outerPadding = AndroidUtilities.dp(5);
@@ -336,6 +338,11 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
 
         public void setForeground(int res) {
             foreground = res == 0 ? null : ContextCompat.getDrawable(getContext(), res);
+            invalidate();
+        }
+
+        public void setHasBleed(boolean hasBleed) {
+            this.hasBleed = hasBleed;
             invalidate();
         }
 
@@ -370,9 +377,14 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
         public void draw(Canvas canvas) {
             canvas.save();
             canvas.clipPath(path);
-            int size = Math.min(getWidth() - getPaddingLeft() - getPaddingRight(), getHeight() - getPaddingTop() - getPaddingBottom());
-            canvas.translate(getPaddingLeft(), getPaddingTop());
-            app.exteraless.appicons.AppIcons.draw(canvas, getDrawable(), foreground, size);
+            int availW = getWidth() - getPaddingLeft() - getPaddingRight();
+            int availH = getHeight() - getPaddingTop() - getPaddingBottom();
+            int size = Math.min(availW, availH);
+            float tx = getPaddingLeft() + (availW - size) / 2f;
+            float ty = getPaddingTop() + (availH - size) / 2f;
+            canvas.translate(tx, ty);
+            Drawable bg = getDrawable() != null ? getDrawable() : getBackground();
+            app.exteraless.appicons.AppIcons.draw(canvas, bg, foreground, size, hasBleed);
             canvas.restore();
         }
 

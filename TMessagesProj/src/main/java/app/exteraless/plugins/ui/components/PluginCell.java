@@ -288,8 +288,8 @@ public class PluginCell extends FrameLayout implements NotificationCenter.Notifi
         checkBox.setOnClickListener(v -> callDelegate(ACTION_TOGGLE));
         // 4dp справа: у Switch трек уже своей вьюхи, и без этого он оказывается
         // ближе к краю карточки, чем текст слева.
-        headerRow.addView(checkBox, LayoutHelper.createLinear(37, 40, Gravity.TOP,
-                12, 0, 4, 0));
+        headerRow.addView(checkBox, LayoutHelper.createLinear(52, 32, Gravity.TOP,
+                12, 4, 8, 0));
         updateCardBackground();
     }
 

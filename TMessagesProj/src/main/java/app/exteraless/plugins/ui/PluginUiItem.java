@@ -1,12 +1,23 @@
 package app.exteraless.plugins.ui;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.ListView.AdapterWithDiffUtils;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.UItem;
@@ -29,6 +40,10 @@ final class PluginUiItem extends UItem {
 
     static UItem engineToggle(int id, CharSequence text, boolean checked) {
         return EngineToggleFactory.of(id, text, checked);
+    }
+
+    static UItem storeBanner(int id, CharSequence title, CharSequence desc) {
+        return StoreBannerFactory.of(id, title, desc);
     }
 
     static PluginUiItem fullscreen(View view, int minusHeight, boolean minusPadding) {
@@ -111,4 +126,106 @@ final class PluginUiItem extends UItem {
             return item;
         }
     }
+
+    public static final class StoreBannerCell extends FrameLayout {
+        private final TextView titleView;
+        private final TextView descView;
+
+        public StoreBannerCell(Context context, Theme.ResourcesProvider resourcesProvider) {
+            super(context);
+            setMinimumHeight(AndroidUtilities.dp(64));
+            setBackground(Theme.getSelectorDrawable(false));
+
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10), AndroidUtilities.dp(16), AndroidUtilities.dp(10));
+            addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+            FrameLayout iconContainer = new FrameLayout(context);
+            GradientDrawable iconBg = new GradientDrawable();
+            iconBg.setCornerRadius(AndroidUtilities.dp(12));
+            iconBg.setColor(Theme.multAlpha(Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider), 0.14f));
+            iconContainer.setBackground(iconBg);
+
+            ImageView iconView = new ImageView(context);
+            iconView.setImageResource(R.drawable.menu_shop);
+            iconView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            iconView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider), PorterDuff.Mode.SRC_IN));
+            iconContainer.addView(iconView, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
+            row.addView(iconContainer, LayoutHelper.createLinear(40, 40, Gravity.CENTER_VERTICAL));
+
+            LinearLayout textCol = new LinearLayout(context);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            textCol.setGravity(Gravity.CENTER_VERTICAL);
+            row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 14, 0, 8, 0));
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            titleView.setTypeface(AndroidUtilities.bold());
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
+            titleView.setSingleLine(true);
+            titleView.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            descView = new TextView(context);
+            descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            descView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2, resourcesProvider));
+            descView.setMaxLines(2);
+            descView.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+            ImageView arrowView = new ImageView(context);
+            arrowView.setImageResource(R.drawable.msg_arrowright);
+            arrowView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon, resourcesProvider), PorterDuff.Mode.MULTIPLY));
+            row.addView(arrowView, LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL));
+        }
+
+        public void set(CharSequence title, CharSequence desc) {
+            titleView.setText(title);
+            descView.setText(desc);
+        }
+    }
+
+    private static final class StoreBannerFactory extends UItem.UItemFactory<StoreBannerCell> {
+        static {
+            setup(new StoreBannerFactory());
+        }
+
+        @Override
+        public StoreBannerCell createView(Context context, RecyclerListView listView,
+                                          int currentAccount, int classGuid,
+                                          Theme.ResourcesProvider resourcesProvider) {
+            return new StoreBannerCell(context, resourcesProvider);
+        }
+
+        @Override
+        public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter,
+                             UniversalRecyclerView listView) {
+            if (view instanceof StoreBannerCell) {
+                ((StoreBannerCell) view).set(item.text, item.subtext);
+            }
+        }
+
+        @Override
+        public boolean equals(UItem first, UItem second) {
+            return first.id == second.id;
+        }
+
+        @Override
+        public boolean contentsEquals(UItem first, UItem second) {
+            return first.id == second.id
+                    && TextUtils.equals(first.text, second.text)
+                    && TextUtils.equals(first.subtext, second.subtext);
+        }
+
+        static UItem of(int id, CharSequence title, CharSequence desc) {
+            UItem item = UItem.ofFactory(StoreBannerFactory.class);
+            item.id = id;
+            item.text = title;
+            item.subtext = desc;
+            return item;
+        }
+    }
 }
+

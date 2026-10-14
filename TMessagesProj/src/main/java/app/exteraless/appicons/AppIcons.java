@@ -96,13 +96,17 @@ public final class AppIcons {
         });
     }
 
-    // Для одиночных иконок (без foreground) рисуем без приближения 1:1, точно в круг.
-    // Для адаптивных иконок с отдельным foreground масштабируем безопасную зону (72dp -> 108dp).
-    public static void draw(Canvas canvas, Drawable background, Drawable foreground, int size) {
-        if (foreground == null) {
+    // Для иконок с 1:1 фоном (полное покрытие, без safe-zone) рисуем без bleed точно в круг.
+    // Для адаптивных иконок масштабируем безопасную зону (72dp -> 108dp) с отступом bleed = 0.25f.
+    public static void draw(Canvas canvas, Drawable background, Drawable foreground, int size, boolean hasBleed) {
+        if (!hasBleed) {
             if (background != null) {
                 background.setBounds(0, 0, size, size);
                 background.draw(canvas);
+            }
+            if (foreground != null) {
+                foreground.setBounds(0, 0, size, size);
+                foreground.draw(canvas);
             }
             return;
         }
@@ -111,8 +115,14 @@ public final class AppIcons {
             background.setBounds(-bleed, -bleed, size + bleed, size + bleed);
             background.draw(canvas);
         }
-        foreground.setBounds(-bleed, -bleed, size + bleed, size + bleed);
-        foreground.draw(canvas);
+        if (foreground != null) {
+            foreground.setBounds(-bleed, -bleed, size + bleed, size + bleed);
+            foreground.draw(canvas);
+        }
+    }
+
+    public static void draw(Canvas canvas, Drawable background, Drawable foreground, int size) {
+        draw(canvas, background, foreground, size, true);
     }
 
     static int accent(Context context, LauncherIcon icon) {

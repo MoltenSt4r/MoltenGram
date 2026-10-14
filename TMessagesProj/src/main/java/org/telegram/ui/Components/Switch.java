@@ -908,8 +908,16 @@ public class Switch extends View {
         final float midX = measuredWidth / 2f;
         final float midY = measuredHeight / 2f;
 
-        final float trackW = dpf2(52f);
-        final float trackH = dpf2(32f);
+        final float baseTrackW = dpf2(52f);
+        final float baseTrackH = dpf2(32f);
+
+        // Dynamically fit into measured container if smaller than standard 52x32dp
+        final float scaleX = (measuredWidth > 0 && measuredWidth < baseTrackW) ? (measuredWidth - dpf2(2f)) / baseTrackW : 1f;
+        final float scaleY = (measuredHeight > 0 && measuredHeight < baseTrackH) ? (measuredHeight - dpf2(2f)) / baseTrackH : 1f;
+        final float scale = Math.max(0.6f, Math.min(1f, Math.min(scaleX, scaleY)));
+
+        final float trackW = baseTrackW * scale;
+        final float trackH = baseTrackH * scale;
         final float trackRadius = trackH / 2f;
 
         final float trackLeft = midX - trackW / 2f;
@@ -941,7 +949,7 @@ public class Switch extends View {
 
         // Track outline when OFF (fades out as switch turns ON)
         if (pp < 1f) {
-            final float strokeWidth = dpf2(2f);
+            final float strokeWidth = dpf2(2f) * scale;
             googleBorderPaint.setStyle(Paint.Style.STROKE);
             googleBorderPaint.setStrokeWidth(strokeWidth);
             googleBorderPaint.setColor(outlineColor);
@@ -952,8 +960,8 @@ public class Switch extends View {
         }
 
         // Thumb metrics: 24dp diameter (12dp radius), 4dp margin from edges in 52dp track
-        final float thumbR = dpf2(12f);
-        final float margin = dpf2(4f);
+        final float thumbR = dpf2(12f) * scale;
+        final float margin = dpf2(4f) * scale;
         final float thumbMinX = trackLeft + margin + thumbR;
         final float thumbMaxX = trackRight - margin - thumbR;
         final float thumbX = thumbMinX + (thumbMaxX - thumbMinX) * pp;
@@ -961,7 +969,7 @@ public class Switch extends View {
 
         // Ripple feedback
         if (rippleDrawable != null) {
-            int ripR = dp(18);
+            int ripR = (int) (dp(18) * scale);
             rippleDrawable.setBounds((int) (thumbX - ripR), (int) (thumbY - ripR), (int) (thumbX + ripR), (int) (thumbY + ripR));
             rippleDrawable.draw(canvas);
         }
@@ -977,25 +985,25 @@ public class Switch extends View {
         paint.setColor(currentThumbColor);
 
         // Subtle stretch during fast movement
-        final float stretch = dpf2(1.5f) * (1f - Math.abs(pp * 2f - 1f));
+        final float stretch = dpf2(1.5f) * scale * (1f - Math.abs(pp * 2f - 1f));
         rectF.set(thumbX - thumbR - stretch, thumbY - thumbR, thumbX + thumbR + stretch, thumbY + thumbR);
         canvas.drawRoundRect(rectF, thumbR, thumbR, paint);
 
         // Icons inside thumb:
         if (iconDrawable != null && animatorIconVisibility.getFloatValue() > 0) {
             float factor = animatorIconVisibility.getFloatValue();
-            drawCenteredDrawable(canvas, iconDrawable, (int) thumbX, (int) thumbY, factor * 0.8f, (int) (255 * factor));
+            drawCenteredDrawable(canvas, iconDrawable, (int) thumbX, (int) thumbY, factor * 0.8f * scale, (int) (255 * factor));
         } else {
             // OFF icon: Cross '✕'
             if (pp < 0.7f) {
                 float crossAlpha = Utilities.clamp01((0.7f - pp) / 0.7f);
                 int crossColor = surfaceBg;
-                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.6f);
+                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.6f * scale);
             }
             // ON icon: Checkmark '✓'
             if (pp > 0.3f) {
                 float checkAlpha = Utilities.clamp01((pp - 0.3f) / 0.7f);
-                drawCheckmark(canvas, thumbX, thumbY, accentColor, checkAlpha);
+                drawCheckmark(canvas, thumbX, thumbY, accentColor, checkAlpha, scale);
             }
         }
 
@@ -1004,7 +1012,7 @@ public class Switch extends View {
         }
     }
 
-    private void drawCheckmark(Canvas canvas, float cx, float cy, int color, float alpha) {
+    private void drawCheckmark(Canvas canvas, float cx, float cy, int color, float alpha, float scale) {
         int oldAlpha = paint2.getAlpha();
         float oldStrokeWidth = paint2.getStrokeWidth();
         Paint.Cap oldCap = paint2.getStrokeCap();
@@ -1012,14 +1020,14 @@ public class Switch extends View {
 
         paint2.setColor(color);
         paint2.setAlpha((int) (255 * alpha));
-        paint2.setStrokeWidth(dpf2(2.0f));
+        paint2.setStrokeWidth(dpf2(2.0f) * scale);
         paint2.setStrokeCap(Paint.Cap.ROUND);
         paint2.setStrokeJoin(Paint.Join.ROUND);
 
         checkPath.reset();
-        checkPath.moveTo(cx - dpf2(4.5f), cy + dpf2(0.5f));
-        checkPath.lineTo(cx - dpf2(1.5f), cy + dpf2(3.5f));
-        checkPath.lineTo(cx + dpf2(4.8f), cy - dpf2(2.8f));
+        checkPath.moveTo(cx - dpf2(4.5f) * scale, cy + dpf2(0.5f) * scale);
+        checkPath.lineTo(cx - dpf2(1.5f) * scale, cy + dpf2(3.5f) * scale);
+        checkPath.lineTo(cx + dpf2(4.8f) * scale, cy - dpf2(2.8f) * scale);
 
         canvas.drawPath(checkPath, paint2);
 

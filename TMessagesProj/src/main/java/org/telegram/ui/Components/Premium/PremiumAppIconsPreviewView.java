@@ -59,6 +59,7 @@ public class PremiumAppIconsPreviewView extends FrameLayout implements PagerHead
         AdaptiveIconImageView iconImageView = new AdaptiveIconImageView(ctx, i);
         iconImageView.setLayoutParams(LayoutHelper.createFrame(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT, Gravity.CENTER, 0, 52, 0, 0));
         iconImageView.setForeground(icon.foreground);
+        iconImageView.setHasBleed(icon.hasBleed);
         iconImageView.setIsNekoXIcon(false);
         iconImageView.setBackgroundResource(icon.background);
         iconImageView.setPadding(AndroidUtilities.dp(8));

@@ -124,6 +124,15 @@ public class PythonPluginsEngine extends com.exteragram.messenger.plugins.Python
                     Python.start(new AndroidPlatform(appContext));
                     FileLog.d("PluginsEngine: Python started in " + (System.currentTimeMillis() - t0) + " ms");
                 }
+                File customSdkDir = new File(appContext.getFilesDir(), "pysdk");
+                if (customSdkDir.exists() && customSdkDir.isDirectory()) {
+                    try {
+                        Python.getInstance().getModule("sys").get("path").callAttr("insert", 0, customSdkDir.getAbsolutePath());
+                        FileLog.d("PluginsEngine: prepended custom pysdk path: " + customSdkDir.getAbsolutePath());
+                    } catch (Throwable t) {
+                        FileLog.e("PluginsEngine: prepend pysdk failed", t);
+                    }
+                }
                 loader = Python.getInstance().getModule("extera_utils.plugin_loader");
                 started = true;
                 // Dev-сервер (порт 42690) — только в developer mode; реализован в plugin_loader.

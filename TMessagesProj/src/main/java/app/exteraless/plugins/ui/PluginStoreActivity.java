@@ -455,13 +455,16 @@ public class PluginStoreActivity extends BaseFragment {
 
             final ArrayList<TLRPC.Chat> folderChats = chats != null ? new ArrayList<>(chats) : new ArrayList<>();
             AndroidUtilities.runOnUIThread(() -> {
+                int delay = 0;
                 for (TLRPC.Chat c : folderChats) {
                     if (c != null && !containsChat(activeSourceChats, c)) {
                         activeSourceChats.add(c);
-                        searchChatBatch(c, 0, null, null);
+                        final TLRPC.Chat chatToSearch = c;
+                        AndroidUtilities.runOnUIThread(() -> searchChatBatch(chatToSearch, 0, null, null), delay);
+                        delay += 120;
                     }
                 }
-                resolveKnownChannels();
+                AndroidUtilities.runOnUIThread(this::resolveKnownChannels, delay + 150);
             });
         });
     }
@@ -572,7 +575,7 @@ public class PluginStoreActivity extends BaseFragment {
 
                     if (!discovered.isEmpty()) {
                         mergePlugins(discovered);
-                        saveCache();
+                        scheduleSaveCache();
                     }
                 }
                 if (onComplete != null) {
@@ -1287,6 +1290,15 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
+    private Runnable saveCacheRunnable;
+    private void scheduleSaveCache() {
+        if (saveCacheRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(saveCacheRunnable);
+        }
+        saveCacheRunnable = this::saveCache;
+        AndroidUtilities.runOnUIThread(saveCacheRunnable, 1200);
+    }
+
     private void saveCache() {
         Activity act = getParentActivity();
         if (act == null || allPlugins.isEmpty()) return;
@@ -1429,11 +1441,7 @@ public class PluginStoreActivity extends BaseFragment {
         }
 
         for (StorePlugin p : list) {
-            StorePluginCell cell = new StorePluginCell(context);
-            cell.bind(p, pluginDelegate);
-            UItem item = UItem.asCustom(cell);
-            item.object = p;
-            items.add(item);
+            items.add(StorePluginItemFactory.of(p, pluginDelegate));
         }
     }
 
@@ -1729,6 +1737,10 @@ public class PluginStoreActivity extends BaseFragment {
             AndroidUtilities.cancelRunOnUIThread(deepSearchRunnable);
             deepSearchRunnable = null;
         }
+        if (saveCacheRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(saveCacheRunnable);
+            saveCacheRunnable = null;
+        }
         for (NotificationCenter.NotificationCenterDelegate obs : activeObservers) {
             NotificationCenter.getInstance(currentAccount).removeObserver(obs, NotificationCenter.fileLoaded);
             NotificationCenter.getInstance(currentAccount).removeObserver(obs, NotificationCenter.fileLoadFailed);
@@ -1814,6 +1826,55 @@ public class PluginStoreActivity extends BaseFragment {
         void onInstalledClick(StorePlugin plugin);
         void onAuthorClick(StorePlugin plugin);
         void onCardClick(StorePlugin plugin);
+    }
+
+    private static final class StorePluginItemFactory extends UItem.UItemFactory<StorePluginCell> {
+        static {
+            setup(new StorePluginItemFactory());
+        }
+
+        @Override
+        public StorePluginCell createView(Context context, RecyclerListView listView,
+                                          int currentAccount, int classGuid,
+                                          Theme.ResourcesProvider resourcesProvider) {
+            return new StorePluginCell(context);
+        }
+
+        @Override
+        public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter,
+                             UniversalRecyclerView listView) {
+            if (view instanceof StorePluginCell && item.object instanceof StorePlugin) {
+                StorePluginCell cell = (StorePluginCell) view;
+                StorePlugin p = (StorePlugin) item.object;
+                cell.bind(p, (StorePluginDelegate) item.tag);
+            }
+        }
+
+        @Override
+        public boolean equals(UItem first, UItem second) {
+            return first.id == second.id;
+        }
+
+        @Override
+        public boolean contentsEquals(UItem first, UItem second) {
+            if (first.object instanceof StorePlugin && second.object instanceof StorePlugin) {
+                StorePlugin p1 = (StorePlugin) first.object;
+                StorePlugin p2 = (StorePlugin) second.object;
+                return p1.downloading == p2.downloading
+                        && TextUtils.equals(p1.version, p2.version)
+                        && TextUtils.equals(p1.name, p2.name)
+                        && TextUtils.equals(p1.description, p2.description);
+            }
+            return false;
+        }
+
+        static UItem of(StorePlugin p, StorePluginDelegate delegate) {
+            UItem item = ofFactory(StorePluginItemFactory.class);
+            item.object = p;
+            item.tag = delegate;
+            item.id = p.id != null ? p.id.hashCode() : 0;
+            return item;
+        }
     }
 
     public static class StorePluginCell extends FrameLayout {

@@ -194,7 +194,7 @@ public class PluginsActivity extends BaseFragment {
             return;
         }
         items.add(UItem.asSpace(dp(8)));
-        items.add(UItem.asButton(ID_PLUGIN_STORE_BANNER, R.drawable.menu_shop,
+        items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
                 getString(R.string.PluginsStoreBannerTitle),
                 getString(R.string.PluginsStoreBannerDesc)));
         items.add(UItem.asSpace(dp(8)));

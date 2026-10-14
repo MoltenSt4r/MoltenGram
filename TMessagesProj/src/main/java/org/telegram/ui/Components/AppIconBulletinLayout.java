@@ -45,6 +45,7 @@ public class AppIconBulletinLayout extends Bulletin.ButtonLayout {
         } else {
             imageView.setForeground(0);
         }
+        imageView.setHasBleed(icon.hasBleed);
         imageView.setIsNekoXIcon(false);
         textView.setText(AndroidUtilities.replaceTags(LocaleController.formatString(R.string.AppIconChangedTo, LocaleController.getString(icon.title))));
     }

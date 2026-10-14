@@ -26,6 +26,8 @@ public class IconPreviewView extends View {
     private Drawable foreground;
     private Drawable oldBackground;
     private Drawable oldForeground;
+    private boolean hasBleed = true;
+    private boolean oldHasBleed = true;
     private float progress = 1f;
     private ValueAnimator animator;
     private float scale = 1f;
@@ -52,7 +54,9 @@ public class IconPreviewView extends View {
         if (crossfade) {
             oldBackground = background;
             oldForeground = foreground;
+            oldHasBleed = hasBleed;
         }
+        hasBleed = icon == null || icon.hasBleed;
         background = icon == null || icon.background == 0 ? null : ContextCompat.getDrawable(getContext(), icon.background);
         foreground = icon == null || icon.foreground == 0 ? null : ContextCompat.getDrawable(getContext(), icon.foreground);
         if (crossfade) {
@@ -102,12 +106,12 @@ public class IconPreviewView extends View {
         canvas.scale(scale, scale, size / 2f, size / 2f);
         canvas.clipPath(shape);
         if (progress < 1f && (oldBackground != null || oldForeground != null)) {
-            AppIcons.draw(canvas, oldBackground, oldForeground, size);
+            AppIcons.draw(canvas, oldBackground, oldForeground, size, oldHasBleed);
             canvas.saveLayerAlpha(0, 0, size, size, (int) (255 * progress));
-            AppIcons.draw(canvas, background, foreground, size);
+            AppIcons.draw(canvas, background, foreground, size, hasBleed);
             canvas.restore();
         } else {
-            AppIcons.draw(canvas, background, foreground, size);
+            AppIcons.draw(canvas, background, foreground, size, hasBleed);
         }
         canvas.restore();
     }

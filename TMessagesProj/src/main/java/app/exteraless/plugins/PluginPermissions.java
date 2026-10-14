@@ -241,10 +241,14 @@ public final class PluginPermissions {
         if (level == PluginTrustLevel.ISOLATED) {
             return new ArrayList<>(Collections.singletonList(UI));
         }
-        if (level != PluginTrustLevel.TRUSTED) {
-            raw.remove(HOOKS);
-            raw.remove(NATIVE);
+        if (level == PluginTrustLevel.TRUSTED) {
+            if (!raw.contains(HOOKS)) {
+                raw.add(HOOKS);
+            }
+            return raw;
         }
+        raw.remove(HOOKS);
+        raw.remove(NATIVE);
         return raw;
     }
 

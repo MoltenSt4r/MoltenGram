@@ -36,8 +36,8 @@ public final class PluginTrustLevel {
     public static final int GATED = 1;
     public static final int TRUSTED = 2;
 
-    /** Уровень новых установок. Права выдаются потом и осознанно. */
-    public static final int DEFAULT = ISOLATED;
+    /** Уровень новых установок. По умолчанию плагинам доверяем, как в Telegram/extera. */
+    public static final int DEFAULT = TRUSTED;
 
     private PluginTrustLevel() {
     }
@@ -82,7 +82,7 @@ public final class PluginTrustLevel {
                 return GATED;
             }
         }
-        return ISOLATED;
+        return TRUSTED;
     }
 
     /**
@@ -103,6 +103,8 @@ public final class PluginTrustLevel {
         } else if (value == GATED) {
             PluginPermissions.revoke(pluginId, PluginPermissions.HOOKS);
             PluginPermissions.revoke(pluginId, PluginPermissions.NATIVE);
+        } else if (value == TRUSTED) {
+            PluginPermissions.grant(pluginId, PluginPermissions.HOOKS);
         }
         FileLog.d("PluginTrustLevel: " + pluginId + " -> " + name(value));
     }

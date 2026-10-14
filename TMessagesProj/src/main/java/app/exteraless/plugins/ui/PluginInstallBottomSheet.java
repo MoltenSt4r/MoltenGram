@@ -211,7 +211,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
                     PluginPermissionsActivity.infoOf(permission),
                     PluginCapabilityScan.evidenceOf(capabilities, permission),
                     i < permissions.size() - 1);
-            cell.setChecked(!obfuscated && !PluginPermissions.isDangerous(permission), false);
+            cell.setChecked(!obfuscated, false);
             cell.setOnToggle(() -> cell.setChecked(!cell.isChecked(), true));
             cells.add(cell);
             content.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT,
