@@ -1846,7 +1846,7 @@ public class PluginStoreActivity extends BaseFragment {
             if (view instanceof StorePluginCell && item.object instanceof StorePlugin) {
                 StorePluginCell cell = (StorePluginCell) view;
                 StorePlugin p = (StorePlugin) item.object;
-                cell.bind(p, (StorePluginDelegate) item.tag);
+                cell.bind(p, (StorePluginDelegate) item.object2);
             }
         }
 
@@ -1871,7 +1871,7 @@ public class PluginStoreActivity extends BaseFragment {
         static UItem of(StorePlugin p, StorePluginDelegate delegate) {
             UItem item = ofFactory(StorePluginItemFactory.class);
             item.object = p;
-            item.tag = delegate;
+            item.object2 = delegate;
             item.id = p.id != null ? p.id.hashCode() : 0;
             return item;
         }
