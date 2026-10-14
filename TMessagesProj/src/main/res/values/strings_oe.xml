@@ -46,6 +46,10 @@
     <string name="AppIconMoltenGramBeer">Beer</string>
     <string name="AppIconMoltenGramMagma">Magma</string>
     <string name="AppIconMoltenGramHolo">Holo</string>
+    <string name="AppIconMoltenGramKraft">Kraft</string>
+    <string name="AppIconMoltenGramCoral">Coral</string>
+    <string name="AppIconMoltenGramOnyx">Onyx</string>
+    <string name="AppIconMoltenGramNeon">Neon</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>
     <string name="OpenExteraPreferences">MoltenGram Preferences</string>

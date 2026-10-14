@@ -44,6 +44,10 @@
     <string name="AppIconMoltenGramBeer">Пиво</string>
     <string name="AppIconMoltenGramMagma">Магма</string>
     <string name="AppIconMoltenGramHolo">Голография</string>
+    <string name="AppIconMoltenGramKraft">Крафт</string>
+    <string name="AppIconMoltenGramCoral">Коралл</string>
+    <string name="AppIconMoltenGramOnyx">Оникс</string>
+    <string name="AppIconMoltenGramNeon">Неон</string>
     <string name="AppIconsSelect">Выбрать</string>
     <string name="AppIconsKeep">Оставить эту</string>
     <string name="OpenExteraPreferences">Настройки MoltenGram</string>

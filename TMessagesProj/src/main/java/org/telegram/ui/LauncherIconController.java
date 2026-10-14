@@ -133,6 +133,14 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramMagma, IconGroup.MOLTENGRAM, "@moltenst4r", "Molten glowing magma", 0xFFC72303),
         MOLTENGRAM_HOLO("MoltenGramHoloIcon", R.drawable.moltengram_holo_icon_background,
                 0, R.string.AppIconMoltenGramHolo, IconGroup.MOLTENGRAM, "@moltenst4r", "Iridescent liquid chrome", 0xFFEA6FCC),
+        MOLTENGRAM_KRAFT("MoltenGramKraftIcon", R.drawable.moltengram_kraft_icon_background,
+                0, R.string.AppIconMoltenGramKraft, IconGroup.MOLTENGRAM, "@moltenst4r", "Vintage kraft paper texture", 0xFFB2A585),
+        MOLTENGRAM_CORAL("MoltenGramCoralIcon", R.drawable.moltengram_coral_icon_background,
+                0, R.string.AppIconMoltenGramCoral, IconGroup.MOLTENGRAM, "@moltenst4r", "Vibrant coral sunset gradient", 0xFFFF7058),
+        MOLTENGRAM_ONYX("MoltenGramOnyxIcon", R.drawable.moltengram_onyx_icon_background,
+                0, R.string.AppIconMoltenGramOnyx, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep contrast black and white", 0xFFFFFFFF),
+        MOLTENGRAM_NEON("MoltenGramNeonIcon", R.drawable.moltengram_neon_icon_background,
+                0, R.string.AppIconMoltenGramNeon, IconGroup.MOLTENGRAM, "@moltenst4r", "Electric neon lime glow", 0xFFCCFF00),
 
         // Telegram
         TELEGRAM("TelegramIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconTelegramOriginal, IconGroup.TELEGRAM, "@telegram", "The classic paper plane", 0xFF143854),
