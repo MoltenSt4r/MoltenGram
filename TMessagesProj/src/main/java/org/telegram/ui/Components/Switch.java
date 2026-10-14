@@ -476,8 +476,8 @@ public class Switch extends View {
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
-        int defaultWidth = AndroidUtilities.dp(50);
-        int defaultHeight = AndroidUtilities.dp(32);
+        int defaultWidth = AndroidUtilities.dp(56);
+        int defaultHeight = AndroidUtilities.dp(34);
 
         int measuredWidth;
         int measuredHeight;

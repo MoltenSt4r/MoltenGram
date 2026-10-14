@@ -29,6 +29,8 @@ import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.Utilities;
+import org.telegram.messenger.browser.Browser;
+import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
@@ -46,8 +48,8 @@ import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 
 /**
  * Material 3 Expressive Update Screen for MoltenGram.
- * Fully native in-window screen matching the MD3 update layout with banner,
- * rich changelog card, individual client info cards with MD3 shape badges,
+ * Fully native in-window screen matching the MD3 update layout,
+ * individual client info cards with MD3 shape badges,
  * animated wavy progress bar, and seamless in-window Shizuku installation.
  */
 public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implements NotificationCenter.NotificationCenterDelegate {
@@ -61,9 +63,6 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     private LinearLayout content;
     private TextView statusTitleView;
     private TextView statusSubtitleView;
-
-    private LinearLayout changelogSection;
-    private LinearLayout changelogCard;
 
     private LinearLayout bottomBarContainer;
     private LinearLayout progressContainer;
@@ -121,10 +120,39 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     }
 
     @Override
+    public ActionBar createActionBar(Context context) {
+        ActionBar bar = super.createActionBar(context);
+        bar.setAddToContainer(false);
+        bar.setVisibility(View.GONE);
+        return bar;
+    }
+
+    @Override
+    public boolean isActionBarCrossfadeEnabled() {
+        return false;
+    }
+
+    @Override
+    public boolean isLightStatusBar() {
+        int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+        return ColorUtils.calculateLuminance(surfaceColor) > 0.7f;
+    }
+
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (getParentActivity() != null) {
+            AndroidUtilities.setLightStatusBar(getParentActivity().getWindow(), isLightStatusBar());
+        }
+    }
+
+    @Override
     public View createView(Context context) {
         if (actionBar != null) {
+            actionBar.setAddToContainer(false);
             actionBar.setVisibility(View.GONE);
         }
+        hasOwnBackground = true;
 
         final int accentColor = Theme.isCurrentThemeDark() ? 0xFFFEB49D : Theme.getColor(Theme.key_featuredStickers_addButton);
         final int cardBgColor = Theme.isCurrentThemeDark() ? 0xFF241A19 : Theme.getColor(Theme.key_windowBackgroundGray);
@@ -141,17 +169,17 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         // --- Custom MD3 Top Bar ---
         topBar = new FrameLayout(context);
         topBar.setPadding(0, statusBarHeight, 0, 0);
+        topBar.setBackgroundColor(surfaceColor);
 
-        // Circular back button
+        // Circular back button with ripple selector
         FrameLayout backBtn = new FrameLayout(context);
-        GradientDrawable backBg = new GradientDrawable();
-        backBg.setShape(GradientDrawable.OVAL);
-        backBg.setColor(Theme.isCurrentThemeDark() ? 0xFF5D3C29 : 0xFFF5DBCF);
-        backBtn.setBackground(backBg);
+        backBtn.setBackground(Theme.createSimpleSelectorCircleDrawable(dp(44),
+                Theme.isCurrentThemeDark() ? 0x26FFFFFF : 0x14000000,
+                Theme.getColor(Theme.key_listSelector)));
 
         ImageView backIcon = new ImageView(context);
         backIcon.setImageResource(R.drawable.ic_ab_back);
-        backIcon.setColorFilter(Theme.isCurrentThemeDark() ? 0xFFFFDDC5 : 0xFF823723);
+        backIcon.setColorFilter(primaryTextColor);
         backIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
         backBtn.addView(backIcon, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
         backBtn.setOnClickListener(v -> finishFragment());
@@ -163,9 +191,9 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         titleCol.setOrientation(LinearLayout.VERTICAL);
 
         titleTextView = new TextView(context);
-        titleTextView.setText("Обновление");
+        titleTextView.setText(LocaleController.getString("OpenExteraUpdates", R.string.OpenExteraUpdates));
         titleTextView.setTextColor(primaryTextColor);
-        titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
+        titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
         titleTextView.setTypeface(AndroidUtilities.bold());
         titleCol.addView(titleTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
 
@@ -176,6 +204,8 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         subtitleTextView.setAlpha(0f); // Hidden by default, fades in on scroll
         titleCol.addView(subtitleTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
+        // At rest titleTextView is vertically centered with backBtn; moves up slightly as subtitle fades in on scroll
+        titleCol.setTranslationY(dp(7));
         topBar.addView(titleCol, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 72, 0, 16, 0));
 
         // --- Scrollable Content ---
@@ -183,39 +213,26 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         scrollView.setFillViewport(true);
         scrollView.setVerticalScrollBarEnabled(false);
         scrollView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
+        scrollView.setClipChildren(false);
+        scrollView.setClipToPadding(false);
 
-        // Smooth top bar scroll transition
+        // Smooth top bar scroll transition with authentic MD3 opaque tonal elevation
         scrollView.setOnScrollChangeListener((NestedScrollView.OnScrollChangeListener) (v, scrollX, scrollY, oldScrollX, oldScrollY) -> {
             float threshold = dp(60);
             float progress = Math.max(0f, Math.min(1f, scrollY / threshold));
             subtitleTextView.setAlpha(progress);
-            topBar.setBackgroundColor(ColorUtils.setAlphaComponent(surfaceColor, (int) (progress * 245)));
+            titleCol.setTranslationY((1f - progress) * dp(7));
+            int elevatedBg = ColorUtils.blendARGB(surfaceColor, Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), 0.05f);
+            topBar.setBackgroundColor(ColorUtils.blendARGB(surfaceColor, elevatedBg, progress));
         });
 
         content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
+        content.setClipChildren(false);
+        content.setClipToPadding(false);
         content.setPadding(dp(16), statusBarHeight + dp(68), dp(16), dp(130));
 
-        // 1. Banner Card
-        FrameLayout bannerFrame = new FrameLayout(context);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            bannerFrame.setOutlineProvider(new ViewOutlineProvider() {
-                @Override
-                public void getOutline(View view, Outline outline) {
-                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(20));
-                }
-            });
-            bannerFrame.setClipToOutline(true);
-        }
-
-        ImageView bannerImage = new ImageView(context);
-        bannerImage.setImageResource(R.drawable.update_banner);
-        bannerImage.setScaleType(ImageView.ScaleType.CENTER_CROP);
-        bannerFrame.addView(bannerImage, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        content.addView(bannerFrame, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 165, 0, 0, 0, 16));
-
-        // 2. Version Header Status
+        // 1. Version Header Status
         LinearLayout statusCol = new LinearLayout(context);
         statusCol.setOrientation(LinearLayout.VERTICAL);
 
@@ -230,32 +247,9 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         statusSubtitleView.setTextColor(secondaryTextColor);
         statusCol.addView(statusSubtitleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 0));
 
-        content.addView(statusCol, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 18));
+        content.addView(statusCol, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 4, 12, 4, 20));
 
-        // 3. Section: "Что нового"
-        changelogSection = new LinearLayout(context);
-        changelogSection.setOrientation(LinearLayout.VERTICAL);
-
-        TextView changelogLabel = new TextView(context);
-        changelogLabel.setText("Что нового");
-        changelogLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        changelogLabel.setTextColor(accentColor);
-        changelogLabel.setTypeface(AndroidUtilities.bold());
-        changelogSection.addView(changelogLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
-
-        changelogCard = new LinearLayout(context);
-        changelogCard.setOrientation(LinearLayout.VERTICAL);
-        changelogCard.setPadding(dp(16), dp(16), dp(16), dp(16));
-
-        GradientDrawable cardBg = new GradientDrawable();
-        cardBg.setCornerRadius(dp(20));
-        cardBg.setColor(cardBgColor);
-        changelogCard.setBackground(cardBg);
-
-        changelogSection.addView(changelogCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        content.addView(changelogSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 18));
-
-        // 4. Section: "О клиенте"
+        // 2. Section: "О клиенте"
         LinearLayout aboutSection = new LinearLayout(context);
         aboutSection.setOrientation(LinearLayout.VERTICAL);
 
@@ -266,51 +260,55 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         aboutLabel.setTypeface(AndroidUtilities.bold());
         aboutSection.addView(aboutLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
 
-        // Card 1: Версия клиента (Pentagon badge)
-        int pentagonBg = Theme.isCurrentThemeDark() ? 0xFF822004 : 0xFFD84B26;
-        int pentagonIconTint = Theme.isCurrentThemeDark() ? 0xFFFFD9D1 : 0xFFFFFFFF;
+        int badgeBg = ColorUtils.setAlphaComponent(accentColor, Theme.isCurrentThemeDark() ? 45 : 30);
+        int badgeTint = accentColor;
+
         String curCommitShort = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
                 (BuildConfig.BUILD_COMMIT_ID.length() > 7 ? BuildConfig.BUILD_COMMIT_ID.substring(0, 7) : BuildConfig.BUILD_COMMIT_ID) : "";
         String curVerStr = BuildVars.BUILD_VERSION_STRING + (!TextUtils.isEmpty(curCommitShort) ? "-" + curCommitShort : "") + ("staging".equals(BuildConfig.BUILD_TYPE) ? " (Canary)" : "");
-        View card1 = createAboutCard(context, Md3AvatarShapes.SHAPE_PENTAGON, pentagonBg,
-                R.drawable.baseline_info_24, pentagonIconTint,
-                "Версия клиента", null, curVerStr, accentColor, cardBgColor);
+
+        // Card 1: Версия MoltenGram
+        View card1 = createAboutCard(context, Md3AvatarShapes.SHAPE_PENTAGON, badgeBg,
+                R.drawable.baseline_info_24, badgeTint,
+                "Версия MoltenGram", null, curVerStr, accentColor, cardBgColor, null);
         aboutSection.addView(card1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-        // Card 2: Версия API (Circle badge)
-        int circleBg = Theme.isCurrentThemeDark() ? 0xFF654B12 : 0xFF8D6818;
-        int circleIconTint = Theme.isCurrentThemeDark() ? 0xFFFFE8A3 : 0xFFFFFFFF;
-        View card2 = createAboutCard(context, Md3AvatarShapes.SHAPE_CIRCLE, circleBg,
-                R.drawable.baseline_info_24, circleIconTint,
-                "Версия API", "Telegram API (TDLib)", "1.8.65", accentColor, cardBgColor);
+        // Card 2: Номер сборки
+        View card2 = createAboutCard(context, Md3AvatarShapes.SHAPE_COOKIE_12, badgeBg,
+                R.drawable.baseline_build_24, badgeTint,
+                "Номер сборки", "Telegram " + BuildVars.BUILD_VERSION_STRING, String.valueOf(BuildConfig.VERSION_CODE), accentColor, cardBgColor, null);
         aboutSection.addView(card2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-        // Card 3: Номер сборки (Cookie 12 badge)
-        int cookieBg = Theme.isCurrentThemeDark() ? 0xFF5D3D25 : 0xFF835432;
-        int cookieIconTint = Theme.isCurrentThemeDark() ? 0xFFFFDDC5 : 0xFFFFFFFF;
-        View card3 = createAboutCard(context, Md3AvatarShapes.SHAPE_COOKIE_12, cookieBg,
-                R.drawable.baseline_build_24, cookieIconTint,
-                "Номер сборки", null, String.valueOf(BuildConfig.VERSION_CODE), accentColor, cardBgColor);
-        aboutSection.addView(card3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+        // Card 3: Список изменений -> GitHub Releases
+        View card3 = createAboutCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
+                R.drawable.msg_help, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesChangelog), "GitHub Releases", "GitHub", accentColor, cardBgColor,
+                v -> Browser.openUrl(getParentActivity(), "https://github.com/MoltenSt4r/MoltenGram/releases"));
+        aboutSection.addView(card3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-        content.addView(aboutSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+        // Card 4: Канал с обновлениями -> @MoltenGram
+        View card4 = createAboutCard(context, Md3AvatarShapes.SHAPE_FLOWER, badgeBg,
+                R.drawable.msg_channel, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesChannel), "@MoltenGram", "@MoltenGram", accentColor, cardBgColor,
+                v -> getMessagesController().openByUserName("MoltenGram", this, 1));
+        aboutSection.addView(card4, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
-        // 5. Section: "Параметры обновления"
+        content.addView(aboutSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // 3. Section: "Параметры обновления"
         LinearLayout settingsSection = new LinearLayout(context);
         settingsSection.setOrientation(LinearLayout.VERTICAL);
 
         TextView settingsLabel = new TextView(context);
-        settingsLabel.setText(LocaleController.getString("OpenExteraUpdates", R.string.OpenExteraUpdates));
+        settingsLabel.setText("Параметры обновления");
         settingsLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         settingsLabel.setTextColor(accentColor);
         settingsLabel.setTypeface(AndroidUtilities.bold());
         settingsSection.addView(settingsLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
 
         // Canary Switch Card
-        int canaryBg = Theme.isCurrentThemeDark() ? 0xFF5D3D25 : 0xFF835432;
-        int canaryTint = Theme.isCurrentThemeDark() ? 0xFFFFDDC5 : 0xFFFFFFFF;
-        View canaryCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_BURST, canaryBg,
-                R.drawable.baseline_sync_problem_24, canaryTint,
+        View canaryCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
+                R.drawable.baseline_sync_problem_24, badgeTint,
                 LocaleController.getString(R.string.OpenExteraUpdatesCanary),
                 LocaleController.getString(R.string.OpenExteraUpdatesCanaryDesc),
                 otaManager.isIncludeCanary(), cardBgColor,
@@ -321,10 +319,8 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         settingsSection.addView(canaryCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
         // Auto Check Switch Card
-        int autoCheckBg = Theme.isCurrentThemeDark() ? 0xFF654B12 : 0xFF8D6818;
-        int autoCheckTint = Theme.isCurrentThemeDark() ? 0xFFFFE8A3 : 0xFFFFFFFF;
-        View autoCheckCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_COOKIE_4, autoCheckBg,
-                R.drawable.sync_outline_28, autoCheckTint,
+        View autoCheckCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_COOKIE_4, badgeBg,
+                R.drawable.sync_outline_28, badgeTint,
                 LocaleController.getString(R.string.OpenExteraUpdatesAutoCheck),
                 LocaleController.getString(R.string.OpenExteraUpdatesAutoCheckDesc),
                 otaManager.isOtaEnabled(), cardBgColor,
@@ -395,7 +391,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     public void onInsets(int left, int top, int right, int bottom) {
         super.onInsets(left, top, right, bottom);
         if (topBar != null) {
-            topBar.setPadding(0, top, 0, 0);
+            topBar.setPadding(left, top, right, 0);
             ViewGroup.LayoutParams lp = topBar.getLayoutParams();
             if (lp != null) {
                 lp.height = top + dp(64);
@@ -403,27 +399,39 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             }
         }
         if (content != null) {
-            content.setPadding(dp(16), top + dp(68), dp(16), bottom + dp(130));
+            content.setPadding(left + dp(16), top + dp(68), right + dp(16), bottom + dp(130));
         }
         if (bottomBarContainer != null && bottomBarContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
             ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) bottomBarContainer.getLayoutParams();
+            lp.leftMargin = left + dp(16);
+            lp.rightMargin = right + dp(16);
             lp.bottomMargin = dp(16) + bottom;
             bottomBarContainer.setLayoutParams(lp);
         }
     }
 
     private View createAboutCard(Context context, int shapeId, int badgeColor, int iconRes, int iconTint,
-                                 String title, String subtitle, String value, int accentColor, int cardBgColor) {
+                                 String title, String subtitle, String value, int accentColor, int cardBgColor,
+                                 View.OnClickListener onClick) {
         FrameLayout card = new FrameLayout(context);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(20));
-        bg.setColor(cardBgColor);
-        card.setBackground(bg);
+        card.setClipChildren(false);
+        card.setClipToPadding(false);
+        if (onClick != null) {
+            card.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(20), cardBgColor, Theme.getColor(Theme.key_listSelector)));
+            card.setOnClickListener(onClick);
+        } else {
+            GradientDrawable bg = new GradientDrawable();
+            bg.setCornerRadius(dp(20));
+            bg.setColor(cardBgColor);
+            card.setBackground(bg);
+        }
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), dp(10), dp(16), dp(10));
+        row.setClipChildren(false);
+        row.setClipToPadding(false);
 
         ShapeBadgeView badge = new ShapeBadgeView(context, shapeId, badgeColor, iconRes, iconTint);
         row.addView(badge, LayoutHelper.createLinear(44, 44, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
@@ -446,14 +454,16 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             textCol.addView(subView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
         }
 
-        row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+        row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
 
-        TextView valView = new TextView(context);
-        valView.setText(value);
-        valView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        valView.setTextColor(accentColor);
-        valView.setTypeface(AndroidUtilities.bold());
-        row.addView(valView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        if (!TextUtils.isEmpty(value)) {
+            TextView valView = new TextView(context);
+            valView.setText(value);
+            valView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            valView.setTextColor(accentColor);
+            valView.setTypeface(AndroidUtilities.bold());
+            row.addView(valView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+        }
 
         card.addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
         return card;
@@ -463,15 +473,16 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                                   String title, String subtitle, boolean checked, int cardBgColor,
                                   Utilities.Callback<Boolean> onToggle) {
         FrameLayout card = new FrameLayout(context);
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(20));
-        bg.setColor(cardBgColor);
-        card.setBackground(bg);
+        card.setClipChildren(false);
+        card.setClipToPadding(false);
+        card.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(20), cardBgColor, Theme.getColor(Theme.key_listSelector)));
 
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
         row.setPadding(dp(16), dp(10), dp(16), dp(10));
+        row.setClipChildren(false);
+        row.setClipToPadding(false);
 
         ShapeBadgeView badge = new ShapeBadgeView(context, shapeId, badgeColor, iconRes, iconTint);
         row.addView(badge, LayoutHelper.createLinear(44, 44, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
@@ -494,11 +505,11 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             textCol.addView(subView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
         }
 
-        row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+        row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
 
         org.telegram.ui.Components.Switch sw = new org.telegram.ui.Components.Switch(context);
         sw.setChecked(checked, false);
-        row.addView(sw, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 10, 0, 0, 0));
+        row.addView(sw, LayoutHelper.createLinear(56, 34, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
 
         card.addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
@@ -554,19 +565,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
         }
 
-        // 2. Changelog Section
-        String changelog = update != null ? update.changelog : "";
-        if (TextUtils.isEmpty(changelog) || changelog.trim().length() < 10) {
-            changelog = "• Добавлены кнопки: Создать канал/группу\n"
-                    + "• Обои чата теперь по зажатию профиля в чате\n"
-                    + "• Рисовка элементов экрана больше не происходит\n"
-                    + "• Прокаченые анимации навбара\n"
-                    + "• Есть пресеты обоев и узоры";
-        }
-        buildChangelogCard(changelog, accentColor);
-        changelogSection.setVisibility(View.VISIBLE);
-
-        // 3. Bottom Bar & Progress
+        // 2. Bottom Bar & Progress
         if (isInstallingShizuku) {
             bottomBarContainer.setPadding(dp(14), dp(12), dp(14), dp(12));
             setButtonBackground(bottomBarContainer, Theme.isCurrentThemeDark() ? 0xF2201A18 : 0xF2F0EAE8, 28);
@@ -637,48 +636,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         }
     }
 
-    private void buildChangelogCard(String changelog, int accentColor) {
-        changelogCard.removeAllViews();
-        Context ctx = getContext() != null ? getContext() : ApplicationLoader.applicationContext;
-        List<String> lines = parseChangelog(changelog);
-        for (String line : lines) {
-            LinearLayout bulletRow = new LinearLayout(ctx);
-            bulletRow.setOrientation(LinearLayout.HORIZONTAL);
-            bulletRow.setGravity(Gravity.TOP);
 
-            TextView bulletDot = new TextView(ctx);
-            bulletDot.setText("•");
-            bulletDot.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-            bulletDot.setTextColor(accentColor);
-            bulletDot.setTypeface(AndroidUtilities.bold());
-            bulletRow.addView(bulletDot, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 10, 0));
-
-            TextView lineText = new TextView(ctx);
-            lineText.setText(AndroidUtilities.replaceTags(line));
-            lineText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            lineText.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            lineText.setLineSpacing(dp(2), 1.15f);
-            bulletRow.addView(lineText, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
-
-            changelogCard.addView(bulletRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
-        }
-    }
-
-    private List<String> parseChangelog(String text) {
-        ArrayList<String> res = new ArrayList<>();
-        if (text == null) return res;
-        String[] split = text.split("\n");
-        for (String s : split) {
-            String trimmed = s.trim();
-            if (trimmed.startsWith("-") || trimmed.startsWith("*") || trimmed.startsWith("•") || trimmed.startsWith("·")) {
-                trimmed = trimmed.substring(1).trim();
-            }
-            if (!trimmed.isEmpty()) {
-                res.add(trimmed);
-            }
-        }
-        return res;
-    }
 
     private void handleActionClick() {
         if (otaManager.isDownloaded()) {
