@@ -27,7 +27,6 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
-import org.telegram.ui.ActionBar.AlertDialog;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -43,7 +42,7 @@ public class MoltenGramOtaManager {
 
     public static final int AUTO_DOWNLOAD_NEVER = 0;   // Ask / Manual
     public static final int AUTO_DOWNLOAD_WIFI = 1;    // Only Wi-Fi
-    public static final int AUTO_DOWNLOAD_ALWAYS = 2;  // Without asking / Any connection
+    public static final int AUTO_DOWNLOAD_ALWAYS = 2;  // Without asking / Any connection (Default)
 
     private static volatile MoltenGramOtaManager instance;
 
@@ -156,7 +155,6 @@ public class MoltenGramOtaManager {
     private void cleanupOldIfUpdated() {
         if (pendingUpdate != null) {
             if (!isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId)) {
-                // Already updated to or past this version
                 clearPendingUpdate();
             }
         }
@@ -196,7 +194,7 @@ public class MoltenGramOtaManager {
     }
 
     public int getAutoDownloadMode() {
-        return prefs.getInt("ota_auto_download", AUTO_DOWNLOAD_NEVER);
+        return prefs.getInt("ota_auto_download", AUTO_DOWNLOAD_ALWAYS);
     }
 
     public void setAutoDownloadMode(int mode) {
@@ -291,7 +289,6 @@ public class MoltenGramOtaManager {
                         continue;
                     }
 
-                    // Look for best apk asset
                     JSONObject apkAsset = null;
                     long bestAssetTime = 0;
                     for (int j = 0; j < assets.length(); j++) {
@@ -335,7 +332,7 @@ public class MoltenGramOtaManager {
                         update.commitId = remoteCommit;
 
                         bestUpdate = update;
-                        break; // Since GitHub releases are sorted newest first
+                        break;
                     }
                 }
 
@@ -350,12 +347,13 @@ public class MoltenGramOtaManager {
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
                     if (resultUpdate != null) {
-                        showUpdateNotification(resultUpdate);
-
-                        // Check if we should auto-download
                         int autoMode = getAutoDownloadMode();
-                        if (autoMode == AUTO_DOWNLOAD_ALWAYS || (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi())) {
+                        boolean shouldAutoDownload = autoMode == AUTO_DOWNLOAD_ALWAYS ||
+                                (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi());
+                        if (shouldAutoDownload && !resultUpdate.isDownloaded() && !isDownloading) {
                             startDownload(null);
+                        } else if (!resultUpdate.isDownloaded() && ApplicationLoader.mainInterfacePaused) {
+                            showUpdateNotification(resultUpdate);
                         }
                     }
 
@@ -412,7 +410,6 @@ public class MoltenGramOtaManager {
             currentVer = currentVer.substring(1);
         }
 
-        // Clean any suffix like -67dbb4f
         String cleanRemote = remoteVer.split("-")[0];
         String cleanCurrent = currentVer.split("-")[0];
 
@@ -433,7 +430,6 @@ public class MoltenGramOtaManager {
             if (r < c) return false;
         }
 
-        // Numerical versions are equal (e.g. 12.10.5 == 12.10.5 or canary == canary)
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
@@ -472,10 +468,10 @@ public class MoltenGramOtaManager {
 
         File targetFile = pendingUpdate.getFile();
         if (targetFile != null && targetFile.exists() && (pendingUpdate.fileSize <= 0 || targetFile.length() == pendingUpdate.fileSize)) {
-            // Already downloaded
             if (callback != null) {
                 callback.onComplete(targetFile);
             }
+            showDownloadCompleteNotification(targetFile, pendingUpdate);
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
             return;
         }
@@ -483,6 +479,7 @@ public class MoltenGramOtaManager {
         isDownloading = true;
         cancelDownloadRequested = false;
         downloadProgress = 0f;
+        showDownloadProgressNotification(0f, pendingUpdate);
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
         Utilities.globalQueue.postRunnable(() -> {
@@ -508,7 +505,6 @@ public class MoltenGramOtaManager {
                 conn.setReadTimeout(30000);
                 conn.setInstanceFollowRedirects(true);
 
-                // Handle HTTP redirects (GitHub Releases redirects to objects.githubusercontent.com)
                 int status = conn.getResponseCode();
                 if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
                     String newUrl = conn.getHeaderField("Location");
@@ -542,7 +538,7 @@ public class MoltenGramOtaManager {
                     downloadedBytes += read;
 
                     long now = System.currentTimeMillis();
-                    if (now - lastProgressTime > 100 || downloadedBytes == totalBytes) {
+                    if (now - lastProgressTime > 250 || downloadedBytes == totalBytes) {
                         lastProgressTime = now;
                         final float prog = totalBytes > 0 ? (float) downloadedBytes / (float) totalBytes : 0f;
                         downloadProgress = prog;
@@ -551,6 +547,7 @@ public class MoltenGramOtaManager {
                             if (callback != null) {
                                 callback.onProgress(prog);
                             }
+                            showDownloadProgressNotification(prog, pendingUpdate);
                             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                         });
                     }
@@ -578,6 +575,14 @@ public class MoltenGramOtaManager {
                     if (callback != null) {
                         callback.onComplete(completedFile);
                     }
+                    if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                            && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()
+                            && ApplicationLoader.mainInterfacePaused) {
+                        dismissUpdateNotification();
+                        installWithShizuku(null, completedFile, null);
+                    } else if (ApplicationLoader.mainInterfacePaused) {
+                        showDownloadCompleteNotification(completedFile, pendingUpdate);
+                    }
                 });
 
             } catch (Exception e) {
@@ -589,6 +594,7 @@ public class MoltenGramOtaManager {
                 AndroidUtilities.runOnUIThread(() -> {
                     isDownloading = false;
                     downloadProgress = 0f;
+                    dismissUpdateNotification();
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                     if (callback != null) {
                         callback.onError(err);
@@ -607,6 +613,7 @@ public class MoltenGramOtaManager {
             cancelDownloadRequested = true;
             isDownloading = false;
             downloadProgress = 0f;
+            dismissUpdateNotification();
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
         }
     }
@@ -614,6 +621,10 @@ public class MoltenGramOtaManager {
     // --- Install APK ---
 
     public void installUpdate(Activity activity) {
+        installUpdate(activity, null);
+    }
+
+    public void installUpdate(Activity activity, app.exteraless.shizuku.ShizukuController.InstallListener listener) {
         if (pendingUpdate == null) {
             return;
         }
@@ -626,99 +637,89 @@ public class MoltenGramOtaManager {
 
                 @Override
                 public void onComplete(File file) {
-                    installApkFile(activity, file);
+                    installApkFile(activity, file, listener);
                 }
 
                 @Override
-                public void onError(String error) {}
+                public void onError(String error) {
+                    if (listener != null) listener.onError(error);
+                }
             });
             return;
         }
 
-        installApkFile(activity, apkFile);
+        installApkFile(activity, apkFile, listener);
     }
 
-    private void installApkFile(Activity activity, File apkFile) {
-        if (activity == null || apkFile == null || !apkFile.exists()) {
+    private void installApkFile(Activity activity, File apkFile, app.exteraless.shizuku.ShizukuController.InstallListener listener) {
+        if (apkFile == null || !apkFile.exists()) {
             return;
         }
 
         if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
                 && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
-            installWithShizuku(activity, apkFile);
+            installWithShizuku(activity, apkFile, listener);
             return;
         }
 
-        installApkStandard(activity, apkFile);
+        if (activity != null) {
+            installApkStandard(activity, apkFile);
+        }
     }
 
-    private void installWithShizuku(Activity activity, File apkFile) {
-        AlertDialog progressDialog = new AlertDialog(activity, AlertDialog.ALERT_TYPE_LOADING);
-        progressDialog.setTitle(LocaleController.getString("ShizukuInstallingUpdate", R.string.ShizukuInstallingUpdate));
-        progressDialog.setMessage(String.format(LocaleController.getString("ShizukuCopyingApk", R.string.ShizukuCopyingApk), 0));
-        progressDialog.setProgress(0);
-        progressDialog.setCanceledOnTouchOutside(false);
-        progressDialog.setCancelable(false);
-        try {
-            progressDialog.show();
-        } catch (Throwable t) {
-            FileLog.e(t);
-        }
-
-        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+    public void installWithShizuku(Activity activity, File apkFile, app.exteraless.shizuku.ShizukuController.InstallListener listener) {
+        Utilities.globalQueue.postRunnable(() -> {
             app.exteraless.shizuku.ShizukuController.getInstance().silentInstallApk(apkFile, new app.exteraless.shizuku.ShizukuController.InstallListener() {
                 @Override
                 public void onProgress(int percent) {
                     AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            if (progressDialog.isShowing()) {
-                                progressDialog.setProgress(percent);
-                                progressDialog.setMessage(String.format(LocaleController.getString("ShizukuCopyingApk", R.string.ShizukuCopyingApk), percent));
-                            }
-                        } catch (Throwable ignored) {}
+                        if (listener != null) {
+                            listener.onProgress(percent);
+                        }
                     });
                 }
 
                 @Override
                 public void onInstalling() {
                     AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            if (progressDialog.isShowing()) {
-                                progressDialog.setProgress(100);
-                                progressDialog.setMessage(LocaleController.getString("ShizukuApplyingUpdate", R.string.ShizukuApplyingUpdate));
-                            }
-                        } catch (Throwable ignored) {}
+                        if (listener != null) {
+                            listener.onInstalling();
+                        }
                     });
                 }
 
                 @Override
                 public void onSuccess() {
                     AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            if (progressDialog.isShowing()) {
-                                progressDialog.dismiss();
-                            }
-                        } catch (Throwable ignored) {}
+                        dismissUpdateNotification();
                         prefs.edit()
                                 .putBoolean("show_update_changelog_on_launch", true)
                                 .putString("last_update_version", pendingUpdate != null ? pendingUpdate.version : "")
                                 .putString("last_update_changelog", pendingUpdate != null ? pendingUpdate.changelog : "")
                                 .apply();
-                        Toast.makeText(activity, LocaleController.getString("ShizukuInstallSuccess", R.string.ShizukuInstallSuccess), Toast.LENGTH_SHORT).show();
-                        relaunchApp(activity);
+                        if (listener != null) {
+                            listener.onSuccess();
+                        } else if (activity != null) {
+                            Toast.makeText(activity, LocaleController.getString("ShizukuInstallSuccess", R.string.ShizukuInstallSuccess), Toast.LENGTH_SHORT).show();
+                            relaunchApp(activity);
+                        } else {
+                            Context context = ApplicationLoader.applicationContext;
+                            if (context != null) {
+                                Toast.makeText(context, LocaleController.getString("ShizukuInstallSuccess", R.string.ShizukuInstallSuccess), Toast.LENGTH_SHORT).show();
+                            }
+                        }
                     });
                 }
 
                 @Override
                 public void onError(String error) {
                     AndroidUtilities.runOnUIThread(() -> {
-                        try {
-                            if (progressDialog.isShowing()) {
-                                progressDialog.dismiss();
-                            }
-                        } catch (Throwable ignored) {}
-                        Toast.makeText(activity, String.format(LocaleController.getString("ShizukuInstallFailed", R.string.ShizukuInstallFailed), error), Toast.LENGTH_LONG).show();
-                        installApkStandard(activity, apkFile);
+                        if (listener != null) {
+                            listener.onError(error);
+                        } else if (activity != null) {
+                            Toast.makeText(activity, String.format(LocaleController.getString("ShizukuInstallFailed", R.string.ShizukuInstallFailed), error), Toast.LENGTH_LONG).show();
+                            installApkStandard(activity, apkFile);
+                        }
                     });
                 }
             });
@@ -797,15 +798,7 @@ public class MoltenGramOtaManager {
 
         if (shouldShow) {
             prefs.edit().putBoolean("show_update_changelog_on_launch", false).apply();
-            String version = prefs.getString("last_update_version", "");
-            String changelog = prefs.getString("last_update_changelog", "");
-            AndroidUtilities.runOnUIThread(() -> {
-                try {
-                    MoltenGramChangelogDialog.show(activity, version, changelog, null);
-                } catch (Throwable t) {
-                    FileLog.e(t);
-                }
-            }, 600);
+            // Centered popup dialog removed as requested
         }
     }
 
@@ -813,10 +806,11 @@ public class MoltenGramOtaManager {
     private static final int NOTIFICATION_ID_UPDATE = 126101;
 
     public void showUpdateNotification(OtaUpdate update) {
-        if (update == null || ApplicationLoader.applicationContext == null) {
+        if (update == null || ApplicationLoader.applicationContext == null || !isOtaEnabled()) {
             return;
         }
-        if (!isOtaEnabled()) {
+        // If user is currently in the foreground app, never show static update notification
+        if (!ApplicationLoader.mainInterfacePaused) {
             return;
         }
         Context context = ApplicationLoader.applicationContext;
@@ -825,17 +819,11 @@ public class MoltenGramOtaManager {
             return;
         }
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            NotificationChannel channel = new NotificationChannel(
-                    NOTIFICATION_CHANNEL_UPDATES,
-                    "MoltenGram Updates",
-                    NotificationManager.IMPORTANCE_DEFAULT);
-            channel.setDescription("Notifications about new MoltenGram versions");
-            nm.createNotificationChannel(channel);
-        }
+        ensureNotificationChannel(nm);
 
         Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
+        intent.putExtra("open_updates", true);
         intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
@@ -849,12 +837,12 @@ public class MoltenGramOtaManager {
         String contentText = TextUtils.isEmpty(update.title) ? ("Новая версия: " + update.version) : (update.title + " (" + update.version + ")");
 
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
-                .setSmallIcon(R.drawable.sync_outline_28)
+                .setSmallIcon(R.drawable.notification)
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
-                .setColor(0xFF1E713B)
+                .setColor(0xFFF5A88E)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT);
 
         if (!TextUtils.isEmpty(update.changelog)) {
@@ -863,12 +851,116 @@ public class MoltenGramOtaManager {
                     .bigText(contentText + "\n\n" + update.changelog));
         }
 
-        builder.addAction(R.drawable.sync_outline_28, "Обновить", pendingIntent);
+        builder.addAction(R.drawable.notification, "Обновить", pendingIntent);
 
         try {
             nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
         } catch (Exception e) {
             FileLog.e(e);
+        }
+    }
+
+    public void showDownloadProgressNotification(float progress, OtaUpdate update) {
+        if (update == null || ApplicationLoader.applicationContext == null || !isOtaEnabled()) {
+            return;
+        }
+        Context context = ApplicationLoader.applicationContext;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+
+        ensureNotificationChannel(nm);
+
+        Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.putExtra("open_updates", true);
+        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, NOTIFICATION_ID_UPDATE, intent, flags);
+
+        int percent = (int) (progress * 100);
+        String title = "Загрузка обновления MoltenGram";
+        String contentText = "Версия " + update.version + " (" + percent + "%)";
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
+                .setSmallIcon(R.drawable.notification)
+                .setContentTitle(title)
+                .setContentText(contentText)
+                .setContentIntent(pendingIntent)
+                .setProgress(100, percent, false)
+                .setOngoing(true)
+                .setOnlyAlertOnce(true)
+                .setColor(0xFFF5A88E)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW);
+
+        try {
+            nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    public void showDownloadCompleteNotification(File file, OtaUpdate update) {
+        if (update == null || ApplicationLoader.applicationContext == null || !isOtaEnabled()) {
+            return;
+        }
+        Context context = ApplicationLoader.applicationContext;
+        NotificationManager nm = (NotificationManager) context.getSystemService(Context.NOTIFICATION_SERVICE);
+        if (nm == null) {
+            return;
+        }
+
+        ensureNotificationChannel(nm);
+
+        Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
+        intent.setAction(Intent.ACTION_VIEW);
+        intent.putExtra("open_updates", true);
+        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
+
+        int flags = PendingIntent.FLAG_UPDATE_CURRENT;
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            flags |= PendingIntent.FLAG_IMMUTABLE;
+        }
+        PendingIntent pendingIntent = PendingIntent.getActivity(context, NOTIFICATION_ID_UPDATE, intent, flags);
+
+        String title = "Обновление MoltenGram загружено";
+        String contentText = "Версия " + update.version + " готова к установке";
+
+        androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
+                .setSmallIcon(R.drawable.notification)
+                .setContentTitle(title)
+                .setContentText(contentText)
+                .setContentIntent(pendingIntent)
+                .setProgress(0, 0, false)
+                .setOngoing(false)
+                .setAutoCancel(true)
+                .setColor(0xFF10B981)
+                .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH);
+
+        builder.addAction(R.drawable.notification, "Установить", pendingIntent);
+
+        try {
+            nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    private void ensureNotificationChannel(NotificationManager nm) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+            NotificationChannel channel = new NotificationChannel(
+                    NOTIFICATION_CHANNEL_UPDATES,
+                    "MoltenGram Updates",
+                    NotificationManager.IMPORTANCE_DEFAULT);
+            channel.setDescription("Notifications about new MoltenGram versions");
+            nm.createNotificationChannel(channel);
         }
     }
 
@@ -890,10 +982,26 @@ public class MoltenGramOtaManager {
         }
         long lastCheck = getLastCheckTime();
         long now = System.currentTimeMillis();
-        // Check at most once every 3 hours in background
         if (now - lastCheck < 3 * 3600 * 1000L) {
             return;
         }
         checkUpdates(false, null, null);
+    }
+
+    public void checkBackgroundSilentInstall() {
+        if (!isOtaEnabled()) {
+            return;
+        }
+        if (isDownloaded() && pendingUpdate != null) {
+            if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                    && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()
+                    && ApplicationLoader.mainInterfacePaused) {
+                File f = pendingUpdate.getFile();
+                if (f != null && f.exists()) {
+                    dismissUpdateNotification();
+                    installWithShizuku(null, f, null);
+                }
+            }
+        }
     }
 }

@@ -1690,6 +1690,9 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         String conferenceSlug = null;
         boolean forceNotInternalForApps = intent.getBooleanExtra(EXTRA_FORCE_NOT_INTERNAL_APPS, false);
         boolean forceRequest = intent.getBooleanExtra(EXTRA_FORCE_REQUEST, false);
+        if (intent.getBooleanExtra("open_updates", false)) {
+            open_settings = 101;
+        }
 
         photoPathsArray = null;
         videoPath = null;
@@ -2777,6 +2780,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             open_settings = 8;
                                         } else if (url.contains("?disablelogs")) {
                                             open_settings = 9;
+                                        } else if (url.contains("updates")) {
+                                            open_settings = 101;
                                         } else if (url.contains("neko")) {
                                             open_settings = 100;
                                         } else if (url.contains("premium_sms")) {
@@ -3384,6 +3389,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                     fragment = null;
                 } else if (open_settings == 100) {
                     fragment = new OpenExteraSettingsActivity();
+                } else if (open_settings == 101) {
+                    fragment = new app.exteraless.settings.OpenExteraUpdatesActivity();
                 } else if (ApplicationLoader.applicationLoaderInstance != null) {
                     fragment = ApplicationLoader.applicationLoaderInstance.openSettings(open_settings);
                 } else {
@@ -6198,9 +6205,16 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 }
                 if (res != null) {
                     BaseFragment fragment = getLastFragment();
-                    if (fragment != null) {
+                    if (fragment != null && !(fragment instanceof app.exteraless.settings.OpenExteraUpdatesActivity)) {
+                        String actionText = res.isDownloaded() ?
+                                LocaleController.getString(R.string.OpenExteraUpdatesInstallNow) :
+                                (ota.isDownloading() ?
+                                        String.format(LocaleController.getString("OpenExteraUpdatesDownloading", R.string.OpenExteraUpdatesDownloading), (int) (ota.getDownloadProgress() * 100)) :
+                                        LocaleController.getString(R.string.OpenExteraUpdates));
                         BulletinFactory.of(fragment).createSimpleBulletin(R.raw.ic_download,
-                                LocaleController.getString(R.string.OpenExteraUpdatesAvailable) + ": " + res.version).show();
+                                LocaleController.getString(R.string.OpenExteraUpdatesAvailable) + ": " + res.version,
+                                actionText,
+                                () -> presentFragment(new app.exteraless.settings.OpenExteraUpdatesActivity())).show();
                     }
                 } else if (force) {
                     BaseFragment fragment = getLastFragment();
@@ -6993,6 +7007,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         pipActivityHandler.onPause();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.stopAllHeavyOperations, 4096);
         ApplicationLoader.mainInterfacePaused = true;
+        app.exteraless.ota.MoltenGramOtaManager.getInstance().checkBackgroundSilentInstall();
         int account = currentAccount;
         Utilities.stageQueue.postRunnable(() -> {
             ApplicationLoader.mainInterfacePausedStageQueue = true;
