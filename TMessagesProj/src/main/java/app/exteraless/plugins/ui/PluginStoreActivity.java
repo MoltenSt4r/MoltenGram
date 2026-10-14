@@ -1869,7 +1869,7 @@ public class PluginStoreActivity extends BaseFragment {
         }
 
         static UItem of(StorePlugin p, StorePluginDelegate delegate) {
-            UItem item = ofFactory(StorePluginItemFactory.class);
+            UItem item = UItem.ofFactory(StorePluginItemFactory.class);
             item.object = p;
             item.object2 = delegate;
             item.id = p.id != null ? p.id.hashCode() : 0;
