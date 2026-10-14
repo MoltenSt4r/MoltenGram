@@ -100,6 +100,7 @@ public class MoltenGramOtaManager {
     private OtaUpdate pendingUpdate;
     private boolean isChecking = false;
     private boolean isDownloading = false;
+    private boolean isInstalling = false;
     private float downloadProgress = 0f;
     private boolean cancelDownloadRequested = false;
 
@@ -235,6 +236,10 @@ public class MoltenGramOtaManager {
         return downloadProgress;
     }
 
+    public boolean isInstalling() {
+        return isInstalling;
+    }
+
     // --- Check Updates ---
 
     public void checkUpdates(boolean force, Activity activity, CheckCallback callback) {
@@ -358,13 +363,24 @@ public class MoltenGramOtaManager {
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
                     if (resultUpdate != null) {
-                        int autoMode = getAutoDownloadMode();
-                        boolean shouldAutoDownload = autoMode == AUTO_DOWNLOAD_ALWAYS ||
-                                (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi());
-                        if (shouldAutoDownload && !resultUpdate.isDownloaded() && !isDownloading) {
-                            startDownload(null);
-                        } else if (!resultUpdate.isDownloaded() && ApplicationLoader.mainInterfacePaused) {
-                            showUpdateNotification(resultUpdate);
+                        boolean canShizukuSilent = app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                                && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission();
+                        if (resultUpdate.isDownloaded()) {
+                            if (canShizukuSilent) {
+                                dismissUpdateNotification();
+                                installWithShizuku(null, resultUpdate.getFile(), null);
+                            } else if (ApplicationLoader.mainInterfacePaused) {
+                                showDownloadCompleteNotification(resultUpdate.getFile(), resultUpdate);
+                            }
+                        } else {
+                            int autoMode = getAutoDownloadMode();
+                            boolean shouldAutoDownload = canShizukuSilent || autoMode == AUTO_DOWNLOAD_ALWAYS ||
+                                    (autoMode == AUTO_DOWNLOAD_WIFI && ApplicationLoader.isConnectedOrConnectingToWiFi());
+                            if (shouldAutoDownload && !isDownloading) {
+                                startDownload(null);
+                            } else if (ApplicationLoader.mainInterfacePaused) {
+                                showUpdateNotification(resultUpdate);
+                            }
                         }
                     }
 
@@ -533,7 +549,14 @@ public class MoltenGramOtaManager {
             if (callback != null) {
                 callback.onComplete(targetFile);
             }
-            showDownloadCompleteNotification(targetFile, pendingUpdate);
+            boolean canShizukuSilent = app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+                    && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission();
+            if (canShizukuSilent && ApplicationLoader.mainInterfacePaused) {
+                dismissUpdateNotification();
+                installWithShizuku(null, targetFile, null);
+            } else {
+                showDownloadCompleteNotification(targetFile, pendingUpdate);
+            }
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
             return;
         }
@@ -638,8 +661,7 @@ public class MoltenGramOtaManager {
                         callback.onComplete(completedFile);
                     }
                     if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
-                            && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()
-                            && ApplicationLoader.mainInterfacePaused) {
+                            && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
                         dismissUpdateNotification();
                         installWithShizuku(null, completedFile, null);
                     } else if (ApplicationLoader.mainInterfacePaused) {
@@ -730,6 +752,12 @@ public class MoltenGramOtaManager {
     }
 
     public void installWithShizuku(Activity activity, File apkFile, app.exteraless.shizuku.ShizukuController.InstallListener listener) {
+        if (isInstalling) {
+            return;
+        }
+        isInstalling = true;
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
+
         Utilities.globalQueue.postRunnable(() -> {
             app.exteraless.shizuku.ShizukuController.getInstance().silentInstallApk(apkFile, new app.exteraless.shizuku.ShizukuController.InstallListener() {
                 @Override
@@ -753,11 +781,15 @@ public class MoltenGramOtaManager {
                 @Override
                 public void onSuccess() {
                     AndroidUtilities.runOnUIThread(() -> {
+                        isInstalling = false;
                         dismissUpdateNotification();
+                        String ver = pendingUpdate != null ? pendingUpdate.version : "";
+                        String chlog = pendingUpdate != null ? pendingUpdate.changelog : "";
+                        clearPendingUpdate();
                         prefs.edit()
                                 .putBoolean("show_update_changelog_on_launch", true)
-                                .putString("last_update_version", pendingUpdate != null ? pendingUpdate.version : "")
-                                .putString("last_update_changelog", pendingUpdate != null ? pendingUpdate.changelog : "")
+                                .putString("last_update_version", ver)
+                                .putString("last_update_changelog", chlog)
                                 .apply();
                         if (listener != null) {
                             listener.onSuccess();
@@ -776,11 +808,15 @@ public class MoltenGramOtaManager {
                 @Override
                 public void onError(String error) {
                     AndroidUtilities.runOnUIThread(() -> {
+                        isInstalling = false;
+                        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                         if (listener != null) {
                             listener.onError(error);
                         } else if (activity != null) {
                             Toast.makeText(activity, String.format(LocaleController.getString("ShizukuInstallFailed", R.string.ShizukuInstallFailed), error), Toast.LENGTH_LONG).show();
                             installApkStandard(activity, apkFile);
+                        } else if (ApplicationLoader.mainInterfacePaused) {
+                            showDownloadCompleteNotification(apkFile, pendingUpdate);
                         }
                     });
                 }
@@ -898,13 +934,16 @@ public class MoltenGramOtaManager {
         String title = "Доступно обновление MoltenGram";
         String contentText = TextUtils.isEmpty(update.title) ? ("Новая версия: " + update.version) : (update.title + " (" + update.version + ")");
 
+        int notifColor = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+        if (notifColor == 0) notifColor = 0xFF2196F3;
+
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
                 .setSmallIcon(R.drawable.notification)
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setContentIntent(pendingIntent)
                 .setAutoCancel(true)
-                .setColor(0xFFF5A88E)
+                .setColor(notifColor)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_DEFAULT);
 
         if (!TextUtils.isEmpty(update.changelog)) {
@@ -950,6 +989,9 @@ public class MoltenGramOtaManager {
         String title = "Загрузка обновления MoltenGram";
         String contentText = "Версия " + update.version + " (" + percent + "%)";
 
+        int notifColor = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+        if (notifColor == 0) notifColor = 0xFF2196F3;
+
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
                 .setSmallIcon(R.drawable.notification)
                 .setContentTitle(title)
@@ -958,7 +1000,7 @@ public class MoltenGramOtaManager {
                 .setProgress(100, percent, false)
                 .setOngoing(true)
                 .setOnlyAlertOnce(true)
-                .setColor(0xFFF5A88E)
+                .setColor(notifColor)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_LOW);
 
         try {
@@ -995,6 +1037,9 @@ public class MoltenGramOtaManager {
         String title = "Обновление MoltenGram загружено";
         String contentText = "Версия " + update.version + " готова к установке";
 
+        int notifColor = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+        if (notifColor == 0) notifColor = 0xFF2196F3;
+
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
                 .setSmallIcon(R.drawable.notification)
                 .setContentTitle(title)
@@ -1003,7 +1048,7 @@ public class MoltenGramOtaManager {
                 .setProgress(0, 0, false)
                 .setOngoing(false)
                 .setAutoCancel(true)
-                .setColor(0xFF10B981)
+                .setColor(notifColor)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH);
 
         builder.addAction(R.drawable.notification, "Установить", pendingIntent);
@@ -1045,19 +1090,22 @@ public class MoltenGramOtaManager {
         long lastCheck = getLastCheckTime();
         long now = System.currentTimeMillis();
         if (now - lastCheck < 3 * 3600 * 1000L) {
+            checkBackgroundSilentInstall();
             return;
         }
         checkUpdates(false, null, null);
     }
 
     public void checkBackgroundSilentInstall() {
+        if (!ApplicationLoader.mainInterfacePaused) {
+            return;
+        }
         if (!isOtaEnabled()) {
             return;
         }
-        if (isDownloaded() && pendingUpdate != null) {
+        if (isDownloaded() && pendingUpdate != null && !isInstalling) {
             if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
-                    && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()
-                    && ApplicationLoader.mainInterfacePaused) {
+                    && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
                 File f = pendingUpdate.getFile();
                 if (f != null && f.exists()) {
                     dismissUpdateNotification();

@@ -39,12 +39,19 @@ public class ShapeBadgeView extends View {
     }
 
     public ShapeBadgeView(Context context, int shapeId, int bgColor, int iconRes) {
-        this(context, shapeId, bgColor, iconRes, 0xFFFFFFFF);
+        this(context, shapeId, bgColor, iconRes, org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton));
     }
 
     public void setBadgeColor(int color) {
         bgPaint.setColor(color);
         invalidate();
+    }
+
+    public void setIconTint(int tint) {
+        if (iconDrawable != null) {
+            iconDrawable.setTint(tint);
+            invalidate();
+        }
     }
 
     @Override

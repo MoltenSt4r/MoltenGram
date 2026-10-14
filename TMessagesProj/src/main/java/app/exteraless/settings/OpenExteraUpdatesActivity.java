@@ -3,7 +3,6 @@ package app.exteraless.settings;
 import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
-import android.graphics.Outline;
 import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.text.TextUtils;
@@ -11,7 +10,6 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
-import android.view.ViewOutlineProvider;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
@@ -35,9 +33,6 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import app.exteraless.appearance.Md3AvatarShapes;
 import app.exteraless.ota.LinearWavyProgressView;
 import app.exteraless.ota.MoltenGramOtaManager;
@@ -51,18 +46,27 @@ import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
  * Fully native in-window screen matching the MD3 update layout,
  * individual client info cards with MD3 shape badges,
  * animated wavy progress bar, and seamless in-window Shizuku installation.
+ * 100% dynamic theme adaptation for blue, green, dark, light, monochrome, and Monet palettes.
  */
 public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implements NotificationCenter.NotificationCenterDelegate {
 
     private final MoltenGramOtaManager otaManager = MoltenGramOtaManager.getInstance();
 
+    private FrameLayout root;
     private FrameLayout topBar;
+    private FrameLayout backBtn;
+    private ImageView backIcon;
+    private LinearLayout titleCol;
     private TextView titleTextView;
     private TextView subtitleTextView;
 
+    private NestedScrollView scrollView;
     private LinearLayout content;
     private TextView statusTitleView;
     private TextView statusSubtitleView;
+
+    private LinearLayout aboutSection;
+    private LinearLayout settingsSection;
 
     private LinearLayout bottomBarContainer;
     private LinearLayout progressContainer;
@@ -81,6 +85,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         super.onFragmentCreate();
         otaManager.dismissUpdateNotification();
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.appUpdateAvailable);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.didSetNewTheme);
 
         if (!otaManager.isUpdateAvailable() && !otaManager.isChecking() && !otaManager.isDownloading()) {
             otaManager.checkUpdates(false, getParentActivity(), (u, err) -> {
@@ -97,12 +102,15 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.appUpdateAvailable);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.didSetNewTheme);
     }
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.appUpdateAvailable) {
             AndroidUtilities.runOnUIThread(this::updateUiState);
+        } else if (id == NotificationCenter.didSetNewTheme) {
+            AndroidUtilities.runOnUIThread(this::updateThemeColors);
         }
     }
 
@@ -141,6 +149,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     @Override
     public void onResume() {
         super.onResume();
+        updateThemeColors();
         if (getParentActivity() != null) {
             AndroidUtilities.setLightStatusBar(getParentActivity().getWindow(), isLightStatusBar());
         }
@@ -154,13 +163,12 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         }
         hasOwnBackground = true;
 
-        final int accentColor = Theme.isCurrentThemeDark() ? 0xFFFEB49D : Theme.getColor(Theme.key_featuredStickers_addButton);
-        final int cardBgColor = Theme.isCurrentThemeDark() ? 0xFF241A19 : Theme.getColor(Theme.key_windowBackgroundGray);
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
         final int primaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         final int secondaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
 
-        FrameLayout root = new FrameLayout(context);
+        root = new FrameLayout(context);
         root.setBackgroundColor(surfaceColor);
         fragmentView = root;
 
@@ -172,12 +180,12 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         topBar.setBackgroundColor(surfaceColor);
 
         // Circular back button with ripple selector
-        FrameLayout backBtn = new FrameLayout(context);
+        backBtn = new FrameLayout(context);
         backBtn.setBackground(Theme.createSimpleSelectorCircleDrawable(dp(44),
-                Theme.isCurrentThemeDark() ? 0x26FFFFFF : 0x14000000,
+                ColorUtils.setAlphaComponent(primaryTextColor, 26),
                 Theme.getColor(Theme.key_listSelector)));
 
-        ImageView backIcon = new ImageView(context);
+        backIcon = new ImageView(context);
         backIcon.setImageResource(R.drawable.ic_ab_back);
         backIcon.setColorFilter(primaryTextColor);
         backIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
@@ -187,7 +195,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         topBar.addView(backBtn, LayoutHelper.createFrame(44, 44, Gravity.LEFT | Gravity.CENTER_VERTICAL, 16, 0, 0, 0));
 
         // Header Title and Subtitle
-        LinearLayout titleCol = new LinearLayout(context);
+        titleCol = new LinearLayout(context);
         titleCol.setOrientation(LinearLayout.VERTICAL);
 
         titleTextView = new TextView(context);
@@ -209,7 +217,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         topBar.addView(titleCol, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 72, 0, 16, 0));
 
         // --- Scrollable Content ---
-        NestedScrollView scrollView = new NestedScrollView(context);
+        scrollView = new NestedScrollView(context);
         scrollView.setFillViewport(true);
         scrollView.setVerticalScrollBarEnabled(false);
         scrollView.setOverScrollMode(View.OVER_SCROLL_IF_CONTENT_SCROLLS);
@@ -222,8 +230,10 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             float progress = Math.max(0f, Math.min(1f, scrollY / threshold));
             subtitleTextView.setAlpha(progress);
             titleCol.setTranslationY((1f - progress) * dp(7));
-            int elevatedBg = ColorUtils.blendARGB(surfaceColor, Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), 0.05f);
-            topBar.setBackgroundColor(ColorUtils.blendARGB(surfaceColor, elevatedBg, progress));
+            int curSurface = Theme.getColor(Theme.key_windowBackgroundWhite);
+            int curPrimary = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+            int elevatedBg = ColorUtils.blendARGB(curSurface, curPrimary, 0.05f);
+            topBar.setBackgroundColor(ColorUtils.blendARGB(curSurface, elevatedBg, progress));
         });
 
         content = new LinearLayout(context);
@@ -249,85 +259,19 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
         content.addView(statusCol, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 4, 12, 4, 20));
 
-        // 2. Section: "О клиенте"
-        LinearLayout aboutSection = new LinearLayout(context);
+        aboutSection = new LinearLayout(context);
         aboutSection.setOrientation(LinearLayout.VERTICAL);
-
-        TextView aboutLabel = new TextView(context);
-        aboutLabel.setText("О клиенте");
-        aboutLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        aboutLabel.setTextColor(accentColor);
-        aboutLabel.setTypeface(AndroidUtilities.bold());
-        aboutSection.addView(aboutLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
-
-        int badgeBg = ColorUtils.setAlphaComponent(accentColor, Theme.isCurrentThemeDark() ? 45 : 30);
-        int badgeTint = accentColor;
-
-        String curCommitShort = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
-                (BuildConfig.BUILD_COMMIT_ID.length() > 7 ? BuildConfig.BUILD_COMMIT_ID.substring(0, 7) : BuildConfig.BUILD_COMMIT_ID) : "";
-        String curVerStr = BuildVars.BUILD_VERSION_STRING + (!TextUtils.isEmpty(curCommitShort) ? "-" + curCommitShort : "") + ("staging".equals(BuildConfig.BUILD_TYPE) ? " (Canary)" : "");
-
-        // Card 1: Версия MoltenGram
-        View card1 = createAboutCard(context, Md3AvatarShapes.SHAPE_PENTAGON, badgeBg,
-                R.drawable.baseline_info_24, badgeTint,
-                "Версия MoltenGram", null, curVerStr, accentColor, cardBgColor, null);
-        aboutSection.addView(card1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        // Card 2: Номер сборки
-        View card2 = createAboutCard(context, Md3AvatarShapes.SHAPE_COOKIE_12, badgeBg,
-                R.drawable.baseline_build_24, badgeTint,
-                "Номер сборки", "Telegram " + BuildVars.BUILD_VERSION_STRING, String.valueOf(BuildConfig.VERSION_CODE), accentColor, cardBgColor, null);
-        aboutSection.addView(card2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        // Card 3: Список изменений -> GitHub Releases
-        View card3 = createAboutCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
-                R.drawable.msg_help, badgeTint,
-                LocaleController.getString(R.string.OpenExteraUpdatesChangelog), "GitHub Releases", "GitHub", accentColor, cardBgColor,
-                v -> Browser.openUrl(getParentActivity(), "https://github.com/MoltenSt4r/MoltenGram/releases"));
-        aboutSection.addView(card3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        // Card 4: Канал с обновлениями -> @MoltenGram
-        View card4 = createAboutCard(context, Md3AvatarShapes.SHAPE_FLOWER, badgeBg,
-                R.drawable.msg_channel, badgeTint,
-                LocaleController.getString(R.string.OpenExteraUpdatesChannel), "@MoltenGram", "@MoltenGram", accentColor, cardBgColor,
-                v -> getMessagesController().openByUserName("MoltenGram", this, 1));
-        aboutSection.addView(card4, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
-
+        aboutSection.setClipChildren(false);
+        aboutSection.setClipToPadding(false);
         content.addView(aboutSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-        // 3. Section: "Параметры обновления"
-        LinearLayout settingsSection = new LinearLayout(context);
+        settingsSection = new LinearLayout(context);
         settingsSection.setOrientation(LinearLayout.VERTICAL);
-
-        TextView settingsLabel = new TextView(context);
-        settingsLabel.setText("Параметры обновления");
-        settingsLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        settingsLabel.setTextColor(accentColor);
-        settingsLabel.setTypeface(AndroidUtilities.bold());
-        settingsSection.addView(settingsLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
-
-        // Canary Switch Card
-        View canaryCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
-                R.drawable.baseline_sync_problem_24, badgeTint,
-                LocaleController.getString(R.string.OpenExteraUpdatesCanary),
-                LocaleController.getString(R.string.OpenExteraUpdatesCanaryDesc),
-                otaManager.isIncludeCanary(), cardBgColor,
-                enabled -> {
-                    otaManager.setIncludeCanary(enabled);
-                    recheckUpdates();
-                });
-        settingsSection.addView(canaryCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        // Auto Check Switch Card
-        View autoCheckCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_COOKIE_4, badgeBg,
-                R.drawable.sync_outline_28, badgeTint,
-                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheck),
-                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheckDesc),
-                otaManager.isOtaEnabled(), cardBgColor,
-                enabled -> otaManager.setOtaEnabled(enabled));
-        settingsSection.addView(autoCheckCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
-
+        settingsSection.setClipChildren(false);
+        settingsSection.setClipToPadding(false);
         content.addView(settingsSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+
+        buildCards(context);
 
         scrollView.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         root.addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -363,7 +307,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         progressContainer.addView(progHeader, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 4));
 
         wavyProgressView = new LinearWavyProgressView(context);
-        wavyProgressView.setColors(accentColor, Theme.isCurrentThemeDark() ? 0x33FEB49D : 0x33E06D53);
+        wavyProgressView.setColors(accentColor, ColorUtils.setAlphaComponent(accentColor, Theme.isCurrentThemeDark() ? 65 : 45));
         progressContainer.addView(wavyProgressView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 16, 0, 2, 0, 8));
 
         bottomBarContainer.addView(progressContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -385,6 +329,152 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
         updateUiState();
         return root;
+    }
+
+    private void buildCards(Context context) {
+        if (context == null || aboutSection == null || settingsSection == null) {
+            return;
+        }
+        aboutSection.removeAllViews();
+        settingsSection.removeAllViews();
+
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+        int cardBgColor = Theme.getColor(Theme.key_windowBackgroundGray);
+        if (cardBgColor == surfaceColor) {
+            cardBgColor = Theme.isCurrentThemeDark()
+                    ? ColorUtils.blendARGB(surfaceColor, 0xFFFFFFFF, 0.08f)
+                    : ColorUtils.blendARGB(surfaceColor, 0xFF000000, 0.05f);
+        }
+        final int badgeBg = ColorUtils.setAlphaComponent(accentColor, Theme.isCurrentThemeDark() ? 50 : 35);
+        final int badgeTint = accentColor;
+
+        // --- Section 1: "О клиенте" ---
+        TextView aboutLabel = new TextView(context);
+        aboutLabel.setText("О клиенте");
+        aboutLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        aboutLabel.setTextColor(accentColor);
+        aboutLabel.setTypeface(AndroidUtilities.bold());
+        aboutSection.addView(aboutLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
+
+        String curCommitShort = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
+                (BuildConfig.BUILD_COMMIT_ID.length() > 7 ? BuildConfig.BUILD_COMMIT_ID.substring(0, 7) : BuildConfig.BUILD_COMMIT_ID) : "";
+        String curVerStr = BuildVars.BUILD_VERSION_STRING + (!TextUtils.isEmpty(curCommitShort) ? "-" + curCommitShort : "") + ("staging".equals(BuildConfig.BUILD_TYPE) ? " (Canary)" : "");
+
+        // Card 1: Версия MoltenGram
+        View card1 = createAboutCard(context, Md3AvatarShapes.SHAPE_PENTAGON, badgeBg,
+                R.drawable.baseline_info_24, badgeTint,
+                "Версия MoltenGram", null, curVerStr, accentColor, cardBgColor, null);
+        aboutSection.addView(card1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Card 2: Номер сборки
+        View card2 = createAboutCard(context, Md3AvatarShapes.SHAPE_COOKIE_12, badgeBg,
+                R.drawable.baseline_build_24, badgeTint,
+                "Номер сборки", "Telegram " + BuildVars.BUILD_VERSION_STRING, String.valueOf(BuildConfig.VERSION_CODE), accentColor, cardBgColor, null);
+        aboutSection.addView(card2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Card 3: Список изменений -> GitHub Releases
+        View card3 = createAboutCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
+                R.drawable.msg_help, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesChangelog), "GitHub Releases", "GitHub", accentColor, cardBgColor,
+                v -> Browser.openUrl(getParentActivity(), "https://github.com/MoltenSt4r/MoltenGram/releases"));
+        aboutSection.addView(card3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Card 4: Канал с обновлениями -> @MoltenGram
+        View card4 = createAboutCard(context, Md3AvatarShapes.SHAPE_FLOWER, badgeBg,
+                R.drawable.msg_channel, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesChannel), "@MoltenGram", "@MoltenGram", accentColor, cardBgColor,
+                v -> getMessagesController().openByUserName("MoltenGram", this, 1));
+        aboutSection.addView(card4, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+
+        // --- Section 2: "Параметры обновления" ---
+        TextView settingsLabel = new TextView(context);
+        settingsLabel.setText("Параметры обновления");
+        settingsLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        settingsLabel.setTextColor(accentColor);
+        settingsLabel.setTypeface(AndroidUtilities.bold());
+        settingsSection.addView(settingsLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
+
+        // Canary Switch Card
+        View canaryCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_BURST, badgeBg,
+                R.drawable.baseline_sync_problem_24, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesCanary),
+                LocaleController.getString(R.string.OpenExteraUpdatesCanaryDesc),
+                otaManager.isIncludeCanary(), cardBgColor,
+                enabled -> {
+                    otaManager.setIncludeCanary(enabled);
+                    recheckUpdates();
+                });
+        settingsSection.addView(canaryCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Auto Check Switch Card
+        View autoCheckCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_COOKIE_4, badgeBg,
+                R.drawable.sync_outline_28, badgeTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheck),
+                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheckDesc),
+                otaManager.isOtaEnabled(), cardBgColor,
+                enabled -> otaManager.setOtaEnabled(enabled));
+        settingsSection.addView(autoCheckCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Shizuku Silent Updates Switch Card
+        View shizukuCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_GEM, badgeBg,
+                R.drawable.msg_permissions, badgeTint,
+                "Тихая установка с Shizuku",
+                "Автоматически обновлять в фоне без участия пользователя",
+                ShizukuConfig.getInstance().isSilentUpdatesEnabled(), cardBgColor,
+                enabled -> {
+                    ShizukuConfig.getInstance().setSilentUpdatesEnabled(enabled);
+                    if (enabled && !ShizukuController.getInstance().hasPermission()) {
+                        if (!ShizukuController.getInstance().isAvailable()) {
+                            ShizukuController.getInstance().openShizukuApp(getParentActivity());
+                        } else {
+                            ShizukuController.getInstance().requestPermission(ShizukuController.REQUEST_CODE_SHIZUKU);
+                        }
+                    }
+                });
+        settingsSection.addView(shizukuCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+    }
+
+    private void updateThemeColors() {
+        if (fragmentView == null || getParentActivity() == null) {
+            return;
+        }
+        Context context = getParentActivity();
+        AndroidUtilities.setLightStatusBar(getParentActivity().getWindow(), isLightStatusBar());
+
+        final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+        final int primaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+        final int secondaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
+
+        if (root != null) {
+            root.setBackgroundColor(surfaceColor);
+        }
+        if (topBar != null) {
+            topBar.setBackgroundColor(surfaceColor);
+        }
+        if (backBtn != null) {
+            backBtn.setBackground(Theme.createSimpleSelectorCircleDrawable(dp(44),
+                    ColorUtils.setAlphaComponent(primaryTextColor, 26),
+                    Theme.getColor(Theme.key_listSelector)));
+        }
+        if (backIcon != null) {
+            backIcon.setColorFilter(primaryTextColor);
+        }
+        if (titleTextView != null) {
+            titleTextView.setTextColor(primaryTextColor);
+        }
+        if (subtitleTextView != null) {
+            subtitleTextView.setTextColor(secondaryTextColor);
+        }
+        if (statusTitleView != null) {
+            statusTitleView.setTextColor(primaryTextColor);
+        }
+        if (statusSubtitleView != null) {
+            statusSubtitleView.setTextColor(secondaryTextColor);
+        }
+
+        buildCards(context);
+        updateUiState();
     }
 
     @Override
@@ -527,16 +617,30 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     private void updateUiState() {
         if (fragmentView == null) return;
 
-        final int accentColor = Theme.isCurrentThemeDark() ? 0xFFFEB49D : Theme.getColor(Theme.key_featuredStickers_addButton);
-        final int onAccentColor = Theme.isCurrentThemeDark() ? 0xFF823723 : 0xFFFFFFFF;
-        final int disabledBg = Theme.isCurrentThemeDark() ? 0x26ffffff : 0x1A000000;
-        final int disabledText = Theme.isCurrentThemeDark() ? 0x88ffffff : Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
+        final int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        final int primaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+        final int secondaryTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
+        final int surfaceColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+
+        final int onAccentColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
+        final int disabledBg = ColorUtils.setAlphaComponent(primaryTextColor, 24);
+        final int disabledText = secondaryTextColor;
+
+        int cardBgColor = Theme.getColor(Theme.key_windowBackgroundGray);
+        if (cardBgColor == surfaceColor) {
+            cardBgColor = Theme.isCurrentThemeDark()
+                    ? ColorUtils.blendARGB(surfaceColor, 0xFFFFFFFF, 0.08f)
+                    : ColorUtils.blendARGB(surfaceColor, 0xFF000000, 0.05f);
+        }
+        final int bottomBarBg = ColorUtils.blendARGB(cardBgColor, primaryTextColor, Theme.isCurrentThemeDark() ? 0.04f : 0.02f);
+        final int trackColor = ColorUtils.setAlphaComponent(accentColor, Theme.isCurrentThemeDark() ? 65 : 45);
 
         MoltenGramOtaManager.OtaUpdate update = otaManager.getPendingUpdate();
         boolean hasUpdate = otaManager.isUpdateAvailable() && update != null;
         boolean isDownloading = otaManager.isDownloading();
         boolean isDownloaded = otaManager.isDownloaded();
         boolean isChecking = otaManager.isChecking();
+        boolean isInstalling = isInstallingShizuku || otaManager.isInstalling();
 
         boolean isCurrentCanary = "staging".equals(BuildConfig.BUILD_TYPE);
         String curCommit = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
@@ -545,98 +649,129 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                 (!TextUtils.isEmpty(curCommit) ? "-" + curCommit : "") +
                 (isCurrentCanary ? " (Canary)" : "");
 
-        subtitleTextView.setText("Сейчас установлена " + currentVerDesc);
+        if (subtitleTextView != null) {
+            subtitleTextView.setText("Сейчас установлена " + currentVerDesc);
+            subtitleTextView.setTextColor(secondaryTextColor);
+        }
 
         // 1. Status View
-        if (isInstallingShizuku) {
-            statusTitleView.setText("Установка MoltenGram…");
-            statusSubtitleView.setText("Применение пакета обновления");
-        } else if (hasUpdate) {
-            statusTitleView.setText("Доступна версия " + update.version);
-            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
-        } else if (isChecking) {
-            statusTitleView.setText("Проверка обновлений…");
-            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
-        } else if (!TextUtils.isEmpty(lastErrorMessage)) {
-            statusTitleView.setText("Ошибка проверки");
-            statusSubtitleView.setText(lastErrorMessage);
-        } else {
-            statusTitleView.setText("Установлена последняя версия");
-            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
+        if (statusTitleView != null && statusSubtitleView != null) {
+            statusTitleView.setTextColor(primaryTextColor);
+            statusSubtitleView.setTextColor(secondaryTextColor);
+            if (isInstalling) {
+                statusTitleView.setText("Установка MoltenGram…");
+                statusSubtitleView.setText("Применение пакета обновления через Shizuku");
+            } else if (hasUpdate) {
+                statusTitleView.setText("Доступна версия " + update.version);
+                statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
+            } else if (isChecking) {
+                statusTitleView.setText("Проверка обновлений…");
+                statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
+            } else if (!TextUtils.isEmpty(lastErrorMessage)) {
+                statusTitleView.setText("Ошибка проверки");
+                statusSubtitleView.setText(lastErrorMessage);
+            } else {
+                statusTitleView.setText("Установлена последняя версия");
+                statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
+            }
         }
 
         // 2. Bottom Bar & Progress
-        if (isInstallingShizuku) {
-            bottomBarContainer.setPadding(dp(14), dp(12), dp(14), dp(12));
-            setButtonBackground(bottomBarContainer, Theme.isCurrentThemeDark() ? 0xF2201A18 : 0xF2F0EAE8, 28);
-            progressContainer.setVisibility(View.VISIBLE);
-            actionButton.setEnabled(false);
-            setButtonBackground(actionButton, disabledBg, 26);
-            actionButtonText.setText("Установка…");
-            actionButtonText.setTextColor(disabledText);
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
-            if (lp != null) {
-                lp.height = dp(52);
-                actionButton.setLayoutParams(lp);
-            }
-        } else if (isDownloading) {
-            bottomBarContainer.setPadding(dp(14), dp(12), dp(14), dp(12));
-            setButtonBackground(bottomBarContainer, Theme.isCurrentThemeDark() ? 0xF2201A18 : 0xF2F0EAE8, 28);
-            progressContainer.setVisibility(View.VISIBLE);
-            progressLabelView.setText("Загрузка…");
-            int percent = (int) (otaManager.getDownloadProgress() * 100);
-            progressPercentView.setText(percent + "%");
-            wavyProgressView.setProgress(otaManager.getDownloadProgress());
-
-            actionButton.setEnabled(false);
-            setButtonBackground(actionButton, disabledBg, 26);
-            actionButtonText.setText("Загрузка…");
-            actionButtonText.setTextColor(disabledText);
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
-            if (lp != null) {
-                lp.height = dp(52);
-                actionButton.setLayoutParams(lp);
-            }
-        } else {
-            bottomBarContainer.setPadding(0, 0, 0, 0);
-            bottomBarContainer.setBackground(null);
-            progressContainer.setVisibility(View.GONE);
-            LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
-            if (lp != null) {
-                lp.height = dp(56);
-                actionButton.setLayoutParams(lp);
-            }
-
-            if (isDownloaded) {
-                actionButton.setEnabled(true);
-                setButtonBackground(actionButton, accentColor, 28);
-                actionButtonText.setText("Установить");
-                actionButtonText.setTextColor(onAccentColor);
-            } else if (hasUpdate) {
-                actionButton.setEnabled(true);
-                setButtonBackground(actionButton, accentColor, 28);
-                actionButtonText.setText("Скачать");
-                actionButtonText.setTextColor(onAccentColor);
-            } else if (isChecking) {
+        if (bottomBarContainer != null && actionButton != null && actionButtonText != null) {
+            if (isInstalling) {
+                bottomBarContainer.setPadding(dp(14), dp(12), dp(14), dp(12));
+                setButtonBackground(bottomBarContainer, bottomBarBg, 28);
+                if (progressContainer != null) {
+                    progressContainer.setVisibility(View.VISIBLE);
+                }
+                if (progressLabelView != null) {
+                    progressLabelView.setTextColor(secondaryTextColor);
+                }
+                if (progressPercentView != null) {
+                    progressPercentView.setTextColor(accentColor);
+                }
+                if (wavyProgressView != null) {
+                    wavyProgressView.setColors(accentColor, trackColor);
+                }
                 actionButton.setEnabled(false);
-                setButtonBackground(actionButton, disabledBg, 28);
-                actionButtonText.setText("Проверка…");
+                setButtonBackground(actionButton, disabledBg, 26);
+                actionButtonText.setText("Установка…");
                 actionButtonText.setTextColor(disabledText);
-            } else if (!TextUtils.isEmpty(lastErrorMessage)) {
-                actionButton.setEnabled(true);
-                setButtonBackground(actionButton, accentColor, 28);
-                actionButtonText.setText("Повторить попытку");
-                actionButtonText.setTextColor(onAccentColor);
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
+                if (lp != null) {
+                    lp.height = dp(52);
+                    actionButton.setLayoutParams(lp);
+                }
+            } else if (isDownloading) {
+                bottomBarContainer.setPadding(dp(14), dp(12), dp(14), dp(12));
+                setButtonBackground(bottomBarContainer, bottomBarBg, 28);
+                if (progressContainer != null) {
+                    progressContainer.setVisibility(View.VISIBLE);
+                }
+                if (progressLabelView != null) {
+                    progressLabelView.setTextColor(secondaryTextColor);
+                    progressLabelView.setText("Загрузка…");
+                }
+                int percent = (int) (otaManager.getDownloadProgress() * 100);
+                if (progressPercentView != null) {
+                    progressPercentView.setText(percent + "%");
+                    progressPercentView.setTextColor(accentColor);
+                }
+                if (wavyProgressView != null) {
+                    wavyProgressView.setColors(accentColor, trackColor);
+                    wavyProgressView.setProgress(otaManager.getDownloadProgress());
+                }
+
+                actionButton.setEnabled(false);
+                setButtonBackground(actionButton, disabledBg, 26);
+                actionButtonText.setText("Загрузка…");
+                actionButtonText.setTextColor(disabledText);
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
+                if (lp != null) {
+                    lp.height = dp(52);
+                    actionButton.setLayoutParams(lp);
+                }
             } else {
-                actionButton.setEnabled(true);
-                setButtonBackground(actionButton, accentColor, 28);
-                actionButtonText.setText("Проверить");
-                actionButtonText.setTextColor(onAccentColor);
+                bottomBarContainer.setPadding(0, 0, 0, 0);
+                bottomBarContainer.setBackground(null);
+                if (progressContainer != null) {
+                    progressContainer.setVisibility(View.GONE);
+                }
+                LinearLayout.LayoutParams lp = (LinearLayout.LayoutParams) actionButton.getLayoutParams();
+                if (lp != null) {
+                    lp.height = dp(56);
+                    actionButton.setLayoutParams(lp);
+                }
+
+                if (isDownloaded) {
+                    actionButton.setEnabled(true);
+                    setButtonBackground(actionButton, accentColor, 28);
+                    actionButtonText.setText("Установить");
+                    actionButtonText.setTextColor(onAccentColor);
+                } else if (hasUpdate) {
+                    actionButton.setEnabled(true);
+                    setButtonBackground(actionButton, accentColor, 28);
+                    actionButtonText.setText("Скачать");
+                    actionButtonText.setTextColor(onAccentColor);
+                } else if (isChecking) {
+                    actionButton.setEnabled(false);
+                    setButtonBackground(actionButton, disabledBg, 28);
+                    actionButtonText.setText("Проверка…");
+                    actionButtonText.setTextColor(disabledText);
+                } else if (!TextUtils.isEmpty(lastErrorMessage)) {
+                    actionButton.setEnabled(true);
+                    setButtonBackground(actionButton, accentColor, 28);
+                    actionButtonText.setText("Повторить попытку");
+                    actionButtonText.setTextColor(onAccentColor);
+                } else {
+                    actionButton.setEnabled(true);
+                    setButtonBackground(actionButton, accentColor, 28);
+                    actionButtonText.setText("Проверить");
+                    actionButtonText.setTextColor(onAccentColor);
+                }
             }
         }
     }
-
-
 
     private void handleActionClick() {
         if (otaManager.isDownloaded()) {
@@ -680,12 +815,17 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     private void installNow() {
         if (ShizukuConfig.getInstance().isSilentUpdatesEnabled()
                 && ShizukuController.getInstance().hasPermission()) {
-            // Seamless in-window installation via Shizuku without any popup dialog!
             isInstallingShizuku = true;
             updateUiState();
-            progressLabelView.setText("Копирование APK…");
-            progressPercentView.setText("0%");
-            wavyProgressView.setProgress(0f);
+            if (progressLabelView != null) {
+                progressLabelView.setText("Копирование APK…");
+            }
+            if (progressPercentView != null) {
+                progressPercentView.setText("0%");
+            }
+            if (wavyProgressView != null) {
+                wavyProgressView.setProgress(0f);
+            }
 
             otaManager.installUpdate(getParentActivity(), new ShizukuController.InstallListener() {
                 @Override

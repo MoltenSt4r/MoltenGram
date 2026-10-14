@@ -31,8 +31,8 @@ public class LinearWavyProgressView extends View {
     private long lastFrameTime = 0;
     private boolean isAnimating = true;
 
-    private int activeColor = 0xFFF5A88E;
-    private int trackColor = 0x33F5A88E;
+    private int activeColor = 0;
+    private int trackColor = 0;
 
     public LinearWavyProgressView(Context context) {
         super(context);
@@ -45,6 +45,13 @@ public class LinearWavyProgressView extends View {
     }
 
     private void init() {
+        int defColor = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+        if (defColor == 0) {
+            defColor = 0xFF2196F3;
+        }
+        activeColor = defColor;
+        trackColor = androidx.core.graphics.ColorUtils.setAlphaComponent(defColor, 45);
+
         wavePaint.setStyle(Paint.Style.STROKE);
         wavePaint.setStrokeWidth(dp(3.5f));
         wavePaint.setStrokeCap(Paint.Cap.ROUND);

@@ -29,19 +29,12 @@ public class MoltenGramPackageReplacedReceiver extends BroadcastReceiver {
         try {
             SharedPreferences prefs = context.getSharedPreferences("moltengram_ota", Context.MODE_PRIVATE);
             prefs.edit().putBoolean("show_update_changelog_on_launch", true).apply();
+            MoltenGramOtaManager.getInstance().clearPendingUpdate();
         } catch (Throwable t) {
             FileLog.e(t);
         }
 
-        try {
-            Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
-            if (launchIntent != null) {
-                launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
-                launchIntent.putExtra("from_app_update", true);
-                context.startActivity(launchIntent);
-            }
-        } catch (Throwable t) {
-            FileLog.e(t);
-        }
+        // Note: background startActivity is restricted on Android 10+ and interrupts the user.
+        // The changelog flag will be shown when the user next launches the app naturally.
     }
 }

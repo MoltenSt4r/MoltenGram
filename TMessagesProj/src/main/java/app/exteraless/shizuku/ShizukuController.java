@@ -3,6 +3,7 @@ package app.exteraless.shizuku;
 import android.content.Context;
 import android.content.Intent;
 import android.content.pm.PackageManager;
+import android.os.Build;
 import android.text.TextUtils;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -188,7 +189,8 @@ public class ShizukuController {
                 listener.onInstalling();
             }
 
-            String installCmd = "pm install -r -d --bypass-low-target-sdk-block " + tmpName + "; RES=$?; rm -f " + tmpName + "; exit $RES";
+            String bypass = Build.VERSION.SDK_INT >= 34 ? "--bypass-low-target-sdk-block " : "";
+            String installCmd = "chmod 644 " + tmpName + "; pm install -r -d " + bypass + tmpName + "; RES=$?; rm -f " + tmpName + "; exit $RES";
             Process pmProcess = exec(new String[]{"sh", "-c", installCmd});
             if (pmProcess == null) {
                 exec(new String[]{"rm", "-f", tmpName});

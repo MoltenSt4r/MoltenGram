@@ -36,7 +36,6 @@
     <string name="AppIconMoltenGramDotted">Точки</string>
     <string name="AppIconMoltenGramEndeavourOS">EndeavourOS</string>
     <string name="AppIconMoltenGramSunrise">Sunrise</string>
-    <string name="AppIconMoltenGramAero">Frutiger Aero</string>
     <string name="AppIconMoltenGramStar">Star</string>
     <string name="AppIconMoltenGramCoffee">Coffee</string>
     <string name="AppIconMoltenGramGlacier">Ледник</string>
@@ -48,6 +47,7 @@
     <string name="AppIconMoltenGramCoral">Коралл</string>
     <string name="AppIconMoltenGramOnyx">Оникс</string>
     <string name="AppIconMoltenGramNeon">Неон</string>
+    <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
     <string name="AppIconsSelect">Выбрать</string>
     <string name="AppIconsKeep">Оставить эту</string>
     <string name="OpenExteraPreferences">Настройки MoltenGram</string>

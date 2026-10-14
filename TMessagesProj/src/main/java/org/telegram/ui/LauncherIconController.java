@@ -117,8 +117,6 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramEndeavourOS, IconGroup.MOLTENGRAM, "@moltenst4r", "EndeavourOS indigo violet", 0xFF7B52AB),
         MOLTENGRAM_SUNRISE("MoltenGramSunriseIcon", R.drawable.moltengram_sunrise_icon_background,
                 0, R.string.AppIconMoltenGramSunrise, IconGroup.MOLTENGRAM, "@moltenst4r", "Morning twilight gradient", 0xFFE06C53),
-        MOLTENGRAM_AERO("MoltenGramAeroIcon", R.drawable.moltengram_aero_icon_background,
-                0, R.string.AppIconMoltenGramAero, IconGroup.MOLTENGRAM, "@moltenst4r", "Frutiger aero 3D glass aesthetic", 0xFF007A9E),
         MOLTENGRAM_STAR("MoltenGramStarIcon", R.drawable.moltengram_star_icon_background,
                 0, R.string.AppIconMoltenGramStar, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep cosmic space starlight", 0xFFFFD700),
         MOLTENGRAM_COFFEE("MoltenGramCoffeeIcon", R.drawable.moltengram_coffee_icon_background,
@@ -141,6 +139,8 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramOnyx, IconGroup.MOLTENGRAM, "@moltenst4r", "Deep contrast black and white", 0xFFFFFFFF),
         MOLTENGRAM_NEON("MoltenGramNeonIcon", R.drawable.moltengram_neon_icon_background,
                 0, R.string.AppIconMoltenGramNeon, IconGroup.MOLTENGRAM, "@moltenst4r", "Electric neon lime glow", 0xFFCCFF00),
+        MOLTENGRAM_EXTERAGRAM("MoltenGramExteraGramIcon", R.drawable.moltengram_exteragram_icon_background,
+                0, R.string.AppIconMoltenGramExteraGram, IconGroup.MOLTENGRAM, "@moltenst4r", "Classic ExteraGram signature style", 0xFFE83030),
 
         // Telegram
         TELEGRAM("TelegramIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconTelegramOriginal, IconGroup.TELEGRAM, "@telegram", "The classic paper plane", 0xFF143854),
