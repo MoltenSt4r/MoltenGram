@@ -28,6 +28,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
@@ -57,6 +58,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     private TextView titleTextView;
     private TextView subtitleTextView;
 
+    private LinearLayout content;
     private TextView statusTitleView;
     private TextView statusSubtitleView;
 
@@ -190,7 +192,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
             topBar.setBackgroundColor(ColorUtils.setAlphaComponent(surfaceColor, (int) (progress * 245)));
         });
 
-        LinearLayout content = new LinearLayout(context);
+        content = new LinearLayout(context);
         content.setOrientation(LinearLayout.VERTICAL);
         content.setPadding(dp(16), statusBarHeight + dp(68), dp(16), dp(130));
 
@@ -267,9 +269,12 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         // Card 1: Версия клиента (Pentagon badge)
         int pentagonBg = Theme.isCurrentThemeDark() ? 0xFF822004 : 0xFFD84B26;
         int pentagonIconTint = Theme.isCurrentThemeDark() ? 0xFFFFD9D1 : 0xFFFFFFFF;
+        String curCommitShort = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
+                (BuildConfig.BUILD_COMMIT_ID.length() > 7 ? BuildConfig.BUILD_COMMIT_ID.substring(0, 7) : BuildConfig.BUILD_COMMIT_ID) : "";
+        String curVerStr = BuildVars.BUILD_VERSION_STRING + (!TextUtils.isEmpty(curCommitShort) ? "-" + curCommitShort : "") + ("staging".equals(BuildConfig.BUILD_TYPE) ? " (Canary)" : "");
         View card1 = createAboutCard(context, Md3AvatarShapes.SHAPE_PENTAGON, pentagonBg,
                 R.drawable.baseline_info_24, pentagonIconTint,
-                "Версия клиента", null, BuildVars.BUILD_VERSION_STRING, accentColor, cardBgColor);
+                "Версия клиента", null, curVerStr, accentColor, cardBgColor);
         aboutSection.addView(card1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
         // Card 2: Версия API (Circle badge)
@@ -289,6 +294,44 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         aboutSection.addView(card3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
         content.addView(aboutSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+
+        // 5. Section: "Параметры обновления"
+        LinearLayout settingsSection = new LinearLayout(context);
+        settingsSection.setOrientation(LinearLayout.VERTICAL);
+
+        TextView settingsLabel = new TextView(context);
+        settingsLabel.setText(LocaleController.getString("OpenExteraUpdates", R.string.OpenExteraUpdates));
+        settingsLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        settingsLabel.setTextColor(accentColor);
+        settingsLabel.setTypeface(AndroidUtilities.bold());
+        settingsSection.addView(settingsLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 4, 0, 4, 8));
+
+        // Canary Switch Card
+        int canaryBg = Theme.isCurrentThemeDark() ? 0xFF5D3D25 : 0xFF835432;
+        int canaryTint = Theme.isCurrentThemeDark() ? 0xFFFFDDC5 : 0xFFFFFFFF;
+        View canaryCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_BURST, canaryBg,
+                R.drawable.baseline_sync_problem_24, canaryTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesCanary),
+                LocaleController.getString(R.string.OpenExteraUpdatesCanaryDesc),
+                otaManager.isIncludeCanary(), cardBgColor,
+                enabled -> {
+                    otaManager.setIncludeCanary(enabled);
+                    recheckUpdates();
+                });
+        settingsSection.addView(canaryCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        // Auto Check Switch Card
+        int autoCheckBg = Theme.isCurrentThemeDark() ? 0xFF654B12 : 0xFF8D6818;
+        int autoCheckTint = Theme.isCurrentThemeDark() ? 0xFFFFE8A3 : 0xFFFFFFFF;
+        View autoCheckCard = createSwitchCard(context, Md3AvatarShapes.SHAPE_COOKIE_4, autoCheckBg,
+                R.drawable.sync_outline_28, autoCheckTint,
+                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheck),
+                LocaleController.getString(R.string.OpenExteraUpdatesAutoCheckDesc),
+                otaManager.isOtaEnabled(), cardBgColor,
+                enabled -> otaManager.setOtaEnabled(enabled));
+        settingsSection.addView(autoCheckCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+
+        content.addView(settingsSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
         scrollView.addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         root.addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -348,6 +391,27 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         return root;
     }
 
+    @Override
+    public void onInsets(int left, int top, int right, int bottom) {
+        super.onInsets(left, top, right, bottom);
+        if (topBar != null) {
+            topBar.setPadding(0, top, 0, 0);
+            ViewGroup.LayoutParams lp = topBar.getLayoutParams();
+            if (lp != null) {
+                lp.height = top + dp(64);
+                topBar.setLayoutParams(lp);
+            }
+        }
+        if (content != null) {
+            content.setPadding(dp(16), top + dp(68), dp(16), bottom + dp(130));
+        }
+        if (bottomBarContainer != null && bottomBarContainer.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) bottomBarContainer.getLayoutParams();
+            lp.bottomMargin = dp(16) + bottom;
+            bottomBarContainer.setLayoutParams(lp);
+        }
+    }
+
     private View createAboutCard(Context context, int shapeId, int badgeColor, int iconRes, int iconTint,
                                  String title, String subtitle, String value, int accentColor, int cardBgColor) {
         FrameLayout card = new FrameLayout(context);
@@ -395,6 +459,60 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         return card;
     }
 
+    private View createSwitchCard(Context context, int shapeId, int badgeColor, int iconRes, int iconTint,
+                                  String title, String subtitle, boolean checked, int cardBgColor,
+                                  Utilities.Callback<Boolean> onToggle) {
+        FrameLayout card = new FrameLayout(context);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(20));
+        bg.setColor(cardBgColor);
+        card.setBackground(bg);
+
+        LinearLayout row = new LinearLayout(context);
+        row.setOrientation(LinearLayout.HORIZONTAL);
+        row.setGravity(Gravity.CENTER_VERTICAL);
+        row.setPadding(dp(16), dp(10), dp(16), dp(10));
+
+        ShapeBadgeView badge = new ShapeBadgeView(context, shapeId, badgeColor, iconRes, iconTint);
+        row.addView(badge, LayoutHelper.createLinear(44, 44, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
+
+        LinearLayout textCol = new LinearLayout(context);
+        textCol.setOrientation(LinearLayout.VERTICAL);
+
+        TextView titleView = new TextView(context);
+        titleView.setText(title);
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        titleView.setTypeface(AndroidUtilities.bold());
+        textCol.addView(titleView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+        if (!TextUtils.isEmpty(subtitle)) {
+            TextView subView = new TextView(context);
+            subView.setText(subtitle);
+            subView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            subView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            textCol.addView(subView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+        }
+
+        row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+        org.telegram.ui.Components.Switch sw = new org.telegram.ui.Components.Switch(context);
+        sw.setChecked(checked, false);
+        row.addView(sw, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 10, 0, 0, 0));
+
+        card.addView(row, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+        card.setOnClickListener(v -> {
+            boolean next = !sw.isChecked();
+            sw.setChecked(next, true);
+            if (onToggle != null) {
+                onToggle.run(next);
+            }
+        });
+
+        return card;
+    }
+
     private void updateUiState() {
         if (fragmentView == null) return;
 
@@ -409,22 +527,31 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         boolean isDownloaded = otaManager.isDownloaded();
         boolean isChecking = otaManager.isChecking();
 
+        boolean isCurrentCanary = "staging".equals(BuildConfig.BUILD_TYPE);
+        String curCommit = !TextUtils.isEmpty(BuildConfig.BUILD_COMMIT_ID) ?
+                (BuildConfig.BUILD_COMMIT_ID.length() > 7 ? BuildConfig.BUILD_COMMIT_ID.substring(0, 7) : BuildConfig.BUILD_COMMIT_ID) : "";
+        String currentVerDesc = "v" + BuildVars.BUILD_VERSION_STRING +
+                (!TextUtils.isEmpty(curCommit) ? "-" + curCommit : "") +
+                (isCurrentCanary ? " (Canary)" : "");
+
+        subtitleTextView.setText("Сейчас установлена " + currentVerDesc);
+
         // 1. Status View
         if (isInstallingShizuku) {
             statusTitleView.setText("Установка MoltenGram…");
             statusSubtitleView.setText("Применение пакета обновления");
         } else if (hasUpdate) {
             statusTitleView.setText("Доступна версия " + update.version);
-            statusSubtitleView.setText("Сейчас установлена v" + BuildVars.BUILD_VERSION_STRING);
+            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
         } else if (isChecking) {
             statusTitleView.setText("Проверка обновлений…");
-            statusSubtitleView.setText("Сейчас установлена v" + BuildVars.BUILD_VERSION_STRING);
+            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
         } else if (!TextUtils.isEmpty(lastErrorMessage)) {
             statusTitleView.setText("Ошибка проверки");
             statusSubtitleView.setText(lastErrorMessage);
         } else {
             statusTitleView.setText("Установлена последняя версия");
-            statusSubtitleView.setText("Сейчас установлена v" + BuildVars.BUILD_VERSION_STRING);
+            statusSubtitleView.setText("Сейчас установлена " + currentVerDesc);
         }
 
         // 2. Changelog Section

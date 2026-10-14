@@ -291,14 +291,24 @@ public class MoltenGramOtaManager {
 
                     JSONObject apkAsset = null;
                     long bestAssetTime = 0;
+                    String bestAssetVer = null;
                     for (int j = 0; j < assets.length(); j++) {
                         JSONObject ast = assets.getJSONObject(j);
                         String name = ast.optString("name", "");
                         if (name.endsWith(".apk")) {
                             long assetTime = parseIsoTime(ast.optString("updated_at", ast.optString("created_at", "")));
-                            if (apkAsset == null || assetTime > bestAssetTime) {
+                            String assetVer = extractVersion(null, name, null);
+                            if (apkAsset == null) {
                                 apkAsset = ast;
                                 bestAssetTime = assetTime;
+                                bestAssetVer = assetVer;
+                            } else {
+                                int verCmp = compareSemver(assetVer, bestAssetVer);
+                                if (verCmp > 0 || (verCmp == 0 && assetTime > bestAssetTime)) {
+                                    apkAsset = ast;
+                                    bestAssetTime = assetTime;
+                                    bestAssetVer = assetVer;
+                                }
                             }
                         }
                     }
@@ -308,11 +318,11 @@ public class MoltenGramOtaManager {
                     }
 
                     String apkName = apkAsset.optString("name", "");
-                    String verStr = tagName.startsWith("v") ? tagName.substring(1) : tagName;
+                    String verStr = extractVersion(tagName, apkName, rel.optString("name", ""));
                     long publishedTime = bestAssetTime > 0 ? bestAssetTime : parseIsoTime(rel.optString("published_at", ""));
 
                     String remoteCommit = "";
-                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("-([0-9a-fA-F]{7,40})(?:\\.|$)").matcher(apkName);
+                    java.util.regex.Matcher m = java.util.regex.Pattern.compile("-([0-9a-fA-F]{7,40})(?:[.(]|$)").matcher(apkName);
                     if (m.find()) {
                         remoteCommit = m.group(1);
                     }
@@ -320,19 +330,20 @@ public class MoltenGramOtaManager {
                     boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit);
 
                     if (isNewer) {
-                        OtaUpdate update = new OtaUpdate();
-                        update.version = verStr;
-                        update.title = rel.optString("name", "MoltenGram " + tagName);
-                        update.changelog = rel.optString("body", "");
-                        update.downloadUrl = apkAsset.optString("browser_download_url", "");
-                        update.fileName = !TextUtils.isEmpty(apkName) ? apkName : ("MoltenGram-" + tagName + ".apk");
-                        update.fileSize = apkAsset.optLong("size", 0);
-                        update.isCanary = prerelease;
-                        update.publishedAt = publishedTime;
-                        update.commitId = remoteCommit;
+                        OtaUpdate candidate = new OtaUpdate();
+                        candidate.version = verStr + (prerelease ? " (Canary)" : "");
+                        candidate.title = rel.optString("name", "MoltenGram " + (prerelease ? "Canary" : tagName));
+                        candidate.changelog = rel.optString("body", "");
+                        candidate.downloadUrl = apkAsset.optString("browser_download_url", "");
+                        candidate.fileName = !TextUtils.isEmpty(apkName) ? apkName : ("MoltenGram-" + tagName + ".apk");
+                        candidate.fileSize = apkAsset.optLong("size", 0);
+                        candidate.isCanary = prerelease;
+                        candidate.publishedAt = publishedTime;
+                        candidate.commitId = remoteCommit;
 
-                        bestUpdate = update;
-                        break;
+                        if (bestUpdate == null || isCandidateBetter(candidate, bestUpdate, includeCanary)) {
+                            bestUpdate = candidate;
+                        }
                     }
                 }
 
@@ -395,7 +406,77 @@ public class MoltenGramOtaManager {
         }
     }
 
-    // --- Version Comparison ---
+    // --- Version Comparison & Candidate Selection ---
+
+    public static String extractVersion(String tagName, String apkName, String releaseName) {
+        if (!TextUtils.isEmpty(tagName)) {
+            java.util.regex.Matcher tm = java.util.regex.Pattern.compile("(?:v)?(\\d+(?:\\.\\d+)+)").matcher(tagName);
+            if (tm.find()) {
+                return tm.group(1);
+            }
+        }
+        if (!TextUtils.isEmpty(apkName)) {
+            java.util.regex.Matcher am = java.util.regex.Pattern.compile("-(?:v)?(\\d+(?:\\.\\d+)+)").matcher(apkName);
+            if (am.find()) {
+                return am.group(1);
+            }
+        }
+        if (!TextUtils.isEmpty(releaseName)) {
+            java.util.regex.Matcher rm = java.util.regex.Pattern.compile("(?:v)?(\\d+(?:\\.\\d+)+)").matcher(releaseName);
+            if (rm.find()) {
+                return rm.group(1);
+            }
+        }
+        return tagName != null ? tagName : "";
+    }
+
+    public static int compareSemver(String ver1, String ver2) {
+        if (ver1 == null) ver1 = "";
+        if (ver2 == null) ver2 = "";
+        String c1 = extractVersion(ver1, null, null);
+        String c2 = extractVersion(ver2, null, null);
+        String[] p1 = c1.split("\\.");
+        String[] p2 = c2.split("\\.");
+        int len = Math.max(p1.length, p2.length);
+        for (int i = 0; i < len; i++) {
+            int n1 = 0;
+            int n2 = 0;
+            if (i < p1.length) {
+                try { n1 = Integer.parseInt(p1[i]); } catch (Exception ignored) {}
+            }
+            if (i < p2.length) {
+                try { n2 = Integer.parseInt(p2[i]); } catch (Exception ignored) {}
+            }
+            if (n1 > n2) return 1;
+            if (n1 < n2) return -1;
+        }
+        return 0;
+    }
+
+    public static boolean isCandidateBetter(OtaUpdate cand, OtaUpdate current, boolean includeCanary) {
+        if (cand == null) return false;
+        if (current == null) return true;
+
+        int verCmp = compareSemver(cand.version, current.version);
+        if (verCmp > 0) {
+            return true;
+        }
+        if (verCmp < 0) {
+            return false;
+        }
+
+        if (cand.publishedAt > current.publishedAt) {
+            return true;
+        } else if (cand.publishedAt < current.publishedAt) {
+            return false;
+        }
+
+        if (includeCanary && cand.isCanary && !current.isCanary) {
+            return true;
+        }
+
+        return false;
+    }
 
     public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit) {
         if (TextUtils.isEmpty(remoteVer)) {
@@ -403,31 +484,12 @@ public class MoltenGramOtaManager {
         }
 
         String currentVer = BuildConfig.BUILD_VERSION_STRING;
-        if (remoteVer.startsWith("v") || remoteVer.startsWith("V")) {
-            remoteVer = remoteVer.substring(1);
+        int cmp = compareSemver(remoteVer, currentVer);
+        if (cmp > 0) {
+            return true;
         }
-        if (currentVer.startsWith("v") || currentVer.startsWith("V")) {
-            currentVer = currentVer.substring(1);
-        }
-
-        String cleanRemote = remoteVer.split("-")[0];
-        String cleanCurrent = currentVer.split("-")[0];
-
-        String[] rParts = cleanRemote.split("\\.");
-        String[] cParts = cleanCurrent.split("\\.");
-
-        int len = Math.max(rParts.length, cParts.length);
-        for (int i = 0; i < len; i++) {
-            int r = 0;
-            int c = 0;
-            if (i < rParts.length) {
-                try { r = Integer.parseInt(rParts[i]); } catch (Exception ignored) {}
-            }
-            if (i < cParts.length) {
-                try { c = Integer.parseInt(cParts[i]); } catch (Exception ignored) {}
-            }
-            if (r > c) return true;
-            if (r < c) return false;
+        if (cmp < 0) {
+            return false;
         }
 
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";

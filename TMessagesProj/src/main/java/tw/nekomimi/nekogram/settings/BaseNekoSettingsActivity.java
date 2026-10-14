@@ -276,12 +276,14 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
             listAdapter.notifyDataSetChanged();
         }
         if (rowMap.containsKey(key)) {
-            listView.highlightRow(() -> {
-                // noinspection ConstantConditions
-                int position = rowMap.get(key);
-                layoutManager.scrollToPositionWithOffset(position, dp(60));
-                return position;
-            });
+            if (listView != null) {
+                listView.highlightRow(() -> {
+                    // noinspection ConstantConditions
+                    int position = rowMap.get(key);
+                    layoutManager.scrollToPositionWithOffset(position, dp(60));
+                    return position;
+                });
+            }
         } else if (unknown != null) {
             unknown.run();
         }
@@ -377,8 +379,10 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
 
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
-        listView.setPadding(0, 0, 0, bottom);
-        listView.setClipToPadding(false);
+        if (listView != null) {
+            listView.setPadding(0, 0, 0, bottom);
+            listView.setClipToPadding(false);
+        }
     }
 
     private class BlurContentView extends SizeNotifierFrameLayout {
