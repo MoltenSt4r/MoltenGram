@@ -259,17 +259,63 @@ public final class PluginInstallHelper {
                     .show();
             return;
         }
-        controller.readMetadataAsync(file, plugin -> {
+        controller.readMetadataAsync(file, rawPlugin -> {
+            Plugin plugin = rawPlugin;
+            if (plugin == null || TextUtils.isEmpty(plugin.id) || plugin.id.equals(file.getName())) {
+                Plugin fallback = inferPluginFallback(file);
+                if (fallback != null) {
+                    plugin = fallback;
+                }
+            }
             // Разбор исходника — на фоновом потоке: это чтение файла и AST.
             final Map<String, List<String>> capabilities = PluginCapabilityScan.scan(file);
             final Map<String, List<String>> offered = offeredPermissions(plugin, capabilities);
+            final Plugin finalPlugin = plugin;
             AndroidUtilities.runOnUIThread(() -> {
                 if (activity.isFinishing()) {
                     return;
                 }
-                showConsentSheet(activity, file, params, plugin, offered, capabilities);
+                showConsentSheet(activity, file, params, finalPlugin, offered, capabilities);
             });
         });
+    }
+
+    private static Plugin inferPluginFallback(File file) {
+        if (file == null || !file.exists()) return null;
+        try (java.io.BufferedReader reader = new java.io.BufferedReader(new java.io.FileReader(file))) {
+            String line;
+            java.util.regex.Pattern idPat = java.util.regex.Pattern.compile("^\\s*__id__\\s*=\\s*['\"]([a-zA-Z0-9_-]+)['\"]");
+            java.util.regex.Pattern namePat = java.util.regex.Pattern.compile("^\\s*__name__\\s*=\\s*['\"]([^'\"]+)['\"]");
+            java.util.regex.Pattern descPat = java.util.regex.Pattern.compile("^\\s*__description__\\s*=\\s*['\"]([^'\"]+)['\"]");
+            java.util.regex.Pattern authorPat = java.util.regex.Pattern.compile("^\\s*__author__\\s*=\\s*['\"]([^'\"]+)['\"]");
+            java.util.regex.Pattern verPat = java.util.regex.Pattern.compile("^\\s*__version__\\s*=\\s*['\"]([^'\"]+)['\"]");
+            String id = null, name = null, desc = null, author = null, ver = null;
+            int count = 0;
+            while ((line = reader.readLine()) != null && count++ < 60) {
+                java.util.regex.Matcher m = idPat.matcher(line);
+                if (m.find()) id = m.group(1);
+                m = namePat.matcher(line);
+                if (m.find()) name = m.group(1);
+                m = descPat.matcher(line);
+                if (m.find()) desc = m.group(1);
+                m = authorPat.matcher(line);
+                if (m.find()) author = m.group(1);
+                m = verPat.matcher(line);
+                if (m.find()) ver = m.group(1);
+            }
+            if (id != null) {
+                Plugin p = new Plugin();
+                p.id = id;
+                p.name = name != null ? name : id;
+                p.description = desc;
+                p.author = author;
+                p.version = ver != null ? ver : "1.0";
+                p.path = file.getAbsolutePath();
+                return p;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
     }
 
     /**
@@ -302,14 +348,6 @@ public final class PluginInstallHelper {
 
     /**
      * Лист установки: карточка плагина и галочки найденного.
-     *
-     * Разбор перечисляет не `__permissions__` (их объявляет меньшинство из 512
-     * плагинов двух каталогов), а то, что нашлось в исходнике; каждая находка —
-     * галочка, и у каждой раскрывашка с именами, по которым она нашлась.
-     *
-     * Галочки по умолчанию сняты. Плагин ставится ровно с тем, что отметили:
-     * ничего не отметили — уровень «Изоляция», отметили что-то — «Ограниченный»,
-     * отметили переписывание кода — «Доверенный».
      */
     private static void showConsentSheet(Activity activity, File file,
                                          com.exteragram.messenger.plugins.ui.components
@@ -317,13 +355,11 @@ public final class PluginInstallHelper {
                                          Plugin plugin,
                                          Map<String, List<String>> offered,
                                          Map<String, List<String>> capabilities) {
+        final boolean isTrusted = params != null && params.getTrusted();
         new PluginInstallBottomSheet(activity, file, params, plugin, offered,
                 (granted, enableAfterInstall) -> {
-                    grantOnConsent(plugin, granted);
+                    grantOnConsent(plugin, file, granted, isTrusted);
                     if (plugin != null && plugin.id != null) {
-                        // Разбор нужен и потом — на экране разрешений, где
-                        // спрашивают «почему приложение решило, что плагину
-                        // нужна сеть». Перечитывать файл ради этого нельзя.
                         PluginCapabilityScan.store(plugin.id, capabilities);
                     }
                     install(activity, file, plugin != null ? plugin.id : null, enableAfterInstall);
@@ -332,27 +368,34 @@ public final class PluginInstallHelper {
 
     /**
      * Зафиксировать выбор пользователя: отмеченные разрешения и уровень под них.
-     *
-     * Запись делается всегда, даже пустая: именно её наличие отличает плагин,
-     * поставленный при модели разрешений, от старого, которому иначе достался
-     * бы режим совместимости со всеми правами сразу.
      */
-    private static void grantOnConsent(Plugin plugin, List<String> granted) {
-        if (plugin == null || TextUtils.isEmpty(plugin.id)) {
+    private static void grantOnConsent(Plugin plugin, File file, List<String> granted, boolean isTrusted) {
+        String id = plugin != null ? plugin.id : null;
+        if (TextUtils.isEmpty(id) && file != null) {
+            id = file.getName();
+        }
+        if (TextUtils.isEmpty(id)) {
             return;
         }
-        PluginPermissions.setGranted(plugin.id, granted);
         final int level;
-        if (granted.isEmpty()) {
-            level = PluginTrustLevel.ISOLATED;
-        } else if (granted.contains(PluginPermissions.HOOKS)
+        if (isTrusted || granted.contains(PluginPermissions.HOOKS)
                 || granted.contains(PluginPermissions.NATIVE)) {
-            // Хуки живут только на доверенном уровне: там про это и сказано.
             level = PluginTrustLevel.TRUSTED;
+            if (isTrusted && !granted.contains(PluginPermissions.HOOKS)) {
+                granted = new ArrayList<>(granted);
+                granted.add(PluginPermissions.HOOKS);
+            }
+        } else if (granted.isEmpty()) {
+            level = PluginTrustLevel.GATED;
         } else {
             level = PluginTrustLevel.GATED;
         }
-        PluginTrustLevel.setLevel(plugin.id, level);
+        PluginPermissions.setGranted(id, granted);
+        PluginTrustLevel.setLevel(id, level);
+        if (file != null && !file.getName().equals(id)) {
+            PluginPermissions.setGranted(file.getName(), granted);
+            PluginTrustLevel.setLevel(file.getName(), level);
+        }
     }
 
     /**

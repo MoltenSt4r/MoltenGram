@@ -20,8 +20,11 @@
 """
 
 import ast
+import base64
 import re
+import struct
 import zipfile
+import zlib
 from typing import Dict, List
 
 PERM_MESSAGES_READ = "messages.read"
@@ -102,6 +105,13 @@ _MARKERS = (
     ("hook_all_methods", PERM_HOOKS, "Xposed"),
     ("hook_all_constructors", PERM_HOOKS, "Xposed"),
     ("XposedBridge", PERM_HOOKS, "Xposed"),
+    ("XC_MethodHook", PERM_HOOKS, "Xposed"),
+    ("findAndHookMethod", PERM_HOOKS, "Xposed"),
+    ("hookMethod", PERM_HOOKS, "Xposed"),
+    ("addXposedHook", PERM_HOOKS, "Xposed"),
+    ("add_xposed_hook", PERM_HOOKS, "Xposed"),
+    ("aliuhook", PERM_HOOKS, "Xposed"),
+    ("DexposedBridge", PERM_HOOKS, "Xposed"),
     ("InMemoryDexClassLoader", PERM_HOOKS, "DexClassLoader"),
     ("DexClassLoader", PERM_HOOKS, "DexClassLoader"),
     ("generate_proxy_class", PERM_HOOKS, "class proxy"),
@@ -389,6 +399,7 @@ def _scan_source(source: str) -> Dict[str, List[str]]:
             found[permission].append(evidence)
 
     _merge(found, _scan_imports(source))
+    _merge(found, _scan_embedded_dex(source))
 
     obfuscation = _detect_obfuscation(source)
     if obfuscation:

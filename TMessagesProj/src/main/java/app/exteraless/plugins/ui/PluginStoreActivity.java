@@ -412,31 +412,45 @@ public class PluginStoreActivity extends BaseFragment {
         Activity act = getParentActivity();
         if (act == null) return;
 
-        // 1. Try disk cache
-        File cache = new File(act.getCacheDir(), CACHE_FILE_NAME);
-        if (cache.exists() && cache.length() > 0) {
-            try (FileInputStream in = new FileInputStream(cache)) {
-                String json = readStream(in);
-                mergeCatalogJson(json);
-            } catch (Exception e) {
-                FileLog.e(e);
+        Utilities.globalQueue.postRunnable(() -> {
+            List<StorePlugin> loaded = new ArrayList<>();
+            // 1. Try disk cache
+            File cache = new File(act.getCacheDir(), CACHE_FILE_NAME);
+            if (cache.exists() && cache.length() > 0) {
+                try (FileInputStream in = new FileInputStream(cache)) {
+                    String json = readStream(in);
+                    List<StorePlugin> list = parseCatalogJson(json);
+                    if (list != null && !list.isEmpty()) {
+                        loaded.addAll(list);
+                    }
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
             }
-        }
 
-        // 2. If still empty, load bundled community plugins from assets
-        if (allPlugins.isEmpty()) {
-            try (InputStream in = act.getAssets().open("packit_plugins.json")) {
-                String json = readStream(in);
-                mergeCatalogJson(json);
-            } catch (Exception e) {
-                FileLog.e(e);
+            // 2. If still empty, load bundled community plugins from assets
+            if (loaded.isEmpty()) {
+                try (InputStream in = act.getAssets().open("packit_plugins.json")) {
+                    String json = readStream(in);
+                    List<StorePlugin> list = parseCatalogJson(json);
+                    if (list != null && !list.isEmpty()) {
+                        loaded.addAll(list);
+                    }
+                } catch (Exception e) {
+                    FileLog.e(e);
+                }
             }
-        }
 
-        updateRows();
+            AndroidUtilities.runOnUIThread(() -> {
+                if (!loaded.isEmpty()) {
+                    mergePlugins(loaded);
+                }
+                updateRows();
 
-        // 3. Scan folder channels (https://t.me/addlist/MsGEKKJgoGlkOGM0) for latest community plugins
-        checkFolderChannelsOnline();
+                // 3. Scan folder channels (https://t.me/addlist/MsGEKKJgoGlkOGM0) for latest community plugins
+                checkFolderChannelsOnline();
+            });
+        });
     }
 
     private void checkFolderChannelsOnline() {
@@ -526,57 +540,63 @@ public class PluginStoreActivity extends BaseFragment {
         sReq.limit = 100;
 
         ConnectionsManager.getInstance(currentAccount).sendRequest(sReq, (res, err) -> {
+            List<StorePlugin> discovered = new ArrayList<>();
+            int minId = Integer.MAX_VALUE;
+            boolean hasFewerThan20 = false;
+            if (res instanceof TLRPC.messages_Messages) {
+                TLRPC.messages_Messages mRes = (TLRPC.messages_Messages) res;
+                for (TLRPC.Message msg : mRes.messages) {
+                    if (msg == null) continue;
+                    if (msg.id < minId) minId = msg.id;
+
+                    if (msg.media instanceof TLRPC.TL_messageMediaDocument) {
+                        TLRPC.Document doc = msg.media.document;
+                        String fName = FileLoader.getDocumentFileName(doc);
+                        if (fName != null && (fName.endsWith(".plugin") || fName.endsWith(".py") || fName.endsWith(".eaf"))) {
+                            String id = fName.replaceAll("\\.[^.]+$", "").toLowerCase(Locale.ROOT).replace(" ", "_");
+                            StorePlugin sp = new StorePlugin();
+                            sp.id = id;
+                            sp.name = cleanPluginName(fName);
+                            String authorName = !TextUtils.isEmpty(chat.username) ? "@" + chat.username : (chat.title != null ? chat.title : "");
+                            sp.author = authorName;
+                            sp.sourceChannel = authorName;
+                            sp.channelPost = !TextUtils.isEmpty(chat.username) ? "https://t.me/" + chat.username + "/" + msg.id : null;
+                            sp.format = fName.endsWith(".py") ? ".py" : (fName.endsWith(".eaf") ? ".eaf" : ".plugin");
+                            sp.isOpenSource = !sp.format.endsWith(".eaf");
+                            sp.description = msg.message;
+                            sp.size = AndroidUtilities.formatFileSize(doc.size);
+                            sp.version = extractVersion(fName, msg.message);
+                            sp.document = doc;
+                            sp.message = msg;
+                            sp.chat = chat;
+                            sp.icon = parseIconFromText(msg.message);
+                            sp.tags.add(sp.isOpenSource ? "OpenSource" : "Binary");
+                            categorizePlugin(sp);
+                            discovered.add(sp);
+                        }
+                    }
+                }
+
+                if (mRes.messages.size() < 20) {
+                    hasFewerThan20 = true;
+                }
+            }
+
+            final int finalMinId = minId;
+            final boolean finalHasFewer = hasFewerThan20;
             AndroidUtilities.runOnUIThread(() -> {
-                if (res instanceof TLRPC.messages_Messages) {
-                    TLRPC.messages_Messages mRes = (TLRPC.messages_Messages) res;
-                    int minId = Integer.MAX_VALUE;
-                    List<StorePlugin> discovered = new ArrayList<>();
-
-                    for (TLRPC.Message msg : mRes.messages) {
-                        if (msg == null) continue;
-                        if (msg.id < minId) minId = msg.id;
-
-                        if (msg.media instanceof TLRPC.TL_messageMediaDocument) {
-                            TLRPC.Document doc = msg.media.document;
-                            String fName = FileLoader.getDocumentFileName(doc);
-                            if (fName != null && (fName.endsWith(".plugin") || fName.endsWith(".py") || fName.endsWith(".eaf"))) {
-                                String id = fName.replaceAll("\\.[^.]+$", "").toLowerCase(Locale.ROOT).replace(" ", "_");
-                                StorePlugin sp = new StorePlugin();
-                                sp.id = id;
-                                sp.name = cleanPluginName(fName);
-                                String authorName = !TextUtils.isEmpty(chat.username) ? "@" + chat.username : (chat.title != null ? chat.title : "");
-                                sp.author = authorName;
-                                sp.sourceChannel = authorName;
-                                sp.channelPost = !TextUtils.isEmpty(chat.username) ? "https://t.me/" + chat.username + "/" + msg.id : null;
-                                sp.format = fName.endsWith(".py") ? ".py" : (fName.endsWith(".eaf") ? ".eaf" : ".plugin");
-                                sp.isOpenSource = !sp.format.endsWith(".eaf");
-                                sp.description = msg.message;
-                                sp.size = AndroidUtilities.formatFileSize(doc.size);
-                                sp.version = extractVersion(fName, msg.message);
-                                sp.document = doc;
-                                sp.message = msg;
-                                sp.chat = chat;
-                                sp.icon = parseIconFromText(msg.message);
-                                sp.tags.add(sp.isOpenSource ? "OpenSource" : "Binary");
-                                categorizePlugin(sp);
-                                discovered.add(sp);
-                            }
-                        }
+                if (query == null) {
+                    if (finalMinId != Integer.MAX_VALUE && finalMinId > 1) {
+                        channelMinMsgId.put(chat.id, finalMinId);
                     }
-
-                    if (query == null) {
-                        if (minId != Integer.MAX_VALUE && minId > 1) {
-                            channelMinMsgId.put(chat.id, minId);
-                        }
-                        if (mRes.messages.size() < 20) {
-                            channelsAtEnd.add(chat.id);
-                        }
+                    if (finalHasFewer) {
+                        channelsAtEnd.add(chat.id);
                     }
+                }
 
-                    if (!discovered.isEmpty()) {
-                        mergePlugins(discovered);
-                        scheduleSaveCache();
-                    }
+                if (!discovered.isEmpty()) {
+                    mergePlugins(discovered);
+                    scheduleSaveCache();
                 }
                 if (onComplete != null) {
                     onComplete.run();
@@ -1242,12 +1262,12 @@ public class PluginStoreActivity extends BaseFragment {
         return false;
     }
 
-    private void mergeCatalogJson(String jsonStr) {
-        if (TextUtils.isEmpty(jsonStr)) return;
+    private List<StorePlugin> parseCatalogJson(String jsonStr) {
+        if (TextUtils.isEmpty(jsonStr)) return null;
         try {
             JSONObject root = new JSONObject(jsonStr);
             JSONArray arr = root.optJSONArray("plugins");
-            if (arr == null) return;
+            if (arr == null) return null;
 
             List<StorePlugin> list = new ArrayList<>();
             for (int i = 0; i < arr.length(); i++) {
@@ -1283,10 +1303,17 @@ public class PluginStoreActivity extends BaseFragment {
                 }
                 list.add(p);
             }
-
-            mergePlugins(list);
+            return list;
         } catch (Exception e) {
             FileLog.e(e);
+            return null;
+        }
+    }
+
+    private void mergeCatalogJson(String jsonStr) {
+        List<StorePlugin> list = parseCatalogJson(jsonStr);
+        if (list != null && !list.isEmpty()) {
+            mergePlugins(list);
         }
     }
 
@@ -1726,7 +1753,7 @@ public class PluginStoreActivity extends BaseFragment {
         }
         final String path = toInstall.getAbsolutePath();
         AndroidUtilities.runOnUIThread(() -> {
-            PluginsController.getInstance().showInstallDialog(PluginStoreActivity.this, path, false);
+            PluginsController.getInstance().showInstallDialog(PluginStoreActivity.this, path, true);
         });
     }
 
@@ -1873,6 +1900,7 @@ public class PluginStoreActivity extends BaseFragment {
             item.object = p;
             item.object2 = delegate;
             item.id = p.id != null ? p.id.hashCode() : 0;
+            item.transparent = true;
             return item;
         }
     }
@@ -1894,6 +1922,7 @@ public class PluginStoreActivity extends BaseFragment {
 
         public StorePluginCell(Context context) {
             super(context);
+            setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
             setPadding(dp(12), dp(4), dp(12), dp(6));
 
             card = new LinearLayout(context);
@@ -1941,7 +1970,7 @@ public class PluginStoreActivity extends BaseFragment {
             nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
             nameView.setTypeface(AndroidUtilities.bold());
             nameView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            nameView.setSingleLine(true);
+            nameView.setMaxLines(2);
             nameView.setEllipsize(TextUtils.TruncateAt.END);
             titleCol.addView(nameView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
@@ -1992,11 +2021,15 @@ public class PluginStoreActivity extends BaseFragment {
             actionsRow.addView(openButton, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
 
             actionButton = new TextView(context);
-            actionButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            actionButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             actionButton.setTypeface(AndroidUtilities.bold());
             actionButton.setGravity(Gravity.CENTER);
-            actionButton.setPadding(dp(16), dp(7), dp(16), dp(7));
-            actionsRow.addView(actionButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 34));
+            actionButton.setSingleLine(true);
+            actionButton.setEllipsize(TextUtils.TruncateAt.END);
+            actionButton.setMinHeight(dp(36));
+            actionButton.setMinimumWidth(dp(84));
+            actionButton.setPadding(dp(14), dp(6), dp(14), dp(6));
+            actionsRow.addView(actionButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
         }
 
         public void bind(StorePlugin p, StorePluginDelegate d) {

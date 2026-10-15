@@ -1029,7 +1029,27 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 // Если он этого не сделал (установка другим плагином, dev-сервер), плагин
                 // не получает ничего, а пользователю показывается, что он появился.
                 if (!PluginPermissions.hasRecord(id)) {
-                    markUnconsented(id);
+                    String sourceName = source.getName();
+                    String baseName = sourceName.replaceAll("\\.[^.]+$", "");
+                    String prefixName = baseName.contains("_") ? baseName.substring(0, baseName.indexOf('_')) : baseName;
+                    if (PluginPermissions.hasRecord(sourceName)) {
+                        PluginPermissions.setGranted(id, PluginPermissions.getGranted(sourceName));
+                        PluginTrustLevel.setLevel(id, PluginTrustLevel.getLevel(sourceName));
+                        PluginPermissions.clear(sourceName);
+                        PluginTrustLevel.clear(sourceName);
+                    } else if (PluginPermissions.hasRecord(baseName)) {
+                        PluginPermissions.setGranted(id, PluginPermissions.getGranted(baseName));
+                        PluginTrustLevel.setLevel(id, PluginTrustLevel.getLevel(baseName));
+                        PluginPermissions.clear(baseName);
+                        PluginTrustLevel.clear(baseName);
+                    } else if (PluginPermissions.hasRecord(prefixName)) {
+                        PluginPermissions.setGranted(id, PluginPermissions.getGranted(prefixName));
+                        PluginTrustLevel.setLevel(id, PluginTrustLevel.getLevel(prefixName));
+                        PluginPermissions.clear(prefixName);
+                        PluginTrustLevel.clear(prefixName);
+                    } else {
+                        markUnconsented(id);
+                    }
                 }
                 synchronized (this) {
                     knownPaths.put(id, dest.getAbsolutePath());
