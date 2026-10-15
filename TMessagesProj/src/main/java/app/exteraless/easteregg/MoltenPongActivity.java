@@ -15,13 +15,10 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.ApplicationLoader;
-import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.ActionBar.Theme;
 
 /**
  * Пасхалка: Пинг-понг MoltenPong против бота на очки со звёздным логотипом MoltenGram.
@@ -36,10 +33,7 @@ public class MoltenPongActivity extends BaseFragment {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle("MoltenPong");
-        actionBar.setSubtitle(LocaleController.getString("EasterEgg", R.string.AppIconEaster));
-        if (actionBar.getSubtitleTextView() != null) {
-            actionBar.getSubtitleTextView().setText("MoltenGram vs Bot");
-        }
+        actionBar.setSubtitle("MoltenGram vs Bot");
 
         ActionBarMenu menu = actionBar.createMenu();
         menu.addItem(1, R.drawable.msg_retry);
