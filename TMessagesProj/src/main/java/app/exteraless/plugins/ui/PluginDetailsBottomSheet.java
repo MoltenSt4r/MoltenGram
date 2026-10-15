@@ -24,6 +24,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LocaleController;
@@ -52,6 +53,7 @@ import java.util.Set;
 import android.util.Pair;
 
 import app.exteraless.plugins.Plugin;
+import app.exteraless.plugins.PluginsConstants;
 import app.exteraless.plugins.PluginsController;
 
 /**
@@ -567,14 +569,19 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         }
 
         if (!iconApplied) {
-            String savedIcon = ApplicationLoader.applicationContext
-                    .getSharedPreferences(app.exteraless.plugins.PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    .getString("plugin_icon_" + target.id, null);
-            if (!TextUtils.isEmpty(savedIcon)) {
-                iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
-                    iconView.setVisibility(View.VISIBLE);
-                    defaultIconView.setVisibility(View.GONE);
-                });
+            Context ctx = getContext();
+            if (ctx == null) {
+                ctx = ApplicationLoader.applicationContext;
+            }
+            if (ctx != null) {
+                String savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString("plugin_icon_" + target.id, null);
+                if (!TextUtils.isEmpty(savedIcon)) {
+                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
+                        iconView.setVisibility(View.VISIBLE);
+                        defaultIconView.setVisibility(View.GONE);
+                    });
+                }
             }
         }
 
