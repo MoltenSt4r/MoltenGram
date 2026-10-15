@@ -100,6 +100,7 @@ public class PluginStoreActivity extends BaseFragment {
     private static final int MENU_SETTINGS = 2;
     private static final int MENU_REFRESH = 3;
     private static final int MENU_MORE = 4;
+    private static final int MENU_CHECK_UPDATES = 5;
 
     private static final int SUB_SORT_DATE_DESC = 10;
     private static final int SUB_SORT_DATE_ASC = 11;
@@ -115,6 +116,7 @@ public class PluginStoreActivity extends BaseFragment {
     private static final int FILTER_MEDIA = 5;
     private static final int FILTER_CHATS = 6;
     private static final int FILTER_DEV = 7;
+    public static final int FILTER_UPDATES = 8;
 
     public static class StorePlugin {
         public String id;
@@ -137,32 +139,89 @@ public class PluginStoreActivity extends BaseFragment {
         public TLRPC.Chat chat;
         public final List<StorePlugin> versions = new ArrayList<>();
 
-        public boolean isInstalled() {
+        public Plugin findInstalledPlugin() {
             String norm = normalizePluginId(id);
-            if (PluginsController.getInstance().getPlugin(id) != null) return true;
+            String strippedNorm = norm.replaceAll("[^a-zA-Z0-9]", "");
+            Plugin installed = PluginsController.getInstance().getPlugin(id);
+            if (installed != null) return installed;
+
             for (Plugin p : PluginsController.getInstance().getPlugins().values()) {
-                if (p != null && normalizePluginId(p.getId()).equalsIgnoreCase(norm)) {
-                    return true;
+                if (p == null) continue;
+                String pNorm = normalizePluginId(p.getId());
+                if (pNorm.equalsIgnoreCase(norm) || pNorm.replaceAll("[^a-zA-Z0-9]", "").equalsIgnoreCase(strippedNorm)) {
+                    return p;
+                }
+                if (!TextUtils.isEmpty(p.name) && !TextUtils.isEmpty(name)) {
+                    if (p.name.trim().equalsIgnoreCase(name.trim())) {
+                        return p;
+                    }
+                }
+            }
+            return null;
+        }
+
+        public boolean isInstalled() {
+            return findInstalledPlugin() != null;
+        }
+
+        public boolean hasUpdate() {
+            Plugin installed = findInstalledPlugin();
+            if (installed == null) return false;
+            if (!TextUtils.isEmpty(installed.version) && !TextUtils.isEmpty(version)) {
+                return compareVersions(version, installed.version) > 0;
+            }
+            if (message != null && message.date > 0 && installed.path != null) {
+                File f = new File(installed.path);
+                if (f.exists() && f.lastModified() > 0) {
+                    return ((long) message.date * 1000L) > (f.lastModified() + 60000L);
                 }
             }
             return false;
         }
+    }
 
-        public boolean hasUpdate() {
-            String norm = normalizePluginId(id);
-            Plugin installed = PluginsController.getInstance().getPlugin(id);
-            if (installed == null) {
-                for (Plugin p : PluginsController.getInstance().getPlugins().values()) {
-                    if (p != null && normalizePluginId(p.getId()).equalsIgnoreCase(norm)) {
-                        installed = p;
-                        break;
-                    }
+    private static final List<StorePlugin> cachedCatalog = new ArrayList<>();
+
+    public static boolean hasAnyUpdatesAvailable() {
+        synchronized (cachedCatalog) {
+            for (StorePlugin p : cachedCatalog) {
+                if (p != null && p.isInstalled() && p.hasUpdate()) {
+                    return true;
                 }
             }
-            if (installed == null) return false;
-            if (installed.version == null || version == null) return false;
-            return compareVersions(version, installed.version) > 0;
         }
+        return false;
+    }
+
+    public static int getCachedUpdatesCount() {
+        int count = 0;
+        synchronized (cachedCatalog) {
+            for (StorePlugin p : cachedCatalog) {
+                if (p != null && p.isInstalled() && p.hasUpdate()) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    public int countAvailableUpdates() {
+        int count = 0;
+        synchronized (allPlugins) {
+            for (StorePlugin p : allPlugins) {
+                if (p != null && p.isInstalled() && p.hasUpdate()) {
+                    count++;
+                }
+            }
+        }
+        return count;
+    }
+
+    private int initialFilter = -1;
+
+    public void setInitialFilter(int filter) {
+        this.initialFilter = filter;
+        this.currentFilter = filter;
     }
 
     private UniversalRecyclerView listView;
@@ -226,6 +285,8 @@ public class PluginStoreActivity extends BaseFragment {
                     finishFragment();
                 } else if (id == MENU_SETTINGS) {
                     presentFragment(new PluginStoreSettingsActivity());
+                } else if (id == MENU_CHECK_UPDATES) {
+                    checkForUpdates(true);
                 } else if (id == MENU_REFRESH) {
                     BulletinFactory.of(PluginStoreActivity.this)
                             .createSimpleBulletin(R.drawable.msg_retry, getString(R.string.PluginsStoreLoading))
@@ -279,6 +340,7 @@ public class PluginStoreActivity extends BaseFragment {
         sortItem.addSubItem(SUB_SORT_SIZE_DESC, R.drawable.msg_media, getString(R.string.PluginsStoreSortSizeDesc));
 
         ActionBarMenuItem moreItem = menu.addItem(MENU_MORE, R.drawable.ic_ab_other);
+        moreItem.addSubItem(MENU_CHECK_UPDATES, R.drawable.msg_retry, getString(R.string.PluginsStoreCheckUpdates));
         moreItem.addSubItem(MENU_REFRESH, R.drawable.msg_retry, getString(R.string.PluginsStoreRetry));
         moreItem.addSubItem(MENU_SETTINGS, R.drawable.msg_settings_old, getString(R.string.PluginsStoreSettings));
 
@@ -297,6 +359,9 @@ public class PluginStoreActivity extends BaseFragment {
         chipsLayout.setOrientation(LinearLayout.HORIZONTAL);
         chipsScroll.addView(chipsLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
         contentView.addView(chipsScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        if (initialFilter >= 0) {
+            currentFilter = initialFilter;
+        }
         buildChips(context);
 
         // RecyclerView
@@ -353,10 +418,48 @@ public class PluginStoreActivity extends BaseFragment {
         return fragmentView;
     }
 
+    public void checkForUpdates(boolean manual) {
+        if (manual) {
+            BulletinFactory.of(this)
+                    .createSimpleBulletin(R.drawable.msg_retry, getString(R.string.PluginsStoreLoading))
+                    .show();
+        }
+        channelMinMsgId.clear();
+        channelsAtEnd.clear();
+        checkFolderChannelsOnline();
+        currentFilter = FILTER_UPDATES;
+        if (chipsLayout != null && getContext() != null) {
+            buildChips(getContext());
+        }
+        updateRows();
+
+        AndroidUtilities.runOnUIThread(() -> {
+            int count = countAvailableUpdates();
+            if (chipsLayout != null && getContext() != null) {
+                buildChips(getContext());
+            }
+            updateRows();
+            if (manual) {
+                if (count > 0) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.drawable.msg_retry, LocaleController.formatString(R.string.PluginsStoreUpdatesFound, count))
+                            .show();
+                } else {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.drawable.msg_retry, getString(R.string.PluginsStoreAllUpToDate))
+                            .show();
+                }
+            }
+        }, 1500);
+    }
+
     private void buildChips(Context context) {
+        if (chipsLayout == null || context == null) return;
         chipsLayout.removeAllViews();
+        int updatesCount = countAvailableUpdates();
         int[] filterIds = {
                 FILTER_ALL,
+                FILTER_UPDATES,
                 FILTER_OPEN_SOURCE,
                 FILTER_UI,
                 FILTER_TWEAKS,
@@ -367,6 +470,7 @@ public class PluginStoreActivity extends BaseFragment {
         };
         int[] titleResIds = {
                 R.string.PluginsStoreFilterAll,
+                R.string.PluginsStoreFilterUpdates,
                 R.string.PluginsStoreFilterOpenSource,
                 R.string.PluginsStoreFilterUi,
                 R.string.PluginsStoreFilterTweaks,
@@ -379,7 +483,11 @@ public class PluginStoreActivity extends BaseFragment {
         for (int i = 0; i < filterIds.length; i++) {
             final int fId = filterIds[i];
             TextView chip = new TextView(context);
-            chip.setText(getString(titleResIds[i]));
+            String title = getString(titleResIds[i]);
+            if (fId == FILTER_UPDATES && updatesCount > 0) {
+                title += " (" + updatesCount + ")";
+            }
+            chip.setText(title);
             chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             chip.setTypeface(AndroidUtilities.bold());
             chip.setGravity(Gravity.CENTER);
@@ -393,6 +501,9 @@ public class PluginStoreActivity extends BaseFragment {
                 if (accent == 0) accent = 0xff00d2b4;
                 bg.setColor(accent);
                 chip.setTextColor(0xffffffff);
+            } else if (fId == FILTER_UPDATES && updatesCount > 0) {
+                bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                chip.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
             } else {
                 bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                 chip.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
@@ -1061,9 +1172,15 @@ public class PluginStoreActivity extends BaseFragment {
     public static String parseIconFromText(String text) {
         if (TextUtils.isEmpty(text)) return null;
         try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?").matcher(text);
+            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
             if (m.find()) {
                 return m.group(1);
+            }
+            m = java.util.regex.Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+            if (m.find()) {
+                String pack = m.group(1);
+                String idx = m.group(2);
+                return pack + "/" + (idx != null ? idx : "0");
             }
         } catch (Exception ignored) {}
         return null;
@@ -1106,24 +1223,48 @@ public class PluginStoreActivity extends BaseFragment {
     public static String extractVersion(String fName, String msgText) {
         if (!TextUtils.isEmpty(msgText)) {
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:version|версия)\\s*[:=]\\s*[\"']?([0-9]+(?:\\.[0-9]+)+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(msgText);
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:version|версия|ver|v)\\.?\\s*[:=\\s]\\s*[\"']?([0-9]+(?:\\.[0-9]+)*)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(msgText);
+                if (m.find()) {
+                    return m.group(1);
+                }
+            } catch (Exception ignored) {}
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:^|\\s)[vV]\\.?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(msgText);
+                if (m.find()) {
+                    return m.group(1);
+                }
+            } catch (Exception ignored) {}
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b([0-9]+\\.[0-9]+(?:\\.[0-9]+)*)\\b").matcher(msgText);
                 if (m.find()) {
                     return m.group(1);
                 }
             } catch (Exception ignored) {}
         }
-        try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:v|ver)?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fName);
-            if (m.find()) {
-                return m.group(1);
-            }
-        } catch (Exception ignored) {}
+        if (!TextUtils.isEmpty(fName)) {
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|ver)?([0-9]+(?:\\.[0-9]+)*)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fName);
+                if (m.find()) {
+                    return m.group(1);
+                }
+            } catch (Exception ignored) {}
+            try {
+                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:v|ver)?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fName);
+                if (m.find()) {
+                    return m.group(1);
+                }
+            } catch (Exception ignored) {}
+        }
         return null;
     }
 
     public static int compareVersions(String v1, String v2) {
         if (v1 == null) return v2 == null ? 0 : -1;
         if (v2 == null) return 1;
+        v1 = v1.trim();
+        v2 = v2.trim();
+        if (v1.startsWith("v") || v1.startsWith("V")) v1 = v1.substring(1);
+        if (v2.startsWith("v") || v2.startsWith("V")) v2 = v2.substring(1);
         String[] parts1 = v1.split("\\.");
         String[] parts2 = v2.split("\\.");
         int len = Math.max(parts1.length, parts2.length);
@@ -1187,6 +1328,8 @@ public class PluginStoreActivity extends BaseFragment {
                                     np.versions.add(v);
                                 }
                             }
+                            if (TextUtils.isEmpty(np.icon) && !TextUtils.isEmpty(existing.icon)) np.icon = existing.icon;
+                            if (np.chat == null && existing.chat != null) np.chat = existing.chat;
                             allPlugins.set(i, np);
                             changed = true;
                         } else {
@@ -1208,6 +1351,13 @@ public class PluginStoreActivity extends BaseFragment {
                     changed = true;
                 }
             }
+        }
+        synchronized (cachedCatalog) {
+            cachedCatalog.clear();
+            cachedCatalog.addAll(allPlugins);
+        }
+        if (chipsLayout != null && getContext() != null) {
+            buildChips(getContext());
         }
         if (changed) {
             updateRows();
@@ -1393,7 +1543,9 @@ public class PluginStoreActivity extends BaseFragment {
 
         for (StorePlugin p : listCopy) {
             // Check filter
-            if (currentFilter == FILTER_OPEN_SOURCE) {
+            if (currentFilter == FILTER_UPDATES) {
+                if (!p.isInstalled() || !p.hasUpdate()) continue;
+            } else if (currentFilter == FILTER_OPEN_SOURCE) {
                 if (!p.isOpenSource) continue;
             } else if (currentFilter == FILTER_UI) {
                 if (!hasTag(p, "UI", "Interface", "Player", "Customization", "Appearance")) continue;
@@ -1497,11 +1649,24 @@ public class PluginStoreActivity extends BaseFragment {
         textView.setTypeface(AndroidUtilities.bold());
         textView.setGravity(Gravity.CENTER);
         textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        textView.setText(!TextUtils.isEmpty(searchQuery) ? getString(R.string.PluginsNotFound) : "Нет доступных обновлений");
+
+        String emptyText;
+        String btnText;
+        if (!TextUtils.isEmpty(searchQuery)) {
+            emptyText = getString(R.string.PluginsNotFound);
+            btnText = "Сбросить поиск";
+        } else if (currentFilter == FILTER_UPDATES) {
+            emptyText = getString(R.string.PluginsStoreAllUpToDate);
+            btnText = getString(R.string.PluginsStoreCheckUpdates);
+        } else {
+            emptyText = getString(R.string.PluginsNotFound);
+            btnText = getString(R.string.PluginsStoreRetry);
+        }
+        textView.setText(emptyText);
         layout.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
 
         TextView button = new TextView(context);
-        button.setText(!TextUtils.isEmpty(searchQuery) ? "Сбросить поиск" : "Проверить обновления");
+        button.setText(btnText);
         button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         button.setTypeface(AndroidUtilities.bold());
         button.setGravity(Gravity.CENTER);
@@ -1520,6 +1685,8 @@ public class PluginStoreActivity extends BaseFragment {
                     actionBar.closeSearchField(true);
                 }
                 updateRows();
+            } else if (currentFilter == FILTER_UPDATES) {
+                checkForUpdates(true);
             } else {
                 channelMinMsgId.clear();
                 channelsAtEnd.clear();
@@ -1968,9 +2135,25 @@ public class PluginStoreActivity extends BaseFragment {
                 }
             }
 
+            if (!iconApplied && plugin.chat != null && plugin.chat.photo != null) {
+                AvatarDrawable avatarDrawable = new AvatarDrawable();
+                avatarDrawable.setInfo(plugin.chat);
+                iconView.setForUserOrChat(plugin.chat, avatarDrawable);
+                iconView.setVisibility(VISIBLE);
+                defaultIconView.setVisibility(GONE);
+                iconApplied = true;
+            }
+
             if (!iconApplied) {
-                iconView.setVisibility(GONE);
-                defaultIconView.setVisibility(VISIBLE);
+                AvatarDrawable avatarDrawable = new AvatarDrawable();
+                avatarDrawable.setTextSize(AndroidUtilities.dp(16));
+                String name = plugin.name != null ? plugin.name : (plugin.id != null ? plugin.id : "Plugin");
+                long idHash = (long) Math.abs(name.hashCode());
+                avatarDrawable.setInfo(idHash, name, null);
+                iconView.setImageDrawable(avatarDrawable);
+                iconView.setVisibility(VISIBLE);
+                defaultIconView.setVisibility(GONE);
+                iconApplied = true;
             }
         }
 

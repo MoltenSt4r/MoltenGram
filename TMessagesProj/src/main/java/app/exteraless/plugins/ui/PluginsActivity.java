@@ -68,6 +68,7 @@ public class PluginsActivity extends BaseFragment {
     private static final int MENU_OTHER = 10;
     private static final int MENU_EXPORT_LOGS = 3;
     private static final int MENU_CLEAR_LOGS = 4;
+    private static final int MENU_CHECK_UPDATES = 5;
 
     private static final int ID_ENGINE_TOGGLE = -1;
     private static final int ID_PLUGIN_STORE_BANNER = -2;
@@ -92,7 +93,15 @@ public class PluginsActivity extends BaseFragment {
                 } else if (id == MENU_INFO) {
                     presentFragment(new PluginsInfoActivity());
                 } else if (id == MENU_STORE) {
-                    presentFragment(new PluginStoreActivity());
+                    PluginStoreActivity store = new PluginStoreActivity();
+                    if (PluginStoreActivity.getCachedUpdatesCount() > 0) {
+                        store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
+                    }
+                    presentFragment(store);
+                } else if (id == MENU_CHECK_UPDATES) {
+                    PluginStoreActivity store = new PluginStoreActivity();
+                    store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
+                    presentFragment(store);
                 }
             }
         });
@@ -115,6 +124,7 @@ public class PluginsActivity extends BaseFragment {
                                     }
                                 });
         search.setSearchFieldHint(getString(R.string.Search));
+        actionBar.createMenu().addItem(MENU_CHECK_UPDATES, R.drawable.msg_retry);
         actionBar.createMenu().addItem(MENU_STORE, R.drawable.menu_shop);
         actionBar.createMenu().addItem(MENU_INFO, R.drawable.msg_info);
 
@@ -194,9 +204,16 @@ public class PluginsActivity extends BaseFragment {
             return;
         }
         items.add(UItem.asSpace(dp(8)));
-        items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
-                getString(R.string.PluginsStoreBannerTitle),
-                getString(R.string.PluginsStoreBannerDesc)));
+        int updatesCount = PluginStoreActivity.getCachedUpdatesCount();
+        if (updatesCount > 0) {
+            items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
+                    getString(R.string.PluginsStoreBannerTitle) + " • " + LocaleController.formatString(R.string.PluginsStoreUpdatesFound, updatesCount),
+                    getString(R.string.PluginsStoreBannerDesc)));
+        } else {
+            items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
+                    getString(R.string.PluginsStoreBannerTitle),
+                    getString(R.string.PluginsStoreBannerDesc)));
+        }
         items.add(UItem.asSpace(dp(8)));
 
         List<Plugin> visible = visiblePlugins();
@@ -431,7 +448,11 @@ public class PluginsActivity extends BaseFragment {
             return;
         }
         if (item.id == ID_PLUGIN_STORE_BANNER) {
-            presentFragment(new PluginStoreActivity());
+            PluginStoreActivity store = new PluginStoreActivity();
+            if (PluginStoreActivity.getCachedUpdatesCount() > 0) {
+                store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
+            }
+            presentFragment(store);
             return;
         }
         // По карточке кликов не ждём: у неё свои кнопки и свой тумблер.

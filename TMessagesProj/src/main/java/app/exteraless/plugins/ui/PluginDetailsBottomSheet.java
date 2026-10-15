@@ -601,9 +601,25 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             }
         }
 
+        if (!iconApplied && target.chat != null && target.chat.photo != null) {
+            AvatarDrawable avatarDrawable = new AvatarDrawable();
+            avatarDrawable.setInfo(target.chat);
+            iconView.setForUserOrChat(target.chat, avatarDrawable);
+            iconView.setVisibility(View.VISIBLE);
+            defaultIconView.setVisibility(View.GONE);
+            iconApplied = true;
+        }
+
         if (!iconApplied) {
-            iconView.setVisibility(View.GONE);
-            defaultIconView.setVisibility(View.VISIBLE);
+            AvatarDrawable avatarDrawable = new AvatarDrawable();
+            avatarDrawable.setTextSize(AndroidUtilities.dp(22));
+            String name = target.name != null ? target.name : (target.id != null ? target.id : "Plugin");
+            long idHash = (long) Math.abs(name.hashCode());
+            avatarDrawable.setInfo(idHash, name, null);
+            iconView.setImageDrawable(avatarDrawable);
+            iconView.setVisibility(View.VISIBLE);
+            defaultIconView.setVisibility(View.GONE);
+            iconApplied = true;
         }
     }
 

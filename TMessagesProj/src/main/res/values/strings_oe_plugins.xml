@@ -238,6 +238,10 @@ Source:
     <string name="PluginsStoreChannelFolder">Add all channels (Folder)</string>
     <string name="PluginsStoreChannelFolderDesc">One-click addlist folder with trusted plugin channels</string>
     <string name="PluginsStoreFilterOpenSource">Open Source</string>
+    <string name="PluginsStoreFilterUpdates">Updates</string>
+    <string name="PluginsStoreCheckUpdates">Check for Updates</string>
+    <string name="PluginsStoreAllUpToDate">All plugins are up to date</string>
+    <string name="PluginsStoreUpdatesFound">Updates available: %1$d</string>
     <string name="PluginsStoreFilterTweaks">Customization</string>
     <string name="PluginsStoreFilterMedia">Media &amp; Player</string>
     <string name="PluginsStoreFilterChats">Chats &amp; Messages</string>

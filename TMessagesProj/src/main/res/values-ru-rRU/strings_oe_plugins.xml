@@ -233,6 +233,10 @@
     <string name="PluginsStoreChannelFolder">Добавить все каналы (Папка)</string>
     <string name="PluginsStoreChannelFolderDesc">Папка с официальными и доверенными каналами плагинов</string>
     <string name="PluginsStoreFilterOpenSource">Открытый код</string>
+    <string name="PluginsStoreFilterUpdates">Обновления</string>
+    <string name="PluginsStoreCheckUpdates">Проверить обновления</string>
+    <string name="PluginsStoreAllUpToDate">Все плагины обновлены до последней версии</string>
+    <string name="PluginsStoreUpdatesFound">Доступно обновлений: %1$d</string>
     <string name="PluginsStoreFilterTweaks">Кастомизация</string>
     <string name="PluginsStoreFilterMedia">Медиа &amp; Плеер</string>
     <string name="PluginsStoreFilterChats">Чаты &amp; Сообщения</string>
