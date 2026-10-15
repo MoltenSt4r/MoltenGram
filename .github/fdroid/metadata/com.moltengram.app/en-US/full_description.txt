@@ -1,0 +1,11 @@
+MoltenGram is a powerful, privacy-first, and highly customizable Telegram client based on Exteraless with native Material Design 3 aesthetics.
+
+Key features:
+• Media Carousel: browse grouped photos and videos in a smooth horizontal card carousel instead of a grid.
+• Material Design 3 & Material You: dynamic Monet palette, custom avatar shapes per chat type, modern chip folders, and fluid text input animations.
+• MetroList Audio Player: full-screen modern music player with synchronized lyrics from multiple providers.
+• Built-in Plugin Store: install and update Python plugins directly in one click.
+• Shizuku Silent Updates: background app updates without manual package installer prompts.
+• Over 20 unique launcher icons with monochrome Nothing OS and Google Pixel support.
+• Fastest Proxy: auto-ping test and seamless connection to the fastest proxy server.
+• Complete privacy: no third-party trackers, analytics, or ads.

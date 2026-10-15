@@ -7,8 +7,6 @@ on:
     paths-ignore:
       - '**.md'
       - '.github/**'
-      - '!.github/workflows/release.yml'
-      - '!.github/scripts/**'
   workflow_dispatch:
     inputs:
       publish:

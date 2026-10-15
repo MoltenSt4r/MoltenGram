@@ -1,0 +1,1 @@
+Свободный Android-клиент Telegram с каруселью медиа, Material Design 3, плеером MetroList и плагинами.

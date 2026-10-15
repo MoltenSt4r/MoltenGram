@@ -24,6 +24,29 @@
 
 ---
 
+## Скачать и подключить
+
+* **Прямая загрузка APK (v12.10.6):** [MoltenGram-v12.10.6-ae8723f.1261.apk](https://github.com/MoltenSt4r/MoltenGram/releases/download/v12.10.6/MoltenGram-v12.10.6-ae8723f.1261.apk)
+* **Официальный сайт:** [moltenstar.space](https://moltenstar.space)
+* **Репозиторий F-Droid:** `https://moltenst4r.github.io/MoltenGram/fdroid/repo`
+  * Подключить в F-Droid / Neo Store / Droid-ify: `fdroidrepos://moltenst4r.github.io/MoltenGram/fdroid/repo?fingerprint=4B4EFFEE9D4CCBCB75DC3BF2E2A21655F2F35747B2D95FCF836E186FCE9D5030`
+* **Канал с обновлениями в Telegram:** [@MoltenGram](https://t.me/MoltenGram)
+
+---
+
+## Что нового в v12.10.6
+
+- 🔥 **Карусель медиа (Media Carousel):** горизонтальная прокрутка карточек медиа в чатах и каналах.
+- 📐 **Исправление границ и подписи:** устранен выход текста подписи за пределы пузыря сообщения, точный учет `captionOffsetX` и ширины.
+- 📰 **Широкие посты в каналах:** карусели корректно поддерживают полноразмерный режим постов каналов.
+- 💬 **Позиционирование:** исправлено размещение текста над каруселью (`captionAbove`) и плашки времени в чатах.
+- 🔄 **Плавный скролл:** сброс позиции карусели на начало альбома и корректный реверсивный порядок.
+- 🎨 **Калибровка иконок лаунчера:** Классическая (выпуск за пределы без рамок), переработанная Star, Ледник, Google, Точки и др.
+- 🧩 **Стабильность:** исправления каталога Plugin Store и движка PythonPluginsEngine.
+- 🚀 **База Telegram:** обновление базы до официальной версии 12.10.6.
+
+---
+
 ## Ключевые особенности
 
 ### 🎨 Material 3 и оформление
@@ -120,6 +143,23 @@
 It brings a refined **Material 3 / Material You** experience, an interactive media carousel, a powerful music player, a built-in plugin store, and intelligent performance enhancements.
 
 * **Package name:** `com.moltengram.app` (installs alongside official Telegram and exteraless).
+
+### Download & Repository
+* **Direct APK Download (v12.10.6):** [MoltenGram-v12.10.6-ae8723f.1261.apk](https://github.com/MoltenSt4r/MoltenGram/releases/download/v12.10.6/MoltenGram-v12.10.6-ae8723f.1261.apk)
+* **Official Website:** [moltenstar.space](https://moltenstar.space)
+* **F-Droid Repository:** `https://moltenst4r.github.io/MoltenGram/fdroid/repo`
+  * Add to F-Droid client: `fdroidrepos://moltenst4r.github.io/MoltenGram/fdroid/repo?fingerprint=4B4EFFEE9D4CCBCB75DC3BF2E2A21655F2F35747B2D95FCF836E186FCE9D5030`
+* **Release Channel:** [@MoltenGram](https://t.me/MoltenGram)
+
+### What's New in v12.10.6
+- 🔥 **Media Carousel:** Horizontal smooth card carousel in chats and channels.
+- 📐 **Bubble bounds & caption overflow fix:** Fixed caption text protruding outside message bubbles with exact measurement.
+- 📰 **Wide channel posts:** Full-width support for media carousels in channels.
+- 💬 **Layout fixes:** Proper placement for `captionAbove` headers and time badge in chats.
+- 🔄 **Carousel reset:** Auto-scroll to album start and correct reverse ordering.
+- 🎨 **Launcher icons calibrated:** Classic full bleed, updated Star, Glacier, Google, Dotted, etc.
+- 🧩 **Plugin Store & engine:** Enhanced catalog stability and Python plugins compatibility.
+- 🚀 **Telegram base:** Updated to upstream version 12.10.6.
 
 ### Key Features
 - **Media Carousel:** View grouped photos and videos in a smooth horizontal card carousel instead of the classic grid.

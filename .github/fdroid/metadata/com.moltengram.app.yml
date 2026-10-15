@@ -5,12 +5,13 @@ AuthorName: MoltenStar
 WebSite: https://moltenstar.space
 SourceCode: https://github.com/MoltenSt4r/MoltenGram
 IssueTracker: https://github.com/MoltenSt4r/MoltenGram/issues
+Changelog: https://github.com/MoltenSt4r/MoltenGram/releases/tag/v12.10.6
 Name: MoltenGram
 AutoName: MoltenGram
 Summary: Modern Material Design 3 Telegram Client
 Description: |-
   MoltenGram is an experimental Telegram client fork based on exteraless and NagramX.
-  Features full Material You / Monet support, 10 unique launcher icons, Chaquopy Python plugin engine, and modern UI.
+  Features full Material You / Monet support, 20+ unique launcher icons, media carousel, MetroList player, Chaquopy Python plugin engine, and modern UI.
 
 AutoUpdateMode: None
 UpdateCheckMode: Static

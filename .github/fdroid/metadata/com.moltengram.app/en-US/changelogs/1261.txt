@@ -1,0 +1,13 @@
+🔥 Full Media Carousel support in chats and channels.
+📐 Fixed caption text overflowing bubble boundaries with precise width and padding calculations.
+📰 Enforced wide channel posts support for media carousels and albums.
+💬 Corrected header and captionAbove placement and time badge alignment in chats.
+🔄 Added automatic carousel scroll reset to start and proper reverse-order handling.
+🎨 Calibrated and updated app launcher icons (Classic edge-bleed, revised Star, Glacier, Google, Dotted, etc.).
+🧩 Fixed Plugin Store catalog and Chaquopy Python plugins engine.
+🎵 MetroList audio player and multi-source synced lyrics with drag-and-drop prioritization.
+⚡ Seamless background app updates with Shizuku integration.
+📱 Material 3 chip folders with Filled/Outlined/Ghost styles and fluid morphing.
+✨ Smooth text input animations: liquid cursor, blur and particles.
+🌐 Automatic fastest proxy ping test and connection.
+🚀 Telegram base updated to upstream version 12.10.6.
