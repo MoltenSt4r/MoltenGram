@@ -171,6 +171,10 @@ public final class PluginPermissions {
         return out;
     }
 
+    public static List<String> getGranted(String pluginId) {
+        return getStored(pluginId);
+    }
+
     /**
      * Записать согласие пользователя. Запись появляется всегда, даже пустая — именно
      * её наличие отличает установленный при модели плагин от старого.
