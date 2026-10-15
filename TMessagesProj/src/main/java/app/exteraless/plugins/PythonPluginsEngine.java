@@ -13,6 +13,7 @@ import org.telegram.ui.Components.UItem;
 
 import app.exteraless.plugins.models.CustomSetting;
 
+import java.io.File;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
