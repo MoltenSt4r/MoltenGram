@@ -571,6 +571,9 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             p.author = JsonUtils.optStringOrNull(meta, "author");
             p.version = meta.optString("version", "1.0");
             p.icon = JsonUtils.optStringOrNull(meta, "icon");
+            if (android.text.TextUtils.isEmpty(p.icon) && preferences != null && !android.text.TextUtils.isEmpty(p.id)) {
+                p.icon = preferences.getString("plugin_icon_" + p.id, null);
+            }
             p.appVersion = JsonUtils.optStringOrNull(meta, "app_version");
             p.sdkVersion = JsonUtils.optStringOrNull(meta, "sdk_version");
             p.beta = meta.optBoolean("beta", false);

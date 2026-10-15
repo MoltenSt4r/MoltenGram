@@ -79,7 +79,10 @@ import java.util.Set;
 
 import app.exteraless.plugins.Plugin;
 import app.exteraless.plugins.PluginAutoConverter;
+import app.exteraless.plugins.PluginInstallHelper;
+import app.exteraless.plugins.PluginsConstants;
 import app.exteraless.plugins.PluginsController;
+import org.telegram.ui.LaunchActivity;
 
 /**
  * Built-in Plugin Store for exteraGram / exteraless.
@@ -1534,21 +1537,33 @@ public class PluginStoreActivity extends BaseFragment {
 
     void downloadAndInstall(StorePlugin plugin) {
         Activity activity = getParentActivity();
+        if (activity == null) activity = LaunchActivity.instance;
         if (activity == null) return;
+
+        // Persist plugin icon in preferences so it is preserved upon installation
+        if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
+            ApplicationLoader.applicationContext
+                    .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                    .edit()
+                    .putString("plugin_icon_" + plugin.id, plugin.icon)
+                    .apply();
+        }
 
         // 1. If plugin was directly fetched from a telegram channel
         if (plugin.document != null) {
-            File localFile = FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
-            if (localFile != null && localFile.exists() && localFile.length() > 0) {
-                installPluginFile(localFile);
-                return;
-            }
             if (plugin.message != null) {
                 File msgFile = FileLoader.getInstance(currentAccount).getPathToMessage(plugin.message);
                 if (msgFile != null && msgFile.exists() && msgFile.length() > 0) {
-                    installPluginFile(msgFile);
-                    return;
+                    MessageObject msgObj = new MessageObject(currentAccount, plugin.message, false, false);
+                    if (PluginInstallHelper.handleMessageTap(activity, msgObj)) {
+                        return;
+                    }
                 }
+            }
+            File localFile = FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
+            if (localFile != null && localFile.exists() && localFile.length() > 0) {
+                installPluginFile(localFile, plugin);
+                return;
             }
 
             plugin.downloading = true;
@@ -1556,6 +1571,7 @@ public class PluginStoreActivity extends BaseFragment {
 
             final String attachName = FileLoader.getAttachFileName(plugin.document);
             final String docName = FileLoader.getDocumentFileName(plugin.document);
+            final Activity finalActivity = activity;
 
             NotificationCenter.NotificationCenterDelegate observer = new NotificationCenter.NotificationCenterDelegate() {
                 @Override
@@ -1565,15 +1581,19 @@ public class PluginStoreActivity extends BaseFragment {
                         File f = (File) args[1];
                         if (matches(name, f)) {
                             cleanup();
-                            File target = (f != null && f.exists() && f.length() > 0) ? f :
-                                    FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
-                            if (target == null || !target.exists() || target.length() == 0) {
-                                if (plugin.message != null) {
-                                    target = FileLoader.getInstance(currentAccount).getPathToMessage(plugin.message);
+                            if (plugin.message != null) {
+                                File msgFile = FileLoader.getInstance(currentAccount).getPathToMessage(plugin.message);
+                                if (msgFile != null && msgFile.exists() && msgFile.length() > 0) {
+                                    MessageObject msgObj = new MessageObject(currentAccount, plugin.message, false, false);
+                                    if (PluginInstallHelper.handleMessageTap(finalActivity, msgObj)) {
+                                        return;
+                                    }
                                 }
                             }
+                            File target = (f != null && f.exists() && f.length() > 0) ? f :
+                                    FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
                             if (target != null && target.exists() && target.length() > 0) {
-                                installPluginFile(target);
+                                installPluginFile(target, plugin);
                             } else {
                                 BulletinFactory.of(PluginStoreActivity.this)
                                         .createSimpleBulletin(R.drawable.msg_delete, getString(R.string.PluginsInstallReadError))
@@ -1670,7 +1690,7 @@ public class PluginStoreActivity extends BaseFragment {
                 AndroidUtilities.runOnUIThread(() -> {
                     plugin.downloading = false;
                     updateRows();
-                    installPluginFile(file);
+                    installPluginFile(file, plugin);
                 });
             } catch (Exception e) {
                 FileLog.e(e);
@@ -1717,6 +1737,16 @@ public class PluginStoreActivity extends BaseFragment {
                                                 plugin.document = msg.media.document;
                                                 plugin.message = msg;
                                                 plugin.chat = finalChat;
+                                                if (TextUtils.isEmpty(plugin.icon)) {
+                                                    plugin.icon = parseIconFromText(msg.message);
+                                                }
+                                                if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
+                                                    ApplicationLoader.applicationContext
+                                                            .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                                                            .edit()
+                                                            .putString("plugin_icon_" + plugin.id, plugin.icon)
+                                                            .apply();
+                                                }
                                                 plugin.downloading = false;
                                                 downloadAndInstall(plugin);
                                                 return;
@@ -1745,15 +1775,30 @@ public class PluginStoreActivity extends BaseFragment {
         Browser.openUrl(getParentActivity(), postUrl);
     }
 
-    private void installPluginFile(File file) {
+    private void installPluginFile(File file, StorePlugin plugin) {
         if (file == null || !file.exists() || file.length() == 0) return;
+        Activity activity = getParentActivity();
+        if (activity == null) activity = LaunchActivity.instance;
+        if (activity == null) return;
+
         File toInstall = file;
-        if (PluginsController.getInstance().isBetaImportPyEnabled() && file.getName().toLowerCase(Locale.ROOT).endsWith(".py")) {
-            toInstall = PluginAutoConverter.autoConvertIfNeeded(file);
+        String lower = file.getName().toLowerCase(Locale.ROOT);
+        boolean hasExt = lower.endsWith(".plugin") || lower.endsWith(".py") || lower.endsWith(".eaf") || lower.endsWith(".elyx");
+        if (!hasExt && plugin != null && !TextUtils.isEmpty(plugin.id)) {
+            String ext = plugin.format != null ? plugin.format : ".plugin";
+            File canonical = new File(activity.getCacheDir(), plugin.id + ext);
+            AndroidUtilities.copyFileSafe(file, canonical);
+            if (canonical.exists() && canonical.length() > 0) {
+                toInstall = canonical;
+            }
+        }
+
+        if (PluginsController.getInstance().isBetaImportPyEnabled() && toInstall.getName().toLowerCase(Locale.ROOT).endsWith(".py")) {
+            toInstall = PluginAutoConverter.autoConvertIfNeeded(toInstall);
         }
         final String path = toInstall.getAbsolutePath();
         AndroidUtilities.runOnUIThread(() -> {
-            PluginsController.getInstance().showInstallDialog(PluginStoreActivity.this, path, true);
+            PluginsController.getInstance().showInstallDialog(PluginStoreActivity.this, path, false);
         });
     }
 
@@ -2154,29 +2199,29 @@ public class PluginStoreActivity extends BaseFragment {
             }
 
             if (!iconApplied) {
-                TLRPC.Chat chat = p.chat;
-                if (chat == null && !TextUtils.isEmpty(p.sourceChannel)) {
-                    String u = p.sourceChannel.startsWith("@") ? p.sourceChannel.substring(1) : p.sourceChannel;
-                    TLObject obj = MessagesController.getInstance(UserConfig.selectedAccount).getUserOrChat(u);
-                    if (obj instanceof TLRPC.Chat) {
-                        chat = (TLRPC.Chat) obj;
-                        p.chat = chat;
-                    }
+                String savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString("plugin_icon_" + p.id, null);
+                if (!TextUtils.isEmpty(savedIcon)) {
+                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    });
                 }
+            }
 
-                AvatarDrawable avatar = new AvatarDrawable();
-                avatar.setRoundRadius(dp(14));
-                avatar.setTextSize(dp(18));
-                if (chat != null) {
-                    avatar.setInfo(chat);
-                    iconView.setForUserOrChat(chat, avatar);
-                } else {
-                    int seed = p.id != null ? p.id.hashCode() : (p.name != null ? p.name.hashCode() : 0);
-                    avatar.setInfo(seed, p.name != null ? p.name : "Plugin", null);
-                    iconView.setImage(null, null, avatar, null);
+            if (!iconApplied) {
+                Plugin installed = PluginsController.getInstance().getPlugin(p.id);
+                if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+                    iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    });
                 }
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
+            }
+
+            if (!iconApplied) {
+                iconView.setVisibility(GONE);
+                defaultIconView.setVisibility(VISIBLE);
             }
         }
     }

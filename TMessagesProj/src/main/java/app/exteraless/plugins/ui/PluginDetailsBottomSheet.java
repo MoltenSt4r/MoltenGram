@@ -44,7 +44,12 @@ import org.telegram.ui.Components.LinkSpanDrawable;
 
 import java.io.File;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Locale;
+import java.util.Set;
+import android.util.Pair;
 
 import app.exteraless.plugins.Plugin;
 import app.exteraless.plugins.PluginsController;
@@ -363,6 +368,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
     private void buildSimilarSection(Context context, LinearLayout content) {
         if (allPlugins == null || allPlugins.size() <= 1) return;
 
+        List<PluginStoreActivity.StorePlugin> similarList = findSimilarPlugins(plugin, allPlugins);
+        if (similarList.isEmpty()) return;
+
         TextView title = createSectionTitle(context, "Похожие плагины");
         content.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
 
@@ -374,11 +382,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         row.setOrientation(LinearLayout.HORIZONTAL);
         scroll.addView(row, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
 
-        int added = 0;
-        for (PluginStoreActivity.StorePlugin other : allPlugins) {
-            if (other == plugin || (other.id != null && other.id.equalsIgnoreCase(plugin.id))) continue;
-            if (added >= 10) break;
-
+        for (PluginStoreActivity.StorePlugin other : similarList) {
             LinearLayout item = new LinearLayout(context);
             item.setOrientation(LinearLayout.VERTICAL);
             item.setGravity(Gravity.CENTER_HORIZONTAL);
@@ -421,12 +425,103 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             });
 
             row.addView(item, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
-            added++;
         }
 
-        if (added > 0) {
-            content.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+        content.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
+    }
+
+    private List<PluginStoreActivity.StorePlugin> findSimilarPlugins(PluginStoreActivity.StorePlugin target, List<PluginStoreActivity.StorePlugin> pool) {
+        if (pool == null || target == null) return Collections.emptyList();
+
+        List<Pair<PluginStoreActivity.StorePlugin, Integer>> scored = new ArrayList<>();
+        Set<String> targetTags = new HashSet<>();
+        if (target.tags != null) {
+            for (String t : target.tags) {
+                if (!TextUtils.isEmpty(t)) targetTags.add(t.toLowerCase(Locale.ROOT));
+            }
         }
+
+        Set<String> targetTokens = extractTokens(target.name, target.description);
+
+        for (PluginStoreActivity.StorePlugin other : pool) {
+            if (other == null || other == target) continue;
+            if (other.id != null && target.id != null && other.id.equalsIgnoreCase(target.id)) continue;
+
+            int score = 0;
+            // 1. Tag overlap (вес 20 за каждый общий тег)
+            if (other.tags != null) {
+                for (String t : other.tags) {
+                    if (t != null && targetTags.contains(t.toLowerCase(Locale.ROOT))) {
+                        score += 20;
+                    }
+                }
+            }
+
+            // 2. Тот же автор или канал (вес 15)
+            if (!TextUtils.isEmpty(other.author) && !TextUtils.isEmpty(target.author)
+                    && other.author.equalsIgnoreCase(target.author)) {
+                score += 15;
+            } else if (!TextUtils.isEmpty(other.sourceChannel) && !TextUtils.isEmpty(target.sourceChannel)
+                    && other.sourceChannel.equalsIgnoreCase(target.sourceChannel)) {
+                score += 12;
+            }
+
+            // 3. Формат плагина (.plugin, .eaf и т.д.)
+            if (!TextUtils.isEmpty(other.format) && other.format.equalsIgnoreCase(target.format)) {
+                score += 3;
+            }
+
+            // 4. Семантическое пересечение ключевых слов названия и описания
+            Set<String> otherTokens = extractTokens(other.name, other.description);
+            for (String tok : otherTokens) {
+                if (targetTokens.contains(tok)) {
+                    score += 6;
+                }
+            }
+
+            if (score > 0) {
+                scored.add(new Pair<>(other, score));
+            }
+        }
+
+        Collections.sort(scored, (a, b) -> Integer.compare(b.second, a.second));
+
+        List<PluginStoreActivity.StorePlugin> result = new ArrayList<>();
+        for (int i = 0; i < Math.min(10, scored.size()); i++) {
+            result.add(scored.get(i).first);
+        }
+
+        if (result.size() < 6 && pool.size() > 1) {
+            for (PluginStoreActivity.StorePlugin other : pool) {
+                if (other == target || (other.id != null && target.id != null && other.id.equalsIgnoreCase(target.id))) continue;
+                if (!result.contains(other)) {
+                    result.add(other);
+                    if (result.size() >= 8) break;
+                }
+            }
+        }
+        return result;
+    }
+
+    private static Set<String> extractTokens(String... texts) {
+        Set<String> tokens = new HashSet<>();
+        if (texts == null) return tokens;
+        for (String text : texts) {
+            if (TextUtils.isEmpty(text)) continue;
+            String[] words = text.toLowerCase(Locale.ROOT).split("[^a-zA-Zа-яА-Я0-9_]+");
+            for (String w : words) {
+                if (w.length() <= 2) continue;
+                if (isStopWord(w)) continue;
+                tokens.add(w);
+            }
+        }
+        return tokens;
+    }
+
+    private static boolean isStopWord(String w) {
+        return "the".equals(w) || "and".equals(w) || "for".equals(w) || "with".equals(w)
+                || "plugin".equals(w) || "плагин".equals(w) || "для".equals(w) || "или".equals(w)
+                || "telegram".equals(w) || "extera".equals(w) || "from".equals(w) || "this".equals(w);
     }
 
     private TextView createSectionTitle(Context context, String title) {
@@ -472,27 +567,30 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         }
 
         if (!iconApplied) {
-            TLRPC.Chat chat = target.chat;
-            if (chat == null && !TextUtils.isEmpty(target.sourceChannel)) {
-                String u = target.sourceChannel.startsWith("@") ? target.sourceChannel.substring(1) : target.sourceChannel;
-                TLObject obj = MessagesController.getInstance(UserConfig.selectedAccount).getUserOrChat(u);
-                if (obj instanceof TLRPC.Chat) {
-                    chat = (TLRPC.Chat) obj;
-                }
+            String savedIcon = ApplicationLoader.applicationContext
+                    .getSharedPreferences(app.exteraless.plugins.PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                    .getString("plugin_icon_" + target.id, null);
+            if (!TextUtils.isEmpty(savedIcon)) {
+                iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                });
             }
-            AvatarDrawable avatar = new AvatarDrawable();
-            avatar.setRoundRadius(dp(18));
-            avatar.setTextSize(dp(22));
-            if (chat != null) {
-                avatar.setInfo(chat);
-                iconView.setForUserOrChat(chat, avatar);
-            } else {
-                int seed = target.id != null ? target.id.hashCode() : 0;
-                avatar.setInfo(seed, target.name != null ? target.name : "Plugin", null);
-                iconView.setImage(null, null, avatar, null);
+        }
+
+        if (!iconApplied) {
+            Plugin installed = PluginsController.getInstance().getPlugin(target.id);
+            if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+                iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                });
             }
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
+        }
+
+        if (!iconApplied) {
+            iconView.setVisibility(View.GONE);
+            defaultIconView.setVisibility(View.VISIBLE);
         }
     }
 

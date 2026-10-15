@@ -90,6 +90,25 @@ public class AboutHeaderCell extends LinearLayout {
         version.setGravity(Gravity.CENTER);
         version.setLineSpacing(AndroidUtilities.dp(2), 1f);
         version.setText(buildVersionString());
+        final int[] tapCount = new int[]{0};
+        final long[] lastTap = new long[]{0};
+        version.setOnClickListener(v -> {
+            long now = System.currentTimeMillis();
+            if (now - lastTap[0] > 1500) {
+                tapCount[0] = 0;
+            }
+            lastTap[0] = now;
+            tapCount[0]++;
+            if (tapCount[0] >= 10) {
+                tapCount[0] = 0;
+                org.telegram.ui.ActionBar.BaseFragment fragment = org.telegram.ui.LaunchActivity.getSafeLastFragment();
+                if (fragment != null) {
+                    fragment.presentFragment(new app.exteraless.easteregg.MoltenPongActivity());
+                }
+            } else if (tapCount[0] >= 5) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            }
+        });
         addView(version, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL, 60, 2, 60, 28));
     }

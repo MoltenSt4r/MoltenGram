@@ -208,6 +208,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
     private View navigationBar;
 
     private int versionViewPressCount = 0;
+    private int versionTapCount = 0;
+    private long lastVersionTapTime = 0;
 
     public SettingsActivity() {
         this(null);
@@ -530,7 +532,25 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         versionView.setPadding(dp(21), dp(10), dp(21), dp(10));
         versionView.setGravity(Gravity.CENTER);
         versionView.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector), Theme.RIPPLE_MASK_ALL));
-        versionView.setOnClickListener(v -> showVersionMenu());
+        versionView.setOnClickListener(v -> {
+            long now = System.currentTimeMillis();
+            if (now - lastVersionTapTime > 1500) {
+                versionTapCount = 0;
+            }
+            lastVersionTapTime = now;
+            versionTapCount++;
+            if (versionTapCount >= 10) {
+                versionTapCount = 0;
+                presentFragment(new app.exteraless.easteregg.MoltenPongActivity());
+                return;
+            }
+            if (versionTapCount >= 5) {
+                v.performHapticFeedback(android.view.HapticFeedbackConstants.CLOCK_TICK);
+            }
+            if (versionTapCount == 1) {
+                showVersionMenu();
+            }
+        });
         versionView.setOnLongClickListener(v -> {
             versionViewPressCount++;
             if (versionViewPressCount < 2 && !BuildVars.DEBUG_PRIVATE_VERSION) {

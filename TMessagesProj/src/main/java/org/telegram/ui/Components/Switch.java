@@ -911,10 +911,8 @@ public class Switch extends View {
         final float baseTrackW = dpf2(52f);
         final float baseTrackH = dpf2(32f);
 
-        // Dynamically fit into measured container if smaller than standard 52x32dp
-        final float scaleX = (measuredWidth > 0 && measuredWidth < baseTrackW) ? (measuredWidth - dpf2(2f)) / baseTrackW : 1f;
-        final float scaleY = (measuredHeight > 0 && measuredHeight < baseTrackH) ? (measuredHeight - dpf2(2f)) / baseTrackH : 1f;
-        final float scale = Math.max(0.6f, Math.min(1f, Math.min(scaleX, scaleY)));
+        // Render at standard 1:1 MD3 scale (52x32dp)
+        final float scale = 1f;
 
         final float trackW = baseTrackW * scale;
         final float trackH = baseTrackH * scale;
