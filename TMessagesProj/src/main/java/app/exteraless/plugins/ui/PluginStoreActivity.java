@@ -1536,9 +1536,10 @@ public class PluginStoreActivity extends BaseFragment {
     }
 
     void downloadAndInstall(StorePlugin plugin) {
-        Activity activity = getParentActivity();
-        if (activity == null) activity = LaunchActivity.instance;
-        if (activity == null) return;
+        Activity act = getParentActivity();
+        if (act == null) act = LaunchActivity.instance;
+        if (act == null) return;
+        final Activity activity = act;
 
         // Persist plugin icon in preferences so it is preserved upon installation
         if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
