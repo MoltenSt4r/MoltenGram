@@ -235,7 +235,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         installButton.setOnClickListener(v -> {
             dismiss();
             if (parentActivity != null) {
-                parentActivity.downloadAndInstall(plugin);
+                parentActivity.openPluginMessage(plugin);
             }
         });
         buttonsRow.addView(installButton, LayoutHelper.createLinear(0, 44, 1f, 8, 0, 0, 0));
@@ -260,7 +260,13 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         // Chip 2: Source channel / author
         String srcText = !TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel :
                 (!TextUtils.isEmpty(plugin.author) ? plugin.author : "Community");
-        chipsRow.addView(createStatChip(context, R.drawable.msg_channel, srcText), LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+        View srcChip = createStatChip(context, R.drawable.msg_channel, srcText + " ↗");
+        srcChip.setOnClickListener(v -> {
+            if (parentActivity != null) {
+                parentActivity.openPluginMessage(plugin);
+            }
+        });
+        chipsRow.addView(srcChip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
 
         // Chip 3: File size
         if (!TextUtils.isEmpty(plugin.size)) {
@@ -737,7 +743,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                     dismiss();
                     if (parentSheet != null) parentSheet.dismiss();
                     if (storeActivity != null) {
-                        storeActivity.downloadAndInstall(ver);
+                        storeActivity.openPluginMessage(ver);
                     }
                 });
                 card.addView(dlBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 0, 0));
@@ -805,7 +811,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                     } else {
                         customPlugin.link = text;
                     }
-                    storeActivity.downloadAndInstall(customPlugin);
+                    storeActivity.openPluginMessage(customPlugin);
                 }
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);

@@ -18,6 +18,7 @@ import android.widget.FrameLayout;
 import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.net.Uri;
+import android.os.Bundle;
 import android.widget.LinearLayout;
 import android.widget.TextView;
 
@@ -51,6 +52,7 @@ import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
@@ -1535,11 +1537,8 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
-    void downloadAndInstall(StorePlugin plugin) {
-        Activity act = getParentActivity();
-        if (act == null) act = LaunchActivity.instance;
-        if (act == null) return;
-        final Activity activity = act;
+    public void openPluginMessage(StorePlugin plugin) {
+        if (plugin == null) return;
 
         // Persist plugin icon in preferences so it is preserved upon installation
         if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
@@ -1550,257 +1549,71 @@ public class PluginStoreActivity extends BaseFragment {
                     .apply();
         }
 
-        // 1. If plugin was directly fetched from a telegram channel
-        if (plugin.document != null) {
-            if (plugin.message != null) {
-                File msgFile = FileLoader.getInstance(currentAccount).getPathToMessage(plugin.message);
-                if (msgFile != null && msgFile.exists() && msgFile.length() > 0) {
-                    MessageObject msgObj = new MessageObject(currentAccount, plugin.message, false, false);
-                    if (PluginInstallHelper.handleMessageTap(activity, msgObj)) {
-                        return;
-                    }
-                }
-            }
-            File localFile = FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
-            if (localFile != null && localFile.exists() && localFile.length() > 0) {
-                installPluginFile(localFile, plugin);
-                return;
-            }
+        Activity act = getParentActivity();
+        if (act == null) act = LaunchActivity.instance;
 
-            plugin.downloading = true;
-            updateRows();
-
-            final String attachName = FileLoader.getAttachFileName(plugin.document);
-            final String docName = FileLoader.getDocumentFileName(plugin.document);
-            final Activity finalActivity = activity;
-
-            NotificationCenter.NotificationCenterDelegate observer = new NotificationCenter.NotificationCenterDelegate() {
-                @Override
-                public void didReceivedNotification(int id, int account, Object... args) {
-                    if (id == NotificationCenter.fileLoaded) {
-                        String name = (String) args[0];
-                        File f = (File) args[1];
-                        if (matches(name, f)) {
-                            cleanup();
-                            if (plugin.message != null) {
-                                File msgFile = FileLoader.getInstance(currentAccount).getPathToMessage(plugin.message);
-                                if (msgFile != null && msgFile.exists() && msgFile.length() > 0) {
-                                    MessageObject msgObj = new MessageObject(currentAccount, plugin.message, false, false);
-                                    if (PluginInstallHelper.handleMessageTap(finalActivity, msgObj)) {
-                                        return;
-                                    }
-                                }
-                            }
-                            File target = (f != null && f.exists() && f.length() > 0) ? f :
-                                    FileLoader.getInstance(currentAccount).getPathToAttach(plugin.document, true);
-                            if (target != null && target.exists() && target.length() > 0) {
-                                installPluginFile(target, plugin);
-                            } else {
-                                BulletinFactory.of(PluginStoreActivity.this)
-                                        .createSimpleBulletin(R.drawable.msg_delete, getString(R.string.PluginsInstallReadError))
-                                        .show();
-                            }
-                        }
-                    } else if (id == NotificationCenter.fileLoadFailed) {
-                        String name = (String) args[0];
-                        if (matches(name, null)) {
-                            cleanup();
-                            BulletinFactory.of(PluginStoreActivity.this)
-                                    .createSimpleBulletin(R.drawable.msg_delete, getString(R.string.PluginsInstallReadError))
-                                    .show();
-                        }
-                    }
-                }
-
-                private boolean matches(String name, File f) {
-                    if (TextUtils.equals(name, attachName) || TextUtils.equals(name, docName)) {
-                        return true;
-                    }
-                    if (f != null && (TextUtils.equals(f.getName(), attachName) || TextUtils.equals(f.getName(), docName))) {
-                        return true;
-                    }
-                    return false;
-                }
-
-                private void cleanup() {
-                    NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileLoaded);
-                    NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.fileLoadFailed);
-                    activeObservers.remove(this);
-                    plugin.downloading = false;
-                    updateRows();
-                }
-            };
-
-            activeObservers.add(observer);
-            NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoaded);
-            NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoadFailed);
-
-            MessageObject msgObj = plugin.message != null ? new MessageObject(currentAccount, plugin.message, false, false) : null;
-            FileLoader.getInstance(currentAccount).loadFile(plugin.document, msgObj, FileLoader.PRIORITY_HIGH, 0);
+        // 1. If we have chat and message objects
+        if (plugin.chat != null && plugin.message != null && plugin.message.id > 0) {
+            Bundle args = new Bundle();
+            args.putLong("chat_id", plugin.chat.id);
+            args.putInt("message_id", plugin.message.id);
+            presentFragment(new ChatActivity(args));
             return;
         }
 
-        // 2. If it's a telegram post link (e.g. https://t.me/PESSDES_Plugins/91)
+        // 2. If we have direct channel post link (e.g. https://t.me/channel/123)
         String postUrl = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost : plugin.link;
-        if (!TextUtils.isEmpty(postUrl) && postUrl.startsWith("https://t.me/")) {
-            downloadTelegramPost(plugin, postUrl);
-            return;
-        }
-
-        // 3. Otherwise download via HTTP
-        if (TextUtils.isEmpty(plugin.link)) {
-            BulletinFactory.of(this).createSimpleBulletin(R.drawable.msg_info, "Download link not found").show();
-            return;
-        }
-
-        plugin.downloading = true;
-        updateRows();
-
-        Utilities.globalQueue.postRunnable(() -> {
-            try {
-                URL url = new URL(plugin.link);
-                HttpURLConnection conn = (HttpURLConnection) url.openConnection();
-                conn.setConnectTimeout(15000);
-                conn.setReadTimeout(30000);
-                conn.setRequestProperty("User-Agent", "exteraless/" + BuildVars.BUILD_VERSION_STRING);
-                conn.connect();
-
-                int code = conn.getResponseCode();
-                if (code < 200 || code >= 300) {
-                    throw new Exception("HTTP " + code);
+        if (!TextUtils.isEmpty(postUrl)) {
+            String clean = postUrl.trim();
+            if (clean.startsWith("tg://") || clean.startsWith("https://t.me/") || clean.startsWith("http://t.me/") || clean.startsWith("t.me/")) {
+                if (clean.startsWith("t.me/")) {
+                    clean = "https://" + clean;
                 }
-
-                String ext = plugin.format != null ? plugin.format : ".plugin";
-                String linkLower = plugin.link.toLowerCase(Locale.ROOT);
-                if (linkLower.endsWith(".eaf")) ext = ".eaf";
-                else if (linkLower.endsWith(".py")) ext = ".py";
-                else if (linkLower.endsWith(".plugin")) ext = ".plugin";
-
-                File file = new File(activity.getCacheDir(), plugin.id + "_" + plugin.version + ext);
-                try (InputStream in = conn.getInputStream();
-                     FileOutputStream out = new FileOutputStream(file)) {
-                    byte[] buf = new byte[8192];
-                    int read;
-                    while ((read = in.read(buf)) != -1) {
-                        out.write(buf, 0, read);
-                    }
-                } finally {
-                    conn.disconnect();
-                }
-
-                AndroidUtilities.runOnUIThread(() -> {
-                    plugin.downloading = false;
-                    updateRows();
-                    installPluginFile(file, plugin);
-                });
-            } catch (Exception e) {
-                FileLog.e(e);
-                AndroidUtilities.runOnUIThread(() -> {
-                    plugin.downloading = false;
-                    updateRows();
-                    BulletinFactory.of(PluginStoreActivity.this)
-                            .createSimpleBulletin(R.drawable.msg_delete, getString(R.string.PluginsInstallError) + ": " + e.getMessage())
-                            .show();
-                });
-            }
-        });
-    }
-
-    private void downloadTelegramPost(StorePlugin plugin, String postUrl) {
-        try {
-            Uri uri = Uri.parse(postUrl);
-            List<String> segments = uri.getPathSegments();
-            if (segments != null && segments.size() >= 2) {
-                String username = segments.get(0);
-                int msgId = Integer.parseInt(segments.get(1));
-
-                plugin.downloading = true;
-                updateRows();
-
-                TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
-                req.username = username;
-                ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> {
-                    if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
-                        TLRPC.TL_contacts_resolvedPeer rPeer = (TLRPC.TL_contacts_resolvedPeer) res;
-                        TLRPC.Chat chat = (!rPeer.chats.isEmpty()) ? rPeer.chats.get(0) : null;
-                        if (chat != null) {
-                            TLRPC.TL_channels_getMessages gReq = new TLRPC.TL_channels_getMessages();
-                            gReq.channel = MessagesController.getInstance(currentAccount).getInputChannel(chat);
-                            gReq.id.add(msgId);
-                            final TLRPC.Chat finalChat = chat;
-                            ConnectionsManager.getInstance(currentAccount).sendRequest(gReq, (mRes, mErr) -> {
-                                AndroidUtilities.runOnUIThread(() -> {
-                                    if (mRes instanceof TLRPC.messages_Messages) {
-                                        TLRPC.messages_Messages messages = (TLRPC.messages_Messages) mRes;
-                                        if (!messages.messages.isEmpty()) {
-                                            TLRPC.Message msg = messages.messages.get(0);
-                                            if (msg != null && msg.media instanceof TLRPC.TL_messageMediaDocument) {
-                                                plugin.document = msg.media.document;
-                                                plugin.message = msg;
-                                                plugin.chat = finalChat;
-                                                if (TextUtils.isEmpty(plugin.icon)) {
-                                                    plugin.icon = parseIconFromText(msg.message);
-                                                }
-                                                if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
-                                                    ApplicationLoader.applicationContext
-                                                            .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                                                            .edit()
-                                                            .putString("plugin_icon_" + plugin.id, plugin.icon)
-                                                            .apply();
-                                                }
-                                                plugin.downloading = false;
-                                                downloadAndInstall(plugin);
-                                                return;
-                                            }
-                                        }
-                                    }
-                                    plugin.downloading = false;
-                                    updateRows();
-                                    Browser.openUrl(getParentActivity(), postUrl);
-                                });
-                            });
-                            return;
-                        }
-                    }
-                    AndroidUtilities.runOnUIThread(() -> {
-                        plugin.downloading = false;
-                        updateRows();
-                        Browser.openUrl(getParentActivity(), postUrl);
-                    });
-                });
+                Browser.openUrl(act != null ? act : getParentActivity(), clean);
                 return;
             }
-        } catch (Exception e) {
-            FileLog.e(e);
         }
-        Browser.openUrl(getParentActivity(), postUrl);
-    }
 
-    private void installPluginFile(File file, StorePlugin plugin) {
-        if (file == null || !file.exists() || file.length() == 0) return;
-        Activity activity = getParentActivity();
-        if (activity == null) activity = LaunchActivity.instance;
-        if (activity == null) return;
-
-        File toInstall = file;
-        String lower = file.getName().toLowerCase(Locale.ROOT);
-        boolean hasExt = lower.endsWith(".plugin") || lower.endsWith(".py") || lower.endsWith(".eaf") || lower.endsWith(".elyx");
-        if (!hasExt && plugin != null && !TextUtils.isEmpty(plugin.id)) {
-            String ext = plugin.format != null ? plugin.format : ".plugin";
-            File canonical = new File(activity.getCacheDir(), plugin.id + ext);
-            AndroidUtilities.copyFileSafe(file, canonical);
-            if (canonical.exists() && canonical.length() > 0) {
-                toInstall = canonical;
+        // 3. If we have source channel
+        if (!TextUtils.isEmpty(plugin.sourceChannel)) {
+            String ch = plugin.sourceChannel.trim();
+            if (ch.startsWith("@")) {
+                ch = ch.substring(1);
+            }
+            if (!ch.startsWith("http://") && !ch.startsWith("https://")) {
+                String url = "https://t.me/" + ch;
+                if (plugin.message != null && plugin.message.id > 0) {
+                    url += "/" + plugin.message.id;
+                }
+                Browser.openUrl(act != null ? act : getParentActivity(), url);
+                return;
+            } else {
+                Browser.openUrl(act != null ? act : getParentActivity(), ch);
+                return;
             }
         }
 
-        if (PluginsController.getInstance().isBetaImportPyEnabled() && toInstall.getName().toLowerCase(Locale.ROOT).endsWith(".py")) {
-            toInstall = PluginAutoConverter.autoConvertIfNeeded(toInstall);
+        // 4. Fallback to generic link or author
+        if (!TextUtils.isEmpty(plugin.link)) {
+            Browser.openUrl(act != null ? act : getParentActivity(), plugin.link);
+            return;
         }
-        final String path = toInstall.getAbsolutePath();
-        AndroidUtilities.runOnUIThread(() -> {
-            PluginsController.getInstance().showInstallDialog(PluginStoreActivity.this, path, false);
-        });
+
+        if (!TextUtils.isEmpty(plugin.author)) {
+            String auth = plugin.author.trim();
+            if (auth.startsWith("@")) {
+                Browser.openUrl(act != null ? act : getParentActivity(), "https://t.me/" + auth.substring(1));
+                return;
+            }
+        }
+
+        BulletinFactory.of(this)
+                .createSimpleBulletin(R.drawable.msg_info, "Канал или сообщение плагина не найдены")
+                .show();
+    }
+
+    void downloadAndInstall(StorePlugin plugin) {
+        openPluginMessage(plugin);
     }
 
     @Override
@@ -1965,6 +1778,7 @@ public class PluginStoreActivity extends BaseFragment {
         private StorePlugin plugin;
         private StorePluginDelegate delegate;
         private boolean expanded = false;
+        private boolean isIconLoaded = false;
 
         public StorePluginCell(Context context) {
             super(context);
@@ -2078,7 +1892,92 @@ public class PluginStoreActivity extends BaseFragment {
             actionsRow.addView(actionButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
         }
 
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            if (plugin != null && !isIconLoaded) {
+                loadIcon();
+            }
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            unloadIcon();
+        }
+
+        private void unloadIcon() {
+            isIconLoaded = false;
+            iconView.setTag(null);
+            iconView.clearImage();
+            iconView.setImageDrawable(null);
+            iconView.setVisibility(GONE);
+            defaultIconView.setVisibility(VISIBLE);
+        }
+
+        private void loadIcon() {
+            if (plugin == null || isIconLoaded) {
+                return;
+            }
+            if (!isAttachedToWindow()) {
+                return;
+            }
+
+            isIconLoaded = true;
+            iconView.setTag(null);
+            iconView.setImageDrawable(null);
+
+            boolean iconApplied = false;
+            if (!TextUtils.isEmpty(plugin.icon)) {
+                iconApplied = PluginIcons.apply(iconView, plugin.icon, () -> {
+                    iconView.setVisibility(VISIBLE);
+                    defaultIconView.setVisibility(GONE);
+                });
+            }
+
+            if (!iconApplied) {
+                if (plugin.document != null && plugin.document.thumbs != null && !plugin.document.thumbs.isEmpty()) {
+                    TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(plugin.document.thumbs, 120);
+                    if (thumbSize != null) {
+                        iconView.setImage(ImageLocation.getForDocument(thumbSize, plugin.document), "50_50", null, null, plugin.document);
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                        iconApplied = true;
+                    }
+                }
+            }
+
+            if (!iconApplied) {
+                String savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString("plugin_icon_" + plugin.id, null);
+                if (!TextUtils.isEmpty(savedIcon)) {
+                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    });
+                }
+            }
+
+            if (!iconApplied) {
+                Plugin installed = PluginsController.getInstance().getPlugin(plugin.id);
+                if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+                    iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    });
+                }
+            }
+
+            if (!iconApplied) {
+                iconView.setVisibility(GONE);
+                defaultIconView.setVisibility(VISIBLE);
+            }
+        }
+
         public void bind(StorePlugin p, StorePluginDelegate d) {
+            if (this.plugin != p) {
+                unloadIcon();
+            }
             this.plugin = p;
             this.delegate = d;
             nameView.setText(p.name != null ? p.name : p.id);
@@ -2176,53 +2075,10 @@ public class PluginStoreActivity extends BaseFragment {
                 });
             }
 
-            iconView.setTag(null);
-            iconView.setImageDrawable(null);
-
-            boolean iconApplied = false;
-            if (!TextUtils.isEmpty(p.icon)) {
-                iconApplied = PluginIcons.apply(iconView, p.icon, () -> {
-                    iconView.setVisibility(VISIBLE);
-                    defaultIconView.setVisibility(GONE);
-                });
-            }
-
-            if (!iconApplied) {
-                if (p.document != null && p.document.thumbs != null && !p.document.thumbs.isEmpty()) {
-                    TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(p.document.thumbs, 120);
-                    if (thumbSize != null) {
-                        iconView.setImage(ImageLocation.getForDocument(thumbSize, p.document), "50_50", null, null, p.document);
-                        iconView.setVisibility(VISIBLE);
-                        defaultIconView.setVisibility(GONE);
-                        iconApplied = true;
-                    }
-                }
-            }
-
-            if (!iconApplied) {
-                String savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                        .getString("plugin_icon_" + p.id, null);
-                if (!TextUtils.isEmpty(savedIcon)) {
-                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
-                        iconView.setVisibility(VISIBLE);
-                        defaultIconView.setVisibility(GONE);
-                    });
-                }
-            }
-
-            if (!iconApplied) {
-                Plugin installed = PluginsController.getInstance().getPlugin(p.id);
-                if (installed != null && !TextUtils.isEmpty(installed.icon)) {
-                    iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
-                        iconView.setVisibility(VISIBLE);
-                        defaultIconView.setVisibility(GONE);
-                    });
-                }
-            }
-
-            if (!iconApplied) {
-                iconView.setVisibility(GONE);
-                defaultIconView.setVisibility(VISIBLE);
+            if (isAttachedToWindow()) {
+                loadIcon();
+            } else {
+                unloadIcon();
             }
         }
     }
