@@ -9541,7 +9541,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 drawForwardedName = (messageObject.messageOwner.fwd_from != null && !(messageObject.isAnyKindOfSticker() && messageObject.isDice())) || messageObject.type == MessageObject.TYPE_STORY;
                 if (!messageObject.isAnyKindOfSticker() && messageObject.type != MessageObject.TYPE_ROUND_VIDEO) {
-                    drawName = (isSavedChat && !messageObject.isOutOwner() && (messageObject.getSavedDialogId() < 0 || messageObject.getSavedDialogId() == UserObject.ANONYMOUS) || messageObject.isFromGroup() && messageObject.isSupergroup() || messageObject.isRepostPreview || messageObject.isImportedForward() && messageObject.messageOwner.fwd_from.from_id == null || isSideMenuEnabled && !messageObject.isOutOwner() && (isMonoForum && isAllChats || isForum)) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0);
+                    drawName = (isSavedChat && !messageObject.isOutOwner() && (messageObject.getSavedDialogId() < 0 || messageObject.getSavedDialogId() == UserObject.ANONYMOUS) || messageObject.isFromGroup() && messageObject.isSupergroup() || messageObject.isRepostPreview || messageObject.isImportedForward() && messageObject.messageOwner.fwd_from.from_id == null || isSideMenuEnabled && !messageObject.isOutOwner() && (isMonoForum && isAllChats || isForum)) && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0);
                 }
                 mediaBackground = isMedia = messageObject.type != MessageObject.TYPE_FILE;
                 drawImageButton = true;
@@ -10376,88 +10376,111 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         }
                         photoHeight = h;
                         if (isMediaCarouselMessage()) {
-                            int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(24)), (int) (AndroidUtilities.displaySize.x * 0.88f));
-                            if (availableWidth <= 0) {
-                                availableWidth = AndroidUtilities.dp(300);
+                            if (messageObject.isWideChannelPost()) {
+                                backgroundWidth = getWideChannelPostBackgroundWidth(messageObject, false);
+                                photoWidth = WideChannelPostLayout.mediaContentWidth(backgroundWidth, false);
+                            } else {
+                                int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(24)), (int) (AndroidUtilities.displaySize.x * 0.88f));
+                                if (availableWidth <= 0) {
+                                    availableWidth = AndroidUtilities.dp(300);
+                                }
+                                backgroundWidth = availableWidth;
+                                photoWidth = backgroundWidth - dp(20);
                             }
-                            photoWidth = availableWidth;
                             photoHeight = AndroidUtilities.dp(220);
                             mediaBackground = false;
-                            backgroundWidth = photoWidth + dp(17);
-                        }
-                        if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
-                            widthForCaption += photoWidth - dp(15);
-                        }
-                        boolean checkCaption = true;
-                        if ((currentPosition.flags & captionFlag()) != 0 || captionAbove || currentMessagesGroup.hasSibling && (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) == 0) {
 
-                            if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
-                                widthForCaption += getAdditionalWidthForPosition(currentPosition);
+                            captionOffsetX = 0;
+                            widthForCaption = photoWidth - dp(10);
+                            if (currentMessagesGroup != null) {
+                                MessageObject captionMsg = currentMessagesGroup.findCaptionMessageObject();
+                                if (captionMsg != null && captionMsg.caption != null) {
+                                    currentCaption = captionMsg.caption;
+                                } else {
+                                    for (int i = 0; i < currentMessagesGroup.messages.size(); i++) {
+                                        MessageObject m = currentMessagesGroup.messages.get(i);
+                                        if (m.caption != null) {
+                                            currentCaption = m.caption;
+                                            break;
+                                        }
+                                    }
+                                }
                             }
-                            int count = Math.min(currentMessagesGroup.posArray.size(), currentMessagesGroup.messages.size());
-                            for (int i = 0; i < count; i++) {
-                                MessageObject m = currentMessagesGroup.messages.get(i);
-                                MessageObject.GroupedMessagePosition rowPosition = currentMessagesGroup.posArray.get(i);
-                                if (rowPosition != currentPosition && (rowPosition.flags & captionFlag()) != 0) {
-                                    w = (int) Math.ceil(rowPosition.pw / 1000.0f * dWidth);
-                                    if (rowPosition.minY != 0 && (messageObject.isOutOwner() && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 || !messageObject.isOutOwner() && (rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0)) {
-                                        int firstLineWidth = 0;
-                                        int currentLineWidth = 0;
-                                        for (int a = 0; a < currentMessagesGroup.posArray.size(); a++) {
-                                            MessageObject.GroupedMessagePosition position = currentMessagesGroup.posArray.get(a);
-                                            if (position.minY == 0) {
-                                                firstLineWidth += Math.ceil(position.pw / 1000.0f * dWidth) + (position.leftSpanOffset != 0 ? Math.ceil(position.leftSpanOffset / 1000.0f * dWidth) : 0);
-                                            } else if (position.minY == rowPosition.minY) {
-                                                currentLineWidth += Math.ceil((position.pw) / 1000.0f * dWidth) + (position.leftSpanOffset != 0 ? Math.ceil(position.leftSpanOffset / 1000.0f * dWidth) : 0);
-                                            } else if (position.minY > rowPosition.minY) {
-                                                break;
+                        } else {
+                            if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
+                                widthForCaption += photoWidth - dp(15);
+                            }
+                            boolean checkCaption = true;
+                            if ((currentPosition.flags & captionFlag()) != 0 || captionAbove || currentMessagesGroup.hasSibling && (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) == 0) {
+
+                                if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
+                                    widthForCaption += getAdditionalWidthForPosition(currentPosition);
+                                }
+                                int count = Math.min(currentMessagesGroup.posArray.size(), currentMessagesGroup.messages.size());
+                                for (int i = 0; i < count; i++) {
+                                    MessageObject m = currentMessagesGroup.messages.get(i);
+                                    MessageObject.GroupedMessagePosition rowPosition = currentMessagesGroup.posArray.get(i);
+                                    if (rowPosition != currentPosition && (rowPosition.flags & captionFlag()) != 0) {
+                                        w = (int) Math.ceil(rowPosition.pw / 1000.0f * dWidth);
+                                        if (rowPosition.minY != 0 && (messageObject.isOutOwner() && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 || !messageObject.isOutOwner() && (rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0)) {
+                                            int firstLineWidth = 0;
+                                            int currentLineWidth = 0;
+                                            for (int a = 0; a < currentMessagesGroup.posArray.size(); a++) {
+                                                MessageObject.GroupedMessagePosition position = currentMessagesGroup.posArray.get(a);
+                                                if (position.minY == 0) {
+                                                    firstLineWidth += Math.ceil(position.pw / 1000.0f * dWidth) + (position.leftSpanOffset != 0 ? Math.ceil(position.leftSpanOffset / 1000.0f * dWidth) : 0);
+                                                } else if (position.minY == rowPosition.minY) {
+                                                    currentLineWidth += Math.ceil((position.pw) / 1000.0f * dWidth) + (position.leftSpanOffset != 0 ? Math.ceil(position.leftSpanOffset / 1000.0f * dWidth) : 0);
+                                                } else if (position.minY > rowPosition.minY) {
+                                                    break;
+                                                }
+                                            }
+                                            w += firstLineWidth - currentLineWidth;
+                                        }
+                                        w -= dp(9);
+                                        if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0 && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
+                                            w -= dp(8);
+                                        } else if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) == 0 && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) == 0) {
+                                            w -= dp(11);
+                                        } else if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
+                                            w -= dp(10);
+                                        } else {
+                                            w -= dp(9);
+                                        }
+                                        if (!m.isWideChannelPost()
+                                                && ((isChat || m.isRepostPreview) && !isThreadPost && !m.isOutOwner()
+                                                || m.forceAvatar
+                                                || m.messageOwner.guestchat_via_from != null
+                                                || m.getDialogId() == UserObject.VERIFY)
+                                                && m.needDrawAvatar()
+                                                && (rowPosition == null || rowPosition.edge)) {
+                                            w -= dp(48);
+                                        }
+                                        w += getAdditionalWidthForPosition(rowPosition);
+                                        if (!rowPosition.edge) {
+                                            w += dp(10);
+                                        }
+                                        widthForCaption += w;
+                                        if (rowPosition.minX < currentPosition.minX || currentMessagesGroup.hasSibling && rowPosition.minY != rowPosition.maxY) {
+                                            captionOffsetX -= w;
+                                        }
+                                    }
+                                    if (checkCaption) {
+                                        if (m.caption != null) {
+                                            if (currentCaption != null) {
+                                                currentCaption = null;
+                                                checkCaption = false;
+                                            } else {
+                                                currentCaption = m.caption;
                                             }
                                         }
-                                        w += firstLineWidth - currentLineWidth;
-                                    }
-                                    w -= dp(9);
-                                    if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0 && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
-                                        w -= dp(8);
-                                    } else if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) == 0 && (rowPosition.flags & MessageObject.POSITION_FLAG_LEFT) == 0) {
-                                        w -= dp(11);
-                                    } else if ((rowPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
-                                        w -= dp(10);
-                                    } else {
-                                        w -= dp(9);
-                                    }
-                                    if (!m.isWideChannelPost()
-                                            && ((isChat || m.isRepostPreview) && !isThreadPost && !m.isOutOwner()
-                                            || m.forceAvatar
-                                            || m.messageOwner.guestchat_via_from != null
-                                            || m.getDialogId() == UserObject.VERIFY)
-                                            && m.needDrawAvatar()
-                                            && (rowPosition == null || rowPosition.edge)) {
-                                        w -= dp(48);
-                                    }
-                                    w += getAdditionalWidthForPosition(rowPosition);
-                                    if (!rowPosition.edge) {
-                                        w += dp(10);
-                                    }
-                                    widthForCaption += w;
-                                    if (rowPosition.minX < currentPosition.minX || currentMessagesGroup.hasSibling && rowPosition.minY != rowPosition.maxY) {
-                                        captionOffsetX -= w;
                                     }
                                 }
-                                if (checkCaption) {
-                                    if (m.caption != null) {
-                                        if (currentCaption != null) {
-                                            currentCaption = null;
-                                            checkCaption = false;
-                                        } else {
-                                            currentCaption = m.caption;
-                                        }
-                                    }
+                                if ((currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && currentCaption != null) {
+                                    currentMessagesGroup.cachedWidthForCaption = widthForCaption;
+                                } else if (currentMessagesGroup.cachedWidthForCaption > 0) {
+                                    widthForCaption = currentMessagesGroup.cachedWidthForCaption;
                                 }
-                            }
-                            if ((currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && currentCaption != null) {
-                                currentMessagesGroup.cachedWidthForCaption = widthForCaption;
-                            } else if (currentMessagesGroup.cachedWidthForCaption > 0) {
-                                widthForCaption = currentMessagesGroup.cachedWidthForCaption;
                             }
                         }
                     } else {
@@ -10806,7 +10829,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
                 setMessageObjectInternal(messageObject);
 
-                if (drawForwardedName && messageObject.needDrawForwarded() && (currentPosition == null || currentPosition.minY == 0)) {
+                if (drawForwardedName && messageObject.needDrawForwarded() && (currentPosition == null || isMediaCarouselMessage() || currentPosition.minY == 0)) {
                     if (messageObject.type != MessageObject.TYPE_ROUND_VIDEO) {
                         namesOffset += dp(5);
                     }
@@ -10815,7 +10838,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
                 if (isMediaCarouselMessage()) {
                     int yOffset = namesOffset > 0 ? dp(7) : dp(5);
-                    int footerHeight = (currentCaption != null || captionLayout != null) ? dp(12) : dp(26);
+                    int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : dp(26);
                     totalHeight = photoHeight + yOffset + namesOffset + footerHeight + additionHeight;
                 } else {
                     totalHeight = photoHeight + dp(14) + namesOffset + additionHeight;
@@ -10855,7 +10878,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         totalHeight -= dp(2);
                     }
                 }
-                if (captionLayout != null && captionAbove && (currentPosition == null || (currentPosition.flags & captionFlag()) != 0)) {
+                if (captionLayout != null && captionAbove && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & captionFlag()) != 0)) {
                     additionalTop = captionLayout.textHeight() + dp(8);
                 }
 
@@ -14095,9 +14118,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             resultHeight = botDraftHeightController.getOverrideMeasureHeight(currentMessageObject, normHeight);
         }
         if (isMediaCarouselMessage()) {
-            int footerHeight = (currentCaption != null || captionLayout != null) ? dp(12) : dp(26);
+            int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : dp(26);
             int neededHeight = (int) photoImage.getImageY() + (int) photoImage.getImageHeight() + footerHeight;
-            if (captionLayout != null) {
+            if (captionLayout != null && !captionAbove) {
                 neededHeight += captionLayout.textHeight() + dp(14);
             }
             if (!reactionsLayoutInBubble.isEmpty && !reactionsLayoutInBubble.isSmall) {
@@ -14218,7 +14241,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean shouldEnforceWideChannelPostOuterWidth(MessageObject messageObject) {
         return messageObject != null
                 && messageObject.isWideChannelPost()
-                && (currentMessagesGroup == null || currentMessagesGroup.isDocuments)
+                && (currentMessagesGroup == null || currentMessagesGroup.isDocuments || isMediaCarouselMessage())
                 && !messageObject.isAnyKindOfSticker()
                 && !messageObject.isAnimatedEmoji()
                 && !messageObject.isDice()
@@ -19476,7 +19499,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
         cachedIsBookmarked = BookmarksHelper.isBookmarked(currentAccount, messageObject.getDialogId(), messageObject.getId());
         if (messageObject.isWideChannelPost() && !messageObject.isOutOwner()
-                && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0)) {
+                && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0)) {
             drawName = true;
         }
         boolean needAuthorName = isNeedAuthorName();
@@ -19484,7 +19507,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         boolean viaGuestBot = messageObject.messageOwner.guestchat_via_from != null;
         if (!hasPsaHint && (needAuthorName || viaBot || viaGuestBot)) {
             drawNameLayout = true;
-            drawNameAvatar = !messageObject.isOutOwner() && ((isForum || isMonoForum) && isSideMenuEnabled || messageObject.isWideChannelPost()) && (currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0);
+            drawNameAvatar = !messageObject.isOutOwner() && ((isForum || isMonoForum) && isSideMenuEnabled || messageObject.isWideChannelPost()) && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_TOP) != 0);
             nameWidth = getMaxNameWidth();
             if (nameWidth < 0) {
                 nameWidth = dp(100);
@@ -19743,7 +19766,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentForwardUser = MessagesController.getInstance(currentAccount).getUser(messageObject.messageOwner.fwd_from.from_id.user_id);
             }
         }
-        if (messageObject.type == MessageObject.TYPE_STORY || (drawForwardedName && messageObject.needDrawForwarded() && (currentPosition == null || currentPosition.minY == 0))) {
+        if (messageObject.type == MessageObject.TYPE_STORY || (drawForwardedName && messageObject.needDrawForwarded() && (currentPosition == null || isMediaCarouselMessage() || currentPosition.minY == 0))) {
             if (messageObject.type != MessageObject.TYPE_STORY && messageObject.messageOwner.fwd_from.from_name != null) {
                 currentForwardName = messageObject.messageOwner.fwd_from.from_name;
             }
@@ -25285,7 +25308,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (isRoundVideo) {
             timeY -= (dp(drawPinnedBottom ? 4 : 5) + reactionsLayoutInBubble.getCurrentTotalHeight(transitionParams.animateChangeProgress)) * (1f - getVideoTranscriptionProgress());
         }
-        if (currentMessagesGroup != null) {
+        if (currentMessagesGroup != null && !isMediaCarouselMessage()) {
             timeY += currentMessagesGroup.transitionParams.offsetBottom;
             if (currentMessagesGroup.transitionParams.backgroundChangeBounds) {
                 timeY -= getTranslationY();

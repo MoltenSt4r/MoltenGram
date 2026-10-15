@@ -147,8 +147,15 @@ public class Md3MediaCarouselView extends FrameLayout {
         if (currentGroupId != group.groupId || messages.size() != group.messages.size()) {
             currentGroupId = group.groupId;
             messages.clear();
-            messages.addAll(group.messages);
+            if (group.reversed) {
+                for (int i = group.messages.size() - 1; i >= 0; i--) {
+                    messages.add(group.messages.get(i));
+                }
+            } else {
+                messages.addAll(group.messages);
+            }
             adapter.notifyDataSetChanged();
+            recyclerView.scrollToPosition(0);
         }
     }
 
