@@ -100,7 +100,7 @@ public class LauncherIconController {
         MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
                 R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF1E713B),
         MOLTENGRAM_CLASSIC("MoltenGramClassicIcon", R.drawable.moltengram_icon_background,
-                0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature emerald flame", 0xFF1E713B, false),
+                0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature emerald flame", 0xFF1E713B),
         MOLTENGRAM_PROTON("MoltenGramProtonIcon", R.drawable.moltengram_proton_icon_background,
                 0, R.string.AppIconMoltenGramProton, IconGroup.MOLTENGRAM, "@moltenst4r", "Proton cyber aesthetics", 0xFF6D4AFF),
         MOLTENGRAM_SAD("MoltenGramSadIcon", R.drawable.moltengram_sad_icon_background,
