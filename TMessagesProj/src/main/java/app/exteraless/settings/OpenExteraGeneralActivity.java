@@ -1349,8 +1349,9 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                                         ? R.string.OEGeneralBatteryOptimizationOff
                                         : R.string.OEGeneralBatteryOptimizationOn), true);
                     } else if (position == shizukuBoostRow) {
-                        cell.setTextAndValueAndIcon(getString(R.string.OEGeneralShizukuNotificationBoost),
-                                getShizukuBoostStatus(), R.drawable.msg_permissions, false);
+                        cell.setTextAndValue(getString(R.string.OEGeneralShizukuNotificationBoost),
+                                getShizukuBoostStatus(), false);
+                        cell.setIcon(R.drawable.msg_permissions);
                     } else if (position == savePathRow) {
                         String path = NekoConfig.customSavePath.String();
                         cell.setTextAndValue(getString(R.string.OEGeneralSavePath),
