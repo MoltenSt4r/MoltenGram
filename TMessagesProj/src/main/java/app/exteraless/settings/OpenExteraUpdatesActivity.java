@@ -311,7 +311,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == statusHeaderRow) {
-                        cell.setText(getString(R.string.OpenExteraUpdatesStatus));
+                        cell.setText(getString(R.string.OpenExteraUpdates));
                     } else if (position == aboutHeaderRow) {
                         cell.setText("О клиенте");
                     } else if (position == settingsHeaderRow) {
