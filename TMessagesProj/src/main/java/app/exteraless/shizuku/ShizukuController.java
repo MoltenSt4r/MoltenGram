@@ -248,14 +248,61 @@ public class ShizukuController {
     }
 
     public boolean setUnrestrictedBackground() {
+        return boostNotificationPerformance();
+    }
+
+    public boolean boostNotificationPerformance() {
+        if (!hasPermission()) {
+            return false;
+        }
         try {
             String pkg = ApplicationLoader.applicationContext.getPackageName();
+            // Whitelist from battery optimization / Doze (deep & light doze)
             runCommand("cmd deviceidle whitelist +" + pkg);
+            runCommand("dumpsys deviceidle whitelist +" + pkg);
+
+            // Set app standby bucket to active (bucket 10: no delays, unmetered alarms/jobs)
+            runCommand("am set-standby-bucket " + pkg + " active");
+
+            // Lift AppOps background, wake lock, and foreground restrictions
             runCommand("cmd appops set " + pkg + " RUN_IN_BACKGROUND allow");
+            runCommand("cmd appops set " + pkg + " RUN_ANY_IN_BACKGROUND allow");
             runCommand("cmd appops set " + pkg + " START_FOREGROUND allow");
+            runCommand("cmd appops set " + pkg + " WAKE_LOCK allow");
+
+            // Allow background network under Data Saver
+            try {
+                int uid = ApplicationLoader.applicationContext.getApplicationInfo().uid;
+                runCommand("cmd netpolicy add restrict-background-whitelist " + uid);
+            } catch (Throwable ignored) {}
+
             return true;
         } catch (Throwable t) {
             FileLog.e(t);
+            return false;
+        }
+    }
+
+    public boolean isNotificationBoostActive() {
+        if (!hasPermission()) {
+            return false;
+        }
+        try {
+            android.os.PowerManager pm = (android.os.PowerManager) ApplicationLoader.applicationContext.getSystemService(Context.POWER_SERVICE);
+            boolean batteryOk = pm == null || pm.isIgnoringBatteryOptimizations(ApplicationLoader.applicationContext.getPackageName());
+            if (!batteryOk) {
+                return false;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+                android.app.usage.UsageStatsManager usm = (android.app.usage.UsageStatsManager)
+                        ApplicationLoader.applicationContext.getSystemService(Context.USAGE_STATS_SERVICE);
+                if (usm != null) {
+                    int bucket = usm.getAppStandbyBucket();
+                    return bucket <= 20; // active or exempted or working_set
+                }
+            }
+            return true;
+        } catch (Throwable t) {
             return false;
         }
     }

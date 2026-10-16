@@ -1741,7 +1741,38 @@ public class PushListenerController {
         });
     }
 
+    public static void resetProvider() {
+        instance = null;
+        ApplicationLoader.pushProvider = null;
+    }
+
+    public static void forceReRegisterPush() {
+        Utilities.stageQueue.postRunnable(() -> {
+            resetProvider();
+            reconcilePushRegistration();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig uc = UserConfig.getInstance(a);
+                if (uc.getClientUserId() != 0) {
+                    uc.registeredForPush = false;
+                    uc.saveConfig(false);
+                    final int acc = a;
+                    AndroidUtilities.runOnUIThread(() -> {
+                        MessagesController mc = MessagesController.getInstance(acc);
+                        mc.forceRegisterForPush();
+                    });
+                }
+            }
+            AndroidUtilities.runOnUIThread(() -> {
+                IPushListenerServiceProvider provider = ApplicationLoader.getPushProvider();
+                if (provider != null && provider.hasServices()) {
+                    provider.onRequestPushToken();
+                }
+            });
+        });
+    }
+
     public static void reconcilePushRegistration() {
+        resetProvider();
         Utilities.stageQueue.postRunnable(() -> {
             int serviceType = NaConfig.INSTANCE.getPushServiceType().Int();
             boolean googlePush = serviceType == 1 || serviceType == 3;

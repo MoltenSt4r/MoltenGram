@@ -56,4 +56,12 @@ public class ShizukuConfig {
     public void setSilentPluginUpdatesEnabled(boolean enabled) {
         prefs.edit().putBoolean("silent_plugin_updates", enabled).apply();
     }
+
+    public boolean isNotificationBoostEnabled() {
+        return prefs.getBoolean("notification_boost", true);
+    }
+
+    public void setNotificationBoostEnabled(boolean enabled) {
+        prefs.edit().putBoolean("notification_boost", enabled).apply();
+    }
 }
