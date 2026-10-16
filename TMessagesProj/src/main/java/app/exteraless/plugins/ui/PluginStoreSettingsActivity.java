@@ -19,6 +19,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
+import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -34,6 +35,7 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
     private int hideOldVersionsRow = -1;
     private int deepSearchRow = -1;
     private int autoUpdateRow = -1;
+    private int pageSizeRow = -1;
     private int searchDividerRow = -1;
 
     private int sourcesHeaderRow = -1;
@@ -63,6 +65,7 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
         hideOldVersionsRow = addRow("hideOldVersions");
         deepSearchRow = addRow("deepSearch");
         autoUpdateRow = addRow("autoUpdate");
+        pageSizeRow = addRow("pageSize");
         searchDividerRow = addRow();
 
         sourcesHeaderRow = addRow("sourcesHeader");
@@ -118,6 +121,8 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(next);
             }
+        } else if (position == pageSizeRow) {
+            showPageSizeDialog();
         } else if (position == addChannelRow) {
             showAddChannelDialog();
         } else if (position >= channelsStartRow && position < channelsEndRow) {
@@ -130,6 +135,43 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
             config.clearCache();
             BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.PluginsStoreSettingsClearCacheDone)).show();
         }
+    }
+
+    private void showPageSizeDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.PluginsStoreSettingsPageSize));
+        builder.setMessage(getString(R.string.PluginsStoreSettingsPageSizePrompt));
+
+        final EditText editText = new EditText(getParentActivity());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setHint("1–100");
+        editText.setInputType(InputType.TYPE_CLASS_NUMBER);
+        editText.setSingleLine(true);
+        editText.setText(String.valueOf(config.getPageSize()));
+        editText.setSelection(editText.getText().length());
+
+        FrameLayout container = new FrameLayout(getParentActivity());
+        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+        container.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        builder.setView(container);
+
+        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
+            String input = editText.getText().toString().trim();
+            try {
+                int val = Integer.parseInt(input);
+                val = Math.max(PluginStoreConfig.MIN_PAGE_SIZE, Math.min(PluginStoreConfig.MAX_PAGE_SIZE, val));
+                config.setPageSize(val);
+                if (listAdapter != null) {
+                    listAdapter.notifyItemChanged(pageSizeRow);
+                }
+            } catch (Exception ignored) {
+            }
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
     }
 
     private void showAddChannelDialog() {
@@ -203,6 +245,8 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_HEADER;
             } else if (position == hideOldVersionsRow || position == deepSearchRow || position == autoUpdateRow) {
                 return TYPE_CHECK;
+            } else if (position == pageSizeRow) {
+                return TYPE_SETTINGS;
             } else if (position == addChannelRow || (position >= channelsStartRow && position < channelsEndRow) || position == clearCacheRow) {
                 return TYPE_TEXT;
             } else if (position == infoRow) {
@@ -251,6 +295,13 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValueAndCheck(getString(R.string.PluginsStoreSettingsDeepSearch), getString(R.string.PluginsStoreSettingsDeepSearchDesc), config.isDeepSearchEnabled(), true, true);
                     } else if (position == autoUpdateRow) {
                         cell.setTextAndValueAndCheck(getString(R.string.PluginsStoreSettingsAutoUpdate), getString(R.string.PluginsStoreSettingsAutoUpdateDesc), config.isAutoUpdateEnabled(), false, true);
+                    }
+                    break;
+                }
+                case TYPE_SETTINGS: {
+                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
+                    if (position == pageSizeRow) {
+                        cell.setTextAndValue(getString(R.string.PluginsStoreSettingsPageSize), String.valueOf(config.getPageSize()), false);
                     }
                     break;
                 }

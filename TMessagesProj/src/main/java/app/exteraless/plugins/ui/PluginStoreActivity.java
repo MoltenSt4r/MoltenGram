@@ -218,10 +218,18 @@ public class PluginStoreActivity extends BaseFragment {
     }
 
     private int initialFilter = -1;
+    private int displayedCount = PluginStoreConfig.DEFAULT_PAGE_SIZE;
 
     public void setInitialFilter(int filter) {
         this.initialFilter = filter;
         this.currentFilter = filter;
+        this.displayedCount = config.getPageSize();
+    }
+
+    private void loadMorePlugins() {
+        int pageSize = config.getPageSize();
+        displayedCount += pageSize;
+        updateRows();
     }
 
     private UniversalRecyclerView listView;
@@ -320,12 +328,14 @@ public class PluginStoreActivity extends BaseFragment {
                     @Override
                     public void onSearchCollapse() {
                         searchQuery = null;
+                        displayedCount = config.getPageSize();
                         updateRows();
                     }
 
                     @Override
                     public void onTextChanged(android.widget.EditText editText) {
                         searchQuery = editText.getText().toString();
+                        displayedCount = config.getPageSize();
                         updateRows();
                         scheduleDeepSearch(searchQuery);
                     }
@@ -359,6 +369,7 @@ public class PluginStoreActivity extends BaseFragment {
         chipsLayout.setOrientation(LinearLayout.HORIZONTAL);
         chipsScroll.addView(chipsLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
         contentView.addView(chipsScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        displayedCount = config.getPageSize();
         if (initialFilter >= 0) {
             currentFilter = initialFilter;
         }
@@ -428,6 +439,7 @@ public class PluginStoreActivity extends BaseFragment {
         channelsAtEnd.clear();
         checkFolderChannelsOnline();
         currentFilter = FILTER_UPDATES;
+        displayedCount = config.getPageSize();
         if (chipsLayout != null && getContext() != null) {
             buildChips(getContext());
         }
@@ -516,6 +528,7 @@ public class PluginStoreActivity extends BaseFragment {
             chip.setOnClickListener(v -> {
                 if (currentFilter != fId) {
                     currentFilter = fId;
+                    displayedCount = config.getPageSize();
                     buildChips(context);
                     updateRows();
                 }
@@ -1624,8 +1637,20 @@ public class PluginStoreActivity extends BaseFragment {
             return;
         }
 
-        for (StorePlugin p : list) {
-            items.add(StorePluginItemFactory.of(p, pluginDelegate));
+        int pageSize = config.getPageSize();
+        if (displayedCount < pageSize) {
+            displayedCount = pageSize;
+        }
+
+        int countToShow = Math.min(displayedCount, list.size());
+        for (int i = 0; i < countToShow; i++) {
+            items.add(StorePluginItemFactory.of(list.get(i), pluginDelegate));
+        }
+
+        if (list.size() > countToShow) {
+            boolean isSearching = !TextUtils.isEmpty(searchQuery);
+            int textRes = isSearching ? R.string.PluginsStoreOtherSearchResults : R.string.ShowMore;
+            items.add(LoadMorePillItemFactory.of(textRes, this::loadMorePlugins));
         }
     }
 
@@ -1926,6 +1951,99 @@ public class PluginStoreActivity extends BaseFragment {
             item.object = p;
             item.object2 = delegate;
             item.id = p.id != null ? p.id.hashCode() : 0;
+            item.transparent = true;
+            return item;
+        }
+    }
+
+    public static class LoadMorePillCell extends FrameLayout {
+        private final TextView textView;
+        private final ImageView arrowView;
+        private final LinearLayout pillContainer;
+
+        public LoadMorePillCell(Context context) {
+            super(context);
+            setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+            setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+
+            pillContainer = new LinearLayout(context);
+            pillContainer.setOrientation(LinearLayout.HORIZONTAL);
+            pillContainer.setGravity(Gravity.CENTER);
+            pillContainer.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(12));
+
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accent == 0) accent = 0xff00d2b4;
+            int accentPressed = Theme.getColor(Theme.key_featuredStickers_addButtonPressed);
+            if (accentPressed == 0) accentPressed = 0x3300d2b4;
+            pillContainer.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(22), accent, accentPressed));
+
+            int textColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
+            if (textColor == 0) textColor = 0xffffffff;
+
+            textView = new TextView(context);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            textView.setTypeface(AndroidUtilities.bold());
+            textView.setTextColor(textColor);
+            textView.setGravity(Gravity.CENTER);
+            pillContainer.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            arrowView = new ImageView(context);
+            arrowView.setImageResource(R.drawable.baseline_keyboard_arrow_down_24);
+            arrowView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
+            arrowView.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            pillContainer.addView(arrowView, LayoutHelper.createLinear(20, 20, Gravity.CENTER_VERTICAL, 6, 0, 0, 0));
+
+            addView(pillContainer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.CENTER));
+        }
+
+        public void bind(int textResId, Runnable onClick) {
+            textView.setText(textResId);
+            pillContainer.setOnClickListener(v -> {
+                if (onClick != null) {
+                    onClick.run();
+                }
+            });
+        }
+    }
+
+    private static final class LoadMorePillItemFactory extends UItem.UItemFactory<LoadMorePillCell> {
+        static {
+            setup(new LoadMorePillItemFactory());
+        }
+
+        @Override
+        public LoadMorePillCell createView(Context context, RecyclerListView listView,
+                                          int currentAccount, int classGuid,
+                                          Theme.ResourcesProvider resourcesProvider) {
+            return new LoadMorePillCell(context);
+        }
+
+        @Override
+        public void bindView(View view, UItem item, boolean divider, UniversalAdapter adapter,
+                             UniversalRecyclerView listView) {
+            if (view instanceof LoadMorePillCell) {
+                LoadMorePillCell cell = (LoadMorePillCell) view;
+                int textRes = item.intValue;
+                Runnable onClick = (Runnable) item.object;
+                cell.bind(textRes, onClick);
+            }
+        }
+
+        @Override
+        public boolean equals(UItem first, UItem second) {
+            return first.id == second.id;
+        }
+
+        @Override
+        public boolean contentsEquals(UItem first, UItem second) {
+            return first.intValue == second.intValue;
+        }
+
+        static UItem of(int textResId, Runnable onClick) {
+            UItem item = UItem.ofFactory(LoadMorePillItemFactory.class);
+            item.id = -999;
+            item.intValue = textResId;
+            item.object = onClick;
             item.transparent = true;
             return item;
         }

@@ -71,7 +71,6 @@ public class PluginsActivity extends BaseFragment {
     private static final int MENU_CHECK_UPDATES = 5;
 
     private static final int ID_ENGINE_TOGGLE = -1;
-    private static final int ID_PLUGIN_STORE_BANNER = -2;
 
     private static final int REQUEST_CODE_PICK_PLUGIN = 9781;
 
@@ -202,17 +201,6 @@ public class PluginsActivity extends BaseFragment {
                 getString(R.string.EnablePluginsEngine), engineEnabled));
         if (!engineEnabled) {
             return;
-        }
-        items.add(UItem.asSpace(dp(8)));
-        int updatesCount = PluginStoreActivity.getCachedUpdatesCount();
-        if (updatesCount > 0) {
-            items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
-                    getString(R.string.PluginsStoreBannerTitle) + " • " + LocaleController.formatString(R.string.PluginsStoreUpdatesFound, updatesCount),
-                    getString(R.string.PluginsStoreBannerDesc)));
-        } else {
-            items.add(PluginUiItem.storeBanner(ID_PLUGIN_STORE_BANNER,
-                    getString(R.string.PluginsStoreBannerTitle),
-                    getString(R.string.PluginsStoreBannerDesc)));
         }
         items.add(UItem.asSpace(dp(8)));
 
@@ -445,14 +433,6 @@ public class PluginsActivity extends BaseFragment {
                             }
                         }));
             }
-            return;
-        }
-        if (item.id == ID_PLUGIN_STORE_BANNER) {
-            PluginStoreActivity store = new PluginStoreActivity();
-            if (PluginStoreActivity.getCachedUpdatesCount() > 0) {
-                store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
-            }
-            presentFragment(store);
             return;
         }
         // По карточке кликов не ждём: у неё свои кнопки и свой тумблер.

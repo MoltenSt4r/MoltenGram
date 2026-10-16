@@ -263,6 +263,10 @@
     <string name="PluginsStoreSettingsHideOldDesc">Оставлять в списке только самую свежую версию каждого плагина</string>
     <string name="PluginsStoreSettingsAutoUpdate">Проверять обновления плагинов</string>
     <string name="PluginsStoreSettingsAutoUpdateDesc">Автоматически проверять наличие новых версий установленных плагинов</string>
+    <string name="PluginsStoreSettingsPageSize">Количество плагинов на страницу</string>
+    <string name="PluginsStoreSettingsPageSizePrompt">Введите количество плагинов (1–100):</string>
+    <string name="PluginsStoreOtherSearchResults">Другие результаты поиска</string>
+    <string name="ShowMore">Показать ещё</string>
     <string name="PluginsStoreSettingsClearCache">Очистить кэш каталога</string>
     <string name="PluginsStoreSettingsClearCacheDone">Кэш каталога очищен</string>
     <string name="PluginsStoreSettingsRescan">Пересканировать все каналы</string>

@@ -23,6 +23,10 @@ public class PluginStoreConfig {
     public static final int SORT_NAME_DESC = 3;
     public static final int SORT_SIZE_DESC = 4;
 
+    public static final int DEFAULT_PAGE_SIZE = 10;
+    public static final int MIN_PAGE_SIZE = 1;
+    public static final int MAX_PAGE_SIZE = 100;
+
     public static final List<String> DEFAULT_CHANNELS = Collections.unmodifiableList(Arrays.asList(
             "PESSDES_Plugins",
             "PluginProject",
@@ -165,6 +169,26 @@ public class PluginStoreConfig {
 
     public void setAutoUpdateEnabled(boolean enabled) {
         prefs.edit().putBoolean("auto_update_plugins", enabled).apply();
+    }
+
+    public int getPageSize() {
+        int size = prefs.getInt("page_size", DEFAULT_PAGE_SIZE);
+        if (size < MIN_PAGE_SIZE) {
+            return MIN_PAGE_SIZE;
+        }
+        if (size > MAX_PAGE_SIZE) {
+            return MAX_PAGE_SIZE;
+        }
+        return size;
+    }
+
+    public void setPageSize(int size) {
+        if (size < MIN_PAGE_SIZE) {
+            size = MIN_PAGE_SIZE;
+        } else if (size > MAX_PAGE_SIZE) {
+            size = MAX_PAGE_SIZE;
+        }
+        prefs.edit().putInt("page_size", size).apply();
     }
 
     public void clearCache() {
