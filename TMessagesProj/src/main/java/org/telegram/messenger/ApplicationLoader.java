@@ -140,6 +140,10 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
         mapsProvider = null;
     }
 
+    public static void resetPushProvider() {
+        pushProvider = null;
+    }
+
     /*protected IMapsProvider onCreateMapsProvider() {
         return new GoogleMapsProvider();
     }*/

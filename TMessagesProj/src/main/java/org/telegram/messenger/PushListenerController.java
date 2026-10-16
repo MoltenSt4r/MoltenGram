@@ -1743,7 +1743,7 @@ public class PushListenerController {
 
     public static void resetProvider() {
         instance = null;
-        ApplicationLoader.pushProvider = null;
+        ApplicationLoader.resetPushProvider();
     }
 
     public static void forceReRegisterPush() {
