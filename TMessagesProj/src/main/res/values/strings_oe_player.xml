@@ -53,6 +53,13 @@
     <string name="OEAppearancePlayerCropCoverDesc">Force square aspect ratio for album cover</string>
     <string name="OEAppearancePlayerKeepScreenOn">Keep screen on in player</string>
     <string name="OEAppearancePlayerKeepScreenOnDesc">Keep the screen on while the expanded music player is visible</string>
+    <string name="OEAppearancePlayerCoverShape">Album cover shape</string>
+    <string name="OEAppearancePlayerCoverShapeDisabled">Off (Classic)</string>
+    <string name="OEAppearancePlayerCoverShapeCycle">Cycle sequentially</string>
+    <string name="OEAppearancePlayerCoverShapeRandom">Random shape</string>
+    <string name="OEAppearancePlayerCoverShapeCustom">Choose shape…</string>
+    <string name="OEAppearancePlayerVideoCover">Video covers (Canvas)</string>
+    <string name="OEAppearancePlayerVideoCoverDesc">Automatically replace album cover with video or clip when detected</string>
     <string name="OEAppearancePlayerAudioHeader">Playback &amp; Audio</string>
     <string name="OEAppearancePlayerSleepTimer">Sleep Timer</string>
     <string name="OEAppearancePlayerSleepTimerDesc">Automatically pause playback after the specified time</string>

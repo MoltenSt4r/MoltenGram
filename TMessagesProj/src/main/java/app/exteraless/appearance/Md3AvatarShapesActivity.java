@@ -21,6 +21,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
@@ -208,19 +209,19 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         }
     }
 
-    private void openShapePicker(int peerType, String title, int currentShape) {
-        if (getParentActivity() == null) return;
+    public static void openShapePicker(Context context, Theme.ResourcesProvider resourceProvider, String title, int currentShape, Utilities.Callback<Integer> onSelected) {
+        if (context == null) return;
 
-        BottomSheet.Builder builder = new BottomSheet.Builder(getParentActivity());
+        BottomSheet.Builder builder = new BottomSheet.Builder(context);
         builder.setTitle(title, true);
 
-        LinearLayout contentLayout = new LinearLayout(getParentActivity());
+        LinearLayout contentLayout = new LinearLayout(context);
         contentLayout.setOrientation(LinearLayout.VERTICAL);
         contentLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
 
-        RecyclerListView gridView = new RecyclerListView(getParentActivity());
+        RecyclerListView gridView = new RecyclerListView(context);
         int columns = AndroidUtilities.isTablet() ? 6 : 4;
-        gridView.setLayoutManager(new GridLayoutManager(getParentActivity(), columns));
+        gridView.setLayoutManager(new GridLayoutManager(context, columns));
 
         final BottomSheet[] sheetRef = new BottomSheet[1];
 
@@ -245,6 +246,27 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         });
 
         gridView.setOnItemClickListener((view, position) -> {
+            if (onSelected != null) {
+                onSelected.run(position);
+            }
+            if (sheetRef[0] != null) {
+                sheetRef[0].dismiss();
+            }
+        });
+
+        gridView.setNestedScrollingEnabled(false);
+        contentLayout.addView(gridView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(context);
+        scrollView.addView(contentLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        builder.setCustomView(scrollView);
+        sheetRef[0] = builder.create();
+        sheetRef[0].show();
+    }
+
+    private void openShapePicker(int peerType, String title, int currentShape) {
+        if (getParentActivity() == null) return;
+        openShapePicker(getParentActivity(), getResourceProvider(), title, currentShape, position -> {
             switch (peerType) {
                 case Md3AvatarShapes.PEER_TYPE_USER:
                     AppearanceConfig.avatarShapeUsers.setConfigInt(position);
@@ -267,19 +289,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             if (listAdapter != null) {
                 listAdapter.notifyDataSetChanged();
             }
-            if (sheetRef[0] != null) {
-                sheetRef[0].dismiss();
-            }
         });
-
-        gridView.setNestedScrollingEnabled(false);
-        contentLayout.addView(gridView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        android.widget.ScrollView scrollView = new android.widget.ScrollView(getParentActivity());
-        scrollView.addView(contentLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        builder.setCustomView(scrollView);
-        sheetRef[0] = builder.create();
-        showDialog(sheetRef[0]);
     }
 
     private void notifyAvatarsChanged() {
@@ -294,7 +304,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         );
     }
 
-    private String getShapeName(int shapeId) {
+    public static String getShapeName(int shapeId) {
         if (shapeId >= 0 && shapeId < Md3AvatarShapes.SHAPE_NAMES.length) {
             return Md3AvatarShapes.SHAPE_NAMES[shapeId];
         }

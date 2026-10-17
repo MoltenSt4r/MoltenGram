@@ -31,6 +31,7 @@ public class CoverImage extends BackupImageView {
     private Path shapePath;
     private int lastW = -1;
     private int lastH = -1;
+    private float defaultElevation = -1f;
 
     public CoverImage(Context context, int noteSizeDp) {
         super(context);
@@ -46,12 +47,21 @@ public class CoverImage extends BackupImageView {
         if (this.shapeId != shapeId) {
             this.shapeId = shapeId;
             this.shapePath = null;
+            if (defaultElevation < 0) {
+                defaultElevation = getElevation();
+            }
             if (shapeId >= 0) {
                 setRoundRadius(0);
                 getImageReceiver().setRoundRadius(0);
+                setElevation(0);
             } else {
                 setRoundRadius(radius);
+                getImageReceiver().setRoundRadius(radius);
+                if (defaultElevation > 0) {
+                    setElevation(defaultElevation);
+                }
             }
+            invalidateOutline();
             invalidate();
         }
     }

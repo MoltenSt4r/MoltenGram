@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.text.TextUtils;
 import android.util.LruCache;
 
+import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.Md3AvatarShapes;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLoader;
@@ -47,6 +48,13 @@ public final class PlayerArt {
     private static final ArrayList<Pending> pending = new ArrayList<>();
 
     public static synchronized int getOrCycleShape(MessageObject messageObject) {
+        int mode = AppearanceConfig.playerCoverShape();
+        if (mode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+            return -1;
+        }
+        if (mode >= 0) {
+            return mode;
+        }
         if (messageObject == null) {
             return MD3_EXPRESSIVE_SHAPES[0];
         }
@@ -58,9 +66,19 @@ public final class PlayerArt {
         if (cached != null) {
             return cached;
         }
-        int shape = MD3_EXPRESSIVE_SHAPES[(shapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+        int shape;
+        if (mode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+            int randIdx = (int) (Math.random() * MD3_EXPRESSIVE_SHAPES.length);
+            shape = MD3_EXPRESSIVE_SHAPES[randIdx];
+        } else {
+            shape = MD3_EXPRESSIVE_SHAPES[(shapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+        }
         trackShapes.put(key, shape);
         return shape;
+    }
+
+    public static synchronized void clearTrackShapesCache() {
+        trackShapes.evictAll();
     }
 
     private static final class Pending {

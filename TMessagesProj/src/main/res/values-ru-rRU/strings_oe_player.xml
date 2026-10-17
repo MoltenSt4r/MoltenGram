@@ -53,6 +53,13 @@
     <string name="OEAppearancePlayerCropCoverDesc">Принудительно использовать квадратное соотношение сторон</string>
     <string name="OEAppearancePlayerKeepScreenOn">Не выключать экран при развернутом плеере</string>
     <string name="OEAppearancePlayerKeepScreenOnDesc">Предотвращает отключение экрана во время прослушивания музыки с открытым плеером</string>
+    <string name="OEAppearancePlayerCoverShape">Форма обложки альбома</string>
+    <string name="OEAppearancePlayerCoverShapeDisabled">Выключено (Классическая)</string>
+    <string name="OEAppearancePlayerCoverShapeCycle">Поочерёдно</string>
+    <string name="OEAppearancePlayerCoverShapeRandom">Случайно</string>
+    <string name="OEAppearancePlayerCoverShapeCustom">Выбрать фигуру…</string>
+    <string name="OEAppearancePlayerVideoCover">Видео-обложки (Canvas)</string>
+    <string name="OEAppearancePlayerVideoCoverDesc">Заменять обложку на видеоклип при обнаружении</string>
     <string name="OEAppearancePlayerAudioHeader">Воспроизведение и аудио</string>
     <string name="OEAppearancePlayerSleepTimer">Таймер сна</string>
     <string name="OEAppearancePlayerSleepTimerDesc">Автоматически останавливать воспроизведение через заданное время</string>

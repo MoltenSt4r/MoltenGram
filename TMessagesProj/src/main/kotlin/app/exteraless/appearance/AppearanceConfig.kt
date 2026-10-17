@@ -421,6 +421,32 @@ object AppearanceConfig {
         return playerKeepScreenOn.Bool()
     }
 
+    const val COVER_SHAPE_DISABLED = -1
+    const val COVER_SHAPE_CYCLE = -2
+    const val COVER_SHAPE_RANDOM = -3
+
+    /** Форма обложки альбома в плеере: -1 (выключено), -2 (циклически), -3 (случайно) или ID фигуры >= 0. */
+    @JvmField
+    val playerCoverShape =
+        addConfig("OEAppearancePlayerCoverShape", ConfigItem.configTypeInt, COVER_SHAPE_CYCLE)
+
+    @JvmStatic
+    fun playerCoverShape(): Int {
+        ensureLoaded()
+        return playerCoverShape.Int()
+    }
+
+    /** Заменять обложку на видео при обнаружении (Canvas). */
+    @JvmField
+    val playerVideoCover =
+        addConfig("OEAppearancePlayerVideoCover", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerVideoCover(): Boolean {
+        ensureLoaded()
+        return playerVideoCover.Bool()
+    }
+
     /** Останавливать воспроизведение при отключении звука (громкость 0). */
     @JvmField
     val playerPauseOnMute =

@@ -43,6 +43,9 @@ import java.util.Collections;
 import java.util.List;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
+import app.exteraless.appearance.Md3AvatarShapesActivity;
+import org.telegram.messenger.NotificationCenter;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
@@ -52,6 +55,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int bgStyleRow;
     private int seekbarStyleRow;
     private int colorStyleRow;
+    private int coverShapeRow;
+    private int videoCoverRow;
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
@@ -91,6 +96,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         bgStyleRow = addRow("bgStyle");
         seekbarStyleRow = addRow("seekbarStyle");
         colorStyleRow = addRow("colorStyle");
+        coverShapeRow = addRow("coverShape");
+        videoCoverRow = addRow("videoCover");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
@@ -144,6 +151,45 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 AppearanceConfig.playerColorStyle.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(colorStyleRow);
             });
+        } else if (position == coverShapeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                    getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                    getString(R.string.OEAppearancePlayerCoverShapeRandom),
+                    getString(R.string.OEAppearancePlayerCoverShapeCustom)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerCoverShape), options, which -> {
+                if (which == 0) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 1) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 2) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 3) {
+                    int currentShape = AppearanceConfig.playerCoverShape();
+                    if (currentShape < 0) currentShape = 0;
+                    Md3AvatarShapesActivity.openShapePicker(getContext(), getResourceProvider(), getString(R.string.OEAppearancePlayerCoverShape), currentShape, shapeId -> {
+                        AppearanceConfig.playerCoverShape.setConfigInt(shapeId);
+                        PlayerArt.clearTrackShapesCache();
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                        if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    });
+                }
+            });
+        } else if (position == videoCoverRow) {
+            AppearanceConfig.playerVideoCover.setConfigBool(!AppearanceConfig.playerVideoCover());
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(AppearanceConfig.playerVideoCover());
+            }
         } else if (position == swipeTrackRow) {
             AppearanceConfig.playerSwipeTrack.setConfigBool(!AppearanceConfig.playerSwipeTrack());
             if (view instanceof TextCheckCell) {
@@ -231,10 +277,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+            } else if (position == videoCoverRow || position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow
+            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == sleepTimerRow || position == systemEqualizerRow) {
                 return TYPE_SETTINGS;
@@ -258,7 +304,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 }
             } else if (type == TYPE_CHECK) {
                 TextCheckCell cell = (TextCheckCell) holder.itemView;
-                if (position == swipeTrackRow) {
+                if (position == videoCoverRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerVideoCover), getString(R.string.OEAppearancePlayerVideoCoverDesc), AppearanceConfig.playerVideoCover(), true, true);
+                } else if (position == swipeTrackRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerSwipeTrack), AppearanceConfig.playerSwipeTrack(), true);
                 } else if (position == cropCoverRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
@@ -286,6 +334,21 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     int colorStyle = AppearanceConfig.playerColorStyle();
                     String colorName = colorStyle == 1 ? getString(R.string.OEAppearancePlayerColorStyleTheme) : getString(R.string.OEAppearancePlayerColorStyleCover);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerColorStyle), colorName, true);
+                } else if (position == coverShapeRow) {
+                    int shapeMode = AppearanceConfig.playerCoverShape();
+                    String shapeStr;
+                    if (shapeMode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeDisabled);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_CYCLE) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeRandom);
+                    } else if (shapeMode >= 0 && shapeMode < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        shapeStr = Md3AvatarShapes.SHAPE_NAMES[shapeMode];
+                    } else {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    }
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerCoverShape), shapeStr, true);
                 } else if (position == lyricsSourcesRow) {
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsSources), getString(R.string.OEAppearancePlayerLyricsSourcesDesc), true);
                 } else if (position == lyricsPriorityRow) {

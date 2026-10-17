@@ -329,10 +329,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         cover.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
+                if (cover.getShapeId() >= 0) {
+                    outline.setEmpty();
+                } else {
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
+                }
             }
         });
-        cover.setElevation(dp(14));
+        cover.setElevation(cover.getShapeId() >= 0 ? 0 : dp(14));
         cover.setOnTouchListener(this::onCoverTouch);
         layout.addView(cover);
 
