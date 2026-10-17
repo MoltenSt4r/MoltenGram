@@ -205,4 +205,10 @@
     <string name="OEChatsTrackingFilterUpdated">Фильтр обновлён</string>
     <string name="OEChatsTrackingFilterLatest">Фильтр уже свежий</string>
     <string name="OEChatsTrackingFilterFailed">Не удалось обновить фильтр</string>
+    <string name="OEChatsDisableMarkdown">Отключение автоформатирования</string>
+    <string name="OEChatsDisableMarkdownInfo">Символы разметки (например, *текст*) останутся в сообщении как есть и не преобразуются в жирный, курсив или моноширинный шрифт.</string>
+    <string name="OEPluginCommandSuggestions">Всплывающий список команд плагинов</string>
+    <string name="OEPluginCommandSuggestionsInfo">Показывать подсказки команд над полем ввода при написании префикса (например, .ping).</string>
+    <string name="OEPluginCommandPrefixes">Префиксы команд</string>
+    <string name="OEPluginCommandPrefixesInfo">Символы префиксов для подсказок команд плагинов через запятую (по умолчанию .,!,$,?).</string>
 </resources>

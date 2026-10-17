@@ -8073,7 +8073,10 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else if (object instanceof String) {
                 if (mentionContainer.getAdapter().isBotCommands()) {
-                    if (chatMode == MODE_SCHEDULED) {
+                    if (mentionContainer.getAdapter().isPluginCommands() || !((String) object).startsWith("/")) {
+                        chatActivityEnterView.replaceWithText(start, len, object + " ", false);
+                        hideFieldPanel(false);
+                    } else if (chatMode == MODE_SCHEDULED) {
                         AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), dialog_id, (notify, scheduleDate, scheduleRepeatPeriod) -> {
                             getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of((String) object, dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, notify, scheduleDate, 0, null, false));
                             chatActivityEnterView.setFieldText("");
@@ -8195,6 +8198,11 @@ public class ChatActivity extends BaseFragment implements
                 }
             } else if (object instanceof String) {
                 if (mentionContainer.getAdapter().isBotCommands()) {
+                    if (mentionContainer.getAdapter().isPluginCommands() || !((String) object).startsWith("/")) {
+                        chatActivityEnterView.replaceWithText(start, len, object + " ", false);
+                        hideFieldPanel(false);
+                        return true;
+                    }
                     if (URLSpanBotCommand.enabled) {
                         chatActivityEnterView.setFieldText("");
                         chatActivityEnterView.setCommand(null, (String) object, true, currentChat != null && currentChat.megagroup);

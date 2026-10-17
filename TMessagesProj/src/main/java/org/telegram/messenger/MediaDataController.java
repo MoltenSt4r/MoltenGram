@@ -7470,6 +7470,9 @@ public class MediaDataController extends BaseController {
         if (message == null || message[0] == null) {
             return null;
         }
+        if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDisableMarkdown().Bool()) {
+            parseMarkdown = false;
+        }
         ArrayList<TLRPC.MessageEntity> entities = null;
         int index;
         int start = -1;
@@ -7563,7 +7566,7 @@ public class MediaDataController extends BaseController {
             entities.add(entity);
         }
 
-        if (NaConfig.INSTANCE.getMarkdownParser().Int() == NekoConfig.MARKDOWN_PARSER_NEKO)  {
+        if (parseMarkdown && NaConfig.INSTANCE.getMarkdownParser().Int() == NekoConfig.MARKDOWN_PARSER_NEKO)  {
             EntitiesHelper.parseMarkdown(message, allowStrike);
         }
 

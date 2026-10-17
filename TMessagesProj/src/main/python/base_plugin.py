@@ -586,6 +586,15 @@ class BasePlugin:
         self._exteraless_state("_exteraless_menu_callbacks", dict)
         if "_exteraless_send_message_registered" not in self.__dict__:
             self.__dict__["_exteraless_send_message_registered"] = False
+        # Auto-register declared commands (__commands__ or commands)
+        for attr in ("__commands__", "commands"):
+            cmds = getattr(self, attr, None)
+            if isinstance(cmds, dict):
+                for c, d in cmds.items():
+                    self.add_command(str(c), str(d))
+            elif isinstance(cmds, (list, tuple, set)):
+                for c in cmds:
+                    self.add_command(str(c), "")
 
     @property
     def plugin_id(self) -> Optional[str]:
@@ -719,6 +728,22 @@ class BasePlugin:
             PythonBridge.addSendMessageHook(self._exteraless_plugin_id, int(priority))
         except Exception as e:
             self.log(f"add_on_send_message_hook() failed: {e}")
+
+    # ---- command suggestions ----
+
+    def add_command(self, command: str, description: str = ""):
+        """Register a command prefix / keyword for autocomplete suggestions."""
+        if not command:
+            return
+        cmd_str = str(command).strip()
+        desc_str = str(description).strip() if description else ""
+        if not self._exteraless_bridge_available():
+            return
+        try:
+            PythonBridge.registerCommand(self._exteraless_plugin_id, cmd_str, desc_str)
+        except Exception as e:
+            self.log(f"add_command({cmd_str!r}) failed: {e}")
+
 
     # ---- menus ----
 

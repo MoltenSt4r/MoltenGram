@@ -165,6 +165,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int hideKeyboardOnScrollRow;
     private int disableGlobalSearchRow;
     private int addCommaRow;
+    private int disableMarkdownRow;
+    private int pluginCommandSuggestionsRow;
+    private int pluginCommandPrefixesRow;
     private int inlineMathRow;
     private int inlineMathCurrencyRow;
     private int hideSendAsPeerRow;
@@ -401,6 +404,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         hideKeyboardOnScrollRow = addRow("hideKeyboardOnScroll");
         disableGlobalSearchRow = addRow("disableGlobalSearch");
         addCommaRow = addRow("addCommaAfterMention");
+        disableMarkdownRow = addRow("disableMarkdown");
+        pluginCommandSuggestionsRow = addRow("pluginCommandSuggestions");
+        pluginCommandPrefixesRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("pluginCommandPrefixes") : -1;
         inlineMathRow = addRow("inlineMathResult");
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
         hideSendAsPeerRow = addRow("hideSendAsPeer");
@@ -1557,6 +1563,34 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else if (position == textAnimationRow) {
             presentFragment(new app.exteraless.chats.TextAnimationSettingsActivity());
             return;
+        } else if (position == pluginCommandPrefixesRow) {
+            if (getParentActivity() == null) {
+                return;
+            }
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(LocaleController.getString(R.string.OEPluginCommandPrefixes));
+            final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
+            editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            editText.setText(OpenExteraConfig.pluginCommandPrefixes());
+            editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            editText.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
+            editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+            android.widget.FrameLayout frameLayout = new android.widget.FrameLayout(getParentActivity());
+            frameLayout.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT, 24, 8, 24, 0));
+            builder.setView(frameLayout);
+            builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialogInterface, i) -> {
+                String val = editText.getText().toString().trim();
+                if (val.isEmpty()) {
+                    val = ".,!,$,?";
+                }
+                OpenExteraConfig.pluginCommandPrefixes.setConfigString(val);
+                if (listAdapter != null && pluginCommandPrefixesRow != -1) {
+                    listAdapter.notifyItemChanged(pluginCommandPrefixesRow);
+                }
+            });
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(builder.create());
+            return;
         }
 
         if (position == tapToSwitchRecordRow) {
@@ -1594,6 +1628,16 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     listAdapter.notifyItemRemoved(wasCurrencyRow);
                 } else if (wasCurrencyRow == -1 && inlineMathCurrencyRow != -1) {
                     listAdapter.notifyItemInserted(inlineMathCurrencyRow);
+                }
+            }
+        } else if (position == pluginCommandSuggestionsRow) {
+            int wasPrefixesRow = pluginCommandPrefixesRow;
+            updateRows();
+            if (listAdapter != null) {
+                if (wasPrefixesRow != -1 && pluginCommandPrefixesRow == -1) {
+                    listAdapter.notifyItemRemoved(wasPrefixesRow);
+                } else if (wasPrefixesRow == -1 && pluginCommandPrefixesRow != -1) {
+                    listAdapter.notifyItemInserted(pluginCommandPrefixesRow);
                 }
             }
         } else if (position == hideTimeOnStickersRow && stickerSizeCell != null) {
@@ -1765,6 +1809,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == hideKeyboardOnScrollRow) return NekoConfig.hideKeyboardOnChatScroll;
         if (position == disableGlobalSearchRow) return NaConfig.INSTANCE.getDisableGlobalSearch();
         if (position == addCommaRow) return OpenExteraConfig.addCommaAfterMention;
+        if (position == disableMarkdownRow) return NaConfig.INSTANCE.getDisableMarkdown();
+        if (position == pluginCommandSuggestionsRow) return OpenExteraConfig.pluginCommandSuggestions;
         if (position == inlineMathRow) return ChatsConfig.inlineMathResult;
         if (position == inlineMathCurrencyRow) return ChatsConfig.inlineMathCurrency;
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
@@ -2418,6 +2464,14 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsDisableGlobalSearch), NaConfig.INSTANCE.getDisableGlobalSearch().Bool(), true);
             } else if (position == addCommaRow) {
                 cell.setTextAndCheck(getString(R.string.AddCommaAfterMention), OpenExteraConfig.addCommaAfterMention.Bool(), true);
+            } else if (position == disableMarkdownRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OEChatsDisableMarkdown),
+                        getString(R.string.OEChatsDisableMarkdownInfo),
+                        NaConfig.INSTANCE.getDisableMarkdown().Bool(), false, true);
+            } else if (position == pluginCommandSuggestionsRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OEPluginCommandSuggestions),
+                        getString(R.string.OEPluginCommandSuggestionsInfo),
+                        OpenExteraConfig.pluginCommandSuggestions.Bool(), false, true);
             } else if (position == inlineMathRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsInlineMath),
                         getString(R.string.OEChatsInlineMathInfo),
@@ -2590,6 +2644,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 String updated = LinkCleaner.lastUpdated();
                 cell.setTextAndValue(getString(R.string.OEChatsTrackingFilter),
                         updated == null ? "AdGuard" : LocaleController.formatString(R.string.OEChatsTrackingFilterValue, updated), false);
+            } else if (position == pluginCommandPrefixesRow) {
+                cell.setTextAndValue(getString(R.string.OEPluginCommandPrefixes),
+                        OpenExteraConfig.pluginCommandPrefixes(), true);
             }
         }
 
@@ -2680,7 +2737,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || position == openLinkConfirmationRow || position == transcribeProviderRow
                     || position == cloudflareCredentialsRow || position == geminiApiKeyRow
                     || position == openAiCredentialsRow || position == voskModelsRow
-                    || position == textAnimationRow || position == trackingFilterRow;
+                    || position == textAnimationRow || position == trackingFilterRow
+                    || position == pluginCommandPrefixesRow;
         }
     }
 }

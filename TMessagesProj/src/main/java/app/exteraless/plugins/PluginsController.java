@@ -22,6 +22,7 @@ import java.io.FileOutputStream;
 import java.io.FileInputStream;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -102,6 +103,8 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
     private final HookTargetCache updatesTargetsCache = new HookTargetCache();
 
     private final List<MenuItemRecord> menuItems = Collections.synchronizedList(new ArrayList<>());
+    /** pluginId -> список команд плагина для автодополнения в чате. */
+    private final Map<String, List<PluginCommand>> pluginCommands = new ConcurrentHashMap<>();
     /** Слушатель открытого экрана настроек плагина. */
     private final Map<String, List<Runnable>> settingsReloadListeners = new ConcurrentHashMap<>();
 
@@ -475,11 +478,13 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 existing.permissionsDeclared = fresh.permissionsDeclared;
                 existing.loadError = fresh.loadError;
                 existing.enabled = enabled;
+                scanPluginCommands(existing);
                 continue;
             }
             fresh.enabled = enabled;
             knownPaths.put(fresh.id, freshPath);
             plugins.put(fresh.id, fresh);
+            scanPluginCommands(fresh);
         }
         // Файлы, которых больше нет: выгрузить и забыть.
         for (Iterator<Map.Entry<String, Plugin>> it = plugins.entrySet().iterator(); it.hasNext(); ) {
@@ -492,6 +497,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 unregisterPluginHooks(gone.id);
                 PythonPluginsEngine.getInstance().unload(gone);
             }
+            unregisterPluginCommands(gone.id);
             knownPaths.remove(entry.getKey());
             it.remove();
         }
@@ -1069,6 +1075,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                     deliver(callback, false, error, null);
                     return;
                 }
+                scanPluginCommands(p);
                 deliver(callback, true, null, p);
             } catch (Exception e) {
                 FileLog.e("PluginsController: install failed", e);
@@ -1085,6 +1092,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (p == null) {
             return false;
         }
+        unregisterPluginCommands(id);
         if (p.loaded) {
             unregisterPluginHooks(id);
             PythonPluginsEngine.getInstance().unload(p);
@@ -2267,5 +2275,208 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             }
         }
         return byPriority(priorities);
+    }
+
+    // ---------- команды плагинов ----------
+
+    public static class PluginCommand {
+        public final String command;
+        public final String description;
+        public final String pluginId;
+        public final String pluginName;
+
+        public PluginCommand(String command, String description, String pluginId, String pluginName) {
+            this.command = command != null ? command.trim() : "";
+            this.description = description != null ? description.trim() : "";
+            this.pluginId = pluginId != null ? pluginId : "";
+            this.pluginName = pluginName != null ? pluginName : "";
+        }
+
+        public String getCleanCommand() {
+            if (command != null && !command.isEmpty()) {
+                char c = command.charAt(0);
+                if (c == '.' || c == '!' || c == '/' || c == '$' || c == '?' || c == ',') {
+                    return command.substring(1);
+                }
+            }
+            return command != null ? command : "";
+        }
+
+        public String getPrefixedCommand(char prefix) {
+            String clean = getCleanCommand();
+            return prefix + clean;
+        }
+
+        public String getFormattedHelp() {
+            if (description != null && !description.isEmpty()) {
+                if (pluginName != null && !pluginName.isEmpty() && !description.contains(pluginName)) {
+                    return description + " • " + pluginName;
+                }
+                return description;
+            }
+            return pluginName != null && !pluginName.isEmpty() ? pluginName : "";
+        }
+    }
+
+    public boolean isPluginPrefix(char ch) {
+        if (!app.exteraless.OpenExteraConfig.pluginCommandSuggestions()) {
+            return false;
+        }
+        String prefixes = app.exteraless.OpenExteraConfig.pluginCommandPrefixes();
+        if (prefixes == null || prefixes.trim().isEmpty()) {
+            return ch == '.';
+        }
+        for (int i = 0; i < prefixes.length(); i++) {
+            char p = prefixes.charAt(i);
+            if (p == ch && !Character.isWhitespace(p)) {
+                return true;
+            }
+        }
+        return ch == '.';
+    }
+
+    public void registerPluginCommand(String pluginId, String command, String description) {
+        if (pluginId == null || command == null || command.trim().isEmpty()) {
+            return;
+        }
+        command = command.trim();
+        Plugin p = plugins.get(pluginId);
+        String pName = p != null && p.name != null ? p.name : pluginId;
+        List<PluginCommand> list = pluginCommands.computeIfAbsent(pluginId, k -> new CopyOnWriteArrayList<>());
+        for (PluginCommand existing : list) {
+            if (existing.command.equalsIgnoreCase(command)) {
+                list.remove(existing);
+                break;
+            }
+        }
+        list.add(new PluginCommand(command, description, pluginId, pName));
+    }
+
+    public void unregisterPluginCommands(String pluginId) {
+        if (pluginId != null) {
+            pluginCommands.remove(pluginId);
+        }
+    }
+
+    public List<PluginCommand> getMatchingCommands(char prefix, String query) {
+        List<PluginCommand> results = new ArrayList<>();
+        if (!app.exteraless.OpenExteraConfig.pluginCommandSuggestions()) {
+            return results;
+        }
+        String q = query != null ? query.toLowerCase() : "";
+        Set<String> seen = new HashSet<>();
+
+        for (Map.Entry<String, Plugin> entry : plugins.entrySet()) {
+            Plugin p = entry.getValue();
+            if (p != null && !p.enabled) {
+                continue;
+            }
+            List<PluginCommand> cmds = pluginCommands.get(entry.getKey());
+            if (cmds != null) {
+                for (PluginCommand cmd : cmds) {
+                    String clean = cmd.getCleanCommand().toLowerCase();
+                    if ((clean.startsWith(q) || (prefix + clean).startsWith(q)) && seen.add(clean)) {
+                        results.add(cmd);
+                    }
+                }
+            }
+        }
+
+        if (results.isEmpty() && isEngineEnabled()) {
+            String[] defaultCmds = new String[]{"ping", "help", "info", "id", "restart", "eval", "exec", "calc"};
+            String[] defaultHelp = new String[]{"Check latency & uptime", "Plugin help menu", "Show info", "Show chat / user ID", "Restart client / engine", "Evaluate expression", "Execute code", "Calculate expression"};
+            for (int i = 0; i < defaultCmds.length; i++) {
+                String cmdName = defaultCmds[i];
+                if ((cmdName.startsWith(q) || (prefix + cmdName).startsWith(q)) && seen.add(cmdName)) {
+                    results.add(new PluginCommand(cmdName, defaultHelp[i], "core", "Plugin"));
+                }
+            }
+        }
+
+        results.sort((a, b) -> a.getCleanCommand().compareToIgnoreCase(b.getCleanCommand()));
+        return results;
+    }
+
+    private static final Set<String> COMMON_NON_COMMAND_EXTS = new HashSet<>(Arrays.asList(
+            "jpg", "jpeg", "png", "gif", "webp", "mp4", "mp3", "ogg", "json", "xml",
+            "txt", "py", "plugin", "apk", "zip", "rar", "pdf", "doc", "docx", "tmp",
+            "dat", "bin", "so", "dex", "java", "kt", "html", "css", "js", "m4a",
+            "wav", "avi", "mkv", "tgs", "ttf", "otf", "woff", "gz", "bz2", "xz", "tar"
+    ));
+
+    public void scanPluginCommands(Plugin plugin) {
+        if (plugin == null || plugin.path == null) {
+            return;
+        }
+        fileExecutor.execute(() -> {
+            try {
+                File file = new File(plugin.path);
+                if (!file.exists() || !file.canRead()) {
+                    return;
+                }
+                String content;
+                try (FileInputStream fis = new FileInputStream(file)) {
+                    byte[] data = new byte[(int) Math.min(file.length(), 512 * 1024)];
+                    int len = fis.read(data);
+                    if (len <= 0) {
+                        return;
+                    }
+                    content = new String(data, 0, len, StandardCharsets.UTF_8);
+                }
+
+                java.util.regex.Pattern dictPattern = java.util.regex.Pattern.compile(
+                        "(?:__commands__|commands)\\s*=\\s*\\{([^\\}]+)\\}");
+                java.util.regex.Matcher dictMatcher = dictPattern.matcher(content);
+                while (dictMatcher.find()) {
+                    String body = dictMatcher.group(1);
+                    java.util.regex.Pattern kvPattern = java.util.regex.Pattern.compile(
+                            "[\"']([a-zA-Z0-9_.-]+)[\"']\\s*:\\s*[\"']([^\"']+)[\"']");
+                    java.util.regex.Matcher kvMatcher = kvPattern.matcher(body);
+                    while (kvMatcher.find()) {
+                        registerPluginCommand(plugin.id, kvMatcher.group(1), kvMatcher.group(2));
+                    }
+                }
+
+                java.util.regex.Pattern listPattern = java.util.regex.Pattern.compile(
+                        "(?:__commands__|commands)\\s*=\\s*\\[([^\\]]+)\\]");
+                java.util.regex.Matcher listMatcher = listPattern.matcher(content);
+                while (listMatcher.find()) {
+                    String body = listMatcher.group(1);
+                    java.util.regex.Pattern itemPattern = java.util.regex.Pattern.compile(
+                            "[\"']([a-zA-Z0-9_.-]+)[\"']");
+                    java.util.regex.Matcher itemMatcher = itemPattern.matcher(body);
+                    while (itemMatcher.find()) {
+                        registerPluginCommand(plugin.id, itemMatcher.group(1), "");
+                    }
+                }
+
+                java.util.regex.Pattern swPattern = java.util.regex.Pattern.compile(
+                        "startswith\\s*\\(\\s*[\"']([.!?,/$][a-zA-Z0-9_-]{2,32})[\"']");
+                java.util.regex.Matcher swMatcher = swPattern.matcher(content);
+                while (swMatcher.find()) {
+                    registerPluginCommand(plugin.id, swMatcher.group(1), "");
+                }
+
+                java.util.regex.Pattern cmdPattern = java.util.regex.Pattern.compile(
+                        "(?:@command|@loader\\.command|@cmd)\\s*\\(\\s*[\"']([a-zA-Z0-9_-]{2,32})[\"']");
+                java.util.regex.Matcher cmdMatcher = cmdPattern.matcher(content);
+                while (cmdMatcher.find()) {
+                    registerPluginCommand(plugin.id, cmdMatcher.group(1), "");
+                }
+
+                java.util.regex.Pattern dotPattern = java.util.regex.Pattern.compile(
+                        "[\"'](\\.[a-zA-Z][a-zA-Z0-9_-]{1,31})[\"']");
+                java.util.regex.Matcher dotMatcher = dotPattern.matcher(content);
+                while (dotMatcher.find()) {
+                    String candidate = dotMatcher.group(1);
+                    String ext = candidate.substring(1).toLowerCase();
+                    if (!COMMON_NON_COMMAND_EXTS.contains(ext)) {
+                        registerPluginCommand(plugin.id, candidate, "");
+                    }
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        });
     }
 }

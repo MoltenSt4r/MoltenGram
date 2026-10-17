@@ -208,4 +208,10 @@
     <string name="OEChatsTrackingFilterUpdated">Filter updated</string>
     <string name="OEChatsTrackingFilterLatest">Filter is already up to date</string>
     <string name="OEChatsTrackingFilterFailed">Couldn\'t update the filter</string>
+    <string name="OEChatsDisableMarkdown">Disable auto-formatting</string>
+    <string name="OEChatsDisableMarkdownInfo">Formatting characters like *text* will remain literal instead of converting into bold, italic, or monospace.</string>
+    <string name="OEPluginCommandSuggestions">Plugin command suggestions</string>
+    <string name="OEPluginCommandSuggestionsInfo">Show autocomplete popup when typing a command prefix (e.g. .ping).</string>
+    <string name="OEPluginCommandPrefixes">Command prefixes</string>
+    <string name="OEPluginCommandPrefixesInfo">Prefix characters that trigger command suggestions (e.g. .,!,$,?).</string>
 </resources>
