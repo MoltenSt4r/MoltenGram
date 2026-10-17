@@ -26,3 +26,5 @@ replay_pid*.log
 # Ключ подписи (папка release)
 TMessagesProj/release/
 tests/local/
+
+.agents/

@@ -5,6 +5,7 @@
     <string name="OEPlayerFromChat">Из чата</string>
     <string name="OEPlayerFromProfile">Из профиля</string>
     <string name="OEPlayerFromSearch">Из поиска</string>
+    <string name="OEPlayerFromPlaylist">Из плейлиста</string>
     <string name="OEPlayerMusic">Музыка</string>
     <string name="OEPlayerLyrics">Текст</string>
     <string name="OEPlayerQueue">Далее</string>
@@ -61,6 +62,8 @@
     <string name="OEAppearancePlayerVideoCover">Видео-обложки (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Заменять обложку на видеоклип при обнаружении</string>
     <string name="OEAppearancePlayerAudioHeader">Воспроизведение и аудио</string>
+    <string name="OEPlayerLocalPlaylists">Локальные плейлисты</string>
+    <string name="OEPlayerLocalPlaylistsDesc">Управление плейлистами, импорт и экспорт</string>
     <string name="OEAppearancePlayerSleepTimer">Таймер сна</string>
     <string name="OEAppearancePlayerSleepTimerDesc">Автоматически останавливать воспроизведение через заданное время</string>
     <string name="OEAppearancePlayerSleepTimerRunning">Активен: осталось %1$s</string>
@@ -124,4 +127,17 @@
     <string name="OEAppearancePlayerSpeedReset">Сбросить (1.0×)</string>
     <string name="OEAppearancePlayerLyricsTranslating">Перевод текста...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Текст переведён</string>
+
+    <!-- Metrolist & YouTube Music -->
+    <string name="OEPlayerMetrolistHeader">YouTube Music и Metrolist</string>
+    <string name="OEPlayerMetrolistAuth">Авторизация</string>
+    <string name="OEPlayerMetrolistGuest">Гостевой режим</string>
+    <string name="OEPlayerMetrolistCookies">Вход по cookie (cookies.txt)</string>
+    <string name="OEPlayerMetrolistGoogle">Google аккаунт</string>
+    <string name="OEPlayerMetrolistCookieDialogTitle">Импорт cookies YouTube Music</string>
+    <string name="OEPlayerMetrolistCookieDialogHint">Вставьте cookies.txt или строку куки</string>
+    <string name="OEPlayerLoadingTrack">Загрузка трека...</string>
+    <string name="OEPlayerLoadError">Не удалось загрузить трек</string>
+    <string name="OEPlayerAddedToSaved">Сохранено в Избранное</string>
+    <string name="OEPlayerAddedToProfile">Сохранено в профиль</string>
 </resources>

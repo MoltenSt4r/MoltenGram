@@ -123,6 +123,25 @@ public class CoverImage extends BackupImageView {
             setImage(null, null, thumb, null, null, 0, 1, messageObject);
         } else {
             setImageDrawable(null);
+            if (app.exteraless.appearance.AppearanceConfig.playerVideoCover()) {
+                final MessageObject reqMsg = messageObject;
+                app.exteraless.metrolist.SongRecMatcher.getInstance().findVideoCover(reqMsg, new app.exteraless.metrolist.SongRecMatcher.MatchCallback() {
+                    @Override
+                    public void onMatched(String videoUrl, app.exteraless.metrolist.MetrolistClient.Track track) {
+                        if (reqMsg == message && track != null && !android.text.TextUtils.isEmpty(track.thumbnailUrl)) {
+                            org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> {
+                                if (reqMsg == message) {
+                                    setImage(track.thumbnailUrl, null, null);
+                                }
+                            });
+                        }
+                    }
+
+                    @Override
+                    public void onNotFound() {
+                    }
+                });
+            }
         }
     }
 

@@ -48,6 +48,10 @@ public class CustomCommandsActivity extends BaseFragment {
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
         actionBar.setAllowOverlayTitle(true);
         actionBar.setTitle(getString(R.string.CustomCommandsTitle));
+        if (actionBar.getTitleTextView() != null) {
+            actionBar.getTitleTextView().setTextSize(18);
+            actionBar.getTitleTextView().setScrollNonFitText(true);
+        }
         
         ActionBarMenuItem addMenu = actionBar.createMenu().addItem(ID_ADD, R.drawable.msg_add);
         addMenu.setContentDescription(getString(R.string.CustomCommandsAdd));
@@ -203,7 +207,8 @@ public class CustomCommandsActivity extends BaseFragment {
         descEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         descEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
         descEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        descEdit.setSingleLine(true);
+        descEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        descEdit.setMaxLines(3);
         if (existing != null && existing.description != null) {
             descEdit.setText(existing.description);
         }

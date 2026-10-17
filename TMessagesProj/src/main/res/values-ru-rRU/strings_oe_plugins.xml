@@ -311,7 +311,7 @@
     <string name="CustomCommandName">Команда</string>
     <string name="CustomCommandNameHint">например .id или .tagall</string>
     <string name="CustomCommandDesc">Описание</string>
-    <string name="CustomCommandDescHint">например Показывает ID пользователя</string>
+    <string name="CustomCommandDescHint">Описание команды</string>
     <string name="CustomCommandSave">Сохранить</string>
     <string name="CustomCommandCancel">Отмена</string>
 

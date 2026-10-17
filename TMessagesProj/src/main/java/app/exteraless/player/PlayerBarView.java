@@ -141,6 +141,12 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.messagePlayingProgressDidChanged) {
+            boolean paused = MediaController.getInstance().isMessagePaused();
+            boolean playing = !paused;
+            if (playButton.isPlaying() != playing) {
+                playButton.setPlaying(playing, true);
+                playButton.setContentDescription(getString(paused ? R.string.AccActionPlay : R.string.AccActionPause));
+            }
             playButton.progressChanged();
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;

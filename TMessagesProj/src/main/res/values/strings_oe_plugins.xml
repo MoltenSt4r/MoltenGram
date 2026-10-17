@@ -315,7 +315,7 @@ Source:
     <string name="CustomCommandName">Command</string>
     <string name="CustomCommandNameHint">e.g. .id or .tagall</string>
     <string name="CustomCommandDesc">Description</string>
-    <string name="CustomCommandDescHint">e.g. Shows user ID</string>
+    <string name="CustomCommandDescHint">Command description</string>
     <string name="CustomCommandSave">Save</string>
     <string name="CustomCommandCancel">Cancel</string>
 

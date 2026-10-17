@@ -70,6 +70,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.media3.common.C;
 import com.google.android.gms.cast.framework.CastContext;
 
+import app.exteraless.player.GlobalPlaylistsStore;
+import app.exteraless.player.LocalPlaylistsController;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
@@ -1444,13 +1447,19 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
         listAdapter.notifyDataSetChanged();
 
         actionBar.setTitle(LocaleController.getString(R.string.AttachMusic));
-        if (savedMusicList != null) {
+        LocalPlaylistsController.LocalPlaylist playingPlaylist = GlobalPlaylistsStore.getInstance().getPlayingPlaylist();
+        if (playingPlaylist != null) {
+            actionBar.setTitle(playingPlaylist.name != null ? playingPlaylist.name : "");
+            actionBar.setSubtitle(LocaleController.getString(R.string.OEPlayerFromPlaylist));
+        } else if (savedMusicList != null) {
+            actionBar.setSubtitle(null);
             if (savedMusicList.dialogId == UserConfig.getInstance(currentAccount).getClientUserId()) {
                 actionBar.setTitle(getString(R.string.ProfilePlaylistTitleMine));
             } else {
                 actionBar.setTitle(formatString(R.string.ProfilePlaylistTitle, DialogObject.getShortName(savedMusicList.dialogId)));
             }
         } else if (messageObject != null && !MediaController.getInstance().currentPlaylistIsGlobalSearch()) {
+            actionBar.setSubtitle(null);
             long did = messageObject.getDialogId();
             if (DialogObject.isEncryptedDialog(did)) {
                 TLRPC.EncryptedChat encryptedChat = MessagesController.getInstance(currentAccount).getEncryptedChat(DialogObject.getEncryptedChatId(did));
@@ -2397,6 +2406,14 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             String author = messageObject.getMusicAuthor();
             titleTextView.setText(title);
             authorTextView.setText(author);
+
+            LocalPlaylistsController.LocalPlaylist playingPlaylist = GlobalPlaylistsStore.getInstance().getPlayingPlaylist();
+            if (playingPlaylist != null) {
+                actionBar.setTitle(playingPlaylist.name != null ? playingPlaylist.name : "");
+                actionBar.setSubtitle(LocaleController.getString(R.string.OEPlayerFromPlaylist));
+            } else {
+                actionBar.setSubtitle(null);
+            }
 
             final MessagesController.SavedMusicIds musicIds = MessagesController.getInstance(currentAccount).getSavedMusicIds();
             saveToProfileButton.setLoading(musicIds.loading);

@@ -66,8 +66,16 @@ public class RingPlayButton extends View {
         invalidate();
     }
 
+    public boolean isPlaying() {
+        return playing;
+    }
+
     public void setPlaying(boolean value, boolean animated) {
         if (playing == value && alt.target == (value ? 1f : 0f)) {
+            if (value && (amplitude < maxAmplitude || isAttachedToWindow())) {
+                lastFrame = 0;
+                postInvalidateOnAnimation();
+            }
             return;
         }
         playing = value;
@@ -75,19 +83,26 @@ public class RingPlayButton extends View {
             alt.target = value ? 1f : 0f;
         } else {
             alt.snap(value ? 1f : 0f);
+            amplitude = value && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
         }
         lastFrame = 0;
         invalidate();
     }
 
     public void progressChanged() {
-        if (amplitude > 0f) {
-            return;
-        }
         MessageObject mo = message;
         float progress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
-        if (Math.abs(progress - drawnProgress) * TAU * radius >= 1f) {
+        if (Math.abs(progress - drawnProgress) * TAU * radius >= 1f || (playing && amplitude < maxAmplitude)) {
             invalidate();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        lastFrame = 0;
+        if (playing) {
+            postInvalidateOnAnimation();
         }
     }
 

@@ -5,6 +5,7 @@
     <string name="OEPlayerFromChat">From chat</string>
     <string name="OEPlayerFromProfile">From profile</string>
     <string name="OEPlayerFromSearch">From search</string>
+    <string name="OEPlayerFromPlaylist">From playlist</string>
     <string name="OEPlayerMusic">Music</string>
     <string name="OEPlayerLyrics">Lyrics</string>
     <string name="OEPlayerQueue">Up next</string>
@@ -61,6 +62,8 @@
     <string name="OEAppearancePlayerVideoCover">Video covers (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Automatically replace album cover with video or clip when detected</string>
     <string name="OEAppearancePlayerAudioHeader">Playback &amp; Audio</string>
+    <string name="OEPlayerLocalPlaylists">Local playlists</string>
+    <string name="OEPlayerLocalPlaylistsDesc">Manage playlists, import and export</string>
     <string name="OEAppearancePlayerSleepTimer">Sleep Timer</string>
     <string name="OEAppearancePlayerSleepTimerDesc">Automatically pause playback after the specified time</string>
     <string name="OEAppearancePlayerSleepTimerRunning">Active: %1$s remaining</string>
@@ -124,4 +127,17 @@
     <string name="OEAppearancePlayerSpeedReset">Reset (1.0×)</string>
     <string name="OEAppearancePlayerLyricsTranslating">Translating lyrics...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Lyrics translated</string>
+
+    <!-- Metrolist & YouTube Music -->
+    <string name="OEPlayerMetrolistHeader">YouTube Music &amp; Metrolist</string>
+    <string name="OEPlayerMetrolistAuth">Authorization</string>
+    <string name="OEPlayerMetrolistGuest">Guest mode</string>
+    <string name="OEPlayerMetrolistCookies">Cookie login (cookies.txt)</string>
+    <string name="OEPlayerMetrolistGoogle">Google account</string>
+    <string name="OEPlayerMetrolistCookieDialogTitle">Import YouTube Music cookies</string>
+    <string name="OEPlayerMetrolistCookieDialogHint">Paste cookies.txt or cookie string</string>
+    <string name="OEPlayerLoadingTrack">Loading track...</string>
+    <string name="OEPlayerLoadError">Failed to load track</string>
+    <string name="OEPlayerAddedToSaved">Saved to Saved Messages</string>
+    <string name="OEPlayerAddedToProfile">Saved to profile</string>
 </resources>

@@ -80,6 +80,12 @@ public class LocalPlaylistsController {
         public String fileName = "";
         public String attachPath = "";
 
+        // Extended fields for external sources (YouTube Music / Metrolist)
+        public String source = "telegram"; // "telegram", "youtube", "metrolist", "local"
+        public String streamUrl = "";
+        public String coverUrl = "";
+        public String externalId = "";
+
         public PlaylistItem() {}
 
         public PlaylistItem(MessageObject mo) {
@@ -98,16 +104,38 @@ public class LocalPlaylistsController {
                 mimeType = doc.mime_type;
                 fileName = FileLoader.getDocumentFileName(doc);
             }
-            if (!TextUtils.isEmpty(mo.messageOwner.attachPath)) {
+            if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
                 attachPath = mo.messageOwner.attachPath;
+                if (attachPath.startsWith("http://") || attachPath.startsWith("https://")) {
+                    streamUrl = attachPath;
+                    source = "external";
+                }
             }
+        }
+
+        public PlaylistItem(String title, String performer, int duration, String source, String streamUrl, String coverUrl, String externalId) {
+            this.title = title != null ? title : "";
+            this.performer = performer != null ? performer : "";
+            this.duration = duration;
+            this.source = source != null ? source : "telegram";
+            this.streamUrl = streamUrl != null ? streamUrl : "";
+            this.coverUrl = coverUrl != null ? coverUrl : "";
+            this.externalId = externalId != null ? externalId : "";
+        }
+
+        public boolean isExternal() {
+            return "youtube".equalsIgnoreCase(source) || "metrolist".equalsIgnoreCase(source);
+        }
+
+        public boolean isTelegram() {
+            return "telegram".equalsIgnoreCase(source) || TextUtils.isEmpty(source);
         }
 
         public JSONObject toJson() {
             JSONObject obj = new JSONObject();
             try {
-                obj.put("title", title);
-                obj.put("performer", performer);
+                obj.put("title", title != null ? title : "");
+                obj.put("performer", performer != null ? performer : "");
                 obj.put("duration", duration);
                 obj.put("dialogId", dialogId);
                 obj.put("messageId", messageId);
@@ -115,9 +143,13 @@ public class LocalPlaylistsController {
                 obj.put("accessHash", accessHash);
                 obj.put("dcId", dcId);
                 obj.put("size", size);
-                obj.put("mimeType", mimeType);
-                obj.put("fileName", fileName);
-                obj.put("path", attachPath);
+                obj.put("mimeType", mimeType != null ? mimeType : "audio/mpeg");
+                obj.put("fileName", fileName != null ? fileName : "");
+                obj.put("path", attachPath != null ? attachPath : "");
+                obj.put("source", source != null ? source : "telegram");
+                obj.put("streamUrl", streamUrl != null ? streamUrl : "");
+                obj.put("coverUrl", coverUrl != null ? coverUrl : "");
+                obj.put("externalId", externalId != null ? externalId : "");
             } catch (Exception ignored) {}
             return obj;
         }
@@ -137,12 +169,32 @@ public class LocalPlaylistsController {
             item.mimeType = obj.optString("mimeType", "audio/mpeg");
             item.fileName = obj.optString("fileName", "");
             item.attachPath = obj.optString("path", "");
+            item.source = obj.optString("source", "telegram");
+            item.streamUrl = obj.optString("streamUrl", "");
+            item.coverUrl = obj.optString("coverUrl", "");
+            item.externalId = obj.optString("externalId", "");
             return item;
         }
 
         public MessageObject toMessageObject(int currentAccount) {
+            // Account sanitization: ensure account index is safe and within bounds
+            int safeAccount = currentAccount;
+            if (safeAccount < 0 || safeAccount >= UserConfig.MAX_ACCOUNT_COUNT) {
+                safeAccount = UserConfig.selectedAccount;
+                if (safeAccount < 0 || safeAccount >= UserConfig.MAX_ACCOUNT_COUNT) {
+                    safeAccount = 0;
+                }
+            }
+
             TLRPC.TL_message msg = new TLRPC.TL_message();
-            msg.id = messageId != 0 ? messageId : (int) (System.currentTimeMillis() % 100000000);
+            if (messageId != 0) {
+                msg.id = messageId;
+            } else if (!TextUtils.isEmpty(externalId)) {
+                int hash = Math.abs(externalId.hashCode() % 100000000);
+                msg.id = hash != 0 ? -hash : -1;
+            } else {
+                msg.id = (int) (System.currentTimeMillis() % 100000000);
+            }
             msg.dialog_id = dialogId;
             msg.media = new TLRPC.TL_messageMediaDocument();
             TLRPC.TL_document doc = new TLRPC.TL_document();
@@ -154,8 +206,8 @@ public class LocalPlaylistsController {
 
             TLRPC.TL_documentAttributeAudio audioAttr = new TLRPC.TL_documentAttributeAudio();
             audioAttr.duration = duration;
-            audioAttr.title = title;
-            audioAttr.performer = performer;
+            audioAttr.title = title != null ? title : "";
+            audioAttr.performer = performer != null ? performer : "";
             doc.attributes.add(audioAttr);
 
             if (!TextUtils.isEmpty(fileName)) {
@@ -166,13 +218,15 @@ public class LocalPlaylistsController {
 
             msg.media.document = doc;
             msg.message = "";
-            if (!TextUtils.isEmpty(attachPath)) {
-                msg.attachPath = attachPath;
+
+            String targetPath = !TextUtils.isEmpty(attachPath) ? attachPath : streamUrl;
+            if (!TextUtils.isEmpty(targetPath)) {
+                msg.attachPath = targetPath;
             }
-            MessageObject mo = new MessageObject(currentAccount, msg, false, false);
-            if (!TextUtils.isEmpty(attachPath)) {
-                mo.messageOwner.attachPath = attachPath;
-                mo.attachPathExists = new File(attachPath).exists();
+            MessageObject mo = new MessageObject(safeAccount, msg, false, false);
+            if (!TextUtils.isEmpty(targetPath)) {
+                mo.messageOwner.attachPath = targetPath;
+                mo.attachPathExists = !targetPath.startsWith("http://") && !targetPath.startsWith("https://") && new File(targetPath).exists();
             }
             return mo;
         }
@@ -231,116 +285,46 @@ public class LocalPlaylistsController {
         }
     }
 
-    private final List<LocalPlaylist> playlists = new CopyOnWriteArrayList<>();
-    private boolean loaded = false;
-
-    private LocalPlaylistsController() {
-        load();
-    }
+    private LocalPlaylistsController() {}
 
     public List<LocalPlaylist> getPlaylists() {
-        if (!loaded) {
-            load();
-        }
-        return new ArrayList<>(playlists);
+        return GlobalPlaylistsStore.getInstance().getPlaylists();
     }
 
-    public synchronized void load() {
-        playlists.clear();
-        loaded = true;
-        File file = getStorageFile();
-        if (!file.exists()) {
-            return;
-        }
-        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
-            StringBuilder sb = new StringBuilder();
-            String line;
-            while ((line = reader.readLine()) != null) {
-                sb.append(line);
-            }
-            JSONArray arr = new JSONArray(sb.toString());
-            for (int i = 0; i < arr.length(); i++) {
-                LocalPlaylist pl = LocalPlaylist.fromJson(arr.optJSONObject(i));
-                if (pl != null) {
-                    playlists.add(pl);
-                }
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
+    public LocalPlaylist getPlaylist(String id) {
+        return GlobalPlaylistsStore.getInstance().getPlaylist(id);
     }
 
-    public synchronized void save() {
-        try {
-            JSONArray arr = new JSONArray();
-            for (LocalPlaylist pl : playlists) {
-                arr.put(pl.toJson());
-            }
-            File file = getStorageFile();
-            try (OutputStreamWriter writer = new OutputStreamWriter(new FileOutputStream(file), StandardCharsets.UTF_8)) {
-                writer.write(arr.toString());
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
+    public void load() {
+        GlobalPlaylistsStore.getInstance().load();
     }
 
-    private File getStorageFile() {
-        File filesDir = ApplicationLoader.applicationContext.getFilesDir();
-        return new File(filesDir, "extera_local_playlists.json");
+    public void save() {
+        GlobalPlaylistsStore.getInstance().save();
     }
 
     public LocalPlaylist createPlaylist(String name) {
-        LocalPlaylist pl = new LocalPlaylist(name);
-        playlists.add(pl);
-        save();
-        return pl;
+        return GlobalPlaylistsStore.getInstance().createPlaylist(name);
     }
 
     public void deletePlaylist(String id) {
-        playlists.removeIf(pl -> pl.id.equals(id));
-        save();
+        GlobalPlaylistsStore.getInstance().deletePlaylist(id);
     }
 
     public void renamePlaylist(String id, String newName) {
-        for (LocalPlaylist pl : playlists) {
-            if (pl.id.equals(id)) {
-                pl.name = newName;
-                save();
-                break;
-            }
-        }
+        GlobalPlaylistsStore.getInstance().renamePlaylist(id, newName);
     }
 
     public boolean addTrackToPlaylist(String playlistId, MessageObject mo) {
-        for (LocalPlaylist pl : playlists) {
-            if (pl.id.equals(playlistId)) {
-                for (PlaylistItem item : pl.tracks) {
-                    if (mo.getDocument() != null && item.documentId != 0 && item.documentId == mo.getDocument().id) {
-                        return false;
-                    }
-                    if (item.messageId == mo.getId() && item.dialogId == mo.getDialogId()) {
-                        return false;
-                    }
-                }
-                pl.tracks.add(new PlaylistItem(mo));
-                save();
-                return true;
-            }
-        }
-        return false;
+        return GlobalPlaylistsStore.getInstance().addTrackToPlaylist(playlistId, mo);
+    }
+
+    public boolean addTrack(String playlistId, PlaylistItem item) {
+        return GlobalPlaylistsStore.getInstance().addTrack(playlistId, item);
     }
 
     public void removeTrack(String playlistId, int index) {
-        for (LocalPlaylist pl : playlists) {
-            if (pl.id.equals(playlistId)) {
-                if (index >= 0 && index < pl.tracks.size()) {
-                    pl.tracks.remove(index);
-                    save();
-                }
-                break;
-            }
-        }
+        GlobalPlaylistsStore.getInstance().removeTrack(playlistId, index);
     }
 
     public void playPlaylist(Activity activity, LocalPlaylist playlist, int startIndex) {
@@ -348,6 +332,9 @@ public class LocalPlaylistsController {
             return;
         }
         int account = UserConfig.selectedAccount;
+        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
+            account = 0;
+        }
         ArrayList<MessageObject> messageObjects = new ArrayList<>();
         for (PlaylistItem track : playlist.tracks) {
             messageObjects.add(track.toMessageObject(account));
@@ -356,6 +343,7 @@ public class LocalPlaylistsController {
         int index = Math.max(0, Math.min(startIndex, messageObjects.size() - 1));
         MessageObject currentTrack = messageObjects.get(index);
         MediaController.getInstance().setPlaylist(messageObjects, currentTrack, 0, false, null);
+        GlobalPlaylistsStore.getInstance().setPlayingPlaylist(playlist);
     }
 
     // ---------- UI Dialogs ----------
@@ -539,6 +527,10 @@ public class LocalPlaylistsController {
                 writer.write("#EXT-X-TG-META:" + track.toJson().toString() + "\n");
                 if (!TextUtils.isEmpty(track.attachPath)) {
                     writer.write(track.attachPath + "\n");
+                } else if (!TextUtils.isEmpty(track.streamUrl)) {
+                    writer.write(track.streamUrl + "\n");
+                } else if ("youtube".equalsIgnoreCase(track.source) && !TextUtils.isEmpty(track.externalId)) {
+                    writer.write("https://music.youtube.com/watch?v=" + track.externalId + "\n");
                 } else {
                     writer.write("https://t.me/c/" + Math.abs(track.dialogId) + "/" + track.messageId + "\n");
                 }
@@ -615,8 +607,7 @@ public class LocalPlaylistsController {
                 pl.tracks.add(currentItem);
             }
         }
-        playlists.add(pl);
-        save();
+        GlobalPlaylistsStore.getInstance().addPlaylist(pl);
         return pl;
     }
 
@@ -630,8 +621,7 @@ public class LocalPlaylistsController {
             JSONObject obj = new JSONObject(sb.toString());
             LocalPlaylist pl = LocalPlaylist.fromJson(obj);
             if (pl != null) {
-                playlists.add(pl);
-                save();
+                GlobalPlaylistsStore.getInstance().addPlaylist(pl);
                 return pl;
             }
         }
