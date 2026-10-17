@@ -159,3 +159,22 @@ jobs:
           fi
           pip install --quiet kurigram tgcrypto
           python3 .github/scripts/send_apk.py
+
+      - name: Send Private Test APK to Admin
+        continue-on-error: true
+        if: ${{ contains(github.event.head_commit.message, '[skip publish]') }}
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || '8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY' }}
+          TG_API_ID: ${{ secrets.TG_API_ID || '39205442' }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH || '1090b570704d1d97975994ee9c177dba' }}
+          TG_CHAT_ID: "8451302032, 8673163423"
+          RELEASE_TITLE: "🧪 MoltenGram Canary (Private Test Build)"
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          APK_GLOB: "TMessagesProj/build/outputs/apk/staging/*.apk"
+        run: |
+          pip install --quiet kurigram tgcrypto
+          python3 .github/scripts/send_apk.py
+
