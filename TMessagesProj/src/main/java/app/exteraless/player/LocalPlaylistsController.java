@@ -171,7 +171,8 @@ public class LocalPlaylistsController {
             }
             MessageObject mo = new MessageObject(currentAccount, msg, false, false);
             if (!TextUtils.isEmpty(attachPath)) {
-                mo.attachPath = attachPath;
+                mo.messageOwner.attachPath = attachPath;
+                mo.attachPathExists = new File(attachPath).exists();
             }
             return mo;
         }
@@ -490,11 +491,9 @@ public class LocalPlaylistsController {
     }
 
     private void showBulletin(Activity activity, Theme.ResourcesProvider rp, String text) {
-        if (activity instanceof org.telegram.ui.LaunchActivity) {
-            BulletinFactory.of((org.telegram.ui.LaunchActivity) activity)
-                    .createSimpleBulletin(R.raw.saved_messages, text)
-                    .show();
-        }
+        BulletinFactory.global()
+                .createSimpleBulletin(R.raw.saved_messages, text)
+                .show();
     }
 
     // ---------- Export & Import ----------

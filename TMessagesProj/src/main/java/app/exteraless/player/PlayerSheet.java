@@ -1926,7 +1926,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             dismissImmediately();
             PlayerActions.showInChat(activity, mo);
         });
-        o.add(R.drawable.msg_playlist, getString(R.string.AudioAddToPlaylist), () -> {
+        o.add(R.drawable.baseline_playlist_add_24, getString(R.string.AudioAddToPlaylist), () -> {
             o.dismiss();
             LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
         });
