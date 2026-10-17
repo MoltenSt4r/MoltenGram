@@ -39,6 +39,14 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force || true
+          df -h
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
