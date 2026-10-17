@@ -556,7 +556,7 @@ object AppearanceConfig {
 
     @JvmField
     val playerLyricsKuGou =
-        addConfig("OEAppearancePlayerLyricsKuGou", ConfigItem.configTypeBool, false)
+        addConfig("OEAppearancePlayerLyricsKuGou", ConfigItem.configTypeBool, true)
 
     @JvmStatic
     fun playerLyricsKuGou(): Boolean {

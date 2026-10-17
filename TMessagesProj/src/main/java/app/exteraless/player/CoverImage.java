@@ -4,8 +4,10 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.RectF;
 
+import app.exteraless.appearance.Md3AvatarShapes;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.MessageObject;
 import org.telegram.ui.Components.BackupImageView;
@@ -25,6 +27,11 @@ public class CoverImage extends BackupImageView {
     private int fallbackSeed;
     private Listener listener;
 
+    private int shapeId = -1;
+    private Path shapePath;
+    private int lastW = -1;
+    private int lastH = -1;
+
     public CoverImage(Context context, int noteSizeDp) {
         super(context);
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
@@ -35,6 +42,24 @@ public class CoverImage extends BackupImageView {
         });
     }
 
+    public void setShapeId(int shapeId) {
+        if (this.shapeId != shapeId) {
+            this.shapeId = shapeId;
+            this.shapePath = null;
+            if (shapeId >= 0) {
+                setRoundRadius(0);
+                getImageReceiver().setRoundRadius(0);
+            } else {
+                setRoundRadius(radius);
+            }
+            invalidate();
+        }
+    }
+
+    public int getShapeId() {
+        return shapeId;
+    }
+
     public void setListener(int fallbackSeed, Listener listener) {
         this.fallbackSeed = fallbackSeed;
         this.listener = listener;
@@ -42,7 +67,12 @@ public class CoverImage extends BackupImageView {
 
     public void setRadius(int r) {
         radius = r;
-        setRoundRadius(r);
+        if (shapeId < 0) {
+            setRoundRadius(r);
+        } else {
+            setRoundRadius(0);
+            getImageReceiver().setRoundRadius(0);
+        }
         invalidate();
     }
 
@@ -156,12 +186,40 @@ public class CoverImage extends BackupImageView {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        final int w = getWidth();
+        final int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            super.onDraw(canvas);
+            return;
+        }
+
+        final boolean hasShape = shapeId >= 0;
+        if (hasShape) {
+            getImageReceiver().setRoundRadius(0);
+            if (shapePath == null || lastW != w || lastH != h) {
+                lastW = w;
+                lastH = h;
+                shapePath = Md3AvatarShapes.getShapePath(shapeId, 0, 0, w, h);
+            }
+            canvas.save();
+            canvas.clipPath(shapePath);
+        }
+
         if (!getImageReceiver().hasBitmapImage()) {
-            rect.set(0, 0, getWidth(), getHeight());
-            canvas.drawRoundRect(rect, radius, radius, placeholderPaint);
-            note.setBounds(0, 0, getWidth(), getHeight());
+            if (hasShape && shapePath != null) {
+                canvas.drawPath(shapePath, placeholderPaint);
+            } else {
+                rect.set(0, 0, w, h);
+                canvas.drawRoundRect(rect, radius, radius, placeholderPaint);
+            }
+            note.setBounds(0, 0, w, h);
             note.draw(canvas);
         }
+
         super.onDraw(canvas);
+
+        if (hasShape) {
+            canvas.restore();
+        }
     }
 }

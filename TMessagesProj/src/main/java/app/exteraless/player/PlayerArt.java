@@ -4,6 +4,7 @@ import android.graphics.Bitmap;
 import android.text.TextUtils;
 import android.util.LruCache;
 
+import app.exteraless.appearance.Md3AvatarShapes;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
@@ -21,8 +22,46 @@ public final class PlayerArt {
         void onSeed(int seed);
     }
 
+    public static final int[] MD3_EXPRESSIVE_SHAPES = new int[] {
+        Md3AvatarShapes.SHAPE_SQUARE,         // 1: Squircle
+        Md3AvatarShapes.SHAPE_COOKIE_4,       // 16: 4-sided cookie
+        Md3AvatarShapes.SHAPE_SUNNY,          // 14: Sunny (rounded star)
+        Md3AvatarShapes.SHAPE_CLOVER_4,       // 21: 4-leaf clover
+        Md3AvatarShapes.SHAPE_PILL,           // 6: Pill
+        Md3AvatarShapes.SHAPE_FLOWER,         // 27: 8-petal flower
+        Md3AvatarShapes.SHAPE_PUFFY_DIAMOND,  // 29: Puffy diamond
+        Md3AvatarShapes.SHAPE_HEART,          // 34: Heart
+        Md3AvatarShapes.SHAPE_GEM,            // 13: Gem
+        Md3AvatarShapes.SHAPE_CLAMSHELL,      // 11: Clamshell
+        Md3AvatarShapes.SHAPE_ARCH,           // 3: Arch
+        Md3AvatarShapes.SHAPE_SOFT_BURST,     // 24: Soft burst
+        Md3AvatarShapes.SHAPE_COOKIE_6,       // 17: 6-sided cookie
+        Md3AvatarShapes.SHAPE_CLOVER_8,       // 22: 8-leaf clover
+        Md3AvatarShapes.SHAPE_BUN,            // 33: Bun
+        Md3AvatarShapes.SHAPE_VERY_SUNNY      // 15: Very sunny
+    };
+
+    private static int shapeCycleIndex = 0;
+    private static final LruCache<String, Integer> trackShapes = new LruCache<>(64);
     private static final LruCache<String, Integer> seeds = new LruCache<>(64);
     private static final ArrayList<Pending> pending = new ArrayList<>();
+
+    public static synchronized int getOrCycleShape(MessageObject messageObject) {
+        if (messageObject == null) {
+            return MD3_EXPRESSIVE_SHAPES[0];
+        }
+        String key = key(messageObject);
+        if (key == null) {
+            return MD3_EXPRESSIVE_SHAPES[0];
+        }
+        Integer cached = trackShapes.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        int shape = MD3_EXPRESSIVE_SHAPES[(shapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+        trackShapes.put(key, shape);
+        return shape;
+    }
 
     private static final class Pending {
         final String key;

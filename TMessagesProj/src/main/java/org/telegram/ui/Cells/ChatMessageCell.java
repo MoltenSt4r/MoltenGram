@@ -10380,7 +10380,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 backgroundWidth = getWideChannelPostBackgroundWidth(messageObject, false);
                                 photoWidth = WideChannelPostLayout.mediaContentWidth(backgroundWidth, false);
                             } else {
-                                int availableWidth = Math.min(getParentWidth() - (isChat ? dp(56) : dp(24)), (int) (AndroidUtilities.displaySize.x * 0.88f));
+                                int maxAllowed = getParentWidth() - (isChat ? dp(56) : dp(24));
+                                int availableWidth;
+                                if (currentMessagesGroup != null && currentMessagesGroup.messages != null && currentMessagesGroup.messages.size() == 2) {
+                                    int preferredWidth = Math.min((int) (AndroidUtilities.displaySize.x * 0.72f), AndroidUtilities.dp(290));
+                                    availableWidth = maxAllowed > 0 ? Math.min(maxAllowed, preferredWidth) : preferredWidth;
+                                } else {
+                                    availableWidth = Math.min(maxAllowed, (int) (AndroidUtilities.displaySize.x * 0.88f));
+                                }
                                 if (availableWidth <= 0) {
                                     availableWidth = AndroidUtilities.dp(300);
                                 }

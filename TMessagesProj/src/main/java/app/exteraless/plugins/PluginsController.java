@@ -2382,17 +2382,6 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             }
         }
 
-        if (results.isEmpty() && isEngineEnabled()) {
-            String[] defaultCmds = new String[]{"ping", "help", "info", "id", "restart", "eval", "exec", "calc"};
-            String[] defaultHelp = new String[]{"Check latency & uptime", "Plugin help menu", "Show info", "Show chat / user ID", "Restart client / engine", "Evaluate expression", "Execute code", "Calculate expression"};
-            for (int i = 0; i < defaultCmds.length; i++) {
-                String cmdName = defaultCmds[i];
-                if ((cmdName.startsWith(q) || (prefix + cmdName).startsWith(q)) && seen.add(cmdName)) {
-                    results.add(new PluginCommand(cmdName, defaultHelp[i], "core", "Plugin"));
-                }
-            }
-        }
-
         results.sort((a, b) -> a.getCleanCommand().compareToIgnoreCase(b.getCleanCommand()));
         return results;
     }
@@ -2451,21 +2440,21 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 }
 
                 java.util.regex.Pattern swPattern = java.util.regex.Pattern.compile(
-                        "startswith\\s*\\(\\s*[\"']([.!?,/$][a-zA-Z0-9_-]{2,32})[\"']");
+                        "startswith\\s*\\(\\s*[\"']([.!?,/$][a-zA-Z0-9_-]{1,32})[\"']");
                 java.util.regex.Matcher swMatcher = swPattern.matcher(content);
                 while (swMatcher.find()) {
                     registerPluginCommand(plugin.id, swMatcher.group(1), "");
                 }
 
                 java.util.regex.Pattern cmdPattern = java.util.regex.Pattern.compile(
-                        "(?:@command|@loader\\.command|@cmd)\\s*\\(\\s*[\"']([a-zA-Z0-9_-]{2,32})[\"']");
+                        "(?:@command|@loader\\.command|@cmd)\\s*\\(\\s*[\"']([a-zA-Z0-9_-]{1,32})[\"']");
                 java.util.regex.Matcher cmdMatcher = cmdPattern.matcher(content);
                 while (cmdMatcher.find()) {
                     registerPluginCommand(plugin.id, cmdMatcher.group(1), "");
                 }
 
                 java.util.regex.Pattern dotPattern = java.util.regex.Pattern.compile(
-                        "[\"'](\\.[a-zA-Z][a-zA-Z0-9_-]{1,31})[\"']");
+                        "[\"'](\\.[a-zA-Z][a-zA-Z0-9_-]{0,31})[\"']");
                 java.util.regex.Matcher dotMatcher = dotPattern.matcher(content);
                 while (dotMatcher.find()) {
                     String candidate = dotMatcher.group(1);

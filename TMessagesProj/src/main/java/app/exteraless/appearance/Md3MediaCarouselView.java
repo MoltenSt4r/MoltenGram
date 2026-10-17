@@ -17,8 +17,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.carousel.Carousel;
 import com.google.android.material.carousel.CarouselLayoutManager;
 import com.google.android.material.carousel.CarouselSnapHelper;
+import com.google.android.material.carousel.CarouselStrategy;
+import com.google.android.material.carousel.KeylineState;
 import com.google.android.material.carousel.MaskableFrameLayout;
 import com.google.android.material.carousel.MultiBrowseCarouselStrategy;
 import com.google.android.material.shape.ShapeAppearanceModel;
@@ -38,13 +41,17 @@ import java.util.Locale;
 
 /**
  * Material Design 3 Carousel view for displaying grouped photos and videos (albums).
- * Implemented using CarouselLayoutManager and MultiBrowseCarouselStrategy from Material Components.
+ * Implemented using CarouselLayoutManager with MultiBrowseCarouselStrategy and TwoPhotoCarouselStrategy from Material Components.
  */
 public class Md3MediaCarouselView extends FrameLayout {
 
     private final RecyclerView recyclerView;
     private final CarouselAdapter adapter;
     private final ArrayList<MessageObject> messages = new ArrayList<>();
+    private final CarouselLayoutManager layoutManager;
+    private final MultiBrowseCarouselStrategy multiBrowseStrategy = new MultiBrowseCarouselStrategy();
+    private final TwoPhotoCarouselStrategy twoPhotoStrategy = new TwoPhotoCarouselStrategy();
+    private CarouselStrategy currentStrategy;
     private ChatMessageCell parentCell;
     private long currentGroupId = 0;
     private boolean isHorizontalDrag;
@@ -68,17 +75,24 @@ public class Md3MediaCarouselView extends FrameLayout {
                     startY = e.getY();
                     isHorizontalDrag = false;
                     ViewParent p = getParent();
-                    if (p != null) {
+                    if (p != null && (canScrollHorizontally(1) || canScrollHorizontally(-1))) {
                         p.requestDisallowInterceptTouchEvent(true);
                     }
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     float dx = Math.abs(e.getX() - startX);
                     float dy = Math.abs(e.getY() - startY);
                     if (dx > dy && dx > AndroidUtilities.touchSlop) {
-                        isHorizontalDrag = true;
-                        ViewParent p = getParent();
-                        if (p != null) {
-                            p.requestDisallowInterceptTouchEvent(true);
+                        if (canScrollHorizontally(1) || canScrollHorizontally(-1)) {
+                            isHorizontalDrag = true;
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(true);
+                            }
+                        } else {
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(false);
+                            }
                         }
                     } else if (dy > dx && dy > AndroidUtilities.touchSlop && !isHorizontalDrag) {
                         ViewParent p = getParent();
@@ -103,10 +117,12 @@ public class Md3MediaCarouselView extends FrameLayout {
                     float dx = Math.abs(e.getX() - startX);
                     float dy = Math.abs(e.getY() - startY);
                     if (dx > dy && dx > AndroidUtilities.touchSlop) {
-                        isHorizontalDrag = true;
-                        ViewParent p = getParent();
-                        if (p != null) {
-                            p.requestDisallowInterceptTouchEvent(true);
+                        if (canScrollHorizontally(1) || canScrollHorizontally(-1)) {
+                            isHorizontalDrag = true;
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(true);
+                            }
                         }
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
@@ -122,7 +138,8 @@ public class Md3MediaCarouselView extends FrameLayout {
         recyclerView.setClipToPadding(false);
         recyclerView.setClipChildren(false);
 
-        CarouselLayoutManager layoutManager = new CarouselLayoutManager(new MultiBrowseCarouselStrategy());
+        currentStrategy = multiBrowseStrategy;
+        layoutManager = new CarouselLayoutManager(multiBrowseStrategy);
         layoutManager.setCarouselAlignment(CarouselLayoutManager.ALIGNMENT_START);
         recyclerView.setLayoutManager(layoutManager);
 
@@ -154,8 +171,38 @@ public class Md3MediaCarouselView extends FrameLayout {
             } else {
                 messages.addAll(group.messages);
             }
+            updateCarouselStrategy();
             adapter.notifyDataSetChanged();
             recyclerView.scrollToPosition(0);
+        } else {
+            updateCarouselStrategy();
+        }
+    }
+
+    private void updateCarouselStrategy() {
+        CarouselStrategy targetStrategy = messages.size() == 2 ? twoPhotoStrategy : multiBrowseStrategy;
+        if (currentStrategy != targetStrategy) {
+            currentStrategy = targetStrategy;
+            layoutManager.setCarouselStrategy(targetStrategy);
+        }
+    }
+
+    private static class TwoPhotoCarouselStrategy extends CarouselStrategy {
+
+        @NonNull
+        @Override
+        public KeylineState onFirstChildMeasuredWithMargins(@NonNull Carousel carousel, @NonNull View child) {
+            int containerWidth = carousel.getContainerWidth();
+            ViewGroup.MarginLayoutParams lp = child.getLayoutParams() instanceof ViewGroup.MarginLayoutParams
+                    ? (ViewGroup.MarginLayoutParams) child.getLayoutParams()
+                    : null;
+            int leftMargin = lp != null ? lp.leftMargin : AndroidUtilities.dp(4);
+            float itemSize = Math.max(1f, (containerWidth - AndroidUtilities.dp(16)) / 2f);
+            float firstCenter = leftMargin + itemSize / 2f;
+
+            return new KeylineState.Builder(itemSize, containerWidth)
+                    .addKeylineRange(firstCenter, 0f, itemSize, 2, true)
+                    .build();
         }
     }
 
