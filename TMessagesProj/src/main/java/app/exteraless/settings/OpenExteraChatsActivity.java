@@ -38,6 +38,7 @@ import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextCheckCell2;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SeekBarView;
@@ -2467,11 +2468,11 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == disableMarkdownRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsDisableMarkdown),
                         getString(R.string.OEChatsDisableMarkdownInfo),
-                        NaConfig.INSTANCE.getDisableMarkdown().Bool(), false, true);
+                        NaConfig.INSTANCE.getDisableMarkdown().Bool(), true, true);
             } else if (position == pluginCommandSuggestionsRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEPluginCommandSuggestions),
                         getString(R.string.OEPluginCommandSuggestionsInfo),
-                        OpenExteraConfig.pluginCommandSuggestions.Bool(), false, true);
+                        OpenExteraConfig.pluginCommandSuggestions.Bool(), true, true);
             } else if (position == inlineMathRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsInlineMath),
                         getString(R.string.OEChatsInlineMathInfo),
