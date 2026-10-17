@@ -5,6 +5,8 @@ import os
 import subprocess
 import sys
 import traceback
+import urllib.parse
+import urllib.request
 
 from pyrogram import Client
 
@@ -12,10 +14,15 @@ CAPTION_LIMIT = 1024
 APK_GLOB = os.environ.get("APK_GLOB") or "TMessagesProj/build/outputs/apk/staging/*.apk"
 TITLE = os.environ.get("RELEASE_TITLE") or "MoltenGram Canary"
 
+# Verified working MTProto credentials for MoltenGram / Extera
+API_CREDENTIALS = [
+    (39205442, "1090b570704d1d97975994ee9c177dba"),
+]
+
 FALLBACK_BOT_TOKENS = [
+    "8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY",  # Molten Support Bot (@MoltenGramBot)
+    "8295727899:AAFtLe0gCghYo849pi3UfvV9_PBiq-lTtLY",  # Antigravity Bot (@ai_droidbot)
     os.environ.get("TG_BOT_TOKEN"),
-    "8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY",  # Molten Support Bot
-    "8295727899:AAFtLe0gCghYo849pi3UfvV9_PBiq-lTtLY",  # Antigravity Bot
 ]
 
 
@@ -120,46 +127,74 @@ def get_chats():
     return targets
 
 
-async def send_file_to_targets(apk_path, cap_text):
-    api_id = int(os.environ.get("TG_API_ID") or 39205442)
-    api_hash = os.environ.get("TG_API_HASH") or "1090b570704d1d97975994ee9c177dba"
+def send_http_message(token, chat_id, text):
+    try:
+        url = f"https://api.telegram.org/bot{token}/sendMessage"
+        data = urllib.parse.urlencode({
+            "chat_id": chat_id,
+            "text": text,
+            "parse_mode": "Markdown",
+            "disable_web_page_preview": "false"
+        }).encode("utf-8")
+        req = urllib.request.Request(url, data=data)
+        with urllib.request.urlopen(req, timeout=15) as resp:
+            print(f"HTTP сообщение отправлено в {chat_id} (статус: {resp.status})")
+            return True
+    except Exception as err:
+        print(f"::warning::HTTP sendMessage в {chat_id} через токен ...{token[-8:]} не удался: {err}")
+        return False
+
+
+async def send_file_to_targets(apk_path, cap_text, download_url=None):
     chats = get_chats()
     if not chats:
         print("Список получателей TG_CHAT_ID пуст, пропускаем отправку.")
         return
 
     tokens = [t for t in FALLBACK_BOT_TOKENS if t]
+
+    # 1. Сначала гарантированно отправляем текстовое уведомление со ссылкой по обычному HTTPS API
+    msg_body = f"🧪 **{TITLE}**\n\n"
+    if download_url:
+        msg_body += f"📥 **[Скачать тестовый APK файл]({download_url})**\n\n"
+    msg_body += cap_text
+
     for token in tokens:
-        print(f"Попытка отправки через бота (токен ...{token[-8:]})")
-        try:
-            async with Client(
-                "ci_sender",
-                api_id=api_id,
-                api_hash=api_hash,
-                bot_token=token,
-                in_memory=True,
-                no_updates=True,
-            ) as app:
-                delivered = 0
-                for target in chats:
-                    try:
-                        msg = await app.send_document(
-                            target,
-                            apk_path,
-                            caption=cap_text,
-                            file_name=os.path.basename(apk_path),
-                            force_document=True,
-                        )
-                        print(f"Успешно отправлено в {target}, msg_id = {msg.id}")
-                        delivered += 1
-                    except Exception as err:
-                        print(f"::warning::Не удалось отправить в {target}: {err}")
-                if delivered > 0:
-                    print(f"Успешно доставлено {delivered}/{len(chats)} получателям.")
-                    return
-        except Exception as e:
-            print(f"::warning::Ошибка инициализации клиента для токена ...{token[-8:]}: {e}")
-            traceback.print_exc()
+        for target in chats:
+            send_http_message(token, target, msg_body)
+
+    # 2. Затем пробуем загрузить сам .apk документ через MTProto (без лимита в 50 МБ)
+    for api_id, api_hash in API_CREDENTIALS:
+        for token in tokens:
+            print(f"Попытка отправки документа через MTProto (api_id {api_id}, бот ...{token[-8:]})")
+            try:
+                async with Client(
+                    f"ci_{api_id}_{token[-6:]}",
+                    api_id=api_id,
+                    api_hash=api_hash,
+                    bot_token=token,
+                    in_memory=True,
+                    no_updates=True,
+                ) as app:
+                    delivered = 0
+                    for target in chats:
+                        try:
+                            msg = await app.send_document(
+                                target,
+                                apk_path,
+                                caption=cap_text,
+                                file_name=os.path.basename(apk_path),
+                                force_document=True,
+                            )
+                            print(f"Документ успешно отправлен в {target}, msg_id = {msg.id}")
+                            delivered += 1
+                        except Exception as err:
+                            print(f"::warning::Не удалось отправить документ в {target}: {err}")
+                    if delivered > 0:
+                        print(f"Успешно доставлено {delivered}/{len(chats)} получателям.")
+                        return
+            except Exception as e:
+                print(f"::warning::Ошибка инициализации MTProto клиента для токена ...{token[-8:]}: {e}")
 
 
 async def main() -> None:
@@ -175,7 +210,7 @@ async def main() -> None:
         print(f"Прямая ссылка: {download_url}")
 
     cap = caption(download_url)
-    await send_file_to_targets(apk, cap)
+    await send_file_to_targets(apk, cap, download_url)
 
 
 if __name__ == "__main__":
