@@ -302,4 +302,46 @@ Source:
     <string name="ShizukuApplyingUpdate">Applying update… App will restart</string>
     <string name="ShizukuInstallSuccess">Update installed successfully!</string>
     <string name="ShizukuInstallFailed">Shizuku install failed: %s</string>
+
+    <!-- Custom Autocomplete Commands -->
+    <string name="CustomCommandsTitle">Custom Commands</string>
+    <string name="CustomCommandsDesc">User-defined command suggestions for autocomplete (.id, .tagall, etc.)</string>
+    <string name="CustomCommandsAdd">Add Command</string>
+    <string name="CustomCommandsEdit">Edit Command</string>
+    <string name="CustomCommandsDelete">Delete Command</string>
+    <string name="CustomCommandsDeleteConfirm">Delete this custom command?</string>
+    <string name="CustomCommandsEmpty">No custom commands yet</string>
+    <string name="CustomCommandsEmptyDesc">Add custom commands with descriptions to quickly autocomplete them in chats.</string>
+    <string name="CustomCommandName">Command</string>
+    <string name="CustomCommandNameHint">e.g. .id or .tagall</string>
+    <string name="CustomCommandDesc">Description</string>
+    <string name="CustomCommandDescHint">e.g. Shows user ID</string>
+    <string name="CustomCommandSave">Save</string>
+    <string name="CustomCommandCancel">Cancel</string>
+
+    <!-- Local Playlists -->
+    <string name="AudioPlaylists">Playlists</string>
+    <string name="AudioMyPlaylists">My Playlists</string>
+    <string name="AudioAddToPlaylist">Add to Playlist</string>
+    <string name="AudioNewPlaylist">New Playlist</string>
+    <string name="AudioPlaylistName">Playlist Name</string>
+    <string name="AudioPlaylistNameHint">e.g. Favorites or Workout</string>
+    <string name="AudioPlaylistCreated">Playlist created</string>
+    <string name="AudioPlaylistDeleted">Playlist deleted</string>
+    <string name="AudioPlaylistAdded">Track added to playlist</string>
+    <string name="AudioPlaylistAlreadyExists">Track already in playlist</string>
+    <string name="AudioPlaylistExport">Export Playlist</string>
+    <string name="AudioPlaylistExportM3U8">Export as M3U8</string>
+    <string name="AudioPlaylistExportJson">Export as .mplaylist</string>
+    <string name="AudioPlaylistImport">Import Playlist</string>
+    <string name="AudioPlaylistImportSuccess">Imported playlist: %s</string>
+    <string name="AudioPlaylistImportError">Failed to import playlist</string>
+    <string name="AudioPlaylistEmpty">No tracks in this playlist</string>
+    <string name="AudioPlaylistsEmpty">No playlists yet</string>
+    <string name="AudioPlaylistsEmptyDesc">Create playlists from the audio player to organize your music.</string>
+    <string name="AudioPlaylistPlay">Play</string>
+    <string name="AudioPlaylistDelete">Delete Playlist</string>
+    <string name="AudioPlaylistDeleteConfirm">Delete playlist “%s”?</string>
+    <string name="AudioPlaylistRemoveTrack">Remove Track</string>
+    <string name="AudioPlaylistTracksCount">%d tracks</string>
 </resources>

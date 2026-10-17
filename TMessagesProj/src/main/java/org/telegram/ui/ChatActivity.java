@@ -21338,11 +21338,21 @@ public class ChatActivity extends BaseFragment implements
                 if (messageObject != null) {
                     ChatMessageCell cell = (ChatMessageCell) view;
                     MessageObject message = cell.getMessageObject();
-                    if (message != null && message.getId() == messageObject.getId()) {
-                        if (message.pollMediaMapping != null && index >= 0 && index < message.pollMediaMapping.size()) {
-                            imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(index));
+                    if (message != null && (message.getId() == messageObject.getId() || cell.containsCarouselMessage(messageObject))) {
+                        int effectiveIndex = index;
+                        if (cell.isMediaCarouselMessage()) {
+                            int carouselIdx = cell.getCarouselMessageIndex(messageObject);
+                            if (carouselIdx >= 0) {
+                                effectiveIndex = carouselIdx;
+                            }
+                        }
+                        if (message.pollMediaMapping != null && effectiveIndex >= 0 && effectiveIndex < message.pollMediaMapping.size()) {
+                            imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(effectiveIndex));
                         } else {
-                            imageReceiver = cell.getPhotoImage(index);
+                            imageReceiver = cell.getPhotoImage(effectiveIndex);
+                        }
+                        if (imageReceiver != null) {
+                            index = effectiveIndex;
                         }
                     }
                 }
@@ -21373,14 +21383,21 @@ public class ChatActivity extends BaseFragment implements
             }
 
             if (imageReceiver != null) {
+                View targetView = view;
+                if (view instanceof ChatMessageCell) {
+                    View carouselItem = ((ChatMessageCell) view).getCarouselItemView(index);
+                    if (carouselItem != null) {
+                        targetView = carouselItem;
+                    }
+                }
                 if (onlyIfVisible && view.getY() + imageReceiver.getImageY2() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
                     return null;
                 }
                 int[] coords = new int[2];
-                view.getLocationInWindow(coords);
+                targetView.getLocationInWindow(coords);
                 PhotoViewer.PlaceProviderObject object = new PhotoViewer.PlaceProviderObject();
                 object.viewX = coords[0];
-                object.viewY = coords[1] - 0 + view.getPaddingTop();
+                object.viewY = coords[1] - 0 + targetView.getPaddingTop();
                 object.parentView = chatListView;
                 object.animatingImageView = null;
                 object.imageReceiver = imageReceiver;
@@ -44524,6 +44541,9 @@ public class ChatActivity extends BaseFragment implements
                         handled = true;
                     }
                     if (!handled) {
+                        if (app.exteraless.player.LocalPlaylistsController.getInstance().handlePlaylistFileClick(ChatActivity.this, message)) {
+                            return;
+                        }
                         try {
                             AndroidUtilities.openForView(message, getParentActivity(), themeDelegate, false);
                         } catch (Exception e) {
@@ -44885,6 +44905,9 @@ public class ChatActivity extends BaseFragment implements
                         PhotoViewer.getInstance().setParentActivity(ChatActivity.this, themeDelegate);
                         PhotoViewer.getInstance().openPhoto(message, ChatActivity.this, message.type != 0 ? dialog_id : 0, message.type != 0 ? mergeDialogId : 0, message.type != 0 ? getTopicId() : 0, photoViewerProvider);
                         handled = true;
+                    }
+                    if (app.exteraless.player.LocalPlaylistsController.getInstance().handlePlaylistFileClick(ChatActivity.this, message)) {
+                        return;
                     }
                     if (MarkdownParser.isMarkdown(message)) {
                         parseMarkdownAsync(message);

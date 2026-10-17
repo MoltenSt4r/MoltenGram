@@ -29,6 +29,7 @@ import com.google.android.material.shape.ShapeAppearanceModel;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
@@ -179,6 +180,54 @@ public class Md3MediaCarouselView extends FrameLayout {
         }
     }
 
+    public View getItemView(int index) {
+        if (recyclerView != null) {
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
+            if (holder != null) {
+                return holder.itemView;
+            }
+            if (recyclerView.getLayoutManager() != null) {
+                return recyclerView.getLayoutManager().findViewByPosition(index);
+            }
+        }
+        return null;
+    }
+
+    public ImageReceiver getImageReceiver(int index) {
+        if (recyclerView != null) {
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
+            if (holder instanceof CarouselViewHolder) {
+                return ((CarouselViewHolder) holder).imageView.getImageReceiver();
+            }
+            if (recyclerView.getLayoutManager() != null) {
+                View v = recyclerView.getLayoutManager().findViewByPosition(index);
+                if (v != null) {
+                    RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(v);
+                    if (vh instanceof CarouselViewHolder) {
+                        return ((CarouselViewHolder) vh).imageView.getImageReceiver();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public int indexOf(MessageObject message) {
+        if (message == null || messages.isEmpty()) {
+            return -1;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            if (messages.get(i).getId() == message.getId()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public boolean containsMessage(MessageObject message) {
+        return indexOf(message) >= 0;
+    }
+
     private void updateCarouselStrategy() {
         CarouselStrategy targetStrategy = messages.size() == 2 ? twoPhotoStrategy : multiBrowseStrategy;
         if (currentStrategy != targetStrategy) {
@@ -224,7 +273,7 @@ public class Md3MediaCarouselView extends FrameLayout {
             frameLayout.setShapeAppearanceModel(shapeModel);
 
             BackupImageView imageView = new BackupImageView(parent.getContext());
-            imageView.setRoundRadius(0);
+            imageView.setRoundRadius(AndroidUtilities.dp(16));
             imageView.getImageReceiver().setAspectFit(false);
             frameLayout.addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 

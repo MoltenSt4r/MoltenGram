@@ -169,6 +169,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int disableMarkdownRow;
     private int pluginCommandSuggestionsRow;
     private int pluginCommandPrefixesRow;
+    private int customCommandsRow;
     private int inlineMathRow;
     private int inlineMathCurrencyRow;
     private int hideSendAsPeerRow;
@@ -408,6 +409,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         disableMarkdownRow = addRow("disableMarkdown");
         pluginCommandSuggestionsRow = addRow("pluginCommandSuggestions");
         pluginCommandPrefixesRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("pluginCommandPrefixes") : -1;
+        customCommandsRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("customCommands") : -1;
         inlineMathRow = addRow("inlineMathResult");
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
         hideSendAsPeerRow = addRow("hideSendAsPeer");
@@ -1592,6 +1594,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
             showDialog(builder.create());
             return;
+        } else if (position == customCommandsRow) {
+            presentFragment(new app.exteraless.plugins.ui.CustomCommandsActivity());
+            return;
         }
 
         if (position == tapToSwitchRecordRow) {
@@ -1636,9 +1641,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             updateRows();
             if (listAdapter != null) {
                 if (wasPrefixesRow != -1 && pluginCommandPrefixesRow == -1) {
-                    listAdapter.notifyItemRemoved(wasPrefixesRow);
+                    listAdapter.notifyItemRangeRemoved(wasPrefixesRow, 2);
                 } else if (wasPrefixesRow == -1 && pluginCommandPrefixesRow != -1) {
-                    listAdapter.notifyItemInserted(pluginCommandPrefixesRow);
+                    listAdapter.notifyItemRangeInserted(pluginCommandPrefixesRow, 2);
                 }
             }
         } else if (position == hideTimeOnStickersRow && stickerSizeCell != null) {
@@ -2648,6 +2653,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == pluginCommandPrefixesRow) {
                 cell.setTextAndValue(getString(R.string.OEPluginCommandPrefixes),
                         OpenExteraConfig.pluginCommandPrefixes(), true);
+            } else if (position == customCommandsRow) {
+                cell.setText(getString(R.string.CustomCommandsTitle), false);
             }
         }
 
@@ -2739,7 +2746,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || position == cloudflareCredentialsRow || position == geminiApiKeyRow
                     || position == openAiCredentialsRow || position == voskModelsRow
                     || position == textAnimationRow || position == trackingFilterRow
-                    || position == pluginCommandPrefixesRow;
+                    || position == pluginCommandPrefixesRow || position == customCommandsRow;
         }
     }
 }

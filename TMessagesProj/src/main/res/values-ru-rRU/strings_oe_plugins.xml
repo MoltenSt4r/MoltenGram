@@ -298,4 +298,46 @@
     <string name="ShizukuApplyingUpdate">Применение обновления… Приложение сейчас перезапустится</string>
     <string name="ShizukuInstallSuccess">Обновление успешно установлено!</string>
     <string name="ShizukuInstallFailed">Ошибка установки через Shizuku: %s</string>
+
+    <!-- Custom Autocomplete Commands -->
+    <string name="CustomCommandsTitle">Пользовательские команды</string>
+    <string name="CustomCommandsDesc">Собственные подсказки команд для автодополнения (.id, .tagall и т.д.)</string>
+    <string name="CustomCommandsAdd">Добавить команду</string>
+    <string name="CustomCommandsEdit">Изменить команду</string>
+    <string name="CustomCommandsDelete">Удалить команду</string>
+    <string name="CustomCommandsDeleteConfirm">Удалить эту команду?</string>
+    <string name="CustomCommandsEmpty">Нет пользовательских команд</string>
+    <string name="CustomCommandsEmptyDesc">Добавьте команды с описанием для быстрого автодополнения в чатах.</string>
+    <string name="CustomCommandName">Команда</string>
+    <string name="CustomCommandNameHint">например .id или .tagall</string>
+    <string name="CustomCommandDesc">Описание</string>
+    <string name="CustomCommandDescHint">например Показывает ID пользователя</string>
+    <string name="CustomCommandSave">Сохранить</string>
+    <string name="CustomCommandCancel">Отмена</string>
+
+    <!-- Local Playlists -->
+    <string name="AudioPlaylists">Плейлисты</string>
+    <string name="AudioMyPlaylists">Мои плейлисты</string>
+    <string name="AudioAddToPlaylist">Добавить в плейлист</string>
+    <string name="AudioNewPlaylist">Новый плейлист</string>
+    <string name="AudioPlaylistName">Название плейлиста</string>
+    <string name="AudioPlaylistNameHint">например Избранное или Тренировка</string>
+    <string name="AudioPlaylistCreated">Плейлист создан</string>
+    <string name="AudioPlaylistDeleted">Плейлист удалён</string>
+    <string name="AudioPlaylistAdded">Трек добавлен в плейлист</string>
+    <string name="AudioPlaylistAlreadyExists">Трек уже в плейлисте</string>
+    <string name="AudioPlaylistExport">Экспорт плейлиста</string>
+    <string name="AudioPlaylistExportM3U8">Экспортировать как M3U8</string>
+    <string name="AudioPlaylistExportJson">Экспортировать как .mplaylist</string>
+    <string name="AudioPlaylistImport">Импортировать плейлист</string>
+    <string name="AudioPlaylistImportSuccess">Импортирован плейлист: %s</string>
+    <string name="AudioPlaylistImportError">Не удалось импортировать плейлист</string>
+    <string name="AudioPlaylistEmpty">В этом плейлисте пока нет треков</string>
+    <string name="AudioPlaylistsEmpty">Нет плейлистов</string>
+    <string name="AudioPlaylistsEmptyDesc">Создавайте локальные плейлисты из аудио-плеера для удобного прослушивания.</string>
+    <string name="AudioPlaylistPlay">Слушать</string>
+    <string name="AudioPlaylistDelete">Удалить плейлист</string>
+    <string name="AudioPlaylistDeleteConfirm">Удалить плейлист «%s»?</string>
+    <string name="AudioPlaylistRemoveTrack">Удалить из плейлиста</string>
+    <string name="AudioPlaylistTracksCount">%d треков</string>
 </resources>

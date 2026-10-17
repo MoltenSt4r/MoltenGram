@@ -360,6 +360,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         likeButton = new MorphButton(context, heartIcon);
         likeButton.setRadius(dp(24), false);
         likeButton.setOnClickListener(v -> toggleProfile());
+        likeButton.setOnLongClickListener(v -> {
+            AndroidUtilities.vibrateCursor(v);
+            saveCurrentToSavedMessages();
+            return true;
+        });
         titleRow.addView(likeButton, LayoutHelper.createLinear(48, 48, Gravity.CENTER_VERTICAL, 12, 0, 0, 0));
         layout.addView(titleRow);
 
@@ -1185,6 +1190,18 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         });
     }
 
+    public void saveCurrentToSavedMessages() {
+        MessageObject mo = current;
+        if (mo == null || PlayerActions.noForwards(mo)) {
+            return;
+        }
+        PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
+        Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+        BulletinFactory.of(root, rp)
+                .createSimpleBulletin(R.raw.saved_messages, getString(R.string.AudioSaveToSavedMessagesSaved))
+                .show();
+    }
+
     private void updateModes(boolean animated) {
         int mode = SharedConfig.repeatMode;
         boolean repeatActive = mode == 1 || mode == 2;
@@ -1908,6 +1925,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             o.dismiss();
             dismissImmediately();
             PlayerActions.showInChat(activity, mo);
+        });
+        o.add(R.drawable.msg_playlist, getString(R.string.AudioAddToPlaylist), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
+        });
+        o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
         });
         o.addGap();
         o.add(R.drawable.menu_night_mode_24, getString(R.string.OEAppearancePlayerSleepTimer), () -> {

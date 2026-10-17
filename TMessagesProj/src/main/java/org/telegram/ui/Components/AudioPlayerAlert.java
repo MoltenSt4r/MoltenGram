@@ -3017,6 +3017,14 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             o.dismiss();
             onSubItemClick(4);
         });
+        o.add(R.drawable.msg_playlist, getString(R.string.AudioAddToPlaylist), () -> {
+            o.dismiss();
+            app.exteraless.player.LocalPlaylistsController.getInstance().showAddToPlaylistDialog(parentActivity, messageObject, resourcesProvider);
+        });
+        o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
+            o.dismiss();
+            app.exteraless.player.LocalPlaylistsController.getInstance().showPlaylistsDialog(parentActivity, resourcesProvider);
+        });
         if (castAvailable) {
             castItem = o.add();
             castItem.setTextAndIcon(getString(R.string.VideoPlayerChromecast), R.drawable.menu_video_chromecast);

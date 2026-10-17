@@ -36,6 +36,7 @@ import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.CopyOnWriteArrayList;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicLong;
 
 import app.exteraless.debug.PluginToggleTrace;
@@ -132,6 +133,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         PluginGrantStore.get();
         watchdog = new PluginsWatchdog(preferences);
         getPluginsDir().mkdirs();
+        loadCustomCommands();
 
         if (!isEngineEnabled()) {
             return;
@@ -2318,9 +2320,137 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         }
     }
 
+    public static class CustomCommand {
+        public String prefix = ".";
+        public String name = "";
+        public String description = "";
+
+        public CustomCommand() {}
+
+        public CustomCommand(String prefix, String name, String description) {
+            String p = prefix != null && !prefix.trim().isEmpty() ? prefix.trim().substring(0, 1) : ".";
+            String n = name != null ? name.trim() : "";
+            if (n.startsWith(p)) {
+                n = n.substring(p.length()).trim();
+            } else if (n.startsWith(".") || n.startsWith("/") || n.startsWith("!") || n.startsWith("$")) {
+                p = n.substring(0, 1);
+                n = n.substring(1).trim();
+            }
+            this.prefix = p;
+            this.name = n;
+            this.description = description != null ? description.trim() : "";
+        }
+
+        public char getPrefix() {
+            return prefix != null && !prefix.isEmpty() ? prefix.charAt(0) : '.';
+        }
+
+        public String getCleanCommand() {
+            return name != null ? name : "";
+        }
+
+        public String getFullCommand() {
+            return (prefix != null ? prefix : ".") + (name != null ? name : "");
+        }
+
+        public JSONObject toJson() {
+            JSONObject obj = new JSONObject();
+            try {
+                obj.put("prefix", prefix);
+                obj.put("name", name);
+                obj.put("desc", description);
+            } catch (Exception ignored) {}
+            return obj;
+        }
+
+        public static CustomCommand fromJson(JSONObject obj) {
+            if (obj == null) return null;
+            CustomCommand cmd = new CustomCommand();
+            cmd.prefix = obj.optString("prefix", ".");
+            cmd.name = obj.optString("name", "");
+            cmd.description = obj.optString("desc", "");
+            return cmd;
+        }
+    }
+
+    private final List<CustomCommand> customCommands = new CopyOnWriteArrayList<>();
+
+    public List<CustomCommand> getCustomCommands() {
+        if (customCommands.isEmpty()) {
+            loadCustomCommands();
+        }
+        return new ArrayList<>(customCommands);
+    }
+
+    public void loadCustomCommands() {
+        customCommands.clear();
+        Context ctx = appContext != null ? appContext : ApplicationLoader.applicationContext;
+        if (ctx == null) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE);
+        String jsonStr = prefs.getString("custom_autocomplete_commands", null);
+        if (jsonStr != null && !jsonStr.isEmpty()) {
+            try {
+                JSONArray arr = new JSONArray(jsonStr);
+                for (int i = 0; i < arr.length(); i++) {
+                    JSONObject obj = arr.getJSONObject(i);
+                    CustomCommand cmd = CustomCommand.fromJson(obj);
+                    if (cmd != null && !cmd.name.isEmpty()) {
+                        customCommands.add(cmd);
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
+    }
+
+    public void saveCustomCommands() {
+        JSONArray arr = new JSONArray();
+        for (CustomCommand cmd : customCommands) {
+            arr.put(cmd.toJson());
+        }
+        Context ctx = appContext != null ? appContext : ApplicationLoader.applicationContext;
+        if (ctx == null) return;
+        SharedPreferences prefs = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE);
+        prefs.edit().putString("custom_autocomplete_commands", arr.toString()).apply();
+    }
+
+    public void addCustomCommand(String prefix, String name, String description) {
+        CustomCommand cmd = new CustomCommand(prefix, name, description);
+        if (!cmd.name.isEmpty()) {
+            deleteCustomCommand(cmd.prefix, cmd.name);
+            customCommands.add(cmd);
+            saveCustomCommands();
+        }
+    }
+
+    public void editCustomCommand(int index, String prefix, String name, String description) {
+        if (index >= 0 && index < customCommands.size()) {
+            customCommands.set(index, new CustomCommand(prefix, name, description));
+            saveCustomCommands();
+        }
+    }
+
+    public void deleteCustomCommand(int index) {
+        if (index >= 0 && index < customCommands.size()) {
+            customCommands.remove(index);
+            saveCustomCommands();
+        }
+    }
+
+    public void deleteCustomCommand(String prefix, String name) {
+        customCommands.removeIf(cmd -> cmd.prefix.equals(prefix) && cmd.name.equalsIgnoreCase(name));
+        saveCustomCommands();
+    }
+
     public boolean isPluginPrefix(char ch) {
         if (!app.exteraless.OpenExteraConfig.pluginCommandSuggestions()) {
             return false;
+        }
+        for (CustomCommand cc : customCommands) {
+            if (cc.getPrefix() == ch) {
+                return true;
+            }
         }
         String prefixes = app.exteraless.OpenExteraConfig.pluginCommandPrefixes();
         if (prefixes == null || prefixes.trim().isEmpty()) {
@@ -2365,6 +2495,16 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         }
         String q = query != null ? query.toLowerCase() : "";
         Set<String> seen = new HashSet<>();
+
+        // Custom user-defined commands have top priority
+        for (CustomCommand cc : customCommands) {
+            if (cc.getPrefix() == prefix) {
+                String clean = cc.getCleanCommand().toLowerCase();
+                if ((clean.startsWith(q) || (prefix + clean).startsWith(q)) && seen.add(clean)) {
+                    results.add(new PluginCommand(cc.getFullCommand(), cc.description, "custom", ""));
+                }
+            }
+        }
 
         for (Map.Entry<String, Plugin> entry : plugins.entrySet()) {
             Plugin p = entry.getValue();

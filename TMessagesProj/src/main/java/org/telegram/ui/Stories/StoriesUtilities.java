@@ -121,6 +121,9 @@ public class StoriesUtilities {
     };
 
     public static void drawAvatarWithStory(long dialogId, Canvas canvas, ImageReceiver avatarImage, boolean hasStories, AvatarStoryParams params) {
+        if (params != null) {
+            params.avatarImage = avatarImage;
+        }
         StoriesController storiesController = MessagesController.getInstance(UserConfig.selectedAccount).getStoriesController();
         boolean animated = params.animate;
         if (params.dialogId != dialogId) {
@@ -694,6 +697,14 @@ public class StoriesUtilities {
     }
 
     private static void drawCircleInternal(Canvas canvas, View view, AvatarStoryParams params, Paint paint, boolean isForum) {
+        int md3Shape = params != null && params.avatarImage != null
+                ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(params.avatarImage.getPeerType())
+                : 0;
+        if (md3Shape > 0) {
+            Path shapePath = app.exteraless.appearance.Md3AvatarShapes.getShapePath(md3Shape, rectTmp.left, rectTmp.top, rectTmp.width(), rectTmp.height());
+            canvas.drawPath(shapePath, paint);
+            return;
+        }
         if (isForum || !app.exteraless.appearance.AppearanceConfig.avatarCornersDefault()) {
             forumRect.set(rectTmp);
             forumRect.inset(dp(0.5f), dp(0.5f));
@@ -714,6 +725,26 @@ public class StoriesUtilities {
     private static final Path forumSegmentPath = new Path();
 
     private static void drawSegment(Canvas canvas, RectF rectTmp, Paint paint, float startAngle, float endAngle, AvatarStoryParams params, boolean isForum) {
+        int md3Shape = params != null && params.avatarImage != null
+                ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(params.avatarImage.getPeerType())
+                : 0;
+        if (md3Shape > 0) {
+            Path shapePath = app.exteraless.appearance.Md3AvatarShapes.getShapePath(md3Shape, rectTmp.left, rectTmp.top, rectTmp.width(), rectTmp.height());
+            forumRoundRectPathMeasure.setPath(shapePath, false);
+            float length = forumRoundRectPathMeasure.getLength();
+            float percentFrom = ((startAngle % 360f) + 360f) % 360f / 360f;
+            float percentTo = ((endAngle % 360f) + 360f) % 360f / 360f;
+            forumSegmentPath.reset();
+            if (percentTo >= percentFrom) {
+                forumRoundRectPathMeasure.getSegment(length * percentFrom, length * percentTo, forumSegmentPath, true);
+            } else {
+                forumRoundRectPathMeasure.getSegment(length * percentFrom, length, forumSegmentPath, true);
+                forumRoundRectPathMeasure.getSegment(0, length * percentTo, forumSegmentPath, true);
+            }
+            forumSegmentPath.rLineTo(0, 0);
+            canvas.drawPath(forumSegmentPath, paint);
+            return;
+        }
         if (isForum || !app.exteraless.appearance.AppearanceConfig.avatarCornersDefault()) {
             // Сегментированное кольцо тоже идёт по форме аватарки.
             float r = isForum && app.exteraless.appearance.AppearanceConfig.avatarCornersDefault()
@@ -1237,6 +1268,7 @@ public class StoriesUtilities {
     }
 
     public static class AvatarStoryParams {
+        public ImageReceiver avatarImage;
         public boolean drawSegments = true;
         public boolean animate = true;
         public int storyId;

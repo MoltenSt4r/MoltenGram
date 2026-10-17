@@ -6464,6 +6464,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public ImageReceiver getPhotoImage(int index) {
+        if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
+            ImageReceiver receiver = md3MediaCarouselView.getImageReceiver(index);
+            if (receiver != null) {
+                return receiver;
+            }
+        }
         if (currentMessageObject != null && currentMessageObject.type == MessageObject.TYPE_POLL) {
             if (index == PollAttachedMediaPack.INDEX_DESCRIPTION) {
                 return pollContentDrawable != null ? pollContentDrawable.getImageReceiver() : null;
@@ -6481,6 +6487,24 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             return groupMedia.getPhotoImage(index);
         }
         return photoImage;
+    }
+
+    public boolean containsCarouselMessage(MessageObject message) {
+        return isMediaCarouselMessage() && md3MediaCarouselView != null && md3MediaCarouselView.containsMessage(message);
+    }
+
+    public int getCarouselMessageIndex(MessageObject message) {
+        if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
+            return md3MediaCarouselView.indexOf(message);
+        }
+        return -1;
+    }
+
+    public View getCarouselItemView(int index) {
+        if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
+            return md3MediaCarouselView.getItemView(index);
+        }
+        return null;
     }
 
     public ImageReceiver getBlurredPhotoImage() {
@@ -17727,7 +17751,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentMessageObject.type == MessageObject.TYPE_STORY
         ) {
             float x, y, h;
-            if (transitionParams.imageChangeBoundsTransition) {
+            if (transitionParams.imageChangeBoundsTransition && !isMediaCarouselMessage()) {
                 x = transitionParams.animateToImageX;
                 y = transitionParams.animateToImageY;
                 h = transitionParams.animateToImageH;
@@ -29891,7 +29915,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             deltaTop = 0;
             toDeltaLeft = 0;
             toDeltaRight = 0;
-            if (imageChangeBoundsTransition && animateToImageW != 0 && animateToImageH != 0) {
+            if (imageChangeBoundsTransition && animateToImageW != 0 && animateToImageH != 0 && !isMediaCarouselMessage()) {
                 photoImage.setImageCoords(animateToImageX, animateToImageY, animateToImageW, animateToImageH);
             }
             if (animateRadius) {
