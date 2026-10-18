@@ -996,6 +996,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         detached = true;
+        if (cover != null) {
+            cover.release();
+        }
+        if (smallCover != null) {
+            smallCover.release();
+        }
         if (getWindow() != null) {
             getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
@@ -1169,7 +1175,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (mo == null) {
             return;
         }
-        if (mo.getDocument() != null) {
+        if (mo.getDocument() != null && mo.getDocument().id != 0) {
             if (PlayerActions.isProfileSavePending(mo)) {
                 return;
             }
@@ -1181,7 +1187,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
                 if (error != null) {
                     updateLike(true);
-                    BulletinFactory.of(root, rp).showForError(error);
+                    if ("CLIENT_LOCAL_TRACK_NOT_SUPPORTED".equals(error.text)) {
+                        BulletinFactory.of(root, rp).createSimpleBulletin(R.drawable.msg_retry,
+                                getString(R.string.OEPlayerLocalTrackNotSupported)).show();
+                    } else {
+                        BulletinFactory.of(root, rp).showForError(error);
+                    }
                     return;
                 }
                 MessagesController.SavedMusicList list = MediaController.getInstance().currentSavedMusicList;
@@ -1200,6 +1211,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             });
         } else {
             Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+            BulletinFactory.of(root, rp).createSimpleBulletin(R.drawable.msg_retry,
+                    getString(R.string.OEPlayerLocalTrackNotSupported)).show();
             LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
         }
     }

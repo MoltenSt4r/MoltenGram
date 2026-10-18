@@ -140,4 +140,5 @@
     <string name="OEPlayerLoadError">Failed to load track</string>
     <string name="OEPlayerAddedToSaved">Saved to Saved Messages</string>
     <string name="OEPlayerAddedToProfile">Saved to profile</string>
+    <string name="OEPlayerLocalTrackNotSupported">Only Telegram tracks can be saved to profile</string>
 </resources>

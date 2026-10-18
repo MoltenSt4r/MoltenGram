@@ -2,9 +2,12 @@ package app.exteraless.metrolist;
 
 import android.text.TextUtils;
 
+import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 
 import java.io.File;
@@ -51,7 +54,36 @@ public final class SongRecMatcher {
     }
 
     /**
-     * Ищет видео-обложку (Canvas / клип) для воспроизводимого трека MessageObject.
+     * Очищает поисковый запрос от расширений файлов, подчеркиваний и служебных слов.
+     */
+    public static String cleanQuery(String artist, String title) {
+        String combined;
+        if (!TextUtils.isEmpty(artist) && !TextUtils.isEmpty(title)) {
+            combined = artist + " " + title;
+        } else if (!TextUtils.isEmpty(title)) {
+            combined = title;
+        } else if (!TextUtils.isEmpty(artist)) {
+            combined = artist;
+        } else {
+            return "";
+        }
+        combined = combined.replaceAll("(?i)\\.(mp3|m4a|wav|aac|flac|ogg|opus)$", "");
+        combined = combined.replace('_', ' ');
+        combined = CLEAN_PATTERN.matcher(combined).replaceAll(" ").trim();
+        return combined.replaceAll("\\s+", " ");
+    }
+
+    public void cacheVideoCover(String artist, String title, int duration, String videoCoverUrl) {
+        if (!TextUtils.isEmpty(videoCoverUrl)) {
+            String cacheKey = ((artist != null ? artist : "") + "_" + (title != null ? title : "") + "_" + duration).toLowerCase(Locale.ROOT);
+            videoCoverCache.put(cacheKey, videoCoverUrl);
+            String altKey = ((artist != null ? artist : "") + "_" + (title != null ? title : "") + "_0").toLowerCase(Locale.ROOT);
+            videoCoverCache.put(altKey, videoCoverUrl);
+        }
+    }
+
+    /**
+     * Ищет видео-обложку (Canvas / клип) и статичную обложку для трека MessageObject.
      */
     public void findVideoCover(MessageObject messageObject, MatchCallback callback) {
         if (messageObject == null) {
@@ -61,19 +93,37 @@ public final class SongRecMatcher {
 
         String artist = messageObject.getMusicAuthor();
         String title = messageObject.getMusicTitle();
+        if ("Unknown Artist".equalsIgnoreCase(artist) || LocaleController.getString(R.string.AudioUnknownArtist).equalsIgnoreCase(artist)) {
+            artist = "";
+        }
+        if (TextUtils.isEmpty(title) || "Unknown Track".equalsIgnoreCase(title) || LocaleController.getString(R.string.AudioUnknownTitle).equalsIgnoreCase(title)) {
+            title = "";
+            if (messageObject.getDocument() != null) {
+                title = FileLoader.getDocumentFileName(messageObject.getDocument());
+            }
+            if (TextUtils.isEmpty(title) && messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
+                String path = messageObject.messageOwner.attachPath;
+                int lastSlash = path.lastIndexOf('/');
+                title = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+            }
+        }
         int duration = (int) messageObject.getDuration();
         String cacheKey = (artist + "_" + title + "_" + duration).toLowerCase(Locale.ROOT);
 
         String cached = videoCoverCache.get(cacheKey);
+        if (cached == null) {
+            cached = videoCoverCache.get((artist + "_" + title + "_0").toLowerCase(Locale.ROOT));
+        }
         if (cached != null) {
             callback.onMatched(cached, null);
             return;
         }
 
+        final String finalArtist = artist;
+        final String finalTitle = title;
         Utilities.globalQueue.postRunnable(() -> {
             try {
-                String query = (artist != null ? artist : "") + " " + (title != null ? title : "");
-                query = query.trim();
+                String query = cleanQuery(finalArtist, finalTitle);
                 if (query.isEmpty()) {
                     callback.onNotFound();
                     return;
@@ -91,21 +141,23 @@ public final class SongRecMatcher {
                 float bestScore = 0f;
 
                 for (MetrolistClient.Track cand : candidates) {
-                    float score = evaluateMatch(title, artist, duration, cand, messageObject);
+                    float score = evaluateMatch(finalTitle, finalArtist, duration, cand, messageObject);
                     if (score > bestScore) {
                         bestScore = score;
                         bestMatch = cand;
                     }
                 }
 
-                // Порог уверенности (65%)
-                if (bestMatch != null && bestScore >= 0.65f) {
+                // Порог уверенности: 0.40f (для конвертированных файлов и кастомных тегов)
+                if (bestMatch != null && bestScore >= 0.40f) {
                     MetrolistClient.Track full = MetrolistClient.getInstance().fetchPlayer(bestMatch.id);
-                    if (full != null && !TextUtils.isEmpty(full.videoCoverUrl)) {
-                        videoCoverCache.put(cacheKey, full.videoCoverUrl);
-                        callback.onMatched(full.videoCoverUrl, full);
-                        return;
+                    MetrolistClient.Track resolved = (full != null) ? full : bestMatch;
+                    String videoUrl = (full != null && !TextUtils.isEmpty(full.videoCoverUrl)) ? full.videoCoverUrl : null;
+                    if (videoUrl != null) {
+                        videoCoverCache.put(cacheKey, videoUrl);
                     }
+                    callback.onMatched(videoUrl, resolved);
+                    return;
                 }
 
                 callback.onNotFound();
@@ -121,8 +173,17 @@ public final class SongRecMatcher {
      * с учетом метаданных, хронометража и мультисегментного акустического сканирования SongRec.
      */
     public float evaluateMatch(String reqTitle, String reqArtist, int reqDuration, MetrolistClient.Track cand, MessageObject mo) {
-        float titleSim = stringSimilarity(cleanString(reqTitle), cleanString(cand.title));
-        float artistSim = stringSimilarity(cleanString(reqArtist), cleanString(cand.artist));
+        float titleSim;
+        float artistSim;
+        if (TextUtils.isEmpty(reqArtist)) {
+            String combinedCand = cleanString(cand.artist + " " + cand.title);
+            String combinedReq = cleanString(reqTitle);
+            titleSim = stringSimilarity(combinedReq, combinedCand);
+            artistSim = titleSim;
+        } else {
+            titleSim = stringSimilarity(cleanString(reqTitle), cleanString(cand.title));
+            artistSim = stringSimilarity(cleanString(reqArtist), cleanString(cand.artist));
+        }
 
         // Оценка длительности (в пределах +-5 секунд максимальный балл)
         float durationSim = 0.5f;

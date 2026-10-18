@@ -114,6 +114,10 @@ public final class MetrolistController {
             account = 0;
         }
 
+        if (!TextUtils.isEmpty(track.videoCoverUrl)) {
+            SongRecMatcher.getInstance().cacheVideoCover(track.artist, track.title, track.duration, track.videoCoverUrl);
+        }
+
         LocalPlaylistsController.PlaylistItem item = new LocalPlaylistsController.PlaylistItem(
                 track.title,
                 track.artist,
@@ -176,9 +180,15 @@ public final class MetrolistController {
                             .createSimpleBulletin(R.drawable.left_status_profile, LocaleController.getString(R.string.OEPlayerAddedToProfile))
                             .show();
                 } else {
-                    BulletinFactory.global()
-                            .createSimpleBulletin(R.drawable.msg_retry, error.text)
-                            .show();
+                    if ("CLIENT_LOCAL_TRACK_NOT_SUPPORTED".equals(error.text)) {
+                        BulletinFactory.global()
+                                .createSimpleBulletin(R.drawable.msg_retry, LocaleController.getString(R.string.OEPlayerLocalTrackNotSupported))
+                                .show();
+                    } else {
+                        BulletinFactory.global()
+                                .createSimpleBulletin(R.drawable.msg_retry, error.text)
+                                .show();
+                    }
                 }
             } catch (Exception ignored) {
             }

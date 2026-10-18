@@ -140,4 +140,5 @@
     <string name="OEPlayerLoadError">Не удалось загрузить трек</string>
     <string name="OEPlayerAddedToSaved">Сохранено в Избранное</string>
     <string name="OEPlayerAddedToProfile">Сохранено в профиль</string>
+    <string name="OEPlayerLocalTrackNotSupported">Сохранить в профиль можно только треки из Telegram</string>
 </resources>

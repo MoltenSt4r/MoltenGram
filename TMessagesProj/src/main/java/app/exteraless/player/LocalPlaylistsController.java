@@ -22,6 +22,7 @@ import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
@@ -79,6 +80,7 @@ public class LocalPlaylistsController {
         public String mimeType = "audio/mpeg";
         public String fileName = "";
         public String attachPath = "";
+        public byte[] fileReference;
 
         // Extended fields for external sources (YouTube Music / Metrolist)
         public String source = "telegram"; // "telegram", "youtube", "metrolist", "local"
@@ -103,6 +105,7 @@ public class LocalPlaylistsController {
                 size = doc.size;
                 mimeType = doc.mime_type;
                 fileName = FileLoader.getDocumentFileName(doc);
+                fileReference = doc.file_reference;
             }
             if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
                 attachPath = mo.messageOwner.attachPath;
@@ -150,6 +153,9 @@ public class LocalPlaylistsController {
                 obj.put("streamUrl", streamUrl != null ? streamUrl : "");
                 obj.put("coverUrl", coverUrl != null ? coverUrl : "");
                 obj.put("externalId", externalId != null ? externalId : "");
+                if (fileReference != null && fileReference.length > 0) {
+                    obj.put("fileRef", android.util.Base64.encodeToString(fileReference, android.util.Base64.NO_WRAP));
+                }
             } catch (Exception ignored) {}
             return obj;
         }
@@ -173,6 +179,12 @@ public class LocalPlaylistsController {
             item.streamUrl = obj.optString("streamUrl", "");
             item.coverUrl = obj.optString("coverUrl", "");
             item.externalId = obj.optString("externalId", "");
+            String fileRefStr = obj.optString("fileRef", null);
+            if (!TextUtils.isEmpty(fileRefStr)) {
+                try {
+                    item.fileReference = android.util.Base64.decode(fileRefStr, android.util.Base64.DEFAULT);
+                } catch (Exception ignored) {}
+            }
             return item;
         }
 
@@ -196,6 +208,9 @@ public class LocalPlaylistsController {
                 msg.id = (int) (System.currentTimeMillis() % 100000000);
             }
             msg.dialog_id = dialogId;
+            if (dialogId != 0) {
+                msg.peer_id = MessagesController.getInstance(safeAccount).getPeer(dialogId);
+            }
             msg.media = new TLRPC.TL_messageMediaDocument();
             TLRPC.TL_document doc = new TLRPC.TL_document();
             doc.id = documentId;
@@ -203,6 +218,7 @@ public class LocalPlaylistsController {
             doc.dc_id = dcId;
             doc.size = size;
             doc.mime_type = mimeType != null ? mimeType : "audio/mpeg";
+            doc.file_reference = fileReference;
 
             TLRPC.TL_documentAttributeAudio audioAttr = new TLRPC.TL_documentAttributeAudio();
             audioAttr.duration = duration;
@@ -217,7 +233,7 @@ public class LocalPlaylistsController {
             }
 
             msg.media.document = doc;
-            msg.message = "";
+            msg.message = !TextUtils.isEmpty(coverUrl) ? coverUrl : "";
 
             String targetPath = !TextUtils.isEmpty(attachPath) ? attachPath : streamUrl;
             if (!TextUtils.isEmpty(targetPath)) {
