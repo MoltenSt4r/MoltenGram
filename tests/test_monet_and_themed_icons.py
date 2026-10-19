@@ -8,17 +8,18 @@ RES_DIR = os.path.join(REPO_ROOT, 'TMessagesProj/src/main/res')
 JAVA_DIR = os.path.join(REPO_ROOT, 'TMessagesProj/src/main/java')
 
 
-def test_all_moltengram_anydpi_icons_have_monochrome():
+def test_all_anydpi_launcher_icons_have_monochrome():
     anydpi_dir = os.path.join(RES_DIR, 'mipmap-anydpi-v26')
-    xml_files = glob.glob(os.path.join(anydpi_dir, 'ic_launcher_moltengram_*.xml'))
-    assert len(xml_files) > 0, "No moltengram anydpi icons found"
+    xml_files = glob.glob(os.path.join(anydpi_dir, '*.xml'))
+    assert len(xml_files) > 0, "No anydpi icons found"
 
+    missing = []
     for xml_path in xml_files:
         with open(xml_path, 'r', encoding='utf-8') as f:
             content = f.read()
-        assert '<monochrome android:drawable="@drawable/moltengram_icon_monochrome" />' in content, (
-            f'{os.path.basename(xml_path)} missing official monochrome vector'
-        )
+        if '<monochrome' not in content:
+            missing.append(os.path.basename(xml_path))
+    assert len(missing) == 0, f"Icons missing monochrome vector tag: {missing}"
 
 
 def test_monet_helper_dark_roles_surface_and_background_n1():
@@ -30,6 +31,8 @@ def test_monet_helper_dark_roles_surface_and_background_n1():
     assert 'put("background", "n1:6");' in content, "darkRoles background must map to n1:6"
     assert 'put("surface", "n1:6");' in content, "darkRoles surface must map to n1:6"
     assert 'put("surface_dim", "n1:6");' in content, "darkRoles surface_dim must map to n1:6"
+    assert 'put("surface_container", "n1:12");' in content, "darkRoles surface_container must map to n1:12"
+    assert 'put("on_surface", "n1:90");' in content, "darkRoles on_surface must map to n1:90"
 
 
 def test_monet_helper_rejects_static_oem_baseline_roles():
@@ -37,9 +40,11 @@ def test_monet_helper_rejects_static_oem_baseline_roles():
     with open(monet_helper_path, 'r', encoding='utf-8') as f:
         content = f.read()
 
-    # Verify baseline purple 80 and dark surface constants exist
+    # Verify baseline purple 80, purple 40, dark surface, and dark container constants exist
     assert 'd0bcff' in content.lower(), "Must detect Purple80 baseline"
+    assert '6750a4' in content.lower(), "Must detect Purple40 baseline"
     assert '141218' in content.lower(), "Must detect #141218 dark surface baseline"
+    assert '4a4458' in content.lower(), "Must detect #4A4458 dark container baseline"
     assert 'isStaticBaselineFrameworkRole' in content, "Must implement static baseline role detection"
 
 

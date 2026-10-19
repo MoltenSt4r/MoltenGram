@@ -238,24 +238,24 @@ public class MonetHelper {
         put("tertiary_container", "a3:30");
         put("on_tertiary_container", "a3:90");
         put("background", "n1:6");
-        put("on_background", "n2:90");
+        put("on_background", "n1:90");
         put("surface", "n1:6");
-        put("on_surface", "n2:90");
+        put("on_surface", "n1:90");
         put("surface_variant", "n2:30");
         put("on_surface_variant", "n2:80");
-        put("inverse_surface", "n2:90");
-        put("inverse_on_surface", "n2:20");
+        put("inverse_surface", "n1:90");
+        put("inverse_on_surface", "n1:20");
         put("outline", "n2:60");
         put("outline_variant", "n2:30");
         put("scrim", "n2:0");
         put("shadow", "n2:0");
-        put("surface_bright", "n2:24");
+        put("surface_bright", "n1:24");
         put("surface_dim", "n1:6");
-        put("surface_container", "n2:12");
-        put("surface_container_high", "n2:17");
-        put("surface_container_highest", "n2:22");
-        put("surface_container_low", "n2:10");
-        put("surface_container_lowest", "n2:4");
+        put("surface_container", "n1:12");
+        put("surface_container_high", "n1:17");
+        put("surface_container_highest", "n1:22");
+        put("surface_container_low", "n1:10");
+        put("surface_container_lowest", "n1:4");
     }};
 
     private static final HashMap<String, String> fixedRoles = new HashMap<>() {{
@@ -474,11 +474,18 @@ public class MonetHelper {
     }
 
     private static final int BASELINE_PURPLE_80 = 0xffd0bcff;
+    private static final int BASELINE_PURPLE_40 = 0xff6750a4;
     private static final int BASELINE_DARK_SURFACE = 0xff141218;
+    private static final int BASELINE_LIGHT_SURFACE = 0xfffef7ff;
+    private static final int BASELINE_DARK_CONTAINER = 0xff4a4458;
 
     private static boolean isStaticBaselineFrameworkRole(int color) {
         int rgb = color & 0xffffff;
-        return rgb == (BASELINE_PURPLE_80 & 0xffffff) || rgb == (BASELINE_DARK_SURFACE & 0xffffff);
+        return rgb == (BASELINE_PURPLE_80 & 0xffffff)
+                || rgb == (BASELINE_PURPLE_40 & 0xffffff)
+                || rgb == (BASELINE_DARK_SURFACE & 0xffffff)
+                || rgb == (BASELINE_LIGHT_SURFACE & 0xffffff)
+                || rgb == (BASELINE_DARK_CONTAINER & 0xffffff);
     }
 
     private static Boolean frameworkRolesTrusted;
@@ -500,11 +507,15 @@ public class MonetHelper {
 
         // OEM / Nothing OS static framework roles check:
         // When dynamic colors are active, framework roles must not be overridden by
-        // OEM hardcoded static baseline Purple80 (0xFFD0BCFF) or surface (#141218).
-        Integer probePrimary = readFrameworkRole("primary", "dark");
-        Integer probeSurface = readFrameworkRole("surface", "dark");
-        if ((probePrimary != null && isStaticBaselineFrameworkRole(probePrimary))
-                || (probeSurface != null && isStaticBaselineFrameworkRole(probeSurface))) {
+        // OEM hardcoded static baseline Purple80 (0xFFD0BCFF), Purple40 (0xFF6750A4), or surface (#141218).
+        Integer probePrimaryDark = readFrameworkRole("primary", "dark");
+        Integer probeSurfaceDark = readFrameworkRole("surface", "dark");
+        Integer probePrimaryLight = readFrameworkRole("primary", "light");
+        Integer probeSurfaceLight = readFrameworkRole("surface", "light");
+        if ((probePrimaryDark != null && isStaticBaselineFrameworkRole(probePrimaryDark))
+                || (probeSurfaceDark != null && isStaticBaselineFrameworkRole(probeSurfaceDark))
+                || (probePrimaryLight != null && isStaticBaselineFrameworkRole(probePrimaryLight))
+                || (probeSurfaceLight != null && isStaticBaselineFrameworkRole(probeSurfaceLight))) {
             frameworkRolesTrusted = false;
             return false;
         }
@@ -585,28 +596,48 @@ public class MonetHelper {
         String palette = descriptor.substring(0, separator);
         int tone = Integer.parseInt(descriptor.substring(separator + 1));
 
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) {
+            return null;
+        }
+
         Integer shade = toneToShade.get(tone);
         if (shade != null) {
             Integer shadeId = ids.get(palette + "_" + shade);
-            if (shadeId == null) {
-                return null;
-            }
-            try {
-                return ApplicationLoader.applicationContext.getColor(shadeId);
-            } catch (Exception ignore) {
-                return null;
+            if (shadeId != null) {
+                try {
+                    return context.getColor(shadeId);
+                } catch (Exception ignore) {}
             }
         }
 
         Integer keyId = ids.get(palette + "_600");
-        if (keyId == null) {
-            return null;
+        if (keyId != null) {
+            try {
+                return setLuminance(context.getColor(keyId), tone);
+            } catch (Exception ignore) {}
         }
-        try {
-            return setLuminance(ApplicationLoader.applicationContext.getColor(keyId), tone);
-        } catch (Exception ignore) {
-            return null;
+
+        // Direct fallback to closest real system palette color
+        int closestTone = 1000;
+        int closestDiff = Integer.MAX_VALUE;
+        for (Integer availableTone : toneToShade.keySet()) {
+            int diff = Math.abs(availableTone - tone);
+            if (diff < closestDiff) {
+                closestDiff = diff;
+                closestTone = availableTone;
+            }
         }
+        Integer fallbackShade = toneToShade.get(closestTone);
+        if (fallbackShade != null) {
+            Integer fallbackId = ids.get(palette + "_" + fallbackShade);
+            if (fallbackId != null) {
+                try {
+                    return context.getColor(fallbackId);
+                } catch (Exception ignore) {}
+            }
+        }
+        return null;
     }
 
     private static int setLuminance(int color, double luminance) {
