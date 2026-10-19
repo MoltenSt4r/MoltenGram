@@ -54,6 +54,76 @@ def test_icon_anydpi_xml_monochrome_and_background(variant):
             content = f.read()
         assert '<monochrome' in content, f'{name} must contain <monochrome tag'
         assert f'moltengram_{variant}_icon_background' in content, f'{name} must reference moltengram_{variant}_icon_background'
+        assert f'moltengram_{variant}_icon_monochrome' in content, f'{name} must reference moltengram_{variant}_icon_monochrome'
+
+
+@pytest.mark.parametrize('variant', VARIANTS)
+def test_dedicated_monochrome_drawable_valid_vector(variant):
+    drawable_path = os.path.join(RES_DIR, 'drawable', f'moltengram_{variant}_icon_monochrome.xml')
+    assert os.path.exists(drawable_path), f'{drawable_path} must exist'
+    tree = ET.parse(drawable_path)
+    root = tree.getroot()
+    assert root.tag == 'vector', f'{drawable_path} root tag must be vector'
+    ns = {'android': 'http://schemas.android.com/apk/res/android'}
+    width = root.attrib.get('{http://schemas.android.com/apk/res/android}width')
+    height = root.attrib.get('{http://schemas.android.com/apk/res/android}height')
+    assert width == '108dp', f'Expected width 108dp, got {width}'
+    assert height == '108dp', f'Expected height 108dp, got {height}'
+    paths = root.findall('.//path')
+    assert len(paths) >= 1, f'{drawable_path} must contain at least one path'
+
+
+@pytest.mark.parametrize('density,sizes', DENSITIES.items())
+def test_nothing_icon_safe_zone_no_clipping_all_densities(density, sizes):
+    import math
+    bg_size, _ = sizes
+    bg_path = os.path.join(RES_DIR, f'drawable-{density}', 'moltengram_nothing_icon_background.png')
+    im = Image.open(bg_path).convert('RGB')
+    w, h = im.size
+    cx, cy = w / 2.0, h / 2.0
+    safe_radius = 108.0 * (bg_size / 324.0)
+
+    outside = 0
+    for y in range(h):
+        for x in range(w):
+            r, g, b = im.getpixel((x, y))
+            if max(r, g, b) > 30:
+                if math.hypot(x - cx, y - cy) > safe_radius:
+                    outside += 1
+    assert outside == 0, f'{density} Nothing OS glyph has {outside} pixels outside the safe circle'
+
+
+@pytest.mark.parametrize('density,sizes', DENSITIES.items())
+def test_halloween_flame_safe_zone_no_clipping_all_densities(density, sizes):
+    import math
+    bg_size, _ = sizes
+    bg_path = os.path.join(RES_DIR, f'drawable-{density}', 'moltengram_halloween_icon_background.png')
+    im = Image.open(bg_path).convert('RGB')
+    w, h = im.size
+    cx, cy = w / 2.0, h / 2.0
+    safe_radius = 108.0 * (bg_size / 324.0)
+
+    # Flood fill flame from center
+    center_flame = (int(round(cx)), int(round(cy)))
+    visited = set()
+    queue = [center_flame]
+    visited.add(center_flame)
+    flame_pts = []
+
+    while queue:
+        px, py = queue.pop(0)
+        flame_pts.append((px, py))
+        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
+            nx, ny = px + dx, py + dy
+            if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
+                r, g, b = im.getpixel((nx, ny))
+                if r > 200 and 90 < g < 150 and b < 30:
+                    visited.add((nx, ny))
+                    queue.append((nx, ny))
+
+    assert len(flame_pts) > 0, f'{density} flame not found at center'
+    outside = sum(1 for pt in flame_pts if math.hypot(pt[0] - cx, pt[1] - cy) > safe_radius)
+    assert outside == 0, f'{density} Halloween flame has {outside} pixels outside the safe circle'
 
 
 @pytest.mark.parametrize('variant,alias_suffix', [
