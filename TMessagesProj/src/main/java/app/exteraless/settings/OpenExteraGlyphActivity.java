@@ -183,6 +183,30 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         }
     }
 
+    @Override
+    protected boolean onItemLongClick(View view, int position, float x, float y) {
+        if (position == glyphBurstRow) {
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
+            showDeviceBurstChooserDialog();
+            return true;
+        }
+        return super.onItemLongClick(view, position, x, y);
+    }
+
+    private void showDeviceBurstChooserDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEGlyphBurst));
+        builder.setItems(NothingPhoneEasterEgg.ALL_MODELS, (dialog, which) -> {
+            String selectedModel = NothingPhoneEasterEgg.ALL_MODELS[which];
+            NothingPhoneEasterEgg.playBurstForModel(getParentActivity(), this, selectedModel);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
     private class ListAdapter extends BaseListAdapter {
 
         public ListAdapter(Context context) {
