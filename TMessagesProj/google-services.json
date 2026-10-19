@@ -1,13 +1,14 @@
 {
   "project_info": {
-    "project_number": "335004274031",
-    "project_id": "exteraless",
-    "storage_bucket": "exteraless.firebasestorage.app"
+    "project_number": "128182063456",
+    "firebase_url": "https://tgstatus-f2e09-default-rtdb.firebaseio.com",
+    "project_id": "tgstatus-f2e09",
+    "storage_bucket": "tgstatus-f2e09.firebasestorage.app"
   },
   "client": [
     {
       "client_info": {
-        "mobilesdk_app_id": "1:335004274031:android:e06325b96c4b17732eac9a",
+        "mobilesdk_app_id": "1:128182063456:android:a362f0d08d2574261fce05",
         "android_client_info": {
           "package_name": "com.moltengram.app"
         }
@@ -15,26 +16,7 @@
       "oauth_client": [],
       "api_key": [
         {
-          "current_key": "AIzaSyBuCdqzdLtlstYvdiSnVJmVoxusxFKlabc"
-        }
-      ],
-      "services": {
-        "appinvite_service": {
-          "other_platform_oauth_client": []
-        }
-      }
-    },
-    {
-      "client_info": {
-        "mobilesdk_app_id": "1:335004274031:android:e06325b96c4b17732eac9a",
-        "android_client_info": {
-          "package_name": "com.exterams.app"
-        }
-      },
-      "oauth_client": [],
-      "api_key": [
-        {
-          "current_key": "AIzaSyBuCdqzdLtlstYvdiSnVJmVoxusxFKlabc"
+          "current_key": "AIzaSyD8zuvYeQx13Bgciun_MYePMI5Bxa76fE4"
         }
       ],
       "services": {
