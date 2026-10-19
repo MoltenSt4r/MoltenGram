@@ -73,7 +73,8 @@ public class UpdateLayout extends IUpdateLayout {
         updateLayout = new FrameLayout(activity);
         updateLayout.setVisibility(View.INVISIBLE);
         updateLayout.setTranslationY(dp(44));
-        updateLayout.setBackground(Theme.getSelectorDrawable(0x40ffffff, false));
+        int themeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        updateLayout.setBackground(Theme.getSelectorDrawable(Theme.multAlpha(themeColor, 0.25f), false));
         sideMenuContainer.addView(updateLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.LEFT | Gravity.BOTTOM));
         updateLayout.setOnClickListener(v -> {
             MoltenGramOtaManager ota = MoltenGramOtaManager.getInstance();
@@ -163,6 +164,20 @@ public class UpdateLayout extends IUpdateLayout {
     public void updateAppUpdateViews(int currentAccount, boolean animated) {
         if (sideMenuContainer == null) {
             return;
+        }
+        int themeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
+        if (updateLayout != null) {
+            updateLayout.setBackground(Theme.getSelectorDrawable(Theme.multAlpha(themeColor, 0.25f), false));
+        }
+        if (updateLayoutIcon != null) {
+            updateLayoutIcon.setColors(buttonTextColor, buttonTextColor, themeColor, themeColor);
+        }
+        if (updateTextView != null) {
+            updateTextView.setTextColor(buttonTextColor);
+        }
+        if (updateSizeTextView != null) {
+            updateSizeTextView.setTextColor(Theme.multAlpha(buttonTextColor, 0.8f));
         }
         MoltenGramOtaManager ota = MoltenGramOtaManager.getInstance();
         if (ota.isUpdateAvailable()) {

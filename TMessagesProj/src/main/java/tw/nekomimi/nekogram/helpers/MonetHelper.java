@@ -237,9 +237,9 @@ public class MonetHelper {
         put("on_tertiary", "a3:20");
         put("tertiary_container", "a3:30");
         put("on_tertiary_container", "a3:90");
-        put("background", "n2:6");
+        put("background", "n1:6");
         put("on_background", "n2:90");
-        put("surface", "n2:6");
+        put("surface", "n1:6");
         put("on_surface", "n2:90");
         put("surface_variant", "n2:30");
         put("on_surface_variant", "n2:80");
@@ -250,7 +250,7 @@ public class MonetHelper {
         put("scrim", "n2:0");
         put("shadow", "n2:0");
         put("surface_bright", "n2:24");
-        put("surface_dim", "n2:6");
+        put("surface_dim", "n1:6");
         put("surface_container", "n2:12");
         put("surface_container_high", "n2:17");
         put("surface_container_highest", "n2:22");
@@ -473,6 +473,14 @@ public class MonetHelper {
         return resolveRoleTone(tone);
     }
 
+    private static final int BASELINE_PURPLE_80 = 0xffd0bcff;
+    private static final int BASELINE_DARK_SURFACE = 0xff141218;
+
+    private static boolean isStaticBaselineFrameworkRole(int color) {
+        int rgb = color & 0xffffff;
+        return rgb == (BASELINE_PURPLE_80 & 0xffffff) || rgb == (BASELINE_DARK_SURFACE & 0xffffff);
+    }
+
     private static Boolean frameworkRolesTrusted;
 
     private static final String[][] ROLE_PROBES = {
@@ -489,6 +497,18 @@ public class MonetHelper {
         if (cached != null) {
             return cached;
         }
+
+        // OEM / Nothing OS static framework roles check:
+        // When dynamic colors are active, framework roles must not be overridden by
+        // OEM hardcoded static baseline Purple80 (0xFFD0BCFF) or surface (#141218).
+        Integer probePrimary = readFrameworkRole("primary", "dark");
+        Integer probeSurface = readFrameworkRole("surface", "dark");
+        if ((probePrimary != null && isStaticBaselineFrameworkRole(probePrimary))
+                || (probeSurface != null && isStaticBaselineFrameworkRole(probeSurface))) {
+            frameworkRolesTrusted = false;
+            return false;
+        }
+
         boolean trusted = true;
         int checked = 0;
         for (String[] probe : ROLE_PROBES) {
@@ -533,7 +553,11 @@ public class MonetHelper {
         if (!frameworkRolesMatchPalettes()) {
             return null;
         }
-        return readFrameworkRole(role, mode);
+        Integer color = readFrameworkRole(role, mode);
+        if (color != null && isStaticBaselineFrameworkRole(color)) {
+            return null;
+        }
+        return color;
     }
 
     private static Integer readFrameworkRole(String role, String mode) {
@@ -567,14 +591,22 @@ public class MonetHelper {
             if (shadeId == null) {
                 return null;
             }
-            return ApplicationLoader.applicationContext.getColor(shadeId);
+            try {
+                return ApplicationLoader.applicationContext.getColor(shadeId);
+            } catch (Exception ignore) {
+                return null;
+            }
         }
 
         Integer keyId = ids.get(palette + "_600");
         if (keyId == null) {
             return null;
         }
-        return setLuminance(ApplicationLoader.applicationContext.getColor(keyId), tone);
+        try {
+            return setLuminance(ApplicationLoader.applicationContext.getColor(keyId), tone);
+        } catch (Exception ignore) {
+            return null;
+        }
     }
 
     private static int setLuminance(int color, double luminance) {
