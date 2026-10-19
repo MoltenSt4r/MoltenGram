@@ -198,7 +198,7 @@ public class NothingPhoneEasterEgg {
         if (fragment != null) {
             String title = "💥 " + getDeviceDisplayName();
             BulletinFactory.of(fragment)
-                    .createSimpleBulletin(R.drawable.baseline_flash_on_24, title)
+                    .createSimpleBulletin(R.raw.info, title)
                     .show();
         }
     }

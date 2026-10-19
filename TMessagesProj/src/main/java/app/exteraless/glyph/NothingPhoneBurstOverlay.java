@@ -167,12 +167,12 @@ public class NothingPhoneBurstOverlay extends View {
 
             animator.addListener(new AnimatorListenerAdapter() {
                 @Override
-                public void end(Animator animation) {
+                public void onAnimationEnd(Animator animation) {
                     finishAndRemove();
                 }
 
                 @Override
-                public void onAnimationEnd(Animator animation) {
+                public void onAnimationCancel(Animator animation) {
                     finishAndRemove();
                 }
             });
