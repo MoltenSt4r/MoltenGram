@@ -4,7 +4,15 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.app.Activity;
 import android.content.Context;
+import android.graphics.Typeface;
+import android.text.Editable;
 import android.text.InputType;
+import android.text.Spannable;
+import android.text.SpannableStringBuilder;
+import android.text.TextUtils;
+import android.text.TextWatcher;
+import android.text.style.ForegroundColorSpan;
+import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -19,8 +27,8 @@ import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.UItem;
@@ -52,7 +60,7 @@ public class CustomCommandsActivity extends BaseFragment {
             actionBar.getTitleTextView().setTextSize(18);
             actionBar.getTitleTextView().setScrollNonFitText(true);
         }
-        
+
         ActionBarMenuItem addMenu = actionBar.createMenu().addItem(ID_ADD, R.drawable.msg_add);
         addMenu.setContentDescription(getString(R.string.CustomCommandsAdd));
 
@@ -81,26 +89,33 @@ public class CustomCommandsActivity extends BaseFragment {
     }
 
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
-        items.add(UItem.asHeader(getString(R.string.CustomCommandsTitle)));
-        items.add(UItem.asButton(ID_ADD_BUTTON, getString(R.string.CustomCommandsAdd))
-                .setIcon(R.drawable.msg_add)
-                .accent());
-        items.add(UItem.asShadow(getString(R.string.CustomCommandsDesc)));
+        items.add(UItem.asTopView(getString(R.string.CustomCommandsTitle), getString(R.string.CustomCommandsDesc), "RestrictedEmoji", "⚡"));
+
+        adapter.whiteSectionStart();
+        items.add(UItem.asButton(ID_ADD_BUTTON, R.drawable.msg_add, getString(R.string.CustomCommandsAdd)).accent());
+        adapter.whiteSectionEnd();
+        items.add(UItem.asShadow(null));
 
         List<PluginsController.CustomCommand> list = PluginsController.getInstance().getCustomCommands();
         if (list.isEmpty()) {
-            items.add(UItem.asHeader(getString(R.string.CustomCommandsEmpty)));
             items.add(UItem.asShadow(getString(R.string.CustomCommandsEmptyDesc)));
         } else {
+            items.add(UItem.asHeader(getString(R.string.CustomCommandsTitle)));
+            adapter.whiteSectionStart();
+            int accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, getResourceProvider());
             for (int i = 0; i < list.size(); i++) {
                 PluginsController.CustomCommand cmd = list.get(i);
-                UItem item = UItem.asButton(ID_COMMAND_BASE + i, cmd.getFullCommand());
-                if (cmd.description != null && !cmd.description.isEmpty()) {
-                    item.setValue(cmd.description);
-                }
-                item.setIcon(R.drawable.msg_bot);
+                SpannableStringBuilder ssb = new SpannableStringBuilder();
+                String prefix = cmd.getPrefix() != 0 ? String.valueOf(cmd.getPrefix()) : ".";
+                String title = prefix + (cmd.command != null ? cmd.command : "");
+                ssb.append(title);
+                ssb.setSpan(new ForegroundColorSpan(accentColor), 0, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+                ssb.setSpan(new StyleSpan(Typeface.BOLD), 0, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
+
+                UItem item = UItem.asButton(ID_COMMAND_BASE + i, R.drawable.msg_bot, ssb, cmd.description);
                 items.add(item);
             }
+            adapter.whiteSectionEnd();
             items.add(UItem.asShadow(null));
         }
     }
@@ -168,18 +183,66 @@ public class CustomCommandsActivity extends BaseFragment {
         Activity act = getParentActivity();
         if (act == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(act, getResourceProvider());
-        builder.setTitle(existing != null ? getString(R.string.CustomCommandsEdit) : getString(R.string.CustomCommandsAdd));
+        BottomSheet.Builder builder = new BottomSheet.Builder(act, true, getResourceProvider());
 
         LinearLayout layout = new LinearLayout(act);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(16), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+        layout.setPadding(AndroidUtilities.dp(22), AndroidUtilities.dp(16), AndroidUtilities.dp(22), AndroidUtilities.dp(16));
 
-        TextView nameTitle = new TextView(act);
-        nameTitle.setText(getString(R.string.CustomCommandName));
-        nameTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        nameTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
-        layout.addView(nameTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
+        TextView titleView = new TextView(act);
+        titleView.setText(existing != null ? getString(R.string.CustomCommandsEdit) : getString(R.string.CustomCommandsAdd));
+        titleView.setTypeface(AndroidUtilities.bold());
+        titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
+        titleView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        layout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
+
+        TextView prefixLabel = new TextView(act);
+        prefixLabel.setText(getString(R.string.CustomCommandName));
+        prefixLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        prefixLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        layout.addView(prefixLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        String[] prefixes = new String[]{".", "/", "!", "$", "?"};
+        TextView[] chipViews = new TextView[prefixes.length];
+        String initialPrefix = existing != null ? String.valueOf(existing.getPrefix()) : ".";
+        final String[] selectedPrefix = new String[]{initialPrefix};
+
+        LinearLayout chipsLayout = new LinearLayout(act);
+        chipsLayout.setOrientation(LinearLayout.HORIZONTAL);
+
+        Runnable updateChips = () -> {
+            int activeColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
+            int activeTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider());
+            int inactiveBg = Theme.getColor(Theme.key_windowBackgroundGray, getResourceProvider());
+            int inactiveTextColor = Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider());
+
+            for (int i = 0; i < prefixes.length; i++) {
+                boolean isSelected = prefixes[i].equals(selectedPrefix[0]);
+                chipViews[i].setTextColor(isSelected ? activeTextColor : inactiveTextColor);
+                if (isSelected) {
+                    chipViews[i].setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), activeColor));
+                } else {
+                    chipViews[i].setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), inactiveBg));
+                }
+            }
+        };
+
+        for (int i = 0; i < prefixes.length; i++) {
+            final String p = prefixes[i];
+            TextView chip = new TextView(act);
+            chip.setText(p);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+            chip.setTypeface(AndroidUtilities.bold());
+            chip.setGravity(Gravity.CENTER);
+            chipViews[i] = chip;
+            chip.setOnClickListener(v -> {
+                selectedPrefix[0] = p;
+                updateChips.run();
+            });
+            chipsLayout.addView(chip, LayoutHelper.createLinear(44, 36, 0, 0, 8, 0));
+        }
+        updateChips.run();
+        layout.addView(chipsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
         EditTextBoldCursor nameEdit = new EditTextBoldCursor(act);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
@@ -196,16 +259,40 @@ public class CustomCommandsActivity extends BaseFragment {
         nameEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
         nameEdit.setSingleLine(true);
         nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
-        if (existing != null) {
-            nameEdit.setText(existing.getFullCommand());
-        }
-        layout.addView(nameEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
-        TextView descTitle = new TextView(act);
-        descTitle.setText(getString(R.string.CustomCommandDesc));
-        descTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        descTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
-        layout.addView(descTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
+        if (existing != null) {
+            nameEdit.setText(existing.command != null ? existing.command : "");
+        }
+
+        nameEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                if (s != null && s.length() > 0) {
+                    char first = s.charAt(0);
+                    for (String p : prefixes) {
+                        if (p.charAt(0) == first) {
+                            selectedPrefix[0] = p;
+                            updateChips.run();
+                            s.delete(0, 1);
+                            break;
+                        }
+                    }
+                }
+            }
+        });
+        layout.addView(nameEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+
+        TextView descLabel = new TextView(act);
+        descLabel.setText(getString(R.string.CustomCommandDesc));
+        descLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        descLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        layout.addView(descLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         EditTextBoldCursor descEdit = new EditTextBoldCursor(act);
         descEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
@@ -225,25 +312,45 @@ public class CustomCommandsActivity extends BaseFragment {
         if (existing != null && existing.description != null) {
             descEdit.setText(existing.description);
         }
-        layout.addView(descEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+        layout.addView(descEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 20));
 
-        builder.setView(layout);
-        builder.setPositiveButton(getString(R.string.CustomCommandSave), (dialog, which) -> {
-            String fullInput = nameEdit.getText().toString().trim();
+        TextView saveButton = new TextView(act);
+        saveButton.setText(getString(R.string.CustomCommandSave));
+        saveButton.setGravity(Gravity.CENTER);
+        saveButton.setTypeface(AndroidUtilities.bold());
+        saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        saveButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider()));
+        saveButton.setBackground(Theme.AdaptiveRipple.filledRectByKey(Theme.key_featuredStickers_addButton, 10));
+        saveButton.setPadding(0, AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14));
+        layout.addView(saveButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        TextView cancelButton = new TextView(act);
+        cancelButton.setText(getString(R.string.CustomCommandCancel));
+        cancelButton.setGravity(Gravity.CENTER);
+        cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        cancelButton.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        cancelButton.setPadding(0, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(8));
+        layout.addView(cancelButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
+
+        builder.setCustomView(layout);
+        BottomSheet sheet = builder.create();
+
+        saveButton.setOnClickListener(v -> {
+            String name = nameEdit.getText().toString().trim();
             String desc = descEdit.getText().toString().trim();
-            if (fullInput.isEmpty()) {
+            if (name.isEmpty()) {
+                AndroidUtilities.shakeView(nameEdit);
                 return;
             }
 
-            String prefix = ".";
-            String name = fullInput;
-            char firstChar = fullInput.charAt(0);
-            if (!Character.isLetterOrDigit(firstChar)) {
-                prefix = String.valueOf(firstChar);
-                name = fullInput.substring(1).trim();
+            String prefix = selectedPrefix[0];
+            if (!name.isEmpty() && !Character.isLetterOrDigit(name.charAt(0))) {
+                prefix = String.valueOf(name.charAt(0));
+                name = name.substring(1).trim();
             }
 
             if (name.isEmpty()) {
+                AndroidUtilities.shakeView(nameEdit);
                 return;
             }
 
@@ -256,8 +363,11 @@ public class CustomCommandsActivity extends BaseFragment {
             if (listView != null && listView.adapter != null) {
                 listView.adapter.update(true);
             }
+            sheet.dismiss();
         });
-        builder.setNegativeButton(getString(R.string.CustomCommandCancel), null);
-        showDialog(builder.create());
+
+        cancelButton.setOnClickListener(v -> sheet.dismiss());
+
+        showDialog(sheet);
     }
 }

@@ -79,6 +79,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsShadowRow;
 
     private int audioHeaderRow;
+    private int crossfadeRow;
+    private int crossfadeDurationRow;
     private int playlistsRow;
     private int sleepTimerRow;
     private int systemEqualizerRow;
@@ -127,6 +129,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Audio
         audioHeaderRow = addRow("audioHeader");
+        crossfadeRow = addRow("crossfade");
+        crossfadeDurationRow = addRow("crossfadeDuration");
         playlistsRow = addRow("playlists");
         sleepTimerRow = addRow("sleepTimer");
         systemEqualizerRow = addRow("systemEqualizer");
@@ -295,6 +299,21 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 AppearanceConfig.playerLyricsTextSize.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsTextSizeRow);
             });
+        } else if (position == crossfadeRow) {
+            AppearanceConfig.playerCrossfade.setConfigBool(!AppearanceConfig.playerCrossfade());
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(AppearanceConfig.playerCrossfade());
+            }
+        } else if (position == crossfadeDurationRow) {
+            int[] durations = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+            CharSequence[] options = new CharSequence[durations.length];
+            for (int i = 0; i < durations.length; i++) {
+                options[i] = org.telegram.messenger.LocaleController.formatPluralString("Seconds", durations[i]);
+            }
+            showSelector(getString(R.string.OEAppearancePlayerCrossfadeDuration), options, which -> {
+                AppearanceConfig.playerCrossfadeDuration.setConfigInt(durations[which]);
+                if (listAdapter != null) listAdapter.notifyItemChanged(crossfadeDurationRow);
+            });
         } else if (position == playlistsRow) {
             LocalPlaylistsController.getInstance().showPlaylistsDialog(getParentActivity(), getResourceProvider());
         } else if (position == sleepTimerRow) {
@@ -334,11 +353,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow || position == metrolistHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
-                    || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow) {
+                    || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
+                    || position == crossfadeRow) {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow
+                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow
                     || position == metrolistAuthRow) {
                 return TYPE_SETTINGS;
             } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow || position == metrolistShadowRow) {
@@ -375,6 +395,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsTranslate), getString(R.string.OEAppearancePlayerLyricsTranslateDesc), AppearanceConfig.playerLyricsTranslate(), true, true);
                 } else if (position == lyricsAutoscrollRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), true);
+                } else if (position == crossfadeRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerCrossfade), getString(R.string.OEAppearancePlayerCrossfadeDesc), AppearanceConfig.playerCrossfade(), true, true);
                 }
             } else if (type == TYPE_SETTINGS) {
                 TextSettingsCell cell = (TextSettingsCell) holder.itemView;
@@ -435,6 +457,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     int textSizeMode = AppearanceConfig.playerLyricsTextSize();
                     String textSizeName = textSizeMode == 0 ? getString(R.string.OEAppearancePlayerLyricsTextSizeNormal) : textSizeMode == 2 ? getString(R.string.OEAppearancePlayerLyricsTextSizeHuge) : getString(R.string.OEAppearancePlayerLyricsTextSizeLarge);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsTextSize), textSizeName, false);
+                } else if (position == crossfadeDurationRow) {
+                    int sec = AppearanceConfig.playerCrossfadeDuration();
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerCrossfadeDuration), org.telegram.messenger.LocaleController.formatPluralString("Seconds", sec), true);
                 } else if (position == playlistsRow) {
                     cell.setTextAndValue(getString(R.string.OEPlayerLocalPlaylists), getString(R.string.OEPlayerLocalPlaylistsDesc), true);
                 } else if (position == sleepTimerRow) {
