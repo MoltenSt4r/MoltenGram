@@ -211,4 +211,7 @@
     <string name="OEBackupSectionAi">Artificial Intelligence (AI)</string>
     <string name="OEBackupSelectAll">Select all</string>
     <string name="OEBackupDeselectAll">Deselect all</string>
+    <string name="OEMemeMom">Mom</string>
+    <string name="OEMemeGavnoyed">Shiteater</string>
+    <string name="OEMemeBoguStydno">God is ashamed</string>
 </resources>
