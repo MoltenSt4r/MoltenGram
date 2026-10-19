@@ -163,7 +163,7 @@ public class MoltenGramOtaManager {
 
     private void cleanupOldIfUpdated() {
         if (pendingUpdate != null) {
-            if (!isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId)) {
+            if (!isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary)) {
                 clearPendingUpdate();
             }
         }
@@ -226,7 +226,7 @@ public class MoltenGramOtaManager {
     // --- State Accessors ---
 
     public boolean isUpdateAvailable() {
-        return pendingUpdate != null && isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId);
+        return pendingUpdate != null && isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary);
     }
 
     public OtaUpdate getPendingUpdate() {
@@ -345,7 +345,7 @@ public class MoltenGramOtaManager {
                         remoteCommit = m.group(1);
                     }
 
-                    boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit);
+                    boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit, prerelease);
 
                     if (isNewer) {
                         OtaUpdate candidate = new OtaUpdate();
@@ -491,33 +491,63 @@ public class MoltenGramOtaManager {
             return false;
         }
 
+        boolean currentCanary = isCurrentCanary();
+        if (currentCanary) {
+            if (cand.isCanary && !current.isCanary) {
+                return true;
+            } else if (!cand.isCanary && current.isCanary) {
+                return false;
+            }
+        } else {
+            if (!cand.isCanary && current.isCanary) {
+                return true;
+            } else if (cand.isCanary && !current.isCanary) {
+                return false;
+            }
+        }
+
         if (cand.publishedAt > current.publishedAt) {
             return true;
         } else if (cand.publishedAt < current.publishedAt) {
             return false;
         }
 
-        if (includeCanary && cand.isCanary && !current.isCanary) {
-            return true;
-        }
-
         return false;
     }
 
+    public static boolean isCurrentCanary() {
+        return "staging".equalsIgnoreCase(BuildConfig.BUILD_TYPE);
+    }
+
     public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit) {
+        boolean remoteIsCanary = remoteVer != null && remoteVer.toLowerCase().contains("canary");
+        return isNewerVersion(remoteVer, remoteTimestamp, remoteCommit, remoteIsCanary);
+    }
+
+    public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit, boolean remoteIsCanary) {
         if (TextUtils.isEmpty(remoteVer)) {
             return false;
         }
 
         String currentVer = BuildConfig.BUILD_VERSION_STRING;
         int cmp = compareSemver(remoteVer, currentVer);
-        if (cmp > 0) {
-            return true;
-        }
         if (cmp < 0) {
             return false;
         }
 
+        boolean currentIsCanary = isCurrentCanary();
+        // Prevent cross-channel oscillations on the same semver
+        if (cmp == 0) {
+            if (currentIsCanary != remoteIsCanary) {
+                return false;
+            }
+        }
+
+        if (cmp > 0) {
+            return true;
+        }
+
+        // At this point, cmp == 0 and currentIsCanary == remoteIsCanary
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
@@ -535,13 +565,7 @@ public class MoltenGramOtaManager {
         }
 
         if (remoteSec > 0 && currentSec > 0) {
-            if (remoteSec > currentSec) {
-                return true;
-            }
-        } else if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
-            if (!remoteCommit.equalsIgnoreCase(currentCommit)) {
-                return true;
-            }
+            return remoteSec > currentSec;
         }
 
         return false;

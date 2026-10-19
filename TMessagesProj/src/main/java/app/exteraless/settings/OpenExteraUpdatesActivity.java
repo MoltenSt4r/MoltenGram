@@ -208,6 +208,9 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
     }
 
     private void handleActionClick() {
+        if (otaManager.isInstalling()) {
+            return;
+        }
         if (otaManager.isUpdateAvailable()) {
             if (otaManager.isDownloaded()) {
                 otaManager.installUpdate(getParentActivity());
@@ -322,7 +325,9 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                 case TYPE_DETAIL_SETTINGS: {
                     TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
                     if (position == statusRow) {
-                        if (otaManager.isChecking()) {
+                        if (otaManager.isInstalling()) {
+                            cell.setTextAndValue("Установка обновления...", "Выполняется установка новой версии...", false);
+                        } else if (otaManager.isChecking()) {
                             cell.setTextAndValue("Проверка обновлений...", "Связь с сервером обновлений...", false);
                         } else if (otaManager.isUpdateAvailable()) {
                             MoltenGramOtaManager.OtaUpdate u = otaManager.getPendingUpdate();
@@ -355,7 +360,10 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                 case TYPE_TEXT: {
                     TextCell cell = (TextCell) holder.itemView;
                     if (position == actionRow) {
-                        if (otaManager.isUpdateAvailable()) {
+                        cell.setColors(Theme.key_featuredStickers_addButton, Theme.key_featuredStickers_addButton);
+                        if (otaManager.isInstalling()) {
+                            cell.setTextAndIcon("Установка обновления...", R.drawable.msg_retry, false);
+                        } else if (otaManager.isUpdateAvailable()) {
                             if (otaManager.isDownloaded()) {
                                 cell.setTextAndIcon(getString(R.string.OpenExteraUpdatesInstallNow), R.drawable.baseline_check_circle_24, false);
                             } else if (otaManager.isDownloading()) {
@@ -370,8 +378,10 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                             cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdatesCheckNow), getLastCheckString(), R.drawable.sync_outline_28, false);
                         }
                     } else if (position == changelogRow) {
+                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdatesChangelog), "GitHub", R.drawable.msg_help, true);
                     } else if (position == channelRow) {
+                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdatesChannel), "@MoltenGram", R.drawable.msg_channel, false);
                     }
                     break;

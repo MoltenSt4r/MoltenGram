@@ -189,17 +189,26 @@ public class CustomCommandsActivity extends BaseFragment {
         layout.setOrientation(LinearLayout.VERTICAL);
         layout.setPadding(AndroidUtilities.dp(22), AndroidUtilities.dp(16), AndroidUtilities.dp(22), AndroidUtilities.dp(16));
 
+        int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider());
+        int hintColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider());
+        int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
+        int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider());
+        int inactiveBg = Theme.getColor(Theme.key_windowBackgroundGray, getResourceProvider());
+        int lineNormal = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider());
+        int lineActive = accentColor;
+        int lineError = Theme.getColor(Theme.key_text_RedBold, getResourceProvider());
+
         TextView titleView = new TextView(act);
         titleView.setText(existing != null ? getString(R.string.CustomCommandsEdit) : getString(R.string.CustomCommandsAdd));
         titleView.setTypeface(AndroidUtilities.bold());
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
-        titleView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        titleView.setTextColor(textColor);
         layout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
 
         TextView prefixLabel = new TextView(act);
         prefixLabel.setText(getString(R.string.CustomCommandName));
         prefixLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        prefixLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        prefixLabel.setTextColor(hintColor);
         layout.addView(prefixLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
         String[] prefixes = new String[]{".", "/", "!", "$", "?"};
@@ -211,16 +220,11 @@ public class CustomCommandsActivity extends BaseFragment {
         chipsLayout.setOrientation(LinearLayout.HORIZONTAL);
 
         Runnable updateChips = () -> {
-            int activeColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
-            int activeTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider());
-            int inactiveBg = Theme.getColor(Theme.key_windowBackgroundGray, getResourceProvider());
-            int inactiveTextColor = Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider());
-
             for (int i = 0; i < prefixes.length; i++) {
                 boolean isSelected = prefixes[i].equals(selectedPrefix[0]);
-                chipViews[i].setTextColor(isSelected ? activeTextColor : inactiveTextColor);
+                chipViews[i].setTextColor(isSelected ? buttonTextColor : textColor);
                 if (isSelected) {
-                    chipViews[i].setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), activeColor));
+                    chipViews[i].setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), accentColor));
                 } else {
                     chipViews[i].setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), inactiveBg));
                 }
@@ -247,15 +251,11 @@ public class CustomCommandsActivity extends BaseFragment {
         EditTextBoldCursor nameEdit = new EditTextBoldCursor(act);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         nameEdit.setHint(getString(R.string.CustomCommandNameHint));
-        nameEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        nameEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
-        nameEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        nameEdit.setTextColor(textColor);
+        nameEdit.setHintColor(hintColor);
+        nameEdit.setCursorColor(accentColor);
         nameEdit.setBackground(Theme.createEditTextDrawable(act, true));
-        nameEdit.setLineColors(
-                Theme.getColor(Theme.key_dialogInputField, getResourceProvider()),
-                Theme.getColor(Theme.key_dialogInputFieldActivated, getResourceProvider()),
-                Theme.getColor(Theme.key_text_RedBold, getResourceProvider())
-        );
+        nameEdit.setLineColors(lineNormal, lineActive, lineError);
         nameEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
         nameEdit.setSingleLine(true);
         nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
@@ -291,21 +291,17 @@ public class CustomCommandsActivity extends BaseFragment {
         TextView descLabel = new TextView(act);
         descLabel.setText(getString(R.string.CustomCommandDesc));
         descLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        descLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        descLabel.setTextColor(hintColor);
         layout.addView(descLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         EditTextBoldCursor descEdit = new EditTextBoldCursor(act);
         descEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         descEdit.setHint(getString(R.string.CustomCommandDescHint));
-        descEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        descEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
-        descEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        descEdit.setTextColor(textColor);
+        descEdit.setHintColor(hintColor);
+        descEdit.setCursorColor(accentColor);
         descEdit.setBackground(Theme.createEditTextDrawable(act, true));
-        descEdit.setLineColors(
-                Theme.getColor(Theme.key_dialogInputField, getResourceProvider()),
-                Theme.getColor(Theme.key_dialogInputFieldActivated, getResourceProvider()),
-                Theme.getColor(Theme.key_text_RedBold, getResourceProvider())
-        );
+        descEdit.setLineColors(lineNormal, lineActive, lineError);
         descEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
         descEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         descEdit.setMaxLines(3);
@@ -319,7 +315,7 @@ public class CustomCommandsActivity extends BaseFragment {
         saveButton.setGravity(Gravity.CENTER);
         saveButton.setTypeface(AndroidUtilities.bold());
         saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        saveButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider()));
+        saveButton.setTextColor(buttonTextColor);
         saveButton.setBackground(Theme.AdaptiveRipple.filledRectByKey(Theme.key_featuredStickers_addButton, 10));
         saveButton.setPadding(0, AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14));
         layout.addView(saveButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
@@ -328,7 +324,7 @@ public class CustomCommandsActivity extends BaseFragment {
         cancelButton.setText(getString(R.string.CustomCommandCancel));
         cancelButton.setGravity(Gravity.CENTER);
         cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        cancelButton.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
+        cancelButton.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, getResourceProvider()));
         cancelButton.setPadding(0, AndroidUtilities.dp(8), 0, AndroidUtilities.dp(8));
         layout.addView(cancelButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
 
