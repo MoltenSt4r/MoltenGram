@@ -165,7 +165,7 @@ public class StickerSizePreviewMessagesCell extends LinearLayout {
             cells[1].requestLayout();
             invalidate();
 
-            BulletinFactory.of(fragment).createSimpleBulletin(getString(R.string.OEMemeBoguStydno)).show();
+            BulletinFactory.of(fragment).createSimpleBulletin(R.raw.info, getString(R.string.OEMemeBoguStydno)).show();
         } else {
             messageObjects[0].customPhotoResId = 0;
             messageObjects[0].customReplyName = getString(R.string.StickerSizeDialogName);
