@@ -18,4 +18,4 @@
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes wght{from{font-variation-settings:'ROND' 100,'wght' 400}to{font-variation-settings:'ROND' 100,'wght' 760}}
 @keyframes wave{from{transform:translateX(0)}to{transform:translateX(-48px)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style><rect width="316.6" height="88" rx="32" fill="#f5f2fa"/></svg>
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style><rect width="316.6" height="88" rx="32" fill="#f0f5ed"/></svg>

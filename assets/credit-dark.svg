@@ -18,4 +18,4 @@
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes wght{from{font-variation-settings:'ROND' 100,'wght' 400}to{font-variation-settings:'ROND' 100,'wght' 760}}
 @keyframes wave{from{transform:translateX(0)}to{transform:translateX(-48px)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}*{animation:none!important}</style><text x="2.0" y="13.0" fill="#c7c5d0" text-anchor="start" style="font-size:12px;font-weight:500;" opacity=".7">Made with Expressive Profile</text></svg>
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}*{animation:none!important}</style><text x="2.0" y="13.0" fill="#c0c9bf" text-anchor="start" style="font-size:12px;font-weight:500;" opacity=".7">Made with Expressive Profile</text></svg>
