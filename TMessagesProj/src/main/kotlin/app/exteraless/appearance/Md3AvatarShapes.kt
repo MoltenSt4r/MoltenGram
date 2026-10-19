@@ -201,7 +201,28 @@ object Md3AvatarShapes {
         center: Offset = Offset(0.5f, 0.5f),
         mirroring: Boolean = false,
     ): RoundedPolygon {
-        val actualPoints = doRepeat(pnr, reps, center, mirroring)
+        val rawPoints = doRepeat(pnr, reps, center, mirroring)
+        val actualPoints = mutableListOf<PointNRound>()
+        for (pt in rawPoints) {
+            if (actualPoints.isNotEmpty()) {
+                val last = actualPoints.last()
+                val dx = pt.o.x - last.o.x
+                val dy = pt.o.y - last.o.y
+                if (dx * dx + dy * dy < 1e-6f) {
+                    continue
+                }
+            }
+            actualPoints.add(pt)
+        }
+        if (actualPoints.size > 2) {
+            val first = actualPoints.first()
+            val last = actualPoints.last()
+            val dx = first.o.x - last.o.x
+            val dy = first.o.y - last.o.y
+            if (dx * dx + dy * dy < 1e-6f) {
+                actualPoints.removeAt(actualPoints.size - 1)
+            }
+        }
         return RoundedPolygon(
             vertices = FloatArray(actualPoints.size * 2) { ix ->
                 actualPoints[ix / 2].o.let { if (ix % 2 == 0) it.x else it.y }
@@ -566,10 +587,18 @@ object Md3AvatarShapes {
 
         var polygon = basePolygons[id]
         if (polygon == null) {
-            polygon = buildPolygon(id)
+            polygon = try {
+                buildPolygon(id)
+            } catch (e: Throwable) {
+                RoundedPolygon.circle().normalized()
+            }
             basePolygons[id] = polygon
         }
-        val path = polygon.toPath()
+        val path = try {
+            polygon.toPath()
+        } catch (e: Throwable) {
+            Path().apply { addCircle(0.5f, 0.5f, 0.5f, Path.Direction.CW) }
+        }
         basePaths[id] = path
         return path
     }

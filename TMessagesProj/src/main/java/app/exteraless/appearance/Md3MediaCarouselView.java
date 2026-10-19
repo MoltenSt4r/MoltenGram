@@ -201,10 +201,22 @@ public class Md3MediaCarouselView extends FrameLayout {
 
     public BackupImageView getImageView(int index) {
         View itemView = getItemView(index);
+        if (itemView instanceof ViewGroup) {
+            ViewGroup vg = (ViewGroup) itemView;
+            for (int i = 0; i < vg.getChildCount(); i++) {
+                View c = vg.getChildAt(i);
+                if (c instanceof BackupImageView) {
+                    return (BackupImageView) c;
+                }
+            }
+        }
         if (itemView != null && recyclerView != null) {
-            RecyclerView.ViewHolder holder = recyclerView.getChildViewHolder(itemView);
-            if (holder instanceof CarouselViewHolder) {
-                return ((CarouselViewHolder) holder).imageView;
+            try {
+                RecyclerView.ViewHolder holder = recyclerView.getChildViewHolder(itemView);
+                if (holder instanceof CarouselViewHolder) {
+                    return ((CarouselViewHolder) holder).imageView;
+                }
+            } catch (Exception ignored) {
             }
         }
         return null;
@@ -222,10 +234,13 @@ public class Md3MediaCarouselView extends FrameLayout {
             }
             if (recyclerView.getLayoutManager() != null) {
                 View v = recyclerView.getLayoutManager().findViewByPosition(index);
-                if (v != null) {
-                    RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(v);
-                    if (vh instanceof CarouselViewHolder) {
-                        return ((CarouselViewHolder) vh).imageView.getImageReceiver();
+                if (v instanceof ViewGroup) {
+                    ViewGroup vg = (ViewGroup) v;
+                    for (int i = 0; i < vg.getChildCount(); i++) {
+                        View c = vg.getChildAt(i);
+                        if (c instanceof BackupImageView) {
+                            return ((BackupImageView) c).getImageReceiver();
+                        }
                     }
                 }
             }
@@ -254,6 +269,14 @@ public class Md3MediaCarouselView extends FrameLayout {
             if (msg.photoThumbs != null) {
                 for (int b = 0; b < msg.photoThumbs.size(); b++) {
                     TLRPC.PhotoSize photoSize = msg.photoThumbs.get(b);
+                    if (photoSize != null && photoSize.location != null && photoSize.location.local_id == fileLocation.local_id) {
+                        return i;
+                    }
+                }
+            }
+            if (msg.messageOwner != null && msg.messageOwner.media != null && msg.messageOwner.media.document != null && msg.messageOwner.media.document.thumbs != null) {
+                for (int b = 0; b < msg.messageOwner.media.document.thumbs.size(); b++) {
+                    TLRPC.PhotoSize photoSize = msg.messageOwner.media.document.thumbs.get(b);
                     if (photoSize != null && photoSize.location != null && photoSize.location.local_id == fileLocation.local_id) {
                         return i;
                     }
