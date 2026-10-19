@@ -8071,7 +8071,7 @@ public class ChatActivity extends BaseFragment implements
             } else if (object instanceof String) {
                     if (mentionContainer.getAdapter().isPluginCommands()
                             || !((String) object).startsWith("/")
-                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
                             || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
                         chatActivityEnterView.replaceWithText(start, len, object + " ", false);
                         hideFieldPanel(false);
@@ -8198,7 +8198,7 @@ public class ChatActivity extends BaseFragment implements
             } else if (object instanceof String) {
                     if (mentionContainer.getAdapter().isPluginCommands()
                             || !((String) object).startsWith("/")
-                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
                             || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
                         chatActivityEnterView.replaceWithText(start, len, object + " ", false);
                         hideFieldPanel(false);
