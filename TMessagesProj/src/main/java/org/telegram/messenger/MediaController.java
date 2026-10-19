@@ -1234,6 +1234,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     private ValueAnimator audioVolumeAnimator;
     private boolean crossfadeTriggered = false;
     private int currentCrossfadeDuration = 0;
+    private int currentCrossfadeFadeOutDuration = 0;
+    private int currentCrossfadeFadeInDuration = 0;
     private VideoPlayer previousAudioPlayer;
     private ValueAnimator previousAudioAnimator;
 
@@ -1713,12 +1715,16 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                                 && duration > 0
                                                 && progress > 0
                                                 && hasNextMessageWithoutOrder()) {
-                                            int crossfadeSec = app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration();
-                                            int crossfadeDurationMs = Math.max(1000, crossfadeSec * 1000);
-                                            int fadeMs = (int) Math.min(crossfadeDurationMs, duration / 2);
-                                            if (duration - progress <= fadeMs) {
+                                            int fadeOutSec = app.exteraless.appearance.AppearanceConfig.playerCrossfadeFadeOutDuration();
+                                            int fadeInSec = app.exteraless.appearance.AppearanceConfig.playerCrossfadeFadeInDuration();
+                                            int fadeOutMs = fadeOutSec * 1000;
+                                            int fadeInMs = fadeInSec * 1000;
+                                            int triggerMs = (int) Math.min(Math.max(fadeOutMs, fadeInMs), duration / 2);
+                                            if (triggerMs > 0 && duration - progress <= triggerMs) {
                                                 crossfadeTriggered = true;
-                                                currentCrossfadeDuration = fadeMs;
+                                                currentCrossfadeFadeOutDuration = Math.min(fadeOutMs, (int) (duration / 2));
+                                                currentCrossfadeFadeInDuration = fadeInMs;
+                                                currentCrossfadeDuration = currentCrossfadeFadeOutDuration;
                                                 playNextMessageWithoutOrder(true);
                                                 return;
                                             }
@@ -2586,10 +2592,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 });
                 int fadeOutDuration = 300;
                 if (!stopService) {
-                    if (crossfadeTriggered && currentCrossfadeDuration > 0) {
-                        fadeOutDuration = currentCrossfadeDuration;
+                    if (crossfadeTriggered && currentCrossfadeFadeOutDuration > 0) {
+                        fadeOutDuration = currentCrossfadeFadeOutDuration;
                     } else if (app.exteraless.appearance.AppearanceConfig.playerCrossfade() && playingMessageObject != null && playingMessageObject.isMusic()) {
-                        fadeOutDuration = Math.min(1500, app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration() * 1000);
+                        fadeOutDuration = app.exteraless.appearance.AppearanceConfig.playerCrossfadeFadeOutDuration() * 1000;
                     }
                 }
                 valueAnimator.setDuration(fadeOutDuration);
@@ -2715,6 +2721,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public boolean seekToProgress(MessageObject messageObject, float progress) {
         crossfadeTriggered = false;
         currentCrossfadeDuration = 0;
+        currentCrossfadeFadeOutDuration = 0;
+        currentCrossfadeFadeInDuration = 0;
         cleanupPreviousPlayer();
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
@@ -2751,6 +2759,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public boolean seekToProgressMs(MessageObject messageObject, long progressMs) {
         crossfadeTriggered = false;
         currentCrossfadeDuration = 0;
+        currentCrossfadeFadeOutDuration = 0;
+        currentCrossfadeFadeInDuration = 0;
         cleanupPreviousPlayer();
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
@@ -4160,13 +4170,13 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                     }
                     int fadeInDuration = 300;
                     float startVolume = audioVolume;
-                    if (crossfadeTriggered && currentCrossfadeDuration > 0) {
-                        fadeInDuration = currentCrossfadeDuration;
+                    if (crossfadeTriggered && currentCrossfadeFadeInDuration > 0) {
+                        fadeInDuration = currentCrossfadeFadeInDuration;
                         startVolume = 0f;
                         audioVolume = 0f;
                         setPlayerVolume();
                     } else if (app.exteraless.appearance.AppearanceConfig.playerCrossfade() && messageObject.isMusic()) {
-                        fadeInDuration = Math.min(1500, app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration() * 1000);
+                        fadeInDuration = app.exteraless.appearance.AppearanceConfig.playerCrossfadeFadeInDuration() * 1000;
                         startVolume = 0f;
                         audioVolume = 0f;
                         setPlayerVolume();
@@ -4181,9 +4191,13 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 }
                 crossfadeTriggered = false;
                 currentCrossfadeDuration = 0;
+                currentCrossfadeFadeOutDuration = 0;
+                currentCrossfadeFadeInDuration = 0;
             } catch (Exception e) {
                 crossfadeTriggered = false;
                 currentCrossfadeDuration = 0;
+                currentCrossfadeFadeOutDuration = 0;
+                currentCrossfadeFadeInDuration = 0;
                 FileLog.e(e);
                 NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.messagePlayingPlayStateChanged, playingMessageObject != null ? playingMessageObject.getId() : 0);
                 if (audioPlayer != null) {

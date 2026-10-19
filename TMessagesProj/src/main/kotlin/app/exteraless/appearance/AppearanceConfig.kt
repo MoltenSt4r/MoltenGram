@@ -492,16 +492,38 @@ object AppearanceConfig {
         return playerCrossfade.Bool()
     }
 
-    /** Длительность кроссфейда в секундах (1..12, по умолчанию 5). */
+    /** Длительность кроссфейда в секундах (обратная совместимость). */
     @JvmField
     val playerCrossfadeDuration =
-        addConfig("OEAppearancePlayerCrossfadeDuration", ConfigItem.configTypeInt, 5)
+        addConfig("OEAppearancePlayerCrossfadeDuration", ConfigItem.configTypeInt, 3)
 
     @JvmStatic
     fun playerCrossfadeDuration(): Int {
+        return playerCrossfadeFadeOutDuration()
+    }
+
+    /** Длительность затухания (Fade Out) кроссфейда в секундах (0..12, по умолчанию 3). */
+    @JvmField
+    val playerCrossfadeFadeOutDuration =
+        addConfig("OEAppearancePlayerCrossfadeFadeOutDuration", ConfigItem.configTypeInt, 3)
+
+    @JvmStatic
+    fun playerCrossfadeFadeOutDuration(): Int {
         ensureLoaded()
-        val d = playerCrossfadeDuration.Int()
-        return if (d in 1..12) d else 5
+        val d = playerCrossfadeFadeOutDuration.Int()
+        return if (d in 0..12) d else 3
+    }
+
+    /** Длительность нарастания (Fade In) кроссфейда в секундах (0..12, по умолчанию 3). */
+    @JvmField
+    val playerCrossfadeFadeInDuration =
+        addConfig("OEAppearancePlayerCrossfadeFadeInDuration", ConfigItem.configTypeInt, 3)
+
+    @JvmStatic
+    fun playerCrossfadeFadeInDuration(): Int {
+        ensureLoaded()
+        val d = playerCrossfadeFadeInDuration.Int()
+        return if (d in 0..12) d else 3
     }
 
     /** Размер шрифта текста песни: 0 — Нормальный (22sp), 1 — Крупный (26sp), 2 — Огромный (32sp). */

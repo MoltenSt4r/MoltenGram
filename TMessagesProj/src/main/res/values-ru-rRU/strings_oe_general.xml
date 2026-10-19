@@ -208,7 +208,4 @@
     <string name="OEBackupSectionAi">Искусственный интеллект (AI)</string>
     <string name="OEBackupSelectAll">Выбрать все</string>
     <string name="OEBackupDeselectAll">Снять все</string>
-    <string name="OEMemeMom">Мама</string>
-    <string name="OEMemeGavnoyed">Гавноед</string>
-    <string name="OEMemeBoguStydno">Богу стыдно</string>
 </resources>
