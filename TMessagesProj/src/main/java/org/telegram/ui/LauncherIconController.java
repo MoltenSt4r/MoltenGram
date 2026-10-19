@@ -112,7 +112,7 @@ public class LauncherIconController {
         MOLTENGRAM_ANOTHERCHANCE("MoltenGramAnotherChanceIcon", R.drawable.moltengram_anotherchance_icon_background,
                 0, R.string.AppIconMoltenGramAnotherChance, IconGroup.MOLTENGRAM, "@moltenst4r", "Another chance renewal", 0xFF00897B),
         MOLTENGRAM_DOTTED("MoltenGramDottedIcon", R.drawable.moltengram_dotted_icon_background,
-                0, R.string.AppIconMoltenGramDotted, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS glyph dot matrix", 0xFFFFFFFF, false),
+                0, R.string.AppIconMoltenGramDotted, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS glyph dot matrix", 0xFFFFFFFF),
         MOLTENGRAM_ENDEAVOUROS("MoltenGramEndeavourOSIcon", R.drawable.moltengram_endeavouros_icon_background,
                 0, R.string.AppIconMoltenGramEndeavourOS, IconGroup.MOLTENGRAM, "@moltenst4r", "EndeavourOS indigo violet", 0xFF7B52AB),
         MOLTENGRAM_SUNRISE("MoltenGramSunriseIcon", R.drawable.moltengram_sunrise_icon_background,
