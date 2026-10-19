@@ -44,4 +44,11 @@ public class SongRecMatcherTest {
         float wrongScore = matcher.evaluateMatch("Afterglow", "Wilkinson", 185, wrongCand, null);
         assertTrue("Low score expected for completely different song", wrongScore < 0.50f);
     }
+
+    @Test
+    public void testUpgradeThumbnail() {
+        String ytUrl = "https://lh3.googleusercontent.com/sample=w120-h120-l90-rj";
+        String hdUrl = SongRecMatcher.upgradeThumbnail(ytUrl);
+        assertEquals("https://lh3.googleusercontent.com/sample=w800-h800-l90-rj", hdUrl);
+    }
 }
