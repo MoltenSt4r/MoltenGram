@@ -458,7 +458,13 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         } else if (object instanceof TLRPC.ChatInvite) {
             oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
         } else if (avatarDrawable instanceof AvatarDrawable) {
-            oePeerType = ((AvatarDrawable) avatarDrawable).peerType;
+            AvatarDrawable ad = (AvatarDrawable) avatarDrawable;
+            if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+            } else {
+                oePeerType = ad.peerType;
+            }
         }
         BitmapDrawable strippedBitmap = null;
         boolean hasStripped = false;
@@ -1133,6 +1139,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             recycleBitmap(null, a);
         }
         ImageLoader.getInstance().cancelLoadingForImageReceiver(this, true);
+        oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+        oeIsAvatar = false;
     }
 
     public void onDetachedFromWindow() {
@@ -2052,6 +2060,26 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             float crossfadeProgress = currentAlpha;
             if (crossfadeByScale > 0) {
                 currentAlpha = Math.min(currentAlpha + crossfadeByScale * currentAlpha, 1);
+            }
+
+            if (oeIsAvatar) {
+                if (staticThumbDrawable instanceof AvatarDrawable) {
+                    AvatarDrawable ad = (AvatarDrawable) staticThumbDrawable;
+                    if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
+                        oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                        ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                    } else {
+                        ad.peerType = oePeerType;
+                    }
+                } else if (drawable instanceof AvatarDrawable) {
+                    AvatarDrawable ad = (AvatarDrawable) drawable;
+                    if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
+                        oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                        ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                    } else {
+                        ad.peerType = oePeerType;
+                    }
+                }
             }
 
             boolean md3Clip = oeIsAvatar && canvas != null && app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) > 0;

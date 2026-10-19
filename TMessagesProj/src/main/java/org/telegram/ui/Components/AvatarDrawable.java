@@ -269,11 +269,11 @@ public class AvatarDrawable extends Drawable {
 
     public void setAvatarType(int value) {
         avatarType = value;
-        if (avatarType == AVATAR_TYPE_SAVED) {
+        if (avatarType == AVATAR_TYPE_SAVED || avatarType == AVATAR_TYPE_MY_NOTES) {
             peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
-        } else if (avatarType == AVATAR_TYPE_FILTER_GROUPS) {
+        } else if (avatarType == AVATAR_TYPE_FILTER_GROUPS || avatarType == AVATAR_TYPE_EXISTING_CHATS) {
             peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
-        } else if (avatarType == AVATAR_TYPE_FILTER_CHANNELS) {
+        } else if (avatarType == AVATAR_TYPE_FILTER_CHANNELS || avatarType == AVATAR_TYPE_NEW_CHATS) {
             peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_CHANNEL;
         } else if (avatarType == AVATAR_TYPE_FILTER_BOTS) {
             peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT;
@@ -436,6 +436,13 @@ public class AvatarDrawable extends Drawable {
         color = getThemedColor(Theme.keys_avatar_background[getColorIndex(id)]);
         color2 = getThemedColor(Theme.keys_avatar_background2[getColorIndex(id)]);
         avatarType = AVATAR_TYPE_NORMAL;
+        if (id == UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId()) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+        } else if (id < 0) {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+        } else {
+            peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+        }
         drawDeleted = false;
         getAvatarSymbols("", "", "", stringBuilder);
     }
@@ -810,7 +817,11 @@ public class AvatarDrawable extends Drawable {
      */
     private void drawBackgroundShape(Canvas canvas, int size, float scale, Paint paint) {
         final float half = size / 2.0f;
-        int shapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(peerType);
+        int currentPeerType = peerType;
+        if (avatarType == AVATAR_TYPE_SAVED || avatarType == AVATAR_TYPE_MY_NOTES) {
+            currentPeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+        }
+        int shapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(currentPeerType);
         if (shapeId > 0) {
             final float inset = half * (1f - scale);
             android.graphics.Path path = app.exteraless.appearance.Md3AvatarShapes.getShapePath(shapeId, inset, inset, size - inset * 2, size - inset * 2);
