@@ -106,8 +106,8 @@ public class CustomCommandsActivity extends BaseFragment {
             for (int i = 0; i < list.size(); i++) {
                 PluginsController.CustomCommand cmd = list.get(i);
                 SpannableStringBuilder ssb = new SpannableStringBuilder();
-                String prefix = cmd.getPrefix() != 0 ? String.valueOf(cmd.getPrefix()) : ".";
-                String title = prefix + (cmd.command != null ? cmd.command : "");
+                String prefix = cmd.prefix != null && !cmd.prefix.isEmpty() ? cmd.prefix : ".";
+                String title = prefix + (cmd.name != null ? cmd.name : "");
                 ssb.append(title);
                 ssb.setSpan(new ForegroundColorSpan(accentColor), 0, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
                 ssb.setSpan(new StyleSpan(Typeface.BOLD), 0, ssb.length(), Spannable.SPAN_EXCLUSIVE_EXCLUSIVE);
@@ -204,7 +204,7 @@ public class CustomCommandsActivity extends BaseFragment {
 
         String[] prefixes = new String[]{".", "/", "!", "$", "?"};
         TextView[] chipViews = new TextView[prefixes.length];
-        String initialPrefix = existing != null ? String.valueOf(existing.getPrefix()) : ".";
+        String initialPrefix = existing != null && existing.prefix != null && !existing.prefix.isEmpty() ? existing.prefix : ".";
         final String[] selectedPrefix = new String[]{initialPrefix};
 
         LinearLayout chipsLayout = new LinearLayout(act);
@@ -261,7 +261,7 @@ public class CustomCommandsActivity extends BaseFragment {
         nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
         if (existing != null) {
-            nameEdit.setText(existing.command != null ? existing.command : "");
+            nameEdit.setText(existing.name != null ? existing.name : "");
         }
 
         nameEdit.addTextChangedListener(new TextWatcher() {

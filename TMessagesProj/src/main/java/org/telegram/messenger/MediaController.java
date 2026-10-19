@@ -1234,6 +1234,25 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     private ValueAnimator audioVolumeAnimator;
     private boolean crossfadeTriggered = false;
     private int currentCrossfadeDuration = 0;
+    private VideoPlayer previousAudioPlayer;
+    private ValueAnimator previousAudioAnimator;
+
+    private void cleanupPreviousPlayer() {
+        if (previousAudioAnimator != null) {
+            previousAudioAnimator.removeAllListeners();
+            previousAudioAnimator.removeAllUpdateListeners();
+            previousAudioAnimator.cancel();
+            previousAudioAnimator = null;
+        }
+        if (previousAudioPlayer != null) {
+            try {
+                previousAudioPlayer.releasePlayer(true);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+            previousAudioPlayer = null;
+        }
+    }
 
     private final ValueAnimator.AnimatorUpdateListener audioVolumeUpdateListener = new ValueAnimator.AnimatorUpdateListener() {
         @Override
@@ -2522,6 +2541,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     public void cleanupPlayer(boolean notify, boolean stopService, boolean byVoiceEnd, boolean transferPlayerToPhotoViewer) {
+        cleanupPreviousPlayer();
         if (stopService && restoreMusicPlaylistState()) {
             return;
         }
@@ -2537,8 +2557,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
 
             if (!CastSync.isActive() && audioPlayer.isPlaying() && playingMessageObject != null && !playingMessageObject.isVoice()) {
-                VideoPlayer playerFinal = audioPlayer;
+                final VideoPlayer playerFinal = audioPlayer;
+                previousAudioPlayer = playerFinal;
                 ValueAnimator valueAnimator = ValueAnimator.ofFloat(audioVolume, 0);
+                previousAudioAnimator = valueAnimator;
                 valueAnimator.addUpdateListener(valueAnimator1 -> {
                     float volume;
                     if (audioFocus != AUDIO_NO_FOCUS_CAN_DUCK) {
@@ -2555,6 +2577,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                             playerFinal.releasePlayer(true);
                         } catch (Exception e) {
                             FileLog.e(e);
+                        }
+                        if (previousAudioPlayer == playerFinal) {
+                            previousAudioPlayer = null;
+                            previousAudioAnimator = null;
                         }
                     }
                 });
@@ -2689,6 +2715,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public boolean seekToProgress(MessageObject messageObject, float progress) {
         crossfadeTriggered = false;
         currentCrossfadeDuration = 0;
+        cleanupPreviousPlayer();
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
             return false;
@@ -2724,6 +2751,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public boolean seekToProgressMs(MessageObject messageObject, long progressMs) {
         crossfadeTriggered = false;
         currentCrossfadeDuration = 0;
+        cleanupPreviousPlayer();
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
             return false;
@@ -3087,6 +3115,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     private void stopPlaybackOnTrackEnd() {
+        cleanupPreviousPlayer();
         if (audioPlayer != null || videoPlayer != null) {
             if (audioPlayer != null) {
                 if (reporter != null) {
@@ -4126,6 +4155,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 if (!messageObject.isVoice()) {
                     if (audioVolumeAnimator != null) {
                         audioVolumeAnimator.removeAllListeners();
+                        audioVolumeAnimator.removeAllUpdateListeners();
                         audioVolumeAnimator.cancel();
                     }
                     int fadeInDuration = 300;
@@ -4485,6 +4515,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             return false;
         }
         stopProgressTimer();
+        cleanupPreviousPlayer();
         try {
             if (audioPlayer != null) {
                 if (smoothFade && !CastSync.isActive() && !playingMessageObject.isVoice() && (playingMessageObject.getDuration() * (1f - playingMessageObject.audioProgress) > 1) && LaunchActivity.isResumed) {
