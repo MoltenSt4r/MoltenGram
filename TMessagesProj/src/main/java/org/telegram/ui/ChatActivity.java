@@ -8069,6 +8069,7 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
             } else if (object instanceof String) {
+                if (mentionContainer.getAdapter().isBotCommands()) {
                     if (mentionContainer.getAdapter().isPluginCommands()
                             || !((String) object).startsWith("/")
                             || NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
@@ -8196,6 +8197,7 @@ public class ChatActivity extends BaseFragment implements
                     return false;
                 }
             } else if (object instanceof String) {
+                if (mentionContainer.getAdapter().isBotCommands()) {
                     if (mentionContainer.getAdapter().isPluginCommands()
                             || !((String) object).startsWith("/")
                             || NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()

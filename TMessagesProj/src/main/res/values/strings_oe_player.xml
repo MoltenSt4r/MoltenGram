@@ -64,6 +64,9 @@
     <string name="OEAppearancePlayerVideoCover">Video covers (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Automatically replace album cover with video or clip when detected</string>
     <string name="OEAppearancePlayerAudioHeader">Playback &amp; Audio</string>
+    <string name="OEAppearancePlayerCrossfade">Crossfade</string>
+    <string name="OEAppearancePlayerCrossfadeDesc">Smoothly fades out current track while fading in the next one</string>
+    <string name="OEAppearancePlayerCrossfadeDuration">Crossfade duration</string>
     <string name="OEPlayerLocalPlaylists">Local playlists</string>
     <string name="OEPlayerLocalPlaylistsDesc">Manage playlists, import and export</string>
     <string name="OEAppearancePlayerSleepTimer">Sleep Timer</string>

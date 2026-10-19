@@ -64,6 +64,9 @@
     <string name="OEAppearancePlayerVideoCover">Видео-обложки (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Заменять обложку на видеоклип при обнаружении</string>
     <string name="OEAppearancePlayerAudioHeader">Воспроизведение и аудио</string>
+    <string name="OEAppearancePlayerCrossfade">Кроссфейд</string>
+    <string name="OEAppearancePlayerCrossfadeDesc">Плавно затухает текущий трек по мере нарастания звука следующего</string>
+    <string name="OEAppearancePlayerCrossfadeDuration">Длительность кроссфейда</string>
     <string name="OEPlayerLocalPlaylists">Локальные плейлисты</string>
     <string name="OEPlayerLocalPlaylistsDesc">Управление плейлистами, импорт и экспорт</string>
     <string name="OEAppearancePlayerSleepTimer">Таймер сна</string>

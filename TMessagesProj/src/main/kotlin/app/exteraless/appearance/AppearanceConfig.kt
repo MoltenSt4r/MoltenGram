@@ -481,6 +481,29 @@ object AppearanceConfig {
         return playerResumeOnBluetooth.Bool()
     }
 
+    /** Плавный переход (кроссфейд) между музыкальными треками. */
+    @JvmField
+    val playerCrossfade =
+        addConfig("OEAppearancePlayerCrossfade", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerCrossfade(): Boolean {
+        ensureLoaded()
+        return playerCrossfade.Bool()
+    }
+
+    /** Длительность кроссфейда в секундах (1..12, по умолчанию 5). */
+    @JvmField
+    val playerCrossfadeDuration =
+        addConfig("OEAppearancePlayerCrossfadeDuration", ConfigItem.configTypeInt, 5)
+
+    @JvmStatic
+    fun playerCrossfadeDuration(): Int {
+        ensureLoaded()
+        val d = playerCrossfadeDuration.Int()
+        return if (d in 1..12) d else 5
+    }
+
     /** Размер шрифта текста песни: 0 — Нормальный (22sp), 1 — Крупный (26sp), 2 — Огромный (32sp). */
     @JvmField
     val playerLyricsTextSize =

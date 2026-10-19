@@ -1232,6 +1232,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
 
     private float audioVolume;
     private ValueAnimator audioVolumeAnimator;
+    private boolean crossfadeTriggered = false;
+    private int currentCrossfadeDuration = 0;
 
     private final ValueAnimator.AnimatorUpdateListener audioVolumeUpdateListener = new ValueAnimator.AnimatorUpdateListener() {
         @Override
@@ -1684,6 +1686,23 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                                         bufferedValue = audioPlayer.getBufferedPosition() / (float) duration;
                                         if (duration == C.TIME_UNSET || progress < 0 || seekToProgressPending != 0) {
                                             return;
+                                        }
+                                        if (app.exteraless.appearance.AppearanceConfig.playerCrossfade()
+                                                && currentPlayingMessageObject != null
+                                                && currentPlayingMessageObject.isMusic()
+                                                && !crossfadeTriggered
+                                                && duration > 0
+                                                && progress > 0
+                                                && hasNextMessageWithoutOrder()) {
+                                            int crossfadeSec = app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration();
+                                            int crossfadeDurationMs = Math.max(1000, crossfadeSec * 1000);
+                                            int fadeMs = (int) Math.min(crossfadeDurationMs, duration / 2);
+                                            if (duration - progress <= fadeMs) {
+                                                crossfadeTriggered = true;
+                                                currentCrossfadeDuration = fadeMs;
+                                                playNextMessageWithoutOrder(true);
+                                                return;
+                                            }
                                         }
                                     }
                                     lastProgress = progress;
@@ -2539,7 +2558,15 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         }
                     }
                 });
-                valueAnimator.setDuration(300);
+                int fadeOutDuration = 300;
+                if (!stopService) {
+                    if (crossfadeTriggered && currentCrossfadeDuration > 0) {
+                        fadeOutDuration = currentCrossfadeDuration;
+                    } else if (app.exteraless.appearance.AppearanceConfig.playerCrossfade() && playingMessageObject != null && playingMessageObject.isMusic()) {
+                        fadeOutDuration = Math.min(1500, app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration() * 1000);
+                    }
+                }
+                valueAnimator.setDuration(fadeOutDuration);
                 valueAnimator.start();
             } else {
                 try {
@@ -2660,6 +2687,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     public boolean seekToProgress(MessageObject messageObject, float progress) {
+        crossfadeTriggered = false;
+        currentCrossfadeDuration = 0;
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
             return false;
@@ -2693,6 +2722,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     public boolean seekToProgressMs(MessageObject messageObject, long progressMs) {
+        crossfadeTriggered = false;
+        currentCrossfadeDuration = 0;
         final MessageObject playingMessageObject = this.playingMessageObject;
         if (audioPlayer == null && videoPlayer == null || messageObject == null || playingMessageObject == null || !isSamePlayingMessage(messageObject)) {
             return false;
@@ -3000,6 +3031,24 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             playingMessageObject.resetPlayingProgress();
         }
         playMessage(messageObject);
+    }
+
+    public boolean hasNextMessageWithoutOrder() {
+        ArrayList<MessageObject> currentPlayList = SharedConfig.shuffleMusic ? shuffledPlaylist : playlist;
+        if (currentPlayList == null || currentPlayList.isEmpty()) {
+            return false;
+        }
+        if (SharedConfig.repeatMode == AudioPlayerAlert.PLAY_ONCE && !forceLoopCurrentPlaylist) {
+            return false;
+        }
+        if (SharedConfig.repeatMode == 2 || SharedConfig.repeatMode == 1) {
+            return true;
+        }
+        if (forceLoopCurrentPlaylist) {
+            return true;
+        }
+        int nextIndex = currentPlaylistNum + (SharedConfig.playOrderReversed ? +1 : -1);
+        return nextIndex >= 0 && nextIndex < currentPlayList.size();
     }
 
     private void playNextMessageWithoutOrder(boolean byStop) {
@@ -4079,15 +4128,32 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         audioVolumeAnimator.removeAllListeners();
                         audioVolumeAnimator.cancel();
                     }
-                    audioVolumeAnimator = ValueAnimator.ofFloat(audioVolume, 1f);
+                    int fadeInDuration = 300;
+                    float startVolume = audioVolume;
+                    if (crossfadeTriggered && currentCrossfadeDuration > 0) {
+                        fadeInDuration = currentCrossfadeDuration;
+                        startVolume = 0f;
+                        audioVolume = 0f;
+                        setPlayerVolume();
+                    } else if (app.exteraless.appearance.AppearanceConfig.playerCrossfade() && messageObject.isMusic()) {
+                        fadeInDuration = Math.min(1500, app.exteraless.appearance.AppearanceConfig.playerCrossfadeDuration() * 1000);
+                        startVolume = 0f;
+                        audioVolume = 0f;
+                        setPlayerVolume();
+                    }
+                    audioVolumeAnimator = ValueAnimator.ofFloat(startVolume, 1f);
                     audioVolumeAnimator.addUpdateListener(audioVolumeUpdateListener);
-                    audioVolumeAnimator.setDuration(300);
+                    audioVolumeAnimator.setDuration(fadeInDuration);
                     audioVolumeAnimator.start();
                 } else {
                     audioVolume = 1f;
                     setPlayerVolume();
                 }
+                crossfadeTriggered = false;
+                currentCrossfadeDuration = 0;
             } catch (Exception e) {
+                crossfadeTriggered = false;
+                currentCrossfadeDuration = 0;
                 FileLog.e(e);
                 NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.messagePlayingPlayStateChanged, playingMessageObject != null ? playingMessageObject.getId() : 0);
                 if (audioPlayer != null) {
