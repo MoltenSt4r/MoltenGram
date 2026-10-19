@@ -3,6 +3,9 @@ package app.exteraless.player;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -14,8 +17,11 @@ import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
+import android.view.animation.OvershootInterpolator;
 
 import androidx.annotation.NonNull;
+
+import org.telegram.ui.Components.CubicBezierInterpolator;
 
 public class WavySeekBar extends View {
 
@@ -43,6 +49,14 @@ public class WavySeekBar extends View {
     private float phase;
     private long lastFrame;
     private float maxAmplitude = dp(4);
+
+    private ValueAnimator returnAnimator;
+    private float returnProgress;
+    private boolean animatingReturn;
+
+    private ValueAnimator resetAnimator;
+    private float resetProgress;
+    private boolean animatingReset;
 
     public WavySeekBar(Context context) {
         super(context);
@@ -72,8 +86,102 @@ public class WavySeekBar extends View {
         invalidate();
     }
 
+    private void cancelAnimations() {
+        if (returnAnimator != null) {
+            returnAnimator.cancel();
+            returnAnimator = null;
+        }
+        animatingReturn = false;
+        if (resetAnimator != null) {
+            resetAnimator.cancel();
+            resetAnimator = null;
+        }
+        animatingReset = false;
+    }
+
+    public void startBounceReturn(float from, float to) {
+        cancelAnimations();
+        animatingReturn = true;
+        returnProgress = from;
+        returnAnimator = ValueAnimator.ofFloat(from, to);
+        returnAnimator.setDuration(320);
+        returnAnimator.setInterpolator(new OvershootInterpolator(1.4f));
+        returnAnimator.addUpdateListener(anim -> {
+            returnProgress = (float) anim.getAnimatedValue();
+            invalidate();
+        });
+        returnAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                animatingReturn = false;
+                returnAnimator = null;
+                invalidate();
+            }
+        });
+        returnAnimator.start();
+    }
+
+    public void animateResetToZero() {
+        if (progress <= 0.02f || dragging) {
+            progress = 0f;
+            invalidate();
+            return;
+        }
+        cancelAnimations();
+        animatingReset = true;
+        resetProgress = progress;
+        resetAnimator = ValueAnimator.ofFloat(progress, 0f);
+        resetAnimator.setDuration(300);
+        resetAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        resetAnimator.addUpdateListener(anim -> {
+            resetProgress = (float) anim.getAnimatedValue();
+            invalidate();
+        });
+        resetAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                animatingReset = false;
+                resetAnimator = null;
+                progress = 0f;
+                invalidate();
+            }
+        });
+        resetAnimator.start();
+    }
+
+    public void cancelSeek() {
+        if (dragging) {
+            dragging = false;
+            float from = dragProgress;
+            float to = progress;
+            if (delegate != null) {
+                delegate.onSeekEnd(progress, false);
+            }
+            startBounceReturn(from, to);
+        }
+    }
+
     public void setProgress(float value) {
-        if (!dragging && progress != value) {
+        if (dragging) {
+            return;
+        }
+        if (animatingReturn) {
+            progress = value;
+            return;
+        }
+        if (animatingReset) {
+            if (value > 0.05f) {
+                cancelAnimations();
+                progress = value;
+                invalidate();
+            }
+            return;
+        }
+        if (progress > 0.15f && value < 0.03f) {
+            animateResetToZero();
+            return;
+        }
+        if (progress != value) {
             progress = value;
             invalidate();
         }
@@ -118,6 +226,7 @@ public class WavySeekBar extends View {
         }
         switch (event.getActionMasked()) {
             case MotionEvent.ACTION_DOWN:
+                cancelAnimations();
                 dragging = true;
                 if (getParent() != null) {
                     getParent().requestDisallowInterceptTouchEvent(true);
@@ -152,10 +261,12 @@ public class WavySeekBar extends View {
             case MotionEvent.ACTION_CANCEL:
                 if (dragging) {
                     dragging = false;
+                    float from = dragProgress;
+                    float to = progress;
                     if (delegate != null) {
                         delegate.onSeekEnd(progress, false);
                     }
-                    invalidate();
+                    startBounceReturn(from, to);
                 }
                 return true;
         }
@@ -190,7 +301,16 @@ public class WavySeekBar extends View {
         float cy = getHeight() / 2f;
         float left = left();
         float right = right();
-        float p = dragging ? dragProgress : progress;
+        float p;
+        if (dragging) {
+            p = dragProgress;
+        } else if (animatingReturn) {
+            p = returnProgress;
+        } else if (animatingReset) {
+            p = resetProgress;
+        } else {
+            p = progress;
+        }
 
         float thumbW = dragging ? dp(3) : dp(5);
         float x = left + p * (right - left);

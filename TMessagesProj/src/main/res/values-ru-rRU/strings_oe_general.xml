@@ -196,4 +196,19 @@
     <string name="OEAyuDatabaseImportFailed">Не удалось импортировать файл</string>
     <string name="OEAyuRegexReversed">Обратный</string>
     <string name="OEAyuRegexReversedInfo">Скрывать сообщения, которые не совпадают с выражением</string>
+    <string name="OEBackupSectionsTitle">Разделы для экспорта</string>
+    <string name="OEBackupImportSectionsTitle">Разделы для импорта</string>
+    <string name="OEBackupImportSectionsDesc">Выберите разделы для восстановления из резервной копии:</string>
+    <string name="OEBackupSectionGeneral">Основные настройки и оформление</string>
+    <string name="OEBackupSectionTor">Сеть и Orbot / Tor</string>
+    <string name="OEBackupSectionShizuku">Обновления и Shizuku</string>
+    <string name="OEBackupSectionPlugins">Плагины и дополнения</string>
+    <string name="OEBackupSectionMedia">Плеер, медиа и субтитры</string>
+    <string name="OEBackupSectionNotifications">Уведомления</string>
+    <string name="OEBackupSectionAi">Искусственный интеллект (AI)</string>
+    <string name="OEBackupSelectAll">Выбрать все</string>
+    <string name="OEBackupDeselectAll">Снять все</string>
+    <string name="OEMemeMom">Мама</string>
+    <string name="OEMemeGavnoyed">Гавноед</string>
+    <string name="OEMemeBoguStydno">Богу стыдно</string>
 </resources>

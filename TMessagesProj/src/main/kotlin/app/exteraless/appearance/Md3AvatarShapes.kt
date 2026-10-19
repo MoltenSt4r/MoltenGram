@@ -63,8 +63,17 @@ object Md3AvatarShapes {
     const val SHAPE_PIXEL_TRIANGLE = 32
     const val SHAPE_BUN = 33
     const val SHAPE_HEART = 34
+    const val SHAPE_STAR_4 = 35
+    const val SHAPE_STAR_8 = 36
+    const val SHAPE_HEXAGON = 37
+    const val SHAPE_CLOUD = 38
+    const val SHAPE_SCALLOP = 39
+    const val SHAPE_OCTAGON = 40
+    const val SHAPE_SHIELD = 41
+    const val SHAPE_FLOWER_12 = 42
+    const val SHAPE_CLOVER_3 = 43
 
-    const val SHAPES_COUNT = 35
+    const val SHAPES_COUNT = 44
 
     @JvmField
     val SHAPE_NAMES = arrayOf(
@@ -102,7 +111,16 @@ object Md3AvatarShapes {
         "Pixel circle",
         "Pixel triangle",
         "Bun",
-        "Heart"
+        "Heart",
+        "4-point star",
+        "8-point star",
+        "Hexagon",
+        "Cloud",
+        "Scallop",
+        "Octagon",
+        "Shield",
+        "12-petal flower",
+        "3-leaf clover"
     )
 
     private val cornerRound15 = CornerRounding(radius = .15f)
@@ -469,6 +487,68 @@ object Md3AvatarShapes {
                     PointNRound(Offset(0.501f, 0.946f), CornerRounding(0.129f)),
                 ),
                 reps = 1,
+                mirroring = true,
+            ).normalized()
+            SHAPE_STAR_4 -> RoundedPolygon.star(
+                numVerticesPerRadius = 4,
+                innerRadius = 0.45f,
+                rounding = cornerRound20,
+                innerRounding = cornerRound15,
+            ).normalized()
+            SHAPE_STAR_8 -> RoundedPolygon.star(
+                numVerticesPerRadius = 8,
+                innerRadius = 0.55f,
+                rounding = cornerRound15,
+                innerRounding = cornerRound15,
+            ).normalized()
+            SHAPE_HEXAGON -> RoundedPolygon(
+                numVertices = 6,
+                rounding = cornerRound20,
+            ).transformed(rotateNeg90).normalized()
+            SHAPE_CLOUD -> customPolygon(
+                listOf(
+                    PointNRound(Offset(0.500f, 0.100f), CornerRounding(0.800f)),
+                    PointNRound(Offset(0.760f, 0.200f), CornerRounding(0.700f)),
+                    PointNRound(Offset(0.960f, 0.520f), CornerRounding(0.650f)),
+                    PointNRound(Offset(0.880f, 0.850f), CornerRounding(0.550f)),
+                    PointNRound(Offset(0.600f, 0.880f), CornerRounding(0.450f)),
+                    PointNRound(Offset(0.500f, 0.880f), CornerRounding(0.300f)),
+                ),
+                reps = 1,
+                mirroring = true,
+            ).normalized()
+            SHAPE_SCALLOP -> RoundedPolygon.star(
+                numVerticesPerRadius = 12,
+                innerRadius = 0.82f,
+                rounding = cornerRound50,
+                innerRounding = cornerRound20,
+            ).normalized()
+            SHAPE_OCTAGON -> RoundedPolygon(
+                numVertices = 8,
+                rounding = cornerRound20,
+            ).normalized()
+            SHAPE_SHIELD -> customPolygon(
+                listOf(
+                    PointNRound(Offset(0.500f, 0.050f), CornerRounding(0.100f)),
+                    PointNRound(Offset(0.950f, 0.100f), CornerRounding(0.250f)),
+                    PointNRound(Offset(0.920f, 0.550f), CornerRounding(0.400f)),
+                    PointNRound(Offset(0.500f, 0.980f), CornerRounding(0.200f)),
+                ),
+                reps = 1,
+                mirroring = true,
+            ).normalized()
+            SHAPE_FLOWER_12 -> RoundedPolygon.star(
+                numVerticesPerRadius = 12,
+                innerRadius = 0.72f,
+                rounding = cornerRound50,
+                innerRounding = cornerRound20,
+            ).normalized()
+            SHAPE_CLOVER_3 -> customPolygon(
+                listOf(
+                    PointNRound(Offset(0.500f, 0.120f)),
+                    PointNRound(Offset(0.780f, -0.080f), CornerRounding(0.450f)),
+                ),
+                reps = 3,
                 mirroring = true,
             ).normalized()
             else -> RoundedPolygon.circle().normalized()

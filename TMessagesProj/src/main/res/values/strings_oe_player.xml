@@ -54,11 +54,13 @@
     <string name="OEAppearancePlayerCropCoverDesc">Force square aspect ratio for album cover</string>
     <string name="OEAppearancePlayerKeepScreenOn">Keep screen on in player</string>
     <string name="OEAppearancePlayerKeepScreenOnDesc">Keep the screen on while the expanded music player is visible</string>
-    <string name="OEAppearancePlayerCoverShape">Album cover shape</string>
+    <string name="OEAppearancePlayerCoverShape">Album cover shape (Full player)</string>
+    <string name="OEAppearancePlayerCoverShapeFollow">Same as full player</string>
     <string name="OEAppearancePlayerCoverShapeDisabled">Off (Classic)</string>
     <string name="OEAppearancePlayerCoverShapeCycle">Cycle sequentially</string>
     <string name="OEAppearancePlayerCoverShapeRandom">Random shape</string>
     <string name="OEAppearancePlayerCoverShapeCustom">Choose shape…</string>
+    <string name="OEAppearancePlayerMiniCoverShape">Mini-player cover shape</string>
     <string name="OEAppearancePlayerVideoCover">Video covers (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Automatically replace album cover with video or clip when detected</string>
     <string name="OEAppearancePlayerAudioHeader">Playback &amp; Audio</string>
@@ -141,4 +143,18 @@
     <string name="OEPlayerAddedToSaved">Saved to Saved Messages</string>
     <string name="OEPlayerAddedToProfile">Saved to profile</string>
     <string name="OEPlayerLocalTrackNotSupported">Only Telegram tracks can be saved to profile</string>
+    <string name="OEPlayerAddToQueue">Add to queue</string>
+    <string name="OEPlayerAddedToQueue">Added %1$d tracks to queue</string>
+    <string name="OEPlayerGenerateByArtist">Auto-generate by artist</string>
+    <string name="OEPlayerPlaylistsGenerated">Generated %1$d playlists by artist</string>
+    <string name="OEPlayerReturnToChat">Return to chat</string>
+    <string name="OEPlayerOpenPlaylist">Open current playlist</string>
+    <string name="OEPlayerChoosePlaylist">Choose playlist</string>
+    <string name="AudioPlaylistRename">Rename</string>
+    <string name="OEPlayerEmptyPlaylist">Playlist is empty</string>
+    <string name="OEPlayerRemoveTrack">Remove from playlist</string>
+    <string name="OEThemePreviewReply">Which end of a chocolate cornet do you eat first? 🥐</string>
+    <string name="OEThemePreviewLine1">The head, I guess? That way the chocolate won\'t spill!</string>
+    <string name="OEThemePreviewLine2">I break off the tail end and dip it into the chocolate cream! 😎</string>
+    <string name="OEThemePreviewName">Konata</string>
 </resources>

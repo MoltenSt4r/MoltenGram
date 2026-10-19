@@ -22,11 +22,16 @@ import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaController;
+import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.MessageObject;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
+import org.telegram.SQLite.SQLiteCursor;
+import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -362,6 +367,123 @@ public class LocalPlaylistsController {
         GlobalPlaylistsStore.getInstance().setPlayingPlaylist(playlist);
     }
 
+    public void addPlaylistToQueue(Activity activity, LocalPlaylist playlist, Theme.ResourcesProvider rp) {
+        if (playlist == null || playlist.tracks.isEmpty()) {
+            return;
+        }
+        int account = UserConfig.selectedAccount;
+        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
+            account = 0;
+        }
+        ArrayList<MessageObject> messageObjects = new ArrayList<>();
+        for (PlaylistItem track : playlist.tracks) {
+            messageObjects.add(track.toMessageObject(account));
+        }
+        ArrayList<MessageObject> currentQueue = MediaController.getInstance().getPlaylist();
+        if (currentQueue == null || currentQueue.isEmpty()) {
+            playPlaylist(activity, playlist, 0);
+        } else {
+            currentQueue.addAll(messageObjects);
+            NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.moreMusicDidLoad, messageObjects.size());
+        }
+        showBulletin(activity, rp, String.format(getString(R.string.OEPlayerAddedToQueue), messageObjects.size()));
+    }
+
+    public void generatePlaylistsByArtist(Activity activity, Theme.ResourcesProvider rp) {
+        if (activity == null) return;
+        int account = UserConfig.selectedAccount;
+        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
+            account = 0;
+        }
+        long clientUserId = UserConfig.getInstance(account).getClientUserId();
+
+        // Collect seed tracks from main thread
+        ArrayList<MessageObject> seedTracks = new ArrayList<>();
+        ArrayList<MessageObject> queue = MediaController.getInstance().getPlaylist();
+        if (queue != null) {
+            seedTracks.addAll(queue);
+        }
+        if (MediaController.getInstance().currentSavedMusicList != null && MediaController.getInstance().currentSavedMusicList.list != null) {
+            seedTracks.addAll(MediaController.getInstance().currentSavedMusicList.list);
+        }
+
+        MessagesStorage.getInstance(account).getStorageQueue().postRunnable(() -> {
+            ArrayList<MessageObject> allTracks = new ArrayList<>(seedTracks);
+
+            try {
+                SQLiteCursor cursor = MessagesStorage.getInstance(account).getDatabase().queryFinalized(
+                        String.format(java.util.Locale.US,
+                                "SELECT data, mid FROM media_v4 WHERE uid = %d AND type = %d ORDER BY date DESC LIMIT 2000",
+                                clientUserId, MediaDataController.MEDIA_MUSIC));
+                while (cursor.next()) {
+                    NativeByteBuffer data = cursor.byteBufferValue(0);
+                    if (data != null) {
+                        TLRPC.Message message = TLRPC.Message.TLdeserialize(data, data.readInt32(false), false);
+                        message.readAttachPath(data, clientUserId);
+                        data.reuse();
+                        if (MessageObject.isMusicMessage(message)) {
+                            message.id = cursor.intValue(1);
+                            message.dialog_id = clientUserId;
+                            allTracks.add(new MessageObject(account, message, false, true));
+                        }
+                    }
+                }
+                cursor.dispose();
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+
+            AndroidUtilities.runOnUIThread(() -> {
+                if (allTracks.isEmpty()) {
+                    showBulletin(activity, rp, getString(R.string.OEPlayerEmptyPlaylist));
+                    return;
+                }
+
+                java.util.Map<String, List<MessageObject>> grouped = new java.util.LinkedHashMap<>();
+                for (MessageObject mo : allTracks) {
+                    String author = mo.getMusicAuthor();
+                    if (TextUtils.isEmpty(author)) {
+                        author = "Unknown Artist";
+                    } else {
+                        author = author.trim();
+                    }
+                    List<MessageObject> group = grouped.get(author);
+                    if (group == null) {
+                        group = new ArrayList<>();
+                        grouped.put(author, group);
+                    }
+                    group.add(mo);
+                }
+
+                int createdCount = 0;
+                for (java.util.Map.Entry<String, List<MessageObject>> entry : grouped.entrySet()) {
+                    String artist = entry.getKey();
+                    List<MessageObject> tracks = entry.getValue();
+                    if (tracks.isEmpty()) continue;
+
+                    LocalPlaylist targetPl = null;
+                    for (LocalPlaylist existing : getPlaylists()) {
+                        if (artist.equalsIgnoreCase(existing.name)) {
+                            targetPl = existing;
+                            break;
+                        }
+                    }
+                    if (targetPl == null) {
+                        targetPl = createPlaylist(artist);
+                        createdCount++;
+                    }
+                    for (MessageObject mo : tracks) {
+                        addTrackToPlaylist(targetPl.id, mo);
+                    }
+                }
+
+                save();
+                int totalCount = createdCount > 0 ? createdCount : grouped.size();
+                showBulletin(activity, rp, String.format(getString(R.string.OEPlayerPlaylistsGenerated), totalCount));
+            });
+        });
+    }
+
     // ---------- UI Dialogs ----------
 
     public void showAddToPlaylistDialog(Activity activity, MessageObject mo, Theme.ResourcesProvider rp) {
@@ -420,31 +542,9 @@ public class LocalPlaylistsController {
         builder.show();
     }
 
-    private void showPlaylistOptions(Activity activity, LocalPlaylist pl, Theme.ResourcesProvider rp) {
+    public void showPlaylistOptions(Activity activity, LocalPlaylist pl, Theme.ResourcesProvider rp) {
         if (activity == null || pl == null) return;
-
-        CharSequence[] options = new CharSequence[]{
-                getString(R.string.AudioPlaylistPlay),
-                getString(R.string.AudioPlaylistExportM3U8),
-                getString(R.string.AudioPlaylistExportJson),
-                getString(R.string.AudioPlaylistDelete)
-        };
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity, rp);
-        builder.setTitle(pl.name);
-        builder.setItems(options, (dialog, which) -> {
-            if (which == 0) {
-                playPlaylist(activity, pl, 0);
-            } else if (which == 1) {
-                exportAndShare(activity, pl, true);
-            } else if (which == 2) {
-                exportAndShare(activity, pl, false);
-            } else if (which == 3) {
-                confirmDelete(activity, pl, rp);
-            }
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        builder.show();
+        new LocalPlaylistBottomSheet(activity, pl, rp).show();
     }
 
     private void confirmDelete(Activity activity, LocalPlaylist pl, Theme.ResourcesProvider rp) {
@@ -494,7 +594,7 @@ public class LocalPlaylistsController {
         builder.show();
     }
 
-    private void showBulletin(Activity activity, Theme.ResourcesProvider rp, String text) {
+    public void showBulletin(Activity activity, Theme.ResourcesProvider rp, String text) {
         BulletinFactory.global()
                 .createSimpleBulletin(R.raw.saved_messages, text)
                 .show();

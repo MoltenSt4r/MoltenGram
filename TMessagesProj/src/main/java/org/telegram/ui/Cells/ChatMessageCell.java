@@ -10076,7 +10076,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         photoImage.setImage(null, null, thumb, null, messageObject, 0);
                     }
                     if (messageObject.useCustomPhoto) {
-                        photoImage.setImageBitmap(getResources().getDrawable(R.drawable.sticker));
+                        int resId = messageObject.customPhotoResId != 0 ? messageObject.customPhotoResId : R.drawable.sticker;
+                        photoImage.setImageBitmap(getResources().getDrawable(resId));
                     }
                     if (!reactionsLayoutInBubble.isSmall) {
                         reactionsLayoutInBubble.measure(maxWidth + dp(36), currentMessageObject.isOutOwner() && (currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) ? Gravity.RIGHT : Gravity.LEFT);

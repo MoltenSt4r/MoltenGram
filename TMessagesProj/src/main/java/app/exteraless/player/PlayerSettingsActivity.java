@@ -62,6 +62,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int seekbarStyleRow;
     private int colorStyleRow;
     private int coverShapeRow;
+    private int miniCoverShapeRow;
     private int videoCoverRow;
     private int swipeTrackRow;
     private int cropCoverRow;
@@ -108,6 +109,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         seekbarStyleRow = addRow("seekbarStyle");
         colorStyleRow = addRow("colorStyle");
         coverShapeRow = addRow("coverShape");
+        miniCoverShapeRow = addRow("miniCoverShape");
         videoCoverRow = addRow("videoCover");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
@@ -199,6 +201,46 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         PlayerArt.clearTrackShapesCache();
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                         if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    });
+                }
+            });
+        } else if (position == miniCoverShapeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEAppearancePlayerCoverShapeFollow),
+                    getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                    getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                    getString(R.string.OEAppearancePlayerCoverShapeRandom),
+                    getString(R.string.OEAppearancePlayerCoverShapeCustom)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerMiniCoverShape), options, which -> {
+                if (which == 0) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_FOLLOW);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 1) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 2) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 3) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 4) {
+                    int currentShape = AppearanceConfig.playerMiniCoverShape();
+                    if (currentShape < 0) currentShape = 0;
+                    Md3AvatarShapesActivity.openShapePicker(getContext(), getResourceProvider(), getString(R.string.OEAppearancePlayerMiniCoverShape), currentShape, shapeId -> {
+                        AppearanceConfig.playerMiniCoverShape.setConfigInt(shapeId);
+                        PlayerArt.clearTrackShapesCache();
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                        if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
                     });
                 }
             });
@@ -301,7 +343,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } else if (position == videoCoverRow || position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow
+            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow
                     || position == metrolistAuthRow) {
@@ -373,6 +415,23 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
                     }
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerCoverShape), shapeStr, true);
+                } else if (position == miniCoverShapeRow) {
+                    int shapeMode = AppearanceConfig.playerMiniCoverShape();
+                    String shapeStr;
+                    if (shapeMode == AppearanceConfig.COVER_SHAPE_FOLLOW) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeFollow);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeDisabled);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_CYCLE) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeRandom);
+                    } else if (shapeMode >= 0 && shapeMode < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        shapeStr = Md3AvatarShapes.SHAPE_NAMES[shapeMode];
+                    } else {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeFollow);
+                    }
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerMiniCoverShape), shapeStr, true);
                 } else if (position == lyricsSourcesRow) {
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsSources), getString(R.string.OEAppearancePlayerLyricsSourcesDesc), true);
                 } else if (position == lyricsPriorityRow) {

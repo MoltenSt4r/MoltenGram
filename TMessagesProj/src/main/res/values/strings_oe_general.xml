@@ -199,4 +199,19 @@
     <string name="OEAyuDatabaseImportFailed">Couldn\'t import this file</string>
     <string name="OEAyuRegexReversed">Reversed</string>
     <string name="OEAyuRegexReversedInfo">Hide messages that don\'t match the expression</string>
+    <string name="OEBackupSectionsTitle">Sections to export</string>
+    <string name="OEBackupImportSectionsTitle">Sections to import</string>
+    <string name="OEBackupImportSectionsDesc">Select sections to restore from backup:</string>
+    <string name="OEBackupSectionGeneral">General &amp; Appearance</string>
+    <string name="OEBackupSectionTor">Network &amp; Tor / Orbot</string>
+    <string name="OEBackupSectionShizuku">Updates &amp; Shizuku</string>
+    <string name="OEBackupSectionPlugins">Plugins &amp; Extensions</string>
+    <string name="OEBackupSectionMedia">Music player &amp; media</string>
+    <string name="OEBackupSectionNotifications">Notifications</string>
+    <string name="OEBackupSectionAi">Artificial Intelligence (AI)</string>
+    <string name="OEBackupSelectAll">Select all</string>
+    <string name="OEBackupDeselectAll">Deselect all</string>
+    <string name="OEMemeMom">Mom</string>
+    <string name="OEMemeGavnoyed">Shiteater</string>
+    <string name="OEMemeBoguStydno">God is ashamed</string>
 </resources>

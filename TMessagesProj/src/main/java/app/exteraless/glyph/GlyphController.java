@@ -388,6 +388,49 @@ public final class GlyphController {
         });
     }
 
+    /**
+     * Nothing Phone (1) glyph burst particle effect with haptic feedback.
+     */
+    public void playPhone1BurstEffect(Context context) {
+        handler.post(() -> {
+            if (!ensureReady()) {
+                return;
+            }
+            if (stripManager != null && stripSessionOpen) {
+                try {
+                    GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+                    builder.buildChannelB()
+                            .buildChannelA()
+                            .buildChannelE()
+                            .buildChannelC()
+                            .buildChannelD()
+                            .buildPeriod(80)
+                            .buildCycles(4)
+                            .buildInterval(30);
+                    stripManager.animate(builder.build());
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            }
+            if (context != null) {
+                try {
+                    android.os.Vibrator vibrator = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
+                    if (vibrator != null && vibrator.hasVibrator()) {
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            long[] timings = new long[]{0, 40, 30, 60, 30, 80};
+                            int[] amplitudes = new int[]{0, 180, 0, 220, 0, 255};
+                            vibrator.vibrate(android.os.VibrationEffect.createWaveform(timings, amplitudes, -1));
+                        } else {
+                            vibrator.vibrate(new long[]{0, 40, 30, 60, 30, 80}, -1);
+                        }
+                    }
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+            }
+        });
+    }
+
     private void runPendingPreview() {
         if (!previewPending) {
             return;

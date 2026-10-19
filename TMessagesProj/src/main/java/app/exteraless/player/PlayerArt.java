@@ -39,11 +39,22 @@ public final class PlayerArt {
         Md3AvatarShapes.SHAPE_COOKIE_6,       // 17: 6-sided cookie
         Md3AvatarShapes.SHAPE_CLOVER_8,       // 22: 8-leaf clover
         Md3AvatarShapes.SHAPE_BUN,            // 33: Bun
-        Md3AvatarShapes.SHAPE_VERY_SUNNY      // 15: Very sunny
+        Md3AvatarShapes.SHAPE_VERY_SUNNY,     // 15: Very sunny
+        Md3AvatarShapes.SHAPE_STAR_4,         // 35: 4-point star
+        Md3AvatarShapes.SHAPE_STAR_8,         // 36: 8-point star
+        Md3AvatarShapes.SHAPE_HEXAGON,        // 37: Hexagon
+        Md3AvatarShapes.SHAPE_CLOUD,          // 38: Cloud
+        Md3AvatarShapes.SHAPE_SCALLOP,        // 39: Scallop
+        Md3AvatarShapes.SHAPE_OCTAGON,        // 40: Octagon
+        Md3AvatarShapes.SHAPE_SHIELD,         // 41: Shield
+        Md3AvatarShapes.SHAPE_FLOWER_12,      // 42: 12-petal flower
+        Md3AvatarShapes.SHAPE_CLOVER_3        // 43: 3-leaf clover
     };
 
     private static int shapeCycleIndex = 0;
+    private static int miniShapeCycleIndex = 0;
     private static final LruCache<String, Integer> trackShapes = new LruCache<>(64);
+    private static final LruCache<String, Integer> miniTrackShapes = new LruCache<>(64);
     private static final LruCache<String, Integer> seeds = new LruCache<>(64);
     private static final ArrayList<Pending> pending = new ArrayList<>();
 
@@ -77,8 +88,42 @@ public final class PlayerArt {
         return shape;
     }
 
+    public static synchronized int getOrCycleMiniShape(MessageObject messageObject) {
+        int mode = AppearanceConfig.playerMiniCoverShape();
+        if (mode == AppearanceConfig.COVER_SHAPE_FOLLOW) {
+            return getOrCycleShape(messageObject);
+        }
+        if (mode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+            return -1;
+        }
+        if (mode >= 0) {
+            return mode;
+        }
+        if (messageObject == null) {
+            return MD3_EXPRESSIVE_SHAPES[0];
+        }
+        String key = key(messageObject);
+        if (key == null) {
+            return MD3_EXPRESSIVE_SHAPES[0];
+        }
+        Integer cached = miniTrackShapes.get(key);
+        if (cached != null) {
+            return cached;
+        }
+        int shape;
+        if (mode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+            int randIdx = (int) (Math.random() * MD3_EXPRESSIVE_SHAPES.length);
+            shape = MD3_EXPRESSIVE_SHAPES[randIdx];
+        } else {
+            shape = MD3_EXPRESSIVE_SHAPES[(miniShapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+        }
+        miniTrackShapes.put(key, shape);
+        return shape;
+    }
+
     public static synchronized void clearTrackShapesCache() {
         trackShapes.evictAll();
+        miniTrackShapes.evictAll();
     }
 
     private static final class Pending {

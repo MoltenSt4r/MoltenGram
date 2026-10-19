@@ -22,4 +22,6 @@
     <string name="OEGlyphAnimWave">Cascading Wave</string>
     <string name="OEGlyphAnimBreathing">Breathing</string>
     <string name="OEGlyphAnimHeartbeat">Heartbeat</string>
+    <string name="OEGlyphBurst">Particle burst effect</string>
+    <string name="OEGlyphBurstDesc">Nothing Phone (1) glyph burst particle effect with haptics</string>
 </resources>

@@ -183,20 +183,7 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             message1.overrideLinkEmoji = 0;
         } else {
             TLRPC.Message message = new TLRPC.TL_message();
-            if (type == 0) {
-                message.message = LocaleController.getString(R.string.FontSizePreviewReply);
-            } else {
-                message.message = LocaleController.getString(R.string.NewThemePreviewReply);
-            }
-            String greeting = "\uD83D\uDC4B";
-            int index = message.message.indexOf(greeting);
-            if (index >= 0) {
-                TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
-                entity.offset = index;
-                entity.length = greeting.length();
-                entity.document_id = 5386654653003864312L;
-                message.entities.add(entity);
-            }
+            message.message = LocaleController.getString(R.string.OEThemePreviewReply);
             message.date = date + 60;
             message.dialog_id = 1;
             message.flags = 259;
@@ -210,24 +197,7 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             MessageObject replyMessageObject = new MessageObject(UserConfig.selectedAccount, message, true, false);
 
             message = new TLRPC.TL_message();
-            if (type == 0) {
-                message.message = LocaleController.getString(R.string.FontSizePreviewLine2);
-            } else {
-                String text = LocaleController.getString(R.string.NewThemePreviewLine3);
-                StringBuilder builder = new StringBuilder(text);
-                int index1 = text.indexOf('*');
-                int index2 = text.lastIndexOf('*');
-                if (index1 != -1 && index2 != -1) {
-                    builder.replace(index2, index2 + 1, "");
-                    builder.replace(index1, index1 + 1, "");
-                    TLRPC.TL_messageEntityTextUrl entityUrl = new TLRPC.TL_messageEntityTextUrl();
-                    entityUrl.offset = index1;
-                    entityUrl.length = index2 - index1 - 1;
-                    entityUrl.url = "https://telegram.org";
-                    message.entities.add(entityUrl);
-                }
-                message.message = builder.toString();
-            }
+            message.message = LocaleController.getString(R.string.OEThemePreviewLine2);
             String cool = "\uD83D\uDE0E";
             int index1 = message.message.indexOf(cool);
             if (index1 >= 0) {
@@ -254,11 +224,7 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             message1.eventId = 1;
 
             message = new TLRPC.TL_message();
-            if (type == 0) {
-                message.message = LocaleController.getString(R.string.FontSizePreviewLine1);
-            } else {
-                message.message = LocaleController.getString(R.string.NewThemePreviewLine1);
-            }
+            message.message = LocaleController.getString(R.string.OEThemePreviewLine1);
             message.date = date + 60;
             message.dialog_id = 1;
             message.flags = 257 + 8;
@@ -272,11 +238,7 @@ public class ThemePreviewMessagesCell extends LinearLayout {
             message.peer_id = new TLRPC.TL_peerUser();
             message.peer_id.user_id = UserConfig.getInstance(UserConfig.selectedAccount).getClientUserId();
             message2 = new MessageObject(UserConfig.selectedAccount, message, true, false);
-            if (type == 0) {
-//                message2.customReplyName = LocaleController.getString(R.string.FontSizePreviewName);
-            } else {
-                message2.customReplyName = LocaleController.getString(R.string.NewThemePreviewName);
-            }
+            message2.customReplyName = LocaleController.getString(R.string.OEThemePreviewName);
             message2.eventId = 1;
             message2.resetLayout();
             message2.replyMessageObject = replyMessageObject;

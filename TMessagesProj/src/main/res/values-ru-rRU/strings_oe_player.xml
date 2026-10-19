@@ -54,11 +54,13 @@
     <string name="OEAppearancePlayerCropCoverDesc">Принудительно использовать квадратное соотношение сторон</string>
     <string name="OEAppearancePlayerKeepScreenOn">Не выключать экран при развернутом плеере</string>
     <string name="OEAppearancePlayerKeepScreenOnDesc">Предотвращает отключение экрана во время прослушивания музыки с открытым плеером</string>
-    <string name="OEAppearancePlayerCoverShape">Форма обложки альбома</string>
+    <string name="OEAppearancePlayerCoverShape">Форма обложки альбома (Основной плеер)</string>
+    <string name="OEAppearancePlayerCoverShapeFollow">Как в основном плеере</string>
     <string name="OEAppearancePlayerCoverShapeDisabled">Выключено (Классическая)</string>
     <string name="OEAppearancePlayerCoverShapeCycle">Поочерёдно</string>
     <string name="OEAppearancePlayerCoverShapeRandom">Случайно</string>
     <string name="OEAppearancePlayerCoverShapeCustom">Выбрать фигуру…</string>
+    <string name="OEAppearancePlayerMiniCoverShape">Форма обложки в мини-плеере</string>
     <string name="OEAppearancePlayerVideoCover">Видео-обложки (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Заменять обложку на видеоклип при обнаружении</string>
     <string name="OEAppearancePlayerAudioHeader">Воспроизведение и аудио</string>
@@ -141,4 +143,18 @@
     <string name="OEPlayerAddedToSaved">Сохранено в Избранное</string>
     <string name="OEPlayerAddedToProfile">Сохранено в профиль</string>
     <string name="OEPlayerLocalTrackNotSupported">Сохранить в профиль можно только треки из Telegram</string>
+    <string name="OEPlayerAddToQueue">Добавить в очередь</string>
+    <string name="OEPlayerAddedToQueue">В очередь добавлено треков: %1$d</string>
+    <string name="OEPlayerGenerateByArtist">Сгруппировать по исполнителям</string>
+    <string name="OEPlayerPlaylistsGenerated">Сгенерировано плейлистов: %1$d</string>
+    <string name="OEPlayerReturnToChat">Вернуться в чат</string>
+    <string name="OEPlayerOpenPlaylist">Открыть текущий плейлист</string>
+    <string name="OEPlayerChoosePlaylist">Выбрать плейлист</string>
+    <string name="AudioPlaylistRename">Переименовать</string>
+    <string name="OEPlayerEmptyPlaylist">Плейлист пуст</string>
+    <string name="OEPlayerRemoveTrack">Удалить из плейлиста</string>
+    <string name="OEThemePreviewReply">С какой стороны ты ешь шоколадный рогалик? 🥐</string>
+    <string name="OEThemePreviewLine1">С широкой стороны, наверное... Так шоколад не вытекает!</string>
+    <string name="OEThemePreviewLine2">А я отламываю острый кончик и макаю в шоколад! 😎</string>
+    <string name="OEThemePreviewName">Коната</string>
 </resources>

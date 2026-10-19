@@ -210,6 +210,10 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
     }
 
     public static void openShapePicker(Context context, Theme.ResourcesProvider resourceProvider, String title, int currentShape, Utilities.Callback<Integer> onSelected) {
+        openShapePicker(context, resourceProvider, title, currentShape, false, onSelected);
+    }
+
+    public static void openShapePicker(Context context, Theme.ResourcesProvider resourceProvider, String title, int currentShape, boolean allowCycling, Utilities.Callback<Integer> onSelected) {
         if (context == null) return;
 
         BottomSheet.Builder builder = new BottomSheet.Builder(context);
@@ -219,11 +223,61 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         contentLayout.setOrientation(LinearLayout.VERTICAL);
         contentLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(8), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
 
+        final BottomSheet[] sheetRef = new BottomSheet[1];
+
+        if (allowCycling) {
+            LinearLayout cyclingLayout = new LinearLayout(context);
+            cyclingLayout.setOrientation(LinearLayout.HORIZONTAL);
+            cyclingLayout.setPadding(0, 0, 0, AndroidUtilities.dp(12));
+
+            TextView cycleBtn = new TextView(context);
+            cycleBtn.setText(LocaleController.getString("OEAppearancePlayerCoverShapeCycle", R.string.OEAppearancePlayerCoverShapeCycle));
+            cycleBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            cycleBtn.setTypeface(AndroidUtilities.bold());
+            cycleBtn.setGravity(Gravity.CENTER);
+            cycleBtn.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+            GradientDrawable cycleBg = new GradientDrawable();
+            cycleBg.setCornerRadius(AndroidUtilities.dp(16));
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton, resourceProvider);
+            if (accent == 0) accent = 0xff00d2b4;
+            cycleBg.setColor(currentShape == AppearanceConfig.COVER_SHAPE_CYCLE ? accent : Theme.multAlpha(accent, 0.15f));
+            cycleBtn.setBackground(cycleBg);
+            cycleBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_CYCLE ? 0xffffffff : accent);
+            cycleBtn.setOnClickListener(v -> {
+                if (onSelected != null) onSelected.run(AppearanceConfig.COVER_SHAPE_CYCLE);
+                if (sheetRef[0] != null) sheetRef[0].dismiss();
+            });
+
+            TextView randomBtn = new TextView(context);
+            randomBtn.setText(LocaleController.getString("OEAppearancePlayerCoverShapeRandom", R.string.OEAppearancePlayerCoverShapeRandom));
+            randomBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            randomBtn.setTypeface(AndroidUtilities.bold());
+            randomBtn.setGravity(Gravity.CENTER);
+            randomBtn.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
+            GradientDrawable randBg = new GradientDrawable();
+            randBg.setCornerRadius(AndroidUtilities.dp(16));
+            randBg.setColor(currentShape == AppearanceConfig.COVER_SHAPE_RANDOM ? accent : Theme.multAlpha(accent, 0.15f));
+            randomBtn.setBackground(randBg);
+            randomBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_RANDOM ? 0xffffffff : accent);
+            randomBtn.setOnClickListener(v -> {
+                if (onSelected != null) onSelected.run(AppearanceConfig.COVER_SHAPE_RANDOM);
+                if (sheetRef[0] != null) sheetRef[0].dismiss();
+            });
+
+            LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp1.rightMargin = AndroidUtilities.dp(6);
+            cyclingLayout.addView(cycleBtn, lp1);
+
+            LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+            lp2.leftMargin = AndroidUtilities.dp(6);
+            cyclingLayout.addView(randomBtn, lp2);
+
+            contentLayout.addView(cyclingLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
         RecyclerListView gridView = new RecyclerListView(context);
         int columns = AndroidUtilities.isTablet() ? 6 : 4;
         gridView.setLayoutManager(new GridLayoutManager(context, columns));
-
-        final BottomSheet[] sheetRef = new BottomSheet[1];
 
         gridView.setAdapter(new RecyclerView.Adapter<RecyclerListView.Holder>() {
             @NonNull

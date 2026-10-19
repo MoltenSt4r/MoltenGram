@@ -17,6 +17,7 @@ import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
 import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
+import android.animation.ValueAnimator;
 import android.app.Activity;
 import android.app.Dialog;
 import android.content.Context;
@@ -2718,7 +2719,22 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             if (playingMessageObject != null) {
                 final float left = -dpf2(1);
                 final float right = getMeasuredWidth() + dpf2(1);
-                final float p = lerp(left, right, playingMessageObject.audioProgress);
+                float targetProgress = playingMessageObject.audioProgress;
+                if ((lastAudioPlayingMessage != null && lastAudioPlayingMessage != playingMessageObject && lastAudioProgress > 0.05f)
+                        || (!isAudioResettingProgress && lastAudioProgress > 0.15f && targetProgress < 0.03f)) {
+                    startAudioProgressResetAnimation(lastAudioProgress);
+                }
+                lastAudioPlayingMessage = playingMessageObject;
+                if (isAudioResettingProgress && targetProgress > 0.05f) {
+                    if (audioProgressResetAnimator != null) {
+                        audioProgressResetAnimator.cancel();
+                        audioProgressResetAnimator = null;
+                    }
+                    isAudioResettingProgress = false;
+                }
+                float curProgress = isAudioResettingProgress ? audioAnimatedResetProgress : targetProgress;
+                lastAudioProgress = curProgress;
+                final float p = lerp(left, right, curProgress);
                 final float bottom = getMeasuredHeight();
                 final float top = bottom - dpf2(2);
 
@@ -2727,6 +2743,37 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             }
         }
         wasDraw = true;
+    }
+
+    private ValueAnimator audioProgressResetAnimator;
+    private float audioAnimatedResetProgress;
+    private boolean isAudioResettingProgress;
+    private MessageObject lastAudioPlayingMessage;
+    private float lastAudioProgress;
+
+    private void startAudioProgressResetAnimation(float from) {
+        if (from <= 0.02f) return;
+        if (audioProgressResetAnimator != null) {
+            audioProgressResetAnimator.cancel();
+        }
+        isAudioResettingProgress = true;
+        audioAnimatedResetProgress = from;
+        audioProgressResetAnimator = ValueAnimator.ofFloat(from, 0f);
+        audioProgressResetAnimator.setDuration(280);
+        audioProgressResetAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        audioProgressResetAnimator.addUpdateListener(anim -> {
+            audioAnimatedResetProgress = (float) anim.getAnimatedValue();
+            invalidate();
+        });
+        audioProgressResetAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                isAudioResettingProgress = false;
+                audioProgressResetAnimator = null;
+                invalidate();
+            }
+        });
+        audioProgressResetAnimator.start();
     }
 
     boolean drawOverlay;

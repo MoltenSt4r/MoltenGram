@@ -36,6 +36,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
     private int glyphScreenOffRow;
     private int glyphDividerRow;
     private int glyphPreviewRow;
+    private int glyphBurstRow;
 
     public OpenExteraGlyphActivity() {
         super();
@@ -60,6 +61,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphScreenOffRow = addRow(GlyphConfig.screenOffOnly.getKey());
             glyphDividerRow = addRow();
             glyphPreviewRow = addRow("glyphPreview");
+            glyphBurstRow = addRow("glyphBurst");
         } else {
             glyphNewMessageRow = -1;
             glyphCallsRow = -1;
@@ -67,6 +69,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphScreenOffRow = -1;
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
+            glyphBurstRow = -1;
         }
     }
 
@@ -169,6 +172,18 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);
             showDialog(builder.create());
+        } else if (position == glyphBurstRow) {
+            if (!GlyphController.getInstance().isSupported()) {
+                BulletinFactory.of(this)
+                        .createSimpleBulletin(R.raw.info, getString(R.string.OEGlyphUnsupported))
+                        .show();
+                return;
+            }
+            view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
+            GlyphController.getInstance().playPhone1BurstEffect(getParentActivity() != null ? getParentActivity() : getContext());
+            BulletinFactory.of(this)
+                    .createSimpleBulletin(R.drawable.baseline_flash_on_24, getString(R.string.OEGlyphBurst))
+                    .show();
         }
     }
 
@@ -214,7 +229,13 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndIcon(getString(R.string.OEGlyphPreview),
-                                R.drawable.deproko_baseline_lamp_filled_24, false);
+                                R.drawable.deproko_baseline_lamp_filled_24, true);
+                    } else if (position == glyphBurstRow) {
+                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
+                                Theme.key_windowBackgroundWhiteBlackText);
+                        cell.setTextAndValueAndIcon(getString(R.string.OEGlyphBurst),
+                                getString(R.string.OEGlyphBurstDesc),
+                                R.drawable.baseline_flash_on_24, false);
                     }
                     break;
                 }
@@ -234,7 +255,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == glyphHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == glyphPreviewRow) {
+            } else if (position == glyphPreviewRow || position == glyphBurstRow) {
                 return TYPE_TEXT;
             } else if (position == glyphDividerRow) {
                 return TYPE_INFO_PRIVACY;

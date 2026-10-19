@@ -274,11 +274,13 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
+                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
+                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else {
@@ -311,6 +313,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         current = mo;
         titleView.setText(mo.getMusicTitle());
         artistView.setText(mo.getMusicAuthor());
+        cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
         cover.setMessage(mo);
         playButton.setMessage(mo);
         playButton.setContentDescription(getString(MediaController.getInstance().isMessagePaused() ? R.string.AccActionPlay : R.string.AccActionPause));

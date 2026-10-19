@@ -424,6 +424,7 @@ object AppearanceConfig {
     const val COVER_SHAPE_DISABLED = -1
     const val COVER_SHAPE_CYCLE = -2
     const val COVER_SHAPE_RANDOM = -3
+    const val COVER_SHAPE_FOLLOW = -4
 
     /** Форма обложки альбома в плеере: -1 (выключено), -2 (циклически), -3 (случайно) или ID фигуры >= 0. */
     @JvmField
@@ -434,6 +435,17 @@ object AppearanceConfig {
     fun playerCoverShape(): Int {
         ensureLoaded()
         return playerCoverShape.Int()
+    }
+
+    /** Форма обложки в мини-плеере: -4 (как в основном плеере), -1 (выключено), -2 (циклически), -3 (случайно) или ID фигуры >= 0. */
+    @JvmField
+    val playerMiniCoverShape =
+        addConfig("OEAppearancePlayerMiniCoverShape", ConfigItem.configTypeInt, COVER_SHAPE_FOLLOW)
+
+    @JvmStatic
+    fun playerMiniCoverShape(): Int {
+        ensureLoaded()
+        return playerMiniCoverShape.Int()
     }
 
     /** Заменять обложку на видео при обнаружении (Canvas). */

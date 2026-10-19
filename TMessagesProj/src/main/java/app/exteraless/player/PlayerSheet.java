@@ -68,6 +68,7 @@ import org.telegram.ui.LaunchActivity;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import app.exteraless.appearance.AppearanceConfig;
@@ -307,6 +308,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         LinearLayout headerCenter = new LinearLayout(context);
         headerCenter.setOrientation(LinearLayout.VERTICAL);
         headerCenter.setGravity(Gravity.CENTER_HORIZONTAL);
+        headerCenter.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(8), 0, ColorUtils.setAlphaComponent(colors.onSurface, 0x1f)));
+        headerCenter.setPadding(dp(8), dp(4), dp(8), dp(4));
+        headerCenter.setOnClickListener(this::showHeaderMenu);
         headerLabel = new TextView(context);
         headerLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         headerLabel.setLetterSpacing(0.08f);
@@ -1102,6 +1106,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         cover.setMessage(mo);
         smallCover.setMessage(mo);
         if (changed) {
+            seekBar.animateResetToZero();
             Integer seed = PlayerArt.cachedSeed(mo);
             if (seed != null) {
                 animateColors(PlayerColors.fromSeed(seed, dark), animated);
@@ -1905,6 +1910,33 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (activity != null) {
             new AudioPlayerAlert(activity, resourcesProvider).show();
         }
+    }
+
+    private void showHeaderMenu(View anchor) {
+        if (activity == null) return;
+        Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+        ItemOptions o = ItemOptions.makeOptions(container, rp, anchor, true);
+        o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
+        });
+        o.add(R.drawable.msg_message, getString(R.string.OEPlayerReturnToChat), () -> {
+            o.dismiss();
+            GlobalPlaylistsStore.getInstance().clearPlayingPlaylist();
+            MessageObject mo = current;
+            if (mo != null && mo.getDialogId() != 0) {
+                ArrayList<MessageObject> list = new ArrayList<>();
+                list.add(mo);
+                MediaController.getInstance().setPlaylist(list, mo, 0, true, null);
+            }
+            updateHeader();
+            BulletinFactory.of(container, rp).createSimpleBulletin(R.raw.contact_check, getString(R.string.OEPlayerReturnToChat)).show();
+        });
+        o.add(R.drawable.msg_openprofile, getString(R.string.OEPlayerGenerateByArtist), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().generatePlaylistsByArtist(activity, rp);
+        });
+        o.show();
     }
 
     private void showMenu(View anchor) {
