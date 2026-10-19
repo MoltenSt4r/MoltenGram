@@ -371,10 +371,7 @@ public class LocalPlaylistsController {
         if (playlist == null || playlist.tracks.isEmpty()) {
             return;
         }
-        int account = UserConfig.selectedAccount;
-        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
-            account = 0;
-        }
+        final int account = (UserConfig.selectedAccount >= 0 && UserConfig.selectedAccount < UserConfig.MAX_ACCOUNT_COUNT) ? UserConfig.selectedAccount : 0;
         ArrayList<MessageObject> messageObjects = new ArrayList<>();
         for (PlaylistItem track : playlist.tracks) {
             messageObjects.add(track.toMessageObject(account));
@@ -391,11 +388,8 @@ public class LocalPlaylistsController {
 
     public void generatePlaylistsByArtist(Activity activity, Theme.ResourcesProvider rp) {
         if (activity == null) return;
-        int account = UserConfig.selectedAccount;
-        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
-            account = 0;
-        }
-        long clientUserId = UserConfig.getInstance(account).getClientUserId();
+        final int account = (UserConfig.selectedAccount >= 0 && UserConfig.selectedAccount < UserConfig.MAX_ACCOUNT_COUNT) ? UserConfig.selectedAccount : 0;
+        final long clientUserId = UserConfig.getInstance(account).getClientUserId();
 
         // Collect seed tracks from main thread
         ArrayList<MessageObject> seedTracks = new ArrayList<>();
