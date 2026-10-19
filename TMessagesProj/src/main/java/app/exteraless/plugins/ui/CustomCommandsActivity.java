@@ -190,7 +190,10 @@ public class CustomCommandsActivity extends BaseFragment {
         layout.setPadding(AndroidUtilities.dp(22), AndroidUtilities.dp(16), AndroidUtilities.dp(22), AndroidUtilities.dp(16));
 
         int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider());
-        int hintColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider());
+        int hintColor = Theme.getColor(Theme.key_windowBackgroundWhiteHintText, getResourceProvider());
+        if (hintColor == 0) {
+            hintColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider());
+        }
         int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
         int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, getResourceProvider());
         int inactiveBg = Theme.getColor(Theme.key_windowBackgroundGray, getResourceProvider());
@@ -250,9 +253,11 @@ public class CustomCommandsActivity extends BaseFragment {
 
         EditTextBoldCursor nameEdit = new EditTextBoldCursor(act);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        nameEdit.setHint(getString(R.string.CustomCommandNameHint));
         nameEdit.setTextColor(textColor);
+        nameEdit.setHintTextColor(hintColor);
         nameEdit.setHintColor(hintColor);
+        nameEdit.setHintText(getString(R.string.CustomCommandNameHint));
+        nameEdit.setHint(getString(R.string.CustomCommandNameHint));
         nameEdit.setCursorColor(accentColor);
         nameEdit.setBackground(Theme.createEditTextDrawable(act, true));
         nameEdit.setLineColors(lineNormal, lineActive, lineError);
@@ -296,9 +301,11 @@ public class CustomCommandsActivity extends BaseFragment {
 
         EditTextBoldCursor descEdit = new EditTextBoldCursor(act);
         descEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        descEdit.setHint(getString(R.string.CustomCommandDescHint));
         descEdit.setTextColor(textColor);
+        descEdit.setHintTextColor(hintColor);
         descEdit.setHintColor(hintColor);
+        descEdit.setHintText(getString(R.string.CustomCommandDescHint));
+        descEdit.setHint(getString(R.string.CustomCommandDescHint));
         descEdit.setCursorColor(accentColor);
         descEdit.setBackground(Theme.createEditTextDrawable(act, true));
         descEdit.setLineColors(lineNormal, lineActive, lineError);
