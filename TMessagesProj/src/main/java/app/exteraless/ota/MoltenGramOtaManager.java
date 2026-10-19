@@ -536,9 +536,10 @@ public class MoltenGramOtaManager {
         }
 
         boolean currentIsCanary = isCurrentCanary();
+        boolean effectiveRemoteIsCanary = remoteIsCanary || (remoteVer != null && remoteVer.toLowerCase().contains("canary"));
         // Prevent cross-channel oscillations on the same semver
         if (cmp == 0) {
-            if (currentIsCanary != remoteIsCanary) {
+            if (currentIsCanary != effectiveRemoteIsCanary) {
                 return false;
             }
         }
@@ -547,10 +548,14 @@ public class MoltenGramOtaManager {
             return true;
         }
 
-        // At this point, cmp == 0 and currentIsCanary == remoteIsCanary
+        // At this point, cmp == 0 and currentIsCanary == effectiveRemoteIsCanary
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
+                return false;
+            }
+            int minLen = Math.min(remoteCommit.length(), currentCommit.length());
+            if (minLen >= 7 && remoteCommit.regionMatches(true, 0, currentCommit, 0, minLen)) {
                 return false;
             }
         }
