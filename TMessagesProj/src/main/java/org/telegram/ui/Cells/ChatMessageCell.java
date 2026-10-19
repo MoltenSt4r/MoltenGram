@@ -6500,9 +6500,23 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return -1;
     }
 
+    public int getCarouselMessageIndex(TLRPC.FileLocation fileLocation) {
+        if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
+            return md3MediaCarouselView.indexOf(fileLocation);
+        }
+        return -1;
+    }
+
     public View getCarouselItemView(int index) {
         if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
             return md3MediaCarouselView.getItemView(index);
+        }
+        return null;
+    }
+
+    public View getCarouselImageView(int index) {
+        if (isMediaCarouselMessage() && md3MediaCarouselView != null) {
+            return md3MediaCarouselView.getImageView(index);
         }
         return null;
     }

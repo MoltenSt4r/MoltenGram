@@ -5,6 +5,8 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
@@ -16,6 +18,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.MessageObject;
@@ -165,7 +169,14 @@ public class StickerSizePreviewMessagesCell extends LinearLayout {
             cells[1].requestLayout();
             invalidate();
 
-            BulletinFactory.of(fragment).createSimpleBulletin(R.drawable.easter_egg_meme_girl, getString(R.string.OEMemeBoguStydno)).show();
+            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.easter_egg_meme_girl);
+            if (bitmap != null) {
+                RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+                drawable.setCornerRadius(AndroidUtilities.dp(8));
+                BulletinFactory.of(fragment).createSimpleBulletin(drawable, getString(R.string.OEMemeBoguStydno)).show();
+            } else {
+                BulletinFactory.of(fragment).createSimpleBulletin(R.drawable.easter_egg_meme_girl, getString(R.string.OEMemeBoguStydno)).show();
+            }
         } else {
             messageObjects[0].customPhotoResId = 0;
             messageObjects[0].customReplyName = getString(R.string.StickerSizeDialogName);

@@ -68,11 +68,10 @@ public class CustomCommandsActivity extends BaseFragment {
         });
 
         FrameLayout contentView = new FrameLayout(context);
-        contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, getResourceProvider()));
 
         listView = new UniversalRecyclerView(this, this::fillItems, this::onItemClick, this::onItemLongClick);
         listView.setSections();
-        listView.adapter.setApplyBackground(false);
         contentView.addView(listView,
                 LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
         actionBar.setAdaptiveBackground(listView);
@@ -136,7 +135,7 @@ public class CustomCommandsActivity extends BaseFragment {
                 getString(R.string.CustomCommandsDelete)
         };
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(act);
+        AlertDialog.Builder builder = new AlertDialog.Builder(act, getResourceProvider());
         builder.setTitle(cmd.getFullCommand());
         builder.setItems(options, (dialog, which) -> {
             if (which == 0) {
@@ -152,7 +151,7 @@ public class CustomCommandsActivity extends BaseFragment {
         Activity act = getParentActivity();
         if (act == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(act);
+        AlertDialog.Builder builder = new AlertDialog.Builder(act, getResourceProvider());
         builder.setTitle(getString(R.string.CustomCommandsDelete));
         builder.setMessage(getString(R.string.CustomCommandsDeleteConfirm));
         builder.setPositiveButton(getString(R.string.Delete), (dialog, which) -> {
@@ -169,7 +168,7 @@ public class CustomCommandsActivity extends BaseFragment {
         Activity act = getParentActivity();
         if (act == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(act);
+        AlertDialog.Builder builder = new AlertDialog.Builder(act, getResourceProvider());
         builder.setTitle(existing != null ? getString(R.string.CustomCommandsEdit) : getString(R.string.CustomCommandsAdd));
 
         LinearLayout layout = new LinearLayout(act);
@@ -179,17 +178,24 @@ public class CustomCommandsActivity extends BaseFragment {
         TextView nameTitle = new TextView(act);
         nameTitle.setText(getString(R.string.CustomCommandName));
         nameTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        nameTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
+        nameTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
         layout.addView(nameTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         EditTextBoldCursor nameEdit = new EditTextBoldCursor(act);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         nameEdit.setHint(getString(R.string.CustomCommandNameHint));
-        nameEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        nameEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
-        nameEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        nameEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        nameEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
+        nameEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        nameEdit.setBackground(Theme.createEditTextDrawable(act, true));
+        nameEdit.setLineColors(
+                Theme.getColor(Theme.key_dialogInputField, getResourceProvider()),
+                Theme.getColor(Theme.key_dialogInputFieldActivated, getResourceProvider()),
+                Theme.getColor(Theme.key_text_RedBold, getResourceProvider())
+        );
+        nameEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
         nameEdit.setSingleLine(true);
-        nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_VARIATION_VISIBLE_PASSWORD);
+        nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
         if (existing != null) {
             nameEdit.setText(existing.getFullCommand());
         }
@@ -198,15 +204,22 @@ public class CustomCommandsActivity extends BaseFragment {
         TextView descTitle = new TextView(act);
         descTitle.setText(getString(R.string.CustomCommandDesc));
         descTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        descTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
+        descTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2, getResourceProvider()));
         layout.addView(descTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         EditTextBoldCursor descEdit = new EditTextBoldCursor(act);
         descEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         descEdit.setHint(getString(R.string.CustomCommandDescHint));
-        descEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        descEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint));
-        descEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        descEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        descEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
+        descEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        descEdit.setBackground(Theme.createEditTextDrawable(act, true));
+        descEdit.setLineColors(
+                Theme.getColor(Theme.key_dialogInputField, getResourceProvider()),
+                Theme.getColor(Theme.key_dialogInputFieldActivated, getResourceProvider()),
+                Theme.getColor(Theme.key_text_RedBold, getResourceProvider())
+        );
+        descEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
         descEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         descEdit.setMaxLines(3);
         if (existing != null && existing.description != null) {

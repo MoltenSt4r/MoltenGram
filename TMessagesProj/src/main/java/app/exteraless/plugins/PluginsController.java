@@ -2526,6 +2526,32 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         return results;
     }
 
+    public boolean isCustomOrPluginCommand(String command) {
+        if (command == null || command.isEmpty()) {
+            return false;
+        }
+        char prefix = command.charAt(0);
+        String clean = command.length() > 1 ? command.substring(1).toLowerCase(Locale.ROOT) : "";
+        for (CustomCommand cc : customCommands) {
+            if (cc.getPrefix() == prefix && cc.getCleanCommand().equalsIgnoreCase(clean)) {
+                return true;
+            }
+        }
+        for (Map.Entry<String, Plugin> entry : plugins.entrySet()) {
+            Plugin p = entry.getValue();
+            if (p != null && !p.enabled) continue;
+            List<PluginCommand> cmds = pluginCommands.get(entry.getKey());
+            if (cmds != null) {
+                for (PluginCommand cmd : cmds) {
+                    if (cmd.getCleanCommand().equalsIgnoreCase(clean)) {
+                        return true;
+                    }
+                }
+            }
+        }
+        return false;
+    }
+
     private static final Set<String> COMMON_NON_COMMAND_EXTS = new HashSet<>(Arrays.asList(
             "jpg", "jpeg", "png", "gif", "webp", "mp4", "mp3", "ogg", "json", "xml",
             "txt", "py", "plugin", "apk", "zip", "rar", "pdf", "doc", "docx", "tmp",

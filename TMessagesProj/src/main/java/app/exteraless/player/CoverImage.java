@@ -3,15 +3,12 @@ package app.exteraless.player;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
-import android.graphics.Matrix;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.net.Uri;
 import android.text.TextUtils;
 import android.view.MotionEvent;
-import android.view.TextureView;
 import android.widget.FrameLayout;
 
 import app.exteraless.appearance.AppearanceConfig;
@@ -24,26 +21,20 @@ import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessageObject;
-import org.telegram.messenger.NotificationCenter;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.audioinfo.AudioInfo;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.VideoPlayer;
 
 import java.io.File;
 
-public class CoverImage extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
+public class CoverImage extends FrameLayout {
 
     public interface Listener {
         void onSeed(MessageObject messageObject, int seed);
     }
 
     private final BackupImageView imageView;
-    private final TextureView textureView;
-    private VideoPlayer videoPlayer;
-    private String currentVideoUrl;
 
     private final Paint placeholderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final RectF rect = new RectF();
@@ -62,9 +53,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
     private int lastH = -1;
     private float defaultElevation = -1f;
 
-    private int videoWidth;
-    private int videoHeight;
-
     public CoverImage(Context context, int noteSizeDp) {
         super(context);
         this.noteSizeDp = noteSizeDp;
@@ -74,13 +62,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
         imageView.setFocusable(false);
         imageView.setClickable(false);
         addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-
-        textureView = new TextureView(context);
-        textureView.setFocusable(false);
-        textureView.setClickable(false);
-        textureView.setOpaque(false);
-        textureView.setAlpha(0f);
-        addView(textureView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
         imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
@@ -176,7 +157,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
         if (messageObject == null) {
             currentKey = null;
             message = null;
-            releasePlayer();
             imageView.setImageDrawable(null);
             return;
         }
@@ -204,8 +184,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
         currentKey = key;
         message = messageObject;
 
-        releasePlayer();
-
         boolean hasCover = false;
         if (file != null) {
             imageView.setImageBitmap(file);
@@ -229,10 +207,10 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
             }
         }
 
-        // If video cover is enabled or static cover is missing, match via SongRec / Innertube
-        if (noteSizeDp >= 60 && (AppearanceConfig.playerVideoCover() || !hasCover)) {
+        // If static cover is missing, match via SongRec / Innertube to get regular thumbnail cover
+        if (noteSizeDp >= 60 && !hasCover) {
             final MessageObject reqMsg = messageObject;
-            SongRecMatcher.getInstance().findVideoCover(reqMsg, new SongRecMatcher.MatchCallback() {
+            SongRecMatcher.getInstance().findCover(reqMsg, new SongRecMatcher.MatchCallback() {
                 @Override
                 public void onMatched(String videoUrl, MetrolistClient.Track track) {
                     AndroidUtilities.runOnUIThread(() -> {
@@ -241,9 +219,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
                         }
                         if (!imageView.getImageReceiver().hasBitmapImage() && track != null && !TextUtils.isEmpty(track.thumbnailUrl)) {
                             imageView.setImage(track.thumbnailUrl, null, null);
-                        }
-                        if (AppearanceConfig.playerVideoCover() && !TextUtils.isEmpty(videoUrl)) {
-                            playVideoCover(videoUrl);
                         }
                     });
                 }
@@ -255,133 +230,8 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
         }
     }
 
-    private void playVideoCover(String videoUrl) {
-        if (TextUtils.isEmpty(videoUrl)) {
-            return;
-        }
-        if (videoPlayer != null && TextUtils.equals(currentVideoUrl, videoUrl)) {
-            if (!MediaController.getInstance().isMessagePaused()) {
-                videoPlayer.play();
-            } else {
-                videoPlayer.pause();
-            }
-            return;
-        }
-
-        releasePlayer();
-        currentVideoUrl = videoUrl;
-
-        try {
-            videoPlayer = new VideoPlayer();
-            videoPlayer.setDelegate(new VideoPlayer.VideoPlayerDelegate() {
-                @Override
-                public void onStateChanged(boolean playWhenReady, int playbackState) {
-                }
-
-                @Override
-                public void onError(VideoPlayer player, Exception e) {
-                    FileLog.e(e);
-                    releasePlayer();
-                }
-
-                @Override
-                public void onVideoSizeChanged(int width, int height, int unappliedRotationDegrees, float pixelWidthHeightRatio) {
-                    videoWidth = width;
-                    videoHeight = height;
-                    updateTextureTransform();
-                }
-
-                @Override
-                public void onRenderedFirstFrame() {
-                    textureView.animate().alpha(1f).setDuration(250).start();
-                }
-            });
-            videoPlayer.setTextureView(textureView);
-            videoPlayer.setMute(true);
-            videoPlayer.setVolume(0f);
-            videoPlayer.setLooping(true);
-            videoPlayer.preparePlayer(Uri.parse(videoUrl), "other");
-            if (!MediaController.getInstance().isMessagePaused()) {
-                videoPlayer.play();
-            } else {
-                videoPlayer.pause();
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-            releasePlayer();
-        }
-    }
-
-    private void updateTextureTransform() {
-        int viewW = getWidth();
-        int viewH = getHeight();
-        if (viewW <= 0 || viewH <= 0 || videoWidth <= 0 || videoHeight <= 0) {
-            return;
-        }
-        float viewRatio = (float) viewW / (float) viewH;
-        float videoRatio = (float) videoWidth / (float) videoHeight;
-        float scaleX = 1f;
-        float scaleY = 1f;
-
-        if (videoRatio > viewRatio) {
-            scaleX = videoRatio / viewRatio;
-            scaleY = 1f;
-        } else {
-            scaleX = 1f;
-            scaleY = viewRatio / videoRatio;
-        }
-
-        Matrix matrix = new Matrix();
-        matrix.setScale(scaleX, scaleY, viewW / 2f, viewH / 2f);
-        textureView.setTransform(matrix);
-    }
-
     public void release() {
-        releasePlayer();
-    }
-
-    private void releasePlayer() {
-        currentVideoUrl = null;
-        if (videoPlayer != null) {
-            videoPlayer.releasePlayer(true);
-            videoPlayer = null;
-        }
-        if (textureView != null) {
-            textureView.animate().cancel();
-            textureView.setAlpha(0f);
-        }
-    }
-
-    @Override
-    protected void onAttachedToWindow() {
-        super.onAttachedToWindow();
-        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
-        for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
-            NotificationCenter.getInstance(i).addObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
-        }
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
-        for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
-            NotificationCenter.getInstance(i).removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
-        }
-        releasePlayer();
-    }
-
-    @Override
-    public void didReceivedNotification(int id, int account, Object... args) {
-        if (id == NotificationCenter.messagePlayingPlayStateChanged) {
-            if (videoPlayer != null) {
-                if (MediaController.getInstance().isMessagePaused()) {
-                    videoPlayer.pause();
-                } else {
-                    videoPlayer.play();
-                }
-            }
-        }
+        imageView.setImageDrawable(null);
     }
 
     private void onBitmap(Bitmap bitmap) {
@@ -403,7 +253,6 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
         roundPath = null;
         lastW = w;
         lastH = h;
-        updateTextureTransform();
     }
 
     @Override
@@ -442,7 +291,7 @@ public class CoverImage extends FrameLayout implements NotificationCenter.Notifi
             }
         }
 
-        if (!imageView.getImageReceiver().hasBitmapImage() && textureView.getAlpha() <= 0f) {
+        if (!imageView.getImageReceiver().hasBitmapImage()) {
             if (hasShape && shapePath != null) {
                 canvas.drawPath(shapePath, placeholderPaint);
             } else {

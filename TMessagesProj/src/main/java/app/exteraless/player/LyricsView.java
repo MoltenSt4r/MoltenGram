@@ -455,9 +455,11 @@ public class LyricsView extends FrameLayout {
         private final Spring scale = new Spring(1f, 320f, 0.75f, 0.0005f);
         private int index = -1;
         private String text;
+        private String translationText;
         private boolean plain;
         private boolean isBacking;
         private StaticLayout layout;
+        private StaticLayout translationLayout;
         private int layoutWidth;
         private int role = ROLE_FUTURE;
         private long lastFrame;
@@ -476,19 +478,22 @@ public class LyricsView extends FrameLayout {
                     displayText = value + "\n" + rom;
                 }
             }
-            if (!TextUtils.isEmpty(translation)) {
-                displayText = displayText + "\n" + translation;
-            }
             if (backing && app.exteraless.appearance.AppearanceConfig.playerLyricsSplitRoles() && !TextUtils.isEmpty(displayText)) {
                 if (!displayText.startsWith("(") && !displayText.endsWith(")")) {
                     displayText = "(" + displayText + ")";
                 }
             }
-            if (!TextUtils.equals(text, displayText) || plain != isPlain || isBacking != backing) {
+            String displayTranslation = translation != null ? translation.trim() : null;
+            if (TextUtils.isEmpty(displayTranslation)) {
+                displayTranslation = null;
+            }
+            if (!TextUtils.equals(text, displayText) || !TextUtils.equals(translationText, displayTranslation) || plain != isPlain || isBacking != backing) {
                 text = displayText;
+                translationText = displayTranslation;
                 plain = isPlain;
                 isBacking = backing;
                 layout = null;
+                translationLayout = null;
                 requestLayout();
             }
         }
@@ -561,6 +566,18 @@ public class LyricsView extends FrameLayout {
                     .setLineSpacing(0, 1.18f)
                     .setIncludePad(false)
                     .build();
+
+            if (!TextUtils.isEmpty(translationText)) {
+                paint.setTextSize(textSize() * 0.68f);
+                translationLayout = StaticLayout.Builder.obtain(translationText, 0, translationText.length(), paint, textWidth)
+                        .setAlignment(alignment)
+                        .setLineSpacing(0, 1.15f)
+                        .setIncludePad(false)
+                        .build();
+                paint.setTextSize(textSize());
+            } else {
+                translationLayout = null;
+            }
         }
 
         @Override
@@ -568,7 +585,15 @@ public class LyricsView extends FrameLayout {
             int width = MeasureSpec.getSize(widthMeasureSpec);
             ensureLayout(width);
             int pad = plain ? dp(6) : dp(10);
-            int content = isInterlude() ? (int) (textSize() * 0.9f) : layout.getHeight();
+            int content;
+            if (isInterlude()) {
+                content = (int) (textSize() * 0.9f);
+            } else {
+                content = layout.getHeight();
+                if (translationLayout != null) {
+                    content += dp(4) + translationLayout.getHeight();
+                }
+            }
             setMeasuredDimension(width, content + pad * 2);
         }
 
@@ -621,6 +646,7 @@ public class LyricsView extends FrameLayout {
                 fillMatrix.setScale(1f, Math.max(1f, height * 0.2f));
                 fillMatrix.postTranslate(0, (progress * 1.2f - 0.2f) * height);
                 fill.setLocalMatrix(fillMatrix);
+                paint.setTextSize(textSize());
                 paint.setShader(fill);
                 paint.setColor(0xffffffff);
                 float g = glow(progress);
@@ -633,10 +659,23 @@ public class LyricsView extends FrameLayout {
                 paint.setShader(null);
                 paint.clearShadowLayer();
             } else {
+                paint.setTextSize(textSize());
                 paint.setShader(null);
                 paint.clearShadowLayer();
                 paint.setColor(ColorUtils.setAlphaComponent(colorActive, (int) (alpha * baseAlpha)));
                 layout.draw(canvas);
+            }
+
+            if (!isInterlude() && translationLayout != null) {
+                canvas.save();
+                canvas.translate(0, layout.getHeight() + dp(4));
+                paint.setShader(null);
+                paint.clearShadowLayer();
+                paint.setTextSize(textSize() * 0.68f);
+                int transAlpha = (int) (alpha * baseAlpha * 0.70f);
+                paint.setColor(ColorUtils.setAlphaComponent(colorActive, transAlpha));
+                translationLayout.draw(canvas);
+                canvas.restore();
             }
             canvas.restore();
             if (animating || (live && isPlaying())) {

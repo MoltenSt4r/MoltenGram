@@ -63,7 +63,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int colorStyleRow;
     private int coverShapeRow;
     private int miniCoverShapeRow;
-    private int videoCoverRow;
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
@@ -110,7 +109,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         colorStyleRow = addRow("colorStyle");
         coverShapeRow = addRow("coverShape");
         miniCoverShapeRow = addRow("miniCoverShape");
-        videoCoverRow = addRow("videoCover");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
@@ -244,11 +242,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     });
                 }
             });
-        } else if (position == videoCoverRow) {
-            AppearanceConfig.playerVideoCover.setConfigBool(!AppearanceConfig.playerVideoCover());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerVideoCover());
-            }
         } else if (position == swipeTrackRow) {
             AppearanceConfig.playerSwipeTrack.setConfigBool(!AppearanceConfig.playerSwipeTrack());
             if (view instanceof TextCheckCell) {
@@ -340,7 +333,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow || position == metrolistHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == videoCoverRow || position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+            } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow) {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
@@ -370,9 +363,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 }
             } else if (type == TYPE_CHECK) {
                 TextCheckCell cell = (TextCheckCell) holder.itemView;
-                if (position == videoCoverRow) {
-                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerVideoCover), getString(R.string.OEAppearancePlayerVideoCoverDesc), AppearanceConfig.playerVideoCover(), true, true);
-                } else if (position == swipeTrackRow) {
+                if (position == swipeTrackRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerSwipeTrack), AppearanceConfig.playerSwipeTrack(), true);
                 } else if (position == cropCoverRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);

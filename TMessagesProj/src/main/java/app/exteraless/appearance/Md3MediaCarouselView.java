@@ -182,6 +182,12 @@ public class Md3MediaCarouselView extends FrameLayout {
 
     public View getItemView(int index) {
         if (recyclerView != null) {
+            for (int i = 0; i < recyclerView.getChildCount(); i++) {
+                View child = recyclerView.getChildAt(i);
+                if (recyclerView.getChildAdapterPosition(child) == index) {
+                    return child;
+                }
+            }
             RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
             if (holder != null) {
                 return holder.itemView;
@@ -193,7 +199,22 @@ public class Md3MediaCarouselView extends FrameLayout {
         return null;
     }
 
+    public BackupImageView getImageView(int index) {
+        View itemView = getItemView(index);
+        if (itemView != null && recyclerView != null) {
+            RecyclerView.ViewHolder holder = recyclerView.getChildViewHolder(itemView);
+            if (holder instanceof CarouselViewHolder) {
+                return ((CarouselViewHolder) holder).imageView;
+            }
+        }
+        return null;
+    }
+
     public ImageReceiver getImageReceiver(int index) {
+        BackupImageView iv = getImageView(index);
+        if (iv != null) {
+            return iv.getImageReceiver();
+        }
         if (recyclerView != null) {
             RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
             if (holder instanceof CarouselViewHolder) {
@@ -219,6 +240,24 @@ public class Md3MediaCarouselView extends FrameLayout {
         for (int i = 0; i < messages.size(); i++) {
             if (messages.get(i).getId() == message.getId()) {
                 return i;
+            }
+        }
+        return -1;
+    }
+
+    public int indexOf(TLRPC.FileLocation fileLocation) {
+        if (fileLocation == null || messages.isEmpty()) {
+            return -1;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            MessageObject msg = messages.get(i);
+            if (msg.photoThumbs != null) {
+                for (int b = 0; b < msg.photoThumbs.size(); b++) {
+                    TLRPC.PhotoSize photoSize = msg.photoThumbs.get(b);
+                    if (photoSize != null && photoSize.location != null && photoSize.location.local_id == fileLocation.local_id) {
+                        return i;
+                    }
+                }
             }
         }
         return -1;

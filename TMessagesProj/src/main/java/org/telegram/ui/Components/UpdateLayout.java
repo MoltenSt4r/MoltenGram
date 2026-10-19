@@ -139,14 +139,15 @@ public class UpdateLayout extends IUpdateLayout {
         };
         updateTextView.setTextSize(dp(15));
         updateTextView.setTypeface(AndroidUtilities.bold());
-        updateTextView.setTextColor(0xffffffff);
+        updateTextView.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
         updateTextView.setGravity(Gravity.CENTER);
         updateLayout.addView(updateTextView, LayoutHelper.createFrameMatchParent());
         updateTextView.setText(LocaleController.getString(R.string.AppUpdateBeta), false);
 
         updateLayoutIcon = new RadialProgress2(updateTextView);
         int themeColor = Theme.getColor(Theme.getActiveTheme().isMonetNight() ? Theme.key_featuredStickers_unread : Theme.key_featuredStickers_addButton);
-        updateLayoutIcon.setColors(0xffffffff, 0xffffffff, themeColor, themeColor);
+        int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
+        updateLayoutIcon.setColors(buttonTextColor, buttonTextColor, themeColor, themeColor);
         updateLayoutIcon.setProgressRect(0, 0, dp(22), dp(22));
         updateLayoutIcon.setCircleRadius(dp(11));
         updateLayoutIcon.setAsMini();
@@ -156,7 +157,7 @@ public class UpdateLayout extends IUpdateLayout {
         updateSizeTextView.setTextSize(dp(14));
         updateSizeTextView.setTypeface(AndroidUtilities.bold());
         updateSizeTextView.setGravity(Gravity.RIGHT | Gravity.CENTER_VERTICAL);
-        updateSizeTextView.setTextColor(0xccffffff);
+        updateSizeTextView.setTextColor(Theme.multAlpha(Theme.getColor(Theme.key_featuredStickers_buttonText), 0.8f));
     }
 
     public void updateAppUpdateViews(int currentAccount, boolean animated) {

@@ -45,7 +45,14 @@ public final class MetrolistClient {
             this.title = title;
             this.artist = artist;
             this.duration = duration;
-            this.thumbnailUrl = thumbnailUrl;
+            this.thumbnailUrl = upgradeThumbnail(thumbnailUrl);
+        }
+
+        public static String upgradeThumbnail(String url) {
+            if (TextUtils.isEmpty(url)) {
+                return url;
+            }
+            return url.replaceAll("=w\\d+-h\\d+[^&?]*", "=w800-h800-l90-rj");
         }
     }
 

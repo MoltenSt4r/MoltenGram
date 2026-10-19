@@ -10,9 +10,6 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 
-import java.io.File;
-import java.io.FileInputStream;
-import java.io.InputStream;
 import java.util.Collections;
 import java.util.HashMap;
 import java.util.List;
@@ -82,8 +79,12 @@ public final class SongRecMatcher {
         }
     }
 
+    public void findCover(MessageObject messageObject, MatchCallback callback) {
+        findVideoCover(messageObject, callback);
+    }
+
     /**
-     * Ищет видео-обложку (Canvas / клип) и статичную обложку для трека MessageObject.
+     * Ищет статичную HD-обложку для трека MessageObject через Innertube API.
      */
     public void findVideoCover(MessageObject messageObject, MatchCallback callback) {
         if (messageObject == null) {
@@ -105,6 +106,19 @@ public final class SongRecMatcher {
                 String path = messageObject.messageOwner.attachPath;
                 int lastSlash = path.lastIndexOf('/');
                 title = lastSlash >= 0 ? path.substring(lastSlash + 1) : path;
+            }
+        }
+        if (TextUtils.isEmpty(artist) && !TextUtils.isEmpty(title)) {
+            int dashIndex = title.indexOf(" - ");
+            if (dashIndex < 0) {
+                dashIndex = title.indexOf(" – ");
+            }
+            if (dashIndex < 0) {
+                dashIndex = title.indexOf(" — ");
+            }
+            if (dashIndex > 0) {
+                artist = title.substring(0, dashIndex).trim();
+                title = title.substring(dashIndex + 3).trim();
             }
         }
         int duration = (int) messageObject.getDuration();
@@ -152,11 +166,10 @@ public final class SongRecMatcher {
                 if (bestMatch != null && bestScore >= 0.40f) {
                     MetrolistClient.Track full = MetrolistClient.getInstance().fetchPlayer(bestMatch.id);
                     MetrolistClient.Track resolved = (full != null) ? full : bestMatch;
-                    String videoUrl = (full != null && !TextUtils.isEmpty(full.videoCoverUrl)) ? full.videoCoverUrl : null;
-                    if (videoUrl != null) {
-                        videoCoverCache.put(cacheKey, videoUrl);
-                    }
-                    callback.onMatched(videoUrl, resolved);
+                    String thumb = upgradeThumbnail(resolved.thumbnailUrl);
+                    MetrolistClient.Track hdTrack = new MetrolistClient.Track(resolved.id, resolved.title, resolved.artist, resolved.duration, thumb);
+                    hdTrack.audioUrl = resolved.audioUrl;
+                    callback.onMatched(null, hdTrack);
                     return;
                 }
 
@@ -170,7 +183,7 @@ public final class SongRecMatcher {
 
     /**
      * Вычисляет комбинированный коэффициент схожести (0.0 .. 1.0)
-     * с учетом метаданных, хронометража и мультисегментного акустического сканирования SongRec.
+     * с учетом метаданных и хронометража.
      */
     public float evaluateMatch(String reqTitle, String reqArtist, int reqDuration, MetrolistClient.Track cand, MessageObject mo) {
         float titleSim;
@@ -200,62 +213,15 @@ public final class SongRecMatcher {
             }
         }
 
-        // Мультисегментный акустический анализ SongRec (проверка фрагментов начала, середины и припева)
-        float acousticSim = evaluateMultiSegmentAcoustics(mo, reqDuration);
-
-        // Итоговый взвешенный скор:
-        // 40% название + 30% исполнитель + 15% совпадение длительности + 15% акустический отпечаток
-        return (titleSim * 0.40f) + (artistSim * 0.30f) + (durationSim * 0.15f) + (acousticSim * 0.15f);
+        // Итоговый взвешенный скор: 50% название + 35% исполнитель + 15% совпадение длительности
+        return (titleSim * 0.50f) + (artistSim * 0.35f) + (durationSim * 0.15f);
     }
 
-    /**
-     * Мультисегментное сканирование трека:
-     * Если файл аудио загружен на диск, считывает акустические хеши на 3 отметках:
-     * 1. 0s (вступление)
-     * 2. 30s (куплет)
-     * 3. 75s (припев / кульминация)
-     */
-    private float evaluateMultiSegmentAcoustics(MessageObject mo, int durationSec) {
-        if (mo == null) return 0.5f;
-        try {
-            File file = null;
-            if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
-                file = new File(mo.messageOwner.attachPath);
-            }
-            if (file == null || !file.exists()) {
-                return 0.5f; // Нейтральный скор если аудиофайла еще нет локально
-            }
-
-            long fileLen = file.length();
-            if (fileLen < 64 * 1024) {
-                return 0.5f;
-            }
-
-            // Читаем 3 сигнатуры из разных смещений файла
-            int sampleSize = 2048;
-            byte[] buf = new byte[sampleSize];
-            try (InputStream is = new FileInputStream(file)) {
-                // Смещение 1: вступление (первые 4KB)
-                int r1 = is.read(buf);
-
-                // Смещение 2: середина трека (30-50%)
-                long midOffset = fileLen / 3;
-                long skipped = is.skip(Math.max(0, midOffset - sampleSize));
-                int r2 = is.read(buf);
-
-                // Смещение 3: кульминация (60-70%)
-                long endOffset = (fileLen * 2) / 3;
-                long skipped2 = is.skip(Math.max(0, endOffset - (midOffset + sampleSize)));
-                int r3 = is.read(buf);
-
-                if (r1 > 0 && r2 > 0 && r3 > 0) {
-                    // Акустические отпечатки успешно извлечены из всех 3 сегментов
-                    return 0.95f;
-                }
-            }
-        } catch (Exception ignored) {
+    public static String upgradeThumbnail(String url) {
+        if (TextUtils.isEmpty(url)) {
+            return url;
         }
-        return 0.5f;
+        return url.replaceAll("=w\\d+-h\\d+[^&?]*", "=w800-h800-l90-rj");
     }
 
     private static String cleanString(String s) {

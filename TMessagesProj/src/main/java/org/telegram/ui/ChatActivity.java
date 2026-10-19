@@ -8069,8 +8069,10 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
             } else if (object instanceof String) {
-                if (mentionContainer.getAdapter().isBotCommands()) {
-                    if (mentionContainer.getAdapter().isPluginCommands() || !((String) object).startsWith("/")) {
+                    if (mentionContainer.getAdapter().isPluginCommands()
+                            || !((String) object).startsWith("/")
+                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
                         chatActivityEnterView.replaceWithText(start, len, object + " ", false);
                         hideFieldPanel(false);
                     } else if (chatMode == MODE_SCHEDULED) {
@@ -8194,8 +8196,10 @@ public class ChatActivity extends BaseFragment implements
                     return false;
                 }
             } else if (object instanceof String) {
-                if (mentionContainer.getAdapter().isBotCommands()) {
-                    if (mentionContainer.getAdapter().isPluginCommands() || !((String) object).startsWith("/")) {
+                    if (mentionContainer.getAdapter().isPluginCommands()
+                            || !((String) object).startsWith("/")
+                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
                         chatActivityEnterView.replaceWithText(start, len, object + " ", false);
                         hideFieldPanel(false);
                         return true;
@@ -21332,8 +21336,11 @@ public class ChatActivity extends BaseFragment implements
             ImageReceiver imageReceiver = null;
             View view = chatListView.getChildAt(a);
             if (view instanceof ChatMessageCell) {
+                ChatMessageCell cell = (ChatMessageCell) view;
+                if (cell.isSiblingGroupCarouselMessage()) {
+                    continue;
+                }
                 if (messageObject != null) {
-                    ChatMessageCell cell = (ChatMessageCell) view;
                     MessageObject message = cell.getMessageObject();
                     if (message != null && (message.getId() == messageObject.getId() || cell.containsCarouselMessage(messageObject))) {
                         int effectiveIndex = index;
@@ -21350,6 +21357,14 @@ public class ChatActivity extends BaseFragment implements
                         }
                         if (imageReceiver != null) {
                             index = effectiveIndex;
+                        }
+                    }
+                } else if (fileLocation != null && cell.isMediaCarouselMessage()) {
+                    int carouselIdx = cell.getCarouselMessageIndex(fileLocation);
+                    if (carouselIdx >= 0) {
+                        imageReceiver = cell.getPhotoImage(carouselIdx);
+                        if (imageReceiver != null) {
+                            index = carouselIdx;
                         }
                     }
                 }
@@ -21381,20 +21396,37 @@ public class ChatActivity extends BaseFragment implements
 
             if (imageReceiver != null) {
                 View targetView = view;
+                boolean isCarousel = false;
                 if (view instanceof ChatMessageCell) {
-                    View carouselItem = ((ChatMessageCell) view).getCarouselItemView(index);
-                    if (carouselItem != null) {
-                        targetView = carouselItem;
+                    ChatMessageCell cell = (ChatMessageCell) view;
+                    if (cell.isMediaCarouselMessage()) {
+                        View carouselImage = cell.getCarouselImageView(index);
+                        if (carouselImage != null) {
+                            targetView = carouselImage;
+                            isCarousel = true;
+                        } else {
+                            View carouselItem = cell.getCarouselItemView(index);
+                            if (carouselItem != null) {
+                                targetView = carouselItem;
+                                isCarousel = true;
+                            }
+                        }
                     }
-                }
-                if (onlyIfVisible && view.getY() + imageReceiver.getImageY2() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
-                    return null;
                 }
                 int[] coords = new int[2];
                 targetView.getLocationInWindow(coords);
+                if (onlyIfVisible) {
+                    if (isCarousel) {
+                        if (!targetView.isShown() || coords[1] + targetView.getHeight() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
+                            return null;
+                        }
+                    } else if (view.getY() + imageReceiver.getImageY2() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
+                        return null;
+                    }
+                }
                 PhotoViewer.PlaceProviderObject object = new PhotoViewer.PlaceProviderObject();
                 object.viewX = coords[0];
-                object.viewY = coords[1] - 0 + targetView.getPaddingTop();
+                object.viewY = coords[1] + (isCarousel ? 0 : targetView.getPaddingTop());
                 object.parentView = chatListView;
                 object.animatingImageView = null;
                 object.imageReceiver = imageReceiver;
