@@ -262,6 +262,7 @@ public class MessageObject {
     public boolean resendAsIs;
     public String customReplyName;
     public boolean useCustomPhoto;
+    public int customPhotoResId;
     public StringBuilder botButtonsLayout;
     public boolean isRestrictedMessage;
     public long loadedFileSize;

@@ -32,6 +32,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import androidx.collection.LongSparseArray;
 import androidx.recyclerview.widget.RecyclerView;
 
+import app.exteraless.OpenExteraConfig;
+import app.exteraless.plugins.PluginsController;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
 import org.telegram.messenger.ContactsController;
@@ -128,6 +131,8 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
     private LongSparseArray<TL_bots.BotInfo> botInfo;
     private int resultStartPosition;
     private int resultLength;
+    private char foundPrefix = '/';
+    private boolean isPluginCommands = false;
     private String lastText;
     private boolean lastForSearch;
     private boolean lastUsernameOnly;
@@ -1216,8 +1221,9 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
 //                            delegate.needChangePanelVisibility(false);
                             return;
                         }
-                    } else if (a == 0 && botInfo != null && ch == '/') {
+                    } else if ((a == 0 && botInfo != null && ch == '/') || ((a == 0 || text.charAt(a - 1) == '\n') && OpenExteraConfig.pluginCommandSuggestions() && PluginsController.getInstance().isPluginPrefix(ch))) {
                         foundType = 2;
+                        foundPrefix = ch;
                         resultStartPosition = a;
                         resultLength = result.length() + 1;
                         break;
@@ -1245,6 +1251,8 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
         if (foundType == -1) {
             contextMedia = false;
             searchResultBotContext = null;
+            isPluginCommands = false;
+            foundPrefix = '/';
             delegate.needChangePanelVisibility(false);
             return;
         }
@@ -1560,19 +1568,21 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
             ArrayList<TLRPC.User> newResultUsers = new ArrayList<>();
             ArrayList<Boolean> newResultEphemeral = new ArrayList<>();
             final String command = result.toString().toLowerCase();
-            for (int b = 0; b < botInfo.size(); b++) {
-                TL_bots.BotInfo info = botInfo.valueAt(b);
-                for (int a = 0; a < info.commands.size(); a++) {
-                    TLRPC.BotCommand botCommand = info.commands.get(a);
-                    if (botCommand != null && botCommand.command != null && botCommand.command.startsWith(command)) {
-                        newResult.add("/" + botCommand.command);
-                        newResultHelp.add(botCommand.description);
-                        newResultUsers.add(messagesController.getUser(info.user_id));
-                        newResultEphemeral.add(botCommand.ephemeral);
+            if (foundPrefix == '/' && botInfo != null) {
+                for (int b = 0; b < botInfo.size(); b++) {
+                    TL_bots.BotInfo info = botInfo.valueAt(b);
+                    for (int a = 0; a < info.commands.size(); a++) {
+                        TLRPC.BotCommand botCommand = info.commands.get(a);
+                        if (botCommand != null && botCommand.command != null && botCommand.command.startsWith(command)) {
+                            newResult.add("/" + botCommand.command);
+                            newResultHelp.add(botCommand.description);
+                            newResultUsers.add(messagesController.getUser(info.user_id));
+                            newResultEphemeral.add(botCommand.ephemeral);
+                        }
                     }
                 }
             }
-            if (parentFragment != null && !DialogObject.isEncryptedDialog(dialog_id) && parentFragment.getChatMode() == 0 && parentFragment.getCurrentUser() != null && !parentFragment.getCurrentUser().bot && !UserObject.isReplyUser(parentFragment.getCurrentUser()) && !UserObject.isService(parentFragment.getCurrentUser().id)) {
+            if (foundPrefix == '/' && parentFragment != null && !DialogObject.isEncryptedDialog(dialog_id) && parentFragment.getChatMode() == 0 && parentFragment.getCurrentUser() != null && !parentFragment.getCurrentUser().bot && !UserObject.isReplyUser(parentFragment.getCurrentUser()) && !UserObject.isService(parentFragment.getCurrentUser().id)) {
                 final QuickRepliesController quickRepliesController = QuickRepliesController.getInstance(currentAccount);
                 quickRepliesController.load();
                 quickRepliesQuery = command;
@@ -1589,6 +1599,23 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
                 quickRepliesQuery = null;
                 quickReplies = null;
             }
+
+            boolean hasPluginCommands = false;
+            if (OpenExteraConfig.pluginCommandSuggestions()) {
+                java.util.List<PluginsController.PluginCommand> pluginCmds =
+                        PluginsController.getInstance().getMatchingCommands(foundPrefix, command);
+                if (pluginCmds != null && !pluginCmds.isEmpty()) {
+                    hasPluginCommands = true;
+                    for (PluginsController.PluginCommand pc : pluginCmds) {
+                        newResult.add(pc.getPrefixedCommand(foundPrefix));
+                        newResultHelp.add(pc.getFormattedHelp());
+                        newResultUsers.add(null);
+                        newResultEphemeral.add(false);
+                    }
+                }
+            }
+            isPluginCommands = (foundPrefix != '/') || (hasPluginCommands && (botInfo == null || botInfo.size() == 0));
+
             searchResultHashtags = null;
             stickers = null;
             searchResultUsernames = null;
@@ -1744,6 +1771,8 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
         }
         if (searchResultCommands != null) {
             searchResultCommands.clear();
+            isPluginCommands = false;
+            foundPrefix = '/';
         }
         if (quickReplies != null) {
             quickReplies.clear();
@@ -1897,6 +1926,10 @@ public class MentionsAdapter extends RecyclerListView.SelectionAdapter implement
 
     public boolean isBotCommands() {
         return searchResultCommands != null;
+    }
+
+    public boolean isPluginCommands() {
+        return isPluginCommands;
     }
 
     public boolean isStickers() {

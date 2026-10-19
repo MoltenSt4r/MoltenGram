@@ -33,6 +33,7 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
     private int silentUpdatesRow = -1;
     private int silentApkRow = -1;
     private int unrestrictedBgRow = -1;
+    private int notificationBoostRow = -1;
     private int silentPluginsRow = -1;
     private int featuresDividerRow = -1;
 
@@ -117,6 +118,7 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
         silentUpdatesRow = addRow("silentUpdates");
         silentApkRow = addRow("silentApk");
         unrestrictedBgRow = addRow("unrestrictedBg");
+        notificationBoostRow = addRow("notificationBoost");
         silentPluginsRow = addRow("silentPlugins");
         featuresDividerRow = addRow();
 
@@ -171,6 +173,18 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
                     AndroidUtilities.runOnUIThread(() -> BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.ShizukuOptimizationsApplied)).show());
                 });
             }
+        } else if (position == notificationBoostRow) {
+            boolean next = !config.isNotificationBoostEnabled();
+            config.setNotificationBoostEnabled(next);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(next);
+            }
+            if (next && shizuku.hasPermission()) {
+                Utilities.globalQueue.postRunnable(() -> {
+                    shizuku.boostNotificationPerformance();
+                    AndroidUtilities.runOnUIThread(() -> BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.OEGeneralShizukuNotificationBoostApplied)).show());
+                });
+            }
         } else if (position == silentPluginsRow) {
             boolean next = !config.isSilentPluginUpdatesEnabled();
             config.setSilentPluginUpdatesEnabled(next);
@@ -208,7 +222,7 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
         public int getItemViewType(int position) {
             if (position == statusHeaderRow || position == featuresHeaderRow || position == systemHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == silentUpdatesRow || position == silentApkRow || position == unrestrictedBgRow || position == silentPluginsRow) {
+            } else if (position == silentUpdatesRow || position == silentApkRow || position == unrestrictedBgRow || position == notificationBoostRow || position == silentPluginsRow) {
                 return TYPE_CHECK;
             } else if (position == statusRow || position == actionRow || position == trimCachesRow || position == optimizeDexRow) {
                 return TYPE_TEXT;
@@ -269,6 +283,8 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
                         cell.setTextAndCheck(getString(R.string.ShizukuSilentApk), config.isSilentApkEnabled(), true);
                     } else if (position == unrestrictedBgRow) {
                         cell.setTextAndCheck(getString(R.string.ShizukuUnrestrictedBackground), config.isUnrestrictedBackgroundEnabled(), true);
+                    } else if (position == notificationBoostRow) {
+                        cell.setTextAndCheck(getString(R.string.OEGeneralShizukuNotificationBoost), config.isNotificationBoostEnabled(), true);
                     } else if (position == silentPluginsRow) {
                         cell.setTextAndCheck(getString(R.string.ShizukuSilentPlugins), config.isSilentPluginUpdatesEnabled(), false);
                     }

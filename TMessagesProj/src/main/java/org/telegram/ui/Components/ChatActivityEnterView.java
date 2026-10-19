@@ -9089,7 +9089,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                     sendAnimationData.fromPreview = System.currentTimeMillis() - sentFromPreview < 200;
                 }
                 if (!withMarkdown) {
-                    message[0] = text.toString();
+                    message[0] = part.toString();
                     entities = new ArrayList<>();
                 }
 
@@ -12068,7 +12068,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     private CharSequence parseFieldMarkdown(CharSequence text) {
-        if (TextUtils.isEmpty(text) || TextUtils.indexOf(text, '`') < 0) {
+        if (xyz.nextalone.nagram.NaConfig.INSTANCE.getDisableMarkdown().Bool() || TextUtils.isEmpty(text) || TextUtils.indexOf(text, '`') < 0) {
             return text;
         }
         try {

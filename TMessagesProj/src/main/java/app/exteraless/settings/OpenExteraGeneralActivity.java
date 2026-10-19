@@ -56,6 +56,9 @@ import app.exteraless.general.GeneralHelper;
 import app.exteraless.nowplaying.LastFmNowPlaying;
 import app.exteraless.nowplaying.LastFmWebFetcher;
 import app.exteraless.nowplaying.ProfileMusicStamp;
+import app.exteraless.shizuku.ShizukuConfig;
+import app.exteraless.shizuku.ShizukuController;
+import org.telegram.messenger.Utilities;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.config.ConfigItem;
 import tw.nekomimi.nekogram.helpers.AppRestartHelper;
@@ -70,7 +73,7 @@ import xyz.nextalone.nagram.NaConfig;
  * Настройки по возможности привязаны к уже существующим ConfigItem NagramX; новые заводятся
  * только там, где в NagramX нет аналога, и помечены «UI-only» (без бэкенда, как в exteraGram 12.9.0).
  */
-public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
+public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implements ShizukuController.Listener {
 
     private static final int TYPE_SLIDE = 100;
     private static final int PUSH_SERVICE_IN_APP = 0;
@@ -143,6 +146,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
     private int notificationBubblesRow;
     private int pushStatusRow;
     private int batteryOptimizationRow;
+    private int shizukuBoostRow;
     private int notificationsDividerRow;
 
     /** Момент «пять минут назад» для живого примера в строке Relative Last Seen. */
@@ -156,7 +160,25 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
     public boolean onFragmentCreate() {
         GeneralConfig.init();
         fiveMinutesAgo = getConnectionsManager().getCurrentTime() - 300;
+        ShizukuController.getInstance().addListener(this);
         return super.onFragmentCreate();
+    }
+
+    @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        ShizukuController.getInstance().removeListener(this);
+    }
+
+    @Override
+    public void onShizukuStateChanged() {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (listAdapter != null) {
+                if (shizukuBoostRow != -1) listAdapter.notifyItemChanged(shizukuBoostRow);
+                if (batteryOptimizationRow != -1) listAdapter.notifyItemChanged(batteryOptimizationRow);
+                if (pushStatusRow != -1) listAdapter.notifyItemChanged(pushStatusRow);
+            }
+        });
     }
 
     @Override
@@ -220,6 +242,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
         notificationBubblesRow = addRow("disableNotificationBubbles");
         pushStatusRow = addRow("pushStatus");
         batteryOptimizationRow = addRow("batteryOptimization");
+        shizukuBoostRow = addRow("shizukuBoost");
         notificationsDividerRow = addRow();
     }
 
@@ -256,9 +279,26 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
     @Override
     public void onResume() {
         super.onResume();
-        if (listAdapter != null && torSettingsRow != -1) {
-            listAdapter.notifyItemChanged(torSettingsRow);
+        if (listAdapter != null) {
+            if (torSettingsRow != -1) {
+                listAdapter.notifyItemChanged(torSettingsRow);
+            }
+            if (pushStatusRow != -1) {
+                listAdapter.notifyItemChanged(pushStatusRow);
+            }
+            if (batteryOptimizationRow != -1) {
+                listAdapter.notifyItemChanged(batteryOptimizationRow);
+            }
+            if (shizukuBoostRow != -1) {
+                listAdapter.notifyItemChanged(shizukuBoostRow);
+            }
         }
+        try {
+            UserConfig uc = UserConfig.getInstance(UserConfig.selectedAccount);
+            if (!uc.registeredForPush && !TextUtils.isEmpty(SharedConfig.pushString) && SharedConfig.pushType != 0) {
+                MessagesController.getInstance(UserConfig.selectedAccount).registerForPush(SharedConfig.pushType, SharedConfig.pushString);
+            }
+        } catch (Throwable ignored) {}
     }
 
     /** Перерисовать экраны под нами. */
@@ -271,7 +311,12 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == pushStatusRow) {
-            copyPushStatus();
+            showPushStatusDialog();
+            return;
+        }
+
+        if (position == shizukuBoostRow) {
+            handleShizukuBoostClick();
             return;
         }
 
@@ -907,6 +952,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
                 return;
             }
             NaConfig.INSTANCE.getPushServiceType().setConfigInt(which);
+            PushListenerController.resetProvider();
             PushListenerController.reconcilePushRegistration();
             if (which == PUSH_SERVICE_IN_APP) {
                 AndroidUtil.setPushService(false);
@@ -1089,6 +1135,96 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
         }
     }
 
+    private void showPushStatusDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        final StringBuilder details = new StringBuilder();
+        final int type = NaConfig.INSTANCE.getPushServiceType().Int();
+        final String typeName = type == 0 ? getString(R.string.PushServiceTypeInApp) : type == 2 ? getString(R.string.PushServiceTypeUnified) : "Google FCM";
+        final boolean hasToken = !TextUtils.isEmpty(SharedConfig.pushString);
+        final boolean registered = UserConfig.getInstance(UserConfig.selectedAccount).registeredForPush;
+
+        details.append(getString(R.string.PushServiceType)).append(": ").append(typeName).append("\n");
+        details.append(getString(R.string.OEGeneralPushStatus)).append(": ")
+                .append(registered ? getString(R.string.ShizukuStatusConnected) : getString(R.string.OEGeneralPushStatusNotRegistered))
+                .append("\n");
+        details.append("Токен: ").append(hasToken ? ("Есть (" + SharedConfig.pushString.length() + " симв.)") : getString(R.string.OEGeneralPushStatusNoToken)).append("\n");
+        details.append("Standby bucket: ").append(standbyBucket()).append("\n");
+        details.append(getString(R.string.OEGeneralBatteryOptimization)).append(": ")
+                .append(getString(batteryUnrestricted() ? R.string.OEGeneralBatteryOptimizationOff : R.string.OEGeneralBatteryOptimizationOn)).append("\n");
+        if (SharedConfig.pushLastReceivedTime > 0) {
+            details.append("Последний пуш: ").append(LocaleController.formatDateTime(SharedConfig.pushLastReceivedTime / 1000L, true));
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEGeneralPushDialogTitle));
+        builder.setMessage(details.toString());
+        builder.setPositiveButton(getString(R.string.OEGeneralPushReregister), (dialog, which) -> {
+            PushListenerController.forceReRegisterPush();
+            for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+                UserConfig uc = UserConfig.getInstance(a);
+                if (uc.isClientActivated()) {
+                    MessagesController.getInstance(a).forceRegisterForPush();
+                }
+            }
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.OEGeneralPushReregisterSuccess)).show();
+            if (listAdapter != null && pushStatusRow != -1) {
+                listAdapter.notifyItemChanged(pushStatusRow);
+            }
+        });
+        builder.setNeutralButton(getString(R.string.OEGeneralPushCopyDiag), (dialog, which) -> {
+            copyPushStatus();
+        });
+        builder.setNegativeButton(getString(R.string.Close), null);
+        showDialog(builder.create());
+    }
+
+    private void handleShizukuBoostClick() {
+        ShizukuController sc = ShizukuController.getInstance();
+        if (!sc.isAvailable()) {
+            sc.openShizukuApp(getParentActivity());
+            return;
+        }
+        if (!sc.hasPermission()) {
+            sc.requestPermission(ShizukuController.REQUEST_CODE_SHIZUKU);
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEGeneralShizukuNotificationBoostDialogTitle));
+        builder.setMessage(getString(R.string.OEGeneralShizukuNotificationBoostDialogMessage));
+        builder.setPositiveButton(getString(R.string.OEGeneralShizukuNotificationBoostApply), (dialog, which) -> {
+            Utilities.globalQueue.postRunnable(() -> {
+                boolean ok = sc.boostNotificationPerformance();
+                ShizukuConfig.getInstance().setNotificationBoostEnabled(true);
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (ok) {
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.OEGeneralShizukuNotificationBoostApplied)).show();
+                    }
+                    if (listAdapter != null) {
+                        if (shizukuBoostRow != -1) listAdapter.notifyItemChanged(shizukuBoostRow);
+                        if (batteryOptimizationRow != -1) listAdapter.notifyItemChanged(batteryOptimizationRow);
+                        if (pushStatusRow != -1) listAdapter.notifyItemChanged(pushStatusRow);
+                    }
+                });
+            });
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private String getShizukuBoostStatus() {
+        ShizukuController sc = ShizukuController.getInstance();
+        if (sc.hasPermission()) {
+            return getString(R.string.OEGeneralShizukuNotificationBoostActive);
+        } else if (sc.isAvailable()) {
+            return getString(R.string.ShizukuStatusPermissionRequired);
+        } else {
+            return getString(R.string.ShizukuStatusDisconnected);
+        }
+    }
+
     private class ListAdapter extends BaseListAdapter {
 
         public ListAdapter(Context context) {
@@ -1211,7 +1347,11 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValue(getString(R.string.OEGeneralBatteryOptimization),
                                 getString(batteryUnrestricted()
                                         ? R.string.OEGeneralBatteryOptimizationOff
-                                        : R.string.OEGeneralBatteryOptimizationOn), false);
+                                        : R.string.OEGeneralBatteryOptimizationOn), true);
+                    } else if (position == shizukuBoostRow) {
+                        cell.setTextAndValue(getString(R.string.OEGeneralShizukuNotificationBoost),
+                                getShizukuBoostStatus(), false);
+                        cell.setIcon(R.drawable.msg_permissions);
                     } else if (position == savePathRow) {
                         String path = NekoConfig.customSavePath.String();
                         cell.setTextAndValue(getString(R.string.OEGeneralSavePath),
@@ -1316,6 +1456,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity {
                 return TYPE_SETTINGS;
             } else if (position == mapProviderRow || position == mapPreviewRow
                     || position == pushStatusRow || position == batteryOptimizationRow
+                    || position == shizukuBoostRow
                     || position == savePathRow
                     || position == showIdAndDcRow || position == lastfmRow) {
                 return TYPE_SETTINGS;

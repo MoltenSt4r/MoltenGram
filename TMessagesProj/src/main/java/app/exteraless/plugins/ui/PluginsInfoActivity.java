@@ -78,6 +78,7 @@ public class PluginsInfoActivity extends BaseFragment {
     private static final int ID_BACKUP_CREATE = 12;
     private static final int ID_BACKUP_RESTORE = 13;
     private static final int ID_PLUGIN_STORE = 14;
+    private static final int ID_CUSTOM_COMMANDS = 15;
 
     private static final int REQUEST_CODE_PICK_BACKUP = 9782;
     private static final int REQUEST_CODE_PICK_SDK = 9783;
@@ -186,6 +187,8 @@ public class PluginsInfoActivity extends BaseFragment {
         items.add(UItem.asShadow(getString(R.string.PluginsPythonSdkInfo)));
 
         items.add(UItem.asHeader(getString(R.string.PluginsLinks)));
+        items.add(UItem.asButton(ID_CUSTOM_COMMANDS, getString(R.string.CustomCommandsTitle))
+                .setIcon(R.drawable.msg_bot));
         items.add(UItem.asButton(ID_PLUGIN_STORE, getString(R.string.PluginsStoreTitle))
                 .accent()
                 .setIcon(R.drawable.menu_shop));
@@ -236,6 +239,9 @@ public class PluginsInfoActivity extends BaseFragment {
             return;
         } else if (item.id == ID_INSTALL_FROM_FILE) {
             PluginsActivity.openPluginPicker(this);
+            return;
+        } else if (item.id == ID_CUSTOM_COMMANDS) {
+            presentFragment(new CustomCommandsActivity());
             return;
         } else if (item.id == ID_DOCUMENTATION) {
             openUrl(DOCS_URL);

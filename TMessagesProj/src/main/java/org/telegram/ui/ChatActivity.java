@@ -5138,9 +5138,6 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
-        if (BuildConfig.DEBUG && headerItem != null) {
-            headerItem.lazilyAddSubItem(888, R.drawable.menu_download_round, "Dump Canvas");
-        }
 
         // exteraless plugins: подменю CHAT_ACTION_MENU в конце меню «⋮».
         // Место общее для всех веток выше — headerItem здесь уже собран целиком.
@@ -8072,8 +8069,13 @@ public class ChatActivity extends BaseFragment implements
                     }
                 }
             } else if (object instanceof String) {
-                if (mentionContainer.getAdapter().isBotCommands()) {
-                    if (chatMode == MODE_SCHEDULED) {
+                    if (mentionContainer.getAdapter().isPluginCommands()
+                            || !((String) object).startsWith("/")
+                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
+                        chatActivityEnterView.replaceWithText(start, len, object + " ", false);
+                        hideFieldPanel(false);
+                    } else if (chatMode == MODE_SCHEDULED) {
                         AlertsCreator.createScheduleDatePickerDialog(getParentActivity(), dialog_id, (notify, scheduleDate, scheduleRepeatPeriod) -> {
                             getSendMessagesHelper().sendMessage(SendMessagesHelper.SendMessageParams.of((String) object, dialog_id, replyingMessageObject, getThreadMessage(), null, false, null, null, null, notify, scheduleDate, 0, null, false));
                             chatActivityEnterView.setFieldText("");
@@ -8194,7 +8196,14 @@ public class ChatActivity extends BaseFragment implements
                     return false;
                 }
             } else if (object instanceof String) {
-                if (mentionContainer.getAdapter().isBotCommands()) {
+                    if (mentionContainer.getAdapter().isPluginCommands()
+                            || !((String) object).startsWith("/")
+                            || tw.nekomimi.nekogram.config.NaConfig.INSTANCE.getDisableClickCommandToSend().Bool()
+                            || app.exteraless.plugins.PluginsController.getInstance().isCustomOrPluginCommand((String) object)) {
+                        chatActivityEnterView.replaceWithText(start, len, object + " ", false);
+                        hideFieldPanel(false);
+                        return true;
+                    }
                     if (URLSpanBotCommand.enabled) {
                         chatActivityEnterView.setFieldText("");
                         chatActivityEnterView.setCommand(null, (String) object, true, currentChat != null && currentChat.megagroup);
@@ -21327,14 +21336,35 @@ public class ChatActivity extends BaseFragment implements
             ImageReceiver imageReceiver = null;
             View view = chatListView.getChildAt(a);
             if (view instanceof ChatMessageCell) {
+                ChatMessageCell cell = (ChatMessageCell) view;
+                if (cell.isSiblingGroupCarouselMessage()) {
+                    continue;
+                }
                 if (messageObject != null) {
-                    ChatMessageCell cell = (ChatMessageCell) view;
                     MessageObject message = cell.getMessageObject();
-                    if (message != null && message.getId() == messageObject.getId()) {
-                        if (message.pollMediaMapping != null && index >= 0 && index < message.pollMediaMapping.size()) {
-                            imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(index));
+                    if (message != null && (message.getId() == messageObject.getId() || cell.containsCarouselMessage(messageObject))) {
+                        int effectiveIndex = index;
+                        if (cell.isMediaCarouselMessage()) {
+                            int carouselIdx = cell.getCarouselMessageIndex(messageObject);
+                            if (carouselIdx >= 0) {
+                                effectiveIndex = carouselIdx;
+                            }
+                        }
+                        if (message.pollMediaMapping != null && effectiveIndex >= 0 && effectiveIndex < message.pollMediaMapping.size()) {
+                            imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(effectiveIndex));
                         } else {
-                            imageReceiver = cell.getPhotoImage(index);
+                            imageReceiver = cell.getPhotoImage(effectiveIndex);
+                        }
+                        if (imageReceiver != null) {
+                            index = effectiveIndex;
+                        }
+                    }
+                } else if (fileLocation != null && cell.isMediaCarouselMessage()) {
+                    int carouselIdx = cell.getCarouselMessageIndex(fileLocation);
+                    if (carouselIdx >= 0) {
+                        imageReceiver = cell.getPhotoImage(carouselIdx);
+                        if (imageReceiver != null) {
+                            index = carouselIdx;
                         }
                     }
                 }
@@ -21365,14 +21395,38 @@ public class ChatActivity extends BaseFragment implements
             }
 
             if (imageReceiver != null) {
-                if (onlyIfVisible && view.getY() + imageReceiver.getImageY2() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
-                    return null;
+                View targetView = view;
+                boolean isCarousel = false;
+                if (view instanceof ChatMessageCell) {
+                    ChatMessageCell cell = (ChatMessageCell) view;
+                    if (cell.isMediaCarouselMessage()) {
+                        View carouselImage = cell.getCarouselImageView(index);
+                        if (carouselImage != null) {
+                            targetView = carouselImage;
+                            isCarousel = true;
+                        } else {
+                            View carouselItem = cell.getCarouselItemView(index);
+                            if (carouselItem != null) {
+                                targetView = carouselItem;
+                                isCarousel = true;
+                            }
+                        }
+                    }
                 }
                 int[] coords = new int[2];
-                view.getLocationInWindow(coords);
+                targetView.getLocationInWindow(coords);
+                if (onlyIfVisible) {
+                    if (isCarousel) {
+                        if (!targetView.isShown() || coords[1] + targetView.getHeight() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
+                            return null;
+                        }
+                    } else if (view.getY() + imageReceiver.getImageY2() < chatListViewPaddingTop - AndroidUtilities.dp(4)) {
+                        return null;
+                    }
+                }
                 PhotoViewer.PlaceProviderObject object = new PhotoViewer.PlaceProviderObject();
                 object.viewX = coords[0];
-                object.viewY = coords[1] - 0 + view.getPaddingTop();
+                object.viewY = coords[1] + (isCarousel ? 0 : targetView.getPaddingTop());
                 object.parentView = chatListView;
                 object.animatingImageView = null;
                 object.imageReceiver = imageReceiver;
@@ -44516,6 +44570,9 @@ public class ChatActivity extends BaseFragment implements
                         handled = true;
                     }
                     if (!handled) {
+                        if (app.exteraless.player.LocalPlaylistsController.getInstance().handlePlaylistFileClick(ChatActivity.this, message)) {
+                            return;
+                        }
                         try {
                             AndroidUtilities.openForView(message, getParentActivity(), themeDelegate, false);
                         } catch (Exception e) {
@@ -44877,6 +44934,9 @@ public class ChatActivity extends BaseFragment implements
                         PhotoViewer.getInstance().setParentActivity(ChatActivity.this, themeDelegate);
                         PhotoViewer.getInstance().openPhoto(message, ChatActivity.this, message.type != 0 ? dialog_id : 0, message.type != 0 ? mergeDialogId : 0, message.type != 0 ? getTopicId() : 0, photoViewerProvider);
                         handled = true;
+                    }
+                    if (app.exteraless.player.LocalPlaylistsController.getInstance().handlePlaylistFileClick(ChatActivity.this, message)) {
+                        return;
                     }
                     if (MarkdownParser.isMarkdown(message)) {
                         parseMarkdownAsync(message);

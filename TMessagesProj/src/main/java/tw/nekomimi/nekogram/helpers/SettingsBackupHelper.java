@@ -9,6 +9,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
@@ -35,6 +36,8 @@ import java.util.Arrays;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.LinkedHashMap;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.function.Function;
@@ -53,8 +56,73 @@ import xyz.nextalone.nagram.helper.LocalPeerColorHelper;
 import xyz.nextalone.nagram.helper.LocalPremiumStatusHelper;
 
 public final class SettingsBackupHelper {
+
+    public static final String SECTION_GENERAL = "general";
+    public static final String SECTION_TOR = "tor";
+    public static final String SECTION_SHIZUKU = "shizuku";
+    public static final String SECTION_PLUGINS = "plugins";
+    public static final String SECTION_MEDIA = "media";
+    public static final String SECTION_NOTIFICATIONS = "notifications";
+    public static final String SECTION_AI = "ai";
+
+    public static final String[] ALL_SECTIONS = {
+            SECTION_GENERAL,
+            SECTION_TOR,
+            SECTION_SHIZUKU,
+            SECTION_PLUGINS,
+            SECTION_MEDIA,
+            SECTION_NOTIFICATIONS,
+            SECTION_AI
+    };
+
+    public static int getSectionTitleResId(String section) {
+        if (SECTION_TOR.equals(section)) {
+            return R.string.OEBackupSectionTor;
+        } else if (SECTION_SHIZUKU.equals(section)) {
+            return R.string.OEBackupSectionShizuku;
+        } else if (SECTION_PLUGINS.equals(section)) {
+            return R.string.OEBackupSectionPlugins;
+        } else if (SECTION_MEDIA.equals(section)) {
+            return R.string.OEBackupSectionMedia;
+        } else if (SECTION_NOTIFICATIONS.equals(section)) {
+            return R.string.OEBackupSectionNotifications;
+        } else if (SECTION_AI.equals(section)) {
+            return R.string.OEBackupSectionAi;
+        } else {
+            return R.string.OEBackupSectionGeneral;
+        }
+    }
+
+    public static String getSectionForSp(String spName) {
+        if ("tor_config".equals(spName)) {
+            return SECTION_TOR;
+        }
+        if ("shizuku_config".equals(spName) || "moltengram_ota".equals(spName)) {
+            return SECTION_SHIZUKU;
+        }
+        if ("plugin_store_config".equals(spName) || "exteraless_plugins".equals(spName)
+                || "exteraless_plugins_metadata".equals(spName) || "exteraless_plugin_grants".equals(spName)
+                || "exteraless_plugins_foreign".equals(spName) || (spName != null && spName.startsWith("exteraless_plugin_"))) {
+            return SECTION_PLUGINS;
+        }
+        if ("media_saved_pos".equals(spName) || "metrolist_auth".equals(spName) || "video_subtitles".equals(spName)) {
+            return SECTION_MEDIA;
+        }
+        if ("Notifications".equals(spName) || "exteraless_notifications".equals(spName)) {
+            return SECTION_NOTIFICATIONS;
+        }
+        if ("aiConfig".equals(spName)) {
+            return SECTION_AI;
+        }
+        return SECTION_GENERAL;
+    }
+
     public static String backupSettingsJson(boolean isCloud, int indentSpaces) throws JSONException {
-        return backupSettingsJson(isCloud, indentSpaces, true);
+        return backupSettingsJson(isCloud, indentSpaces, true, null);
+    }
+
+    public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys) throws JSONException {
+        return backupSettingsJson(isCloud, indentSpaces, includeApiKeys, null);
     }
 
     private static final Set<String> SAFE_MAINCONFIG_KEYS = new HashSet<>(Arrays.asList(
@@ -81,67 +149,72 @@ public final class SettingsBackupHelper {
                 || "lastUptimeMillis".equals(key);
     }
 
-    public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys) throws JSONException {
+    public static String backupSettingsJson(boolean isCloud, int indentSpaces, boolean includeApiKeys, Set<String> enabledSections) throws JSONException {
 
         JSONObject configJson = new JSONObject();
 
-        ArrayList<String> userconfig = new ArrayList<>();
-        userconfig.add("saveIncomingPhotos");
-        userconfig.add("passcodeHash");
-        userconfig.add("passcodeType");
-        userconfig.add("autoLockIn");
-        userconfig.add("useFingerprint");
-        spToJSON("userconfing", configJson, userconfig::contains, isCloud);
+        if (enabledSections == null || enabledSections.contains(SECTION_GENERAL)) {
+            ArrayList<String> userconfig = new ArrayList<>();
+            userconfig.add("saveIncomingPhotos");
+            userconfig.add("passcodeHash");
+            userconfig.add("passcodeType");
+            userconfig.add("autoLockIn");
+            userconfig.add("useFingerprint");
+            spToJSON("userconfing", configJson, userconfig::contains, isCloud);
 
-        // Telegram main settings - save safe UI settings
-        spToJSON("mainconfig", configJson, SAFE_MAINCONFIG_KEYS::contains, includeApiKeys);
+            spToJSON("mainconfig", configJson, SAFE_MAINCONFIG_KEYS::contains, includeApiKeys);
 
-        // Themes - only local backups, not cloud
-        if (!isCloud) {
-            spToJSON("themeconfig", configJson, null);
-        }
-
-        // Notifications
-        spToJSON("Notifications", configJson, null);
-
-        // Shizuku settings (silent updates, state)
-        spToJSON("shizuku_config", configJson, null, includeApiKeys);
-
-        // Tor / Orbot settings (bridges, exit country, bridge type, enabled status)
-        spToJSON("tor_config", configJson, null, includeApiKeys);
-
-        // Plugin Store settings (sort order, channels, auto-update)
-        spToJSON("plugin_store_config", configJson, null, includeApiKeys);
-
-        // Audio/Video player saved positions
-        spToJSON("media_saved_pos", configJson, null);
-
-        // Neko/Nagram + openExtera Appearance (Player styles, lyrics, avatar rounding, text anim, chips)
-        spToJSON("nkmrcfg", configJson, null, includeApiKeys);
-
-        // openExtera main settings
-        spToJSON("exteraconfig", configJson, null, includeApiKeys);
-
-        // Plugins engine and grants
-        spToJSON(app.exteraless.plugins.PluginsConstants.PREFS_NAME, configJson, null, includeApiKeys);
-        spToJSON("exteraless_plugins_metadata", configJson, null, includeApiKeys);
-        spToJSON("exteraless_plugin_grants", configJson, null, includeApiKeys);
-
-        // Per-plugin preferences
-        try {
-            for (app.exteraless.plugins.Plugin p : app.exteraless.plugins.PluginsController.getInstance().getPluginsSnapshot()) {
-                if (p != null && p.id != null) {
-                    String pluginSp = app.exteraless.plugins.PluginsConstants.SETTINGS_PREFS_PREFIX + p.id;
-                    spToJSON(pluginSp, configJson, null, includeApiKeys);
-                }
+            if (!isCloud) {
+                spToJSON("themeconfig", configJson, null);
             }
-        } catch (Throwable ignore) {
+            spToJSON("nkmrcfg", configJson, null, includeApiKeys);
+            spToJSON("exteraconfig", configJson, null, includeApiKeys);
+            spToJSON("custom_icons", configJson, null, includeApiKeys);
         }
 
-        if (includeApiKeys) {
-            spToJSON("aiConfig", configJson, key -> !"history".equals(key));
-        } else {
-            spToJSON("aiConfig", configJson, key -> !"history".equals(key) && !"services".equals(key));
+        if (enabledSections == null || enabledSections.contains(SECTION_NOTIFICATIONS)) {
+            spToJSON("Notifications", configJson, null);
+            spToJSON("exteraless_notifications", configJson, null);
+        }
+
+        if (enabledSections == null || enabledSections.contains(SECTION_SHIZUKU)) {
+            spToJSON("shizuku_config", configJson, null, includeApiKeys);
+            spToJSON("moltengram_ota", configJson, null, includeApiKeys);
+        }
+
+        if (enabledSections == null || enabledSections.contains(SECTION_TOR)) {
+            spToJSON("tor_config", configJson, null, includeApiKeys);
+        }
+
+        if (enabledSections == null || enabledSections.contains(SECTION_PLUGINS)) {
+            spToJSON("plugin_store_config", configJson, null, includeApiKeys);
+            spToJSON(app.exteraless.plugins.PluginsConstants.PREFS_NAME, configJson, null, includeApiKeys);
+            spToJSON("exteraless_plugins_metadata", configJson, null, includeApiKeys);
+            spToJSON("exteraless_plugin_grants", configJson, null, includeApiKeys);
+            spToJSON("exteraless_plugins_foreign", configJson, null, includeApiKeys);
+            try {
+                for (app.exteraless.plugins.Plugin p : app.exteraless.plugins.PluginsController.getInstance().getPluginsSnapshot()) {
+                    if (p != null && p.id != null) {
+                        String pluginSp = app.exteraless.plugins.PluginsConstants.SETTINGS_PREFS_PREFIX + p.id;
+                        spToJSON(pluginSp, configJson, null, includeApiKeys);
+                    }
+                }
+            } catch (Throwable ignore) {
+            }
+        }
+
+        if (enabledSections == null || enabledSections.contains(SECTION_MEDIA)) {
+            spToJSON("media_saved_pos", configJson, null);
+            spToJSON("metrolist_auth", configJson, null);
+            spToJSON("video_subtitles", configJson, null);
+        }
+
+        if (enabledSections == null || enabledSections.contains(SECTION_AI)) {
+            if (includeApiKeys) {
+                spToJSON("aiConfig", configJson, key -> !"history".equals(key));
+            } else {
+                spToJSON("aiConfig", configJson, key -> !"history".equals(key) && !"services".equals(key));
+            }
         }
 
         return configJson.toString(indentSpaces);
@@ -176,27 +249,90 @@ public final class SettingsBackupHelper {
     }
 
     public static void importSettings(Context context, File settingsFile) {
-        AlertUtil.showConfirm(context,
-                getString(R.string.ImportSettingsAlert),
-                R.drawable.msg_photo_settings_solar,
-                getString(R.string.Import),
-                true,
-                () -> importSettingsConfirmed(context, settingsFile));
-    }
-
-    public static void importSettingsConfirmed(Context context, File settingsFile) {
+        if (context == null || settingsFile == null) return;
         try {
             JsonObject configJson = GsonUtil.toJsonObject(FileUtil.readUtf8String(settingsFile));
-            importSettings(configJson);
-
-            AlertDialog restart = new AlertDialog(context, 0);
-            restart.setTitle(getString(R.string.AppName));
-            restart.setMessage(getString(R.string.RestartAppToTakeEffect));
-            restart.setPositiveButton(getString(R.string.OK), (__, ___) -> AppRestartHelper.triggerRebirth(context, new Intent(context, LaunchActivity.class)));
-            restart.show();
+            showImportSectionsDialog(context, configJson);
         } catch (Exception e) {
             AlertUtil.showSimpleAlert(context, e);
         }
+    }
+
+    public static void showImportSectionsDialog(Context context, JsonObject configJson) {
+        if (context == null || configJson == null) return;
+
+        Set<String> presentSections = new LinkedHashSet<>();
+        for (String spName : configJson.keySet()) {
+            presentSections.add(getSectionForSp(spName));
+        }
+
+        if (presentSections.isEmpty()) {
+            AlertUtil.showSimpleAlert(context, getString(R.string.OEGeneralImportEtgEmpty));
+            return;
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(getString(R.string.OEBackupImportSectionsTitle));
+        builder.setMessage(getString(R.string.OEBackupImportSectionsDesc));
+
+        ScrollView scrollView = new ScrollView(context);
+        LinearLayout linearLayout = new LinearLayout(context);
+        linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.setPadding(0, dp(8), 0, dp(8));
+        scrollView.addView(linearLayout);
+
+        Map<String, CheckBoxCell> sectionCells = new LinkedHashMap<>();
+        for (String section : ALL_SECTIONS) {
+            if (!presentSections.contains(section)) {
+                continue;
+            }
+            CheckBoxCell cell = new CheckBoxCell(context, CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, null);
+            cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setText(getString(getSectionTitleResId(section)), "", true, false);
+            cell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
+            cell.setChecked(true, false);
+            cell.setOnClickListener(v -> {
+                CheckBoxCell c = (CheckBoxCell) v;
+                c.setChecked(!c.isChecked(), true);
+            });
+            linearLayout.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+            sectionCells.put(section, cell);
+        }
+
+        builder.setView(scrollView);
+        builder.setPositiveButton(getString(R.string.Import), (dialog, which) -> {
+            Set<String> selected = new HashSet<>();
+            for (Map.Entry<String, CheckBoxCell> entry : sectionCells.entrySet()) {
+                if (entry.getValue().isChecked()) {
+                    selected.add(entry.getKey());
+                }
+            }
+            if (selected.isEmpty()) {
+                return;
+            }
+
+            try {
+                JsonObject filtered = new JsonObject();
+                for (Map.Entry<String, JsonElement> entry : configJson.entrySet()) {
+                    String section = getSectionForSp(entry.getKey());
+                    if (selected.contains(section)) {
+                        filtered.add(entry.getKey(), entry.getValue());
+                    }
+                }
+
+                importSettings(filtered);
+
+                AlertDialog restart = new AlertDialog(context, 0);
+                restart.setTitle(getString(R.string.AppName));
+                restart.setMessage(getString(R.string.RestartAppToTakeEffect));
+                restart.setPositiveButton(getString(R.string.OK), (__, ___) -> AppRestartHelper.triggerRebirth(context, new Intent(context, LaunchActivity.class)));
+                restart.show();
+            } catch (Exception e) {
+                AlertUtil.showSimpleAlert(context, e);
+            }
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        builder.show();
     }
 
     @SuppressLint("ApplySharedPref")
@@ -340,28 +476,59 @@ public final class SettingsBackupHelper {
         if (context == null) return;
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
-        builder.setTitle(getString(R.string.BackupSettings));
+        builder.setTitle(getString(R.string.OEBackupSectionsTitle));
 
+        ScrollView scrollView = new ScrollView(context);
         LinearLayout linearLayout = new LinearLayout(context);
         linearLayout.setOrientation(LinearLayout.VERTICAL);
+        linearLayout.setPadding(0, dp(8), 0, dp(8));
+        scrollView.addView(linearLayout);
 
-        CheckBoxCell checkBoxCell = new CheckBoxCell(context, CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, resourceProvider);
-        checkBoxCell.setBackground(Theme.getSelectorDrawable(false));
-        checkBoxCell.setText(getString(R.string.ExportSettingsIncludeApiKeys), "", true, false);
-        checkBoxCell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
-        checkBoxCell.setChecked(true, false);
-        checkBoxCell.setOnClickListener(v -> {
-            CheckBoxCell cell = (CheckBoxCell) v;
-            cell.setChecked(!cell.isChecked(), true);
+        Map<String, CheckBoxCell> sectionCells = new LinkedHashMap<>();
+        for (String section : ALL_SECTIONS) {
+            CheckBoxCell cell = new CheckBoxCell(context, CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, resourceProvider);
+            cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setText(getString(getSectionTitleResId(section)), "", true, false);
+            cell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
+            cell.setChecked(true, false);
+            cell.setOnClickListener(v -> {
+                CheckBoxCell c = (CheckBoxCell) v;
+                c.setChecked(!c.isChecked(), true);
+            });
+            linearLayout.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+            sectionCells.put(section, cell);
+        }
+
+        android.view.View divider = new android.view.View(context);
+        divider.setBackgroundColor(Theme.getColor(Theme.key_divider, resourceProvider));
+        linearLayout.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 16, 8, 16, 8));
+
+        CheckBoxCell apiKeysCell = new CheckBoxCell(context, CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, resourceProvider);
+        apiKeysCell.setBackground(Theme.getSelectorDrawable(false));
+        apiKeysCell.setText(getString(R.string.ExportSettingsIncludeApiKeys), "", true, false);
+        apiKeysCell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
+        apiKeysCell.setChecked(true, false);
+        apiKeysCell.setOnClickListener(v -> {
+            CheckBoxCell c = (CheckBoxCell) v;
+            c.setChecked(!c.isChecked(), true);
         });
-        linearLayout.addView(checkBoxCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+        linearLayout.addView(apiKeysCell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
 
-        builder.setView(linearLayout);
+        builder.setView(scrollView);
         builder.setPositiveButton(getString(R.string.ExportTheme), (dialog, which) -> {
-            boolean includeApiKeys = checkBoxCell.isChecked();
+            Set<String> selected = new HashSet<>();
+            for (Map.Entry<String, CheckBoxCell> entry : sectionCells.entrySet()) {
+                if (entry.getValue().isChecked()) {
+                    selected.add(entry.getKey());
+                }
+            }
+            if (selected.isEmpty()) {
+                return;
+            }
+            boolean includeApiKeys = apiKeysCell.isChecked();
             try {
                 File cacheFile = new File(AndroidUtilities.getCacheDir(), new Date() + ".nekox-settings.json");
-                FileUtil.writeUtf8String(SettingsBackupHelper.backupSettingsJson(false, 4, includeApiKeys), cacheFile);
+                FileUtil.writeUtf8String(SettingsBackupHelper.backupSettingsJson(false, 4, includeApiKeys, selected), cacheFile);
                 ShareUtil.shareFile(context, cacheFile);
             } catch (Exception e) {
                 AlertUtil.showSimpleAlert(context, e);

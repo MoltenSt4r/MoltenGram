@@ -3,6 +3,9 @@ package app.exteraless.player;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
@@ -14,6 +17,7 @@ import androidx.annotation.NonNull;
 
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.MessageObject;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 
 public class RingPlayButton extends View {
 
@@ -39,6 +43,39 @@ public class RingPlayButton extends View {
     private long lastFrame;
     private float drawnProgress = -1f;
 
+    private ValueAnimator resetAnimator;
+    private float resetProgress;
+    private boolean animatingReset;
+
+    public void animateResetToZero() {
+        if (drawnProgress <= 0.02f) {
+            drawnProgress = 0f;
+            invalidate();
+            return;
+        }
+        if (resetAnimator != null) {
+            resetAnimator.cancel();
+        }
+        animatingReset = true;
+        resetProgress = drawnProgress;
+        resetAnimator = ValueAnimator.ofFloat(drawnProgress, 0f);
+        resetAnimator.setDuration(300);
+        resetAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        resetAnimator.addUpdateListener(anim -> {
+            resetProgress = (float) anim.getAnimatedValue();
+            invalidate();
+        });
+        resetAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                animatingReset = false;
+                resetAnimator = null;
+                invalidate();
+            }
+        });
+        resetAnimator.start();
+    }
+
     public RingPlayButton(Context context, int radiusDp, float strokeDp, int iconDp, float amplitudeDp, int waves) {
         super(context);
         radius = dp(radiusDp);
@@ -62,12 +99,23 @@ public class RingPlayButton extends View {
     }
 
     public void setMessage(MessageObject messageObject) {
+        if (message != messageObject && message != null && drawnProgress > 0.05f) {
+            animateResetToZero();
+        }
         message = messageObject;
         invalidate();
     }
 
+    public boolean isPlaying() {
+        return playing;
+    }
+
     public void setPlaying(boolean value, boolean animated) {
         if (playing == value && alt.target == (value ? 1f : 0f)) {
+            if (value && (amplitude < maxAmplitude || isAttachedToWindow())) {
+                lastFrame = 0;
+                postInvalidateOnAnimation();
+            }
             return;
         }
         playing = value;
@@ -75,19 +123,37 @@ public class RingPlayButton extends View {
             alt.target = value ? 1f : 0f;
         } else {
             alt.snap(value ? 1f : 0f);
+            amplitude = value && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
         }
         lastFrame = 0;
         invalidate();
     }
 
     public void progressChanged() {
-        if (amplitude > 0f) {
+        MessageObject mo = message;
+        float currentProgress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
+        if (!animatingReset && drawnProgress > 0.15f && currentProgress < 0.03f) {
+            animateResetToZero();
             return;
         }
-        MessageObject mo = message;
-        float progress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
-        if (Math.abs(progress - drawnProgress) * TAU * radius >= 1f) {
+        if (animatingReset && currentProgress > 0.05f) {
+            if (resetAnimator != null) {
+                resetAnimator.cancel();
+                resetAnimator = null;
+            }
+            animatingReset = false;
+        }
+        if (Math.abs(currentProgress - drawnProgress) * TAU * radius >= 1f || (playing && amplitude < maxAmplitude)) {
             invalidate();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        lastFrame = 0;
+        if (playing) {
+            postInvalidateOnAnimation();
         }
     }
 
@@ -115,7 +181,8 @@ public class RingPlayButton extends View {
         float cy = getHeight() / 2f;
         canvas.drawCircle(cx, cy, radius, trackPaint);
         MessageObject mo = message;
-        float progress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
+        float currentProgress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
+        float progress = animatingReset ? resetProgress : currentProgress;
         drawnProgress = progress;
         float sweep = 360f * progress;
         if (sweep > 0.5f) {

@@ -69,6 +69,12 @@ public final class Lyrics {
                 long t = Math.max(0, line.time);
                 sb.append(String.format(Locale.US, "[%02d:%02d.%02d]", t / 60000, t / 1000 % 60, t % 1000 / 10));
             }
+            if (line.role != null) {
+                sb.append("{agent:").append(line.role).append("}");
+            }
+            if (line.isBacking) {
+                sb.append("{bg}");
+            }
             sb.append(line.text).append('\n');
         }
         return sb.toString();
@@ -116,21 +122,30 @@ public final class Lyrics {
             String rawContent = WORD_TIME.matcher(line.substring(end)).replaceAll("").trim();
             boolean isBacking = false;
             String role = null;
-            if (rawContent.startsWith("{bg}")) {
-                isBacking = true;
-                rawContent = rawContent.substring(4).trim();
-            } else if (rawContent.startsWith("[bg:") && rawContent.endsWith("]")) {
-                isBacking = true;
-                rawContent = rawContent.substring(4, rawContent.length() - 1).trim();
-            } else if (rawContent.matches("^\\{agent:[^}]+\\}.*")) {
-                int brace = rawContent.indexOf('}');
-                role = rawContent.substring(7, brace);
-                rawContent = rawContent.substring(brace + 1).trim();
-            } else if (rawContent.matches("^v\\d+:.*")) {
-                int col = rawContent.indexOf(':');
-                role = rawContent.substring(0, col);
-                rawContent = rawContent.substring(col + 1).trim();
-            } else if (rawContent.startsWith("(") && rawContent.endsWith(")") && rawContent.length() > 2) {
+            boolean matchedTag = true;
+            while (matchedTag) {
+                matchedTag = false;
+                if (rawContent.startsWith("{bg}")) {
+                    isBacking = true;
+                    rawContent = rawContent.substring(4).trim();
+                    matchedTag = true;
+                } else if (rawContent.startsWith("[bg:") && rawContent.endsWith("]")) {
+                    isBacking = true;
+                    rawContent = rawContent.substring(4, rawContent.length() - 1).trim();
+                    matchedTag = true;
+                } else if (rawContent.matches("^\\{agent:[^}]+\\}.*")) {
+                    int brace = rawContent.indexOf('}');
+                    role = rawContent.substring(7, brace);
+                    rawContent = rawContent.substring(brace + 1).trim();
+                    matchedTag = true;
+                } else if (rawContent.matches("^v\\d+:.*")) {
+                    int col = rawContent.indexOf(':');
+                    role = rawContent.substring(0, col);
+                    rawContent = rawContent.substring(col + 1).trim();
+                    matchedTag = true;
+                }
+            }
+            if (rawContent.startsWith("(") && rawContent.endsWith(")") && rawContent.length() > 2) {
                 // Bracketed backing vocals
                 isBacking = true;
             }

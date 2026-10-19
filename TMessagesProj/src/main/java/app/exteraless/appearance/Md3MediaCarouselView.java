@@ -17,8 +17,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.google.android.material.carousel.Carousel;
 import com.google.android.material.carousel.CarouselLayoutManager;
 import com.google.android.material.carousel.CarouselSnapHelper;
+import com.google.android.material.carousel.CarouselStrategy;
+import com.google.android.material.carousel.KeylineState;
 import com.google.android.material.carousel.MaskableFrameLayout;
 import com.google.android.material.carousel.MultiBrowseCarouselStrategy;
 import com.google.android.material.shape.ShapeAppearanceModel;
@@ -26,6 +29,7 @@ import com.google.android.material.shape.ShapeAppearanceModel;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
@@ -38,13 +42,17 @@ import java.util.Locale;
 
 /**
  * Material Design 3 Carousel view for displaying grouped photos and videos (albums).
- * Implemented using CarouselLayoutManager and MultiBrowseCarouselStrategy from Material Components.
+ * Implemented using CarouselLayoutManager with MultiBrowseCarouselStrategy and TwoPhotoCarouselStrategy from Material Components.
  */
 public class Md3MediaCarouselView extends FrameLayout {
 
     private final RecyclerView recyclerView;
     private final CarouselAdapter adapter;
     private final ArrayList<MessageObject> messages = new ArrayList<>();
+    private final CarouselLayoutManager layoutManager;
+    private final MultiBrowseCarouselStrategy multiBrowseStrategy = new MultiBrowseCarouselStrategy();
+    private final TwoPhotoCarouselStrategy twoPhotoStrategy = new TwoPhotoCarouselStrategy();
+    private CarouselStrategy currentStrategy;
     private ChatMessageCell parentCell;
     private long currentGroupId = 0;
     private boolean isHorizontalDrag;
@@ -68,17 +76,24 @@ public class Md3MediaCarouselView extends FrameLayout {
                     startY = e.getY();
                     isHorizontalDrag = false;
                     ViewParent p = getParent();
-                    if (p != null) {
+                    if (p != null && (canScrollHorizontally(1) || canScrollHorizontally(-1))) {
                         p.requestDisallowInterceptTouchEvent(true);
                     }
                 } else if (action == MotionEvent.ACTION_MOVE) {
                     float dx = Math.abs(e.getX() - startX);
                     float dy = Math.abs(e.getY() - startY);
                     if (dx > dy && dx > AndroidUtilities.touchSlop) {
-                        isHorizontalDrag = true;
-                        ViewParent p = getParent();
-                        if (p != null) {
-                            p.requestDisallowInterceptTouchEvent(true);
+                        if (canScrollHorizontally(1) || canScrollHorizontally(-1)) {
+                            isHorizontalDrag = true;
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(true);
+                            }
+                        } else {
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(false);
+                            }
                         }
                     } else if (dy > dx && dy > AndroidUtilities.touchSlop && !isHorizontalDrag) {
                         ViewParent p = getParent();
@@ -103,10 +118,12 @@ public class Md3MediaCarouselView extends FrameLayout {
                     float dx = Math.abs(e.getX() - startX);
                     float dy = Math.abs(e.getY() - startY);
                     if (dx > dy && dx > AndroidUtilities.touchSlop) {
-                        isHorizontalDrag = true;
-                        ViewParent p = getParent();
-                        if (p != null) {
-                            p.requestDisallowInterceptTouchEvent(true);
+                        if (canScrollHorizontally(1) || canScrollHorizontally(-1)) {
+                            isHorizontalDrag = true;
+                            ViewParent p = getParent();
+                            if (p != null) {
+                                p.requestDisallowInterceptTouchEvent(true);
+                            }
                         }
                     }
                 } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
@@ -122,7 +139,8 @@ public class Md3MediaCarouselView extends FrameLayout {
         recyclerView.setClipToPadding(false);
         recyclerView.setClipChildren(false);
 
-        CarouselLayoutManager layoutManager = new CarouselLayoutManager(new MultiBrowseCarouselStrategy());
+        currentStrategy = multiBrowseStrategy;
+        layoutManager = new CarouselLayoutManager(multiBrowseStrategy);
         layoutManager.setCarouselAlignment(CarouselLayoutManager.ALIGNMENT_START);
         recyclerView.setLayoutManager(layoutManager);
 
@@ -154,8 +172,125 @@ public class Md3MediaCarouselView extends FrameLayout {
             } else {
                 messages.addAll(group.messages);
             }
+            updateCarouselStrategy();
             adapter.notifyDataSetChanged();
             recyclerView.scrollToPosition(0);
+        } else {
+            updateCarouselStrategy();
+        }
+    }
+
+    public View getItemView(int index) {
+        if (recyclerView != null) {
+            for (int i = 0; i < recyclerView.getChildCount(); i++) {
+                View child = recyclerView.getChildAt(i);
+                if (recyclerView.getChildAdapterPosition(child) == index) {
+                    return child;
+                }
+            }
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
+            if (holder != null) {
+                return holder.itemView;
+            }
+            if (recyclerView.getLayoutManager() != null) {
+                return recyclerView.getLayoutManager().findViewByPosition(index);
+            }
+        }
+        return null;
+    }
+
+    public BackupImageView getImageView(int index) {
+        View itemView = getItemView(index);
+        if (itemView != null && recyclerView != null) {
+            RecyclerView.ViewHolder holder = recyclerView.getChildViewHolder(itemView);
+            if (holder instanceof CarouselViewHolder) {
+                return ((CarouselViewHolder) holder).imageView;
+            }
+        }
+        return null;
+    }
+
+    public ImageReceiver getImageReceiver(int index) {
+        BackupImageView iv = getImageView(index);
+        if (iv != null) {
+            return iv.getImageReceiver();
+        }
+        if (recyclerView != null) {
+            RecyclerView.ViewHolder holder = recyclerView.findViewHolderForAdapterPosition(index);
+            if (holder instanceof CarouselViewHolder) {
+                return ((CarouselViewHolder) holder).imageView.getImageReceiver();
+            }
+            if (recyclerView.getLayoutManager() != null) {
+                View v = recyclerView.getLayoutManager().findViewByPosition(index);
+                if (v != null) {
+                    RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(v);
+                    if (vh instanceof CarouselViewHolder) {
+                        return ((CarouselViewHolder) vh).imageView.getImageReceiver();
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    public int indexOf(MessageObject message) {
+        if (message == null || messages.isEmpty()) {
+            return -1;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            if (messages.get(i).getId() == message.getId()) {
+                return i;
+            }
+        }
+        return -1;
+    }
+
+    public int indexOf(TLRPC.FileLocation fileLocation) {
+        if (fileLocation == null || messages.isEmpty()) {
+            return -1;
+        }
+        for (int i = 0; i < messages.size(); i++) {
+            MessageObject msg = messages.get(i);
+            if (msg.photoThumbs != null) {
+                for (int b = 0; b < msg.photoThumbs.size(); b++) {
+                    TLRPC.PhotoSize photoSize = msg.photoThumbs.get(b);
+                    if (photoSize != null && photoSize.location != null && photoSize.location.local_id == fileLocation.local_id) {
+                        return i;
+                    }
+                }
+            }
+        }
+        return -1;
+    }
+
+    public boolean containsMessage(MessageObject message) {
+        return indexOf(message) >= 0;
+    }
+
+    private void updateCarouselStrategy() {
+        CarouselStrategy targetStrategy = messages.size() == 2 ? twoPhotoStrategy : multiBrowseStrategy;
+        if (currentStrategy != targetStrategy) {
+            currentStrategy = targetStrategy;
+            layoutManager.setCarouselStrategy(targetStrategy);
+        }
+    }
+
+    private static class TwoPhotoCarouselStrategy extends CarouselStrategy {
+
+        @NonNull
+        @Override
+        public KeylineState onFirstChildMeasuredWithMargins(@NonNull Carousel carousel, @NonNull View child) {
+            int containerWidth = carousel.getContainerWidth();
+            ViewGroup.MarginLayoutParams lp = child.getLayoutParams() instanceof ViewGroup.MarginLayoutParams
+                    ? (ViewGroup.MarginLayoutParams) child.getLayoutParams()
+                    : null;
+            int leftMargin = lp != null ? lp.leftMargin : AndroidUtilities.dp(4);
+            float itemSize = Math.max(1f, (containerWidth - AndroidUtilities.dp(16)) / 2f);
+            float firstCenter = leftMargin + itemSize / 2f;
+
+            return new KeylineState.Builder(itemSize, containerWidth)
+                    .addKeylineRange(firstCenter, 0f, itemSize, 2, true)
+                    .build();
         }
     }
 
@@ -177,7 +312,7 @@ public class Md3MediaCarouselView extends FrameLayout {
             frameLayout.setShapeAppearanceModel(shapeModel);
 
             BackupImageView imageView = new BackupImageView(parent.getContext());
-            imageView.setRoundRadius(0);
+            imageView.setRoundRadius(AndroidUtilities.dp(16));
             imageView.getImageReceiver().setAspectFit(false);
             frameLayout.addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 

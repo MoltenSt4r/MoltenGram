@@ -64,6 +64,22 @@ object OpenExteraConfig {
     @JvmStatic
     fun addCommaAfterMention(): Boolean = addCommaAfterMention.Bool()
 
+    // ---- Команды плагинов ----
+
+    /** Всплывающий список команд плагинов при вводе префикса (например, .ping). */
+    @JvmField
+    val pluginCommandSuggestions = addConfig("OEPluginCommandSuggestions", ConfigItem.configTypeBool, true)
+
+    /** Префиксы команд плагинов (по умолчанию ".,!,$,?"). */
+    @JvmField
+    val pluginCommandPrefixes = addConfig("OEPluginCommandPrefixes", ConfigItem.configTypeString, ".,!,$,?")
+
+    @JvmStatic
+    fun pluginCommandSuggestions(): Boolean = pluginCommandSuggestions.Bool()
+
+    @JvmStatic
+    fun pluginCommandPrefixes(): String = pluginCommandPrefixes.String() ?: ".,!,$,?"
+
     // ---- Прокси ----
 
     /**

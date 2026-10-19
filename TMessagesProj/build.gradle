@@ -295,6 +295,10 @@ android {
     sourceSets.main.jniLibs.srcDirs = ['./jni/']
 
     namespace = 'org.telegram.messenger'
+
+    testOptions {
+        unitTests.returnDefaultValues = true
+    }
 }
 
 androidComponents {
@@ -319,6 +323,9 @@ configurations.configureEach {
 }
 
 dependencies {
+    testImplementation 'junit:junit:4.13.2'
+    testImplementation 'org.json:json:20231013'
+
     // official
     implementation 'androidx.core:core-ktx:1.19.0'
     implementation 'androidx.palette:palette-ktx:1.0.0'

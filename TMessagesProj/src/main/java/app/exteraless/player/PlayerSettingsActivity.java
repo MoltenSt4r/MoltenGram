@@ -27,6 +27,10 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import android.text.InputType;
+import android.text.TextUtils;
+import android.widget.FrameLayout;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
@@ -36,6 +40,8 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.EditTextBoldCursor;
+import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.Switch;
 
 import java.util.ArrayList;
@@ -43,17 +49,20 @@ import java.util.Collections;
 import java.util.List;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
+import app.exteraless.appearance.Md3AvatarShapesActivity;
+import org.telegram.messenger.NotificationCenter;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
     private int appearanceHeaderRow;
-    private int md3PlayerRow;
-    private int md3MiniPlayerRow;
     private int bgStyleRow;
     private int seekbarStyleRow;
     private int colorStyleRow;
+    private int coverShapeRow;
+    private int miniCoverShapeRow;
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
@@ -63,23 +72,21 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsExperimentalRow;
     private int lyricsSourcesRow;
     private int lyricsPriorityRow;
-    private int lyricsRomanizeRow;
     private int lyricsTranslateRow;
     private int lyricsAlignmentRow;
-    private int lyricsRolesRow;
-    private int lyricsTapSeekRow;
     private int lyricsAutoscrollRow;
-    private int lyricsHideStatusBarRow;
     private int lyricsTextSizeRow;
-    private int lyricsBlurRow;
     private int lyricsShadowRow;
 
     private int audioHeaderRow;
+    private int playlistsRow;
     private int sleepTimerRow;
-    private int pauseOnMuteRow;
-    private int resumeOnBluetoothRow;
     private int systemEqualizerRow;
     private int audioShadowRow;
+
+    private int metrolistHeaderRow;
+    private int metrolistAuthRow;
+    private int metrolistShadowRow;
 
     @Override
     protected String getKey() {
@@ -97,11 +104,11 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Appearance
         appearanceHeaderRow = addRow("appearanceHeader");
-        md3PlayerRow = addRow("md3Player");
-        md3MiniPlayerRow = addRow("md3MiniPlayer");
         bgStyleRow = addRow("bgStyle");
         seekbarStyleRow = addRow("seekbarStyle");
         colorStyleRow = addRow("colorStyle");
+        coverShapeRow = addRow("coverShape");
+        miniCoverShapeRow = addRow("miniCoverShape");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
@@ -112,24 +119,23 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         lyricsExperimentalRow = addRow("lyricsExperimental");
         lyricsSourcesRow = addRow("lyricsSources");
         lyricsPriorityRow = addRow("lyricsPriority");
-        lyricsRomanizeRow = addRow("lyricsRomanize");
         lyricsTranslateRow = addRow("lyricsTranslate");
         lyricsAlignmentRow = addRow("lyricsAlignment");
-        lyricsRolesRow = addRow("lyricsRoles");
-        lyricsTapSeekRow = addRow("lyricsTapSeek");
         lyricsAutoscrollRow = addRow("lyricsAutoscroll");
-        lyricsHideStatusBarRow = addRow("lyricsHideStatusBar");
         lyricsTextSizeRow = addRow("lyricsTextSize");
-        lyricsBlurRow = addRow("lyricsBlur");
         lyricsShadowRow = addRow();
 
         // Audio
         audioHeaderRow = addRow("audioHeader");
+        playlistsRow = addRow("playlists");
         sleepTimerRow = addRow("sleepTimer");
-        pauseOnMuteRow = addRow("pauseOnMute");
-        resumeOnBluetoothRow = addRow("resumeOnBluetooth");
         systemEqualizerRow = addRow("systemEqualizer");
         audioShadowRow = addRow();
+
+        // Metrolist & YouTube Music
+        metrolistHeaderRow = addRow("metrolistHeader");
+        metrolistAuthRow = addRow("metrolistAuth");
+        metrolistShadowRow = addRow();
     }
 
     @Override
@@ -139,17 +145,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == md3PlayerRow) {
-            AppearanceConfig.md3Player.setConfigBool(!AppearanceConfig.md3Player());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.md3Player());
-            }
-        } else if (position == md3MiniPlayerRow) {
-            AppearanceConfig.md3MiniPlayer.setConfigBool(!AppearanceConfig.md3MiniPlayer());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.md3MiniPlayer());
-            }
-        } else if (position == bgStyleRow) {
+        if (position == bgStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
                     getString(R.string.OEAppearancePlayerBackgroundStyleBlur),
@@ -171,6 +167,80 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             showSelector(getString(R.string.OEAppearancePlayerColorStyle), options, which -> {
                 AppearanceConfig.playerColorStyle.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(colorStyleRow);
+            });
+        } else if (position == coverShapeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                    getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                    getString(R.string.OEAppearancePlayerCoverShapeRandom),
+                    getString(R.string.OEAppearancePlayerCoverShapeCustom)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerCoverShape), options, which -> {
+                if (which == 0) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 1) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 2) {
+                    AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                } else if (which == 3) {
+                    int currentShape = AppearanceConfig.playerCoverShape();
+                    if (currentShape < 0) currentShape = 0;
+                    Md3AvatarShapesActivity.openShapePicker(getContext(), getResourceProvider(), getString(R.string.OEAppearancePlayerCoverShape), currentShape, shapeId -> {
+                        AppearanceConfig.playerCoverShape.setConfigInt(shapeId);
+                        PlayerArt.clearTrackShapesCache();
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                        if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    });
+                }
+            });
+        } else if (position == miniCoverShapeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEAppearancePlayerCoverShapeFollow),
+                    getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                    getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                    getString(R.string.OEAppearancePlayerCoverShapeRandom),
+                    getString(R.string.OEAppearancePlayerCoverShapeCustom)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerMiniCoverShape), options, which -> {
+                if (which == 0) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_FOLLOW);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 1) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 2) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 3) {
+                    AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
+                    PlayerArt.clearTrackShapesCache();
+                    NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                    if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                } else if (which == 4) {
+                    int currentShape = AppearanceConfig.playerMiniCoverShape();
+                    if (currentShape < 0) currentShape = 0;
+                    Md3AvatarShapesActivity.openShapePicker(getContext(), getResourceProvider(), getString(R.string.OEAppearancePlayerMiniCoverShape), currentShape, shapeId -> {
+                        AppearanceConfig.playerMiniCoverShape.setConfigInt(shapeId);
+                        PlayerArt.clearTrackShapesCache();
+                        NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
+                        if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                    });
+                }
             });
         } else if (position == swipeTrackRow) {
             AppearanceConfig.playerSwipeTrack.setConfigBool(!AppearanceConfig.playerSwipeTrack());
@@ -196,11 +266,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             showLyricsSourcesDialog();
         } else if (position == lyricsPriorityRow) {
             showLyricsPriorityDialog();
-        } else if (position == lyricsRomanizeRow) {
-            AppearanceConfig.playerLyricsRomanize.setConfigBool(!AppearanceConfig.playerLyricsRomanize());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsRomanize());
-            }
         } else if (position == lyricsTranslateRow) {
             AppearanceConfig.playerLyricsTranslate.setConfigBool(!AppearanceConfig.playerLyricsTranslate());
             if (view instanceof TextCheckCell) {
@@ -215,25 +280,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 AppearanceConfig.playerLyricsAlignment.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsAlignmentRow);
             });
-        } else if (position == lyricsRolesRow) {
-            AppearanceConfig.playerLyricsSplitRoles.setConfigBool(!AppearanceConfig.playerLyricsSplitRoles());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsSplitRoles());
-            }
-        } else if (position == lyricsTapSeekRow) {
-            AppearanceConfig.playerLyricsTapToSeek.setConfigBool(!AppearanceConfig.playerLyricsTapToSeek());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsTapToSeek());
-            }
         } else if (position == lyricsAutoscrollRow) {
             AppearanceConfig.playerLyricsAutoScroll.setConfigBool(!AppearanceConfig.playerLyricsAutoScroll());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsAutoScroll());
-            }
-        } else if (position == lyricsHideStatusBarRow) {
-            AppearanceConfig.playerLyricsHideStatusBar.setConfigBool(!AppearanceConfig.playerLyricsHideStatusBar());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsHideStatusBar());
             }
         } else if (position == lyricsTextSizeRow) {
             CharSequence[] options = {
@@ -245,23 +295,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 AppearanceConfig.playerLyricsTextSize.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsTextSizeRow);
             });
-        } else if (position == lyricsBlurRow) {
-            AppearanceConfig.playerLyricsBlur.setConfigBool(!AppearanceConfig.playerLyricsBlur());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsBlur());
-            }
+        } else if (position == playlistsRow) {
+            LocalPlaylistsController.getInstance().showPlaylistsDialog(getParentActivity(), getResourceProvider());
         } else if (position == sleepTimerRow) {
             SleepTimer.showDialog(getContext(), getResourceProvider());
-        } else if (position == pauseOnMuteRow) {
-            AppearanceConfig.playerPauseOnMute.setConfigBool(!AppearanceConfig.playerPauseOnMute());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerPauseOnMute());
-            }
-        } else if (position == resumeOnBluetoothRow) {
-            AppearanceConfig.playerResumeOnBluetooth.setConfigBool(!AppearanceConfig.playerResumeOnBluetooth());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerResumeOnBluetooth());
-            }
         } else if (position == systemEqualizerRow) {
             try {
                 Intent eqIntent = new Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL);
@@ -275,6 +312,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } catch (Throwable t) {
                 FileLog.e(t);
             }
+        } else if (position == metrolistAuthRow) {
+            showMetrolistAuthDialog();
         }
     }
 
@@ -292,19 +331,17 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
+            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow || position == metrolistHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == md3PlayerRow || position == md3MiniPlayerRow || position == swipeTrackRow
-                    || position == cropCoverRow || position == keepScreenOnRow || position == lyricsExperimentalRow
-                    || position == lyricsRomanizeRow || position == lyricsTranslateRow || position == lyricsRolesRow
-                    || position == lyricsTapSeekRow || position == lyricsAutoscrollRow || position == lyricsHideStatusBarRow
-                    || position == lyricsBlurRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow) {
+            } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+                    || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow
+            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == sleepTimerRow || position == systemEqualizerRow) {
+                    || position == lyricsTextSizeRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow
+                    || position == metrolistAuthRow) {
                 return TYPE_SETTINGS;
-            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
+            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow || position == metrolistShadowRow) {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
@@ -321,14 +358,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setText(getString(R.string.OEAppearancePlayerLyricsHeader));
                 } else if (position == audioHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerAudioHeader));
+                } else if (position == metrolistHeaderRow) {
+                    cell.setText(getString(R.string.OEPlayerMetrolistHeader));
                 }
             } else if (type == TYPE_CHECK) {
                 TextCheckCell cell = (TextCheckCell) holder.itemView;
-                if (position == md3PlayerRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearanceMd3Player), AppearanceConfig.md3Player(), true);
-                } else if (position == md3MiniPlayerRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearanceMd3MiniPlayer), AppearanceConfig.md3MiniPlayer(), true);
-                } else if (position == swipeTrackRow) {
+                if (position == swipeTrackRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerSwipeTrack), AppearanceConfig.playerSwipeTrack(), true);
                 } else if (position == cropCoverRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
@@ -336,24 +371,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
-                } else if (position == lyricsRomanizeRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsRomanize), AppearanceConfig.playerLyricsRomanize(), true);
                 } else if (position == lyricsTranslateRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsTranslate), getString(R.string.OEAppearancePlayerLyricsTranslateDesc), AppearanceConfig.playerLyricsTranslate(), true, true);
-                } else if (position == lyricsRolesRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsSplitRoles), AppearanceConfig.playerLyricsSplitRoles(), true);
-                } else if (position == lyricsTapSeekRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsTapToSeek), AppearanceConfig.playerLyricsTapToSeek(), true);
                 } else if (position == lyricsAutoscrollRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), true);
-                } else if (position == lyricsHideStatusBarRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsHideStatusBar), AppearanceConfig.playerLyricsHideStatusBar(), true);
-                } else if (position == lyricsBlurRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsBlur), AppearanceConfig.playerLyricsBlur(), false);
-                } else if (position == pauseOnMuteRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerPauseOnMute), AppearanceConfig.playerPauseOnMute(), true);
-                } else if (position == resumeOnBluetoothRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerResumeOnBluetooth), AppearanceConfig.playerResumeOnBluetooth(), true);
                 }
             } else if (type == TYPE_SETTINGS) {
                 TextSettingsCell cell = (TextSettingsCell) holder.itemView;
@@ -370,6 +391,38 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     int colorStyle = AppearanceConfig.playerColorStyle();
                     String colorName = colorStyle == 1 ? getString(R.string.OEAppearancePlayerColorStyleTheme) : getString(R.string.OEAppearancePlayerColorStyleCover);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerColorStyle), colorName, true);
+                } else if (position == coverShapeRow) {
+                    int shapeMode = AppearanceConfig.playerCoverShape();
+                    String shapeStr;
+                    if (shapeMode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeDisabled);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_CYCLE) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeRandom);
+                    } else if (shapeMode >= 0 && shapeMode < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        shapeStr = Md3AvatarShapes.SHAPE_NAMES[shapeMode];
+                    } else {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    }
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerCoverShape), shapeStr, true);
+                } else if (position == miniCoverShapeRow) {
+                    int shapeMode = AppearanceConfig.playerMiniCoverShape();
+                    String shapeStr;
+                    if (shapeMode == AppearanceConfig.COVER_SHAPE_FOLLOW) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeFollow);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_DISABLED) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeDisabled);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_CYCLE) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeCycle);
+                    } else if (shapeMode == AppearanceConfig.COVER_SHAPE_RANDOM) {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeRandom);
+                    } else if (shapeMode >= 0 && shapeMode < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        shapeStr = Md3AvatarShapes.SHAPE_NAMES[shapeMode];
+                    } else {
+                        shapeStr = getString(R.string.OEAppearancePlayerCoverShapeFollow);
+                    }
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerMiniCoverShape), shapeStr, true);
                 } else if (position == lyricsSourcesRow) {
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsSources), getString(R.string.OEAppearancePlayerLyricsSourcesDesc), true);
                 } else if (position == lyricsPriorityRow) {
@@ -381,13 +434,27 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 } else if (position == lyricsTextSizeRow) {
                     int textSizeMode = AppearanceConfig.playerLyricsTextSize();
                     String textSizeName = textSizeMode == 0 ? getString(R.string.OEAppearancePlayerLyricsTextSizeNormal) : textSizeMode == 2 ? getString(R.string.OEAppearancePlayerLyricsTextSizeHuge) : getString(R.string.OEAppearancePlayerLyricsTextSizeLarge);
-                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsTextSize), textSizeName, true);
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsTextSize), textSizeName, false);
+                } else if (position == playlistsRow) {
+                    cell.setTextAndValue(getString(R.string.OEPlayerLocalPlaylists), getString(R.string.OEPlayerLocalPlaylistsDesc), true);
                 } else if (position == sleepTimerRow) {
                     SleepTimer timer = SleepTimer.getInstance();
                     String timerStatus = timer.isRunning() ? timer.getFormattedRemaining() : getString(R.string.OEAppearancePlayerSleepTimerOff);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerSleepTimer), timerStatus, true);
                 } else if (position == systemEqualizerRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerEqualizer), false);
+                } else if (position == metrolistAuthRow) {
+                    int mode = app.exteraless.metrolist.MetrolistAuth.getInstance().getAuthMode();
+                    String val;
+                    if (mode == app.exteraless.metrolist.MetrolistAuth.MODE_COOKIE) {
+                        val = getString(R.string.OEPlayerMetrolistCookies);
+                    } else if (mode == app.exteraless.metrolist.MetrolistAuth.MODE_GOOGLE_OAUTH) {
+                        String email = app.exteraless.metrolist.MetrolistAuth.getInstance().getAccountEmail();
+                        val = !android.text.TextUtils.isEmpty(email) ? email : getString(R.string.OEPlayerMetrolistGoogle);
+                    } else {
+                        val = getString(R.string.OEPlayerMetrolistGuest);
+                    }
+                    cell.setTextAndValue(getString(R.string.OEPlayerMetrolistAuth), val, false);
                 }
             }
         }
@@ -696,6 +763,92 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         builder.setTitle(title);
         builder.setItems(options, (dialog, which) -> {
             onSelected.run(which);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showMetrolistAuthDialog() {
+        if (getParentActivity() == null) return;
+        CharSequence[] options = {
+                getString(R.string.OEPlayerMetrolistGuest),
+                getString(R.string.OEPlayerMetrolistCookies),
+                getString(R.string.OEPlayerMetrolistGoogle)
+        };
+        showSelector(getString(R.string.OEPlayerMetrolistAuth), options, which -> {
+            if (which == 0) {
+                app.exteraless.metrolist.MetrolistAuth.getInstance().setAuthMode(app.exteraless.metrolist.MetrolistAuth.MODE_GUEST);
+                if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
+            } else if (which == 1) {
+                showMetrolistCookieInputDialog();
+            } else if (which == 2) {
+                showMetrolistOAuthInputDialog();
+            }
+        });
+    }
+
+    private void showMetrolistCookieInputDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        builder.setTitle(getString(R.string.OEPlayerMetrolistCookieDialogTitle));
+
+        final EditTextBoldCursor input = new EditTextBoldCursor(getParentActivity());
+        input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        input.setHint(getString(R.string.OEPlayerMetrolistCookieDialogHint));
+        input.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        input.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
+        input.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
+        input.setMaxLines(6);
+        input.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getRawCookies());
+
+        FrameLayout frameLayout = new FrameLayout(getParentActivity());
+        frameLayout.setPadding(dp(24), dp(12), dp(24), dp(8));
+        frameLayout.addView(input, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        builder.setView(frameLayout);
+
+        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
+            String text = input.getText().toString().trim();
+            app.exteraless.metrolist.MetrolistAuth.getInstance().setCookies(text);
+            if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showMetrolistOAuthInputDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        builder.setTitle(getString(R.string.OEPlayerMetrolistGoogle));
+
+        LinearLayout layout = new LinearLayout(getParentActivity());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(24), dp(12), dp(24), dp(8));
+
+        final EditTextBoldCursor emailInput = new EditTextBoldCursor(getParentActivity());
+        emailInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        emailInput.setHint("Email / Login");
+        emailInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        emailInput.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
+        emailInput.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        emailInput.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getAccountEmail());
+        layout.addView(emailInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
+
+        final EditTextBoldCursor tokenInput = new EditTextBoldCursor(getParentActivity());
+        tokenInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        tokenInput.setHint("OAuth Token (Bearer)");
+        tokenInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        tokenInput.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
+        tokenInput.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
+        tokenInput.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getOAuthToken());
+        layout.addView(tokenInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        builder.setView(layout);
+        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
+            String email = emailInput.getText().toString().trim();
+            String token = tokenInput.getText().toString().trim();
+            app.exteraless.metrolist.MetrolistAuth.getInstance().setOAuthToken(token, email, "");
+            if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());

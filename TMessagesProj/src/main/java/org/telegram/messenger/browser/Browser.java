@@ -314,6 +314,10 @@ public class Browser {
             return;
         }
         final int currentAccount = UserConfig.selectedAccount;
+        if (uri != null && app.exteraless.metrolist.MetrolistController.isSupportedUrl(uri.toString())) {
+            app.exteraless.metrolist.MetrolistController.getInstance().playUrl(context, uri.toString());
+            return;
+        }
         boolean[] forceBrowser = new boolean[]{false};
         boolean internalUri = isInternalUri(uri, forceBrowser);
         String browserPackage = getBrowserPackageName(browser);

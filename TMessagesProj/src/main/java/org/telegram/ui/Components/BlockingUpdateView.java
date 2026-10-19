@@ -152,7 +152,7 @@ public class BlockingUpdateView extends FrameLayout implements NotificationCente
         acceptTextView = new TextView(context);
         acceptTextView.setGravity(Gravity.CENTER);
         acceptTextView.setTypeface(AndroidUtilities.bold());
-        acceptTextView.setTextColor(0xffffffff);
+        acceptTextView.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
         acceptTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         acceptButton.addView(acceptTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
 
@@ -180,7 +180,7 @@ public class BlockingUpdateView extends FrameLayout implements NotificationCente
         radialProgressView.setVisibility(View.INVISIBLE);
         radialProgress = new RadialProgress(radialProgressView);
         radialProgress.setBackground(null, true, false);
-        radialProgress.setProgressColor(0xffffffff);
+        radialProgress.setProgressColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
         acceptButton.addView(radialProgressView, LayoutHelper.createFrame(36, 36, Gravity.CENTER));
     }
 

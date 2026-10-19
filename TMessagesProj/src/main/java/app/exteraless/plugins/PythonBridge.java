@@ -81,6 +81,12 @@ public final class PythonBridge {
         controller().removeMenuItem(pluginId, itemId);
     }
 
+    // ---------- команды плагинов ----------
+
+    public static void registerCommand(String pluginId, String command, String description) {
+        controller().registerPluginCommand(pluginId, command, description);
+    }
+
     // ---------- прочее ----------
 
     public static boolean hasPermission(String pluginId, String permission) {

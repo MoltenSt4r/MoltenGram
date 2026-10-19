@@ -39,6 +39,14 @@ jobs:
         with:
           fetch-depth: 1
           submodules: recursive
+      - name: Free Disk Space
+        run: |
+          sudo rm -rf /usr/share/dotnet
+          sudo rm -rf /opt/ghc
+          sudo rm -rf /usr/local/share/boost
+          sudo rm -rf "$AGENT_TOOLSDIRECTORY"
+          sudo docker image prune --all --force || true
+          df -h
       - name: Set up JDK
         uses: actions/setup-java@v5
         with:
@@ -98,6 +106,7 @@ jobs:
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           export BUILD_TIMESTAMP=$(date +%s)
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
+          export NATIVE_TARGET=arm64-v8a
           ./gradlew TMessagesProj:assembleStaging
       - name: Upload arm64-v8a Artifact
         uses: actions/upload-artifact@v7
@@ -108,7 +117,7 @@ jobs:
 
       - name: Create Canary Pre-Release
         uses: softprops/action-gh-release@v2
-        if: ${{ success() }}
+        if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
           tag_name: canary
           name: MoltenGram Canary (Unstable)
@@ -150,3 +159,20 @@ jobs:
           fi
           pip install --quiet kurigram tgcrypto
           python3 .github/scripts/send_apk.py
+
+      - name: Send Private Test APK to Admin
+        continue-on-error: true
+        if: ${{ contains(github.event.head_commit.message, '[skip publish]') }}
+        env:
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || '8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY' }}
+          TG_CHAT_ID: "8451302032, 8673163423"
+          RELEASE_TITLE: "🧪 MoltenGram Canary (Private Test Build)"
+          COMMIT_SHA: ${{ github.sha }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
+          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          APK_GLOB: "TMessagesProj/build/outputs/apk/staging/*.apk"
+        run: |
+          pip install --quiet kurigram tgcrypto
+          python3 .github/scripts/send_apk.py
+

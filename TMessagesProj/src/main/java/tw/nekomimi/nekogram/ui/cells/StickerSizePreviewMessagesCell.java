@@ -5,6 +5,8 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.Canvas;
 import android.graphics.Shader;
 import android.graphics.drawable.BitmapDrawable;
@@ -16,6 +18,8 @@ import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.drawable.RoundedBitmapDrawable;
+import androidx.core.graphics.drawable.RoundedBitmapDrawableFactory;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.MessageObject;
@@ -126,7 +130,7 @@ public class StickerSizePreviewMessagesCell extends LinearLayout {
 
                 @Override
                 public void didPressImage(ChatMessageCell cell, float x, float y, boolean fullPreview) {
-                    BulletinFactory.of(fragment).createErrorBulletin(getString(R.string.Nya), resourcesProvider).show();
+                    toggleMemeEasterEgg(fragment, resourcesProvider);
                 }
 
                 @Override
@@ -138,6 +142,62 @@ public class StickerSizePreviewMessagesCell extends LinearLayout {
             cells[a].setFullyDraw(true);
             cells[a].setMessageObject(messageObjects[a], null, false, false, false);
             addView(cells[a], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+    }
+
+    private boolean isMemeMode;
+
+    private void toggleMemeEasterEgg(BaseFragment fragment, Theme.ResourcesProvider resourcesProvider) {
+        isMemeMode = !isMemeMode;
+        if (isMemeMode) {
+            messageObjects[0].customPhotoResId = R.drawable.easter_egg_meme_girl;
+            messageObjects[0].customReplyName = getString(R.string.OEMemeMom);
+            if (messageObjects[0].replyMessageObject != null && messageObjects[0].replyMessageObject.messageOwner != null) {
+                messageObjects[0].replyMessageObject.messageOwner.message = getString(R.string.OEMemeGavnoyed);
+                messageObjects[0].replyMessageObject.applyNewText();
+                messageObjects[0].replyMessageObject.resetLayout();
+            }
+            if (messageObjects[1] != null && messageObjects[1].messageOwner != null) {
+                messageObjects[1].messageOwner.message = getString(R.string.OEMemeBoguStydno);
+                messageObjects[1].applyNewText();
+                messageObjects[1].resetLayout();
+            }
+            messageObjects[0].resetLayout();
+            cells[0].setMessageObject(messageObjects[0], null, false, false, false);
+            cells[1].setMessageObject(messageObjects[1], null, false, false, false);
+            cells[0].requestLayout();
+            cells[1].requestLayout();
+            invalidate();
+
+            Bitmap bitmap = BitmapFactory.decodeResource(getResources(), R.drawable.easter_egg_meme_girl);
+            if (bitmap != null) {
+                RoundedBitmapDrawable drawable = RoundedBitmapDrawableFactory.create(getResources(), bitmap);
+                drawable.setCornerRadius(AndroidUtilities.dp(8));
+                BulletinFactory.of(fragment).createSimpleBulletin(drawable, getString(R.string.OEMemeBoguStydno)).show();
+            } else {
+                BulletinFactory.of(fragment).createSimpleBulletin(R.drawable.easter_egg_meme_girl, getString(R.string.OEMemeBoguStydno)).show();
+            }
+        } else {
+            messageObjects[0].customPhotoResId = 0;
+            messageObjects[0].customReplyName = getString(R.string.StickerSizeDialogName);
+            if (messageObjects[0].replyMessageObject != null && messageObjects[0].replyMessageObject.messageOwner != null) {
+                messageObjects[0].replyMessageObject.messageOwner.message = getString(R.string.StickerSizeDialogMessageReplyTo);
+                messageObjects[0].replyMessageObject.applyNewText();
+                messageObjects[0].replyMessageObject.resetLayout();
+            }
+            if (messageObjects[1] != null && messageObjects[1].messageOwner != null) {
+                messageObjects[1].messageOwner.message = NekoConfig.stickerSize.Float() < 9 ? getString(R.string.StickerSizeDialogMessageSmallOne) : getString(R.string.StickerSizeDialogMessageBigOne);
+                messageObjects[1].applyNewText();
+                messageObjects[1].resetLayout();
+            }
+            messageObjects[0].resetLayout();
+            cells[0].setMessageObject(messageObjects[0], null, false, false, false);
+            cells[1].setMessageObject(messageObjects[1], null, false, false, false);
+            cells[0].requestLayout();
+            cells[1].requestLayout();
+            invalidate();
+
+            BulletinFactory.of(fragment).createErrorBulletin(getString(R.string.Nya), resourcesProvider).show();
         }
     }
 
@@ -177,7 +237,7 @@ public class StickerSizePreviewMessagesCell extends LinearLayout {
     public void invalidate() {
         super.invalidate();
         for (int a = 0; a < cells.length; a++) {
-            if (a == 1) {
+            if (a == 1 && !isMemeMode) {
                 messageObjects[a].messageOwner.message = NekoConfig.stickerSize.Float() < 9 ? getString(R.string.StickerSizeDialogMessageSmallOne) : getString(R.string.StickerSizeDialogMessageBigOne);
                 messageObjects[a].applyNewText();
                 messageObjects[a].resetLayout();

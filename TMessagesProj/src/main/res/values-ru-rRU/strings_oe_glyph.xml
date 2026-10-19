@@ -21,4 +21,6 @@
     <string name="OEGlyphAnimWave">Бегущая волна</string>
     <string name="OEGlyphAnimBreathing">Плавное дыхание</string>
     <string name="OEGlyphAnimHeartbeat">Ритмичный пульс</string>
+    <string name="OEGlyphBurst">Эффект взрыва частиц</string>
+    <string name="OEGlyphBurstDesc">Взрыв глифов Nothing Phone (1) с тактильной отдачей</string>
 </resources>

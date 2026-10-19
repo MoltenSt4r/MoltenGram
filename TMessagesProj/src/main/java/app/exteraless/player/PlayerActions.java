@@ -265,8 +265,15 @@ public final class PlayerActions {
     }
 
     public static void saveToProfile(MessageObject messageObject, boolean save, ResultCallback callback) {
-        final TLRPC.Document document = messageObject.getDocument();
-        if (document == null || !pendingProfileSaves.add(document.id)) {
+        final TLRPC.Document document = messageObject != null ? messageObject.getDocument() : null;
+        if (document == null || document.id == 0) {
+            TLRPC.TL_error err = new TLRPC.TL_error();
+            err.code = 400;
+            err.text = "CLIENT_LOCAL_TRACK_NOT_SUPPORTED";
+            callback.onResult(err);
+            return;
+        }
+        if (!pendingProfileSaves.add(document.id)) {
             return;
         }
         final long documentId = document.id;
@@ -279,10 +286,30 @@ public final class PlayerActions {
     private static void saveToProfile(MessageObject messageObject, boolean save, ResultCallback callback, boolean triedFileRef) {
         final int account = messageObject.currentAccount;
         final TLRPC.Document document = messageObject.getDocument();
-        if (document == null) {
+        if (document == null || document.id == 0) {
+            TLRPC.TL_error err = new TLRPC.TL_error();
+            err.code = 400;
+            err.text = "CLIENT_LOCAL_TRACK_NOT_SUPPORTED";
+            callback.onResult(err);
             return;
         }
         final long documentId = document.id;
+
+        // Если file_reference пустой, сначала пытаемся обновить сообщение из сети
+        if ((document.file_reference == null || document.file_reference.length == 0) && !triedFileRef && messageObject.getId() > 0) {
+            refetch(messageObject, fresh -> {
+                if (fresh != null && fresh.getDocument() != null && fresh.getDocument().file_reference != null && fresh.getDocument().file_reference.length > 0) {
+                    saveToProfile(fresh, save, callback, true);
+                } else {
+                    TLRPC.TL_error err = new TLRPC.TL_error();
+                    err.code = 400;
+                    err.text = "FILE_REFERENCE_EMPTY";
+                    AndroidUtilities.runOnUIThread(() -> callback.onResult(err));
+                }
+            });
+            return;
+        }
+
         final TLRPC.TL_account_saveMusic req = new TLRPC.TL_account_saveMusic();
         req.unsave = !save;
         req.id = new TLRPC.TL_inputDocument();
@@ -337,8 +364,13 @@ public final class PlayerActions {
             req.id.add(msgId);
             request = req;
         } else {
+            TLRPC.InputChannel inputChannel = MessagesController.getInstance(account).getInputChannel(-messageObject.getDialogId());
+            if (inputChannel == null || inputChannel instanceof TLRPC.TL_inputChannelEmpty) {
+                callback.onMessage(null);
+                return;
+            }
             TLRPC.TL_channels_getMessages req = new TLRPC.TL_channels_getMessages();
-            req.channel = MessagesController.getInstance(account).getInputChannel(-messageObject.getDialogId());
+            req.channel = inputChannel;
             req.id.add(msgId);
             request = req;
         }

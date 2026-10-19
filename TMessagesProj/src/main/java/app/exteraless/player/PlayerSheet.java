@@ -68,6 +68,7 @@ import org.telegram.ui.LaunchActivity;
 
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
+import java.util.ArrayList;
 import java.util.Locale;
 
 import app.exteraless.appearance.AppearanceConfig;
@@ -307,6 +308,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         LinearLayout headerCenter = new LinearLayout(context);
         headerCenter.setOrientation(LinearLayout.VERTICAL);
         headerCenter.setGravity(Gravity.CENTER_HORIZONTAL);
+        headerCenter.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(8), 0, ColorUtils.setAlphaComponent(colors.onSurface, 0x1f)));
+        headerCenter.setPadding(dp(8), dp(4), dp(8), dp(4));
+        headerCenter.setOnClickListener(this::showHeaderMenu);
         headerLabel = new TextView(context);
         headerLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         headerLabel.setLetterSpacing(0.08f);
@@ -329,10 +333,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         cover.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
+                if (cover.getShapeId() >= 0) {
+                    outline.setEmpty();
+                } else {
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
+                }
             }
         });
-        cover.setElevation(dp(14));
+        cover.setElevation(cover.getShapeId() >= 0 ? 0 : dp(14));
         cover.setOnTouchListener(this::onCoverTouch);
         layout.addView(cover);
 
@@ -356,6 +364,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         likeButton = new MorphButton(context, heartIcon);
         likeButton.setRadius(dp(24), false);
         likeButton.setOnClickListener(v -> toggleProfile());
+        likeButton.setOnLongClickListener(v -> {
+            AndroidUtilities.vibrateCursor(v);
+            saveCurrentToSavedMessages();
+            return true;
+        });
         titleRow.addView(likeButton, LayoutHelper.createLinear(48, 48, Gravity.CENTER_VERTICAL, 12, 0, 0, 0));
         layout.addView(titleRow);
 
@@ -987,6 +1000,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         detached = true;
+        if (cover != null) {
+            cover.release();
+        }
+        if (smallCover != null) {
+            smallCover.release();
+        }
         if (getWindow() != null) {
             getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
         }
@@ -1039,6 +1058,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
+                int shapeId = PlayerArt.getOrCycleShape(mo);
+                cover.setShapeId(shapeId);
+                smallCover.setShapeId(shapeId);
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
                 if (lyricsMode && lyricsView.getState() != LyricsView.STATE_LYRICS) {
@@ -1049,6 +1071,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
+                int shapeId = PlayerArt.getOrCycleShape(mo);
+                cover.setShapeId(shapeId);
+                smallCover.setShapeId(shapeId);
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
                 if (lyricsMode && (lyricsView.getState() != LyricsView.STATE_LYRICS)) {
@@ -1075,9 +1100,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         artistView.setText(mo.getMusicAuthor());
         smallTitle.setText(mo.getMusicTitle());
         smallArtist.setText(mo.getMusicAuthor());
+        int shapeId = PlayerArt.getOrCycleShape(mo);
+        cover.setShapeId(shapeId);
+        smallCover.setShapeId(shapeId);
         cover.setMessage(mo);
         smallCover.setMessage(mo);
         if (changed) {
+            seekBar.animateResetToZero();
             Integer seed = PlayerArt.cachedSeed(mo);
             if (seed != null) {
                 animateColors(PlayerColors.fromSeed(seed, dark), animated);
@@ -1108,27 +1137,33 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (mo == null) {
             return;
         }
-        MessagesController.SavedMusicList saved = MediaController.getInstance().currentSavedMusicList;
-        if (saved != null) {
-            headerLabel.setText(getString(R.string.OEPlayerFromProfile));
-            headerTitle.setText(DialogObject.getShortName(saved.currentAccount, saved.dialogId));
-        } else if (MediaController.getInstance().currentPlaylistIsGlobalSearch()) {
-            headerLabel.setText(getString(R.string.OEPlayerFromSearch));
-            headerTitle.setText(getString(R.string.OEPlayerMusic));
+        LocalPlaylistsController.LocalPlaylist playlist = GlobalPlaylistsStore.getInstance().getPlayingPlaylist();
+        if (playlist != null) {
+            headerLabel.setText(getString(R.string.OEPlayerFromPlaylist));
+            headerTitle.setText(playlist.name != null ? playlist.name : "");
         } else {
-            long did = mo.getDialogId();
-            headerLabel.setText(getString(R.string.OEPlayerFromChat));
-            if (did == UserConfig.getInstance(account).getClientUserId()) {
-                headerTitle.setText(getString(R.string.SavedMessages));
+            MessagesController.SavedMusicList saved = MediaController.getInstance().currentSavedMusicList;
+            if (saved != null) {
+                headerLabel.setText(getString(R.string.OEPlayerFromProfile));
+                headerTitle.setText(DialogObject.getShortName(saved.currentAccount, saved.dialogId));
+            } else if (MediaController.getInstance().currentPlaylistIsGlobalSearch()) {
+                headerLabel.setText(getString(R.string.OEPlayerFromSearch));
+                headerTitle.setText(getString(R.string.OEPlayerMusic));
             } else {
-                headerTitle.setText(DialogObject.getName(account, did));
+                long did = mo.getDialogId();
+                headerLabel.setText(getString(R.string.OEPlayerFromChat));
+                if (did == UserConfig.getInstance(account).getClientUserId()) {
+                    headerTitle.setText(getString(R.string.SavedMessages));
+                } else {
+                    headerTitle.setText(DialogObject.getName(account, did));
+                }
             }
         }
     }
 
     private void updateLike(boolean animated) {
         MessageObject mo = current;
-        boolean visible = mo != null && mo.getDocument() != null && !PlayerActions.noForwards(mo);
+        boolean visible = mo != null && (!PlayerActions.noForwards(mo) || mo.getDocument() == null);
         likeButton.setVisibility(visible ? View.VISIBLE : View.GONE);
         if (!visible) {
             return;
@@ -1142,34 +1177,65 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     private void toggleProfile() {
         MessageObject mo = current;
-        if (mo == null || PlayerActions.isProfileSavePending(mo)) {
+        if (mo == null) {
             return;
         }
-        boolean save = !PlayerActions.isSavedToProfile(mo);
-        likeButton.setActive(save, true);
-        likeButton.setRadius(dp(save ? 14 : 24), true);
-        heartIcon.setFillStroke(save);
-        PlayerActions.saveToProfile(mo, save, error -> {
-            Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
-            if (error != null) {
-                updateLike(true);
-                BulletinFactory.of(root, rp).showForError(error);
+        if (mo.getDocument() != null && mo.getDocument().id != 0) {
+            if (PlayerActions.isProfileSavePending(mo)) {
                 return;
             }
-            MessagesController.SavedMusicList list = MediaController.getInstance().currentSavedMusicList;
-            if (!save && list != null && list.dialogId == UserConfig.getInstance(mo.currentAccount).getClientUserId()) {
-                list.remove(mo);
-                if (list.list.isEmpty()) {
-                    MediaController.getInstance().cleanup();
-                    dismissImmediately();
+            boolean save = !PlayerActions.isSavedToProfile(mo);
+            likeButton.setActive(save, true);
+            likeButton.setRadius(dp(save ? 14 : 24), true);
+            heartIcon.setFillStroke(save);
+            PlayerActions.saveToProfile(mo, save, error -> {
+                Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+                if (error != null) {
+                    updateLike(true);
+                    if ("CLIENT_LOCAL_TRACK_NOT_SUPPORTED".equals(error.text)) {
+                        BulletinFactory.of(root, rp).createSimpleBulletin(R.drawable.msg_retry,
+                                getString(R.string.OEPlayerLocalTrackNotSupported)).show();
+                    } else {
+                        BulletinFactory.of(root, rp).showForError(error);
+                    }
                     return;
                 }
-                NotificationCenter.getInstance(mo.currentAccount).postNotificationName(NotificationCenter.musicListLoaded, list);
-            }
-            updateLike(true);
-            BulletinFactory.of(root, rp).createSimpleBulletin(save ? R.raw.saved_messages : R.raw.ic_delete,
-                    getString(save ? R.string.AudioSaveToMyProfileSaved : R.string.AudioSaveToMyProfileUnsaved)).show();
-        });
+                MessagesController.SavedMusicList list = MediaController.getInstance().currentSavedMusicList;
+                if (!save && list != null && list.dialogId == UserConfig.getInstance(mo.currentAccount).getClientUserId()) {
+                    list.remove(mo);
+                    if (list.list.isEmpty()) {
+                        MediaController.getInstance().cleanup();
+                        dismissImmediately();
+                        return;
+                    }
+                    NotificationCenter.getInstance(mo.currentAccount).postNotificationName(NotificationCenter.musicListLoaded, list);
+                }
+                updateLike(true);
+                BulletinFactory.of(root, rp).createSimpleBulletin(save ? R.raw.saved_messages : R.raw.ic_delete,
+                        getString(save ? R.string.AudioSaveToMyProfileSaved : R.string.AudioSaveToMyProfileUnsaved)).show();
+            });
+        } else {
+            Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+            BulletinFactory.of(root, rp).createSimpleBulletin(R.drawable.msg_retry,
+                    getString(R.string.OEPlayerLocalTrackNotSupported)).show();
+            LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
+        }
+    }
+
+    public void saveCurrentToSavedMessages() {
+        MessageObject mo = current;
+        if (mo == null) {
+            return;
+        }
+        if (mo.getDocument() != null && mo.getId() > 0 && !PlayerActions.noForwards(mo)) {
+            PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
+        } else {
+            app.exteraless.metrolist.MetrolistController.getInstance().addToSavedMessages(activity, mo);
+        }
+        Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+        BulletinFactory.of(root, rp)
+                .createSimpleBulletin(R.raw.saved_messages, getString(R.string.AudioSaveToSavedMessagesSaved))
+                .show();
     }
 
     private void updateModes(boolean animated) {
@@ -1846,6 +1912,33 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
+    private void showHeaderMenu(View anchor) {
+        if (activity == null) return;
+        Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
+        ItemOptions o = ItemOptions.makeOptions(container, rp, anchor, true);
+        o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
+        });
+        o.add(R.drawable.msg_message, getString(R.string.OEPlayerReturnToChat), () -> {
+            o.dismiss();
+            GlobalPlaylistsStore.getInstance().clearPlayingPlaylist();
+            MessageObject mo = current;
+            if (mo != null && mo.getDialogId() != 0) {
+                ArrayList<MessageObject> list = new ArrayList<>();
+                list.add(mo);
+                MediaController.getInstance().setPlaylist(list, mo, 0, true, null);
+            }
+            updateHeader();
+            BulletinFactory.of(container, rp).createSimpleBulletin(R.raw.contact_check, getString(R.string.OEPlayerReturnToChat)).show();
+        });
+        o.add(R.drawable.msg_openprofile, getString(R.string.OEPlayerGenerateByArtist), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().generatePlaylistsByArtist(activity, rp);
+        });
+        o.show();
+    }
+
     private void showMenu(View anchor) {
         MessageObject mo = current;
         if (mo == null || activity == null) {
@@ -1864,7 +1957,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             });
             sub.add(R.drawable.msg_saved, getString(R.string.AudioSaveToSavedMessages), () -> {
                 o.dismiss();
-                PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
+                if (mo.getDocument() != null && mo.getId() > 0) {
+                    PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
+                } else {
+                    app.exteraless.metrolist.MetrolistController.getInstance().addToSavedMessages(activity, mo);
+                }
             });
             sub.add(R.drawable.menu_download_round, getString(R.string.AudioSaveToMusicFolder), () -> {
                 o.dismiss();
@@ -1895,6 +1992,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             o.dismiss();
             dismissImmediately();
             PlayerActions.showInChat(activity, mo);
+        });
+        o.add(R.drawable.baseline_playlist_add_24, getString(R.string.AudioAddToPlaylist), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
+        });
+        o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
+            o.dismiss();
+            LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
         });
         o.addGap();
         o.add(R.drawable.menu_night_mode_24, getString(R.string.OEAppearancePlayerSleepTimer), () -> {

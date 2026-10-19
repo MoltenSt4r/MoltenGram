@@ -16497,6 +16497,14 @@ public class MessagesController extends BaseController implements NotificationCe
         getContactsController().deleteUnknownAppAccounts();
     }
 
+    public void forceRegisterForPush() {
+        registeringForPush = false;
+        pushRegistrationId++;
+        if (!TextUtils.isEmpty(SharedConfig.pushString)) {
+            registerForPush(SharedConfig.pushType, SharedConfig.pushString);
+        }
+    }
+
     public void registerForPush(@PushListenerController.PushType int pushType, String regid) {
         if (TextUtils.isEmpty(regid) || getUserConfig().getClientUserId() == 0) {
             return;
@@ -16547,6 +16555,8 @@ public class MessagesController extends BaseController implements NotificationCe
                     FileLog.d("account " + currentAccount + " registered for push, push type: " + pushType);
                     getUserConfig().registeredForPush = true;
                     getUserConfig().saveConfig(false);
+                } else {
+                    FileLog.e("account " + currentAccount + " push registration failed: " + (error != null ? error.text : "unknown"));
                 }
                 registeringForPush = false;
                 if (!currentToken && !TextUtils.isEmpty(SharedConfig.pushString)) {

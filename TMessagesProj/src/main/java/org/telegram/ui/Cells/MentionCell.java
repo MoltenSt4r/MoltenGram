@@ -241,7 +241,11 @@ public class MentionCell extends LinearLayout {
             } else {
                 imageView.setImageDrawable(avatarDrawable);
             }
+        } else if (command != null && !command.startsWith("/")) {
+            imageView.setVisibility(VISIBLE);
+            imageView.setImageResource(R.drawable.msg_plugins, getThemedColor(Theme.key_windowBackgroundWhiteGrayIcon));
         } else {
+            imageView.setImageDrawable(null);
             imageView.setVisibility(INVISIBLE);
         }
         usernameTextView.setVisibility(VISIBLE);

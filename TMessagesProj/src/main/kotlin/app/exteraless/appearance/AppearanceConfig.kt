@@ -421,6 +421,44 @@ object AppearanceConfig {
         return playerKeepScreenOn.Bool()
     }
 
+    const val COVER_SHAPE_DISABLED = -1
+    const val COVER_SHAPE_CYCLE = -2
+    const val COVER_SHAPE_RANDOM = -3
+    const val COVER_SHAPE_FOLLOW = -4
+
+    /** Форма обложки альбома в плеере: -1 (выключено), -2 (циклически), -3 (случайно) или ID фигуры >= 0. */
+    @JvmField
+    val playerCoverShape =
+        addConfig("OEAppearancePlayerCoverShape", ConfigItem.configTypeInt, COVER_SHAPE_CYCLE)
+
+    @JvmStatic
+    fun playerCoverShape(): Int {
+        ensureLoaded()
+        return playerCoverShape.Int()
+    }
+
+    /** Форма обложки в мини-плеере: -4 (как в основном плеере), -1 (выключено), -2 (циклически), -3 (случайно) или ID фигуры >= 0. */
+    @JvmField
+    val playerMiniCoverShape =
+        addConfig("OEAppearancePlayerMiniCoverShape", ConfigItem.configTypeInt, COVER_SHAPE_FOLLOW)
+
+    @JvmStatic
+    fun playerMiniCoverShape(): Int {
+        ensureLoaded()
+        return playerMiniCoverShape.Int()
+    }
+
+    /** Заменять обложку на видео при обнаружении (Canvas). */
+    @JvmField
+    val playerVideoCover =
+        addConfig("OEAppearancePlayerVideoCover", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerVideoCover(): Boolean {
+        ensureLoaded()
+        return playerVideoCover.Bool()
+    }
+
     /** Останавливать воспроизведение при отключении звука (громкость 0). */
     @JvmField
     val playerPauseOnMute =
@@ -556,7 +594,7 @@ object AppearanceConfig {
 
     @JvmField
     val playerLyricsKuGou =
-        addConfig("OEAppearancePlayerLyricsKuGou", ConfigItem.configTypeBool, false)
+        addConfig("OEAppearancePlayerLyricsKuGou", ConfigItem.configTypeBool, true)
 
     @JvmStatic
     fun playerLyricsKuGou(): Boolean {

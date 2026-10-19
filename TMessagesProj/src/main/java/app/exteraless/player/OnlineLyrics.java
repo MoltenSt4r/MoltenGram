@@ -47,17 +47,28 @@ public final class OnlineLyrics {
             String a = clean(artist);
             String t = clean(title);
             if (t != null) {
-                t = AUDIO_EXT.matcher(t).replaceFirst("").replace('_', ' ').trim();
+                t = AUDIO_EXT.matcher(t).replaceFirst("").trim();
+                t = LEADING_TRACK.matcher(t).replaceFirst("").trim();
             }
             if (TextUtils.isEmpty(a) && t != null) {
-                int dash = t.indexOf(" - ");
+                int dash = -1;
+                int dashLen = 3;
+                String[] seps = {" - ", " — ", " – ", " _ "};
+                for (String sep : seps) {
+                    int p = t.indexOf(sep);
+                    if (p > 0) {
+                        dash = p;
+                        dashLen = sep.length();
+                        break;
+                    }
+                }
                 if (dash > 0) {
                     a = t.substring(0, dash).trim();
-                    t = t.substring(dash + 3).trim();
+                    t = t.substring(dash + dashLen).trim();
                 }
             }
-            this.artist = a;
-            this.title = stripDecorations(t);
+            this.artist = normalize(a);
+            this.title = normalize(t);
             this.album = clean(album);
             this.duration = duration;
         }
@@ -89,7 +100,11 @@ public final class OnlineLyrics {
     private static final float MIN_ALIGNED = 0.9f;
     private static final Pattern NOT_WORD = Pattern.compile("[^\\p{L}\\p{N}]+");
     private static final Pattern AUDIO_EXT = Pattern.compile("\\.(mp3|m4a|flac|ogg|oga|opus|wav|aac|alac|wma)$", Pattern.CASE_INSENSITIVE);
-    private static final Pattern DECORATION = Pattern.compile("\\s*[(\\[][^)\\]]*(official|lyric|video|audio|visualizer|remaster|hq|hd)[^)\\]]*[)\\]]", Pattern.CASE_INSENSITIVE);
+    private static final Pattern LEADING_TRACK = Pattern.compile("^(?:[0-9]{1,3}(?:\\.[\\s_-]*|[-_]\\s*|\\s+[-–—]\\s*)|0[0-9]\\s+)");
+    private static final Pattern BRACKETED_TAGS = Pattern.compile("\\s*[(\\[][^)\\]]*(official|lyric|video|audio|visualizer|remaster|hq|hd|4k|feat|ft\\.|featuring|with|prod|clean|explicit|radio\\s*edit|bonus|deluxe|edition|version|live|acoustic|instrumental|kbps|flac|rip|@)[^)\\]]*[)\\]]", Pattern.CASE_INSENSITIVE);
+    private static final Pattern FEAT_PATTERN = Pattern.compile("\\s+(?:[-–—|/]?\\s*(?:feat\\.?|ft\\.?|featuring)|[-–—|/]\\s*with)\\s+.*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern MEDIA_SUFFIX = Pattern.compile("\\s*[-–—|/]\\s*(?:official|lyric|video|audio|visualizer|remaster|hq|hd|live|clean|explicit).*$", Pattern.CASE_INSENSITIVE);
+    private static final Pattern DECORATION = BRACKETED_TAGS;
     private static final DispatchQueue queue = new DispatchQueue("lyrics");
     private static final LruCache<String, Lyrics> memory = new LruCache<>(24);
     private static final HashSet<String> missing = new HashSet<>();
@@ -105,12 +120,26 @@ public final class OnlineLyrics {
         return s.isEmpty() ? null : s;
     }
 
-    private static String stripDecorations(String s) {
+    public static String normalize(String s) {
         if (s == null) {
             return null;
         }
-        String out = DECORATION.matcher(s).replaceAll("").trim();
-        return out.isEmpty() ? s : out;
+        String original = s.trim();
+        if (original.isEmpty()) {
+            return null;
+        }
+        String cleaned = AUDIO_EXT.matcher(original).replaceFirst("").trim();
+        cleaned = LEADING_TRACK.matcher(cleaned).replaceFirst("").trim();
+        cleaned = cleaned.replace('_', ' ');
+        cleaned = BRACKETED_TAGS.matcher(cleaned).replaceAll("").trim();
+        cleaned = FEAT_PATTERN.matcher(cleaned).replaceFirst("").trim();
+        cleaned = MEDIA_SUFFIX.matcher(cleaned).replaceFirst("").trim();
+        cleaned = cleaned.replaceAll("\\s+", " ").trim();
+        return cleaned.isEmpty() ? original : cleaned;
+    }
+
+    private static String stripDecorations(String s) {
+        return normalize(s);
     }
 
     public static Lyrics cached(Query query) {
@@ -186,6 +215,18 @@ public final class OnlineLyrics {
                     }
                 }
 
+                // If still nothing found and KuGou was not enabled, try KuGou fallback
+                if (bestOnline == null && !app.exteraless.appearance.AppearanceConfig.playerLyricsKuGou()) {
+                    try {
+                        Found found = requestKuGou(query);
+                        if (found != null) {
+                            bestOnline = found;
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                }
+
                 // If no synced lyrics yet, try LrcMux fallback
                 if (bestOnline == null || !bestOnline.lyrics.synced) {
                     try {
@@ -206,9 +247,7 @@ public final class OnlineLyrics {
 
                 if (bestOnline != null) {
                     result = bestOnline.lyrics;
-                    if (!failed) {
-                        writeDisk(key, result);
-                    }
+                    writeDisk(key, result);
                 } else {
                     status = failed ? ERROR : NOT_FOUND;
                 }
@@ -227,52 +266,66 @@ public final class OnlineLyrics {
         });
     }
 
-    private static Found requestLrclib(Query q) throws Exception {
-        if (!TextUtils.isEmpty(q.artist)) {
-            StringBuilder url = new StringBuilder(LRCLIB).append("get?artist_name=").append(enc(q.artist))
-                    .append("&track_name=").append(enc(q.title));
-            if (!TextUtils.isEmpty(q.album)) {
-                url.append("&album_name=").append(enc(q.album));
-            }
-            if (q.duration > 0) {
-                url.append("&duration=").append(q.duration);
-            }
-            String body = get(url.toString());
-            if (body != null) {
-                Found found = fromLrclib(new JSONObject(body));
-                if (found != null) {
-                    return found;
+    private static Found requestLrclib(Query q) {
+        try {
+            if (!TextUtils.isEmpty(q.artist)) {
+                StringBuilder url = new StringBuilder(LRCLIB).append("get?artist_name=").append(enc(q.artist))
+                        .append("&track_name=").append(enc(q.title));
+                String body = get(url.toString());
+                if (body != null) {
+                    Found found = fromLrclib(new JSONObject(body));
+                    if (found != null) {
+                        return found;
+                    }
                 }
             }
+            StringBuilder url = new StringBuilder(LRCLIB).append("search?track_name=").append(enc(q.title));
+            if (!TextUtils.isEmpty(q.artist)) {
+                url.append("&artist_name=").append(enc(q.artist));
+            }
+            String body = get(url.toString());
+            Found best = parseLrclibSearch(body, q);
+            if (best != null) {
+                return best;
+            }
+            String queryStr = (q.artist != null ? q.artist + " " : "") + q.title;
+            String qBody = get(LRCLIB + "search?q=" + enc(queryStr));
+            return parseLrclibSearch(qBody, q);
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return null;
         }
-        StringBuilder url = new StringBuilder(LRCLIB).append("search?track_name=").append(enc(q.title));
-        if (!TextUtils.isEmpty(q.artist)) {
-            url.append("&artist_name=").append(enc(q.artist));
-        }
-        String body = get(url.toString());
+    }
+
+    private static Found parseLrclibSearch(String body, Query q) {
         if (body == null) {
             return null;
         }
-        JSONArray arr = new JSONArray(body);
-        Found best = null;
-        int bestScore = Integer.MIN_VALUE;
-        for (int i = 0; i < arr.length(); i++) {
-            JSONObject o = arr.optJSONObject(i);
-            Found found = o == null ? null : fromLrclib(o);
-            if (found == null) {
-                continue;
+        try {
+            JSONArray arr = new JSONArray(body);
+            Found best = null;
+            int bestScore = Integer.MIN_VALUE;
+            for (int i = 0; i < arr.length(); i++) {
+                JSONObject o = arr.optJSONObject(i);
+                Found found = o == null ? null : fromLrclib(o);
+                if (found == null) {
+                    continue;
+                }
+                int score = found.lyrics.synced ? 40 : 0;
+                if (q.duration > 0 && o.has("duration")) {
+                    int diff = (int) Math.abs(Math.round(o.optDouble("duration", 0)) - q.duration);
+                    score -= diff <= MAX_DURATION_DIFF ? diff : 20 + Math.min(diff, 60);
+                }
+                if (score > bestScore) {
+                    bestScore = score;
+                    best = found;
+                }
             }
-            int score = found.lyrics.synced ? 40 : 0;
-            if (q.duration > 0 && o.has("duration")) {
-                int diff = (int) Math.abs(Math.round(o.optDouble("duration", 0)) - q.duration);
-                score -= diff <= MAX_DURATION_DIFF ? diff : 20 + Math.min(diff, 60);
-            }
-            if (score > bestScore) {
-                bestScore = score;
-                best = found;
-            }
+            return best;
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return null;
         }
-        return best;
     }
 
     private static String optString(JSONObject o, String name) {
@@ -301,7 +354,7 @@ public final class OnlineLyrics {
     private static Found requestKuGou(Query q) {
         try {
             String queryStr = (q.artist != null ? q.artist + " " : "") + q.title;
-            String searchUrl = "https://mobileservice.kugou.com/api/v3/search/song?version=9108&plat=0&pagesize=4&showtype=0&keyword=" + enc(queryStr);
+            String searchUrl = "https://mobileservice.kugou.com/api/v3/search/song?version=9108&plat=0&pagesize=8&showtype=0&keyword=" + enc(queryStr);
             String searchRes = get(searchUrl);
             if (searchRes == null) return null;
             JSONObject json = new JSONObject(searchRes);
@@ -309,25 +362,57 @@ public final class OnlineLyrics {
             if (data == null) return null;
             JSONArray info = data.optJSONArray("info");
             if (info == null || info.length() == 0) return null;
-            String hash = null;
+            JSONObject bestSong = null;
+            int bestDiff = Integer.MAX_VALUE;
             for (int i = 0; i < info.length(); i++) {
                 JSONObject song = info.optJSONObject(i);
-                if (song != null) {
-                    hash = song.optString("hash", null);
-                    if (hash != null && !hash.isEmpty()) break;
+                if (song == null) continue;
+                String h = song.optString("hash", null);
+                if (TextUtils.isEmpty(h)) continue;
+                if (q.duration > 0 && song.has("duration")) {
+                    int d = song.optInt("duration", 0);
+                    int diff = Math.abs(d - q.duration);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestSong = song;
+                    }
+                } else if (bestSong == null) {
+                    bestSong = song;
                 }
             }
+            if (bestSong == null) return null;
+            String hash = bestSong.optString("hash", null);
             if (hash == null) return null;
+
             String lrcSearchUrl = "https://lyrics.kugou.com/search?ver=1&man=yes&client=pc&hash=" + hash;
             String lrcSearchRes = get(lrcSearchUrl);
             if (lrcSearchRes == null) return null;
             JSONObject lrcJson = new JSONObject(lrcSearchRes);
             JSONArray candidates = lrcJson.optJSONArray("candidates");
             if (candidates == null || candidates.length() == 0) return null;
-            JSONObject cand = candidates.optJSONObject(0);
-            if (cand == null) return null;
-            String candId = cand.optString("id");
-            String accessKey = cand.optString("accesskey");
+            JSONObject bestCand = null;
+            int bestCandDiff = Integer.MAX_VALUE;
+            for (int i = 0; i < candidates.length(); i++) {
+                JSONObject cand = candidates.optJSONObject(i);
+                if (cand == null) continue;
+                String cId = cand.optString("id");
+                String aKey = cand.optString("accesskey");
+                if (TextUtils.isEmpty(cId) || TextUtils.isEmpty(aKey)) continue;
+                if (q.duration > 0 && cand.has("duration")) {
+                    long candMs = cand.optLong("duration", 0);
+                    int candSec = (int) Math.round(candMs / 1000.0);
+                    int diff = Math.abs(candSec - q.duration);
+                    if (diff < bestCandDiff) {
+                        bestCandDiff = diff;
+                        bestCand = cand;
+                    }
+                } else if (bestCand == null) {
+                    bestCand = cand;
+                }
+            }
+            if (bestCand == null) return null;
+            String candId = bestCand.optString("id");
+            String accessKey = bestCand.optString("accesskey");
             if (TextUtils.isEmpty(candId) || TextUtils.isEmpty(accessKey)) return null;
 
             String dlUrl = "https://lyrics.kugou.com/download?ver=1&client=pc&fmt=lrc&charset=utf8&id=" + candId + "&accesskey=" + accessKey;
@@ -381,11 +466,37 @@ public final class OnlineLyrics {
 
     private static Found requestPaxsenix(Query q) {
         try {
-            StringBuilder url = new StringBuilder("https://lyrics.paxsenix.org/apple-music/lyrics?name=").append(enc(q.title));
-            if (!TextUtils.isEmpty(q.artist)) {
-                url.append("&artist=").append(enc(q.artist));
+            String queryStr = (q.artist != null ? q.artist + " " : "") + q.title;
+            String itunesUrl = "https://itunes.apple.com/search?term=" + enc(queryStr) + "&entity=song&limit=1";
+            String itunesBody = get(itunesUrl);
+            if (itunesBody == null) {
+                return null;
             }
-            String body = get(url.toString());
+            JSONObject itunesJson = new JSONObject(itunesBody);
+            JSONArray itunesResults = itunesJson.optJSONArray("results");
+            if (itunesResults == null || itunesResults.length() == 0) {
+                return null;
+            }
+            JSONObject first = itunesResults.optJSONObject(0);
+            if (first == null) {
+                return null;
+            }
+            long trackId = first.optLong("trackId", 0);
+            if (trackId == 0) {
+                String strId = first.optString("trackId", null);
+                if (strId != null) {
+                    try {
+                        trackId = Long.parseLong(strId);
+                    } catch (NumberFormatException ignore) {
+                    }
+                }
+            }
+            if (trackId == 0) {
+                return null;
+            }
+
+            String paxUrl = "https://lyrics.paxsenix.org/apple-music/lyrics?id=" + trackId;
+            String body = get(paxUrl);
             if (body == null) return null;
             JSONObject json = new JSONObject(body);
             String ttml = optString(json, "ttmlContent");
@@ -396,6 +507,7 @@ public final class OnlineLyrics {
             }
             String elrc = optString(json, "elrcMultiPerson");
             if (elrc == null) elrc = optString(json, "elrc");
+            if (elrc == null) elrc = optString(json, "lrc");
             if (elrc != null) {
                 Lyrics lyrics = Lyrics.parse(elrc, Lyrics.SOURCE_ONLINE, "Paxsenix");
                 return lyrics != null ? new Found(lyrics) : null;
@@ -420,16 +532,37 @@ public final class OnlineLyrics {
             if (body == null) return null;
             JSONObject json = new JSONObject(body);
             JSONArray results = json.optJSONArray("results");
-            if (results != null && results.length() > 0) {
-                JSONObject first = results.optJSONObject(0);
-                if (first != null) {
-                    String lrcUrl = optString(first, "lyricsUrl");
-                    if (lrcUrl != null) {
-                        String lrcContent = get(lrcUrl);
-                        if (lrcContent != null) {
-                            Lyrics lyrics = Lyrics.parse(lrcContent, Lyrics.SOURCE_ONLINE, "LyricsPlus");
-                            return lyrics != null ? new Found(lyrics) : null;
+            if (results == null || results.length() == 0) {
+                return null;
+            }
+            JSONObject bestCandidate = null;
+            int bestDiff = Integer.MAX_VALUE;
+            for (int i = 0; i < results.length(); i++) {
+                JSONObject r = results.optJSONObject(i);
+                if (r == null) continue;
+                String lrcUrl = optString(r, "lyricsUrl");
+                if (TextUtils.isEmpty(lrcUrl)) continue;
+                if (q.duration > 0 && r.has("duration")) {
+                    int d = r.optInt("duration", 0);
+                    int diff = Math.abs(d - q.duration);
+                    if (diff < bestDiff) {
+                        bestDiff = diff;
+                        bestCandidate = r;
+                    }
+                } else if (bestCandidate == null) {
+                    bestCandidate = r;
+                }
+            }
+            if (bestCandidate != null) {
+                String lrcUrl = optString(bestCandidate, "lyricsUrl");
+                if (lrcUrl != null) {
+                    String lrcContent = get(lrcUrl);
+                    if (lrcContent != null) {
+                        if (lrcContent.trim().startsWith("<") || lrcUrl.endsWith(".ttml")) {
+                            lrcContent = ttmlToLrc(lrcContent);
                         }
+                        Lyrics lyrics = Lyrics.parse(lrcContent, Lyrics.SOURCE_ONLINE, "LyricsPlus");
+                        return lyrics != null ? new Found(lyrics) : null;
                     }
                 }
             }
@@ -478,11 +611,23 @@ public final class OnlineLyrics {
         Matcher m = pPattern.matcher(ttml);
         while (m.find()) {
             String begin = m.group(1).trim();
+            String rawP = m.group(0);
             String content = m.group(2).replaceAll("<[^>]+>", "").trim();
             if (content.isEmpty()) continue;
-            boolean isBg = m.group(0).contains("role=\"background\"") || m.group(0).contains("isBackground=\"true\"");
-            String tag = isBg ? "{bg}" : "";
-            sb.append("[").append(normalizeTtmlTime(begin)).append("]").append(tag).append(content).append("\n");
+            content = content.replace("&apos;", "'")
+                             .replace("&#39;", "'")
+                             .replace("&quot;", "\"")
+                             .replace("&gt;", ">")
+                             .replace("&lt;", "<")
+                             .replace("&amp;", "&");
+            boolean isBg = rawP.contains("role=\"background\"") || rawP.contains("isBackground=\"true\"");
+            String roleTag = "";
+            Matcher agentMatcher = Pattern.compile("\\b(?:ttm:)?agent=\"([^\"]+)\"").matcher(rawP);
+            if (agentMatcher.find()) {
+                roleTag = "{agent:" + agentMatcher.group(1) + "}";
+            }
+            String bgTag = isBg ? "{bg}" : "";
+            sb.append("[").append(normalizeTtmlTime(begin)).append("]").append(roleTag).append(bgTag).append(content).append("\n");
         }
         return sb.toString();
     }
@@ -651,7 +796,7 @@ public final class OnlineLyrics {
         if (total == 0 || matched < total * MIN_ALIGNED) {
             return null;
         }
-        return Lyrics.synced(out, timed.source, timed.provider + " + " + LRCLIB_NAME);
+        return Lyrics.synced(out, timed.source, timed.provider + (plain.provider != null ? " + " + plain.provider : ""));
     }
 
     private static String enc(String s) throws Exception {
@@ -661,12 +806,12 @@ public final class OnlineLyrics {
     private static String get(String url) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         try {
-            connection.setConnectTimeout(10_000);
-            connection.setReadTimeout(15_000);
+            connection.setConnectTimeout(8_000);
+            connection.setReadTimeout(12_000);
             connection.setRequestProperty("User-Agent", "exteraless/" + BuildVars.BUILD_VERSION_STRING + " (https://github.com/exteraless/exteraless)");
-            connection.setRequestProperty("Accept", "application/json");
+            connection.setRequestProperty("Accept", "application/json, text/plain, application/xml, */*");
             int code = connection.getResponseCode();
-            if (code == 404) {
+            if (code == 404 || code == 401 || code == 403 || code == 422 || code == 204) {
                 return null;
             }
             if (code < 200 || code >= 300) {
