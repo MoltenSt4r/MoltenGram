@@ -137,7 +137,7 @@ jobs:
             }
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
-        if: ${{ success() }}
+        if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
           tag_name: v12.10.6
           name: MoltenGram v12.10.6
@@ -194,7 +194,7 @@ jobs:
           python3 .github/scripts/send_apk.py
 
       - name: Trigger F-Droid Repository Update
-        if: ${{ always() && steps.release_build_step.outcome == 'success' }}
+        if: ${{ always() && steps.release_build_step.outcome == 'success' && !contains(github.event.head_commit.message, '[skip publish]') }}
         env:
           GH_PAT: ${{ secrets.GH_PAT }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
