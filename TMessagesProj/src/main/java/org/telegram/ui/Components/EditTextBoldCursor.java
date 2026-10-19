@@ -525,20 +525,7 @@ public class EditTextBoldCursor extends EditTextEffects {
 
     public void setHintColor(int value) {
         hintColor = value;
-        super.setHintTextColor(value);
-        if (hintAnimatedDrawable != null) {
-            hintAnimatedDrawable.setTextColor(hintColor);
-        }
-        if (hintAnimatedDrawable2 != null) {
-            hintAnimatedDrawable2.setTextColor(hintColor);
-        }
-        invalidate();
-    }
-
-    @Override
-    public void setHintTextColor(int color) {
-        super.setHintTextColor(color);
-        hintColor = color;
+        setHintTextColor(value);
         if (hintAnimatedDrawable != null) {
             hintAnimatedDrawable.setTextColor(hintColor);
         }
