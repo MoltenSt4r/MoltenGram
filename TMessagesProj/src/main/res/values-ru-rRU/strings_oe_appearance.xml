@@ -7,6 +7,8 @@
     <string name="OEAppearanceAvatarCornersRight">Круг</string>
     <string name="OEAppearanceSingleCornerRadius">Единое закругление</string>
     <string name="OEAppearanceSingleCornerRadiusInfo">Форумы будут иметь ту же форму аватарок, что и чаты.</string>
+    <string name="OEAppearanceHalloweenTheme">Хэллоуинская тема</string>
+    <string name="OEAppearanceHalloweenThemeInfo">Праздничная иконка приложения и хэллоуинские иконки внутри</string>
 
     <string name="OEAppearanceChatList">Список чатов</string>
     <string name="OEAppearanceForceSnow">Всегда показывать снежинки</string>

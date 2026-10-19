@@ -48,6 +48,8 @@
     <string name="AppIconMoltenGramOnyx">Оникс</string>
     <string name="AppIconMoltenGramNeon">Неон</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
+    <string name="AppIconMoltenGramHalloween">Хэллоуин</string>
+    <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconsSelect">Выбрать</string>
     <string name="AppIconsKeep">Оставить эту</string>
     <string name="OpenExteraPreferences">Настройки MoltenGram</string>

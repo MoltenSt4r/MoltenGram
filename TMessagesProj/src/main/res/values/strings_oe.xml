@@ -50,6 +50,8 @@
     <string name="AppIconMoltenGramOnyx">Onyx</string>
     <string name="AppIconMoltenGramNeon">Neon</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
+    <string name="AppIconMoltenGramHalloween">Halloween</string>
+    <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>
     <string name="OpenExteraPreferences">MoltenGram Preferences</string>

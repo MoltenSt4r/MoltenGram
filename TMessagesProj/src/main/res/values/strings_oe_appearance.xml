@@ -10,6 +10,8 @@
     <string name="OEAppearanceAvatarCornersRight">Circle</string>
     <string name="OEAppearanceSingleCornerRadius">Single Corner Radius</string>
     <string name="OEAppearanceSingleCornerRadiusInfo">Forums will have the same avatar shape as chats.</string>
+    <string name="OEAppearanceHalloweenTheme">Halloween Theme</string>
+    <string name="OEAppearanceHalloweenThemeInfo">Holiday launcher icon and Halloween UI icons inside the app</string>
 
     <!-- Chat List -->
     <string name="OEAppearanceChatList">Chat List</string>

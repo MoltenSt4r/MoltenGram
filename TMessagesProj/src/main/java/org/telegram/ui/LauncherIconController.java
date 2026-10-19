@@ -141,6 +141,10 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramNeon, IconGroup.MOLTENGRAM, "@moltenst4r", "Electric neon lime glow", 0xFFCCFF00),
         MOLTENGRAM_EXTERAGRAM("MoltenGramExteraGramIcon", R.drawable.moltengram_exteragram_icon_background,
                 0, R.string.AppIconMoltenGramExteraGram, IconGroup.MOLTENGRAM, "@moltenst4r", "Classic ExteraGram signature style", 0xFFE83030),
+        MOLTENGRAM_HALLOWEEN("MoltenGramHalloweenIcon", R.drawable.moltengram_halloween_icon_background,
+                0, R.string.AppIconMoltenGramHalloween, IconGroup.MOLTENGRAM, "@moltenst4r", "Spooky Halloween night flame", 0xFFFF7701),
+        MOLTENGRAM_NOTHING("MoltenGramNothingIcon", R.drawable.moltengram_nothing_icon_background,
+                0, R.string.AppIconMoltenGramNothing, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS red glyph matrix", 0xFFFF0401),
 
         // Telegram
         TELEGRAM("TelegramIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconTelegramOriginal, IconGroup.TELEGRAM, "@telegram", "The classic paper plane", 0xFF143854),

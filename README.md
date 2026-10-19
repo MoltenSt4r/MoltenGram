@@ -1,14 +1,12 @@
 <div align="center">
 
-<img src="assets/logo.png" width="128" alt="MoltenGram">
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark.svg"><img src="assets/hero-light.svg" width="100%" alt="MoltenGram"></picture>
 
-# MoltenGram
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/social-l-dark.svg"><img src="assets/social-l-light.svg" width="32.930%" alt=""></picture><a href="https://t.me/MoltenSt4r"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/social-1-dark.svg"><img src="assets/social-1-light.svg" width="18.122%" alt="telegram"></picture></a><a href="https://github.com/MoltenSt4r/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/social-2-dark.svg"><img src="assets/social-2-light.svg" width="16.014%" alt="github"></picture></a><picture><source media="(prefers-color-scheme: dark)" srcset="assets/social-r-dark.svg"><img src="assets/social-r-light.svg" width="32.930%" alt=""></picture>
 
-Современный и функциональный клиент Telegram на базе exteraless с Material 3 дизайном, медиа-каруселью и расширенными возможностями.
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/about-dark.svg"><img src="assets/about-light.svg" width="100%" alt="About MoltenGram"></picture>
 
-[![GitHub](https://img.shields.io/badge/GitHub-MoltenSt4r%2FMoltenGram-993c38?logo=github)](https://github.com/MoltenSt4r/MoltenGram)
-[![Telegram](https://img.shields.io/badge/Telegram-@MoltenGram-2CA5E0?logo=telegram)](https://t.me/MoltenGram)
-[![Upstream](https://img.shields.io/badge/Upstream-exteraless-blue?logo=github)](https://github.com/exteraless/exteraless)
+<picture><source media="(prefers-color-scheme: dark)" srcset="assets/wave-dark.svg"><img src="assets/wave-light.svg" width="100%" alt=""></picture>
 
 </div>
 

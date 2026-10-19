@@ -37,6 +37,8 @@ public final class BaseIconPacks {
     public static final int BASE_SOLAR = 1;
     /** Remix Icon (Remix-Design). */
     public static final int BASE_REMIX = 2;
+    /** Halloween Icon Set. */
+    public static final int BASE_HALLOWEEN = 3;
 
     /**
      * Сколько put-ов exteraGram пропущено: их базовых drawable нет в нашем дереве, и
@@ -51,24 +53,28 @@ public final class BaseIconPacks {
     private static volatile SparseIntArray solar;
     private static volatile SparseIntArray remix;
     private static volatile SparseIntArray def;
+    private static volatile SparseIntArray halloween;
 
     private BaseIconPacks() {
     }
 
     // ---- выбор набора ----
 
-    /** Текущий встроенный набор: {@link #BASE_DEFAULT} / {@link #BASE_SOLAR} / {@link #BASE_REMIX}. */
+    /** Текущий встроенный набор: {@link #BASE_DEFAULT} / {@link #BASE_SOLAR} / {@link #BASE_REMIX} / {@link #BASE_HALLOWEEN}. */
     public static int getSelected() {
         try {
             int value = NaConfig.INSTANCE.getIconReplacements().Int();
-            return value == BASE_SOLAR || value == BASE_REMIX ? value : BASE_DEFAULT;
+            if (value == BASE_HALLOWEEN && !app.exteraless.appearance.AppearanceConfig.halloweenTheme()) {
+                return BASE_DEFAULT;
+            }
+            return value == BASE_SOLAR || value == BASE_REMIX || value == BASE_HALLOWEEN ? value : BASE_DEFAULT;
         } catch (Throwable t) {
             return BASE_DEFAULT;
         }
     }
 
     public static void setSelected(int type) {
-        if (type != BASE_DEFAULT && type != BASE_SOLAR && type != BASE_REMIX) {
+        if (type != BASE_DEFAULT && type != BASE_SOLAR && type != BASE_REMIX && type != BASE_HALLOWEEN) {
             type = BASE_DEFAULT;
         }
         NaConfig.INSTANCE.getIconReplacements().setConfigInt(type);
@@ -82,6 +88,9 @@ public final class BaseIconPacks {
         if (type == BASE_REMIX) {
             return "Remix Icon";
         }
+        if (type == BASE_HALLOWEEN) {
+            return "Halloween";
+        }
         return org.telegram.messenger.LocaleController.getString(R.string.Default);
     }
 
@@ -92,6 +101,9 @@ public final class BaseIconPacks {
         }
         if (type == BASE_REMIX) {
             return "Remix-Design";
+        }
+        if (type == BASE_HALLOWEEN) {
+            return "Telegram";
         }
         return "Telegram";
     }
@@ -104,6 +116,9 @@ public final class BaseIconPacks {
         if (type == BASE_REMIX) {
             return getRemix();
         }
+        if (type == BASE_HALLOWEEN) {
+            return getHalloween();
+        }
         // Набор def применяется и при «Default»: popup_fixed_alert/2/3
         // схлопываются в popup_fixed_alert4.
         return getDef();
@@ -115,6 +130,25 @@ public final class BaseIconPacks {
      * Дефолт (набор не выбран) обязан возвращать resId без изменений.
      */
     public static int getIcon(int resId) {
+        if (app.exteraless.appearance.AppearanceConfig.halloweenTheme()) {
+            int selected = getSelected();
+            if (selected == BASE_SOLAR) {
+                if (resId == R.drawable.msg_calls) return R.drawable.msg_calls_hw_solar;
+                if (resId == R.drawable.msg_contacts) return R.drawable.msg_contacts_hw_solar;
+                if (resId == R.drawable.msg_groups) return R.drawable.msg_groups_hw_solar;
+                if (resId == R.drawable.msg_nearby) return R.drawable.msg_nearby_hw_solar;
+                if (resId == R.drawable.msg_saved) return R.drawable.msg_saved_hw_solar;
+                if (resId == R.drawable.msg_settings) return R.drawable.msg_settings_hw_solar;
+                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_solar;
+                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw_solar;
+            } else if (selected == BASE_REMIX) {
+                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_remix;
+                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw_remix;
+            } else {
+                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw;
+                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw;
+            }
+        }
         SparseIntArray map = getMap(getSelected());
         return map == null ? resId : map.get(resId, resId);
     }
@@ -158,6 +192,26 @@ public final class BaseIconPacks {
             }
         }
         return value;
+    }
+
+    public static SparseIntArray getHalloween() {
+        SparseIntArray value = halloween;
+        if (value == null) {
+            synchronized (BaseIconPacks.class) {
+                value = halloween;
+                if (value == null) {
+                    halloween = value = buildHalloween();
+                }
+            }
+        }
+        return value;
+    }
+
+    private static SparseIntArray buildHalloween() {
+        SparseIntArray map = new SparseIntArray(4);
+        map.put(R.drawable.msg_secret, R.drawable.msg_secret_hw);
+        map.put(R.drawable.msg_channel, R.drawable.msg_channel_hw);
+        return map;
     }
 
     /** {@code BaseIconPacks.java:41} — применяется во всех трёх наборах. */

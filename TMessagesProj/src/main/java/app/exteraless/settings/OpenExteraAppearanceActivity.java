@@ -106,6 +106,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3AvatarShapesRow;
     private int avatarsDividerRow;
 
+    // Halloween
+    private int halloweenThemeRow;
+    private int halloweenDividerRow;
+
+
     // Chat list
     private int chatListHeaderRow;
     private int chatListPreviewRow;
@@ -201,6 +206,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         singleCornerRadiusRow = addRow("singleCornerRadius");
         md3AvatarShapesRow = addRow("md3AvatarShapes");
         avatarsDividerRow = addRow();
+
+        halloweenThemeRow = addRow("halloweenTheme");
+        halloweenDividerRow = addRow();
 
         chatListHeaderRow = addRow("chatListHeader");
         chatListPreviewRow = addRow("chatListPreview");
@@ -582,6 +590,21 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == md3AvatarShapesRow) {
             presentFragment(new app.exteraless.appearance.Md3AvatarShapesActivity());
+            return;
+        } else if (position == halloweenThemeRow) {
+            boolean enabled = AppearanceConfig.halloweenTheme.toggleConfigBool();
+            if (view instanceof org.telegram.ui.Cells.TextCheckCell) {
+                ((org.telegram.ui.Cells.TextCheckCell) view).setChecked(enabled);
+            }
+            if (enabled) {
+                LauncherIconController.setIcon(LauncherIconController.LauncherIcon.MOLTENGRAM_HALLOWEEN);
+            } else {
+                if (LauncherIconController.getCurrentIcon() == LauncherIconController.LauncherIcon.MOLTENGRAM_HALLOWEEN) {
+                    LauncherIconController.setIcon(LauncherIconController.LauncherIcon.MOLTENGRAM);
+                }
+            }
+            rebuildAll();
+            Theme.reloadAllResources(ApplicationLoader.applicationContext);
             return;
         } else if (position == iconPacksRow) {
             presentFragment(new IconPacksActivity());
@@ -1028,6 +1051,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceDisableAvatarBlur), NaConfig.INSTANCE.getDisableAvatarBlur().Bool(), false);
                     } else if (position == singleCornerRadiusRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSingleCornerRadius), AppearanceConfig.singleCornerRadius.Bool(), false);
+                    } else if (position == halloweenThemeRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceHalloweenTheme), getString(R.string.OEAppearanceHalloweenThemeInfo), AppearanceConfig.halloweenTheme.Bool(), false, true);
                     } else if (position == forceSnowRow) {
                         cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceForceSnow), getString(R.string.OEAppearanceForceSnowInfo), NekoConfig.actionBarDecoration.Int() == 1, true, true);
                     } else if (position == hideActionBarStatusRow) {
@@ -1251,6 +1276,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_HEADER;
             } else if (position == appearanceDividerRow || position == sectionsDividerRow
                     || position == blurDividerRow || position == avatarsDividerRow
+                    || position == halloweenDividerRow
                     || position == chatListDividerRow || position == foldersDividerRow
                     || position == linksDividerRow || position == hidingDividerRow) {
                 return TYPE_INFO_PRIVACY;

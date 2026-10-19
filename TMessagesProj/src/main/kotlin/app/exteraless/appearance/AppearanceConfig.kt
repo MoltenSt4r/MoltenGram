@@ -85,6 +85,17 @@ object AppearanceConfig {
     val mediaGroupCarousel =
         addConfig("OEAppearanceMediaGroupCarousel", ConfigItem.configTypeBool, false)
 
+    /** Хэллоуинская тема (иконка приложения и иконки внутри приложения). */
+    @JvmField
+    val halloweenTheme =
+        addConfig("OEAppearanceHalloweenTheme", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun halloweenTheme(): Boolean {
+        ensureLoaded()
+        return halloweenTheme.Bool()
+    }
+
     // ---- Список чатов ----
 
     /** Мини-аватарки отправителей в списке чатов. */
