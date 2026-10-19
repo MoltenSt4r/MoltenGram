@@ -1,0 +1,205 @@
+package app.exteraless.glyph;
+
+import android.app.Activity;
+import android.content.Context;
+import android.os.Build;
+import android.os.VibrationEffect;
+import android.os.Vibrator;
+
+import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.BaseFragment;
+import org.telegram.ui.Components.BulletinFactory;
+
+/**
+ * Easter egg manager for Nothing and CMF devices.
+ * Automatically identifies the exact device model (Phone 1, 2, 2a, 2a Plus, 3, 3a, 4a, CMF 1, CMF 2 Pro)
+ * and triggers an on-screen particle explosion with hardware glyphs & vibration.
+ */
+public class NothingPhoneEasterEgg {
+
+    public static boolean isNothingOrCmfDevice() {
+        String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
+        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
+        String model = Build.MODEL != null ? Build.MODEL.toLowerCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toLowerCase() : "";
+        String product = Build.PRODUCT != null ? Build.PRODUCT.toLowerCase() : "";
+
+        return brand.contains("nothing") || manufacturer.contains("nothing") ||
+                brand.contains("cmf") || manufacturer.contains("cmf") ||
+                model.contains("nothing") || model.contains("cmf") ||
+                model.startsWith("a06") || model.startsWith("a14") || model.startsWith("a01") ||
+                device.contains("spacewar") || device.contains("pong") || device.contains("pacman") ||
+                device.contains("tetris") || device.contains("aerodactyl") ||
+                product.contains("spacewar") || product.contains("pong") || product.contains("pacman") ||
+                product.contains("tetris") || product.contains("aerodactyl");
+    }
+
+    public static String getDeviceDisplayName() {
+        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase();
+        String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase();
+
+        if (model.contains("cmf") && (model.contains("2") || model.contains("pro")) || device.contains("cmf2")) {
+            return "CMF Phone 2 Pro";
+        }
+        if (model.contains("cmf") || model.contains("a015") || device.contains("tetris")) {
+            return "CMF Phone 1";
+        }
+        if (model.contains("4a") && model.contains("pro")) {
+            return "Nothing Phone (4a) Pro";
+        }
+        if (model.contains("4a") || model.contains("phone 4")) {
+            return "Nothing Phone (4a)";
+        }
+        if (model.contains("3a") && model.contains("pro")) {
+            return "Nothing Phone (3a) Pro";
+        }
+        if (model.contains("3a")) {
+            return "Nothing Phone (3a)";
+        }
+        if (model.contains("phone 3") || model.contains("phone (3)") || device.contains("phone3")) {
+            return "Nothing Phone (3)";
+        }
+        if (model.contains("a069p") || model.contains("2a plus") || model.contains("2a+") ||
+                device.contains("aerodactyl") || device.contains("pacmanpro")) {
+            return "Nothing Phone (2a) Plus";
+        }
+        if (model.contains("a142") || model.contains("2a") || device.contains("pacman")) {
+            return "Nothing Phone (2a)";
+        }
+        if (model.contains("a065") || device.contains("pong") || model.contains("phone 2") || model.contains("phone (2)")) {
+            return "Nothing Phone (2)";
+        }
+        if (model.contains("a063") || device.contains("spacewar") || model.contains("phone 1") || model.contains("phone (1)")) {
+            return "Nothing Phone (1)";
+        }
+        return "Nothing Phone";
+    }
+
+    public static int[] getDeviceModelDrawables() {
+        String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase();
+        String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase();
+
+        // 1. CMF Phone 2 Pro
+        if (model.contains("cmf") && (model.contains("2") || model.contains("pro")) || device.contains("cmf2")) {
+            return new int[]{
+                    R.drawable.glyph_easter_cmf2_pro_black,
+                    R.drawable.glyph_easter_cmf2_pro_orange,
+                    R.drawable.glyph_easter_cmf2_pro_lightgreen,
+                    R.drawable.glyph_easter_cmf2_pro_lightgrey
+            };
+        }
+        // 2. CMF Phone 1
+        if (model.contains("cmf") || model.contains("a015") || device.contains("tetris")) {
+            return new int[]{
+                    R.drawable.glyph_easter_cmf1_orange,
+                    R.drawable.glyph_easter_cmf1_lightgreen,
+                    R.drawable.glyph_easter_cmf1_black
+            };
+        }
+        // 3. Phone 4a Pro
+        if (model.contains("4a") && model.contains("pro")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone4a_pro_black,
+                    R.drawable.glyph_easter_phone4a_pro_white,
+                    R.drawable.glyph_easter_phone4a_pro_pink
+            };
+        }
+        // 4. Phone 4a
+        if (model.contains("4a") || model.contains("phone 4")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone4a_black,
+                    R.drawable.glyph_easter_phone4a_blue,
+                    R.drawable.glyph_easter_phone4a_pink
+            };
+        }
+        // 5. Phone 3a Pro
+        if (model.contains("3a") && model.contains("pro")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone3a_pro_grey,
+                    R.drawable.glyph_easter_phone3a_pro_black
+            };
+        }
+        // 6. Phone 3a
+        if (model.contains("3a")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone3a_white,
+                    R.drawable.glyph_easter_phone3a_blue,
+                    R.drawable.glyph_easter_phone3a_black
+            };
+        }
+        // 7. Phone 3
+        if (model.contains("phone 3") || model.contains("phone (3)") || device.contains("phone3")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone3_white,
+                    R.drawable.glyph_easter_phone3_black
+            };
+        }
+        // 8. Phone 2a Plus (User's device Nothing A069P, Aerodactyl, PacmanPro)
+        if (model.contains("a069p") || model.contains("2a plus") || model.contains("2a+") ||
+                device.contains("aerodactyl") || device.contains("pacmanpro")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone2a_plus_grey,
+                    R.drawable.glyph_easter_phone2a_plus_black
+            };
+        }
+        // 9. Phone 2a / Phone 2
+        if (model.contains("a142") || model.contains("2a") || device.contains("pacman") ||
+                model.contains("a065") || device.contains("pong") || model.contains("phone 2") || model.contains("phone (2)")) {
+            return new int[]{
+                    R.drawable.glyph_easter_phone2a_black,
+                    R.drawable.glyph_easter_phone2a_white,
+                    R.drawable.glyph_easter_phone2a_blue
+            };
+        }
+        // 10. Phone (1) or default Nothing
+        return new int[]{
+                R.drawable.glyph_easter_phone1_white,
+                R.drawable.glyph_easter_phone1_black,
+                R.drawable.glyph_easter_phone1_blue
+        };
+    }
+
+    public static void playBurst(Activity activity, BaseFragment fragment) {
+        if (activity == null) {
+            return;
+        }
+
+        // 1. Haptic feedback
+        try {
+            Vibrator vibrator = (Vibrator) activity.getSystemService(Context.VIBRATOR_SERVICE);
+            if (vibrator != null && vibrator.hasVibrator()) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    long[] timings = new long[]{0, 40, 30, 60, 30, 80};
+                    int[] amplitudes = new int[]{0, 180, 0, 220, 0, 255};
+                    vibrator.vibrate(VibrationEffect.createWaveform(timings, amplitudes, -1));
+                } else {
+                    vibrator.vibrate(new long[]{0, 40, 30, 60, 30, 80}, -1);
+                }
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+
+        // 2. Hardware Glyphs if supported
+        try {
+            if (GlyphController.getInstance().isSupported()) {
+                GlyphController.getInstance().playPhone1BurstEffect(activity);
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+
+        // 3. On-screen Particle Explosion of the user's specific phone model
+        NothingPhoneBurstOverlay.show(activity, getDeviceModelDrawables());
+
+        // 4. Bulletin info
+        if (fragment != null) {
+            String title = "💥 " + getDeviceDisplayName();
+            BulletinFactory.of(fragment)
+                    .createSimpleBulletin(R.drawable.baseline_flash_on_24, title)
+                    .show();
+        }
+    }
+}

@@ -23,6 +23,7 @@ import android.widget.ScrollView;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
@@ -305,15 +306,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerCrossfade());
             }
         } else if (position == crossfadeDurationRow) {
-            int[] durations = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
-            CharSequence[] options = new CharSequence[durations.length];
-            for (int i = 0; i < durations.length; i++) {
-                options[i] = org.telegram.messenger.LocaleController.formatPluralString("Seconds", durations[i]);
-            }
-            showSelector(getString(R.string.OEAppearancePlayerCrossfadeDuration), options, which -> {
-                AppearanceConfig.playerCrossfadeDuration.setConfigInt(durations[which]);
-                if (listAdapter != null) listAdapter.notifyItemChanged(crossfadeDurationRow);
-            });
+            showCrossfadeDurationDialog();
         } else if (position == playlistsRow) {
             LocalPlaylistsController.getInstance().showPlaylistsDialog(getParentActivity(), getResourceProvider());
         } else if (position == sleepTimerRow) {
@@ -458,8 +451,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     String textSizeName = textSizeMode == 0 ? getString(R.string.OEAppearancePlayerLyricsTextSizeNormal) : textSizeMode == 2 ? getString(R.string.OEAppearancePlayerLyricsTextSizeHuge) : getString(R.string.OEAppearancePlayerLyricsTextSizeLarge);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsTextSize), textSizeName, false);
                 } else if (position == crossfadeDurationRow) {
-                    int sec = AppearanceConfig.playerCrossfadeDuration();
-                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerCrossfadeDuration), org.telegram.messenger.LocaleController.formatPluralString("Seconds", sec), true);
+                    int fadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
+                    int fadeIn = AppearanceConfig.playerCrossfadeFadeInDuration();
+                    String summary = org.telegram.messenger.LocaleController.formatString("OEAppearancePlayerCrossfadeDurationDual", R.string.OEAppearancePlayerCrossfadeDurationDual, fadeOut, fadeIn);
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerCrossfadeDuration), summary, true);
                 } else if (position == playlistsRow) {
                     cell.setTextAndValue(getString(R.string.OEPlayerLocalPlaylists), getString(R.string.OEPlayerLocalPlaylistsDesc), true);
                 } else if (position == sleepTimerRow) {
@@ -874,6 +869,106 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             String token = tokenInput.getText().toString().trim();
             app.exteraless.metrolist.MetrolistAuth.getInstance().setOAuthToken(token, email, "");
             if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showCrossfadeDurationDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        builder.setTitle(getString(R.string.OEAppearancePlayerCrossfadeDuration));
+
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(12), dp(20), dp(8));
+
+        LinearLayout cardsLayout = new LinearLayout(getParentActivity());
+        cardsLayout.setOrientation(LinearLayout.HORIZONTAL);
+        cardsLayout.setWeightSum(2f);
+
+        int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
+        boolean isDark = Theme.isCurrentThemeDark();
+        int cardBg = ColorUtils.blendARGB(accentColor, isDark ? 0xFF232530 : 0xFFF1F3F9, isDark ? 0.88f : 0.85f);
+
+        LinearLayout card1 = new LinearLayout(getParentActivity());
+        card1.setOrientation(LinearLayout.VERTICAL);
+        card1.setPadding(dp(14), dp(10), dp(14), dp(10));
+        card1.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
+
+        TextView title1 = new TextView(getParentActivity());
+        title1.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeOut));
+        title1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        title1.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider()));
+        card1.addView(title1);
+
+        TextView valueText1 = new TextView(getParentActivity());
+        valueText1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        valueText1.setTypeface(AndroidUtilities.bold());
+        valueText1.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider()));
+        card1.addView(valueText1);
+
+        LinearLayout card2 = new LinearLayout(getParentActivity());
+        card2.setOrientation(LinearLayout.VERTICAL);
+        card2.setPadding(dp(14), dp(10), dp(14), dp(10));
+        card2.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
+
+        TextView title2 = new TextView(getParentActivity());
+        title2.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeIn));
+        title2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        title2.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider()));
+        card2.addView(title2);
+
+        TextView valueText2 = new TextView(getParentActivity());
+        valueText2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        valueText2.setTypeface(AndroidUtilities.bold());
+        valueText2.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider()));
+        card2.addView(valueText2);
+
+        LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp1.rightMargin = dp(6);
+        cardsLayout.addView(card1, lp1);
+
+        LinearLayout.LayoutParams lp2 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
+        lp2.leftMargin = dp(6);
+        cardsLayout.addView(card2, lp2);
+
+        container.addView(cardsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+
+        Md3RangeSlider slider = new Md3RangeSlider(getParentActivity());
+        int currentFadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
+        int currentFadeIn = AppearanceConfig.playerCrossfadeFadeInDuration();
+        slider.setRange(0, 12);
+        slider.setValues(currentFadeOut, currentFadeIn);
+        slider.setLabels(getString(R.string.OEAppearancePlayerCrossfadeFadeOut), getString(R.string.OEAppearancePlayerCrossfadeFadeIn));
+
+        final int[] outVal = new int[]{currentFadeOut};
+        final int[] inVal = new int[]{currentFadeIn};
+
+        Runnable updateCards = () -> {
+            valueText1.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", outVal[0]));
+            valueText2.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", inVal[0]));
+        };
+        updateCards.run();
+
+        slider.setOnRangeChangeListener((val1, val2, fromUser) -> {
+            outVal[0] = val1;
+            inVal[0] = val2;
+            updateCards.run();
+        });
+
+        container.addView(slider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 6, 0, 8));
+
+        builder.setView(container);
+        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
+            AppearanceConfig.playerCrossfadeFadeOutDuration.setConfigInt(outVal[0]);
+            AppearanceConfig.playerCrossfadeFadeInDuration.setConfigInt(inVal[0]);
+            AppearanceConfig.playerCrossfadeDuration.setConfigInt(outVal[0]);
+            if (listAdapter != null) {
+                listAdapter.notifyItemChanged(crossfadeDurationRow);
+            }
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());

@@ -2,6 +2,7 @@ package app.exteraless.settings;
 
 import static org.telegram.messenger.LocaleController.getString;
 
+import android.app.Activity;
 import android.content.Context;
 import android.view.View;
 
@@ -18,6 +19,7 @@ import org.telegram.ui.Components.BulletinFactory;
 
 import app.exteraless.glyph.GlyphConfig;
 import app.exteraless.glyph.GlyphController;
+import app.exteraless.glyph.NothingPhoneEasterEgg;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
@@ -61,7 +63,6 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphScreenOffRow = addRow(GlyphConfig.screenOffOnly.getKey());
             glyphDividerRow = addRow();
             glyphPreviewRow = addRow("glyphPreview");
-            glyphBurstRow = addRow("glyphBurst");
         } else {
             glyphNewMessageRow = -1;
             glyphCallsRow = -1;
@@ -69,6 +70,10 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphScreenOffRow = -1;
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
+        }
+        if (NothingPhoneEasterEgg.isNothingOrCmfDevice()) {
+            glyphBurstRow = addRow("glyphBurst");
+        } else {
             glyphBurstRow = -1;
         }
     }
@@ -173,17 +178,8 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             builder.setNegativeButton(getString(R.string.Cancel), null);
             showDialog(builder.create());
         } else if (position == glyphBurstRow) {
-            if (!GlyphController.getInstance().isSupported()) {
-                BulletinFactory.of(this)
-                        .createSimpleBulletin(R.raw.info, getString(R.string.OEGlyphUnsupported))
-                        .show();
-                return;
-            }
             view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-            GlyphController.getInstance().playPhone1BurstEffect(getParentActivity() != null ? getParentActivity() : getContext());
-            BulletinFactory.of(this)
-                    .createSimpleBulletin(R.drawable.baseline_flash_on_24, getString(R.string.OEGlyphBurst))
-                    .show();
+            NothingPhoneEasterEgg.playBurst(getParentActivity() != null ? getParentActivity() : (Activity) getContext(), this);
         }
     }
 
@@ -234,7 +230,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValueAndIcon(getString(R.string.OEGlyphBurst),
-                                getString(R.string.OEGlyphBurstDesc),
+                                NothingPhoneEasterEgg.getDeviceDisplayName(),
                                 R.drawable.baseline_flash_on_24, false);
                     }
                     break;
