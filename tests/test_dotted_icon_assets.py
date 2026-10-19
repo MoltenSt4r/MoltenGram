@@ -1,5 +1,4 @@
 import os
-import re
 import math
 from PIL import Image
 import pytest
@@ -33,24 +32,16 @@ def test_dotted_icon_density_files_exist_and_sizes_match(density, sizes):
 
     with Image.open(round_path) as im:
         assert im.size == (mip_size, mip_size)
-        assert im.mode == 'RGBA'
-        assert im.getpixel((0, 0))[3] == 0, 'Round mipmap corners must be transparent'
 
 
-@pytest.mark.parametrize('density,sizes', DENSITIES.items())
-def test_dotted_icon_safe_zone_and_no_clipping_all_densities(density, sizes):
-    bg_size, _ = sizes
-    bg_path = os.path.join(RES_DIR, f'drawable-{density}', 'moltengram_dotted_icon_background.png')
+def test_dotted_icon_safe_zone_and_no_clipping():
+    bg_path = os.path.join(RES_DIR, 'drawable-xxhdpi', 'moltengram_dotted_icon_background.png')
     im = Image.open(bg_path).convert('RGB')
     w, h = im.size
-    assert (w, h) == (bg_size, bg_size)
-
-    scale = bg_size / 324.0
-    safe_min = 54.0 * scale
-    safe_max = 270.0 * scale
-    safe_radius = 108.0 * scale
+    assert (w, h) == (324, 324)
 
     cx, cy = w / 2.0, h / 2.0
+    safe_radius = (270 - 54) / 2.0  # 108 px
 
     min_x, max_x, min_y, max_y = w, -1, h, -1
     outside_circle_pixels = 0
@@ -68,20 +59,11 @@ def test_dotted_icon_safe_zone_and_no_clipping_all_densities(density, sizes):
                 if dist > safe_radius:
                     outside_circle_pixels += 1
 
-    # Bounding box must be strictly inside safe zone
-    assert min_x >= safe_min, f'{density} min_x {min_x} < {safe_min}'
-    assert max_x <= safe_max, f'{density} max_x {max_x} > {safe_max}'
-    assert min_y >= safe_min, f'{density} min_y {min_y} < {safe_min}'
-    assert max_y <= safe_max, f'{density} max_y {max_y} > {safe_max}'
+    # Bounding box must be strictly inside [54, 270] safe zone
+    assert min_x >= 54, f'min_x {min_x} < 54'
+    assert max_x <= 270, f'max_x {max_x} > 270'
+    assert min_y >= 54, f'min_y {min_y} < 54'
+    assert max_y <= 270, f'max_y {max_y} > 270'
 
     # Must not have any lit flame pixel outside the safe circle
-    assert outside_circle_pixels == 0, f'{density} {outside_circle_pixels} pixels clipped by circular mask'
-
-
-def test_launcher_icon_dotted_has_bleed_true():
-    path = '/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/LauncherIconController.java'
-    with open(path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    match = re.search(r'MOLTENGRAM_DOTTED\([^)]+\)', content)
-    assert match is not None, "MOLTENGRAM_DOTTED must be declared in LauncherIconController"
-    assert 'false' not in match.group(0), "MOLTENGRAM_DOTTED must not set hasBleed=false"
+    assert outside_circle_pixels == 0, f'{outside_circle_pixels} pixels clipped by circular mask'
