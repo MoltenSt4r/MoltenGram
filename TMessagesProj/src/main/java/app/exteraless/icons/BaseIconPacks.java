@@ -136,7 +136,6 @@ public final class BaseIconPacks {
                 if (resId == R.drawable.msg_calls) return R.drawable.msg_calls_hw_solar;
                 if (resId == R.drawable.msg_contacts) return R.drawable.msg_contacts_hw_solar;
                 if (resId == R.drawable.msg_groups) return R.drawable.msg_groups_hw_solar;
-                if (resId == R.drawable.msg_nearby) return R.drawable.msg_nearby_hw_solar;
                 if (resId == R.drawable.msg_saved) return R.drawable.msg_saved_hw_solar;
                 if (resId == R.drawable.msg_settings) return R.drawable.msg_settings_hw_solar;
                 if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_solar;

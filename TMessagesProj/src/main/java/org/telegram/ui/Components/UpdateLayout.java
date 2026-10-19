@@ -146,7 +146,7 @@ public class UpdateLayout extends IUpdateLayout {
         updateTextView.setText(LocaleController.getString(R.string.AppUpdateBeta), false);
 
         updateLayoutIcon = new RadialProgress2(updateTextView);
-        int themeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        themeColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
         updateLayoutIcon.setColors(buttonTextColor, buttonTextColor, themeColor, themeColor);
         updateLayoutIcon.setProgressRect(0, 0, dp(22), dp(22));
