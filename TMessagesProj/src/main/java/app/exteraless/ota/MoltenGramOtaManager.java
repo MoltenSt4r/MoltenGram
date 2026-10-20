@@ -41,9 +41,20 @@ import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
+import android.app.Dialog;
 import android.content.pm.PackageManager;
+import android.util.TypedValue;
+import android.view.Gravity;
+import android.view.ViewGroup;
+import android.widget.FrameLayout;
+import android.widget.LinearLayout;
+import android.widget.TextView;
+import app.exteraless.appearance.M3CircularProgress;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RadialProgressView;
+import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 public class MoltenGramOtaManager {
 
@@ -926,6 +937,142 @@ public class MoltenGramOtaManager {
         }
     }
 
+    private Dialog updateProgressDialog;
+
+    public void showUpdateProgressDialog(Activity activity) {
+        if (activity == null || activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
+            return;
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                if (activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
+                    return;
+                }
+                if (updateProgressDialog != null && updateProgressDialog.isShowing()) {
+                    return;
+                }
+                Dialog dialog = new Dialog(activity, R.style.TransparentDialog);
+                dialog.setCanceledOnTouchOutside(false);
+                dialog.setCancelable(false);
+
+                final boolean isDark = Theme.isCurrentThemeDark();
+
+                // Dynamic Monet wallpaper surface color (never baseline purple 0x141218)
+                int bgColor = MonetHelper.getColor(isDark ? "surface_dark" : "surface_light");
+                if (bgColor == 0 || (isDark && MonetHelper.isStaticBaselineFrameworkRole(bgColor))) {
+                    bgColor = Theme.getColor(isDark ? Theme.key_dialogBackground : Theme.key_windowBackgroundWhite);
+                }
+                if (bgColor == 0 || (isDark && MonetHelper.isStaticBaselineFrameworkRole(bgColor))) {
+                    int neutralBg = MonetHelper.getColor(isDark ? "background_dark" : "background_light");
+                    if (neutralBg != 0 && !MonetHelper.isStaticBaselineFrameworkRole(neutralBg)) {
+                        bgColor = neutralBg;
+                    } else {
+                        bgColor = isDark ? 0xff1b1b1f : 0xfffef7ff;
+                    }
+                }
+
+                FrameLayout root = new FrameLayout(activity);
+                root.setBackgroundColor(bgColor);
+
+                LinearLayout content = new LinearLayout(activity);
+                content.setOrientation(LinearLayout.VERTICAL);
+                content.setGravity(Gravity.CENTER);
+
+                // Dynamic Monet wallpaper accent and track colors
+                int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = MonetHelper.getColor(isDark ? "a1_200" : "a1_600");
+                }
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = Theme.getColor(Theme.key_dialog_inlineProgress);
+                }
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = 0xff527da3;
+                }
+
+                int trackColor = Theme.getColor(Theme.key_featuredStickers_unread);
+                if (trackColor == 0 || trackColor == accentColor || MonetHelper.isStaticBaselineFrameworkRole(trackColor)) {
+                    int monetTrack = MonetHelper.getColor(isDark ? "primary_container_dark" : "primary_container_light");
+                    if (monetTrack != 0 && !MonetHelper.isStaticBaselineFrameworkRole(monetTrack)) {
+                        trackColor = monetTrack;
+                    } else {
+                        trackColor = Theme.multAlpha(accentColor, 0.25f);
+                    }
+                }
+
+                RadialProgressView progressView = new RadialProgressView(activity);
+                progressView.setSize(AndroidUtilities.dp(96));
+                progressView.setStrokeWidth(6);
+                progressView.setProgressColor(accentColor);
+                progressView.setTrackColor(trackColor);
+                progressView.setStyle(M3CircularProgress.STYLE_WAVY, true);
+                progressView.setWavy(true);
+                progressView.setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6));
+
+                int textColor = MonetHelper.getColor(isDark ? "on_surface_dark" : "on_surface_light");
+                if (textColor == 0) {
+                    textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+                }
+                if (textColor == 0) {
+                    textColor = isDark ? 0xffe6e1e5 : 0xff1c1b1f;
+                }
+
+                TextView messageView = new TextView(activity);
+                messageView.setText(LocaleController.getString("Updating", R.string.Updating));
+                messageView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 17);
+                messageView.setTypeface(AndroidUtilities.bold());
+                messageView.setTextColor(textColor);
+                messageView.setGravity(Gravity.CENTER);
+
+                content.addView(progressView, LayoutHelper.createLinear(96, 96, Gravity.CENTER_HORIZONTAL));
+                content.addView(messageView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 24, 0, 0));
+
+                root.addView(content, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
+
+                dialog.setContentView(root, new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                if (dialog.getWindow() != null) {
+                    dialog.getWindow().setLayout(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                        dialog.getWindow().setStatusBarColor(bgColor);
+                        dialog.getWindow().setNavigationBarColor(bgColor);
+                    }
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                        int flags = dialog.getWindow().getDecorView().getSystemUiVisibility();
+                        if (!isDark) {
+                            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                            }
+                        } else {
+                            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
+                            }
+                        }
+                        dialog.getWindow().getDecorView().setSystemUiVisibility(flags);
+                    }
+                }
+
+                dialog.show();
+                updateProgressDialog = dialog;
+            } catch (Throwable t) {
+                FileLog.e("Failed to show update progress dialog", t);
+            }
+        });
+    }
+
+    public void dismissUpdateProgressDialog() {
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                if (updateProgressDialog != null && updateProgressDialog.isShowing()) {
+                    updateProgressDialog.dismiss();
+                    updateProgressDialog = null;
+                }
+            } catch (Throwable ignored) {}
+        });
+    }
+
     private boolean installViaPackageInstallerSession(Activity activity, File apkFile) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return false;
@@ -940,24 +1087,25 @@ public class MoltenGramOtaManager {
             }
 
             // Show in-app Monet progress dialog
-            final AlertDialog[] dialogHolder = new AlertDialog[1];
-            AndroidUtilities.runOnUIThread(() -> {
-                try {
-                    AlertDialog progressDialog = new AlertDialog(activity, 3);
-                    progressDialog.setMessage(LocaleController.getString("Updating", R.string.Updating));
-                    progressDialog.setCanceledOnTouchOutside(false);
-                    progressDialog.setCancelable(false);
-                    progressDialog.show();
-                    dialogHolder[0] = progressDialog;
-                } catch (Throwable ignored) {}
-            });
+            showUpdateProgressDialog(activity);
+
+            Context appContext = activity.getApplicationContext() != null ? activity.getApplicationContext() : activity;
 
             Utilities.globalQueue.postRunnable(() -> {
                 android.content.pm.PackageInstaller packageInstaller = pm.getPackageInstaller();
                 android.content.pm.PackageInstaller.SessionParams params =
                         new android.content.pm.PackageInstaller.SessionParams(android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
                 params.setAppPackageName(activity.getPackageName());
-                params.setRequireUserAction(android.content.pm.PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+                try {
+                    params.setRequireUserAction(android.content.pm.PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+                } catch (Throwable t) {
+                    FileLog.e("PackageInstaller setRequireUserAction failed", t);
+                }
+                if (Build.VERSION.SDK_INT >= 34) {
+                    try {
+                        params.setPackageSource(android.content.pm.PackageInstaller.PACKAGE_SOURCE_OTHER);
+                    } catch (Throwable ignored) {}
+                }
 
                 int sessionId = -1;
                 try {
@@ -974,10 +1122,11 @@ public class MoltenGramOtaManager {
                         session.fsync(out);
                     }
 
-                    Intent intent = new Intent(activity, MoltenGramPackageInstallReceiver.class);
+                    Intent intent = new Intent(appContext, MoltenGramPackageInstallReceiver.class);
                     intent.setAction(MoltenGramPackageInstallReceiver.ACTION_INSTALL_STATUS);
+                    intent.setPackage(appContext.getPackageName());
                     PendingIntent pi = PendingIntent.getBroadcast(
-                            activity,
+                            appContext,
                             sessionId,
                             intent,
                             PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
@@ -991,18 +1140,14 @@ public class MoltenGramOtaManager {
                             packageInstaller.abandonSession(sessionId);
                         } catch (Throwable ignored) {}
                     }
+                    dismissUpdateProgressDialog();
                     AndroidUtilities.runOnUIThread(() -> {
-                        if (dialogHolder[0] != null) {
-                            try {
-                                dialogHolder[0].dismiss();
-                            } catch (Throwable ignored) {}
-                        }
                         try {
                             Intent fallback = new Intent(Intent.ACTION_VIEW);
                             fallback.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
-                            Uri uri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", apkFile);
+                            Uri uri = FileProvider.getUriForFile(appContext, ApplicationLoader.getApplicationId() + ".provider", apkFile);
                             fallback.setDataAndType(uri, "application/vnd.android.package-archive");
-                            activity.startActivity(fallback);
+                            appContext.startActivity(fallback);
                         } catch (Throwable e) {
                             FileLog.e("Fallback install failed", e);
                         }
@@ -1012,6 +1157,7 @@ public class MoltenGramOtaManager {
             return true;
         } catch (Throwable t) {
             FileLog.e("Failed to initiate PackageInstaller session", t);
+            dismissUpdateProgressDialog();
             return false;
         }
     }

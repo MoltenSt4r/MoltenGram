@@ -252,7 +252,27 @@ public class RadialProgressView extends View implements Drawable.Callback {
      * 2 — CircularProgressIndicator, 3 — он же с волной.
      */
     public void setStyle(int style) {
+        setStyle(style, false);
+    }
+
+    public void setStyle(int style, boolean force) {
         manualStyle = true;
+        if (force) {
+            currentStyle = style;
+            if (M3CircularProgress.isCircular(style)) {
+                if (m3 == null) {
+                    m3 = new M3CircularProgress();
+                }
+                m3.setGap(AndroidUtilities.dp(2));
+                if (!trackColorCustom) {
+                    trackColor = Theme.multAlpha(progressColor, 0.2f);
+                }
+                m3.setTrackColor(trackColor);
+                setWavy(style == M3CircularProgress.STYLE_WAVY);
+            }
+            invalidate();
+            return;
+        }
         setStyleInternal(style);
     }
 

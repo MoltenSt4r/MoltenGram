@@ -66,6 +66,7 @@
     <uses-permission android:name="android.permission.MANAGE_OWN_CALLS"/>
     <uses-permission android:name="android.permission.USE_FULL_SCREEN_INTENT"/>
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
+    <uses-permission android:name="android.permission.UPDATE_PACKAGES_WITHOUT_USER_ACTION" />
     <uses-permission android:name="android.permission.READ_PHONE_NUMBERS" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS"/>
     <uses-permission android:name="android.permission.REQUEST_IGNORE_BATTERY_OPTIMIZATIONS"/>
@@ -1093,7 +1094,7 @@
 
         <receiver
             android:name="app.exteraless.ota.MoltenGramPackageInstallReceiver"
-            android:exported="false">
+            android:exported="true">
             <intent-filter>
                 <action android:name="app.exteraless.ota.INSTALL_STATUS" />
             </intent-filter>

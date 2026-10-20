@@ -457,10 +457,15 @@ public class MonetHelper {
             mode = "dark";
         } else {
             String fixed = fixedRoles.get(token);
-            return fixed == null ? null : resolveRoleTone(fixed);
+            if (fixed != null) {
+                return resolveRoleTone(fixed);
+            }
+            mode = Theme.isCurrentThemeDark() ? "dark" : "light";
         }
 
-        String role = token.substring(0, token.length() - mode.length() - 1);
+        String role = token.endsWith("_" + mode)
+                ? token.substring(0, token.length() - mode.length() - 1)
+                : token;
         String tone = "light".equals(mode) ? lightRoles.get(role) : darkRoles.get(role);
         if (tone == null) {
             return null;
@@ -479,7 +484,7 @@ public class MonetHelper {
     private static final int BASELINE_LIGHT_SURFACE = 0xfffef7ff;
     private static final int BASELINE_DARK_CONTAINER = 0xff4a4458;
 
-    private static boolean isStaticBaselineFrameworkRole(int color) {
+    public static boolean isStaticBaselineFrameworkRole(int color) {
         int rgb = color & 0xffffff;
         return rgb == (BASELINE_PURPLE_80 & 0xffffff)
                 || rgb == (BASELINE_PURPLE_40 & 0xffffff)

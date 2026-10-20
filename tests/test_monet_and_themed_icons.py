@@ -119,4 +119,59 @@ def test_package_installer_session_support_and_dialog_inline_progress_monet():
     assert 'fallbackKeys.put(key_dialog_inlineProgress, key_featuredStickers_addButton);' in theme_content, (
         "Inline progress dialog must follow Monet accent key_featuredStickers_addButton"
     )
+    assert 'fallbackKeys.put(key_dialogLineProgress, key_featuredStickers_addButton);' in theme_content
+    assert 'fallbackKeys.put(key_dialogLineProgressBackground, key_featuredStickers_unread);' in theme_content
+
+    # Manifest checks for unattended updates
+    assert 'UPDATE_PACKAGES_WITHOUT_USER_ACTION' in manifest_content, (
+        "Manifest must declare UPDATE_PACKAGES_WITHOUT_USER_ACTION permission for Android 12+/14+ unattended installs"
+    )
+    assert 'android:name="app.exteraless.ota.MoltenGramPackageInstallReceiver"\n            android:exported="true"' in manifest_content or \
+           'android:name="app.exteraless.ota.MoltenGramPackageInstallReceiver" android:exported="true"' in manifest_content or \
+           ('MoltenGramPackageInstallReceiver' in manifest_content and 'android:exported="true"' in manifest_content)
+
+    # In-app Monet update screen dialog checks
+    assert 'showUpdateProgressDialog' in ota_content, "OTA Manager must provide showUpdateProgressDialog"
+    assert 'STYLE_WAVY' in ota_content, "In-app update dialog must style wavy circular loader"
+    assert 'key_featuredStickers_addButton' in ota_content, "In-app update dialog must query dynamic Monet accent"
+    assert 'isStaticBaselineFrameworkRole' in ota_content, "Must validate colors against static baseline purple"
+    assert 'surface_dark' in ota_content or 'surface_light' in ota_content, "Must query dynamic Monet surface tokens"
+    assert 'isDestroyed' in ota_content, "Must guard against destroyed activity window crashes"
+
+    # Receiver background activity start protection for API 34+
+    with open(receiver_path, 'r', encoding='utf-8') as f:
+        receiver_content = f.read()
+    assert 'ActivityOptions' in receiver_content or 'setPendingIntentBackgroundActivityStartMode' in receiver_content, (
+        "Receiver must guard API 34+ background activity starts"
+    )
+
+    # MonetHelper checks
+    monet_helper_path = os.path.join(JAVA_DIR, 'tw/nekomimi/nekogram/helpers/MonetHelper.java')
+    with open(monet_helper_path, 'r', encoding='utf-8') as f:
+        monet_content = f.read()
+    assert 'public static boolean isStaticBaselineFrameworkRole' in monet_content, (
+        "isStaticBaselineFrameworkRole must be public for OTA dialog validation"
+    )
+
+    # RadialProgressView force wavy check
+    radial_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/RadialProgressView.java')
+    with open(radial_path, 'r', encoding='utf-8') as f:
+        radial_content = f.read()
+    assert 'setStyle(int style, boolean force)' in radial_content, (
+        "RadialProgressView must support forcing wavy style"
+    )
+
+    # TransparentDialog Monet checks in v31 styles
+    v31_path = os.path.join(RES_DIR, 'values-v31/styles.xml')
+    with open(v31_path, 'r', encoding='utf-8') as f:
+        v31_content = f.read()
+    assert '<style name="TransparentDialog"' in v31_content
+    assert '@android:color/system_accent1_' in v31_content
+
+    v31_night_path = os.path.join(RES_DIR, 'values-night-v31/styles.xml')
+    with open(v31_night_path, 'r', encoding='utf-8') as f:
+        night_content = f.read()
+    assert '<style name="TransparentDialog"' in night_content
+    assert '@android:color/system_accent1_' in night_content
+
 

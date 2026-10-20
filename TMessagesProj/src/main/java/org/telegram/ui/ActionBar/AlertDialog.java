@@ -889,8 +889,17 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
 
             RadialProgressView progressView = new RadialProgressView(getContext(), resourcesProvider);
             progressView.setSize(dp(32));
-            progressView.setProgressColor(getThemedColor(Theme.key_dialog_inlineProgress));
+            int progressColor = getThemedColor(Theme.key_dialog_inlineProgress);
+            progressView.setProgressColor(progressColor);
+            int trackColor = getThemedColor(Theme.key_featuredStickers_unread);
+            if (trackColor != 0) {
+                progressView.setTrackColor(trackColor);
+            }
             progressViewContainer.addView(progressView, LayoutHelper.createFrame(86, 86, Gravity.CENTER));
+
+            if (!TextUtils.isEmpty(message)) {
+                containerView.addView(messageTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 24, 12, 24, 16));
+            }
         } else {
             if (aboveMessageView != null) {
                 scrollContainer.addView(aboveMessageView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 22, 4, 22, 12));
