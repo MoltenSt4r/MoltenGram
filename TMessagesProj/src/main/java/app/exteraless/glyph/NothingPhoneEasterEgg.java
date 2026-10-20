@@ -35,19 +35,17 @@ public class NothingPhoneEasterEgg {
                 device.contains("spacewar") || device.contains("pong") || device.contains("pacman") ||
                 device.contains("tetris") || device.contains("aerodactyl") || device.contains("frogger") ||
                 device.contains("asteroids") || device.contains("metroid") || device.contains("galaga") ||
-                device.contains("blastoise") || device.contains("supercontra") || device.contains("galaxian") ||
                 product.contains("spacewar") || product.contains("pong") || product.contains("pacman") ||
                 product.contains("tetris") || product.contains("aerodactyl") || product.contains("frogger") ||
-                product.contains("asteroids") || product.contains("metroid") || product.contains("galaga") ||
-                product.contains("blastoise") || product.contains("supercontra") || product.contains("galaxian");
+                product.contains("asteroids") || product.contains("metroid") || product.contains("galaga");
     }
 
     public static String getDeviceDisplayName() {
         String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase();
         String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase();
 
-        // 1. CMF Phone 2 Pro (A001 / Galaga)
-        if ((model.contains("cmf") && (model.contains("2") || model.contains("pro"))) || (model.contains("a001") && !model.contains("a001t")) || device.contains("galaga") || device.contains("cmf2")) {
+        // 1. CMF Phone 2 Pro (A001 / Galaga / CMF2)
+        if ((model.contains("cmf") && (model.contains("2") || model.contains("pro"))) || model.contains("a001") || device.contains("galaga") || device.contains("cmf2")) {
             return "CMF Phone 2 Pro";
         }
         // 2. CMF Phone 1 (A015 / Tetris)
@@ -58,43 +56,35 @@ public class NothingPhoneEasterEgg {
         if (model.contains("a069p") || (model.contains("4a") && model.contains("pro")) || device.contains("froggerpro")) {
             return "Nothing Phone (4a) Pro";
         }
-        // 4. Nothing Phone (4b) (A009P / Blastoise / SuperContra)
-        if (model.contains("a009p") || model.contains("4b") || device.contains("blastoise") || device.contains("supercontra")) {
-            return "Nothing Phone (4b)";
-        }
-        // 5. Nothing Phone (4a) (A069 / Frogger)
+        // 4. Nothing Phone (4a) (A069 / Frogger)
         if (model.contains("a069") || model.contains("4a") || model.contains("phone 4") || device.contains("frogger")) {
             return "Nothing Phone (4a)";
         }
-        // 6. Nothing Phone (3a) Pro
+        // 5. Nothing Phone (3a) Pro
         if (model.contains("3a") && model.contains("pro")) {
             return "Nothing Phone (3a) Pro";
         }
-        // 7. Nothing Phone (3a) Lite (A001T / Galaxian)
-        if ((model.contains("3a") && model.contains("lite")) || model.contains("a001t") || device.contains("galaxian")) {
-            return "Nothing Phone (3a) Lite";
-        }
-        // 8. Nothing Phone (3a) (A059 / Asteroids)
+        // 6. Nothing Phone (3a) (A059 / Asteroids)
         if (model.contains("a059") || model.contains("3a") || device.contains("asteroids")) {
             return "Nothing Phone (3a)";
         }
-        // 9. Nothing Phone (3) (A024 / Metroid)
+        // 7. Nothing Phone (3) (A024 / Metroid)
         if (model.contains("a024") || model.contains("phone 3") || model.contains("phone (3)") || device.contains("metroid") || device.contains("phone3")) {
             return "Nothing Phone (3)";
         }
-        // 10. Nothing Phone (2a) Plus (A142P / PacmanPro)
+        // 8. Nothing Phone (2a) Plus (A142P / PacmanPro)
         if (model.contains("a142p") || (model.contains("2a") && (model.contains("plus") || model.contains("+"))) || device.contains("pacmanpro")) {
             return "Nothing Phone (2a) Plus";
         }
-        // 11. Nothing Phone (2a) (A142 / Pacman / Aerodactyl)
+        // 9. Nothing Phone (2a) (A142 / Pacman / Aerodactyl)
         if (model.contains("a142") || model.contains("2a") || device.contains("pacman") || device.contains("aerodactyl")) {
             return "Nothing Phone (2a)";
         }
-        // 12. Nothing Phone (2) (A065 / Pong)
+        // 10. Nothing Phone (2) (A065 / Pong)
         if (model.contains("a065") || model.contains("ain065") || device.contains("pong") || model.contains("phone 2") || model.contains("phone (2)")) {
             return "Nothing Phone (2)";
         }
-        // 13. Nothing Phone (1) (A063 / Spacewar)
+        // 11. Nothing Phone (1) (A063 / Spacewar)
         if (model.contains("a063") || device.contains("spacewar") || model.contains("phone 1") || model.contains("phone (1)")) {
             return "Nothing Phone (1)";
         }
@@ -108,10 +98,8 @@ public class NothingPhoneEasterEgg {
     public static final String[] ALL_MODELS = new String[]{
             "Nothing Phone (4a) Pro",
             "Nothing Phone (4a)",
-            "Nothing Phone (4b)",
             "Nothing Phone (3a) Pro",
             "Nothing Phone (3a)",
-            "Nothing Phone (3a) Lite",
             "Nothing Phone (3)",
             "Nothing Phone (2a) Plus",
             "Nothing Phone (2a)",
@@ -136,13 +124,6 @@ public class NothingPhoneEasterEgg {
                     R.drawable.glyph_easter_phone4a_pink
             };
         }
-        if ("Nothing Phone (4b)".equals(modelName)) {
-            return new int[]{
-                    R.drawable.glyph_easter_phone4b_black,
-                    R.drawable.glyph_easter_phone4b_white,
-                    R.drawable.glyph_easter_phone4b_blue
-            };
-        }
         if ("Nothing Phone (3a) Pro".equals(modelName)) {
             return new int[]{
                     R.drawable.glyph_easter_phone3a_pro_grey,
@@ -154,13 +135,6 @@ public class NothingPhoneEasterEgg {
                     R.drawable.glyph_easter_phone3a_white,
                     R.drawable.glyph_easter_phone3a_blue,
                     R.drawable.glyph_easter_phone3a_black
-            };
-        }
-        if ("Nothing Phone (3a) Lite".equals(modelName)) {
-            return new int[]{
-                    R.drawable.glyph_easter_phone3a_lite_white,
-                    R.drawable.glyph_easter_phone3a_lite_black,
-                    R.drawable.glyph_easter_phone3a_lite_blue
             };
         }
         if ("Nothing Phone (3)".equals(modelName)) {
@@ -177,8 +151,8 @@ public class NothingPhoneEasterEgg {
         }
         if ("Nothing Phone (2a)".equals(modelName)) {
             return new int[]{
-                    R.drawable.glyph_easter_phone2a_black,
                     R.drawable.glyph_easter_phone2a_white,
+                    R.drawable.glyph_easter_phone2a_black,
                     R.drawable.glyph_easter_phone2a_blue
             };
         }
