@@ -54,12 +54,11 @@ def test_icon_anydpi_xml_monochrome_and_background(variant):
             content = f.read()
         assert '<monochrome' in content, f'{name} must contain <monochrome tag'
         assert f'moltengram_{variant}_icon_background' in content, f'{name} must reference moltengram_{variant}_icon_background'
-        assert f'moltengram_{variant}_icon_monochrome' in content, f'{name} must reference moltengram_{variant}_icon_monochrome'
+        assert 'moltengram_icon_monochrome' in content, f'{name} must reference unified moltengram_icon_monochrome'
 
 
-@pytest.mark.parametrize('variant', VARIANTS)
-def test_dedicated_monochrome_drawable_valid_vector(variant):
-    drawable_path = os.path.join(RES_DIR, 'drawable', f'moltengram_{variant}_icon_monochrome.xml')
+def test_unified_monochrome_drawable_valid_vector():
+    drawable_path = os.path.join(RES_DIR, 'drawable', 'moltengram_icon_monochrome.xml')
     assert os.path.exists(drawable_path), f'{drawable_path} must exist'
     tree = ET.parse(drawable_path)
     root = tree.getroot()

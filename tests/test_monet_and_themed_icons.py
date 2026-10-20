@@ -88,10 +88,12 @@ def test_halloween_icon_pack_maps_all_drawer_icons():
     assert 'msg_settings_hw_solar' in content
 
 
-def test_nothing_os_monochrome_solid_triangle():
-    nothing_mono_path = os.path.join(RES_DIR, 'drawable/moltengram_nothing_icon_monochrome.xml')
-    with open(nothing_mono_path, 'r', encoding='utf-8') as f:
-        content = f.read()
-    assert 'M 40,32 L 40,47 L 61,47 Z' in content
-    assert 'evenOdd' not in content
+def test_moltengram_launcher_icons_use_unified_monet_flame():
+    for variant in ['nothing', 'halloween', 'default', 'classic', 'proton']:
+        name = f'ic_launcher_moltengram_{variant}.xml' if variant != 'default' else 'ic_launcher_moltengram.xml'
+        xml_path = os.path.join(RES_DIR, 'mipmap-anydpi-v26', name)
+        assert os.path.exists(xml_path), f'{xml_path} must exist'
+        with open(xml_path, 'r', encoding='utf-8') as f:
+            content = f.read()
+        assert '@drawable/moltengram_icon_monochrome' in content, f'{name} must use unified Monet icon moltengram_icon_monochrome'
 
