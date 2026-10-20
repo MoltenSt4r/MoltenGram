@@ -83,6 +83,10 @@ public class IconsResources extends Resources {
         }
     }
 
+    public void invalidate() {
+        _iconsType = -1;
+    }
+
     private int getConversion(int icon) {
         return getConversion(icon, -1);
     }
@@ -91,11 +95,7 @@ public class IconsResources extends Resources {
         if (icon == 0) {
             return 0;
         }
-        if (_iconsType == -1) {
-            _iconsType = NaConfig.INSTANCE.getIconReplacements().Int();
-        }
-
-        int consideredIconsType = forcedIconsType == -1 ? _iconsType : forcedIconsType;
+        int consideredIconsType = forcedIconsType == -1 ? NaConfig.INSTANCE.getIconReplacements().Int() : forcedIconsType;
 
         if (consideredIconsType == ICON_REPLACE_SOLAR) {
             return SolarIcons.Companion.getConversion(icon);

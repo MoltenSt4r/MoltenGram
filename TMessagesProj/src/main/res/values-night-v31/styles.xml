@@ -8,7 +8,9 @@
         <item name="android:windowBackground">#1f2732</item>
         <item name="android:windowContentOverlay">@null</item>
         <item name="android:colorPrimaryDark">#1c242e</item>
-        <item name="android:colorPrimary">#232d3a</item>
+        <item name="android:colorPrimary">@android:color/system_accent1_200</item>
+        <item name="android:colorAccent">@android:color/system_accent1_200</item>
+        <item name="android:colorControlActivated">@android:color/system_accent1_200</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:forceDarkAllowed">false</item>
         <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>

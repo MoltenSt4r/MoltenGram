@@ -605,6 +605,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 }
             }
             rebuildAll();
+            app.exteraless.icons.IconPackManager.getInstance().reload();
             Theme.reloadAllResources(ApplicationLoader.applicationContext);
             return;
         } else if (position == iconPacksRow) {

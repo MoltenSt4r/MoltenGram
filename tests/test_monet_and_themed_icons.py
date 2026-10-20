@@ -56,3 +56,42 @@ def test_update_layout_uses_dynamic_monet_accent():
     assert 'Theme.getColor(Theme.key_featuredStickers_addButton)' in content, (
         "UpdateLayout must query dynamic theme accent key_featuredStickers_addButton"
     )
+
+
+def test_v31_styles_use_system_accent_monet():
+    v31_path = os.path.join(RES_DIR, 'values-v31/styles.xml')
+    with open(v31_path, 'r', encoding='utf-8') as f:
+        v31_content = f.read()
+    assert '@android:color/system_accent1_' in v31_content, "values-v31 must define system_accent1"
+
+    v31_night_path = os.path.join(RES_DIR, 'values-night-v31/styles.xml')
+    with open(v31_night_path, 'r', encoding='utf-8') as f:
+        night_content = f.read()
+    assert '@android:color/system_accent1_' in night_content, "values-night-v31 must define system_accent1"
+
+
+def test_theme_progress_circle_falls_back_to_monet_accent():
+    theme_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ActionBar/Theme.java')
+    with open(theme_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    assert 'fallbackKeys.put(key_progressCircle, key_featuredStickers_addButton);' in content
+
+
+def test_halloween_icon_pack_maps_all_drawer_icons():
+    base_packs_path = os.path.join(JAVA_DIR, 'app/exteraless/icons/BaseIconPacks.java')
+    with open(base_packs_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    assert 'msg_calls_hw_solar' in content
+    assert 'msg_contacts_hw_solar' in content
+    assert 'msg_groups_hw_solar' in content
+    assert 'msg_saved_hw_solar' in content
+    assert 'msg_settings_hw_solar' in content
+
+
+def test_nothing_os_monochrome_solid_triangle():
+    nothing_mono_path = os.path.join(RES_DIR, 'drawable/moltengram_nothing_icon_monochrome.xml')
+    with open(nothing_mono_path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    assert 'M 40,32 L 40,47 L 61,47 Z' in content
+    assert 'evenOdd' not in content
+

@@ -132,7 +132,10 @@ public final class BaseIconPacks {
     public static int getIcon(int resId) {
         if (app.exteraless.appearance.AppearanceConfig.halloweenTheme()) {
             int selected = getSelected();
-            if (selected == BASE_SOLAR) {
+            if (selected == BASE_REMIX) {
+                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_remix;
+                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw_remix;
+            } else {
                 if (resId == R.drawable.msg_calls) return R.drawable.msg_calls_hw_solar;
                 if (resId == R.drawable.msg_contacts) return R.drawable.msg_contacts_hw_solar;
                 if (resId == R.drawable.msg_groups) return R.drawable.msg_groups_hw_solar;
@@ -140,12 +143,6 @@ public final class BaseIconPacks {
                 if (resId == R.drawable.msg_settings) return R.drawable.msg_settings_hw_solar;
                 if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_solar;
                 if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw_solar;
-            } else if (selected == BASE_REMIX) {
-                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw_remix;
-                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw_remix;
-            } else {
-                if (resId == R.drawable.msg_secret) return R.drawable.msg_secret_hw;
-                if (resId == R.drawable.msg_channel) return R.drawable.msg_channel_hw;
             }
         }
         SparseIntArray map = getMap(getSelected());
@@ -207,9 +204,14 @@ public final class BaseIconPacks {
     }
 
     private static SparseIntArray buildHalloween() {
-        SparseIntArray map = new SparseIntArray(4);
-        map.put(R.drawable.msg_secret, R.drawable.msg_secret_hw);
-        map.put(R.drawable.msg_channel, R.drawable.msg_channel_hw);
+        SparseIntArray map = new SparseIntArray(8);
+        map.put(R.drawable.msg_calls,    R.drawable.msg_calls_hw_solar);
+        map.put(R.drawable.msg_contacts, R.drawable.msg_contacts_hw_solar);
+        map.put(R.drawable.msg_groups,   R.drawable.msg_groups_hw_solar);
+        map.put(R.drawable.msg_saved,    R.drawable.msg_saved_hw_solar);
+        map.put(R.drawable.msg_settings, R.drawable.msg_settings_hw_solar);
+        map.put(R.drawable.msg_secret,   R.drawable.msg_secret_hw_solar);
+        map.put(R.drawable.msg_channel,  R.drawable.msg_channel_hw_solar);
         return map;
     }
 
