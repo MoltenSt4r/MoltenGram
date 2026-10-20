@@ -1091,6 +1091,14 @@
             </intent-filter>
         </receiver>
 
+        <receiver
+            android:name="app.exteraless.ota.MoltenGramPackageInstallReceiver"
+            android:exported="false">
+            <intent-filter>
+                <action android:name="app.exteraless.ota.INSTALL_STATUS" />
+            </intent-filter>
+        </receiver>
+
         <service
             android:name="app.exteraless.ota.MoltenGramOtaJobService"
             android:permission="android.permission.BIND_JOB_SERVICE"

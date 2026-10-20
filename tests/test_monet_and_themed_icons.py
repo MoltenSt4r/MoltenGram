@@ -97,3 +97,26 @@ def test_moltengram_launcher_icons_use_unified_monet_flame():
             content = f.read()
         assert '@drawable/moltengram_icon_monochrome' in content, f'{name} must use unified Monet icon moltengram_icon_monochrome'
 
+
+def test_package_installer_session_support_and_dialog_inline_progress_monet():
+    ota_manager_path = os.path.join(JAVA_DIR, 'app/exteraless/ota/MoltenGramOtaManager.java')
+    with open(ota_manager_path, 'r', encoding='utf-8') as f:
+        ota_content = f.read()
+    assert 'installViaPackageInstallerSession' in ota_content, "OTA Manager must support PackageInstaller.Session"
+    assert 'USER_ACTION_NOT_REQUIRED' in ota_content, "Must use USER_ACTION_NOT_REQUIRED for silent in-app update"
+
+    receiver_path = os.path.join(JAVA_DIR, 'app/exteraless/ota/MoltenGramPackageInstallReceiver.java')
+    assert os.path.exists(receiver_path), f"{receiver_path} must exist"
+
+    manifest_path = os.path.join(REPO_ROOT, 'TMessagesProj/src/main/AndroidManifest.xml')
+    with open(manifest_path, 'r', encoding='utf-8') as f:
+        manifest_content = f.read()
+    assert 'MoltenGramPackageInstallReceiver' in manifest_content, "MoltenGramPackageInstallReceiver must be in manifest"
+
+    theme_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ActionBar/Theme.java')
+    with open(theme_path, 'r', encoding='utf-8') as f:
+        theme_content = f.read()
+    assert 'fallbackKeys.put(key_dialog_inlineProgress, key_featuredStickers_addButton);' in theme_content, (
+        "Inline progress dialog must follow Monet accent key_featuredStickers_addButton"
+    )
+

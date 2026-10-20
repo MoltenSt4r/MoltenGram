@@ -34,11 +34,16 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.Scanner;
+import android.content.pm.PackageManager;
+import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.Theme;
 
 public class MoltenGramOtaManager {
 
@@ -896,6 +901,14 @@ public class MoltenGramOtaManager {
                 }
             }
 
+            // On Android 12+ (API 31+), install directly via PackageInstaller session to display the in-app
+            // Monet progress indicator instead of the OS PackageInstaller baseline purple screen.
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (installViaPackageInstallerSession(activity, apkFile)) {
+                    return;
+                }
+            }
+
             Intent intent = new Intent(Intent.ACTION_VIEW);
             intent.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
 
@@ -910,6 +923,96 @@ public class MoltenGramOtaManager {
             activity.startActivity(intent);
         } catch (Exception e) {
             FileLog.e(e);
+        }
+    }
+
+    private boolean installViaPackageInstallerSession(Activity activity, File apkFile) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
+            return false;
+        }
+        if (activity == null || apkFile == null || !apkFile.exists()) {
+            return false;
+        }
+        try {
+            PackageManager pm = activity.getPackageManager();
+            if (!pm.canRequestPackageInstalls()) {
+                return false;
+            }
+
+            // Show in-app Monet progress dialog
+            final AlertDialog[] dialogHolder = new AlertDialog[1];
+            AndroidUtilities.runOnUIThread(() -> {
+                try {
+                    AlertDialog progressDialog = new AlertDialog(activity, 3);
+                    progressDialog.setMessage(LocaleController.getString("Updating", R.string.Updating));
+                    progressDialog.setCanceledOnTouchOutside(false);
+                    progressDialog.setCancelable(false);
+                    progressDialog.show();
+                    dialogHolder[0] = progressDialog;
+                } catch (Throwable ignored) {}
+            });
+
+            Utilities.globalQueue.postRunnable(() -> {
+                android.content.pm.PackageInstaller packageInstaller = pm.getPackageInstaller();
+                android.content.pm.PackageInstaller.SessionParams params =
+                        new android.content.pm.PackageInstaller.SessionParams(android.content.pm.PackageInstaller.SessionParams.MODE_FULL_INSTALL);
+                params.setAppPackageName(activity.getPackageName());
+                params.setRequireUserAction(android.content.pm.PackageInstaller.SessionParams.USER_ACTION_NOT_REQUIRED);
+
+                int sessionId = -1;
+                try {
+                    sessionId = packageInstaller.createSession(params);
+                    android.content.pm.PackageInstaller.Session session = packageInstaller.openSession(sessionId);
+
+                    try (OutputStream out = session.openWrite("package", 0, apkFile.length());
+                         InputStream in = new FileInputStream(apkFile)) {
+                        byte[] buffer = new byte[65536];
+                        int len;
+                        while ((len = in.read(buffer)) != -1) {
+                            out.write(buffer, 0, len);
+                        }
+                        session.fsync(out);
+                    }
+
+                    Intent intent = new Intent(activity, MoltenGramPackageInstallReceiver.class);
+                    intent.setAction(MoltenGramPackageInstallReceiver.ACTION_INSTALL_STATUS);
+                    PendingIntent pi = PendingIntent.getBroadcast(
+                            activity,
+                            sessionId,
+                            intent,
+                            PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_MUTABLE
+                    );
+                    session.commit(pi.getIntentSender());
+                    session.close();
+                } catch (Throwable t) {
+                    FileLog.e("PackageInstaller session streaming failed", t);
+                    if (sessionId != -1) {
+                        try {
+                            packageInstaller.abandonSession(sessionId);
+                        } catch (Throwable ignored) {}
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (dialogHolder[0] != null) {
+                            try {
+                                dialogHolder[0].dismiss();
+                            } catch (Throwable ignored) {}
+                        }
+                        try {
+                            Intent fallback = new Intent(Intent.ACTION_VIEW);
+                            fallback.setFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION | Intent.FLAG_ACTIVITY_NEW_TASK);
+                            Uri uri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", apkFile);
+                            fallback.setDataAndType(uri, "application/vnd.android.package-archive");
+                            activity.startActivity(fallback);
+                        } catch (Throwable e) {
+                            FileLog.e("Fallback install failed", e);
+                        }
+                    });
+                }
+            });
+            return true;
+        } catch (Throwable t) {
+            FileLog.e("Failed to initiate PackageInstaller session", t);
+            return false;
         }
     }
 
