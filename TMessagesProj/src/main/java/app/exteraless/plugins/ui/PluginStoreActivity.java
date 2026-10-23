@@ -2153,9 +2153,7 @@ public class PluginStoreActivity extends BaseFragment {
         if (msgId > 0) {
             TLRPC.TL_channels_getMessages getReq = new TLRPC.TL_channels_getMessages();
             getReq.channel = MessagesController.getInstance(currentAccount).getInputChannel(chat);
-            TLRPC.TL_inputMessageID inputMsgId = new TLRPC.TL_inputMessageID();
-            inputMsgId.id = msgId;
-            getReq.id.add(inputMsgId);
+            getReq.id.add(msgId);
             ConnectionsManager.getInstance(currentAccount).sendRequest(getReq, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
                 if (res instanceof TLRPC.messages_Messages) {
                     TLRPC.messages_Messages mRes = (TLRPC.messages_Messages) res;
