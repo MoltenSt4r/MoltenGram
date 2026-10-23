@@ -589,7 +589,15 @@ public class SettingsHelper {
         String capitalized = Character.toUpperCase(key.charAt(0)) + key.substring(1);
         String prefix = fragment.getSearchPrefix();
         if (prefix != null) {
-            String alias = SEARCH_TITLE_ALIASES.get(prefix + ":" + key);
+            String fullKey = prefix + ":" + key;
+            if ("OEAppearance:hideAllChats".equals(fullKey)) {
+                return LocaleController.formatString(R.string.OEAppearanceHideAllChats, getString(R.string.FilterAllChats));
+            } else if ("OEChats:replaceEdited".equals(fullKey)) {
+                return LocaleController.formatString(R.string.OEChatsReplaceEditedWithIcon, getString(R.string.EditedMessage));
+            } else if ("OEChats:hideShareButton".equals(fullKey)) {
+                return LocaleController.formatString(R.string.OEChatsHideShareButton, getString(R.string.ShareFile));
+            }
+            String alias = SEARCH_TITLE_ALIASES.get(fullKey);
             if (alias != null) {
                 title = resolved(alias);
                 if (title != null) {

@@ -82,6 +82,7 @@ public class CoverImage extends FrameLayout {
                 setRoundRadius(0);
                 getImageReceiver().setRoundRadius(0);
                 setElevation(0);
+                setTranslationZ(0);
             } else {
                 setRoundRadius(radius);
                 getImageReceiver().setRoundRadius(radius);

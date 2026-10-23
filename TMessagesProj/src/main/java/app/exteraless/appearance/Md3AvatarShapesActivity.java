@@ -7,6 +7,7 @@ import android.graphics.Path;
 import android.graphics.drawable.GradientDrawable;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -14,6 +15,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.GridLayoutManager;
+import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -39,6 +41,8 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
  * Allows choosing custom shapes per chat type (Users, Bots, Groups, Channels, Self).
  */
 public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
+
+    private static final int TYPE_SHAPE_CAROUSEL = 100;
 
     private int headerRow;
     private int usersRow;
@@ -82,17 +86,37 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         }
 
         @Override
+        protected boolean isSectionContent(int viewType) {
+            if (viewType == TYPE_SHAPE_CAROUSEL) {
+                return true;
+            }
+            return super.isSectionContent(viewType);
+        }
+
+        @Override
         public int getItemViewType(int position) {
             if (position == headerRow) {
                 return TYPE_HEADER;
             } else if (position == usersRow || position == botsRow || position == groupsRow || position == channelsRow || position == selfRow) {
-                return TYPE_SETTINGS;
+                return TYPE_SHAPE_CAROUSEL;
             } else if (position == resetRow) {
                 return TYPE_TEXT;
             } else if (position == infoRow) {
                 return TYPE_INFO_PRIVACY;
             }
             return TYPE_SHADOW;
+        }
+
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_SHAPE_CAROUSEL) {
+                PeerShapeCarouselCell cell = new PeerShapeCarouselCell(mContext);
+                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(cell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
@@ -106,36 +130,41 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
                     }
                     break;
                 }
-                case TYPE_SETTINGS: {
-                    TextSettingsCell cell = (TextSettingsCell) holder.itemView;
+                case TYPE_SHAPE_CAROUSEL: {
+                    PeerShapeCarouselCell cell = (PeerShapeCarouselCell) holder.itemView;
                     if (position == usersRow) {
-                        cell.setTextAndValue(
+                        cell.bind(
+                                Md3AvatarShapes.PEER_TYPE_USER,
                                 LocaleController.getString("md3_avatar_shape_users", R.string.md3_avatar_shape_users),
-                                getShapeName(AppearanceConfig.avatarShapeUsers.Int()),
+                                AppearanceConfig.avatarShapeUsers.Int(),
                                 true
                         );
                     } else if (position == botsRow) {
-                        cell.setTextAndValue(
+                        cell.bind(
+                                Md3AvatarShapes.PEER_TYPE_BOT,
                                 LocaleController.getString("md3_avatar_shape_bots", R.string.md3_avatar_shape_bots),
-                                getShapeName(AppearanceConfig.avatarShapeBots.Int()),
+                                AppearanceConfig.avatarShapeBots.Int(),
                                 true
                         );
                     } else if (position == groupsRow) {
-                        cell.setTextAndValue(
+                        cell.bind(
+                                Md3AvatarShapes.PEER_TYPE_GROUP,
                                 LocaleController.getString("md3_avatar_shape_groups", R.string.md3_avatar_shape_groups),
-                                getShapeName(AppearanceConfig.avatarShapeGroups.Int()),
+                                AppearanceConfig.avatarShapeGroups.Int(),
                                 true
                         );
                     } else if (position == channelsRow) {
-                        cell.setTextAndValue(
+                        cell.bind(
+                                Md3AvatarShapes.PEER_TYPE_CHANNEL,
                                 LocaleController.getString("md3_avatar_shape_channels", R.string.md3_avatar_shape_channels),
-                                getShapeName(AppearanceConfig.avatarShapeChannels.Int()),
+                                AppearanceConfig.avatarShapeChannels.Int(),
                                 true
                         );
                     } else if (position == selfRow) {
-                        cell.setTextAndValue(
+                        cell.bind(
+                                Md3AvatarShapes.PEER_TYPE_SELF,
                                 LocaleController.getString("md3_avatar_shape_self", R.string.md3_avatar_shape_self),
-                                getShapeName(AppearanceConfig.avatarShapeSelf.Int()),
+                                AppearanceConfig.avatarShapeSelf.Int(),
                                 false
                         );
                     }
@@ -160,39 +189,30 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         }
     }
 
+    private void applyPeerShape(int peerType, int shapeId) {
+        switch (peerType) {
+            case Md3AvatarShapes.PEER_TYPE_USER:
+                AppearanceConfig.avatarShapeUsers.setConfigInt(shapeId);
+                break;
+            case Md3AvatarShapes.PEER_TYPE_BOT:
+                AppearanceConfig.avatarShapeBots.setConfigInt(shapeId);
+                break;
+            case Md3AvatarShapes.PEER_TYPE_GROUP:
+                AppearanceConfig.avatarShapeGroups.setConfigInt(shapeId);
+                break;
+            case Md3AvatarShapes.PEER_TYPE_CHANNEL:
+                AppearanceConfig.avatarShapeChannels.setConfigInt(shapeId);
+                break;
+            case Md3AvatarShapes.PEER_TYPE_SELF:
+                AppearanceConfig.avatarShapeSelf.setConfigInt(shapeId);
+                break;
+        }
+        notifyAvatarsChanged();
+    }
+
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == usersRow) {
-            openShapePicker(
-                    Md3AvatarShapes.PEER_TYPE_USER,
-                    LocaleController.getString("md3_avatar_shape_users", R.string.md3_avatar_shape_users),
-                    AppearanceConfig.avatarShapeUsers.Int()
-            );
-        } else if (position == botsRow) {
-            openShapePicker(
-                    Md3AvatarShapes.PEER_TYPE_BOT,
-                    LocaleController.getString("md3_avatar_shape_bots", R.string.md3_avatar_shape_bots),
-                    AppearanceConfig.avatarShapeBots.Int()
-            );
-        } else if (position == groupsRow) {
-            openShapePicker(
-                    Md3AvatarShapes.PEER_TYPE_GROUP,
-                    LocaleController.getString("md3_avatar_shape_groups", R.string.md3_avatar_shape_groups),
-                    AppearanceConfig.avatarShapeGroups.Int()
-            );
-        } else if (position == channelsRow) {
-            openShapePicker(
-                    Md3AvatarShapes.PEER_TYPE_CHANNEL,
-                    LocaleController.getString("md3_avatar_shape_channels", R.string.md3_avatar_shape_channels),
-                    AppearanceConfig.avatarShapeChannels.Int()
-            );
-        } else if (position == selfRow) {
-            openShapePicker(
-                    Md3AvatarShapes.PEER_TYPE_SELF,
-                    LocaleController.getString("md3_avatar_shape_self", R.string.md3_avatar_shape_self),
-                    AppearanceConfig.avatarShapeSelf.Int()
-            );
-        } else if (position == resetRow) {
+        if (position == resetRow) {
             AppearanceConfig.avatarShapeUsers.setConfigInt(0);
             AppearanceConfig.avatarShapeBots.setConfigInt(0);
             AppearanceConfig.avatarShapeGroups.setConfigInt(0);
@@ -366,7 +386,180 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
     }
 
     /**
-     * Item cell for the shape picker grid displaying shape preview and label.
+     * Inline horizontal infinite-scrolling carousel cell for selecting MD3 avatar shapes directly under each category title.
+     */
+    private class PeerShapeCarouselCell extends LinearLayout {
+
+        private static final int INFINITE_COUNT = Integer.MAX_VALUE;
+        private static final int MIDDLE_BASE = (INFINITE_COUNT / 2) - ((INFINITE_COUNT / 2) % Md3AvatarShapes.SHAPES_COUNT);
+
+        private final TextView titleView;
+        private final TextView valueBadgeView;
+        private final GradientDrawable badgeBg;
+        private final RecyclerListView carouselView;
+        private final LinearLayoutManager carouselLayoutManager;
+        private final CarouselAdapter carouselAdapter;
+        private int peerType;
+        private int currentShapeId = -1;
+        private boolean needDivider;
+
+        public PeerShapeCarouselCell(Context context) {
+            super(context);
+            setOrientation(VERTICAL);
+            setWillNotDraw(false);
+            setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12));
+
+            LinearLayout headerLayout = new LinearLayout(context);
+            headerLayout.setOrientation(HORIZONTAL);
+            headerLayout.setGravity(Gravity.CENTER_VERTICAL);
+            headerLayout.setPadding(AndroidUtilities.dp(21), 0, AndroidUtilities.dp(21), AndroidUtilities.dp(8));
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            titleView.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
+            titleView.setSingleLine(true);
+            titleView.setEllipsize(android.text.TextUtils.TruncateAt.END);
+            headerLayout.addView(titleView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.CENTER_VERTICAL));
+
+            valueBadgeView = new TextView(context);
+            valueBadgeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            valueBadgeView.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
+            valueBadgeView.setGravity(Gravity.CENTER);
+            valueBadgeView.setSingleLine(true);
+            valueBadgeView.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(3), AndroidUtilities.dp(10), AndroidUtilities.dp(3));
+
+            badgeBg = new GradientDrawable();
+            badgeBg.setCornerRadius(AndroidUtilities.dp(12));
+            valueBadgeView.setBackground(badgeBg);
+            headerLayout.addView(valueBadgeView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+            addView(headerLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            carouselView = new RecyclerListView(context) {
+                private float startX;
+                private float startY;
+
+                @Override
+                public boolean onInterceptTouchEvent(MotionEvent e) {
+                    int action = e.getActionMasked();
+                    if (action == MotionEvent.ACTION_DOWN) {
+                        startX = e.getX();
+                        startY = e.getY();
+                        if (getParent() != null) {
+                            getParent().requestDisallowInterceptTouchEvent(true);
+                        }
+                    } else if (action == MotionEvent.ACTION_MOVE) {
+                        float dx = Math.abs(e.getX() - startX);
+                        float dy = Math.abs(e.getY() - startY);
+                        if (getParent() != null) {
+                            getParent().requestDisallowInterceptTouchEvent(dx >= dy * 0.7f);
+                        }
+                    }
+                    return super.onInterceptTouchEvent(e);
+                }
+            };
+            carouselView.setClipToPadding(false);
+            carouselView.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            carouselView.setHorizontalScrollBarEnabled(false);
+            carouselView.setItemAnimator(null);
+            carouselLayoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false);
+            carouselView.setLayoutManager(carouselLayoutManager);
+            carouselAdapter = new CarouselAdapter();
+            carouselView.setAdapter(carouselAdapter);
+            carouselView.setOnItemClickListener((view, position) -> {
+                int shapeId = Math.floorMod(position, Md3AvatarShapes.SHAPES_COUNT);
+                if (shapeId != currentShapeId) {
+                    currentShapeId = shapeId;
+                    updateHeaderBadge();
+                    applyPeerShape(peerType, shapeId);
+                    updateVisibleItems();
+                }
+            });
+
+            addView(carouselView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 86));
+        }
+
+        private void updateHeaderBadge() {
+            valueBadgeView.setText(getShapeName(currentShapeId));
+            int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accentColor == 0) {
+                accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText);
+            }
+            badgeBg.setColor(Theme.multAlpha(accentColor, 0.14f));
+            valueBadgeView.setTextColor(accentColor);
+        }
+
+        private void updateVisibleItems() {
+            int childCount = carouselView.getChildCount();
+            for (int i = 0; i < childCount; i++) {
+                View child = carouselView.getChildAt(i);
+                int pos = carouselView.getChildAdapterPosition(child);
+                if (pos != RecyclerView.NO_POSITION && child instanceof ShapeItemCell) {
+                    int shapeId = Math.floorMod(pos, Md3AvatarShapes.SHAPES_COUNT);
+                    ((ShapeItemCell) child).setShape(shapeId, shapeId == currentShapeId);
+                }
+            }
+        }
+
+        public void bind(int peerType, String title, int selectedShapeId, boolean divider) {
+            boolean peerChanged = this.peerType != peerType || this.currentShapeId < 0;
+            boolean shapeChanged = this.currentShapeId != selectedShapeId;
+            this.peerType = peerType;
+            this.currentShapeId = selectedShapeId >= 0 && selectedShapeId < Md3AvatarShapes.SHAPES_COUNT ? selectedShapeId : 0;
+            this.needDivider = divider;
+            titleView.setText(title);
+            titleView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            updateHeaderBadge();
+
+            if (peerChanged) {
+                int targetPos = MIDDLE_BASE + this.currentShapeId;
+                carouselLayoutManager.scrollToPositionWithOffset(targetPos, AndroidUtilities.dp(12));
+                carouselAdapter.notifyDataSetChanged();
+            } else if (shapeChanged) {
+                updateVisibleItems();
+            }
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            if (needDivider) {
+                canvas.drawLine(
+                        LocaleController.isRTL ? 0 : AndroidUtilities.dp(21),
+                        getMeasuredHeight() - 1,
+                        getMeasuredWidth() - (LocaleController.isRTL ? AndroidUtilities.dp(21) : 0),
+                        getMeasuredHeight() - 1,
+                        Theme.dividerPaint
+                );
+            }
+        }
+
+        private class CarouselAdapter extends RecyclerView.Adapter<RecyclerListView.Holder> {
+
+            @NonNull
+            @Override
+            public RecyclerListView.Holder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+                ShapeItemCell cell = new ShapeItemCell(parent.getContext(), true);
+                return new RecyclerListView.Holder(cell);
+            }
+
+            @Override
+            public void onBindViewHolder(@NonNull RecyclerListView.Holder holder, int position) {
+                ShapeItemCell cell = (ShapeItemCell) holder.itemView;
+                int shapeId = Math.floorMod(position, Md3AvatarShapes.SHAPES_COUNT);
+                cell.setShape(shapeId, shapeId == currentShapeId);
+            }
+
+            @Override
+            public int getItemCount() {
+                return INFINITE_COUNT;
+            }
+        }
+    }
+
+    /**
+     * Item cell for the shape picker grid or horizontal carousel displaying shape preview and label.
      */
     private static class ShapeItemCell extends LinearLayout {
 
@@ -375,24 +568,37 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         private final GradientDrawable bgDrawable;
 
         public ShapeItemCell(Context context) {
+            this(context, false);
+        }
+
+        public ShapeItemCell(Context context, boolean compactCarousel) {
             super(context);
             setOrientation(VERTICAL);
             setGravity(Gravity.CENTER);
-            setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(10), AndroidUtilities.dp(6), AndroidUtilities.dp(8));
+            if (compactCarousel) {
+                setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(8), AndroidUtilities.dp(6), AndroidUtilities.dp(6));
+            } else {
+                setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(10), AndroidUtilities.dp(6), AndroidUtilities.dp(8));
+            }
 
             bgDrawable = new GradientDrawable();
             bgDrawable.setCornerRadius(AndroidUtilities.dp(16));
             setBackground(bgDrawable);
 
             RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(
-                    ViewGroup.LayoutParams.MATCH_PARENT,
+                    compactCarousel ? AndroidUtilities.dp(74) : ViewGroup.LayoutParams.MATCH_PARENT,
                     ViewGroup.LayoutParams.WRAP_CONTENT
             );
-            lp.setMargins(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+            if (compactCarousel) {
+                lp.setMargins(AndroidUtilities.dp(4), AndroidUtilities.dp(2), AndroidUtilities.dp(4), AndroidUtilities.dp(2));
+            } else {
+                lp.setMargins(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+            }
             setLayoutParams(lp);
 
+            int iconDp = compactCarousel ? 40 : 44;
             previewView = new ShapePreviewView(context);
-            addView(previewView, LayoutHelper.createLinear(44, 44, Gravity.CENTER_HORIZONTAL));
+            addView(previewView, LayoutHelper.createLinear(iconDp, iconDp, Gravity.CENTER_HORIZONTAL));
 
             textView = new TextView(context);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
@@ -400,7 +606,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             textView.setGravity(Gravity.CENTER);
             textView.setSingleLine(true);
             textView.setEllipsize(android.text.TextUtils.TruncateAt.END);
-            addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 6, 0, 0));
+            addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, compactCarousel ? 4 : 6, 0, 0));
         }
 
         public void setShape(int shapeId, boolean isSelected) {

@@ -10890,7 +10890,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
                 if (isMediaCarouselMessage()) {
                     int yOffset = namesOffset > 0 ? dp(7) : dp(5);
-                    int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : dp(26);
+                    boolean hasReactionsRow = !reactionsLayoutInBubble.isEmpty && !reactionsLayoutInBubble.isSmall;
+                    int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : (hasReactionsRow ? dp(8) : dp(26));
                     totalHeight = photoHeight + yOffset + namesOffset + footerHeight + additionHeight;
                 } else {
                     totalHeight = photoHeight + dp(14) + namesOffset + additionHeight;
@@ -14170,7 +14171,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             resultHeight = botDraftHeightController.getOverrideMeasureHeight(currentMessageObject, normHeight);
         }
         if (isMediaCarouselMessage()) {
-            int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : dp(26);
+            boolean hasReactionsRow = !reactionsLayoutInBubble.isEmpty && !reactionsLayoutInBubble.isSmall;
+            int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : (hasReactionsRow ? dp(8) : dp(26));
             int neededHeight = (int) photoImage.getImageY() + (int) photoImage.getImageHeight() + footerHeight;
             if (captionLayout != null && !captionAbove) {
                 neededHeight += captionLayout.textHeight() + dp(14);

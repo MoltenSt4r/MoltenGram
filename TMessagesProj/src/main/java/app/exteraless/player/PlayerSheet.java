@@ -334,6 +334,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             @Override
             public void getOutline(View view, Outline outline) {
                 if (cover.getShapeId() >= 0) {
+                    outline.setAlpha(0f);
                     outline.setEmpty();
                 } else {
                     outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
@@ -653,8 +654,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         startMorph(0f, 1f, 420, () -> {
             clearMorph();
             restoreMorphCover();
-            cover.setTranslationZ(-cover.getElevation());
-            cover.animate().translationZ(0).setDuration(250).start();
+            if (cover.getShapeId() >= 0) {
+                cover.setElevation(0);
+                cover.setTranslationZ(0);
+            } else {
+                cover.setTranslationZ(-cover.getElevation());
+                cover.animate().translationZ(0).setDuration(250).start();
+            }
             morphBarsState = -1;
             applySystemBars(true);
             onOpenAnimationEnd();
@@ -930,7 +936,22 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         lerpRect(morphCoverFrom, morphCoverTo, p, morphCover);
         float r = morphCoverFromRadius + (morphCoverToRadius - morphCoverFromRadius) * p;
         morphPath.rewind();
-        morphPath.addRoundRect(morphCover, r, r, Path.Direction.CW);
+        if (cover.getShapeId() >= 0) {
+            Path customShape = app.exteraless.appearance.Md3AvatarShapes.getShapePath(
+                    cover.getShapeId(),
+                    morphCover.left,
+                    morphCover.top,
+                    morphCover.width(),
+                    morphCover.height()
+            );
+            if (customShape != null) {
+                morphPath.set(customShape);
+            } else {
+                morphPath.addRoundRect(morphCover, r, r, Path.Direction.CW);
+            }
+        } else {
+            morphPath.addRoundRect(morphCover, r, r, Path.Direction.CW);
+        }
         canvas.save();
         canvas.clipPath(morphPath);
         Bitmap bitmap = morphCoverBitmap;

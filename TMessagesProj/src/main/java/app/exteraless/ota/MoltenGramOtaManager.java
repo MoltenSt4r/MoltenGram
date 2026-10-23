@@ -962,16 +962,22 @@ public class MoltenGramOtaManager {
                 dialog.setCancelable(false);
 
                 final boolean isDark = Theme.isCurrentThemeDark();
+                final Integer wpSeed = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                        ? MonetHelper.getWallpaperPrimarySeed(activity)
+                        : null;
 
-                // Dynamic Monet wallpaper surface color (never baseline purple 0x141218 or 0xfef7ff)
-                int bgColor = MonetHelper.getColor(isDark ? "surface_dark" : "surface_light");
+                // Dynamic Monet / active theme surface color (never baseline purple 0x141218 or 0xfef7ff)
+                int bgColor = Theme.getColor(isDark ? Theme.key_windowBackgroundWhite : Theme.key_dialogBackground);
                 if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
                     bgColor = Theme.getColor(isDark ? Theme.key_dialogBackground : Theme.key_windowBackgroundWhite);
                 }
                 if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
-                    int neutralBg = MonetHelper.getColor(isDark ? "background_dark" : "background_light");
-                    if (neutralBg != 0 && !MonetHelper.isStaticBaselineFrameworkRole(neutralBg)) {
-                        bgColor = neutralBg;
+                    bgColor = MonetHelper.getColor(isDark ? "surface_dark" : "surface_light");
+                }
+                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
+                    if (wpSeed != null && !MonetHelper.isStaticBaselineFrameworkRole(wpSeed)) {
+                        com.google.android.material.color.utilities.Hct hct = com.google.android.material.color.utilities.Hct.fromInt(wpSeed);
+                        bgColor = com.google.android.material.color.utilities.Hct.from(hct.getHue(), Math.min(4d, hct.getChroma() * 0.12d), isDark ? 6d : 98d).toInt();
                     } else {
                         bgColor = isDark ? 0xff121212 : 0xfff8f9fa;
                     }
@@ -984,16 +990,24 @@ public class MoltenGramOtaManager {
                 content.setOrientation(LinearLayout.VERTICAL);
                 content.setGravity(Gravity.CENTER);
 
-                // Dynamic Monet wallpaper accent and track colors
+                // Dynamic Monet wallpaper / active theme accent and track colors
                 int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = Theme.getColor(Theme.key_chats_actionBackground);
+                }
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = MonetHelper.getColor(isDark ? "primary_dark" : "primary_light");
+                }
                 if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
                     accentColor = MonetHelper.getColor(isDark ? "a1_200" : "a1_600");
                 }
                 if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = Theme.getColor(Theme.key_dialog_inlineProgress);
-                }
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = 0xff527da3;
+                    if (wpSeed != null && !MonetHelper.isStaticBaselineFrameworkRole(wpSeed)) {
+                        com.google.android.material.color.utilities.Hct hct = com.google.android.material.color.utilities.Hct.fromInt(wpSeed);
+                        accentColor = com.google.android.material.color.utilities.Hct.from(hct.getHue(), Math.max(36d, hct.getChroma()), isDark ? 80d : 40d).toInt();
+                    } else {
+                        accentColor = 0xff527da3;
+                    }
                 }
 
                 int trackColor = Theme.getColor(Theme.key_featuredStickers_unread);
@@ -1002,7 +1016,7 @@ public class MoltenGramOtaManager {
                     if (monetTrack != 0 && !MonetHelper.isStaticBaselineFrameworkRole(monetTrack)) {
                         trackColor = monetTrack;
                     } else {
-                        trackColor = Theme.multAlpha(accentColor, 0.25f);
+                        trackColor = Theme.multAlpha(accentColor, isDark ? 0.24f : 0.20f);
                     }
                 }
 

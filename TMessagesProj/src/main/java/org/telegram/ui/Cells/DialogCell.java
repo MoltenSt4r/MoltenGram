@@ -3712,6 +3712,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             if (currentDialogFolderId != 0) {
                 Theme.dialogs_archiveAvatarDrawable.setCallback(this);
                 avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_ARCHIVED);
+                avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_UNKNOWN;
+                avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_UNKNOWN);
                 avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
             } else {
                 if (useFromUserAsAvatar && message != null) {
@@ -3721,15 +3723,23 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     avatarDrawable.setInfo(currentAccount, user);
                     if (UserObject.isReplyUser(user)) {
                         avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_REPLIES);
+                        avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT;
+                        avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_BOT);
                         avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
                     } else if (UserObject.isAnonymous(user)) {
                         avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_ANONYMOUS);
+                        avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+                        avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER);
                         avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
                     } else if (UserObject.isUserSelf(user) && isSavedDialog && !isMonoForumTopicDialog) {
                         avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_MY_NOTES);
+                        avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                        avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF);
                         avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
                     } else if (UserObject.isUserSelf(user) && !useMeForMyMessages && !isMonoForumTopicDialog) {
                         avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_SAVED);
+                        avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                        avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF);
                         avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
                     } else {
                         avatarImage.setForUserOrChat(user, avatarDrawable, null, true, VectorAvatarThumbDrawable.TYPE_SMALL, false);

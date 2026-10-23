@@ -653,7 +653,11 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             currentImageDrawable = null;
             imageShader = null;
             composeShader = null;
+            currentThumbDrawable = null;
             thumbShader = null;
+            crossfadeImage = null;
+            crossfadeKey = null;
+            crossfadingWithThumb = false;
             crossfadeShader = null;
             legacyShader = null;
             legacyCanvas = null;
@@ -1047,6 +1051,17 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     }
 
     private void setStaticDrawable(Drawable bitmap) {
+        if (bitmap instanceof org.telegram.ui.Components.AvatarDrawable) {
+            org.telegram.ui.Components.AvatarDrawable ad = (org.telegram.ui.Components.AvatarDrawable) bitmap;
+            oeIsAvatar = true;
+            if (ad.getAvatarType() == org.telegram.ui.Components.AvatarDrawable.AVATAR_TYPE_SAVED
+                    || ad.getAvatarType() == org.telegram.ui.Components.AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
+                oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+                ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
+            } else {
+                oePeerType = ad.peerType;
+            }
+        }
         if (bitmap == staticThumbDrawable) {
             return;
         }

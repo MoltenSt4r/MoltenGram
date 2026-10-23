@@ -5006,6 +5006,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         updateStoriesPosting();
+        updateFloatingButtonOffset();
 
         searchTabsView = null;
 
@@ -9165,10 +9166,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private int miniPlayerPadding;
 
     public void setMiniPlayerInset(float inset, int padding) {
-        if (miniPlayerInset != inset) {
-            miniPlayerInset = inset;
-            updateFloatingButtonOffset();
-        }
+        miniPlayerInset = inset;
+        updateFloatingButtonOffset();
         if (miniPlayerPadding != padding) {
             miniPlayerPadding = padding;
             checkUi_chatListViewPaddingsBottom();
@@ -11154,6 +11153,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             updateTitleText();
             updateStatus(UserConfig.getInstance(account).getCurrentUser(), true);
             updateStoriesPosting();
+        updateFloatingButtonOffset();
         } else if (id == NotificationCenter.mainUserInfoChanged) {
             updateTitleText();
             updateStatus(UserConfig.getInstance(account).getCurrentUser(), true);
@@ -11196,6 +11196,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             updateVisibleRows(0);
         } else if (id == NotificationCenter.storiesEnabledUpdate) {
             updateStoriesPosting();
+        updateFloatingButtonOffset();
         } else if (id == NotificationCenter.unconfirmedAuthUpdate) {
             updateDialogsHint();
         } else if (id == NotificationCenter.premiumPromoUpdated) {

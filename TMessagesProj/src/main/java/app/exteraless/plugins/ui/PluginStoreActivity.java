@@ -118,6 +118,78 @@ public class PluginStoreActivity extends BaseFragment {
     private static final int FILTER_DEV = 7;
     public static final int FILTER_UPDATES = 8;
 
+    private static final java.util.regex.Pattern EXT_PATTERN = java.util.regex.Pattern.compile("\\.[^.]+$");
+    private static final java.util.regex.Pattern NON_ALNUM_ASCII_PATTERN = java.util.regex.Pattern.compile("[^a-zA-Z0-9]");
+    private static final java.util.regex.Pattern COMPACT_STRIP_PATTERN = java.util.regex.Pattern.compile("[^a-z0-9а-я]");
+    private static final java.util.regex.Pattern WORD_SPLIT_PATTERN = java.util.regex.Pattern.compile("[^a-zA-Z0-9а-яА-ЯёЁ]+");
+    private static final java.util.regex.Pattern WHITESPACE_SPLIT_PATTERN = java.util.regex.Pattern.compile("\\s+");
+    private static final java.util.regex.Pattern DASH_UNDERSCORE_PATTERN = java.util.regex.Pattern.compile("[-_]");
+    private static final java.util.regex.Pattern NORM_VERSION_SUFFIX_PATTERN = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|rel|ver)?\\s*[0-9]+(?:\\.[0-9]+)*(?:_rel_[0-9.]+)?.*$");
+    private static final java.util.regex.Pattern NORM_PARENS_SUFFIX_PATTERN = java.util.regex.Pattern.compile("\\s*\\([0-9]+\\)$");
+    private static final java.util.regex.Pattern ICON_ATTR_PATTERN = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern ICON_STICKER_URL_PATTERN = java.util.regex.Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern VER_TEXT_LABELED_PATTERN = java.util.regex.Pattern.compile("(?:version|версия|ver|v)\\.?\\s*[:=\\s]\\s*[\"']?([0-9]+(?:\\.[0-9]+)*)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern VER_TEXT_PREFIX_PATTERN = java.util.regex.Pattern.compile("(?:^|\\s)[vV]\\.?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern VER_TEXT_DOTTED_PATTERN = java.util.regex.Pattern.compile("\\b([0-9]+\\.[0-9]+(?:\\.[0-9]+)*)\\b");
+    private static final java.util.regex.Pattern VER_FNAME_SEP_PATTERN = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|ver)?([0-9]+(?:\\.[0-9]+)*)", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern VER_FNAME_ANY_PATTERN = java.util.regex.Pattern.compile("(?:v|ver)?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern NON_DIGITS_PATTERN = java.util.regex.Pattern.compile("[^0-9]");
+
+    private static volatile int installedCacheGeneration = 1;
+    private static volatile long lastInstalledSnapTime = 0L;
+    private static final Map<String, Plugin> installedByExactId = new HashMap<>();
+    private static final Map<String, Plugin> installedByNormId = new HashMap<>();
+    private static final Map<String, Plugin> installedByStrippedId = new HashMap<>();
+    private static final Map<String, Plugin> installedByNameLower = new HashMap<>();
+    private static final Map<String, Long> installedPathLastModified = new HashMap<>();
+
+    public static synchronized void invalidateInstalledPluginsCache() {
+        lastInstalledSnapTime = 0L;
+        installedCacheGeneration++;
+    }
+
+    private static synchronized void ensureInstalledPluginsSnap() {
+        long now = android.os.SystemClock.uptimeMillis();
+        Map<String, Plugin> map = PluginsController.getInstance().getPlugins();
+        int currentSize = map != null ? map.size() : 0;
+        if (now - lastInstalledSnapTime < 1500L && installedByExactId.size() == currentSize) {
+            return;
+        }
+        lastInstalledSnapTime = now;
+        installedCacheGeneration++;
+        installedByExactId.clear();
+        installedByNormId.clear();
+        installedByStrippedId.clear();
+        installedByNameLower.clear();
+        if (map == null || map.isEmpty()) {
+            return;
+        }
+        for (Plugin p : map.values()) {
+            if (p == null) continue;
+            String pid = p.getId();
+            if (!TextUtils.isEmpty(pid)) {
+                installedByExactId.put(pid, p);
+                String pNorm = normalizePluginId(pid).toLowerCase(Locale.ROOT);
+                installedByNormId.put(pNorm, p);
+                String pStripped = NON_ALNUM_ASCII_PATTERN.matcher(pNorm).replaceAll("");
+                if (!pStripped.isEmpty()) {
+                    installedByStrippedId.put(pStripped, p);
+                }
+            }
+            if (!TextUtils.isEmpty(p.name)) {
+                installedByNameLower.put(p.name.trim().toLowerCase(Locale.ROOT), p);
+            }
+            if (!TextUtils.isEmpty(p.path) && !installedPathLastModified.containsKey(p.path)) {
+                try {
+                    File f = new File(p.path);
+                    installedPathLastModified.put(p.path, f.exists() ? f.lastModified() : 0L);
+                } catch (Exception ignored) {
+                    installedPathLastModified.put(p.path, 0L);
+                }
+            }
+        }
+    }
+
     public static class StorePlugin {
         public String id;
         public String name;
@@ -139,25 +211,86 @@ public class PluginStoreActivity extends BaseFragment {
         public TLRPC.Chat chat;
         public final List<StorePlugin> versions = new ArrayList<>();
 
-        public Plugin findInstalledPlugin() {
-            String norm = normalizePluginId(id);
-            String strippedNorm = norm.replaceAll("[^a-zA-Z0-9]", "");
-            Plugin installed = PluginsController.getInstance().getPlugin(id);
-            if (installed != null) return installed;
+        private transient String cachedNormId;
+        private transient String cachedStrippedNormId;
+        private transient String cachedSearchKey;
+        private transient String cachedFullText;
+        private transient String cachedCompactFull;
+        private transient String[] cachedWordsInPlugin;
+        private transient int cachedInstallGen = -1;
+        private transient Plugin cachedInstalledPlugin;
+        private transient boolean cachedHasUpdate;
+        private transient int cachedMsgDateForUpdate = -1;
+        private transient String cachedVersionForUpdate;
 
-            for (Plugin p : PluginsController.getInstance().getPlugins().values()) {
-                if (p == null) continue;
-                String pNorm = normalizePluginId(p.getId());
-                if (pNorm.equalsIgnoreCase(norm) || pNorm.replaceAll("[^a-zA-Z0-9]", "").equalsIgnoreCase(strippedNorm)) {
-                    return p;
+        public String getNormalizedId() {
+            if (cachedNormId == null) {
+                cachedNormId = normalizePluginId(id).toLowerCase(Locale.ROOT);
+            }
+            return cachedNormId;
+        }
+
+        public String getStrippedNormalizedId() {
+            if (cachedStrippedNormId == null) {
+                cachedStrippedNormId = NON_ALNUM_ASCII_PATTERN.matcher(getNormalizedId()).replaceAll("");
+            }
+            return cachedStrippedNormId;
+        }
+
+        public Plugin findInstalledPlugin() {
+            ensureInstalledPluginsSnap();
+            int gen = installedCacheGeneration;
+            if (cachedInstallGen == gen) {
+                return cachedInstalledPlugin;
+            }
+            Plugin found = null;
+            synchronized (PluginStoreActivity.class) {
+                if (!TextUtils.isEmpty(id)) {
+                    found = installedByExactId.get(id);
                 }
-                if (!TextUtils.isEmpty(p.name) && !TextUtils.isEmpty(name)) {
-                    if (p.name.trim().equalsIgnoreCase(name.trim())) {
-                        return p;
+                if (found == null) {
+                    found = installedByNormId.get(getNormalizedId());
+                }
+                if (found == null) {
+                    String stripped = getStrippedNormalizedId();
+                    if (!stripped.isEmpty()) {
+                        found = installedByStrippedId.get(stripped);
                     }
                 }
+                if (found == null && !TextUtils.isEmpty(name)) {
+                    found = installedByNameLower.get(name.trim().toLowerCase(Locale.ROOT));
+                }
             }
-            return null;
+            cachedInstalledPlugin = found;
+            cachedHasUpdate = computeHasUpdate(found);
+            cachedMsgDateForUpdate = message != null ? message.date : 0;
+            cachedVersionForUpdate = version;
+            cachedInstallGen = gen;
+            return found;
+        }
+
+        private boolean computeHasUpdate(Plugin installed) {
+            if (installed == null) return false;
+            if (!TextUtils.isEmpty(installed.version) && !TextUtils.isEmpty(version)) {
+                return compareVersions(version, installed.version) > 0;
+            }
+            if (message != null && message.date > 0 && installed.path != null) {
+                Long lastMod;
+                synchronized (PluginStoreActivity.class) {
+                    lastMod = installedPathLastModified.get(installed.path);
+                }
+                if (lastMod == null) {
+                    File f = new File(installed.path);
+                    lastMod = f.exists() ? f.lastModified() : 0L;
+                    synchronized (PluginStoreActivity.class) {
+                        installedPathLastModified.put(installed.path, lastMod);
+                    }
+                }
+                if (lastMod > 0L) {
+                    return ((long) message.date * 1000L) > (lastMod + 60000L);
+                }
+            }
+            return false;
         }
 
         public boolean isInstalled() {
@@ -167,16 +300,13 @@ public class PluginStoreActivity extends BaseFragment {
         public boolean hasUpdate() {
             Plugin installed = findInstalledPlugin();
             if (installed == null) return false;
-            if (!TextUtils.isEmpty(installed.version) && !TextUtils.isEmpty(version)) {
-                return compareVersions(version, installed.version) > 0;
+            int msgDate = message != null ? message.date : 0;
+            if (cachedMsgDateForUpdate != msgDate || !TextUtils.equals(cachedVersionForUpdate, version)) {
+                cachedHasUpdate = computeHasUpdate(installed);
+                cachedMsgDateForUpdate = msgDate;
+                cachedVersionForUpdate = version;
             }
-            if (message != null && message.date > 0 && installed.path != null) {
-                File f = new File(installed.path);
-                if (f.exists() && f.lastModified() > 0) {
-                    return ((long) message.date * 1000L) > (f.lastModified() + 60000L);
-                }
-            }
-            return false;
+            return cachedHasUpdate;
         }
     }
 
@@ -809,23 +939,30 @@ public class PluginStoreActivity extends BaseFragment {
         String rawQuery = query.toLowerCase(Locale.ROOT).trim();
         if (rawQuery.isEmpty()) return true;
 
-        String name = p.name != null ? p.name.toLowerCase(Locale.ROOT) : "";
-        String cleanName = cleanPluginName(p.name).toLowerCase(Locale.ROOT);
-        String id = p.id != null ? p.id.toLowerCase(Locale.ROOT) : "";
-        String normId = normalizePluginId(p.id != null ? p.id : "").toLowerCase(Locale.ROOT);
-        String author = p.author != null ? p.author.toLowerCase(Locale.ROOT) : "";
-        String channel = p.sourceChannel != null ? p.sourceChannel.toLowerCase(Locale.ROOT) : "";
-        String desc = p.description != null ? p.description.toLowerCase(Locale.ROOT) : "";
-        StringBuilder tagsBuilder = new StringBuilder();
-        if (p.tags != null) {
-            for (String t : p.tags) {
-                tagsBuilder.append(t).append(" ");
+        String searchKey = (p.name != null ? p.name : "") + "|" + (p.id != null ? p.id : "") + "|" + (p.description != null ? p.description.length() : 0);
+        if (p.cachedFullText == null || !searchKey.equals(p.cachedSearchKey)) {
+            String name = p.name != null ? p.name.toLowerCase(Locale.ROOT) : "";
+            String cleanName = cleanPluginName(p.name).toLowerCase(Locale.ROOT);
+            String id = p.id != null ? p.id.toLowerCase(Locale.ROOT) : "";
+            String normId = p.getNormalizedId();
+            String author = p.author != null ? p.author.toLowerCase(Locale.ROOT) : "";
+            String channel = p.sourceChannel != null ? p.sourceChannel.toLowerCase(Locale.ROOT) : "";
+            String desc = p.description != null ? p.description.toLowerCase(Locale.ROOT) : "";
+            StringBuilder tagsBuilder = new StringBuilder();
+            if (p.tags != null) {
+                for (String t : p.tags) {
+                    tagsBuilder.append(t).append(" ");
+                }
             }
+            String tags = tagsBuilder.toString().toLowerCase(Locale.ROOT);
+            p.cachedFullText = name + " " + cleanName + " " + id + " " + normId + " " + author + " " + channel + " " + desc + " " + tags;
+            p.cachedCompactFull = toCompact(p.cachedFullText);
+            p.cachedWordsInPlugin = WORD_SPLIT_PATTERN.split(p.cachedFullText);
+            p.cachedSearchKey = searchKey;
         }
-        String tags = tagsBuilder.toString().toLowerCase(Locale.ROOT);
 
-        String fullText = name + " " + cleanName + " " + id + " " + normId + " " + author + " " + channel + " " + desc + " " + tags;
-        String compactFull = toCompact(fullText);
+        String fullText = p.cachedFullText;
+        String compactFull = p.cachedCompactFull;
         String compactQuery = toCompact(rawQuery);
 
         if (compactQuery.length() >= 2 && compactFull.contains(compactQuery)) {
@@ -836,7 +973,7 @@ public class PluginStoreActivity extends BaseFragment {
             return true;
         }
 
-        String[] tokens = rawQuery.split("\\s+");
+        String[] tokens = WHITESPACE_SPLIT_PATTERN.split(rawQuery);
         List<String> meaningfulTokens = new ArrayList<>();
         for (String t : tokens) {
             String trimmed = t.trim();
@@ -848,7 +985,7 @@ public class PluginStoreActivity extends BaseFragment {
             meaningfulTokens.addAll(Arrays.asList(tokens));
         }
 
-        String[] wordsInPlugin = fullText.split("[^a-zA-Z0-9а-яА-ЯёЁ]+");
+        String[] wordsInPlugin = p.cachedWordsInPlugin;
 
         for (String token : meaningfulTokens) {
             if (!matchSingleToken(token, compactFull, wordsInPlugin)) {
@@ -918,7 +1055,7 @@ public class PluginStoreActivity extends BaseFragment {
 
     private static String toCompact(String s) {
         if (s == null) return "";
-        return s.toLowerCase(Locale.ROOT).replace('ё', 'е').replaceAll("[^a-z0-9а-я]", "");
+        return COMPACT_STRIP_PATTERN.matcher(s.toLowerCase(Locale.ROOT).replace('ё', 'е')).replaceAll("");
     }
 
     private static boolean isStopWord(String word) {
@@ -1167,10 +1304,10 @@ public class PluginStoreActivity extends BaseFragment {
 
     public static String cleanPluginName(String fName) {
         if (TextUtils.isEmpty(fName)) return "";
-        String base = fName.replaceAll("\\.[^.]+$", "").trim();
+        String base = EXT_PATTERN.matcher(fName).replaceAll("").trim();
         if (base.contains("_") || base.contains("-")) {
-            base = base.replaceAll("[-_]", " ").trim();
-            String[] words = base.split("\\s+");
+            base = DASH_UNDERSCORE_PATTERN.matcher(base).replaceAll(" ").trim();
+            String[] words = WHITESPACE_SPLIT_PATTERN.split(base);
             StringBuilder sb = new StringBuilder();
             for (String w : words) {
                 if (w.isEmpty()) continue;
@@ -1185,11 +1322,11 @@ public class PluginStoreActivity extends BaseFragment {
     public static String parseIconFromText(String text) {
         if (TextUtils.isEmpty(text)) return null;
         try {
-            java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+            java.util.regex.Matcher m = ICON_ATTR_PATTERN.matcher(text);
             if (m.find()) {
                 return m.group(1);
             }
-            m = java.util.regex.Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+            m = ICON_STICKER_URL_PATTERN.matcher(text);
             if (m.find()) {
                 String pack = m.group(1);
                 String idx = m.group(2);
@@ -1223,12 +1360,12 @@ public class PluginStoreActivity extends BaseFragment {
 
     public static String normalizePluginId(String fName) {
         if (TextUtils.isEmpty(fName)) return "";
-        String base = fName.replaceAll("\\.[^.]+$", "").trim().toLowerCase(Locale.ROOT);
-        base = base.replaceAll("(?:_|-|\\s+)(?:v|rel|ver)?\\s*[0-9]+(?:\\.[0-9]+)*(?:_rel_[0-9.]+)?.*$", "");
-        base = base.replaceAll("\\s*\\([0-9]+\\)$", "").trim();
+        String base = EXT_PATTERN.matcher(fName).replaceAll("").trim().toLowerCase(Locale.ROOT);
+        base = NORM_VERSION_SUFFIX_PATTERN.matcher(base).replaceAll("");
+        base = NORM_PARENS_SUFFIX_PATTERN.matcher(base).replaceAll("").trim();
         base = base.replace(" ", "_");
         if (base.isEmpty()) {
-            base = fName.replaceAll("\\.[^.]+$", "").toLowerCase(Locale.ROOT).replace(" ", "_");
+            base = EXT_PATTERN.matcher(fName).replaceAll("").toLowerCase(Locale.ROOT).replace(" ", "_");
         }
         return base;
     }
@@ -1236,19 +1373,19 @@ public class PluginStoreActivity extends BaseFragment {
     public static String extractVersion(String fName, String msgText) {
         if (!TextUtils.isEmpty(msgText)) {
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:version|версия|ver|v)\\.?\\s*[:=\\s]\\s*[\"']?([0-9]+(?:\\.[0-9]+)*)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(msgText);
+                java.util.regex.Matcher m = VER_TEXT_LABELED_PATTERN.matcher(msgText);
                 if (m.find()) {
                     return m.group(1);
                 }
             } catch (Exception ignored) {}
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:^|\\s)[vV]\\.?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(msgText);
+                java.util.regex.Matcher m = VER_TEXT_PREFIX_PATTERN.matcher(msgText);
                 if (m.find()) {
                     return m.group(1);
                 }
             } catch (Exception ignored) {}
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("\\b([0-9]+\\.[0-9]+(?:\\.[0-9]+)*)\\b").matcher(msgText);
+                java.util.regex.Matcher m = VER_TEXT_DOTTED_PATTERN.matcher(msgText);
                 if (m.find()) {
                     return m.group(1);
                 }
@@ -1256,13 +1393,13 @@ public class PluginStoreActivity extends BaseFragment {
         }
         if (!TextUtils.isEmpty(fName)) {
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|ver)?([0-9]+(?:\\.[0-9]+)*)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fName);
+                java.util.regex.Matcher m = VER_FNAME_SEP_PATTERN.matcher(fName);
                 if (m.find()) {
                     return m.group(1);
                 }
             } catch (Exception ignored) {}
             try {
-                java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:v|ver)?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(fName);
+                java.util.regex.Matcher m = VER_FNAME_ANY_PATTERN.matcher(fName);
                 if (m.find()) {
                     return m.group(1);
                 }
@@ -1284,10 +1421,10 @@ public class PluginStoreActivity extends BaseFragment {
         for (int i = 0; i < len; i++) {
             int num1 = 0, num2 = 0;
             if (i < parts1.length) {
-                try { num1 = Integer.parseInt(parts1[i].replaceAll("[^0-9]", "")); } catch (Exception ignored) {}
+                try { num1 = Integer.parseInt(NON_DIGITS_PATTERN.matcher(parts1[i]).replaceAll("")); } catch (Exception ignored) {}
             }
             if (i < parts2.length) {
-                try { num2 = Integer.parseInt(parts2[i].replaceAll("[^0-9]", "")); } catch (Exception ignored) {}
+                try { num2 = Integer.parseInt(NON_DIGITS_PATTERN.matcher(parts2[i]).replaceAll("")); } catch (Exception ignored) {}
             }
             if (num1 != num2) {
                 return Integer.compare(num1, num2);
@@ -1315,6 +1452,21 @@ public class PluginStoreActivity extends BaseFragment {
         return false;
     }
 
+    private Runnable uiRefreshRunnable;
+    private void scheduleUiRefresh() {
+        if (uiRefreshRunnable != null) {
+            return;
+        }
+        uiRefreshRunnable = () -> {
+            uiRefreshRunnable = null;
+            if (chipsLayout != null && getContext() != null) {
+                buildChips(getContext());
+            }
+            updateRows();
+        };
+        AndroidUtilities.runOnUIThread(uiRefreshRunnable, 120);
+    }
+
     private void mergePlugins(List<StorePlugin> newPlugins) {
         if (newPlugins == null || newPlugins.isEmpty()) return;
         boolean changed = false;
@@ -1323,12 +1475,12 @@ public class PluginStoreActivity extends BaseFragment {
         synchronized (allPlugins) {
             for (StorePlugin np : newPlugins) {
                 if (np == null || TextUtils.isEmpty(np.id)) continue;
-                String normNpId = normalizePluginId(np.id);
+                String normNpId = np.getNormalizedId();
                 boolean found = false;
 
                 for (int i = 0; i < allPlugins.size(); i++) {
                     StorePlugin existing = allPlugins.get(i);
-                    String normExistingId = normalizePluginId(existing.id);
+                    String normExistingId = existing.getNormalizedId();
 
                     if (existing.id.equalsIgnoreCase(np.id) || (hideOld && normExistingId.equalsIgnoreCase(normNpId))) {
                         found = true;
@@ -1369,11 +1521,8 @@ public class PluginStoreActivity extends BaseFragment {
             cachedCatalog.clear();
             cachedCatalog.addAll(allPlugins);
         }
-        if (chipsLayout != null && getContext() != null) {
-            buildChips(getContext());
-        }
         if (changed) {
-            updateRows();
+            scheduleUiRefresh();
         }
 
         if (config.isAutoUpdateEnabled()) {
@@ -1811,6 +1960,10 @@ public class PluginStoreActivity extends BaseFragment {
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        if (uiRefreshRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(uiRefreshRunnable);
+            uiRefreshRunnable = null;
+        }
         if (deepSearchRunnable != null) {
             AndroidUtilities.cancelRunOnUIThread(deepSearchRunnable);
             deepSearchRunnable = null;
@@ -1885,7 +2038,13 @@ public class PluginStoreActivity extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
-        resolveKnownChannels();
+        invalidateInstalledPluginsCache();
+        if (!activeSourceChats.isEmpty()) {
+            resolveKnownChannels();
+        }
+        if (chipsLayout != null && getContext() != null) {
+            buildChips(getContext());
+        }
         updateRows();
     }
 

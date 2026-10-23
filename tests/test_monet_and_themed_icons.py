@@ -207,4 +207,97 @@ def test_crossfade_slider_layout_and_monet_colors():
     assert 'slider.setLabels("", "")' in ps_content
 
 
+def test_ota_monet_wallpaper_seed_and_baseline_purple_rejection():
+    monet_helper_path = os.path.join(JAVA_DIR, 'tw/nekomimi/nekogram/helpers/MonetHelper.java')
+    with open(monet_helper_path, 'r', encoding='utf-8') as f:
+        monet_content = f.read()
+    assert 'getWallpaperPrimarySeed' in monet_content
+    assert 'WallpaperManager.getInstance' in monet_content
+    assert 'getWallpaperColors' in monet_content
+    assert 'hue >= 265d && hue <= 318d' in monet_content
+
+    ota_path = os.path.join(JAVA_DIR, 'app/exteraless/ota/MoltenGramOtaManager.java')
+    with open(ota_path, 'r', encoding='utf-8') as f:
+        ota_content = f.read()
+    assert 'MonetHelper.getWallpaperPrimarySeed' in ota_content
+    assert 'Theme.key_windowBackgroundWhite' in ota_content
+
+
+def test_settings_search_formats_placeholder_strings():
+    sh_path = os.path.join(JAVA_DIR, 'tw/nekomimi/nekogram/helpers/SettingsHelper.java')
+    with open(sh_path, 'r', encoding='utf-8') as f:
+        sh_content = f.read()
+    assert '"OEAppearance:hideAllChats".equals(fullKey)' in sh_content
+    assert 'LocaleController.formatString(R.string.OEAppearanceHideAllChats' in sh_content
+    assert '"OEChats:replaceEdited".equals(fullKey)' in sh_content
+    assert '"OEChats:hideShareButton".equals(fullKey)' in sh_content
+
+
+def test_media_carousel_reactions_bottom_padding_reduced():
+    cmc_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/ChatMessageCell.java')
+    with open(cmc_path, 'r', encoding='utf-8') as f:
+        cmc_content = f.read()
+    assert 'boolean hasReactionsRow = !reactionsLayoutInBubble.isEmpty && !reactionsLayoutInBubble.isSmall;' in cmc_content
+    assert 'int footerHeight = (captionLayout != null && !captionAbove) ? dp(12) : (hasReactionsRow ? dp(8) : dp(26));' in cmc_content
+
+
+def test_saved_messages_avatar_shape_clears_crossfade_and_sets_self_peer():
+    ir_path = os.path.join(JAVA_DIR, 'org/telegram/messenger/ImageReceiver.java')
+    with open(ir_path, 'r', encoding='utf-8') as f:
+        ir_content = f.read()
+    assert 'crossfadeImage = null;' in ir_content
+    assert 'crossfadingWithThumb = false;' in ir_content
+    assert 'AvatarDrawable.AVATAR_TYPE_SAVED' in ir_content
+
+    dc_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/DialogCell.java')
+    with open(dc_path, 'r', encoding='utf-8') as f:
+        dc_content = f.read()
+    assert 'avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF);' in dc_content
+
+
+def test_mini_player_updates_dialogs_floating_button_offset():
+    da_path = os.path.join(JAVA_DIR, 'org/telegram/ui/DialogsActivity.java')
+    with open(da_path, 'r', encoding='utf-8') as f:
+        da_content = f.read()
+    assert 'updateStoriesPosting();\n        updateFloatingButtonOffset();' in da_content
+
+    mt_path = os.path.join(JAVA_DIR, 'org/telegram/ui/MainTabsActivity.java')
+    with open(mt_path, 'r', encoding='utf-8') as f:
+        mt_content = f.read()
+    assert 'miniPlayer.update(true);\n            onMiniPlayerOffsetChanged();' in mt_content
+
+
+def test_player_sheet_custom_cover_shape_eliminates_square_shadow_and_morph_rect():
+    ps_path = os.path.join(JAVA_DIR, 'app/exteraless/player/PlayerSheet.java')
+    with open(ps_path, 'r', encoding='utf-8') as f:
+        ps_content = f.read()
+    assert 'outline.setAlpha(0f);' in ps_content
+    assert 'Md3AvatarShapes.getShapePath' in ps_content
+
+    ci_path = os.path.join(JAVA_DIR, 'app/exteraless/player/CoverImage.java')
+    with open(ci_path, 'r', encoding='utf-8') as f:
+        ci_content = f.read()
+    assert 'setTranslationZ(0);' in ci_content
+
+
+def test_plugin_store_precompiles_regex_and_caches_installed_lookup():
+    psa_path = os.path.join(JAVA_DIR, 'app/exteraless/plugins/ui/PluginStoreActivity.java')
+    with open(psa_path, 'r', encoding='utf-8') as f:
+        psa_content = f.read()
+    assert 'NORM_VERSION_SUFFIX_PATTERN' in psa_content
+    assert 'ensureInstalledPluginsSnap' in psa_content
+    assert 'scheduleUiRefresh' in psa_content
+
+
+def test_md3_avatar_shapes_inline_infinite_carousel():
+    mas_path = os.path.join(JAVA_DIR, 'app/exteraless/appearance/Md3AvatarShapesActivity.java')
+    with open(mas_path, 'r', encoding='utf-8') as f:
+        mas_content = f.read()
+    assert 'TYPE_SHAPE_CAROUSEL' in mas_content
+    assert 'PeerShapeCarouselCell' in mas_content
+    assert 'INFINITE_COUNT = Integer.MAX_VALUE' in mas_content
+    assert 'Math.floorMod(position, Md3AvatarShapes.SHAPES_COUNT)' in mas_content
+
+
+
 

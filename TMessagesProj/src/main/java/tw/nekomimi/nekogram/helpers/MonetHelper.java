@@ -2,6 +2,8 @@ package tw.nekomimi.nekogram.helpers;
 
 import static org.telegram.ui.Components.Switch.SWITCH_STYLE_MD3;
 
+import android.app.WallpaperColors;
+import android.app.WallpaperManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
@@ -486,11 +488,58 @@ public class MonetHelper {
 
     public static boolean isStaticBaselineFrameworkRole(int color) {
         int rgb = color & 0xffffff;
-        return rgb == (BASELINE_PURPLE_80 & 0xffffff)
+        if (rgb == (BASELINE_PURPLE_80 & 0xffffff)
                 || rgb == (BASELINE_PURPLE_40 & 0xffffff)
                 || rgb == (BASELINE_DARK_SURFACE & 0xffffff)
                 || rgb == (BASELINE_LIGHT_SURFACE & 0xffffff)
-                || rgb == (BASELINE_DARK_CONTAINER & 0xffffff);
+                || rgb == (BASELINE_DARK_CONTAINER & 0xffffff)) {
+            return true;
+        }
+        try {
+            Hct hct = Hct.fromInt(color);
+            double hue = hct.getHue();
+            double chroma = hct.getChroma();
+            if (hue >= 265d && hue <= 318d && chroma >= 3d) {
+                Context context = ApplicationLoader.applicationContext;
+                if (context != null) {
+                    int sys200 = context.getColor(android.R.color.system_accent1_200) & 0xffffff;
+                    int sys600 = context.getColor(android.R.color.system_accent1_600) & 0xffffff;
+                    if (sys200 == (BASELINE_PURPLE_80 & 0xffffff) || sys600 == (BASELINE_PURPLE_40 & 0xffffff)) {
+                        return true;
+                    }
+                    Hct sysHct = Hct.fromInt(context.getColor(android.R.color.system_accent1_500));
+                    if (sysHct.getHue() >= 265d && sysHct.getHue() <= 318d) {
+                        return true;
+                    }
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return false;
+    }
+
+    public static Integer getWallpaperPrimarySeed(Context context) {
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.O_MR1) {
+            return null;
+        }
+        try {
+            WallpaperManager wm = WallpaperManager.getInstance(context);
+            if (wm == null) {
+                return null;
+            }
+            WallpaperColors wc = wm.getWallpaperColors(WallpaperManager.FLAG_SYSTEM);
+            if (wc == null) {
+                wc = wm.getWallpaperColors(WallpaperManager.FLAG_LOCK);
+            }
+            if (wc != null && wc.getPrimaryColor() != null) {
+                int argb = wc.getPrimaryColor().toArgb();
+                if ((argb & 0xffffff) != 0) {
+                    return argb | 0xff000000;
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return null;
     }
 
     private static Boolean frameworkRolesTrusted;
@@ -611,7 +660,10 @@ public class MonetHelper {
             Integer shadeId = ids.get(palette + "_" + shade);
             if (shadeId != null) {
                 try {
-                    return context.getColor(shadeId);
+                    int c = context.getColor(shadeId);
+                    if (!isStaticBaselineFrameworkRole(c)) {
+                        return c;
+                    }
                 } catch (Exception ignore) {}
             }
         }
@@ -619,8 +671,23 @@ public class MonetHelper {
         Integer keyId = ids.get(palette + "_600");
         if (keyId != null) {
             try {
-                return setLuminance(context.getColor(keyId), tone);
+                int base = context.getColor(keyId);
+                if (!isStaticBaselineFrameworkRole(base)) {
+                    return setLuminance(base, tone);
+                }
             } catch (Exception ignore) {}
+        }
+
+        // If the system framework palette is stuck on Android's baseline purple, derive from WallpaperColors
+        Integer wpSeed = getWallpaperPrimarySeed(context);
+        if (wpSeed != null && !isStaticBaselineFrameworkRole(wpSeed)) {
+            Hct wpHct = Hct.fromInt(wpSeed);
+            double chroma = palette.startsWith("n1") ? Math.min(4d, wpHct.getChroma() * 0.12d)
+                    : palette.startsWith("n2") ? Math.min(8d, wpHct.getChroma() * 0.25d)
+                    : palette.startsWith("a2") ? Math.max(16d, wpHct.getChroma() * 0.35d)
+                    : Math.max(36d, wpHct.getChroma());
+            double hue = palette.startsWith("a3") ? (wpHct.getHue() + 60d) % 360d : wpHct.getHue();
+            return Hct.from(hue, chroma, tone).toInt();
         }
 
         // Direct fallback to closest real system palette color

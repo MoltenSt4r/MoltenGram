@@ -336,6 +336,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         super.onResume();
         if (miniPlayer != null) {
             miniPlayer.update(true);
+            onMiniPlayerOffsetChanged();
         }
         blur3_updateColors();
         checkContactsTabBadge();
@@ -466,6 +467,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         miniPlayer = new app.exteraless.player.PlayerMiniView(context, this, resourceProvider);
         miniPlayer.setOffsetListener(this::onMiniPlayerOffsetChanged);
         contentView.addView(miniPlayer, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, app.exteraless.player.PlayerMiniView.HEIGHT_DP + 16, Gravity.BOTTOM));
+        onMiniPlayerOffsetChanged();
 
         tabsViewWrapper = new FrameLayout(context);
         tabsViewWrapper.setOnClickListener(v -> {});
