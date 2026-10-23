@@ -62,9 +62,25 @@ public class PluginStoreConfig {
         prefs = ApplicationLoader.applicationContext.getSharedPreferences("plugin_store_config", Context.MODE_PRIVATE);
     }
 
+    private Set<String> getStringSetSafe(String key) {
+        try {
+            return prefs.getStringSet(key, null);
+        } catch (ClassCastException e) {
+            // Was previously saved as a plain String (e.g. from backup restore bug) — clear and migrate
+            org.telegram.messenger.FileLog.e("PluginStoreConfig: key '" + key + "' was String, clearing", e);
+            prefs.edit().remove(key).apply();
+            return null;
+        }
+    }
+
+    private Set<String> getStringSafeFallback(String key) {
+        Set<String> val = getStringSetSafe(key);
+        return val != null ? val : new HashSet<>();
+    }
+
     public List<String> getSourceChannels() {
-        Set<String> custom = prefs.getStringSet("custom_channels", null);
-        Set<String> removed = prefs.getStringSet("removed_channels", null);
+        Set<String> custom = getStringSetSafe("custom_channels");
+        Set<String> removed = getStringSetSafe("removed_channels");
         if (removed == null) removed = Collections.emptySet();
 
         List<String> result = new ArrayList<>();
@@ -98,12 +114,12 @@ public class PluginStoreConfig {
         }
         if (clean.isEmpty() || clean.contains("/") || clean.contains("?")) return false;
 
-        Set<String> custom = new HashSet<>(prefs.getStringSet("custom_channels", new HashSet<>()));
+        Set<String> custom = new HashSet<>(getStringSafeFallback("custom_channels"));
         custom.add(clean);
         prefs.edit().putStringSet("custom_channels", custom).apply();
 
         // Also remove from removed set if it was previously removed
-        Set<String> removed = prefs.getStringSet("removed_channels", null);
+        Set<String> removed = getStringSetSafe("removed_channels");
         if (removed != null && removed.contains(clean.toLowerCase(Locale.ROOT))) {
             Set<String> newRemoved = new HashSet<>(removed);
             newRemoved.remove(clean.toLowerCase(Locale.ROOT));
@@ -117,14 +133,14 @@ public class PluginStoreConfig {
         String clean = channel.trim();
         if (clean.startsWith("@")) clean = clean.substring(1);
 
-        Set<String> custom = prefs.getStringSet("custom_channels", null);
+        Set<String> custom = getStringSetSafe("custom_channels");
         if (custom != null && custom.contains(clean)) {
             Set<String> newCustom = new HashSet<>(custom);
             newCustom.remove(clean);
             prefs.edit().putStringSet("custom_channels", newCustom).apply();
         }
 
-        Set<String> removed = new HashSet<>(prefs.getStringSet("removed_channels", new HashSet<>()));
+        Set<String> removed = new HashSet<>(getStringSafeFallback("removed_channels"));
         removed.add(clean.toLowerCase(Locale.ROOT));
         prefs.edit().putStringSet("removed_channels", removed).apply();
     }

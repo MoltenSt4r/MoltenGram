@@ -174,4 +174,37 @@ def test_package_installer_session_support_and_dialog_inline_progress_monet():
     assert '<style name="TransparentDialog"' in night_content
     assert '@android:color/system_accent1_' in night_content
 
+    assert 'import android.view.View;' in ota_content, "MoltenGramOtaManager must import android.view.View"
+    assert 'setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6), 0.05f)' in ota_content
+    assert '0xfffef7ff' not in ota_content.lower(), "MoltenGramOtaManager must not fall back to baseline purple 0xfffef7ff"
+
+
+def test_plugin_store_config_safe_string_set():
+    cfg_path = os.path.join(JAVA_DIR, 'app/exteraless/plugins/ui/PluginStoreConfig.java')
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        cfg_content = f.read()
+    assert 'getStringSetSafe' in cfg_content
+    assert 'ClassCastException' in cfg_content
+
+    backup_path = os.path.join(JAVA_DIR, 'tw/nekomimi/nekogram/helpers/SettingsBackupHelper.java')
+    with open(backup_path, 'r', encoding='utf-8') as f:
+        backup_content = f.read()
+    assert 'isJsonArray()' in backup_content
+    assert 'putStringSet' in backup_content
+
+
+def test_crossfade_slider_layout_and_monet_colors():
+    slider_path = os.path.join(JAVA_DIR, 'app/exteraless/player/Md3RangeSlider.java')
+    with open(slider_path, 'r', encoding='utf-8') as f:
+        slider_content = f.read()
+    assert 'MAX_SIDE_FRACTION' in slider_content
+    assert 'trackRight - norm2 * sideSpan' in slider_content
+    assert '0xFF2A2B36' not in slider_content
+
+    player_settings_path = os.path.join(JAVA_DIR, 'app/exteraless/player/PlayerSettingsActivity.java')
+    with open(player_settings_path, 'r', encoding='utf-8') as f:
+        ps_content = f.read()
+    assert 'slider.setLabels("", "")' in ps_content
+
+
 

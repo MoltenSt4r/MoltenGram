@@ -35,16 +35,18 @@ public class Md3RangeSlider extends View {
 
     private final RectF rect = new RectF();
 
+    private static final float MAX_SIDE_FRACTION = 0.42f;
+
     private int minValue = 0;
     private int maxValue = 12;
-    private int value1 = 3; // Fade Out
-    private int value2 = 3; // Fade In
+    private int value1 = 3; // Start crossfade (Fade In)
+    private int value2 = 3; // End crossfade (Fade Out)
 
-    private int activeThumb = 0; // 0 = none, 1 = value1, 2 = value2
+    private int activeThumb = 0; // 0 = none, 1 = left thumb (start), 2 = right thumb (end)
     private OnRangeChangeListener listener;
 
-    private String label1Prefix = "Out";
-    private String label2Prefix = "In";
+    private String label1Prefix = "";
+    private String label2Prefix = "";
 
     public Md3RangeSlider(Context context) {
         super(context);
@@ -111,11 +113,11 @@ public class Md3RangeSlider extends View {
         int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
         boolean isDark = Theme.isCurrentThemeDark();
 
-        int inactiveColor = ColorUtils.blendARGB(accentColor, isDark ? 0xFF2A2B36 : 0xFFE5E7EB, isDark ? 0.82f : 0.78f);
-        int stopDotColor = ColorUtils.blendARGB(accentColor, isDark ? 0xFFFFFFFF : 0xFF1E1E24, 0.45f);
+        int crossfadeZoneColor = ColorUtils.setAlphaComponent(accentColor, isDark ? 72 : 52);
+        int stopDotColor = ColorUtils.setAlphaComponent(accentColor, isDark ? 165 : 140);
 
         activePaint.setColor(accentColor);
-        inactivePaint.setColor(inactiveColor);
+        inactivePaint.setColor(crossfadeZoneColor);
         stopDotPaint.setColor(stopDotColor);
         thumbPaint.setColor(accentColor);
 
@@ -142,23 +144,22 @@ public class Md3RangeSlider extends View {
         float thumbHalfH = thumbH / 2f;
         float thumbRadius = AndroidUtilities.dp(2.25f);
 
-        float norm1 = (value1 - minValue) / (float) (maxValue - minValue);
-        float norm2 = (value2 - minValue) / (float) (maxValue - minValue);
+        float range = Math.max(1, maxValue - minValue);
+        float norm1 = Math.max(0f, Math.min(1f, (value1 - minValue) / range));
+        float norm2 = Math.max(0f, Math.min(1f, (value2 - minValue) / range));
 
-        float x1 = trackLeft + norm1 * trackWidth;
-        float x2 = trackLeft + norm2 * trackWidth;
+        float sideSpan = trackWidth * MAX_SIDE_FRACTION;
+        float leftX = trackLeft + norm1 * sideSpan;
+        float rightX = trackRight - norm2 * sideSpan;
 
-        float leftX = Math.min(x1, x2);
-        float rightX = Math.max(x1, x2);
-
-        // 1. Left inactive track (from trackLeft to leftX - gap)
+        // 1. Left crossfade zone (from trackLeft to leftX - gap)
         float leftSegmentEnd = leftX - gap - thumbHalfW;
         if (leftSegmentEnd > trackLeft + AndroidUtilities.dp(2)) {
             rect.set(trackLeft, trackTop, leftSegmentEnd, trackBottom);
             canvas.drawRoundRect(rect, trackRadius, trackRadius, inactivePaint);
         }
 
-        // 2. Center active track (between leftX + gap and rightX - gap)
+        // 2. Center filled track without crossfade (between leftX + gap and rightX - gap)
         float centerSegmentStart = leftX + gap + thumbHalfW;
         float centerSegmentEnd = rightX - gap - thumbHalfW;
         if (centerSegmentEnd - centerSegmentStart >= AndroidUtilities.dp(4)) {
@@ -166,14 +167,14 @@ public class Md3RangeSlider extends View {
             canvas.drawRoundRect(rect, trackRadius, trackRadius, activePaint);
         }
 
-        // 3. Right inactive track (from rightX + gap to trackRight)
+        // 3. Right crossfade zone (from rightX + gap to trackRight)
         float rightSegmentStart = rightX + gap + thumbHalfW;
         if (rightSegmentStart < trackRight - AndroidUtilities.dp(2)) {
             rect.set(rightSegmentStart, trackTop, trackRight, trackBottom);
             canvas.drawRoundRect(rect, trackRadius, trackRadius, inactivePaint);
         }
 
-        // 4. Stop-indicator dots inside the inactive track ends
+        // 4. Stop-indicator dots inside the outer crossfade track ends
         float dotRadius = AndroidUtilities.dp(2.8f);
         float leftDotX = trackLeft + AndroidUtilities.dp(8);
         if (leftDotX < leftSegmentEnd - dotRadius) {
@@ -185,17 +186,17 @@ public class Md3RangeSlider extends View {
         }
 
         // 5. Vertical pill thumbs
-        // Draw Thumb 1 (Fade Out)
-        rect.set(x1 - thumbHalfW, trackCenterY - thumbHalfH, x1 + thumbHalfW, trackCenterY + thumbHalfH);
+        rect.set(leftX - thumbHalfW, trackCenterY - thumbHalfH, leftX + thumbHalfW, trackCenterY + thumbHalfH);
         canvas.drawRoundRect(rect, thumbRadius, thumbRadius, thumbPaint);
 
-        // Draw Thumb 2 (Fade In)
-        rect.set(x2 - thumbHalfW, trackCenterY - thumbHalfH, x2 + thumbHalfW, trackCenterY + thumbHalfH);
+        rect.set(rightX - thumbHalfW, trackCenterY - thumbHalfH, rightX + thumbHalfW, trackCenterY + thumbHalfH);
         canvas.drawRoundRect(rect, thumbRadius, thumbRadius, thumbPaint);
 
-        // 6. Draw clean badges/labels above handles
-        drawThumbLabel(canvas, x1, label1Prefix + ": " + value1 + "s", accentColor, isDark);
-        drawThumbLabel(canvas, x2, label2Prefix + ": " + value2 + "s", accentColor, isDark);
+        // 6. Draw clean duration badges above handles (without Fade Out / Fade In text prefixes)
+        String badge1 = (label1Prefix != null && !label1Prefix.isEmpty()) ? (label1Prefix + ": " + value1 + "s") : (value1 + "s");
+        String badge2 = (label2Prefix != null && !label2Prefix.isEmpty()) ? (label2Prefix + ": " + value2 + "s") : (value2 + "s");
+        drawThumbLabel(canvas, leftX, badge1, accentColor, isDark);
+        drawThumbLabel(canvas, rightX, badge2, accentColor, isDark);
     }
 
     private void drawThumbLabel(Canvas canvas, float x, String text, int accentColor, boolean isDark) {
@@ -224,10 +225,12 @@ public class Md3RangeSlider extends View {
             return false;
         }
 
-        float norm1 = (value1 - minValue) / (float) (maxValue - minValue);
-        float norm2 = (value2 - minValue) / (float) (maxValue - minValue);
-        float x1 = trackLeft + norm1 * trackWidth;
-        float x2 = trackLeft + norm2 * trackWidth;
+        float range = Math.max(1, maxValue - minValue);
+        float norm1 = Math.max(0f, Math.min(1f, (value1 - minValue) / range));
+        float norm2 = Math.max(0f, Math.min(1f, (value2 - minValue) / range));
+        float sideSpan = trackWidth * MAX_SIDE_FRACTION;
+        float x1 = trackLeft + norm1 * sideSpan;
+        float x2 = trackRight - norm2 * sideSpan;
 
         float touchX = event.getX();
 
@@ -246,12 +249,12 @@ public class Md3RangeSlider extends View {
                     getParent().requestDisallowInterceptTouchEvent(true);
                 }
                 performHapticFeedback(HapticFeedbackConstants.CLOCK_TICK);
-                updateFromTouch(touchX, trackLeft, trackWidth);
+                updateFromTouch(touchX, trackLeft, trackRight, sideSpan);
                 return true;
             }
             case MotionEvent.ACTION_MOVE: {
                 if (activeThumb != 0) {
-                    updateFromTouch(touchX, trackLeft, trackWidth);
+                    updateFromTouch(touchX, trackLeft, trackRight, sideSpan);
                     return true;
                 }
                 break;
@@ -266,17 +269,21 @@ public class Md3RangeSlider extends View {
         return super.onTouchEvent(event);
     }
 
-    private void updateFromTouch(float touchX, float trackLeft, float trackWidth) {
-        float fraction = Math.max(0f, Math.min(1f, (touchX - trackLeft) / trackWidth));
-        int val = Math.round(minValue + fraction * (maxValue - minValue));
-
+    private void updateFromTouch(float touchX, float trackLeft, float trackRight, float sideSpan) {
+        if (sideSpan <= 0) {
+            return;
+        }
         boolean changed = false;
         if (activeThumb == 1) {
+            float fraction = Math.max(0f, Math.min(1f, (touchX - trackLeft) / sideSpan));
+            int val = Math.round(minValue + fraction * (maxValue - minValue));
             if (value1 != val) {
                 value1 = val;
                 changed = true;
             }
         } else if (activeThumb == 2) {
+            float fraction = Math.max(0f, Math.min(1f, (trackRight - touchX) / sideSpan));
+            int val = Math.round(minValue + fraction * (maxValue - minValue));
             if (value2 != val) {
                 value2 = val;
                 changed = true;

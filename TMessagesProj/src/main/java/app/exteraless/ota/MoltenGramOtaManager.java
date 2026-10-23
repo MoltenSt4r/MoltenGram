@@ -45,6 +45,7 @@ import android.app.Dialog;
 import android.content.pm.PackageManager;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
@@ -815,6 +816,9 @@ public class MoltenGramOtaManager {
             return;
         }
         isInstalling = true;
+        if (activity != null) {
+            showUpdateProgressDialog(activity);
+        }
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
         Utilities.globalQueue.postRunnable(() -> {
@@ -841,6 +845,7 @@ public class MoltenGramOtaManager {
                 public void onSuccess() {
                     AndroidUtilities.runOnUIThread(() -> {
                         isInstalling = false;
+                        dismissUpdateProgressDialog();
                         dismissUpdateNotification();
                         String ver = pendingUpdate != null ? pendingUpdate.version : "";
                         String chlog = pendingUpdate != null ? pendingUpdate.changelog : "";
@@ -868,6 +873,7 @@ public class MoltenGramOtaManager {
                 public void onError(String error) {
                     AndroidUtilities.runOnUIThread(() -> {
                         isInstalling = false;
+                        dismissUpdateProgressDialog();
                         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
                         if (listener != null) {
                             listener.onError(error);
@@ -957,17 +963,17 @@ public class MoltenGramOtaManager {
 
                 final boolean isDark = Theme.isCurrentThemeDark();
 
-                // Dynamic Monet wallpaper surface color (never baseline purple 0x141218)
+                // Dynamic Monet wallpaper surface color (never baseline purple 0x141218 or 0xfef7ff)
                 int bgColor = MonetHelper.getColor(isDark ? "surface_dark" : "surface_light");
-                if (bgColor == 0 || (isDark && MonetHelper.isStaticBaselineFrameworkRole(bgColor))) {
+                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
                     bgColor = Theme.getColor(isDark ? Theme.key_dialogBackground : Theme.key_windowBackgroundWhite);
                 }
-                if (bgColor == 0 || (isDark && MonetHelper.isStaticBaselineFrameworkRole(bgColor))) {
+                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
                     int neutralBg = MonetHelper.getColor(isDark ? "background_dark" : "background_light");
                     if (neutralBg != 0 && !MonetHelper.isStaticBaselineFrameworkRole(neutralBg)) {
                         bgColor = neutralBg;
                     } else {
-                        bgColor = isDark ? 0xff1b1b1f : 0xfffef7ff;
+                        bgColor = isDark ? 0xff121212 : 0xfff8f9fa;
                     }
                 }
 
@@ -1007,10 +1013,10 @@ public class MoltenGramOtaManager {
                 progressView.setTrackColor(trackColor);
                 progressView.setStyle(M3CircularProgress.STYLE_WAVY, true);
                 progressView.setWavy(true);
-                progressView.setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6));
+                progressView.setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6), 0.05f);
 
                 int textColor = MonetHelper.getColor(isDark ? "on_surface_dark" : "on_surface_light");
-                if (textColor == 0) {
+                if (textColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(textColor)) {
                     textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
                 }
                 if (textColor == 0) {

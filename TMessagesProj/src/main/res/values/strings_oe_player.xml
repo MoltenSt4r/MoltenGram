@@ -69,7 +69,7 @@
     <string name="OEAppearancePlayerCrossfadeDuration">Crossfade duration</string>
     <string name="OEAppearancePlayerCrossfadeFadeOut">Fade out</string>
     <string name="OEAppearancePlayerCrossfadeFadeIn">Fade in</string>
-    <string name="OEAppearancePlayerCrossfadeDurationDual">Fade out: %1$d s · Fade in: %2$d s</string>
+    <string name="OEAppearancePlayerCrossfadeDurationDual">%1$d s · %2$d s</string>
     <string name="OEPlayerLocalPlaylists">Local playlists</string>
     <string name="OEPlayerLocalPlaylistsDesc">Manage playlists, import and export</string>
     <string name="OEAppearancePlayerSleepTimer">Sleep Timer</string>

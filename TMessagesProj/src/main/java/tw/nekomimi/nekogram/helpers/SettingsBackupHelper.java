@@ -376,6 +376,17 @@ public final class SettingsBackupHelper {
                     continue;
                 }
                 if (!config.getValue().isJsonPrimitive()) {
+                    // Handle StringSet stored as JsonArray
+                    if (config.getValue().isJsonArray()) {
+                        try {
+                            com.google.gson.JsonArray arr = config.getValue().getAsJsonArray();
+                            java.util.Set<String> set = new java.util.HashSet<>();
+                            for (com.google.gson.JsonElement el : arr) {
+                                if (el.isJsonPrimitive()) set.add(el.getAsString());
+                            }
+                            editor.putStringSet(key, set);
+                        } catch (Throwable ignored) {}
+                    }
                     continue;
                 }
                 JsonPrimitive value = config.getValue().getAsJsonPrimitive();

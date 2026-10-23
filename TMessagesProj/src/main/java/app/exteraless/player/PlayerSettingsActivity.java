@@ -451,9 +451,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     String textSizeName = textSizeMode == 0 ? getString(R.string.OEAppearancePlayerLyricsTextSizeNormal) : textSizeMode == 2 ? getString(R.string.OEAppearancePlayerLyricsTextSizeHuge) : getString(R.string.OEAppearancePlayerLyricsTextSizeLarge);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsTextSize), textSizeName, false);
                 } else if (position == crossfadeDurationRow) {
-                    int fadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
                     int fadeIn = AppearanceConfig.playerCrossfadeFadeInDuration();
-                    String summary = org.telegram.messenger.LocaleController.formatString("OEAppearancePlayerCrossfadeDurationDual", R.string.OEAppearancePlayerCrossfadeDurationDual, fadeOut, fadeIn);
+                    int fadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
+                    String summary = org.telegram.messenger.LocaleController.formatPluralString("Seconds", fadeIn) + " · " + org.telegram.messenger.LocaleController.formatPluralString("Seconds", fadeOut);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerCrossfadeDuration), summary, true);
                 } else if (position == playlistsRow) {
                     cell.setTextAndValue(getString(R.string.OEPlayerLocalPlaylists), getString(R.string.OEPlayerLocalPlaylistsDesc), true);
@@ -891,40 +891,32 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
         boolean isDark = Theme.isCurrentThemeDark();
-        int cardBg = ColorUtils.blendARGB(accentColor, isDark ? 0xFF232530 : 0xFFF1F3F9, isDark ? 0.88f : 0.85f);
+        int cardBg = ColorUtils.setAlphaComponent(accentColor, isDark ? 42 : 28);
 
         LinearLayout card1 = new LinearLayout(getParentActivity());
         card1.setOrientation(LinearLayout.VERTICAL);
-        card1.setPadding(dp(14), dp(10), dp(14), dp(10));
+        card1.setGravity(Gravity.CENTER);
+        card1.setPadding(dp(14), dp(12), dp(14), dp(12));
         card1.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
-
-        TextView title1 = new TextView(getParentActivity());
-        title1.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeOut));
-        title1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        title1.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider()));
-        card1.addView(title1);
 
         TextView valueText1 = new TextView(getParentActivity());
         valueText1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         valueText1.setTypeface(AndroidUtilities.bold());
-        valueText1.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider()));
+        valueText1.setGravity(Gravity.CENTER);
+        valueText1.setTextColor(accentColor);
         card1.addView(valueText1);
 
         LinearLayout card2 = new LinearLayout(getParentActivity());
         card2.setOrientation(LinearLayout.VERTICAL);
-        card2.setPadding(dp(14), dp(10), dp(14), dp(10));
+        card2.setGravity(Gravity.CENTER);
+        card2.setPadding(dp(14), dp(12), dp(14), dp(12));
         card2.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
-
-        TextView title2 = new TextView(getParentActivity());
-        title2.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeIn));
-        title2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-        title2.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, getResourceProvider()));
-        card2.addView(title2);
 
         TextView valueText2 = new TextView(getParentActivity());
         valueText2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         valueText2.setTypeface(AndroidUtilities.bold());
-        valueText2.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider()));
+        valueText2.setGravity(Gravity.CENTER);
+        valueText2.setTextColor(accentColor);
         card2.addView(valueText2);
 
         LinearLayout.LayoutParams lp1 = new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f);
@@ -938,24 +930,24 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         container.addView(cardsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
         Md3RangeSlider slider = new Md3RangeSlider(getParentActivity());
-        int currentFadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
         int currentFadeIn = AppearanceConfig.playerCrossfadeFadeInDuration();
+        int currentFadeOut = AppearanceConfig.playerCrossfadeFadeOutDuration();
         slider.setRange(0, 12);
-        slider.setValues(currentFadeOut, currentFadeIn);
-        slider.setLabels(getString(R.string.OEAppearancePlayerCrossfadeFadeOut), getString(R.string.OEAppearancePlayerCrossfadeFadeIn));
+        slider.setValues(currentFadeIn, currentFadeOut);
+        slider.setLabels("", "");
 
-        final int[] outVal = new int[]{currentFadeOut};
         final int[] inVal = new int[]{currentFadeIn};
+        final int[] outVal = new int[]{currentFadeOut};
 
         Runnable updateCards = () -> {
-            valueText1.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", outVal[0]));
-            valueText2.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", inVal[0]));
+            valueText1.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", inVal[0]));
+            valueText2.setText(org.telegram.messenger.LocaleController.formatPluralString("Seconds", outVal[0]));
         };
         updateCards.run();
 
         slider.setOnRangeChangeListener((val1, val2, fromUser) -> {
-            outVal[0] = val1;
-            inVal[0] = val2;
+            inVal[0] = val1;
+            outVal[0] = val2;
             updateCards.run();
         });
 
@@ -963,8 +955,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         builder.setView(container);
         builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
-            AppearanceConfig.playerCrossfadeFadeOutDuration.setConfigInt(outVal[0]);
             AppearanceConfig.playerCrossfadeFadeInDuration.setConfigInt(inVal[0]);
+            AppearanceConfig.playerCrossfadeFadeOutDuration.setConfigInt(outVal[0]);
             AppearanceConfig.playerCrossfadeDuration.setConfigInt(outVal[0]);
             if (listAdapter != null) {
                 listAdapter.notifyItemChanged(crossfadeDurationRow);
