@@ -221,7 +221,29 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
 
         builder.setItems(items, (dialog, which) -> {
             if (which == 0) {
-                MessagesController.getInstance(currentAccount).openByUserName(channel, this, 1);
+                String cleanChannel = channel != null ? channel.trim() : "";
+                if (cleanChannel.startsWith("@")) {
+                    cleanChannel = cleanChannel.substring(1);
+                }
+                final String targetUsername = cleanChannel;
+                org.telegram.tgnet.TLRPC.TL_contacts_resolveUsername req = new org.telegram.tgnet.TLRPC.TL_contacts_resolveUsername();
+                req.username = targetUsername;
+                org.telegram.tgnet.ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> org.telegram.messenger.AndroidUtilities.runOnUIThread(() -> {
+                    if (res instanceof org.telegram.tgnet.TLRPC.TL_contacts_resolvedPeer) {
+                        org.telegram.tgnet.TLRPC.TL_contacts_resolvedPeer peer = (org.telegram.tgnet.TLRPC.TL_contacts_resolvedPeer) res;
+                        MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                        MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                        if (!peer.chats.isEmpty()) {
+                            android.os.Bundle args = new android.os.Bundle();
+                            args.putLong("chat_id", peer.chats.get(0).id);
+                            presentFragment(new org.telegram.ui.ChatActivity(args));
+                            return;
+                        }
+                    }
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.drawable.msg_info, "Канал @" + targetUsername + " переехал или недоступен")
+                            .show();
+                }));
             } else if (which == 1) {
                 config.removeSourceChannel(channel);
                 updateRows();

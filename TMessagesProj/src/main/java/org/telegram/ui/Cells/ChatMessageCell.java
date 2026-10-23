@@ -10584,7 +10584,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 captionHeight += dp(14);
                                 addedCaptionHeight += dp(14);
                             }
-                            if (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & captionFlag()) != 0) {
+                            if (!isSiblingGroupCarouselMessage() && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & captionFlag()) != 0)) {
                                 additionHeight += addedCaptionHeight;
                                 int widthToCheck = Math.max(captionWidth, photoWidth - dp(10));
                                 if ((reactionsLayoutInBubble.isEmpty || reactionsLayoutInBubble.isSmall) && !shouldDrawTimeOnMedia() && widthToCheck + dp(2) - captionLayout.lastLineWidth < timeWidthTotal + getExtraTimeX() && !hasFactCheck) {
@@ -24048,6 +24048,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public void drawCommentLayout(Canvas canvas, float alpha) {
+        if (isSiblingGroupCarouselMessage()) {
+            return;
+        }
         int x;
         if (mediaBackground) {
             x = backgroundDrawableLeft + dp(12) + getExtraTextX();
@@ -24334,7 +24337,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean hasReactionsToDraw() {
-        return currentMessageObject != null && currentMessageObject.shouldDrawReactions() && (currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall;
+        if (isSiblingGroupCarouselMessage()) {
+            return false;
+        }
+        return currentMessageObject != null && currentMessageObject.shouldDrawReactions() && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall;
     }
 
     public void drawReactionsLayout(Canvas canvas, float alpha, Integer only) {
@@ -24417,6 +24423,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private void drawCaptionLayout(Canvas canvas, MessageObject.TextLayoutBlocks captionLayout, boolean origin, boolean selectionOnly, float alpha) {
+        if (isSiblingGroupCarouselMessage()) {
+            return;
+        }
         int x;
         if (mediaBackground) {
             x = backgroundDrawableLeft + dp(12) + getExtraTextX();

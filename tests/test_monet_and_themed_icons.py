@@ -175,7 +175,8 @@ def test_package_installer_session_support_and_dialog_inline_progress_monet():
     assert '@android:color/system_accent1_' in night_content
 
     assert 'import android.view.View;' in ota_content, "MoltenGramOtaManager must import android.view.View"
-    assert 'setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6), 0.05f)' in ota_content
+    assert 'setWavyValues(AndroidUtilities.dp(33), AndroidUtilities.dp(4f), AndroidUtilities.dp(12), 0.05f)' in ota_content
+    assert 'setProgressImmediate(0.75f)' in ota_content
     assert '0xfffef7ff' not in ota_content.lower(), "MoltenGramOtaManager must not fall back to baseline purple 0xfffef7ff"
 
 
@@ -297,6 +298,53 @@ def test_md3_avatar_shapes_inline_infinite_carousel():
     assert 'PeerShapeCarouselCell' in mas_content
     assert 'INFINITE_COUNT = Integer.MAX_VALUE' in mas_content
     assert 'Math.floorMod(position, Md3AvatarShapes.SHAPES_COUNT)' in mas_content
+
+
+def test_media_carousel_scrim_context_menu_and_sibling_suppression():
+    ca_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ChatActivity.java')
+    with open(ca_path, 'r', encoding='utf-8') as f:
+        ca_content = f.read()
+    assert 'if (cell.isSiblingGroupCarouselMessage()) {' in ca_content
+    assert 'else if (cell != null && cell.isMediaCarouselMessage())' in ca_content
+    assert '!cell.isMediaCarouselMessage()' in ca_content
+
+    cmc_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/ChatMessageCell.java')
+    with open(cmc_path, 'r', encoding='utf-8') as f:
+        cmc_content = f.read()
+    assert 'if (!isSiblingGroupCarouselMessage() && (currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & captionFlag()) != 0))' in cmc_content
+    assert 'public boolean hasReactionsToDraw() {\n        if (isSiblingGroupCarouselMessage()) {\n            return false;\n        }' in cmc_content
+
+
+def test_ota_update_smooth_wave_and_single_stage_transition():
+    m3_path = os.path.join(JAVA_DIR, 'app/exteraless/appearance/M3CircularProgress.java')
+    with open(m3_path, 'r', encoding='utf-8') as f:
+        m3_content = f.read()
+    assert 'Math.max(64, Math.min(720,' in m3_content
+
+    ota_path = os.path.join(JAVA_DIR, 'app/exteraless/ota/MoltenGramOtaManager.java')
+    with open(ota_path, 'r', encoding='utf-8') as f:
+        ota_content = f.read()
+    assert 'isSelfInstallerOfRecord' in ota_content
+    assert 'PACKAGE_SOURCE_STORE' in ota_content
+    assert 'setProgressImmediate(0.75f)' in ota_content
+
+
+def test_plugin_store_direct_download_and_safe_username_resolution():
+    psa_path = os.path.join(JAVA_DIR, 'app/exteraless/plugins/ui/PluginStoreActivity.java')
+    with open(psa_path, 'r', encoding='utf-8') as f:
+        psa_content = f.read()
+    assert 'downloadDocumentAndInstall' in psa_content
+    assert 'openTelegramLinkSafely' in psa_content
+    assert 'searchPluginAcrossMirrors' in psa_content
+    assert 'parseTelegramUsernameAndPostId' in psa_content
+
+    pdbs_path = os.path.join(JAVA_DIR, 'app/exteraless/plugins/ui/PluginDetailsBottomSheet.java')
+    with open(pdbs_path, 'r', encoding='utf-8') as f:
+        pdbs_content = f.read()
+    assert 'parentActivity.downloadAndInstall(plugin)' in pdbs_content
+    assert 'storeActivity.downloadAndInstall(ver)' in pdbs_content
+    assert 'openTelegramLinkSafely' in pdbs_content
+
 
 
 

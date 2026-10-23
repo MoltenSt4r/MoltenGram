@@ -797,7 +797,7 @@ public class MoltenGramOtaManager {
             return;
         }
 
-        if (app.exteraless.shizuku.ShizukuConfig.getInstance().isSilentUpdatesEnabled()
+        if (app.exteraless.shizuku.ShizukuController.getInstance().isAvailable()
                 && app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()) {
             installWithShizuku(activity, apkFile, listener);
             return;
@@ -991,31 +991,46 @@ public class MoltenGramOtaManager {
                 content.setGravity(Gravity.CENTER);
 
                 // Dynamic Monet wallpaper / active theme accent and track colors
-                int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = Theme.getColor(Theme.key_chats_actionBackground);
-                }
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = MonetHelper.getColor(isDark ? "primary_dark" : "primary_light");
-                }
+                int accentColor = MonetHelper.getColor(isDark ? "primary_dark" : "primary_light");
                 if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
                     accentColor = MonetHelper.getColor(isDark ? "a1_200" : "a1_600");
+                }
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                }
+                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
+                    accentColor = Theme.getColor(Theme.key_chats_actionBackground);
                 }
                 if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
                     if (wpSeed != null && !MonetHelper.isStaticBaselineFrameworkRole(wpSeed)) {
                         com.google.android.material.color.utilities.Hct hct = com.google.android.material.color.utilities.Hct.fromInt(wpSeed);
                         accentColor = com.google.android.material.color.utilities.Hct.from(hct.getHue(), Math.max(36d, hct.getChroma()), isDark ? 80d : 40d).toInt();
                     } else {
-                        accentColor = 0xff527da3;
+                        accentColor = isDark ? 0xff8ab4f8 : 0xff527da3;
                     }
                 }
+                // Guarantee high-contrast Monet primary tone for the active wavy arc
+                try {
+                    com.google.android.material.color.utilities.Hct accentHct = com.google.android.material.color.utilities.Hct.fromInt(accentColor);
+                    if (isDark && accentHct.getTone() < 65d) {
+                        accentColor = com.google.android.material.color.utilities.Hct.from(accentHct.getHue(), Math.max(36d, accentHct.getChroma()), 80d).toInt();
+                    } else if (!isDark && accentHct.getTone() > 55d) {
+                        accentColor = com.google.android.material.color.utilities.Hct.from(accentHct.getHue(), Math.max(36d, accentHct.getChroma()), 40d).toInt();
+                    }
+                } catch (Throwable ignored) {}
 
-                int trackColor = Theme.getColor(Theme.key_featuredStickers_unread);
+                int trackColor = MonetHelper.getColor(isDark ? "primary_container_dark" : "primary_container_light");
                 if (trackColor == 0 || trackColor == accentColor || MonetHelper.isStaticBaselineFrameworkRole(trackColor)) {
-                    int monetTrack = MonetHelper.getColor(isDark ? "primary_container_dark" : "primary_container_light");
-                    if (monetTrack != 0 && !MonetHelper.isStaticBaselineFrameworkRole(monetTrack)) {
-                        trackColor = monetTrack;
-                    } else {
+                    trackColor = Theme.multAlpha(accentColor, isDark ? 0.24f : 0.20f);
+                } else {
+                    try {
+                        com.google.android.material.color.utilities.Hct trackHct = com.google.android.material.color.utilities.Hct.fromInt(trackColor);
+                        if (isDark && trackHct.getTone() > 42d) {
+                            trackColor = com.google.android.material.color.utilities.Hct.from(trackHct.getHue(), Math.min(32d, trackHct.getChroma()), 28d).toInt();
+                        } else if (!isDark && trackHct.getTone() < 75d) {
+                            trackColor = com.google.android.material.color.utilities.Hct.from(trackHct.getHue(), Math.min(32d, trackHct.getChroma()), 88d).toInt();
+                        }
+                    } catch (Throwable ignored) {
                         trackColor = Theme.multAlpha(accentColor, isDark ? 0.24f : 0.20f);
                     }
                 }
@@ -1027,7 +1042,8 @@ public class MoltenGramOtaManager {
                 progressView.setTrackColor(trackColor);
                 progressView.setStyle(M3CircularProgress.STYLE_WAVY, true);
                 progressView.setWavy(true);
-                progressView.setWavyValues(AndroidUtilities.dp(16), AndroidUtilities.dp(2.2f), AndroidUtilities.dp(6), 0.05f);
+                progressView.setWavyValues(AndroidUtilities.dp(33), AndroidUtilities.dp(4f), AndroidUtilities.dp(12), 0.05f);
+                progressView.setProgressImmediate(0.75f);
 
                 int textColor = MonetHelper.getColor(isDark ? "on_surface_dark" : "on_surface_light");
                 if (textColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(textColor)) {
@@ -1093,6 +1109,22 @@ public class MoltenGramOtaManager {
         });
     }
 
+    private boolean isSelfInstallerOfRecord(Context context, PackageManager pm) {
+        if (context == null || pm == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return false;
+        }
+        try {
+            String pkg = context.getPackageName();
+            android.content.pm.InstallSourceInfo info = pm.getInstallSourceInfo(pkg);
+            if (info != null) {
+                String installing = info.getInstallingPackageName();
+                String initiating = info.getInitiatingPackageName();
+                return pkg.equals(installing) || pkg.equals(initiating);
+            }
+        } catch (Throwable ignored) {}
+        return false;
+    }
+
     private boolean installViaPackageInstallerSession(Activity activity, File apkFile) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return false;
@@ -1106,8 +1138,12 @@ public class MoltenGramOtaManager {
                 return false;
             }
 
-            // Show in-app Monet progress dialog
-            showUpdateProgressDialog(activity);
+            // Only show the in-app Monet progress dialog upfront when silent unattended self-update is eligible
+            // (our package is already the installer of record), avoiding a two-screen flash before OS confirmation.
+            final boolean silentSelfUpdateEligible = isSelfInstallerOfRecord(activity, pm);
+            if (silentSelfUpdateEligible) {
+                showUpdateProgressDialog(activity);
+            }
 
             Context appContext = activity.getApplicationContext() != null ? activity.getApplicationContext() : activity;
 
@@ -1121,9 +1157,9 @@ public class MoltenGramOtaManager {
                 } catch (Throwable t) {
                     FileLog.e("PackageInstaller setRequireUserAction failed", t);
                 }
-                if (Build.VERSION.SDK_INT >= 34) {
+                if (Build.VERSION.SDK_INT >= 33) {
                     try {
-                        params.setPackageSource(android.content.pm.PackageInstaller.PACKAGE_SOURCE_OTHER);
+                        params.setPackageSource(android.content.pm.PackageInstaller.PACKAGE_SOURCE_STORE);
                     } catch (Throwable ignored) {}
                 }
 

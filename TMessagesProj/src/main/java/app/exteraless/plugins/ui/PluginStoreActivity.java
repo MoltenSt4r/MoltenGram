@@ -391,18 +391,10 @@ public class PluginStoreActivity extends BaseFragment {
 
         @Override
         public void onAuthorClick(StorePlugin plugin) {
+            if (plugin == null) return;
             String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
                     (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author);
-            if (!TextUtils.isEmpty(target)) {
-                String clean = target.trim();
-                if (clean.startsWith("http://") || clean.startsWith("https://")) {
-                    Browser.openUrl(getParentActivity(), clean);
-                } else if (clean.startsWith("@")) {
-                    Browser.openUrl(getParentActivity(), "https://t.me/" + clean.substring(1));
-                } else {
-                    Browser.openUrl(getParentActivity(), "https://t.me/" + clean);
-                }
-            }
+            openTelegramLinkSafely(target, plugin, false);
         }
 
         @Override
@@ -1878,22 +1870,446 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
-    public void openPluginMessage(StorePlugin plugin) {
-        if (plugin == null) return;
-
-        // Persist plugin icon in preferences so it is preserved upon installation
-        if (!TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
+    private void persistPluginIcon(StorePlugin plugin) {
+        if (plugin != null && !TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
             ApplicationLoader.applicationContext
                     .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
                     .edit()
                     .putString("plugin_icon_" + plugin.id, plugin.icon)
                     .apply();
         }
+    }
 
+    private StorePlugin findCandidateWithDocument(StorePlugin plugin) {
+        if (plugin == null) return null;
+        if (plugin.document != null) return plugin;
+        if (plugin.versions != null) {
+            for (StorePlugin v : plugin.versions) {
+                if (v != null && v.document != null) {
+                    return v;
+                }
+            }
+        }
+        String normId = plugin.getNormalizedId();
+        String strippedId = plugin.getStrippedNormalizedId();
+        synchronized (allPlugins) {
+            for (StorePlugin p : allPlugins) {
+                if (p == null) continue;
+                boolean match = (!TextUtils.isEmpty(plugin.id) && plugin.id.equalsIgnoreCase(p.id))
+                        || (!TextUtils.isEmpty(normId) && normId.equalsIgnoreCase(p.getNormalizedId()))
+                        || (!TextUtils.isEmpty(strippedId) && strippedId.equalsIgnoreCase(p.getStrippedNormalizedId()));
+                if (match) {
+                    if (p.document != null) return p;
+                    if (p.versions != null) {
+                        for (StorePlugin pv : p.versions) {
+                            if (pv != null && pv.document != null) {
+                                return pv;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        return null;
+    }
+
+    private void copyResolvedMedia(StorePlugin dst, StorePlugin src) {
+        if (dst == null || src == null || dst == src) return;
+        if (src.document != null) dst.document = src.document;
+        if (src.message != null) dst.message = src.message;
+        if (src.chat != null) dst.chat = src.chat;
+        if (!TextUtils.isEmpty(src.sourceChannel)) dst.sourceChannel = src.sourceChannel;
+        if (!TextUtils.isEmpty(src.channelPost)) dst.channelPost = src.channelPost;
+        if (TextUtils.isEmpty(dst.icon) && !TextUtils.isEmpty(src.icon)) dst.icon = src.icon;
+    }
+
+    private void triggerInstallDialogForFile(File file) {
+        if (file == null || !file.exists() || file.length() <= 0) return;
+        String lower = file.getName().toLowerCase(Locale.ROOT);
+        final File finalFile = PluginsController.getInstance().isBetaImportPyEnabled() && lower.endsWith(".py")
+                ? PluginAutoConverter.autoConvertIfNeeded(file)
+                : file;
+        AndroidUtilities.runOnUIThread(() -> {
+            BaseFragment targetFragment = (getParentActivity() != null && !isFinished) ? this : null;
+            PluginsController.getInstance().showInstallDialog(targetFragment, finalFile.getAbsolutePath(), false);
+        });
+    }
+
+    private void downloadDocumentAndInstall(StorePlugin plugin, StorePlugin docSource) {
+        if (plugin == null || docSource == null || docSource.document == null) return;
+        persistPluginIcon(plugin);
+        copyResolvedMedia(plugin, docSource);
+
+        File path = null;
+        if (docSource.message != null) {
+            path = FileLoader.getInstance(currentAccount).getPathToMessage(docSource.message);
+        }
+        if (path == null || !path.exists() || path.length() == 0) {
+            path = FileLoader.getInstance(currentAccount).getPathToAttach(docSource.document, true);
+        }
+        if (path != null && path.exists() && path.length() > 0) {
+            plugin.downloading = false;
+            updateRows();
+            triggerInstallDialogForFile(path);
+            return;
+        }
+
+        plugin.downloading = true;
+        updateRows();
+
+        final String attachFileName = FileLoader.getAttachFileName(docSource.document);
+        final TLRPC.Document targetDoc = docSource.document;
+        final TLRPC.Message targetMsg = docSource.message;
+
+        final NotificationCenter.NotificationCenterDelegate[] delegateHolder = new NotificationCenter.NotificationCenterDelegate[1];
+        NotificationCenter.NotificationCenterDelegate observer = (id, account, args) -> {
+            if (args == null || args.length == 0) return;
+            String location = (String) args[0];
+            if (location == null || !location.equals(attachFileName)) return;
+
+            if (id == NotificationCenter.fileLoaded) {
+                NotificationCenter.getInstance(currentAccount).removeObserver(delegateHolder[0], NotificationCenter.fileLoaded);
+                NotificationCenter.getInstance(currentAccount).removeObserver(delegateHolder[0], NotificationCenter.fileLoadFailed);
+                activeObservers.remove(delegateHolder[0]);
+                plugin.downloading = false;
+                updateRows();
+
+                File loaded = null;
+                if (targetMsg != null) {
+                    loaded = FileLoader.getInstance(currentAccount).getPathToMessage(targetMsg);
+                }
+                if (loaded == null || !loaded.exists() || loaded.length() == 0) {
+                    loaded = FileLoader.getInstance(currentAccount).getPathToAttach(targetDoc, true);
+                }
+                if (loaded != null && loaded.exists() && loaded.length() > 0) {
+                    triggerInstallDialogForFile(loaded);
+                }
+            } else if (id == NotificationCenter.fileLoadFailed) {
+                NotificationCenter.getInstance(currentAccount).removeObserver(delegateHolder[0], NotificationCenter.fileLoaded);
+                NotificationCenter.getInstance(currentAccount).removeObserver(delegateHolder[0], NotificationCenter.fileLoadFailed);
+                activeObservers.remove(delegateHolder[0]);
+                plugin.downloading = false;
+                updateRows();
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createErrorBulletin(getString(R.string.PluginsInstallReadError))
+                            .show();
+                }
+            }
+        };
+        delegateHolder[0] = observer;
+        activeObservers.add(observer);
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoaded);
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoadFailed);
+
+        Object parentObject = targetMsg != null ? new MessageObject(currentAccount, targetMsg, false, false) : "plugin_store";
+        FileLoader.getInstance(currentAccount).loadFile(targetDoc, parentObject, FileLoader.PRIORITY_HIGH, 1);
+    }
+
+    private static String[] parseTelegramUsernameAndPostId(String raw) {
+        if (TextUtils.isEmpty(raw)) return null;
+        String s = raw.trim();
+        if (s.startsWith("@")) {
+            String u = s.substring(1).trim();
+            int slash = u.indexOf('/');
+            if (slash > 0) {
+                return new String[]{u.substring(0, slash), u.substring(slash + 1)};
+            }
+            return u.isEmpty() ? null : new String[]{u, null};
+        }
+        String lower = s.toLowerCase(Locale.ROOT);
+        int idx = -1;
+        if (lower.startsWith("https://t.me/")) idx = "https://t.me/".length();
+        else if (lower.startsWith("http://t.me/")) idx = "http://t.me/".length();
+        else if (lower.startsWith("t.me/")) idx = "t.me/".length();
+        else if (lower.startsWith("https://telegram.me/")) idx = "https://telegram.me/".length();
+        else if (lower.startsWith("http://telegram.me/")) idx = "http://telegram.me/".length();
+        if (idx > 0) {
+            String rest = s.substring(idx);
+            int qIdx = rest.indexOf('?');
+            if (qIdx >= 0) rest = rest.substring(0, qIdx);
+            int hIdx = rest.indexOf('#');
+            if (hIdx >= 0) rest = rest.substring(0, hIdx);
+            while (rest.startsWith("/")) rest = rest.substring(1);
+            if (rest.startsWith("s/")) rest = rest.substring(2);
+            if (rest.isEmpty() || rest.startsWith("+") || rest.startsWith("joinchat/") || rest.startsWith("addstickers/") || rest.startsWith("addlist/") || rest.startsWith("c/")) {
+                return null;
+            }
+            String[] parts = rest.split("/");
+            if (parts.length >= 2) {
+                return new String[]{parts[0], parts[1]};
+            } else if (parts.length == 1 && !parts[0].isEmpty()) {
+                return new String[]{parts[0], null};
+            }
+        }
+        if (!s.contains("/") && !s.contains(":") && !s.contains(" ")) {
+            return new String[]{s, null};
+        }
+        return null;
+    }
+
+    /**
+     * Resolves a Telegram username/post link via TL_contacts_resolveUsername without triggering
+     * MessagesController.openByUserName's "No such account" (NoUsernameFound) error bulletin.
+     * If the channel/account was renamed or deleted, automatically searches active mirror channels!
+     */
+    public void openTelegramLinkSafely(String targetUrlOrUsername, StorePlugin fallbackPlugin, boolean installOnResolve) {
+        if (TextUtils.isEmpty(targetUrlOrUsername) && fallbackPlugin == null) return;
         Activity act = getParentActivity();
         if (act == null) act = LaunchActivity.instance;
+        final Activity finalAct = act;
 
-        // 1. If we have chat and message objects
+        String[] parsed = parseTelegramUsernameAndPostId(targetUrlOrUsername);
+        if (parsed == null && fallbackPlugin != null) {
+            parsed = parseTelegramUsernameAndPostId(fallbackPlugin.channelPost);
+            if (parsed == null) parsed = parseTelegramUsernameAndPostId(fallbackPlugin.sourceChannel);
+            if (parsed == null) parsed = parseTelegramUsernameAndPostId(fallbackPlugin.link);
+            if (parsed == null) parsed = parseTelegramUsernameAndPostId(fallbackPlugin.author);
+        }
+
+        if (parsed == null) {
+            if (!TextUtils.isEmpty(targetUrlOrUsername) && (targetUrlOrUsername.startsWith("http://") || targetUrlOrUsername.startsWith("https://"))) {
+                String lower = targetUrlOrUsername.toLowerCase(Locale.ROOT);
+                if (!lower.contains("t.me/") && !lower.contains("telegram.me/")) {
+                    if (finalAct != null) {
+                        Browser.openUrl(finalAct, targetUrlOrUsername);
+                    }
+                    return;
+                }
+            }
+            if (fallbackPlugin != null) {
+                searchPluginAcrossMirrors(fallbackPlugin, installOnResolve);
+            }
+            return;
+        }
+
+        final String username = parsed[0];
+        int parsedMsgId = 0;
+        if (!TextUtils.isEmpty(parsed[1])) {
+            try {
+                parsedMsgId = Integer.parseInt(NON_DIGITS_PATTERN.matcher(parsed[1]).replaceAll(""));
+            } catch (Exception ignored) {}
+        }
+        if (parsedMsgId <= 0 && fallbackPlugin != null && fallbackPlugin.message != null && fallbackPlugin.message.id > 0) {
+            parsedMsgId = fallbackPlugin.message.id;
+        }
+        final int msgId = parsedMsgId;
+
+        if (fallbackPlugin != null && installOnResolve) {
+            fallbackPlugin.downloading = true;
+            updateRows();
+        }
+
+        TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+        req.username = username;
+        ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            TLRPC.Chat resolvedChat = null;
+            TLRPC.User resolvedUser = null;
+            if (response instanceof TLRPC.TL_contacts_resolvedPeer) {
+                TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) response;
+                MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                if (!peer.chats.isEmpty()) {
+                    resolvedChat = peer.chats.get(0);
+                } else if (!peer.users.isEmpty()) {
+                    resolvedUser = peer.users.get(0);
+                }
+            }
+
+            if (resolvedChat != null) {
+                final TLRPC.Chat chat = resolvedChat;
+                if (fallbackPlugin != null) {
+                    fallbackPlugin.chat = chat;
+                }
+                if (installOnResolve && fallbackPlugin != null) {
+                    fetchPluginFromResolvedChat(chat, msgId, fallbackPlugin);
+                } else {
+                    Bundle args = new Bundle();
+                    args.putLong("chat_id", chat.id);
+                    if (msgId > 0) {
+                        args.putInt("message_id", msgId);
+                    }
+                    presentFragment(new ChatActivity(args));
+                }
+            } else if (resolvedUser != null && !installOnResolve) {
+                Bundle args = new Bundle();
+                args.putLong("user_id", resolvedUser.id);
+                presentFragment(new ChatActivity(args));
+            } else {
+                // Username no longer exists ("Нет такого аккаунта" avoided!) -> fallback to mirror search
+                if (fallbackPlugin != null) {
+                    searchPluginAcrossMirrors(fallbackPlugin, installOnResolve);
+                } else if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.drawable.msg_info, "Канал @" + username + " переехал или удалён")
+                            .show();
+                }
+            }
+        }));
+    }
+
+    private void fetchPluginFromResolvedChat(TLRPC.Chat chat, int msgId, StorePlugin plugin) {
+        if (chat == null || plugin == null) return;
+        if (msgId > 0) {
+            TLRPC.TL_channels_getMessages getReq = new TLRPC.TL_channels_getMessages();
+            getReq.channel = MessagesController.getInstance(currentAccount).getInputChannel(chat);
+            TLRPC.TL_inputMessageID inputMsgId = new TLRPC.TL_inputMessageID();
+            inputMsgId.id = msgId;
+            getReq.id.add(inputMsgId);
+            ConnectionsManager.getInstance(currentAccount).sendRequest(getReq, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                if (res instanceof TLRPC.messages_Messages) {
+                    TLRPC.messages_Messages mRes = (TLRPC.messages_Messages) res;
+                    for (TLRPC.Message msg : mRes.messages) {
+                        if (msg != null && msg.media instanceof TLRPC.TL_messageMediaDocument && msg.media.document != null) {
+                            plugin.chat = chat;
+                            plugin.message = msg;
+                            plugin.document = msg.media.document;
+                            downloadDocumentAndInstall(plugin, plugin);
+                            return;
+                        }
+                    }
+                }
+                // Message had no document or was deleted -> search channel & mirrors by plugin ID/name
+                searchPluginAcrossMirrors(plugin, true);
+            }));
+        } else {
+            searchPluginAcrossMirrors(plugin, true);
+        }
+    }
+
+    private void searchPluginAcrossMirrors(StorePlugin plugin, boolean installWhenFound) {
+        if (plugin == null) return;
+
+        // First check if another channel already populated it in allPlugins
+        StorePlugin existingDoc = findCandidateWithDocument(plugin);
+        if (existingDoc != null && existingDoc.document != null) {
+            copyResolvedMedia(plugin, existingDoc);
+            plugin.downloading = false;
+            updateRows();
+            if (installWhenFound) {
+                downloadDocumentAndInstall(plugin, existingDoc);
+            } else if (plugin.chat != null && plugin.message != null) {
+                Bundle args = new Bundle();
+                args.putLong("chat_id", plugin.chat.id);
+                args.putInt("message_id", plugin.message.id);
+                presentFragment(new ChatActivity(args));
+            }
+            return;
+        }
+
+        List<TLRPC.Chat> chatsToSearch = new ArrayList<>(activeSourceChats);
+        if (chatsToSearch.isEmpty()) {
+            // Resolve configured source channels first, then search
+            List<String> sourceChannels = config.getSourceChannels();
+            if (sourceChannels.isEmpty()) {
+                plugin.downloading = false;
+                updateRows();
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.drawable.msg_info, "Канал автора переехал или удалён, плагин не найден в зеркалах")
+                            .show();
+                }
+                return;
+            }
+            final int[] pendingResolve = new int[]{sourceChannels.size()};
+            for (String chName : sourceChannels) {
+                TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                req.username = chName;
+                ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                        TLRPC.TL_contacts_resolvedPeer r = (TLRPC.TL_contacts_resolvedPeer) res;
+                        if (r != null && !r.chats.isEmpty()) {
+                            TLRPC.Chat c = r.chats.get(0);
+                            if (!containsChat(activeSourceChats, c)) {
+                                activeSourceChats.add(c);
+                            }
+                        }
+                    }
+                    pendingResolve[0]--;
+                    if (pendingResolve[0] <= 0) {
+                        executeMirrorSearchForPlugin(plugin, new ArrayList<>(activeSourceChats), installWhenFound);
+                    }
+                }));
+            }
+            return;
+        }
+
+        executeMirrorSearchForPlugin(plugin, chatsToSearch, installWhenFound);
+    }
+
+    private void executeMirrorSearchForPlugin(StorePlugin plugin, List<TLRPC.Chat> chats, boolean installWhenFound) {
+        if (chats == null || chats.isEmpty()) {
+            plugin.downloading = false;
+            updateRows();
+            if (getParentActivity() != null) {
+                BulletinFactory.of(this)
+                        .createSimpleBulletin(R.drawable.msg_info, "Канал автора переехал или удалён, плагин не найден в зеркалах")
+                        .show();
+            }
+            return;
+        }
+
+        List<String> queries = new ArrayList<>();
+        if (!TextUtils.isEmpty(plugin.id)) {
+            queries.add(plugin.getNormalizedId());
+        }
+        if (!TextUtils.isEmpty(plugin.name)) {
+            String clean = cleanPluginName(plugin.name);
+            if (!TextUtils.isEmpty(clean) && !queries.contains(clean.toLowerCase(Locale.ROOT))) {
+                queries.add(clean);
+            }
+        }
+        if (queries.isEmpty()) {
+            queries.add("");
+        }
+        final String primaryQuery = queries.get(0);
+
+        final int[] remaining = new int[]{chats.size()};
+        final boolean[] handled = new boolean[]{false};
+
+        for (TLRPC.Chat chat : chats) {
+            searchChatBatch(chat, 0, primaryQuery, () -> {
+                if (handled[0]) return;
+                StorePlugin cand = findCandidateWithDocument(plugin);
+                if (cand != null && cand.document != null) {
+                    handled[0] = true;
+                    copyResolvedMedia(plugin, cand);
+                    plugin.downloading = false;
+                    updateRows();
+                    if (installWhenFound) {
+                        downloadDocumentAndInstall(plugin, cand);
+                    } else if (plugin.chat != null && plugin.message != null) {
+                        Bundle args = new Bundle();
+                        args.putLong("chat_id", plugin.chat.id);
+                        args.putInt("message_id", plugin.message.id);
+                        presentFragment(new ChatActivity(args));
+                    }
+                    return;
+                }
+                remaining[0]--;
+                if (remaining[0] <= 0 && !handled[0]) {
+                    plugin.downloading = false;
+                    updateRows();
+                    if (getParentActivity() != null) {
+                        BulletinFactory.of(this)
+                                .createSimpleBulletin(R.drawable.msg_info, "Канал автора переехал или удалён, плагин временно недоступен")
+                                .show();
+                    }
+                }
+            });
+        }
+    }
+
+    public void openPluginMessage(StorePlugin plugin) {
+        if (plugin == null) return;
+        persistPluginIcon(plugin);
+
+        StorePlugin docCandidate = findCandidateWithDocument(plugin);
+        if (docCandidate != null) {
+            copyResolvedMedia(plugin, docCandidate);
+        }
+
+        // 1. If we have chat and message objects, open the message directly in-app
         if (plugin.chat != null && plugin.message != null && plugin.message.id > 0) {
             Bundle args = new Bundle();
             args.putLong("chat_id", plugin.chat.id);
@@ -1902,59 +2318,33 @@ public class PluginStoreActivity extends BaseFragment {
             return;
         }
 
-        // 2. If we have direct channel post link (e.g. https://t.me/channel/123)
-        String postUrl = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost : plugin.link;
-        if (!TextUtils.isEmpty(postUrl)) {
-            String clean = postUrl.trim();
-            if (clean.startsWith("tg://") || clean.startsWith("https://t.me/") || clean.startsWith("http://t.me/") || clean.startsWith("t.me/")) {
-                if (clean.startsWith("t.me/")) {
-                    clean = "https://" + clean;
-                }
-                Browser.openUrl(act != null ? act : getParentActivity(), clean);
-                return;
-            }
-        }
-
-        // 3. If we have source channel
-        if (!TextUtils.isEmpty(plugin.sourceChannel)) {
-            String ch = plugin.sourceChannel.trim();
-            if (ch.startsWith("@")) {
-                ch = ch.substring(1);
-            }
-            if (!ch.startsWith("http://") && !ch.startsWith("https://")) {
-                String url = "https://t.me/" + ch;
-                if (plugin.message != null && plugin.message.id > 0) {
-                    url += "/" + plugin.message.id;
-                }
-                Browser.openUrl(act != null ? act : getParentActivity(), url);
-                return;
-            } else {
-                Browser.openUrl(act != null ? act : getParentActivity(), ch);
-                return;
-            }
-        }
-
-        // 4. Fallback to generic link or author
-        if (!TextUtils.isEmpty(plugin.link)) {
-            Browser.openUrl(act != null ? act : getParentActivity(), plugin.link);
+        // 2. If we have a document directly, download & install it in-app without navigating to a dead link
+        if (plugin.document != null) {
+            downloadDocumentAndInstall(plugin, plugin);
             return;
         }
 
-        if (!TextUtils.isEmpty(plugin.author)) {
-            String auth = plugin.author.trim();
-            if (auth.startsWith("@")) {
-                Browser.openUrl(act != null ? act : getParentActivity(), "https://t.me/" + auth.substring(1));
-                return;
-            }
-        }
-
-        BulletinFactory.of(this)
-                .createSimpleBulletin(R.drawable.msg_info, "Канал или сообщение плагина не найдены")
-                .show();
+        // 3. Safely resolve channel post / sourceChannel / link / author with automatic mirror fallback
+        String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
+                (!TextUtils.isEmpty(plugin.link) ? plugin.link :
+                        (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author));
+        openTelegramLinkSafely(target, plugin, true);
     }
 
-    void downloadAndInstall(StorePlugin plugin) {
-        openPluginMessage(plugin);
+    public void downloadAndInstall(StorePlugin plugin) {
+        if (plugin == null) return;
+        persistPluginIcon(plugin);
+
+        StorePlugin docCandidate = findCandidateWithDocument(plugin);
+        if (docCandidate != null && docCandidate.document != null) {
+            downloadDocumentAndInstall(plugin, docCandidate);
+            return;
+        }
+
+        String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
+                (!TextUtils.isEmpty(plugin.link) ? plugin.link :
+                        (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author));
+        openTelegramLinkSafely(target, plugin, true);
     }
 
     @Override

@@ -6233,7 +6233,7 @@ public class ChatActivity extends BaseFragment implements
                             continue;
                         }
                         boolean selectionOnly = false;
-                        if (cell.getCurrentPosition() != null) {
+                        if (cell.getCurrentPosition() != null && !cell.isMediaCarouselMessage()) {
                             selectionOnly = (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
                         }
                         float alpha = cell.shouldDrawAlphaLayer() ? cell.getAlpha() : 1f;
@@ -6275,7 +6275,7 @@ public class ChatActivity extends BaseFragment implements
                             continue;
                         }
                         boolean selectionOnly = false;
-                        if (cell.getCurrentPosition() != null) {
+                        if (cell.getCurrentPosition() != null && !cell.isMediaCarouselMessage()) {
                             selectionOnly = (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
                         }
                         float alpha = cell.shouldDrawAlphaLayer() ? cell.getAlpha() : 1f;
@@ -6770,7 +6770,7 @@ public class ChatActivity extends BaseFragment implements
                                 if (cell.hasCaptionLayout()) {
                                     drawCaptionAfter.add(cell);
                                 }
-                                if (message != null && message.hasReactions()) {
+                                if ((message != null && message.hasReactions()) || cell.hasCommentLayout()) {
                                     drawReactionsAfter.add(cell);
                                 }
                             } else {
@@ -18916,15 +18916,15 @@ public class ChatActivity extends BaseFragment implements
             } else if (type == 1) {
                 cell.drawNamesLayout(canvas, alpha);
             } else if (type == 2) {
-                cell.drawCaptionLayout(canvas, cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0, alpha);
+                cell.drawCaptionLayout(canvas, !cell.isMediaCarouselMessage() && cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0, alpha);
             } else if (type == 3) {
-                final boolean selectionOnly = cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
+                final boolean selectionOnly = !cell.isMediaCarouselMessage() && cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
                 cell.drawCommentLayout(canvas, alpha);
                 if (!selectionOnly) {
                     cell.drawReactionsLayout(canvas, alpha, null);
                 }
             } else if (type == 4) {
-                final boolean selectionOnly = cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
+                final boolean selectionOnly = !cell.isMediaCarouselMessage() && cell.getCurrentPosition() != null && (cell.getCurrentPosition().flags & MessageObject.POSITION_FLAG_LEFT) == 0;
                 if (!selectionOnly) {
                     if (scrimViewReaction != null) {
                         final float scrimProgress = scrimPaintAlpha * scrimViewAlpha / 0.2f;
@@ -19093,7 +19093,7 @@ public class ChatActivity extends BaseFragment implements
                             cell = null;
                             actionCell = child instanceof ChatActionCell ? ((ChatActionCell) child) : null;
                         }
-                        if (child != scrimView && (scrimGroup == null || scrimGroup != group) || child.getAlpha() == 0f) {
+                        if (child != scrimView && (scrimGroup == null || scrimGroup != group) || child.getAlpha() == 0f || (cell != null && cell.isSiblingGroupCarouselMessage())) {
                             continue;
                         }
                         if (!groupedBackgroundWasDraw && cell != null && scrimGroup != null && scrimGroup.transitionParams.cell != null) {
@@ -19224,19 +19224,35 @@ public class ChatActivity extends BaseFragment implements
                         }
 
                         if (position != null || (cell != null && cell.getTransitionParams().animateBackgroundBoundsInner)) {
-                            if (position == null || position.last || position.minX == 0 && position.minY == 0) {
-                                if (position == null || position.last) {
-                                    drawTimeAfter.add(cell);
-                                }
-                                if (position == null || (position.minX == 0 && position.minY == 0 && cell.hasNameLayout())) {
+                            if (cell != null && cell.isSiblingGroupCarouselMessage()) {
+                                // Sibling cells of carousel must NEVER draw foreground elements
+                            } else if (cell != null && cell.isMediaCarouselMessage()) {
+                                drawTimeAfter.add(cell);
+                                if (cell.hasNameLayout()) {
                                     drawNamesAfter.add(cell);
                                 }
-                            }
-                            if (position == null || (position.flags & cell.captionFlag()) != 0) {
-                                drawCaptionAfter.add(cell);
-                            }
-                            if (position == null || (position.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (position.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
-                                drawReactionsAfter.add(cell);
+                                if (cell.hasCaptionLayout()) {
+                                    drawCaptionAfter.add(cell);
+                                }
+                                final MessageObject message = cell.getMessageObject();
+                                if ((message != null && message.hasReactions()) || cell.hasCommentLayout()) {
+                                    drawReactionsAfter.add(cell);
+                                }
+                            } else {
+                                if (position == null || position.last || position.minX == 0 && position.minY == 0) {
+                                    if (position == null || position.last) {
+                                        drawTimeAfter.add(cell);
+                                    }
+                                    if (position == null || (position.minX == 0 && position.minY == 0 && cell.hasNameLayout())) {
+                                        drawNamesAfter.add(cell);
+                                    }
+                                }
+                                if (position == null || (position.flags & cell.captionFlag()) != 0) {
+                                    drawCaptionAfter.add(cell);
+                                }
+                                if (position == null || (position.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (position.flags & MessageObject.POSITION_FLAG_LEFT) != 0) {
+                                    drawReactionsAfter.add(cell);
+                                }
                             }
                         }
                         if (scrimViewReaction != null && cell != null && scrimGroup == null) {

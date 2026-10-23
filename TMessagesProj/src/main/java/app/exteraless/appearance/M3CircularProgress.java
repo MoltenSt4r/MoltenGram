@@ -135,7 +135,7 @@ public class M3CircularProgress {
         final float cx = oval.centerX();
         final float cy = oval.centerY();
         final float arcLength = (float) (Math.abs(sweepAngle) / 180.0 * Math.PI * radius);
-        final int steps = Math.max(8, Math.min(180, (int) (Math.abs(sweepAngle) / 2f)));
+        final int steps = Math.max(64, Math.min(720, (int) Math.max(Math.abs(sweepAngle) * 2f, (arcLength / Math.max(1f, waveLength)) * 32f)));
         final float phase = waveSpeed <= 0 ? 0 : (SystemClock.elapsedRealtime() % 100000L) / 1000f * waveSpeed;
         for (int i = 0; i <= steps; i++) {
             final float t = i / (float) steps;

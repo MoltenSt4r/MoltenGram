@@ -235,7 +235,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         installButton.setOnClickListener(v -> {
             dismiss();
             if (parentActivity != null) {
-                parentActivity.openPluginMessage(plugin);
+                parentActivity.downloadAndInstall(plugin);
             }
         });
         buttonsRow.addView(installButton, LayoutHelper.createLinear(0, 44, 1f, 8, 0, 0, 0));
@@ -627,6 +627,11 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
                 (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author);
         if (!TextUtils.isEmpty(target)) {
+            if (parentActivity != null) {
+                dismiss();
+                parentActivity.openTelegramLinkSafely(target.trim(), plugin, false);
+                return;
+            }
             String clean = target.trim();
             Activity act = parentActivity != null ? parentActivity.getParentActivity() : null;
             if (act != null) {
@@ -759,7 +764,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                     dismiss();
                     if (parentSheet != null) parentSheet.dismiss();
                     if (storeActivity != null) {
-                        storeActivity.openPluginMessage(ver);
+                        storeActivity.downloadAndInstall(ver);
                     }
                 });
                 card.addView(dlBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 0, 0));
@@ -827,7 +832,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                     } else {
                         customPlugin.link = text;
                     }
-                    storeActivity.openPluginMessage(customPlugin);
+                    storeActivity.downloadAndInstall(customPlugin);
                 }
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);

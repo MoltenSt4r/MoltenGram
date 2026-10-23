@@ -120,6 +120,18 @@ public class RadialProgressView extends View implements Drawable.Callback {
         }
         progressAnimationStart = animatedProgress;
         progressTime = 0;
+        currentCircleLength = Math.max(4, 360 * Math.max(animatedProgress, currentProgress));
+    }
+
+    public void setProgressImmediate(float value) {
+        noProgress = false;
+        currentProgress = value;
+        animatedProgress = value;
+        progressAnimationStart = value;
+        progressTime = 0;
+        currentCircleLength = Math.max(4, 360 * value);
+        drawingCircleLenght = currentCircleLength;
+        invalidate();
     }
 
     public void sync(RadialProgressView from) {
