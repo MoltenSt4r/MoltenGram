@@ -6770,7 +6770,7 @@ public class ChatActivity extends BaseFragment implements
                                 if (cell.hasCaptionLayout()) {
                                     drawCaptionAfter.add(cell);
                                 }
-                                if ((message != null && message.hasReactions()) || cell.hasCommentLayout()) {
+                                if (cell.hasReactionsToDraw() || (message != null && message.hasReactions()) || cell.hasCommentLayout()) {
                                     drawReactionsAfter.add(cell);
                                 }
                             } else {
@@ -19235,7 +19235,7 @@ public class ChatActivity extends BaseFragment implements
                                     drawCaptionAfter.add(cell);
                                 }
                                 final MessageObject message = cell.getMessageObject();
-                                if ((message != null && message.hasReactions()) || cell.hasCommentLayout()) {
+                                if (cell.hasReactionsToDraw() || (message != null && message.hasReactions()) || cell.hasCommentLayout()) {
                                     drawReactionsAfter.add(cell);
                                 }
                             } else {
@@ -34215,6 +34215,15 @@ public class ChatActivity extends BaseFragment implements
                         public void onReactionClicked(View v, ReactionsLayoutInBubble.VisibleReaction visibleReaction, boolean longpress, boolean addToRecent) {
                             float x = 0, y = 0;
                             BaseCell cell = findMessageCell(primaryMessage.getId(), true);
+                            if (cell instanceof ChatMessageCell && ((ChatMessageCell) cell).isSiblingGroupCarouselMessage() && groupedMessagesMap.get(primaryMessage.getGroupId()) != null) {
+                                MessageObject carouselPrimary = ChatMessageCell.getCarouselPrimaryMessage(groupedMessagesMap.get(primaryMessage.getGroupId()));
+                                if (carouselPrimary != null) {
+                                    BaseCell visibleCell = findMessageCell(carouselPrimary.getId(), true);
+                                    if (visibleCell != null) {
+                                        cell = visibleCell;
+                                    }
+                                }
+                            }
                             if (cell instanceof ChatMessageCell) {
                                 final ChatMessageCell messageCell = (ChatMessageCell) cell;
                                 final ReactionsLayoutInBubble.ReactionButton btn = messageCell.reactionsLayoutInBubble.getReactionButton(visibleReaction);
@@ -34930,6 +34939,15 @@ public class ChatActivity extends BaseFragment implements
             closeMenu();
             if (cell == null) {
                 cell = findMessageCell(primaryMessage.getId(), true);
+                if (cell instanceof ChatMessageCell && ((ChatMessageCell) cell).isSiblingGroupCarouselMessage() && groupedMessagesMap.get(primaryMessage.getGroupId()) != null) {
+                    MessageObject carouselPrimary = ChatMessageCell.getCarouselPrimaryMessage(groupedMessagesMap.get(primaryMessage.getGroupId()));
+                    if (carouselPrimary != null) {
+                        BaseCell visibleCell = findMessageCell(carouselPrimary.getId(), true);
+                        if (visibleCell != null) {
+                            cell = visibleCell;
+                        }
+                    }
+                }
             }
             if (bigEmoji) {
                 if (cell != null) {
@@ -34996,10 +35014,18 @@ public class ChatActivity extends BaseFragment implements
         final boolean added = primaryMessage.selectReaction(visibleReaction, bigEmoji, fromDoubleTap);
         int messageIdForCell = primaryMessage.getId();
         if (groupedMessagesMap.get(primaryMessage.getGroupId()) != null) {
-            int flags = primaryMessage.shouldDrawReactionsInLayout() ? MessageObject.POSITION_FLAG_BOTTOM | MessageObject.POSITION_FLAG_LEFT : MessageObject.POSITION_FLAG_BOTTOM | MessageObject.POSITION_FLAG_RIGHT;
-            MessageObject messageObject = groupedMessagesMap.get(primaryMessage.getGroupId()).findMessageWithFlags(flags);
-            if (messageObject != null) {
-                messageIdForCell = messageObject.getId();
+            MessageObject.GroupedMessages group = groupedMessagesMap.get(primaryMessage.getGroupId());
+            if (app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
+                MessageObject carouselPrimary = ChatMessageCell.getCarouselPrimaryMessage(group);
+                if (carouselPrimary != null) {
+                    messageIdForCell = carouselPrimary.getId();
+                }
+            } else {
+                int flags = primaryMessage.shouldDrawReactionsInLayout() ? MessageObject.POSITION_FLAG_BOTTOM | MessageObject.POSITION_FLAG_LEFT : MessageObject.POSITION_FLAG_BOTTOM | MessageObject.POSITION_FLAG_RIGHT;
+                MessageObject messageObject = group.findMessageWithFlags(flags);
+                if (messageObject != null) {
+                    messageIdForCell = messageObject.getId();
+                }
             }
         }
 
@@ -35007,6 +35033,15 @@ public class ChatActivity extends BaseFragment implements
 
         if (added) {
             cell = findMessageCell(finalMessageIdForCell, true);
+            if (cell instanceof ChatMessageCell && ((ChatMessageCell) cell).isSiblingGroupCarouselMessage() && groupedMessagesMap.get(primaryMessage.getGroupId()) != null) {
+                MessageObject carouselPrimary = ChatMessageCell.getCarouselPrimaryMessage(groupedMessagesMap.get(primaryMessage.getGroupId()));
+                if (carouselPrimary != null) {
+                    BaseCell visibleCell = findMessageCell(carouselPrimary.getId(), true);
+                    if (visibleCell != null) {
+                        cell = visibleCell;
+                    }
+                }
+            }
             showMultipleReactionsPromo(cell, visibleReaction, currentChosenReactions);
             if (!fromDoubleTap) {
                 ReactionsEffectOverlay.show(ChatActivity.this, reactionsLayout, cell, fromView, x, y, visibleReaction, currentAccount, reactionsLayout != null ? (bigEmoji ? ReactionsEffectOverlay.LONG_ANIMATION : ReactionsEffectOverlay.ONLY_MOVE_ANIMATION) : ReactionsEffectOverlay.SHORT_ANIMATION);

@@ -1138,12 +1138,10 @@ public class MoltenGramOtaManager {
                 return false;
             }
 
-            // Only show the in-app Monet progress dialog upfront when silent unattended self-update is eligible
-            // (our package is already the installer of record), avoiding a two-screen flash before OS confirmation.
-            final boolean silentSelfUpdateEligible = isSelfInstallerOfRecord(activity, pm);
-            if (silentSelfUpdateEligible) {
-                showUpdateProgressDialog(activity);
-            }
+            // We do not show the in-app progress dialog upfront for PackageInstaller session,
+            // because on non-root/non-Shizuku installs the OS PackageInstaller displays its own
+            // UI via confirmIntent, which would result in an awkward two-screen flash.
+            // Truly silent background updates are handled exclusively via Shizuku/root.
 
             Context appContext = activity.getApplicationContext() != null ? activity.getApplicationContext() : activity;
 

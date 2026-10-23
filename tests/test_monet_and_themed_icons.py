@@ -320,6 +320,14 @@ def test_ota_update_smooth_wave_and_single_stage_transition():
     with open(m3_path, 'r', encoding='utf-8') as f:
         m3_content = f.read()
     assert 'Math.max(64, Math.min(720,' in m3_content
+    assert 'effectiveWaveLength' in m3_content, "M3CircularProgress must quantize wave length"
+    assert 'rampDist' in m3_content or 'envelope' in m3_content, "M3CircularProgress must taper wave amplitude at ends"
+    assert 'getWaveAmplitude' in m3_content, "M3CircularProgress must provide getWaveAmplitude"
+
+    radial_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/RadialProgressView.java')
+    with open(radial_path, 'r', encoding='utf-8') as f:
+        radial_content = f.read()
+    assert 'strokeInset' in radial_content, "RadialProgressView must inset cicleRect to prevent clipping"
 
     ota_path = os.path.join(JAVA_DIR, 'app/exteraless/ota/MoltenGramOtaManager.java')
     with open(ota_path, 'r', encoding='utf-8') as f:
@@ -327,6 +335,22 @@ def test_ota_update_smooth_wave_and_single_stage_transition():
     assert 'isSelfInstallerOfRecord' in ota_content
     assert 'PACKAGE_SOURCE_STORE' in ota_content
     assert 'setProgressImmediate(0.75f)' in ota_content
+
+
+def test_media_carousel_reactions_binding_and_touch():
+    cmc_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/ChatMessageCell.java')
+    with open(cmc_path, 'r', encoding='utf-8') as f:
+        cmc_content = f.read()
+    assert 'reactionsLayoutInBubble.checkTouchEvent(event)' in cmc_content
+    assert 'isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0)' in cmc_content
+    assert 'isMediaCarouselMessage() ? false : !messageObject.shouldDrawReactionsInLayout()' in cmc_content
+
+    ca_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ChatActivity.java')
+    with open(ca_path, 'r', encoding='utf-8') as f:
+        ca_content = f.read()
+    assert 'AppearanceConfig.mediaGroupCarousel()' in ca_content
+    assert 'cell.isSiblingGroupCarouselMessage()' in ca_content
+    assert 'cell.hasReactionsToDraw() || (message != null && message.hasReactions())' in ca_content
 
 
 def test_plugin_store_direct_download_and_safe_username_resolution():

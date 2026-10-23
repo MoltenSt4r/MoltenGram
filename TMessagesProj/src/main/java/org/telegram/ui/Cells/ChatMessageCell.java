@@ -471,14 +471,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public void drawScrimReaction(Canvas canvas, Integer scrimViewReaction, float progress, boolean direction) {
-        if ((currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
+        if ((currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
             reactionsLayoutInBubble.setScrimProgress(progress, direction);
             reactionsLayoutInBubble.draw(canvas, transitionParams.animateChangeProgress, scrimViewReaction);
         }
     }
 
     public void drawScrimReactionPreview(View view, Canvas canvas, int offset, Integer scrimViewReaction, float progress) {
-        if ((currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
+        if ((currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
             reactionsLayoutInBubble.setScrimProgress(progress);
             reactionsLayoutInBubble.drawPreview(view, canvas, offset, scrimViewReaction);
         }
@@ -1053,13 +1053,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (group == null || group.messages == null || group.messages.isEmpty()) {
             return null;
         }
-        MessageObject captionMsg = group.findCaptionMessageObject();
-        if (captionMsg != null) {
-            return captionMsg;
-        }
         MessageObject primary = group.findPrimaryMessageObject();
         if (primary != null) {
             return primary;
+        }
+        MessageObject captionMsg = group.findCaptionMessageObject();
+        if (captionMsg != null) {
+            return captionMsg;
         }
         return group.messages.get(0);
     }
@@ -4165,7 +4165,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         int x = (int) getEventX(event);
         int y = (int) getEventY(event);
-        if (currentPosition != null && ((currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) == 0 || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) == 0)) {
+        if (!isMediaCarouselMessage() && currentPosition != null && ((currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) == 0 || (currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) == 0)) {
             ViewGroup parent = (ViewGroup) getParent();
             boolean r = false;
             for (int a = 0, N = parent.getChildCount(); a < N; a++) {
@@ -5547,6 +5547,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     private boolean checkReactionsTouchEvent(MotionEvent event) {
         if (currentMessageObject.hasValidGroupId() && currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
+            if (isMediaCarouselMessage()) {
+                return reactionsLayoutInBubble.checkTouchEvent(event);
+            }
             ViewGroup parent = (ViewGroup) getParent();
             if (parent == null) {
                 return false;
@@ -7460,14 +7463,26 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (messageIdChanged || messageObject.reactionsChanged || wasPlayingRound != isPlayingRound) {
                 messageObject.reactionsChanged = false;
                 boolean isTag = messageObject.messageOwner != null && messageObject.messageOwner.reactions != null && messageObject.messageOwner.reactions.reactions_as_tags;
-                if (messageObject.shouldDrawReactions() && !messageObject.isExpiredStory() && (currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0))) {
-                    boolean isSmall = !messageObject.shouldDrawReactionsInLayout();
+                if (messageObject.shouldDrawReactions() && !messageObject.isExpiredStory() && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0))) {
+                    boolean isSmall = isMediaCarouselMessage() ? false : !messageObject.shouldDrawReactionsInLayout();
                     if (currentPosition != null) {
                         MessageObject primaryMessage = groupedMessages.findPrimaryMessageObject();
-                        if (!isTag && primaryMessage.messageOwner != null) {
+                        if (primaryMessage == null || (primaryMessage.messageOwner != null && primaryMessage.messageOwner.reactions == null)) {
+                            for (int i = 0; i < groupedMessages.messages.size(); i++) {
+                                MessageObject obj = groupedMessages.messages.get(i);
+                                if (obj != null && obj.messageOwner != null && obj.messageOwner.reactions != null) {
+                                    primaryMessage = obj;
+                                    break;
+                                }
+                            }
+                        }
+                        if (primaryMessage == null) {
+                            primaryMessage = groupedMessages.findPrimaryMessageObject();
+                        }
+                        if (!isTag && primaryMessage != null && primaryMessage.messageOwner != null) {
                             isTag = primaryMessage.messageOwner.reactions != null && primaryMessage.messageOwner.reactions.reactions_as_tags;
                         }
-                        reactionsLayoutInBubble.setMessage(groupedMessages.findPrimaryMessageObject(), !messageObject.shouldDrawReactionsInLayout(), isTag, resourcesProvider);
+                        reactionsLayoutInBubble.setMessage(primaryMessage != null ? primaryMessage : groupedMessages.findPrimaryMessageObject(), isSmall, isTag, resourcesProvider);
                     } else {
                         reactionsLayoutInBubble.setMessage(messageObject, isSmall, isTag, resourcesProvider);
                     }
@@ -15882,7 +15897,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (!currentMessageObject.shouldDrawReactions()) {
             return;
         }
-        if (!reactionsLayoutInBubble.isEmpty && (currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
+        if (!reactionsLayoutInBubble.isEmpty && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
             if (currentMessageObject.type == MessageObject.TYPE_EMOJIS || currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) {
                 if (currentMessageObject.isOutOwner()) {
                     reactionsLayoutInBubble.x = getMeasuredWidth() - reactionsLayoutInBubble.width - dp(16);//AndroidUtilities.displaySize.x - maxWidth - dp(17);
@@ -24340,7 +24355,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (isSiblingGroupCarouselMessage()) {
             return false;
         }
-        return currentMessageObject != null && currentMessageObject.shouldDrawReactions() && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall;
+        return currentMessageObject != null && (currentMessageObject.shouldDrawReactions() || !reactionsLayoutInBubble.isEmpty) && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall && !reactionsLayoutInBubble.isEmpty;
     }
 
     public void drawReactionsLayout(Canvas canvas, float alpha, Integer only) {
@@ -28967,7 +28982,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             super.setAlpha(alpha);
         }
         if ((currentPosition == null || currentPosition.minY == 0 && currentPosition.minX == 0) && !(enterTransitionInProgress && !currentMessageObject.isVoice()) && replyNameLayout != null && replyTextLayout != null || // Reply layout
-                (currentPosition == null || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) { // Reactions
+                (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) { // Reactions
             invalidate();
         }
     }

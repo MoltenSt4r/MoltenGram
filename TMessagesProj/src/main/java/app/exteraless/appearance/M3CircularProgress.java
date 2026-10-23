@@ -95,6 +95,10 @@ public class M3CircularProgress {
         return waveAmplitude > 0 && waveLength > 0;
     }
 
+    public float getWaveAmplitude() {
+        return waveAmplitude;
+    }
+
     /**
      * @param oval        описанный прямоугольник дуги
      * @param startAngle  начало дуги в градусах
@@ -135,13 +139,39 @@ public class M3CircularProgress {
         final float cx = oval.centerX();
         final float cy = oval.centerY();
         final float arcLength = (float) (Math.abs(sweepAngle) / 180.0 * Math.PI * radius);
-        final int steps = Math.max(64, Math.min(720, (int) Math.max(Math.abs(sweepAngle) * 2f, (arcLength / Math.max(1f, waveLength)) * 32f)));
+        if (arcLength <= 0 || waveLength <= 0) {
+            return;
+        }
+
+        // Quantize wave length to an integer number of waves across the full circumference,
+        // ensuring seamless continuity without crooked or discontinuous endpoints.
+        final float fullCircumference = (float) (2 * Math.PI * radius);
+        final int waveCount = Math.max(1, Math.round(fullCircumference / waveLength));
+        final float effectiveWaveLength = fullCircumference / waveCount;
+
+        final int steps = Math.max(64, Math.min(720, (int) Math.max(Math.abs(sweepAngle) * 2f, (arcLength / effectiveWaveLength) * 32f)));
         final float phase = waveSpeed <= 0 ? 0 : (SystemClock.elapsedRealtime() % 100000L) / 1000f * waveSpeed;
+
+        // Taper wave amplitude to 0 at both arc ends so the stroke cap smoothly joins the circle track
+        final float rampDist = Math.min(effectiveWaveLength, arcLength * 0.5f);
+
         for (int i = 0; i <= steps; i++) {
             final float t = i / (float) steps;
             final float angle = startAngle + sweepAngle * t;
             final float along = arcLength * t + phase;
-            final float offset = (float) (waveAmplitude * Math.sin(2 * Math.PI * along / waveLength));
+
+            float envelope = 1f;
+            if (rampDist > 0) {
+                final float distFromStart = arcLength * t;
+                final float distFromEnd = arcLength * (1f - t);
+                if (distFromStart < rampDist) {
+                    envelope = 0.5f * (1f - (float) Math.cos(Math.PI * distFromStart / rampDist));
+                } else if (distFromEnd < rampDist) {
+                    envelope = 0.5f * (1f - (float) Math.cos(Math.PI * distFromEnd / rampDist));
+                }
+            }
+
+            final float offset = (float) (waveAmplitude * envelope * Math.sin(2 * Math.PI * along / effectiveWaveLength));
             final double rad = Math.toRadians(angle);
             final float r = radius + offset;
             final float x = cx + (float) (r * Math.cos(rad));

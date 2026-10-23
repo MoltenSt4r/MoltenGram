@@ -388,15 +388,24 @@ public class RadialProgressView extends View implements Drawable.Callback {
 
     @Override
     protected void onDraw(Canvas canvas) {
+        float strokeInset = progressPaint != null ? progressPaint.getStrokeWidth() / 2f : 0f;
+        if (m3 != null && m3.isWavy()) {
+            strokeInset += m3.getWaveAmplitude();
+        }
         int x = (getMeasuredWidth() - size) / 2;
         int y = (getMeasuredHeight() - size) / 2;
-        cicleRect.set(x, y, x + size, y + size);
+        cicleRect.set(x + strokeInset, y + strokeInset, x + size - strokeInset, y + size - strokeInset);
         drawArc(canvas);
         updateAnimation();
     }
 
     public void draw(Canvas canvas, float cx, float cy) {
-        cicleRect.set(cx - size / 2f, cy - size / 2f, cx + size / 2f, cy +  size / 2f);
+        float strokeInset = progressPaint != null ? progressPaint.getStrokeWidth() / 2f : 0f;
+        if (m3 != null && m3.isWavy()) {
+            strokeInset += m3.getWaveAmplitude();
+        }
+        float halfSize = size / 2f - strokeInset;
+        cicleRect.set(cx - halfSize, cy - halfSize, cx + halfSize, cy + halfSize);
         drawArc(canvas);
         updateAnimation();
     }
