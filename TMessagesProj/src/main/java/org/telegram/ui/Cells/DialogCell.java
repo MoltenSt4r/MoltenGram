@@ -3712,8 +3712,8 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
             if (currentDialogFolderId != 0) {
                 Theme.dialogs_archiveAvatarDrawable.setCallback(this);
                 avatarDrawable.setAvatarType(AvatarDrawable.AVATAR_TYPE_ARCHIVED);
-                avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_UNKNOWN;
-                avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_UNKNOWN);
+                avatarDrawable.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
+                avatarImage.setPeerType(app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP);
                 avatarImage.setImage(null, null, avatarDrawable, null, user, 0);
             } else {
                 if (useFromUserAsAvatar && message != null) {
