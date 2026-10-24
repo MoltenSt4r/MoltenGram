@@ -402,6 +402,13 @@ def test_noto_animated_emoji_and_current_emoji_reactions():
         rlb_content = f.read()
     assert 'useCurrentEmojiForReactions()' in rlb_content
 
+    reo_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/Reactions/ReactionsEffectOverlay.java')
+    with open(reo_path, 'r', encoding='utf-8') as f:
+        reo_content = f.read()
+    assert 'import android.graphics.drawable.Drawable;' in reo_content
+    assert 'import org.telegram.messenger.Emoji;' in reo_content
+    assert 'useCurrentEmojiForReactions()' in reo_content
+
 
 
 
