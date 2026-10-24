@@ -37,6 +37,46 @@ object ChatsConfig {
     @JvmField
     val stickerShape = addConfig("OEChatsStickerShape", ConfigItem.configTypeInt, 1)
 
+    // ---- Material 3 Поле ввода ----
+
+    @JvmField
+    val md3ChatInput = addConfig("OEChatsMd3ChatInput", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun md3ChatInput(): Boolean {
+        ensureLoaded()
+        return md3ChatInput.Bool()
+    }
+
+    // ---- Анимация сообщений ----
+
+    const val MESSAGE_ANIM_DEFAULT = 0
+    const val MESSAGE_ANIM_NONE = 1
+    const val MESSAGE_ANIM_FADE = 2
+    const val MESSAGE_ANIM_SLIDE = 3
+    const val MESSAGE_ANIM_SCALE = 4
+    const val MESSAGE_ANIM_POP = 5
+
+    @JvmField
+    val incomingMessageAnimation = addConfig("OEChatsIncomingMessageAnimation", ConfigItem.configTypeInt, MESSAGE_ANIM_DEFAULT)
+
+    @JvmField
+    val outgoingMessageAnimation = addConfig("OEChatsOutgoingMessageAnimation", ConfigItem.configTypeInt, MESSAGE_ANIM_DEFAULT)
+
+    @JvmStatic
+    fun incomingMessageAnimation(): Int {
+        ensureLoaded()
+        val anim = incomingMessageAnimation.Int()
+        return if (anim in MESSAGE_ANIM_DEFAULT..MESSAGE_ANIM_POP) anim else MESSAGE_ANIM_DEFAULT
+    }
+
+    @JvmStatic
+    fun outgoingMessageAnimation(): Int {
+        ensureLoaded()
+        val anim = outgoingMessageAnimation.Int()
+        return if (anim in MESSAGE_ANIM_DEFAULT..MESSAGE_ANIM_POP) anim else MESSAGE_ANIM_DEFAULT
+    }
+
     // ---- Ответы ----
 
     /** Цветной фон блока ответа. */

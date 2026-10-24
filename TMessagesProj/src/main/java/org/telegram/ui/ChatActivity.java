@@ -35345,6 +35345,8 @@ public class ChatActivity extends BaseFragment implements
             RLottieDrawable drawable = imageReceiver.getLottieAnimation();
             if (drawable != null) {
                 drawable.restart();
+            } else {
+                imageReceiver.startAnimation(true);
             }
         }
     }

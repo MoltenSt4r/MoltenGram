@@ -152,7 +152,7 @@ public final class GlyphController {
                 breathBrightness = BREATH_MAX;
                 breathDirection = -1;
             }
-            int iconRes = callActive ? R.drawable.baseline_call_24 : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.exterams_md3_icon_monochrome);
+            int iconRes = callActive ? R.drawable.baseline_call_24 : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
             showMatrixIcon(iconRes, breathBrightness, false);
             long delay = callActive ? 70L : BREATH_STEP_MS;
             handler.postDelayed(this, delay);
@@ -661,7 +661,7 @@ public final class GlyphController {
     }
 
     private void showMatrixLogo() {
-        showMatrixIcon(R.drawable.exterams_md3_icon_monochrome, BREATH_MAX, true);
+        showMatrixIcon(R.drawable.moltengram_icon_monochrome, BREATH_MAX, true);
     }
 
     private void showMatrixIcon(int resId, int brightness, boolean autoHide) {
@@ -696,7 +696,7 @@ public final class GlyphController {
     }
 
     private Bitmap getMatrixIconBitmap(Context context, int resId) {
-        if ((resId == R.drawable.exterams_md3_icon_monochrome || resId == R.drawable.exteraless_icon_monochrome) && matrixLogoBitmap != null) {
+        if ((resId == R.drawable.moltengram_icon_monochrome || resId == R.drawable.exteraless_icon_monochrome) && matrixLogoBitmap != null) {
             return matrixLogoBitmap;
         }
         if (resId == R.drawable.baseline_call_24 && matrixCallBitmap != null) {
@@ -714,7 +714,7 @@ public final class GlyphController {
         icon = icon.mutate();
         icon.setTint(Color.WHITE);
         Bitmap bitmap = GlyphMatrixUtils.drawableToBitmap(icon);
-        if (resId == R.drawable.exterams_md3_icon_monochrome || resId == R.drawable.exteraless_icon_monochrome) {
+        if (resId == R.drawable.moltengram_icon_monochrome || resId == R.drawable.exteraless_icon_monochrome) {
             matrixLogoBitmap = bitmap;
         } else if (resId == R.drawable.baseline_call_24) {
             matrixCallBitmap = bitmap;
@@ -725,7 +725,7 @@ public final class GlyphController {
     }
 
     private Bitmap getMatrixLogoBitmap(Context context) {
-        return getMatrixIconBitmap(context, R.drawable.exterams_md3_icon_monochrome);
+        return getMatrixIconBitmap(context, R.drawable.moltengram_icon_monochrome);
     }
 
     private void startMatrixBreathing() {

@@ -85,6 +85,12 @@ object AppearanceConfig {
     val mediaGroupCarousel =
         addConfig("OEAppearanceMediaGroupCarousel", ConfigItem.configTypeBool, false)
 
+    @JvmField
+    val md3ChatInput = app.exteraless.chats.ChatsConfig.md3ChatInput
+
+    @JvmStatic
+    fun md3ChatInput(): Boolean = app.exteraless.chats.ChatsConfig.md3ChatInput()
+
     /** Хэллоуинская тема (иконка приложения и иконки внутри приложения). */
     @JvmField
     val halloweenTheme =

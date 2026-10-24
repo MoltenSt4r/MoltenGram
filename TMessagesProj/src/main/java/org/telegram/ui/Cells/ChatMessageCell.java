@@ -6912,7 +6912,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (photoImage != null) {
             photoImage.setFileLoadingPriority(FileLoader.PRIORITY_NORMAL);
         }
-        if (checkUI && messageObject != null && (isRoundVideo || messageObject.isVideo())) {
+        if (checkUI && messageObject != null && (isRoundVideo || messageObject.isVideo() || messageObject.notoAnimatedEmojiUrl != null)) {
             checkVideoPlayback(true, null);
         }
         if (messageObject != null && !messageObject.mediaExists) {

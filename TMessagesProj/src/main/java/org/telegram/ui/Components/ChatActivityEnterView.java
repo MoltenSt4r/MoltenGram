@@ -2760,7 +2760,16 @@ public class ChatActivityEnterView extends FrameLayout implements
             }
         };
         frameLayout.setClipChildren(false);
-        textFieldContainer.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, DEFAULT_HEIGHT, 0));
+        boolean md3Input = app.exteraless.chats.ChatsConfig.md3ChatInput();
+        if (md3Input) {
+            int panelBg = getThemedColor(Theme.key_chat_messagePanelBackground);
+            boolean isDark = AndroidUtilities.computePerceivedBrightness(panelBg) < 0.721f;
+            int pillBg = isDark ? Theme.blendOver(panelBg, 0x1effffff) : Theme.blendOver(panelBg, 0x12000000);
+            frameLayout.setBackground(Theme.createRoundRectDrawable(dp(24), pillBg));
+            textFieldContainer.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 8, 4, DEFAULT_HEIGHT + 12, 6));
+        } else {
+            textFieldContainer.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, DEFAULT_HEIGHT, 0));
+        }
 
         if (ChatActivityEnterViewStaticIconView.isStaticIconsEnabled()) {
             emojiButton = new ChatActivityEnterViewStaticIconView(context, this) {
@@ -3039,8 +3048,11 @@ public class ChatActivityEnterView extends FrameLayout implements
             }
         };
         sendButtonContainer.setClipChildren(false);
-        sendButtonContainer.setClipToPadding(false);
-        textFieldContainer.addView(sendButtonContainer, LayoutHelper.createFrame(100, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+        if (md3Input) {
+            textFieldContainer.addView(sendButtonContainer, LayoutHelper.createFrame(100, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 4, 6));
+        } else {
+            textFieldContainer.addView(sendButtonContainer, LayoutHelper.createFrame(100, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT));
+        }
 
         audioVideoButtonContainer = new FrameLayout(context) {
 
@@ -11759,6 +11771,16 @@ public class ChatActivityEnterView extends FrameLayout implements
         deleteRichDraftButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_glass_defaultIcon), PorterDuff.Mode.SRC_IN));
         deleteRichDraftButton.setBackground(Theme.createInsetRoundRectDrawable(getThemedColor(Theme.key_listSelector), dp(19), dp(1), dp(3)));
         sendOutlineView.setColorFilter(getThemedColor(Theme.key_telegram_color), PorterDuff.Mode.SRC_IN);
+        if (messageEditTextContainer != null) {
+            if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                int panelBg = getThemedColor(Theme.key_chat_messagePanelBackground);
+                boolean isDark = AndroidUtilities.computePerceivedBrightness(panelBg) < 0.721f;
+                int pillBg = isDark ? Theme.blendOver(panelBg, 0x1effffff) : Theme.blendOver(panelBg, 0x12000000);
+                messageEditTextContainer.setBackground(Theme.createRoundRectDrawable(dp(24), pillBg));
+            } else {
+                messageEditTextContainer.setBackground(null);
+            }
+        }
     }
 
     private void updateAudioVideoSendButtonColor() {

@@ -214,4 +214,15 @@
     <string name="OEPluginCommandSuggestionsInfo">Show autocomplete popup when typing a command prefix (e.g. .ping).</string>
     <string name="OEPluginCommandPrefixes">Command prefixes</string>
     <string name="OEPluginCommandPrefixesInfo">Prefix characters that trigger command suggestions (e.g. .,!,$,?).</string>
+
+    <string name="OEChatsMd3ChatInput">MD3 chat input field</string>
+    <string name="OEChatsMd3ChatInputInfo">Material 3 floating pill-shaped input bar and send button</string>
+    <string name="OEChatsIncomingMessageAnimation">Incoming message animation</string>
+    <string name="OEChatsOutgoingMessageAnimation">Outgoing message animation</string>
+    <string name="OEChatsMessageAnimDefault">Default</string>
+    <string name="OEChatsMessageAnimNone">None</string>
+    <string name="OEChatsMessageAnimFade">Fade</string>
+    <string name="OEChatsMessageAnimSlide">Slide</string>
+    <string name="OEChatsMessageAnimScale">Scale</string>
+    <string name="OEChatsMessageAnimPop">Pop</string>
 </resources>

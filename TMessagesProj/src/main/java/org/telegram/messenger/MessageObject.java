@@ -2206,7 +2206,7 @@ public class MessageObject {
             generateLayout(null);
         } else if (isSticker()) {
             type = TYPE_STICKER;
-        } else if (isAnimatedSticker()) {
+        } else if (isAnimatedSticker() || (app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && notoAnimatedEmojiUrl != null)) {
             type = TYPE_ANIMATED_STICKER;
         } else {
             type = 1000;
@@ -11458,6 +11458,9 @@ public class MessageObject {
     public boolean isAnimatedSticker() {
         if (type != 1000) {
             return type == TYPE_ANIMATED_STICKER;
+        }
+        if (app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && notoAnimatedEmojiUrl != null) {
+            return true;
         }
         boolean isSecretChat = DialogObject.isEncryptedDialog(getDialogId());
         if (isSecretChat && messageOwner.stickerVerified != 1) {

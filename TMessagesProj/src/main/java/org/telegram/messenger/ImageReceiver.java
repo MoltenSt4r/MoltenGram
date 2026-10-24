@@ -995,6 +995,39 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 fileDrawable.start();
             }
             fileDrawable.setAllowDecodeSingleFrame(true);
+        } else if (bitmap instanceof android.graphics.drawable.Animatable) {
+            android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) bitmap;
+            if (Build.VERSION.SDK_INT >= 28 && bitmap instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                ((android.graphics.drawable.AnimatedImageDrawable) bitmap).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+            }
+            bitmap.setCallback(new Drawable.Callback() {
+                @Override
+                public void invalidateDrawable(Drawable who) {
+                    if (parentView != null) {
+                        parentView.invalidate();
+                    } else {
+                        invalidate();
+                    }
+                }
+                @Override
+                public void scheduleDrawable(Drawable who, Runnable what, long when) {
+                    if (parentView != null) {
+                        parentView.postDelayed(what, when - SystemClock.uptimeMillis());
+                    }
+                }
+                @Override
+                public void unscheduleDrawable(Drawable who, Runnable what) {
+                    if (parentView != null) {
+                        parentView.removeCallbacks(what);
+                    }
+                }
+            });
+            if (allowStartAnimation && currentOpenedLayerFlags == 0) {
+                animatable.start();
+            }
+            if (parentView != null) {
+                parentView.invalidate();
+            }
         }
         staticThumbShader = null;
         thumbShader = null;
@@ -1210,6 +1243,15 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (lottieDrawable != null) {
             lottieDrawable.removeParentView(this);
         }
+        if (currentMediaDrawable instanceof android.graphics.drawable.Animatable) {
+            ((android.graphics.drawable.Animatable) currentMediaDrawable).stop();
+        }
+        if (currentImageDrawable instanceof android.graphics.drawable.Animatable) {
+            ((android.graphics.drawable.Animatable) currentImageDrawable).stop();
+        }
+        if (staticThumbDrawable instanceof android.graphics.drawable.Animatable) {
+            ((android.graphics.drawable.Animatable) staticThumbDrawable).stop();
+        }
         if (decorators != null) {
             for (int i = 0; i < decorators.size(); i++) {
                 decorators.get(i).onDetachedFromWidnow();
@@ -1276,6 +1318,18 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         final AnimatedEmojiDrawable animatedEmojiDrawable = getAnimatedEmojiDrawable();
         if (animatedEmojiDrawable != null) {
             animatedEmojiDrawable.addView(this);
+        }
+        if (currentMediaDrawable instanceof android.graphics.drawable.Animatable && allowStartAnimation && currentOpenedLayerFlags == 0) {
+            ((android.graphics.drawable.Animatable) currentMediaDrawable).start();
+            invalidate();
+        }
+        if (currentImageDrawable instanceof android.graphics.drawable.Animatable && allowStartAnimation && currentOpenedLayerFlags == 0) {
+            ((android.graphics.drawable.Animatable) currentImageDrawable).start();
+            invalidate();
+        }
+        if (staticThumbDrawable instanceof android.graphics.drawable.Animatable && allowStartAnimation && currentOpenedLayerFlags == 0) {
+            ((android.graphics.drawable.Animatable) staticThumbDrawable).start();
+            invalidate();
         }
         if (NotificationCenter.getGlobalInstance().isAnimationInProgress()) {
             didReceivedNotification(NotificationCenter.stopAllHeavyOperations, currentAccount, 512);
@@ -2929,6 +2983,21 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             RLottieDrawable rLottieDrawable = getLottieAnimation();
             if (rLottieDrawable != null && !rLottieDrawable.isRunning()) {
                 rLottieDrawable.restart(force);
+            } else if (currentMediaDrawable instanceof android.graphics.drawable.Animatable) {
+                if (force) {
+                    ((android.graphics.drawable.Animatable) currentMediaDrawable).stop();
+                }
+                ((android.graphics.drawable.Animatable) currentMediaDrawable).start();
+            } else if (currentImageDrawable instanceof android.graphics.drawable.Animatable) {
+                if (force) {
+                    ((android.graphics.drawable.Animatable) currentImageDrawable).stop();
+                }
+                ((android.graphics.drawable.Animatable) currentImageDrawable).start();
+            } else if (staticThumbDrawable instanceof android.graphics.drawable.Animatable) {
+                if (force) {
+                    ((android.graphics.drawable.Animatable) staticThumbDrawable).stop();
+                }
+                ((android.graphics.drawable.Animatable) staticThumbDrawable).start();
             }
         }
     }
@@ -2941,6 +3010,12 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             RLottieDrawable rLottieDrawable = getLottieAnimation();
             if (rLottieDrawable != null) {
                 rLottieDrawable.stop();
+            } else if (currentMediaDrawable instanceof android.graphics.drawable.Animatable) {
+                ((android.graphics.drawable.Animatable) currentMediaDrawable).stop();
+            } else if (currentImageDrawable instanceof android.graphics.drawable.Animatable) {
+                ((android.graphics.drawable.Animatable) currentImageDrawable).stop();
+            } else if (staticThumbDrawable instanceof android.graphics.drawable.Animatable) {
+                ((android.graphics.drawable.Animatable) staticThumbDrawable).stop();
             }
         }
     }
@@ -2962,7 +3037,19 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
 
     public boolean isAnimationRunning() {
         AnimatedFileDrawable animation = getAnimation();
-        return animation != null && animation.isRunning();
+        if (animation != null && animation.isRunning()) {
+            return true;
+        }
+        if (currentMediaDrawable instanceof android.graphics.drawable.Animatable && ((android.graphics.drawable.Animatable) currentMediaDrawable).isRunning()) {
+            return true;
+        }
+        if (currentImageDrawable instanceof android.graphics.drawable.Animatable && ((android.graphics.drawable.Animatable) currentImageDrawable).isRunning()) {
+            return true;
+        }
+        if (staticThumbDrawable instanceof android.graphics.drawable.Animatable && ((android.graphics.drawable.Animatable) staticThumbDrawable).isRunning()) {
+            return true;
+        }
+        return false;
     }
 
     public boolean isLottieRunning() {
@@ -3218,6 +3305,39 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             fileDrawable.setAutoRepeatTimeout(autoRepeatTimeout);
             fileDrawable.setAllowDrawFramesWhileCacheGenerating(allowDrawWhileCacheGenerating);
             animationReadySent = false;
+        } else if (drawable instanceof android.graphics.drawable.Animatable) {
+            android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) drawable;
+            if (Build.VERSION.SDK_INT >= 28 && drawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                ((android.graphics.drawable.AnimatedImageDrawable) drawable).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+            }
+            drawable.setCallback(new Drawable.Callback() {
+                @Override
+                public void invalidateDrawable(Drawable who) {
+                    if (parentView != null) {
+                        parentView.invalidate();
+                    } else {
+                        invalidate();
+                    }
+                }
+                @Override
+                public void scheduleDrawable(Drawable who, Runnable what, long when) {
+                    if (parentView != null) {
+                        parentView.postDelayed(what, when - SystemClock.uptimeMillis());
+                    }
+                }
+                @Override
+                public void unscheduleDrawable(Drawable who, Runnable what) {
+                    if (parentView != null) {
+                        parentView.removeCallbacks(what);
+                    }
+                }
+            });
+            if (allowStartAnimation && currentOpenedLayerFlags == 0) {
+                animatable.start();
+            }
+            if (parentView != null) {
+                parentView.invalidate();
+            }
         }
         invalidate();
         return true;
@@ -3266,6 +3386,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             AnimatedEmojiDrawable animatedEmojiDrawable = (AnimatedEmojiDrawable) image;
             animatedEmojiDrawable.removeView(this);
         }
+        if (image instanceof android.graphics.drawable.Animatable) {
+            ((android.graphics.drawable.Animatable) image).stop();
+            image.setCallback(null);
+        }
         if (key != null && (newKey == null || !newKey.equals(key)) && image != null) {
             if (image instanceof RLottieDrawable) {
                 RLottieDrawable fileDrawable = (RLottieDrawable) image;
@@ -3301,6 +3425,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                         AndroidUtilities.recycleBitmaps(bitmapToRecycle);
                     }
                 }
+            } else {
+                ImageLoader.getInstance().decrementUseCount(key);
             }
         }
         if (type == TYPE_MEDIA) {

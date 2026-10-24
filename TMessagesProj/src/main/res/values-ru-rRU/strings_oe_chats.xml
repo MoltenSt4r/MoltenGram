@@ -211,4 +211,15 @@
     <string name="OEPluginCommandSuggestionsInfo">Показывать подсказки команд над полем ввода при написании префикса (например, .ping).</string>
     <string name="OEPluginCommandPrefixes">Префиксы команд</string>
     <string name="OEPluginCommandPrefixesInfo">Символы префиксов для подсказок команд плагинов через запятую (по умолчанию .,!,$,?).</string>
+
+    <string name="OEChatsMd3ChatInput">Поле ввода MD3</string>
+    <string name="OEChatsMd3ChatInputInfo">Плавающее поле ввода в форме пилюли и кнопка отправки в стиле Material 3</string>
+    <string name="OEChatsIncomingMessageAnimation">Анимация входящих сообщений</string>
+    <string name="OEChatsOutgoingMessageAnimation">Анимация исходящих сообщений</string>
+    <string name="OEChatsMessageAnimDefault">По умолчанию</string>
+    <string name="OEChatsMessageAnimNone">Без анимации</string>
+    <string name="OEChatsMessageAnimFade">Затухание (Fade)</string>
+    <string name="OEChatsMessageAnimSlide">Выдвижение (Slide)</string>
+    <string name="OEChatsMessageAnimScale">Масштабирование (Scale)</string>
+    <string name="OEChatsMessageAnimPop">Всплывание (Pop)</string>
 </resources>

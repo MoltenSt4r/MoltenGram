@@ -128,6 +128,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3ListItemsRow;
     private int md3PlayerRow;
     private int md3MiniPlayerRow;
+    private int md3ChatInputRow;
     private int mediaGroupCarouselRow;
     private boolean md3Expanded;
     private int iosGroupRow;
@@ -257,10 +258,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ListItemsRow = addRow("md3ListItems");
             md3PlayerRow = addRow("md3Player", "playerSettings");
             md3MiniPlayerRow = addRow("md3MiniPlayer");
+            md3ChatInputRow = addRow("md3ChatInput");
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
-            md3PlayerRow = md3MiniPlayerRow = mediaGroupCarouselRow = -1;
+            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -684,6 +686,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == md3MiniPlayerRow) {
             AppearanceConfig.md3MiniPlayer.setConfigBool(!AppearanceConfig.md3MiniPlayer.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.md3MiniPlayer.Bool());
+            return;
+        } else if (position == md3ChatInputRow) {
+            app.exteraless.chats.ChatsConfig.md3ChatInput.setConfigBool(!app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
+            }
+            if (listAdapter != null && md3GroupRow >= 0) {
+                listAdapter.notifyItemChanged(md3GroupRow);
+            }
             return;
         } else if (position == mediaGroupCarouselRow) {
             AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
@@ -1132,6 +1143,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3MiniPlayerRow) {
                         cell.setText(getString(R.string.OEAppearanceMd3MiniPlayer), "",
                                 AppearanceConfig.md3MiniPlayer.Bool(), true, true);
+                    } else if (position == md3ChatInputRow) {
+                        cell.setText(getString(R.string.OEAppearanceMd3ChatInput), "",
+                                app.exteraless.chats.ChatsConfig.md3ChatInput.Bool(), true, true);
                     } else if (position == mediaGroupCarouselRow) {
                         cell.setText(getString(R.string.media_group_carousel), "",
                                 AppearanceConfig.mediaGroupCarousel.Bool(), true, true);
@@ -1407,8 +1421,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
-    /** Сколько стилей MD3 включено. Счётчик «N/9» рядом с шевроном. */
-    private static final int MD3_STYLE_COUNT = 9;
+    /** Сколько стилей MD3 включено. Счётчик «N/10» рядом с шевроном. */
+    private static final int MD3_STYLE_COUNT = 10;
     /** Значение селектора NagramX, соответствующее Material Design 3. */
     private static final int STYLE_MD3 = 2;
 
@@ -1426,6 +1440,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (AppearanceConfig.m3ListItems.Bool()) n++;
         if (AppearanceConfig.md3Player.Bool()) n++;
         if (AppearanceConfig.md3MiniPlayer.Bool()) n++;
+        if (app.exteraless.chats.ChatsConfig.md3ChatInput.Bool()) n++;
         if (AppearanceConfig.mediaGroupCarousel.Bool()) n++;
         return n;
     }

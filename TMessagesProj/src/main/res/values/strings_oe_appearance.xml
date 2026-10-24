@@ -199,4 +199,6 @@
     <string name="OEUseNotoAnimatedEmojiInfo">Replace large animated emojis with Google Noto Color Animated Emoji</string>
     <string name="OEUseCurrentEmojiForReactions">Current emoji set for reactions</string>
     <string name="OEUseCurrentEmojiForReactionsInfo">Use current emoji set in reaction picker, animations, and bubbles</string>
+    <string name="OEAppearanceMd3ChatInput">MD3 chat input</string>
+    <string name="OEAppearanceMd3ChatInputInfo">Floating pill-shaped chat input bar</string>
 </resources>

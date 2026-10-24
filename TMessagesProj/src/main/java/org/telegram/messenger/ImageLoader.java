@@ -1063,6 +1063,49 @@ public class ImageLoader {
                     onPostExecute(lottieDrawable);
                 }
             } else if (cacheImage.imageType == FileLoader.IMAGE_TYPE_ANIMATION) {
+                boolean isWebp = (cacheImage.finalFilePath != null && cacheImage.finalFilePath.getName().toLowerCase().endsWith(".webp"))
+                        || (cacheImage.imageLocation != null && cacheImage.imageLocation.path != null && cacheImage.imageLocation.path.toLowerCase().contains(".webp"))
+                        || (cacheImage.key != null && cacheImage.key.toLowerCase().contains(".webp"));
+                if (isWebp && Build.VERSION.SDK_INT >= 28 && cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
+                    try {
+                        android.graphics.ImageDecoder.Source source = android.graphics.ImageDecoder.createSource(cacheImage.finalFilePath);
+                        if (cacheImage.filter != null && cacheImage.filter.contains("firstframe")) {
+                            Bitmap bitmap = android.graphics.ImageDecoder.decodeBitmap(source, (decoder, info, src) -> {
+                                decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                            });
+                            Thread.interrupted();
+                            onPostExecute(bitmap != null ? new BitmapDrawable(bitmap) : null);
+                            return;
+                        } else {
+                            Drawable decoded = android.graphics.ImageDecoder.decodeDrawable(source, (decoder, info, src) -> {
+                                decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                            });
+                            if (decoded instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                                ((android.graphics.drawable.AnimatedImageDrawable) decoded).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                            }
+                            if (decoded instanceof android.graphics.drawable.Animatable) {
+                                ((android.graphics.drawable.Animatable) decoded).start();
+                            }
+                            Thread.interrupted();
+                            onPostExecute(decoded);
+                            return;
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                }
+                if (isWebp && cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
+                    try {
+                        Bitmap bitmap = BitmapFactory.decodeFile(cacheImage.finalFilePath.getAbsolutePath());
+                        if (bitmap != null) {
+                            Thread.interrupted();
+                            onPostExecute(new BitmapDrawable(bitmap));
+                            return;
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                }
                 AnimatedFileDrawable fileDrawable;
                 long seekTo;
                 if (cacheImage.imageLocation != null) {
@@ -1769,6 +1812,10 @@ public class ImageLoader {
                         incrementUseCount(cacheImage.key);
                         decrementKey = cacheImage.key;
                     }
+                } else if (drawable != null) {
+                    toSet = drawable;
+                    incrementUseCount(cacheImage.key);
+                    decrementKey = cacheImage.key;
                 }
                 final Drawable toSetFinal = toSet;
                 final String decrementKetFinal = decrementKey;

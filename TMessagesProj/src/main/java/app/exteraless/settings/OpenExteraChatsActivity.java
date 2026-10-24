@@ -181,6 +181,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     // Messages
     private int messagesHeaderRow;
     private int removeMessageTailRow;
+    private int md3ChatInputRow;
+    private int incomingMessageAnimationRow;
+    private int outgoingMessageAnimationRow;
     private int replaceEditedRow;
     private int showOnlineStatusRow;
     private int hideShareButtonRow;
@@ -420,6 +423,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
 
         messagesHeaderRow = addRow("messagesHeader");
         removeMessageTailRow = addRow("removeMessageTail");
+        md3ChatInputRow = addRow("md3ChatInput");
+        incomingMessageAnimationRow = addRow("incomingMessageAnimation");
+        outgoingMessageAnimationRow = addRow("outgoingMessageAnimation");
         replaceEditedRow = addRow("replaceEdited");
         showOnlineStatusRow = addRow("showOnlineStatus");
         hideShareButtonRow = addRow("hideShareButton");
@@ -1203,6 +1209,17 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         };
     }
 
+    private CharSequence[] messageAnimationOptions() {
+        return new CharSequence[]{
+                getString(R.string.OEChatsMessageAnimDefault),
+                getString(R.string.OEChatsMessageAnimNone),
+                getString(R.string.OEChatsMessageAnimFade),
+                getString(R.string.OEChatsMessageAnimSlide),
+                getString(R.string.OEChatsMessageAnimScale),
+                getString(R.string.OEChatsMessageAnimPop)
+        };
+    }
+
     private CharSequence[] cameraTypeOptions() {
         return new CharSequence[]{
                 getString(R.string.Default),
@@ -1536,6 +1553,18 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else if (position == feedSettingsRow) {
             presentFragment(new app.exteraless.feed.ui.FeedChannelsActivity());
             return;
+        } else if (position == incomingMessageAnimationRow) {
+            showOptions(view, messageAnimationOptions(), index -> {
+                ChatsConfig.incomingMessageAnimation.setConfigInt(index);
+                listAdapter.notifyItemChanged(position);
+            });
+            return;
+        } else if (position == outgoingMessageAnimationRow) {
+            showOptions(view, messageAnimationOptions(), index -> {
+                ChatsConfig.outgoingMessageAnimation.setConfigInt(index);
+                listAdapter.notifyItemChanged(position);
+            });
+            return;
         } else if (position == openLinkConfirmationRow) {
             showOptions(view, openLinkConfirmationOptions(), index -> {
                 setOpenLinkConfirmation(index);
@@ -1822,6 +1851,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
         if (position == keepAttachButtonRow) return ChatsConfig.keepAttachButton;
         if (position == removeMessageTailRow) return ChatsConfig.removeMessageTail;
+        if (position == md3ChatInputRow) return ChatsConfig.md3ChatInput;
         if (position == replaceEditedRow) return NaConfig.INSTANCE.getUseEditedIcon();
         if (position == showOnlineStatusRow) return NaConfig.INSTANCE.getShowOnlineStatus();
         if (position == hideShareButtonRow) return NaConfig.INSTANCE.getHideShareButtonInChannel();
@@ -2494,6 +2524,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
             } else if (position == removeMessageTailRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsRemoveMessageTail), ChatsConfig.removeMessageTail.Bool(), true);
+            } else if (position == md3ChatInputRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OEChatsMd3ChatInput),
+                        getString(R.string.OEChatsMd3ChatInputInfo),
+                        ChatsConfig.md3ChatInput.Bool(), true, true);
             } else if (position == replaceEditedRow) {
                 // В подпись подставляется локализованное «edited».
                 cell.setTextAndCheck(LocaleController.formatString(R.string.OEChatsReplaceEditedWithIcon,
@@ -2655,6 +2689,14 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                         OpenExteraConfig.pluginCommandPrefixes(), true);
             } else if (position == customCommandsRow) {
                 cell.setText(getString(R.string.CustomCommandsTitle), false);
+            } else if (position == incomingMessageAnimationRow) {
+                CharSequence[] options = messageAnimationOptions();
+                cell.setTextAndValue(getString(R.string.OEChatsIncomingMessageAnimation),
+                        options[clampIndex(ChatsConfig.incomingMessageAnimation(), options.length)], true);
+            } else if (position == outgoingMessageAnimationRow) {
+                CharSequence[] options = messageAnimationOptions();
+                cell.setTextAndValue(getString(R.string.OEChatsOutgoingMessageAnimation),
+                        options[clampIndex(ChatsConfig.outgoingMessageAnimation(), options.length)], true);
             }
         }
 
@@ -2746,7 +2788,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || position == cloudflareCredentialsRow || position == geminiApiKeyRow
                     || position == openAiCredentialsRow || position == voskModelsRow
                     || position == textAnimationRow || position == trackingFilterRow
-                    || position == pluginCommandPrefixesRow || position == customCommandsRow;
+                    || position == pluginCommandPrefixesRow || position == customCommandsRow
+                    || position == incomingMessageAnimationRow || position == outgoingMessageAnimationRow;
         }
     }
 }
