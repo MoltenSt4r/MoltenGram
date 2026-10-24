@@ -211,12 +211,60 @@ jobs:
           cp -r fdroid_ws/repo deploy/fdroid/
           touch deploy/.nojekyll deploy/fdroid/.nojekyll
 
+          cat > deploy/robots.txt << 'EOF'
+          User-agent: *
+          Allow: /
+
+          Sitemap: https://moltenst4r.github.io/MoltenGram/sitemap.xml
+          EOF
+
+          cat > deploy/sitemap.xml << 'EOF'
+          <?xml version="1.0" encoding="UTF-8"?>
+          <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+            <url>
+              <loc>https://moltenst4r.github.io/MoltenGram/</loc>
+              <changefreq>weekly</changefreq>
+              <priority>0.8</priority>
+            </url>
+          </urlset>
+          EOF
+
           cat > deploy/index.html << 'EOF'
-          <!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://moltenstar.space/#moltengram"><title>MoltenGram</title></head><body></body></html>
+          <!DOCTYPE html>
+          <html lang="ru">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>MoltenGram • Telegram с Material Design 3</title>
+            <meta name="description" content="MoltenGram — свободный Android-клиент Telegram на базе Exteraless с Material Design 3. Официальный репозиторий F-Droid и загрузка.">
+            <meta name="robots" content="index, follow">
+            <link rel="canonical" href="https://www.moltenstar.space/">
+            <meta http-equiv="refresh" content="0;url=https://www.moltenstar.space/#moltengram">
+            <script>window.location.replace("https://www.moltenstar.space/#moltengram");</script>
+          </head>
+          <body>
+            <p>Перенаправление на <a href="https://www.moltenstar.space/#moltengram">moltenstar.space</a>...</p>
+          </body>
+          </html>
           EOF
 
           cat > deploy/fdroid/index.html << 'EOF'
-          <!DOCTYPE html><html><head><meta charset="utf-8"><meta http-equiv="refresh" content="0;url=https://moltenstar.space/#moltengram"><title>MoltenGram F-Droid</title></head><body></body></html>
+          <!DOCTYPE html>
+          <html lang="ru">
+          <head>
+            <meta charset="utf-8">
+            <meta name="viewport" content="width=device-width, initial-scale=1">
+            <title>MoltenGram F-Droid Repository</title>
+            <meta name="description" content="Официальный F-Droid репозиторий MoltenGram для автоматического обновления Android-клиента.">
+            <meta name="robots" content="index, follow">
+            <link rel="canonical" href="https://www.moltenstar.space/#fdroid">
+            <meta http-equiv="refresh" content="0;url=https://www.moltenstar.space/#fdroid">
+            <script>window.location.replace("https://www.moltenstar.space/#fdroid");</script>
+          </head>
+          <body>
+            <p>Перенаправление на <a href="https://www.moltenstar.space/#fdroid">moltenstar.space</a>...</p>
+          </body>
+          </html>
           EOF
 
       - name: Push to gh-pages
