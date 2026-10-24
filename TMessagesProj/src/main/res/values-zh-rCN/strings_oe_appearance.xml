@@ -31,7 +31,7 @@
     <string name="OEAppearanceTabTitleStyleIconsOnly">仅图标</string>
     <string name="OEAppearanceTabTitleStyleTextWithIcons">名称和图标</string>
     <string name="OEAppearanceTabCounter">通知计数</string>
-    <string name="OEAppearanceHideAllChats">隐藏「%1$s」标签</string>
+    <string name="OEAppearanceHideAllChats">隐藏「全部消息」标签</string>
     <string name="OEAppearanceFoldersInfo">图标会与你的账号同步。</string>
     <string name="OEAppearanceNavigation">应用导航</string>
     <string name="OEAppearanceGeneral">外观</string>

@@ -2748,6 +2748,26 @@ public class ChatActivityEnterView extends FrameLayout implements
                 }
             }
 
+            private final Rect md3BlurBounds = new Rect();
+            private final RectF md3PillRect = new RectF();
+            private final Path md3PillPath = new Path();
+
+            @Override
+            protected void onDraw(Canvas canvas) {
+                if (app.exteraless.chats.ChatsConfig.md3ChatInput() && allowBlur && SharedConfig.chatBlurEnabled() && sizeNotifierLayout != null) {
+                    md3PillRect.set(0, 0, getWidth(), getHeight());
+                    md3PillPath.reset();
+                    md3PillPath.addRoundRect(md3PillRect, dp(24), dp(24), Path.Direction.CW);
+                    canvas.save();
+                    canvas.clipPath(md3PillPath);
+                    md3BlurBounds.set(0, 0, getWidth(), getHeight());
+                    backgroundPaint.setColor(getThemedColor(Theme.key_chat_messagePanelBackground));
+                    sizeNotifierLayout.drawBlurRect(canvas, getY() + textFieldContainer.getY() + ChatActivityEnterView.this.getY(), md3BlurBounds, backgroundPaint, false);
+                    canvas.restore();
+                }
+                super.onDraw(canvas);
+            }
+
             @Override
             protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
                 if (child != null && child == messageEditText) {
@@ -2759,6 +2779,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 return super.drawChild(canvas, child, drawingTime);
             }
         };
+        frameLayout.setWillNotDraw(false);
         frameLayout.setClipChildren(false);
         boolean md3Input = app.exteraless.chats.ChatsConfig.md3ChatInput();
         if (md3Input) {
@@ -4883,6 +4904,36 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (!shouldDrawBackground) {
             return;
         }
+        boolean md3Input = app.exteraless.chats.ChatsConfig.md3ChatInput();
+        if (md3Input) {
+            if (topView != null && topView.getVisibility() == View.VISIBLE) {
+                int top = animatedTop;
+                top += Theme.chat_composeShadowDrawable.getIntrinsicHeight() * (1f - composeShadowAlpha);
+                top += (1f - getTopViewEnterProgress()) * topView.getLayoutParams().height;
+                int bottom = top + Theme.chat_composeShadowDrawable.getIntrinsicHeight();
+
+                if (withComposeShadowDrawable) {
+                    Theme.chat_composeShadowDrawable.setAlpha((int) (composeShadowAlpha * 0xFF));
+                    Theme.chat_composeShadowDrawable.setBounds(0, top, getMeasuredWidth(), bottom);
+                    Theme.chat_composeShadowDrawable.draw(canvas);
+                }
+
+                int topViewBottom = topView.getBottom();
+                if (allowBlur) {
+                    backgroundPaint.setColor(getThemedColor(Theme.key_chat_messagePanelBackground));
+                    if (SharedConfig.chatBlurEnabled() && sizeNotifierLayout != null) {
+                        blurBounds.set(0, bottom, getWidth(), topViewBottom);
+                        sizeNotifierLayout.drawBlurRect(canvas, getTop(), blurBounds, backgroundPaint, false);
+                    } else {
+                        canvas.drawRect(0, bottom, getWidth(), topViewBottom, backgroundPaint);
+                    }
+                } else {
+                    canvas.drawRect(0, bottom, getWidth(), topViewBottom, getThemedPaint(Theme.key_paint_chatComposeBackground));
+                }
+            }
+            return;
+        }
+
         int top = animatedTop;
         top += Theme.chat_composeShadowDrawable.getIntrinsicHeight() * (1f - composeShadowAlpha);
         if (topView != null && topView.getVisibility() == View.VISIBLE) {
@@ -9503,6 +9554,11 @@ public class ChatActivityEnterView extends FrameLayout implements
                         animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.SCALE_X, 0.1f));
                         animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.SCALE_Y, 0.1f));
                         animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.ALPHA, 0.0f));
+                        if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                            animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_X, 0.1f));
+                            animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_Y, 0.1f));
+                            animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.ALPHA, 0.0f));
+                        }
                     }
                     if (expandStickersButton != null && expandStickersButton.getVisibility() == VISIBLE) {
                         animators.add(ObjectAnimator.ofFloat(expandStickersButton, View.SCALE_X, 0.1f));
@@ -9573,6 +9629,11 @@ public class ChatActivityEnterView extends FrameLayout implements
                     audioVideoSendButton.setScaleX(0.1f);
                     audioVideoSendButton.setScaleY(0.1f);
                     audioVideoSendButton.setAlpha(0.0f);
+                    if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                        audioVideoButtonContainer.setScaleX(0.1f);
+                        audioVideoButtonContainer.setScaleY(0.1f);
+                        audioVideoButtonContainer.setAlpha(0.0f);
+                    }
                     audioVideoButtonContainer.setVisibility(GONE);
                     if (slowModeButton.getVisibility() == VISIBLE) {
                         slowModeButton.setScaleX(0.1f);
@@ -9953,6 +10014,14 @@ public class ChatActivityEnterView extends FrameLayout implements
                 animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.SCALE_X, 1f));
                 animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.SCALE_Y, 1f));
                 animators.add(ObjectAnimator.ofFloat(audioVideoSendButton, View.ALPHA, alpha));
+                if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                    audioVideoButtonContainer.setScaleX(0.1f);
+                    audioVideoButtonContainer.setScaleY(0.1f);
+                    audioVideoButtonContainer.setAlpha(0.0f);
+                    animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_X, 1.0f));
+                    animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_Y, 1.0f));
+                    animators.add(ObjectAnimator.ofFloat(audioVideoButtonContainer, View.ALPHA, 1.0f));
+                }
                 if (cancelBotButton.getVisibility() == VISIBLE) {
                     animators.add(ObjectAnimator.ofFloat(cancelBotButton, View.SCALE_X, 0.1f));
                     animators.add(ObjectAnimator.ofFloat(cancelBotButton, View.SCALE_Y, 0.1f));
@@ -9983,6 +10052,11 @@ public class ChatActivityEnterView extends FrameLayout implements
 
                             if (audioVideoButtonContainer != null) {
                                 audioVideoButtonContainer.setVisibility(VISIBLE);
+                                if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                                    audioVideoButtonContainer.setScaleX(1.0f);
+                                    audioVideoButtonContainer.setScaleY(1.0f);
+                                    audioVideoButtonContainer.setAlpha(1.0f);
+                                }
                             }
                         }
                     }
@@ -10017,6 +10091,11 @@ public class ChatActivityEnterView extends FrameLayout implements
                 audioVideoSendButton.setScaleX(1.0f);
                 audioVideoSendButton.setScaleY(1.0f);
                 audioVideoSendButton.setAlpha(1.0f);
+                if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+                    audioVideoButtonContainer.setScaleX(1.0f);
+                    audioVideoButtonContainer.setScaleY(1.0f);
+                    audioVideoButtonContainer.setAlpha(1.0f);
+                }
                 audioVideoButtonContainer.setVisibility(VISIBLE);
                 if (attachLayout != null) {
                     if (getVisibility() == VISIBLE) {
@@ -11788,13 +11867,20 @@ public class ChatActivityEnterView extends FrameLayout implements
             return;
         }
         boolean isMenuState = isAudioVideoSendButtonInMenuState();
-        int color = audioVideoButtonContainerForbidden || isMenuState
-                ? getThemedColor(Theme.key_glass_defaultIcon)
-                : Color.WHITE;
-        setIconColorFilter(audioVideoSendButton, new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
-        audioVideoButtonContainer.setBackground(isMenuState
-                ? Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector))
-                : null);
+        boolean md3Input = app.exteraless.chats.ChatsConfig.md3ChatInput();
+        if (md3Input && !isMenuState) {
+            int sendColor = getThemedColor(Theme.key_chat_messagePanelSend);
+            audioVideoButtonContainer.setBackground(Theme.createInsetRoundRectDrawable(sendColor, dp(19), dp(5), dp(5)));
+            setIconColorFilter(audioVideoSendButton, new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+        } else {
+            int color = audioVideoButtonContainerForbidden || isMenuState
+                    ? getThemedColor(Theme.key_glass_defaultIcon)
+                    : Color.WHITE;
+            setIconColorFilter(audioVideoSendButton, new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+            audioVideoButtonContainer.setBackground(isMenuState
+                    ? Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector))
+                    : null);
+        }
     }
 
     private void updateRecordedDeleteIconColors() {

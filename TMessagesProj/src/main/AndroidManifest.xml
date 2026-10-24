@@ -102,6 +102,10 @@
     <queries>
         <package android:name="com.google.android.apps.maps"/>
         <package android:name="moe.shizuku.privileged.api"/>
+        <package android:name="com.nothing.thirdparty"/>
+        <intent>
+            <action android:name="com.nothing.thirdparty.bind_glyphservice"/>
+        </intent>
         <intent>
             <action android:name="android.intent.action.VIEW"/>
             <data android:scheme="ton"/>
@@ -1252,6 +1256,7 @@
 
         <meta-data android:name="com.google.android.geo.API_KEY" android:value="${MAPS_API_KEY}" />
         <meta-data android:name="NothingKey" android:value="${GLYPH_API_KEY}" />
+        <meta-data android:name="targetNothingSDKVersion" android:value="1" />
         <uses-library android:name="com.google.android.maps" android:required="false"/>
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 

@@ -30,7 +30,7 @@
     <string name="OEAppearanceTabTitleStyleIconsOnly">الأيقونات فقط</string>
     <string name="OEAppearanceTabTitleStyleTextWithIcons">الأسماء مع الأيقونات</string>
     <string name="OEAppearanceTabCounter">عدّاد الإشعارات</string>
-    <string name="OEAppearanceHideAllChats">إخفاء تبويب «%1$s»</string>
+    <string name="OEAppearanceHideAllChats">إخفاء تبويب «كل المحادثات»</string>
     <string name="OEAppearanceFoldersInfo">تتم مزامنة الأيقونات مع حسابك.</string>
     <string name="OEAppearanceNavigation">التنقل في التطبيق</string>
     <string name="OEAppearanceGeneral">المظهر</string>

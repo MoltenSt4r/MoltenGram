@@ -31,7 +31,7 @@
     <string name="OEAppearanceTabTitleStyleIconsOnly">Tylko ikony</string>
     <string name="OEAppearanceTabTitleStyleTextWithIcons">Nazwy z ikonami</string>
     <string name="OEAppearanceTabCounter">Licznik powiadomień</string>
-    <string name="OEAppearanceHideAllChats">Ukryj zakładkę „%1$s”</string>
+    <string name="OEAppearanceHideAllChats">Ukryj zakładkę „Wszystkie czaty”</string>
     <string name="OEAppearanceFoldersInfo">Ikony są synchronizowane z Twoim kontem.</string>
     <string name="OEAppearanceNavigation">Nawigacja aplikacji</string>
     <string name="OEAppearanceGeneral">Wygląd</string>

@@ -31,7 +31,7 @@
     <string name="OEAppearanceTabTitleStyleIconsOnly">Solo iconos</string>
     <string name="OEAppearanceTabTitleStyleTextWithIcons">Nombres con iconos</string>
     <string name="OEAppearanceTabCounter">Contador de notificaciones</string>
-    <string name="OEAppearanceHideAllChats">Ocultar la pestaña «%1$s»</string>
+    <string name="OEAppearanceHideAllChats">Ocultar la pestaña «Todos los chats»</string>
     <string name="OEAppearanceFoldersInfo">Los iconos se sincronizan con tu cuenta.</string>
     <string name="OEAppearanceNavigation">Navegación de la app</string>
     <string name="OEAppearanceGeneral">Apariencia</string>

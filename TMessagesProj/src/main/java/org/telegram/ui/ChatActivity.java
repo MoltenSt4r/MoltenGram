@@ -8242,7 +8242,8 @@ public class ChatActivity extends BaseFragment implements
             fragmentLocationContextView = new FragmentContextView(context, this, null, true, themeDelegate) {
                 @Override
                 public void setVisibility(int visibility) {
-                    topPanelLayout.setViewVisible(fragmentLocationContextViewWrapper, visibility == VISIBLE);
+                    boolean isActionMode = actionBar != null && actionBar.isActionModeShowed();
+                    topPanelLayout.setViewVisible(fragmentLocationContextViewWrapper, visibility == VISIBLE && !isActionMode);
                 }
             };
             fragmentContextViewWrapper = new FrameLayout(context);
@@ -8253,7 +8254,8 @@ public class ChatActivity extends BaseFragment implements
             fragmentContextView = new FragmentContextView(context, this, null, false, themeDelegate) {
                 @Override
                 public void setVisibility(int visibility) {
-                    topPanelLayout.setViewVisible(fragmentContextViewWrapper, visibility == VISIBLE);
+                    boolean isActionMode = actionBar != null && actionBar.isActionModeShowed();
+                    topPanelLayout.setViewVisible(fragmentContextViewWrapper, visibility == VISIBLE && !isActionMode);
                 }
             };
             fragmentContextView.setSpeedHintViewParent(contentView);
@@ -30108,6 +30110,21 @@ public class ChatActivity extends BaseFragment implements
         updatePinnedMessageView(animated, 0);
     }
 
+    public void updateFragmentContextView(boolean animated) {
+        if (topPanelLayout == null) {
+            return;
+        }
+        boolean isActionMode = actionBar != null && actionBar.isActionModeShowed();
+        if (fragmentContextView != null && fragmentContextViewWrapper != null) {
+            boolean shouldShow = fragmentContextView.getVisibility() == View.VISIBLE && !isActionMode;
+            topPanelLayout.setViewVisible(fragmentContextViewWrapper, shouldShow, animated);
+        }
+        if (fragmentLocationContextView != null && fragmentLocationContextViewWrapper != null) {
+            boolean shouldShow = fragmentLocationContextView.getVisibility() == View.VISIBLE && !isActionMode;
+            topPanelLayout.setViewVisible(fragmentLocationContextViewWrapper, shouldShow, animated);
+        }
+    }
+
     private void updatePinnedListButton(boolean animated) {
         if ((isThreadChat() && !isTopic) || pinnedListButton == null) {
             return;
@@ -32527,6 +32544,7 @@ public class ChatActivity extends BaseFragment implements
             }
             bottomViewsVisibilityController.setViewVisible(MESSAGE_ACTION_CONTAINER, false, true);
             actionBar.hideActionMode();
+            updateFragmentContextView(true);
         }
         cantDeleteMessagesCount = 0;
         canEditMessagesCount = 0;
@@ -34604,6 +34622,7 @@ public class ChatActivity extends BaseFragment implements
         closeMenu();
         chatLayoutManager.setCanScrollVertically(true);
         updatePinnedMessageView(true);
+        updateFragmentContextView(true);
 
         AnimatorSet animatorSet = new AnimatorSet();
         ArrayList<Animator> animators = new ArrayList<>();

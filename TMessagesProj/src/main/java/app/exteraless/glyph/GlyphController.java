@@ -27,6 +27,7 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 
+import java.lang.reflect.Field;
 import java.util.List;
 
 /**
@@ -106,8 +107,11 @@ public final class GlyphController {
                 return;
             }
             try {
-                GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder()
-                        .buildPeriod(200)
+                GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                if (b == null) {
+                    return;
+                }
+                b.buildPeriod(200)
                         .buildCycles(1)
                         .buildInterval(0);
                 switch (callWaveStep % 4) {
@@ -160,7 +164,9 @@ public final class GlyphController {
     };
 
     private GlyphController() {
-        supported = "nothing".equalsIgnoreCase(Build.MANUFACTURER);
+        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
+        String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
+        supported = manufacturer.contains("nothing") || brand.contains("nothing") || isPhone1();
     }
 
     public boolean isSupported() {
@@ -388,6 +394,44 @@ public final class GlyphController {
         });
     }
 
+    public static boolean isPhone1() {
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+        String product = Build.PRODUCT != null ? Build.PRODUCT.toUpperCase() : "";
+        String board = Build.BOARD != null ? Build.BOARD.toUpperCase() : "";
+        return model.contains("A063") || model.contains("PHONE (1)") || model.contains("PHONE 1")
+                || device.contains("SPACEWAR") || product.contains("SPACEWAR") || board.contains("SPACEWAR");
+    }
+
+    public static String resolveStripDevice() {
+        if (isPhone1() || Common.is20111()) {
+            return Glyph.DEVICE_20111;
+        }
+        if (Common.is22111()) {
+            return Glyph.DEVICE_22111;
+        }
+        if (Common.is23111()) {
+            return Glyph.DEVICE_23111;
+        }
+        if (Common.is23113()) {
+            return Glyph.DEVICE_23113;
+        }
+        if (Common.is24111()) {
+            return Glyph.DEVICE_24111;
+        }
+        if (Common.is25111()) {
+            return Glyph.DEVICE_25111;
+        }
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        if (model.contains("A065") || model.contains("PHONE (2)")) {
+            return Glyph.DEVICE_22111;
+        }
+        if (model.contains("A142") || model.contains("PHONE (2A)") || model.contains("PHONE 2A")) {
+            return Glyph.DEVICE_23111;
+        }
+        return Glyph.DEVICE_20111;
+    }
+
     /**
      * Nothing Phone (1) glyph burst particle effect with haptic feedback.
      */
@@ -399,15 +443,17 @@ public final class GlyphController {
             if (stripManager != null && stripSessionOpen) {
                 try {
                     GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
-                    builder.buildChannelB()
-                            .buildChannelA()
-                            .buildChannelE()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildPeriod(80)
-                            .buildCycles(4)
-                            .buildInterval(30);
-                    stripManager.animate(builder.build());
+                    if (builder != null) {
+                        builder.buildChannelB()
+                                .buildChannelA()
+                                .buildChannelE()
+                                .buildChannelC()
+                                .buildChannelD()
+                                .buildPeriod(80)
+                                .buildCycles(4)
+                                .buildInterval(30);
+                        stripManager.animate(builder.build());
+                    }
                 } catch (Throwable t) {
                     FileLog.e(t);
                 }
@@ -462,19 +508,57 @@ public final class GlyphController {
         stripManager.init(new GlyphManager.Callback() {
             @Override
             public void onServiceConnected(ComponentName componentName) {
+                String targetDevice = resolveStripDevice();
                 boolean registered = false;
-                if (Common.is20111()) {
-                    registered = stripManager.register(Glyph.DEVICE_20111);
-                } else if (Common.is22111()) {
-                    registered = stripManager.register(Glyph.DEVICE_22111);
-                } else if (Common.is23111()) {
-                    registered = stripManager.register(Glyph.DEVICE_23111);
-                } else if (Common.is23113()) {
-                    registered = stripManager.register(Glyph.DEVICE_23113);
-                } else if (Common.is24111()) {
-                    registered = stripManager.register(Glyph.DEVICE_24111);
-                } else if (Common.is25111()) {
-                    registered = stripManager.register(Glyph.DEVICE_25111);
+                try {
+                    registered = stripManager.register(targetDevice);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+                if (!registered) {
+                    try {
+                        registered = stripManager.register();
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
+                if (!registered) {
+                    try {
+                        Field serviceField = GlyphManager.class.getDeclaredField("mService");
+                        serviceField.setAccessible(true);
+                        Object serviceObj = serviceField.get(stripManager);
+                        if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
+                            com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
+                            registered = glyphService.register(targetDevice);
+                            if (!registered) {
+                                String appKey = Common.getAppKey(context);
+                                registered = glyphService.registerSDK(appKey, targetDevice);
+                            }
+                            if (registered) {
+                                Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
+                                authField.setAccessible(true);
+                                authField.setBoolean(stripManager, true);
+
+                                Field devField = GlyphManager.class.getDeclaredField("mDevice");
+                                devField.setAccessible(true);
+                                devField.set(stripManager, targetDevice);
+                            }
+                        }
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
+                if (registered) {
+                    try {
+                        Field devField = GlyphManager.class.getDeclaredField("mDevice");
+                        devField.setAccessible(true);
+                        Object currentDev = devField.get(stripManager);
+                        if (currentDev == null || !targetDevice.equals(currentDev)) {
+                            devField.set(stripManager, targetDevice);
+                        }
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
                 }
                 if (!registered) {
                     return;
@@ -525,6 +609,9 @@ public final class GlyphController {
         }
         try {
             GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+            if (builder == null) {
+                return;
+            }
             switch (style) {
                 case GlyphConfig.MESSAGE_ANIM_STROBE:
                     builder.buildChannelA()
@@ -585,33 +672,41 @@ public final class GlyphController {
                     callWaveStep = 0;
                     handler.post(callWaveRunnable);
                     break;
-                case GlyphConfig.CALL_ANIM_BREATHING:
-                    GlyphFrame breathingFrame = stripManager.getGlyphFrameBuilder()
-                            .buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(1200)
-                            .buildCycles(RECORDING_MAX_CYCLES)
-                            .buildInterval(0)
-                            .build();
-                    stripManager.animate(breathingFrame);
+                case GlyphConfig.CALL_ANIM_BREATHING: {
+                    GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                    if (b != null) {
+                        GlyphFrame breathingFrame = b
+                                .buildChannelA()
+                                .buildChannelB()
+                                .buildChannelC()
+                                .buildChannelD()
+                                .buildChannelE()
+                                .buildPeriod(1200)
+                                .buildCycles(RECORDING_MAX_CYCLES)
+                                .buildInterval(0)
+                                .build();
+                        stripManager.animate(breathingFrame);
+                    }
                     break;
+                }
                 case GlyphConfig.CALL_ANIM_PULSE:
-                default:
-                    GlyphFrame pulseFrame = stripManager.getGlyphFrameBuilder()
-                            .buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(600)
-                            .buildCycles(RECORDING_MAX_CYCLES)
-                            .buildInterval(150)
-                            .build();
-                    stripManager.animate(pulseFrame);
+                default: {
+                    GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                    if (b != null) {
+                        GlyphFrame pulseFrame = b
+                                .buildChannelA()
+                                .buildChannelB()
+                                .buildChannelC()
+                                .buildChannelD()
+                                .buildChannelE()
+                                .buildPeriod(600)
+                                .buildCycles(RECORDING_MAX_CYCLES)
+                                .buildInterval(150)
+                                .build();
+                        stripManager.animate(pulseFrame);
+                    }
                     break;
+                }
             }
         } catch (Throwable t) {
             FileLog.e(t);
@@ -628,6 +723,9 @@ public final class GlyphController {
         }
         try {
             GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+            if (builder == null) {
+                return;
+            }
             switch (style) {
                 case GlyphConfig.RECORDING_ANIM_ACCENT_RING:
                     builder.buildChannelB()
