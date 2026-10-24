@@ -110,6 +110,7 @@ def test_noto_animated_emoji_playback_support():
     with open(image_receiver_path, "r", encoding="utf-8") as f:
         ir_content = f.read()
 
+    assert "import android.os.SystemClock;" in ir_content
     assert "android.graphics.drawable.Animatable" in ir_content
     assert "setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE)" in ir_content
 
