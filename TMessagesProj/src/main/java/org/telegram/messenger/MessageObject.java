@@ -198,6 +198,7 @@ public class MessageObject {
     public StoriesController.UploadingStory uploadingStory;
     public TLRPC.Document emojiAnimatedSticker;
     public Long emojiAnimatedStickerId;
+    public String notoAnimatedEmojiUrl;
     public boolean isTopicMainMessage;
     public boolean settingAvatar;
     public boolean flickerLoading;
@@ -2151,6 +2152,7 @@ public class MessageObject {
     protected void checkBigAnimatedEmoji() {
         emojiAnimatedSticker = null;
         emojiAnimatedStickerId = null;
+        notoAnimatedEmojiUrl = null;
         if (emojiOnlyCount == 1 && !(getMedia(messageOwner) instanceof TLRPC.TL_messageMediaWebPage) && !(getMedia(messageOwner) instanceof TLRPC.TL_messageMediaInvoice) && (getMedia(messageOwner) instanceof TLRPC.TL_messageMediaEmpty || getMedia(messageOwner) == null) && this.messageOwner.grouped_id == 0) {
             if (messageOwner.entities == null || messageOwner.entities.isEmpty()) {
                 CharSequence emoji = messageText;
@@ -2179,6 +2181,9 @@ public class MessageObject {
                 if (TextUtils.isEmpty(emojiAnimatedStickerColor) || EmojiData.emojiColoredMap.contains(emoji.toString())) {
                     emojiAnimatedSticker = MediaDataController.getInstance(currentAccount).getEmojiAnimatedSticker(emoji);
                 }
+                if (app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) {
+                    notoAnimatedEmojiUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(emoji.toString());
+                }
             } else if (messageOwner.entities.size() == 1 && (messageOwner.entities.get(0) instanceof TLRPC.TL_messageEntityCustomEmoji || (messageOwner.entities.get(0) instanceof TLRPC.TL_messageEntityTextUrl && ((TLRPC.TL_messageEntityTextUrl) messageOwner.entities.get(0)).url != null && ((TLRPC.TL_messageEntityTextUrl) messageOwner.entities.get(0)).url.startsWith("tg://emoji?id=")))) {
                 try {
                     if (messageOwner.entities.get(0) instanceof TLRPC.TL_messageEntityCustomEmoji) {
@@ -2197,7 +2202,7 @@ public class MessageObject {
                 }
             }
         }
-        if (emojiAnimatedSticker == null && emojiAnimatedStickerId == null) {
+        if (emojiAnimatedSticker == null && emojiAnimatedStickerId == null && !(app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && notoAnimatedEmojiUrl != null)) {
             generateLayout(null);
         } else if (isSticker()) {
             type = TYPE_STICKER;
@@ -11362,7 +11367,7 @@ public class MessageObject {
     }
 
     public boolean isAnimatedEmoji() {
-        return emojiAnimatedSticker != null || emojiAnimatedStickerId != null;
+        return emojiAnimatedSticker != null || emojiAnimatedStickerId != null || (app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && notoAnimatedEmojiUrl != null);
     }
 
     public boolean isAnimatedAnimatedEmoji() {

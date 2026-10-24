@@ -35052,14 +35052,18 @@ public class ChatActivity extends BaseFragment implements
         }
         ArrayList<ReactionsLayoutInBubble.VisibleReaction> visibleReactions = new ArrayList<>();
         visibleReactions.addAll(primaryMessage.getChoosenReactions());
-        getSendMessagesHelper().sendReaction(primaryMessage, visibleReactions, added ? visibleReaction : null, bigEmoji, addToRecent, ChatActivity.this, updateReactionRunnable = new Runnable() {
+        final boolean[] executed = new boolean[1];
+        Runnable currentReactionRunnable = new Runnable() {
             @Override
             public void run() {
                 if (withoutAnimation) {
                     return;
                 }
-                if (updateReactionRunnable != null) {
-                    updateReactionRunnable = null;
+                if (!executed[0]) {
+                    executed[0] = true;
+                    if (updateReactionRunnable == this) {
+                        updateReactionRunnable = null;
+                    }
                     if (fromDoubleTap) {
                         doOnIdle(() -> {
                             AndroidUtilities.runOnUIThread(() -> {
@@ -35086,14 +35090,16 @@ public class ChatActivity extends BaseFragment implements
                     closeMenu();
                 }
             }
-        });
+        };
+        updateReactionRunnable = currentReactionRunnable;
+        getSendMessagesHelper().sendReaction(primaryMessage, visibleReactions, added ? visibleReaction : null, bigEmoji, addToRecent, ChatActivity.this, currentReactionRunnable);
 
         if (fromDoubleTap || withoutAnimation) {
             updateMessageAnimated(primaryMessage, true);
-            updateReactionRunnable.run();
+            currentReactionRunnable.run();
         }
         if (!withoutAnimation) {
-            AndroidUtilities.runOnUIThread(updateReactionRunnable, 50);
+            AndroidUtilities.runOnUIThread(currentReactionRunnable, 50);
         }
     }
 
@@ -35131,6 +35137,13 @@ public class ChatActivity extends BaseFragment implements
             if (updateReactions) {
                 message.forceUpdate = true;
                 message.reactionsChanged = true;
+                if (messageInList != null && messageInList != message) {
+                    messageInList.forceUpdate = true;
+                    messageInList.reactionsChanged = true;
+                    if (message.messageOwner != null && messageInList.messageOwner != null) {
+                        messageInList.messageOwner.reactions = message.messageOwner.reactions;
+                    }
+                }
             }
             if (chatAdapter.isFiltered) {
                 MessageObject filteredMessage = filteredMessagesDict != null ? filteredMessagesDict.get(message.getId()) : null;
@@ -35138,6 +35151,9 @@ public class ChatActivity extends BaseFragment implements
                 if (filteredMessage != null && updateReactions) {
                     filteredMessage.forceUpdate = true;
                     filteredMessage.reactionsChanged = true;
+                    if (message.messageOwner != null && filteredMessage.messageOwner != null) {
+                        filteredMessage.messageOwner.reactions = message.messageOwner.reactions;
+                    }
                 }
                 if (index >= 0) {
                     chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
@@ -35147,6 +35163,10 @@ public class ChatActivity extends BaseFragment implements
                 if (index >= 0) {
                     chatAdapter.notifyItemChanged(chatAdapter.messagesStartRow + index);
                 }
+            }
+            BaseCell cell = findMessageCell(message.getId(), false);
+            if (cell != null) {
+                cell.invalidate();
             }
         }
     }

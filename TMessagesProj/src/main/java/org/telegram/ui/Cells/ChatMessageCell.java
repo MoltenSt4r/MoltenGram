@@ -9972,7 +9972,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if ((messageObject.isAnimatedSticker() || messageObject.isVideoSticker()) && photoWidth == 0 && photoHeight == 0) {
                         photoWidth = photoHeight = 512;
                     }
-                    if (messageObject.isAnimatedAnimatedEmoji()) {
+                    if (messageObject.isAnimatedAnimatedEmoji() || (messageObject.isAnimatedEmoji() && messageObject.notoAnimatedEmojiUrl != null)) {
                         photoWidth = Math.max(512, photoWidth);
                         photoHeight = Math.max(512, photoHeight);
                         if (MessageObject.isTextColorEmoji(messageObject.getDocument())) {
@@ -10036,7 +10036,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                             }
                         }
                     } else if (messageObject.isAnimatedEmoji()) {
-                        if (!LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_CHAT)) {
+                        if (messageObject.notoAnimatedEmojiUrl != null) {
+                            filter = String.format(Locale.US, "%d_%d", w, h);
+                            photoImage.setAutoRepeat(1);
+                        } else if (!LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_CHAT)) {
                             filter = String.format(Locale.US, "%d_%d_nr_messageId=%d" + messageObject.emojiAnimatedStickerColor, w, h, messageObject.stableId);
                             thumb = DocumentObject.getCircleThumb(.4f, Theme.key_chat_serviceBackground, resourcesProvider, 0.65f);
                             photoImage.setAutoRepeat(3);
@@ -10083,7 +10086,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (!messageObject.isOutOwner() && MessageObject.isPremiumSticker(messageObject.getDocument())) {
                         flipImage = true;
                     }
-                    if (messageObject.getDocument() != null) {
+                    if (messageObject.notoAnimatedEmojiUrl != null) {
+                        photoImage.setAllowStartAnimation(true);
+                        photoImage.setImage(ImageLocation.getForPath(messageObject.notoAnimatedEmojiUrl), filter, null, null, thumb, 0, "webp", parentObject, 1);
+                    } else if (messageObject.getDocument() != null) {
                         if (messageObject.isVideoSticker()) {
                             photoImage.setImage(ImageLocation.getForDocument(messageObject.getDocument()), ImageLoader.AUTOPLAY_FILTER,
                                     ImageLocation.getForObject(currentPhotoObjectThumb, photoParentObject), "b1",

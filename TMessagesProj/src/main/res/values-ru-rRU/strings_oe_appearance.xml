@@ -185,4 +185,9 @@
     <string name="OEAppearanceChipFoldersListTopPadding">Отступ списка чатов</string>
     <string name="OEAppearanceChipFoldersScrollDivider">Разделитель при скролле</string>
     <string name="OEAppearanceChipFoldersScrollDividerInfo">Показывать линию под панелью при прокрутке чатов.</string>
+
+    <string name="OEUseNotoAnimatedEmoji">Noto Color Animated Emoji</string>
+    <string name="OEUseNotoAnimatedEmojiInfo">Заменять большие анимированные эмодзи на Noto Color Animated Emoji</string>
+    <string name="OEUseCurrentEmojiForReactions">Текущий набор эмодзи для реакций</string>
+    <string name="OEUseCurrentEmojiForReactionsInfo">Использовать текущий набор эмодзи в меню, анимации и под сообщениями</string>
 </resources>

@@ -935,11 +935,17 @@ public class ReactionsLayoutInBubble {
 //                    }
                     particles = reuseFrom != null && reuseFrom.particles != null ? reuseFrom.particles : new StarsReactionsSheet.Particles(StarsReactionsSheet.Particles.TYPE_RADIAL, SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH ? 18 : 8);
                 } else if (visibleReaction.emojicon != null) {
-                    TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
-                    if (r != null) {
-                        //imageReceiver.setImage(ImageLocation.getForDocument(r.static_icon), "40_40", svgThumb, "webp", r, 1);
-                        SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(r.static_icon, Theme.key_windowBackgroundGray, 1.0f);
-                        imageReceiver.setImage(ImageLocation.getForDocument(r.center_icon), "40_40_lastreactframe", svgThumb, "webp", r, 1);
+                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        imageReceiver.setImageBitmap(emojiDrawable);
+                    } else {
+                        TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
+                        if (r != null) {
+                            //imageReceiver.setImage(ImageLocation.getForDocument(r.static_icon), "40_40", svgThumb, "webp", r, 1);
+                            SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(r.static_icon, Theme.key_windowBackgroundGray, 1.0f);
+                            imageReceiver.setImage(ImageLocation.getForDocument(r.center_icon), "40_40_lastreactframe", svgThumb, "webp", r, 1);
+                        }
                     }
                 } else if (visibleReaction.documentId != 0) {
                     animatedEmojiDrawable = new AnimatedEmojiDrawable(getCacheType(), currentAccount, visibleReaction.documentId);
@@ -1403,19 +1409,29 @@ public class ReactionsLayoutInBubble {
                 if (visibleReaction.isStar) {
 
                 } else if (visibleReaction.emojicon != null) {
-                    TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
-                    if (r != null && r.activate_animation != null) {
-                        //imageReceiver.setImage(ImageLocation.getForDocument(r.static_icon), "40_40", svgThumb, "webp", r, 1);
-                        SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(r.static_icon, Theme.key_windowBackgroundGray, 1.0f);
+                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
                         previewImageReceiver = new ImageReceiver(parent);
                         previewImageReceiver.setLayerNum(7);
                         previewImageReceiver.onAttachedToWindow();
                         previewImageReceiver.setRoundRadius(dp(14));
-                        previewImageReceiver.setAllowStartLottieAnimation(true);
-                        previewImageReceiver.setAllowStartAnimation(true);
-                        previewImageReceiver.setAutoRepeat(1);
-                        previewImageReceiver.setAllowDecodeSingleFrame(true);
-                        previewImageReceiver.setImage(ImageLocation.getForDocument(r.activate_animation), "140_140", svgThumb, null, r, 1);
+                        previewImageReceiver.setImageBitmap(emojiDrawable);
+                    } else {
+                        TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
+                        if (r != null && r.activate_animation != null) {
+                            //imageReceiver.setImage(ImageLocation.getForDocument(r.static_icon), "40_40", svgThumb, "webp", r, 1);
+                            SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(r.static_icon, Theme.key_windowBackgroundGray, 1.0f);
+                            previewImageReceiver = new ImageReceiver(parent);
+                            previewImageReceiver.setLayerNum(7);
+                            previewImageReceiver.onAttachedToWindow();
+                            previewImageReceiver.setRoundRadius(dp(14));
+                            previewImageReceiver.setAllowStartLottieAnimation(true);
+                            previewImageReceiver.setAllowStartAnimation(true);
+                            previewImageReceiver.setAutoRepeat(1);
+                            previewImageReceiver.setAllowDecodeSingleFrame(true);
+                            previewImageReceiver.setImage(ImageLocation.getForDocument(r.activate_animation), "140_140", svgThumb, null, r, 1);
+                        }
                     }
                 } else if (visibleReaction.documentId != 0) {
                     previewAnimatedEmojiDrawable = new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_LARGE_140, currentAccount, visibleReaction.documentId);
@@ -1632,6 +1648,9 @@ public class ReactionsLayoutInBubble {
     }
 
     public void animateReaction(VisibleReaction reaction) {
+        if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+            return;
+        }
         if (reaction.documentId == 0 && animatedReactions.get(reaction) == null) {
             ImageReceiver imageReceiver = new ImageReceiver();
             imageReceiver.setParentView(parentView);

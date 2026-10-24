@@ -53,10 +53,24 @@ object OpenExteraConfig {
     @JvmField
     val downloadEmojiPacks = addConfig("OEDownloadEmojiPacks", ConfigItem.configTypeBool, false)
 
+    /** Заменять большие анимированные эмодзи на Noto Color Animated Emoji при отправке одного эмодзи */
+    @JvmField
+    val useNotoAnimatedEmoji = addConfig("OEUseNotoAnimatedEmoji", ConfigItem.configTypeBool, false)
+
+    /** Использовать текущий набор эмодзи для реакций (в меню, анимации и под сообщением) */
+    @JvmField
+    val useCurrentEmojiForReactions = addConfig("OEUseCurrentEmojiForReactions", ConfigItem.configTypeBool, false)
+
     // ---- Статические геттеры для вызова из Java в горячих местах ----
 
     @JvmStatic
     fun downloadEmojiPacks(): Boolean = downloadEmojiPacks.Bool()
+
+    @JvmStatic
+    fun useNotoAnimatedEmoji(): Boolean = useNotoAnimatedEmoji.Bool()
+
+    @JvmStatic
+    fun useCurrentEmojiForReactions(): Boolean = useCurrentEmojiForReactions.Bool()
 
     @JvmStatic
     fun relativeLastSeen(): Boolean = relativeLastSeen.Bool()

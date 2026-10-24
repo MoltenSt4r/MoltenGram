@@ -641,7 +641,11 @@ public class ReactionsEffectOverlay {
                     }
                 }
 
-                if (animationType == ONLY_MOVE_ANIMATION) {
+                if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                    Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
+                    Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                    emojiImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                } else if (animationType == ONLY_MOVE_ANIMATION) {
                     TLRPC.Document document = isStories ? availableReaction.select_animation : availableReaction.appear_animation;
                     emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                     emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
@@ -703,7 +707,13 @@ public class ReactionsEffectOverlay {
 
             if (animationType != SHORT_ANIMATION && !isStories) {
                 if (availableReaction != null) {
-                    emojiStaticImageView.getImageReceiver().setImage(ImageLocation.getForDocument(availableReaction.center_icon), "40_40_lastreactframe", null, "webp", availableReaction, 1);
+                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        emojiStaticImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                    } else {
+                        emojiStaticImageView.getImageReceiver().setImage(ImageLocation.getForDocument(availableReaction.center_icon), "40_40_lastreactframe", null, "webp", availableReaction, 1);
+                    }
                 }
                 container.addView(emojiStaticImageView);
                 emojiStaticImageView.getLayoutParams().width = emojiSize;

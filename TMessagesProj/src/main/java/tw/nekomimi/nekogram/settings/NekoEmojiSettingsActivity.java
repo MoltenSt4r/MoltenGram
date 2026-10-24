@@ -69,6 +69,8 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
 
     private int generalRow;
     private int useSystemEmojiRow;
+    private int useCurrentEmojiForReactionsRow;
+    private int useNotoAnimatedEmojiRow;
     private int general2Row;
 
     private int useCustomEmojiRow;
@@ -162,6 +164,18 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
             }
             EmojiHelper.reloadEmoji();
             listAdapter.notifyEmojiSetsChanged();
+        } else if (position == useCurrentEmojiForReactionsRow) {
+            OpenExteraConfig.useCurrentEmojiForReactions.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(OpenExteraConfig.useCurrentEmojiForReactions());
+            }
+            EmojiHelper.reloadEmoji();
+        } else if (position == useNotoAnimatedEmojiRow) {
+            OpenExteraConfig.useNotoAnimatedEmoji.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(OpenExteraConfig.useNotoAnimatedEmoji());
+            }
+            EmojiHelper.reloadEmoji();
         } else if (position == customEmojiAddRow) {
             chatAttachAlert = new ChatAttachAlert(getParentActivity(), NekoEmojiSettingsActivity.this, false, false);
             chatAttachAlert.setEmojiPicker();
@@ -213,6 +227,8 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
 
         generalRow = addRow();
         useSystemEmojiRow = addRow("useSystemEmoji");
+        useCurrentEmojiForReactionsRow = addRow("useCurrentEmojiForReactions");
+        useNotoAnimatedEmojiRow = addRow("useNotoAnimatedEmoji");
         general2Row = addRow();
 
         useCustomEmojiRow = addRow();
@@ -445,6 +461,18 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
                         } else {
                             textCheckCell.setTextAndCheck(getString(R.string.EmojiUseDefault), NekoConfig.useSystemEmoji.Bool(), false);
                         }
+                    } else if (position == useCurrentEmojiForReactionsRow) {
+                        if (partial) {
+                            textCheckCell.setChecked(OpenExteraConfig.useCurrentEmojiForReactions());
+                        } else {
+                            textCheckCell.setTextAndValueAndCheck(getString(R.string.OEUseCurrentEmojiForReactions), getString(R.string.OEUseCurrentEmojiForReactionsInfo), OpenExteraConfig.useCurrentEmojiForReactions(), true, false);
+                        }
+                    } else if (position == useNotoAnimatedEmojiRow) {
+                        if (partial) {
+                            textCheckCell.setChecked(OpenExteraConfig.useNotoAnimatedEmoji());
+                        } else {
+                            textCheckCell.setTextAndValueAndCheck(getString(R.string.OEUseNotoAnimatedEmoji), getString(R.string.OEUseNotoAnimatedEmojiInfo), OpenExteraConfig.useNotoAnimatedEmoji(), true, false);
+                        }
                     } else if (position == downloadEmojiPacksRow) {
                         if (partial) {
                             textCheckCell.setChecked(OpenExteraConfig.downloadEmojiPacks());
@@ -516,7 +544,7 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
         public int getItemViewType(int position) {
             if (position == general2Row) {
                 return TYPE_SHADOW;
-            } else if (position == useSystemEmojiRow || position == downloadEmojiPacksRow) {
+            } else if (position == useSystemEmojiRow || position == useCurrentEmojiForReactionsRow || position == useNotoAnimatedEmojiRow || position == downloadEmojiPacksRow) {
                 return TYPE_CHECK;
             } else if (position == emojiPackRow || position == generalRow || position == useCustomEmojiRow) {
                 return TYPE_HEADER;

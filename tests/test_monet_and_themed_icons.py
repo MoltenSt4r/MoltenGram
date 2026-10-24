@@ -370,6 +370,39 @@ def test_plugin_store_direct_download_and_safe_username_resolution():
     assert 'openTelegramLinkSafely' in pdbs_content
 
 
+def test_fast_reactions_race_condition_fix():
+    ca_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ChatActivity.java')
+    with open(ca_path, 'r', encoding='utf-8') as f:
+        ca_content = f.read()
+    assert 'currentReactionRunnable' in ca_content
+    assert 'executed[0]' in ca_content
+    assert 'messageInList.messageOwner.reactions = message.messageOwner.reactions' in ca_content
+
+
+def test_noto_animated_emoji_and_current_emoji_reactions():
+    kt_path = os.path.join(REPO_ROOT, 'TMessagesProj/src/main/kotlin/app/exteraless/OpenExteraConfig.kt')
+    with open(kt_path, 'r', encoding='utf-8') as f:
+        kt_content = f.read()
+    assert 'useNotoAnimatedEmoji' in kt_content
+    assert 'useCurrentEmojiForReactions' in kt_content
+
+    noto_path = os.path.join(JAVA_DIR, 'app/exteraless/chats/NotoEmojiHelper.java')
+    assert os.path.exists(noto_path)
+    with open(noto_path, 'r', encoding='utf-8') as f:
+        noto_content = f.read()
+    assert 'getWebpUrl' in noto_content
+
+    rcl_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/ReactionsContainerLayout.java')
+    with open(rcl_path, 'r', encoding='utf-8') as f:
+        rcl_content = f.read()
+    assert 'useCurrentEmojiForReactions()' in rcl_content
+
+    rlb_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/Reactions/ReactionsLayoutInBubble.java')
+    with open(rlb_path, 'r', encoding='utf-8') as f:
+        rlb_content = f.read()
+    assert 'useCurrentEmojiForReactions()' in rlb_content
+
+
 
 
 

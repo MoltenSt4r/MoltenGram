@@ -194,4 +194,9 @@
     <string name="OEAppearanceChipFoldersListTopPadding">Chat List Offset</string>
     <string name="OEAppearanceChipFoldersScrollDivider">Scroll Divider</string>
     <string name="OEAppearanceChipFoldersScrollDividerInfo">Show bottom divider line under folders bar when scrolling chats.</string>
+
+    <string name="OEUseNotoAnimatedEmoji">Noto Color Animated Emoji</string>
+    <string name="OEUseNotoAnimatedEmojiInfo">Replace large animated emojis with Google Noto Color Animated Emoji</string>
+    <string name="OEUseCurrentEmojiForReactions">Current emoji set for reactions</string>
+    <string name="OEUseCurrentEmojiForReactionsInfo">Use current emoji set in reaction picker, animations, and bubbles</string>
 </resources>

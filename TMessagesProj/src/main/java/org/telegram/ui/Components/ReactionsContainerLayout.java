@@ -2171,7 +2171,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             resetAnimation();
             currentReaction = react;
             hasEnterAnimation = currentReaction.isStar || (currentReaction.emojicon != null && (showCustomEmojiReaction() || allReactionsIsDefault)) && LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_REACTIONS);
-            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect) {
+            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction.emojicon != null)) {
                 hasEnterAnimation = false;
             }
             if (currentReaction.isStar || currentReaction.emojicon != null) {
@@ -2229,9 +2229,12 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 if (particles == null) {
                     particles = new StarsReactionsSheet.Particles(StarsReactionsSheet.Particles.TYPE_RADIAL, SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH ? 45 : 18);
                 }
-            } else if (type == TYPE_STICKER_SET_EMOJI && react != null && react.emojicon != null) {
-                enterImageView.getImageReceiver().setImageBitmap(Emoji.getEmojiDrawable(react.emojicon));
-                loopImageView.getImageReceiver().setImageBitmap(Emoji.getEmojiDrawable(react.emojicon));
+            } else if ((type == TYPE_STICKER_SET_EMOJI || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) && react != null && react.emojicon != null) {
+                Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(react.emojicon);
+                Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(react.emojicon);
+                enterImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                loopImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);
             } else if (currentReaction.isEffect) {
                 TLRPC.Document document = MessagesController.getInstance(currentAccount).getEffectDocument(currentReaction.documentId);
                 SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(document, Theme.key_windowBackgroundWhiteGrayIcon, 0.2f);
