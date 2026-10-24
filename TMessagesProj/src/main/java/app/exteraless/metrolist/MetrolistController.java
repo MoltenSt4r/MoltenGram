@@ -566,8 +566,7 @@ public final class MetrolistController {
                                     }));
                                 }
                             }
-                        }
-                    };
+                        };
 
                     timeoutRunnable[0] = () -> {
                         NotificationCenter.getInstance(safeAccount).removeObserver(observer[0], NotificationCenter.messageReceivedByServer);
