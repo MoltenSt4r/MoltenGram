@@ -936,8 +936,10 @@ public class ReactionsLayoutInBubble {
                     particles = reuseFrom != null && reuseFrom.particles != null ? reuseFrom.particles : new StarsReactionsSheet.Particles(StarsReactionsSheet.Particles.TYPE_RADIAL, SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH ? 18 : 8);
                 } else if (visibleReaction.emojicon != null) {
                     if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
-                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
-                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
                         imageReceiver.setImageBitmap(emojiDrawable);
                     } else {
                         TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
@@ -1410,8 +1412,10 @@ public class ReactionsLayoutInBubble {
 
                 } else if (visibleReaction.emojicon != null) {
                     if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
-                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
-                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
                         previewImageReceiver = new ImageReceiver(parent);
                         previewImageReceiver.setLayerNum(7);
                         previewImageReceiver.onAttachedToWindow();

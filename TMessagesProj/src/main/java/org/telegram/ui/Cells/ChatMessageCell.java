@@ -10088,7 +10088,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                     if (messageObject.notoAnimatedEmojiUrl != null) {
                         photoImage.setAllowStartAnimation(true);
-                        photoImage.setImage(ImageLocation.getForPath(messageObject.notoAnimatedEmojiUrl), filter, null, null, thumb, 0, "webp", parentObject, 1);
+                        photoImage.setImage(ImageLocation.getForVideoPath(messageObject.notoAnimatedEmojiUrl), filter, null, null, thumb, 0, "webp", parentObject, 1);
                     } else if (messageObject.getDocument() != null) {
                         if (messageObject.isVideoSticker()) {
                             photoImage.setImage(ImageLocation.getForDocument(messageObject.getDocument()), ImageLoader.AUTOPLAY_FILTER,

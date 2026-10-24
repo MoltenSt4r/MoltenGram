@@ -409,6 +409,24 @@ def test_noto_animated_emoji_and_current_emoji_reactions():
     assert 'import org.telegram.messenger.Emoji;' in reo_content
     assert 'useCurrentEmojiForReactions()' in reo_content
 
+    assert 'Emoji.getEmojiBigDrawable' not in rlb_content, "ReactionsLayoutInBubble must not call getEmojiBigDrawable"
+    assert 'fullSize = false' in rlb_content
+
+    assert 'Emoji.getEmojiBigDrawable' not in rcl_content, "ReactionsContainerLayout must not call getEmojiBigDrawable"
+    assert 'fullSize = false' in rcl_content
+
+    saed_path = os.path.join(JAVA_DIR, 'org/telegram/ui/SelectAnimatedEmojiDialog.java')
+    with open(saed_path, 'r', encoding='utf-8') as f:
+        saed_content = f.read()
+    assert 'useCurrentEmojiForReactions()' in saed_content
+    assert 'fullSize = false' in saed_content
+
+    cmc_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/ChatMessageCell.java')
+    with open(cmc_path, 'r', encoding='utf-8') as f:
+        cmc_content = f.read()
+    assert 'ImageLocation.getForVideoPath(messageObject.notoAnimatedEmojiUrl)' in cmc_content
+
+
 
 
 

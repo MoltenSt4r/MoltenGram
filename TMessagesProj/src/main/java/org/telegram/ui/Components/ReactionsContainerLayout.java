@@ -2230,8 +2230,10 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                     particles = new StarsReactionsSheet.Particles(StarsReactionsSheet.Particles.TYPE_RADIAL, SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH ? 45 : 18);
                 }
             } else if ((type == TYPE_STICKER_SET_EMOJI || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) && react != null && react.emojicon != null) {
-                Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(react.emojicon);
-                Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(react.emojicon);
+                Drawable emojiDrawable = Emoji.getEmojiDrawable(react.emojicon);
+                if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                    ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                }
                 enterImageView.getImageReceiver().setImageBitmap(emojiDrawable);
                 loopImageView.getImageReceiver().setImageBitmap(emojiDrawable);
                 pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);

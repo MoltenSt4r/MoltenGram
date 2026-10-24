@@ -984,7 +984,14 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     selectedReactionView = imageViewEmoji;
                     pressedProgress = 0f;
                     cancelPressed = false;
-                    if (selectedReactionView.isDefaultReaction) {
+                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && selectedReactionView.reaction != null && selectedReactionView.reaction.emojicon != null) {
+                        setBigReactionAnimatedEmoji(null);
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(selectedReactionView.reaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
+                        bigReactionImageReceiver.setImageBitmap(emojiDrawable);
+                    } else if (selectedReactionView.isDefaultReaction) {
                         setBigReactionAnimatedEmoji(null);
                         TLRPC.TL_availableReaction reaction = MediaDataController.getInstance(currentAccount).getReactionsMap().get(selectedReactionView.reaction.emojicon);
                         if (reaction != null) {
@@ -1070,7 +1077,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
         RecyclerListView.OnItemClickListener onItemClick = (view, position) -> {
             if (view instanceof ImageViewEmoji) {
                 ImageViewEmoji viewEmoji = (ImageViewEmoji) view;
-                if (viewEmoji.isDefaultReaction || viewEmoji.reaction != null && viewEmoji.reaction.isStar || type == TYPE_STICKER_SET_EMOJI || type == TYPE_EFFECTS) {
+                if (viewEmoji.isDefaultReaction || viewEmoji.reaction != null || type == TYPE_STICKER_SET_EMOJI || type == TYPE_EFFECTS) {
                     incrementHintUse();
                     onReactionClick(viewEmoji, viewEmoji.reaction);
                 } else if (viewEmoji.isStaticIcon && viewEmoji.document != null) {
@@ -2267,8 +2274,24 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 imageView.setViewSelected(selectedReactions.contains(currentReaction), false);
                 imageView.notDraw = false;
                 imageView.invalidate();
-                if (type == TYPE_STICKER_SET_EMOJI) {
-                    imageView.setDrawable(Emoji.getEmojiDrawable(currentReaction.emojicon));
+                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction != null && currentReaction.emojicon != null)) {
+                    Drawable emojiDrawable = Emoji.getEmojiDrawable(currentReaction.emojicon);
+                    if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                        ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                    }
+                    imageView.setDrawable(emojiDrawable);
+                    imageView.isDefaultReaction = false;
+                    imageView.span = null;
+                    imageView.document = null;
+                    if (imageView.imageReceiver != null) {
+                        imageView.imageReceiver.clearImage();
+                    }
+                    if (imageView.preloadEffectImageReceiver != null) {
+                        imageView.preloadEffectImageReceiver.clearImage();
+                    }
+                    if (imageView.premiumLockIconView != null) {
+                        imageView.premiumLockIconView.setVisibility(View.GONE);
+                    }
                 } else if (!currentReaction.isEffect && currentReaction.emojicon != null) {
                     imageView.isDefaultReaction = true;
                     TLRPC.TL_availableReaction reaction = MediaDataController.getInstance(currentAccount).getReactionsMap().get(currentReaction.emojicon);
@@ -2338,7 +2361,11 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     if (visibleReaction.documentId == 0) {
                         selected = selectedReactions.contains(visibleReaction);
                         imageView.isFirstReactions = true;
-                        imageView.setDrawable(Emoji.getEmojiDrawable(visibleReaction.emojicon));
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
+                        imageView.setDrawable(emojiDrawable);
                         imageView.setViewSelected(selected, false);
                         return;
                     } else {
@@ -2646,11 +2673,27 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     currentReaction = topReactions.get(index);
                 }
 
-                if (type == TYPE_STICKER_SET_EMOJI) {
+                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction != null && currentReaction.emojicon != null)) {
                     imageView.notDraw = false;
                     imageView.isFirstReactions = true;
                     imageView.reaction = currentReaction;
-                    imageView.setDrawable(Emoji.getEmojiDrawable(currentReaction.emojicon));
+                    Drawable emojiDrawable = Emoji.getEmojiDrawable(currentReaction.emojicon);
+                    if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                        ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                    }
+                    imageView.setDrawable(emojiDrawable);
+                    imageView.isDefaultReaction = false;
+                    imageView.span = null;
+                    imageView.document = null;
+                    if (imageView.imageReceiver != null) {
+                        imageView.imageReceiver.clearImage();
+                    }
+                    if (imageView.preloadEffectImageReceiver != null) {
+                        imageView.preloadEffectImageReceiver.clearImage();
+                    }
+                    if (imageView.premiumLockIconView != null) {
+                        imageView.premiumLockIconView.setVisibility(View.GONE);
+                    }
                     imageView.setViewSelected(selectedReactions.contains(currentReaction), false);
                     return;
                 }
@@ -2810,7 +2853,11 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     imageView.notDraw = false;
                     imageView.isFirstReactions = false;
                     imageView.reaction = ReactionsLayoutInBubble.VisibleReaction.fromEmojicon(emoji);
-                    imageView.setDrawable(Emoji.getEmojiDrawable(emoji));
+                    Drawable emojiDrawable = Emoji.getEmojiDrawable(emoji);
+                    if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                        ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                    }
+                    imageView.setDrawable(emojiDrawable);
                     selected = selectedReactions.contains(imageView.reaction);
                     imageView.setViewSelected(selected, false);
                     return;
@@ -4562,12 +4609,12 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         skewAlpha = .25f + .75f * skewAlpha;
                     }
                 }
-                boolean drawInUi = type == TYPE_STICKER_SET_EMOJI || skewAlpha < 1 || isAnimating() || imageViewEmojis.size() <= 4 || !lite || enterAnimationInProgress() || type == TYPE_AVATAR_CONSTRUCTOR || type == TYPE_CHAT_REACTIONS;
+                boolean drawInUi = type == TYPE_STICKER_SET_EMOJI || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() || skewAlpha < 1 || isAnimating() || imageViewEmojis.size() <= 4 || !lite || enterAnimationInProgress() || type == TYPE_AVATAR_CONSTRUCTOR || type == TYPE_CHAT_REACTIONS;
                 if (!drawInUi) {
                     boolean animatedExpandIn = animateExpandStartTime > 0 && (SystemClock.elapsedRealtime() - animateExpandStartTime) < animateExpandDuration();
                     for (int i = 0; i < imageViewEmojis.size(); i++) {
                         ImageViewEmoji img = imageViewEmojis.get(i);
-                        if (img.pressedProgress != 0 || img.selectedProgress != 0 || img.backAnimator != null || img.getTranslationX() != 0 || img.getTranslationY() != 0 || img.getAlpha() != 1 || (animatedExpandIn && img.position > animateExpandFromPosition && img.position < animateExpandToPosition) || img.isStaticIcon) {
+                        if (img.pressedProgress != 0 || img.selectedProgress != 0 || img.backAnimator != null || img.getTranslationX() != 0 || img.getTranslationY() != 0 || img.getAlpha() != 1 || (animatedExpandIn && img.position > animateExpandFromPosition && img.position < animateExpandToPosition) || img.isStaticIcon || img.drawable != null) {
                             drawInUi = true;
                             break;
                         }
@@ -4773,7 +4820,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         }
 
                         float scale = imageView.getScaleX();
-                        if (type == TYPE_STICKER_SET_EMOJI) {
+                        if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && imageView.reaction != null && imageView.reaction.emojicon != null)) {
                             scale *= .87f;
                         }
                         if (imageView.pressedProgress != 0 || imageView.selectedProgress > 0 && type != TYPE_TOPIC_ICON && type != TYPE_AVATAR_CONSTRUCTOR) {
@@ -4811,7 +4858,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                             drawable.setAlpha(255);
                         } else if (!imageView.isDefaultReaction && !imageView.isStaticIcon) {
                             AnimatedEmojiSpan span = imageView.span;
-                            if (span == null && type != TYPE_STICKER_SET_EMOJI || imageView.notDraw) {
+                            if ((span == null && type != TYPE_STICKER_SET_EMOJI && (!app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() || imageView.drawable == null)) || imageView.notDraw) {
                                 continue;
                             }
                             drawable = imageView.drawable;
@@ -4835,7 +4882,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                                 final float s = AndroidUtilities.lerp(1f, 0.85f, imageView.selectedProgress);
                                 canvas.scale(s, s, AndroidUtilities.rectTmp2.centerX(), AndroidUtilities.rectTmp2.centerY());
                             }
-                            if (type == TYPE_CHAT_REACTIONS || type == TYPE_STICKER_SET_EMOJI || type == TYPE_EFFECTS) {
+                            if (type == TYPE_CHAT_REACTIONS || type == TYPE_STICKER_SET_EMOJI || type == TYPE_EFFECTS || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && imageView.reaction != null && imageView.reaction.emojicon != null)) {
                                 canvas.scale(scale, scale, AndroidUtilities.rectTmp2.centerX(), AndroidUtilities.rectTmp2.centerY());
                             } else {
                                 skew(canvas, i, imageView.getHeight());
@@ -5773,7 +5820,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
             paint.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
             canvas.drawRect(0, 0, selectedReactionView.getMeasuredWidth(), selectedReactionView.getMeasuredHeight(), paint);
             canvas.scale(pressedViewScale, pressedViewScale, selectedReactionView.getMeasuredWidth() / 2f, selectedReactionView.getMeasuredHeight());
-            ImageReceiver imageReceiver = selectedReactionView.isDefaultReaction ? bigReactionImageReceiver : selectedReactionView.imageReceiverToDraw;
+            ImageReceiver imageReceiver = (selectedReactionView.isDefaultReaction || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && selectedReactionView.reaction != null && selectedReactionView.reaction.emojicon != null)) ? bigReactionImageReceiver : selectedReactionView.imageReceiverToDraw;
             if (bigReactionAnimatedEmoji != null && bigReactionAnimatedEmoji.getImageReceiver() != null && bigReactionAnimatedEmoji.getImageReceiver().hasBitmapImage()) {
                 imageReceiver = bigReactionAnimatedEmoji.getImageReceiver();
             }
