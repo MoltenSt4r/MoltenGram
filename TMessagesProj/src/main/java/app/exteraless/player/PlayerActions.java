@@ -267,6 +267,10 @@ public final class PlayerActions {
     public static void saveToProfile(MessageObject messageObject, boolean save, ResultCallback callback) {
         final TLRPC.Document document = messageObject != null ? messageObject.getDocument() : null;
         if (document == null || document.id == 0) {
+            if (messageObject != null && save) {
+                app.exteraless.metrolist.MetrolistController.getInstance().saveStreamTrackToProfile(messageObject, callback);
+                return;
+            }
             TLRPC.TL_error err = new TLRPC.TL_error();
             err.code = 400;
             err.text = "CLIENT_LOCAL_TRACK_NOT_SUPPORTED";

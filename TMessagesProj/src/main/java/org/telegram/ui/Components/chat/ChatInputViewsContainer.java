@@ -269,7 +269,7 @@ public class ChatInputViewsContainer extends FrameLayout {
         tmpRect.offset(0, blurTop + (int) bubbleInputTranlationY);
 
         blurredBackgroundDrawable.setBounds(tmpRect);
-        if (drawInputBackground)
+        if (drawInputBackground && !app.exteraless.chats.ChatsConfig.md3ChatInput())
             blurredBackgroundDrawable.draw(canvas);
 
         if (needDrawInAppKeyboard) {

@@ -3809,8 +3809,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         seekToProgressPending = 0;
         File file = null;
         boolean exists = false;
-        if (messageObject.messageOwner.attachPath != null && messageObject.messageOwner.attachPath.length() > 0) {
-            file = new File(messageObject.messageOwner.attachPath);
+        final String streamAttachPath = messageObject.messageOwner != null ? messageObject.messageOwner.attachPath : null;
+        final boolean isHttpUrl = streamAttachPath != null && (streamAttachPath.startsWith("http://") || streamAttachPath.startsWith("https://"));
+        if (!isHttpUrl && streamAttachPath != null && streamAttachPath.length() > 0) {
+            file = new File(streamAttachPath);
             exists = file.exists();
             if (!exists) {
                 file = null;
@@ -3818,7 +3820,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         }
         final File cacheFile = file != null ? file : FileLoader.getInstance(messageObject.currentAccount).getPathToMessage(messageObject.messageOwner);
         boolean canStream = SharedConfig.streamMedia && (messageObject.isMusic() || messageObject.isRoundVideo() || messageObject.isVideo() && messageObject.canStreamVideo()) && !messageObject.shouldEncryptPhotoOrVideo() && !DialogObject.isEncryptedDialog(messageObject.getDialogId());
-        if (cacheFile != file && !(exists = cacheFile.exists()) && !canStream) {
+        if (!isHttpUrl && cacheFile != file && !(exists = cacheFile.exists()) && !canStream) {
             FileLoader.getInstance(messageObject.currentAccount).loadFile(messageObject.getDocument(), messageObject, FileLoader.PRIORITY_LOW, messageObject.shouldEncryptPhotoOrVideo() ? 2 : 0);
             downloadingCurrentMessage = true;
             isPaused = false;
@@ -4076,7 +4078,10 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         return Theme.getCurrentAudiVisualizerDrawable().getParentView() != null;
                     }
                 });
-                if (exists) {
+                if (isHttpUrl) {
+                    audioPlayer.preparePlayer(Uri.parse(streamAttachPath), "other");
+                    isStreamingCurrentAudio = true;
+                } else if (exists) {
                     if (!messageObject.mediaExists && cacheFile != file) {
                         AndroidUtilities.runOnUIThread(() -> NotificationCenter.getInstance(messageObject.currentAccount).postNotificationName(NotificationCenter.fileLoaded, FileLoader.getAttachFileName(messageObject.getDocument()), cacheFile));
                         if (NaConfig.INSTANCE.getEnableSaveDeletedMessages().Bool() && messageObject.isAyuDeleted()) {

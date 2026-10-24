@@ -77,3 +77,70 @@ def test_md3_chat_input_styling_and_animations():
     # Audio video container scale and alpha animations in checkSendButton
     assert "ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_X" in content
     assert "ObjectAnimator.ofFloat(audioVideoButtonContainer, View.ALPHA" in content
+
+
+def test_chat_input_views_container_md3_draw_background():
+    container_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "chat", "ChatInputViewsContainer.java"
+    )
+    with open(container_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "if (drawInputBackground && !app.exteraless.chats.ChatsConfig.md3ChatInput())" in content
+    assert "blurredBackgroundDrawable.draw(canvas);" in content
+
+
+def test_chat_message_cell_share_button_selection_guard():
+    cell_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java"
+    )
+    with open(cell_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "if (delegate != null && (delegate.hasSelectedMessages() || !delegate.canPerformActions())) return false;" in content
+    assert "delegate == null || (!delegate.hasSelectedMessages() && delegate.canPerformActions())" in content
+
+
+def test_metrolist_url_matcher_youtube_music_and_youtu_be():
+    matcher_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistUrlMatcher.java"
+    )
+    with open(matcher_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "youtu.be" in content
+    assert "YOUTU_BE_PATTERN" in content
+    assert "music.youtube.com" in content
+    assert "metrolist.cc" in content
+
+
+def test_media_controller_http_audio_streaming():
+    mc_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "messenger", "MediaController.java"
+    )
+    with open(mc_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert 'streamAttachPath.startsWith("http://") || streamAttachPath.startsWith("https://")' in content
+    assert 'audioPlayer.preparePlayer(Uri.parse(streamAttachPath), "other");' in content
+
+
+def test_profile_music_saving_for_streaming_tracks():
+    controller_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistController.java"
+    )
+    with open(controller_path, "r", encoding="utf-8") as f:
+        c_content = f.read()
+
+    assert "public void saveStreamTrackToProfile(MessageObject mo, PlayerActions.ResultCallback callback)" in c_content
+    assert "TL_account_saveMusic req = new TLRPC.TL_account_saveMusic();" in c_content
+    assert "NotificationCenter.profileMusicUpdated" in c_content
+
+    actions_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "PlayerActions.java"
+    )
+    with open(actions_path, "r", encoding="utf-8") as f:
+        a_content = f.read()
+
+    assert "app.exteraless.metrolist.MetrolistController.getInstance().saveStreamTrackToProfile(messageObject, callback);" in a_content
+

@@ -5341,6 +5341,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else if (
                         sideButtonVisible &&
                         drawSideButton != 0 &&
+                        (delegate == null || (!delegate.hasSelectedMessages() && delegate.canPerformActions())) &&
                         x >= sideStartX - dp(24) && x <= sideStartX + dp(40) &&
                         y >= sideStartY - dp(drawSummarizeButton ? 6 : 24) && y <= sideStartY + dp(38 + (drawSideButton == 3 && commentLayout != null ? 18 : 0) + (drawSideButton2 == SIDE_BUTTON_SPONSORED_MORE ? 38 : 0))
                     ) {
@@ -12842,6 +12843,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     handled = delegate.didLongPressChannelAvatar(this, currentChat, id, lastTouchX, lastTouchY);
                 }
             } else if (sideButtonPressed) {
+                if (delegate != null && (delegate.hasSelectedMessages() || !delegate.canPerformActions())) {
+                    sideButtonPressed = false;
+                    pressedSideButton = 0;
+                    delegate.didLongPress(this, lastTouchX, lastTouchY);
+                    return false;
+                }
                 if (pressedSideButton != SIDE_BUTTON_SPONSORED_CLOSE &&
                     pressedSideButton != SIDE_BUTTON_SPONSORED_MORE &&
                     pressedSideButton != 3 && pressedSideButton != 2
@@ -19377,6 +19384,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     protected boolean checkNeedDrawShareButton(MessageObject messageObject) {
+        if (delegate != null && (delegate.hasSelectedMessages() || !delegate.canPerformActions())) return false;
         if (messageObject.isWideChannelPost()) return false;
         if (!messageObject.isSaved && NaConfig.INSTANCE.getHideShareButtonInChannel().Bool()) return false;
         if (currentMessageObject.isAyuDeleted()) return false;
