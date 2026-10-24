@@ -149,3 +149,67 @@ def test_profile_music_saving_for_streaming_tracks():
 
     assert "app.exteraless.metrolist.MetrolistController.getInstance().saveStreamTrackToProfile(messageObject, callback);" in a_content
 
+
+def test_chat_list_item_animator_enter_transition_and_added_items_height():
+    animator_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "recyclerview", "ChatListItemAnimator.java"
+    )
+    with open(animator_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Enter transition cleanup must execute for all animations
+    assert "activity.animatingMessageObjects.remove(chatMessageCell.getMessageObject());" in content
+    assert "activity.getChatActivityEnterView().startMessageTransition();" in content
+    assert "if (addedItemsHeight != 0)" in content
+    assert "view.setTranslationY(addedItemsHeight);" in content
+    assert "holder != greetingsSticker" in content
+    assert "cell.getTransitionParams().resetAnimation();" in content or "((ChatMessageCell) view).getTransitionParams().resetAnimation();" in content
+
+
+def test_metrolist_url_matcher_youtube_domains_and_endpoints():
+    matcher_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistUrlMatcher.java"
+    )
+    with open(matcher_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert 'host.equals("youtube.com") || host.endsWith(".youtube.com")' in content
+    assert "YT_PATH_PATTERN" in content
+
+
+def test_metrolist_client_innertube_clients_and_cipher_fallback():
+    client_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistClient.java"
+    )
+    with open(client_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "ANDROID_TESTSUITE" in content
+    assert "TVHTML5_SIMPLY_EMBEDDED_PLAYER" in content
+    assert "signatureCipher" in content
+    assert "hlsManifestUrl" in content
+
+
+def test_video_player_modern_user_agent_and_hls_fallback():
+    vp_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "VideoPlayer.java"
+    )
+    with open(vp_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "Chrome/130.0.0.0" in content
+    assert "Firefox/47.0" not in content
+    assert '.contains(".m3u8")' in content
+
+
+def test_metrolist_controller_audio_url_resolution_and_profile_saving():
+    controller_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistController.java"
+    )
+    with open(controller_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "MetrolistClient.Track resolved = MetrolistClient.getInstance().fetchPlayer(videoId);" in content
+    assert "conn.setRequestProperty(\"Referer\", \"https://music.youtube.com/\");" in content
+
+

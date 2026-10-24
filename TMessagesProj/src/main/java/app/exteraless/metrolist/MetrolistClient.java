@@ -142,13 +142,25 @@ public final class MetrolistClient {
             return track;
         }
 
-        // 2. Если есть cookies или OAuth, пробуем ANDROID_MUSIC
+        // 2. ANDROID_TESTSUITE (возвращает прямые расшифрованные потоки)
+        track = fetchPlayerWithClient(videoId, "ANDROID_TESTSUITE", "1.9", "GooglePlayServices/23.16.13 (Android 14; sdk 34)", true);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 3. TVHTML5_SIMPLY_EMBEDDED_PLAYER
+        track = fetchPlayerWithClient(videoId, "TVHTML5_SIMPLY_EMBEDDED_PLAYER", "2.0", USER_AGENT_WEB, true);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 4. Если есть cookies или OAuth, пробуем ANDROID_MUSIC
         track = fetchPlayerWithClient(videoId, "ANDROID_MUSIC", "6.42.52", USER_AGENT_ANDROID, false);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 3. Fallback: WEB_REMIX
+        // 5. Fallback: WEB_REMIX
         track = fetchPlayerWithClient(videoId, "WEB_REMIX", "1.20240101.01.00", USER_AGENT_WEB, false);
         return track;
     }
@@ -171,7 +183,7 @@ public final class MetrolistClient {
             requestObj.put("context", context);
             requestObj.put("videoId", videoId);
 
-            String endpoint = (isIos ? YOUTUBE_API_BASE : INNERTUBE_API_BASE) + "/player";
+            String endpoint = (isIos || "ANDROID_TESTSUITE".equals(clientName) || "TVHTML5_SIMPLY_EMBEDDED_PLAYER".equals(clientName) ? YOUTUBE_API_BASE : INNERTUBE_API_BASE) + "/player";
             String jsonResponse = postJson(endpoint, requestObj.toString(), userAgent, clientName, clientVersion);
             if (TextUtils.isEmpty(jsonResponse)) {
                 return null;
@@ -201,39 +213,90 @@ public final class MetrolistClient {
             if (root.has("streamingData")) {
                 JSONObject streamingData = root.getJSONObject("streamingData");
                 JSONArray adaptiveFormats = streamingData.optJSONArray("adaptiveFormats");
+                JSONArray formats = streamingData.optJSONArray("formats");
+                List<JSONObject> allFormats = new ArrayList<>();
                 if (adaptiveFormats != null) {
-                    int maxAudioBitrate = -1;
-                    String bestAudioUrl = null;
-                    int maxVideoHeight = -1;
-                    String bestVideoUrl = null;
-
                     for (int i = 0; i < adaptiveFormats.length(); i++) {
-                        JSONObject format = adaptiveFormats.getJSONObject(i);
-                        String mimeType = format.optString("mimeType", "");
-                        String url = format.optString("url", null);
+                        allFormats.add(adaptiveFormats.getJSONObject(i));
+                    }
+                }
+                if (formats != null) {
+                    for (int i = 0; i < formats.length(); i++) {
+                        allFormats.add(formats.getJSONObject(i));
+                    }
+                }
 
-                        if (TextUtils.isEmpty(url)) {
-                            continue;
+                int maxAudioBitrate = -1;
+                String bestAudioUrl = null;
+                int maxVideoHeight = -1;
+                String bestVideoUrl = null;
+
+                for (JSONObject format : allFormats) {
+                    String mimeType = format.optString("mimeType", "");
+                    String url = format.optString("url", null);
+
+                    if (TextUtils.isEmpty(url)) {
+                        String cipher = format.optString("signatureCipher", null);
+                        if (TextUtils.isEmpty(cipher)) {
+                            cipher = format.optString("cipher", null);
                         }
-
-                        if (mimeType.startsWith("audio/")) {
-                            int bitrate = format.optInt("bitrate", 0);
-                            if (bitrate > maxAudioBitrate) {
-                                maxAudioBitrate = bitrate;
-                                bestAudioUrl = url;
-                            }
-                        } else if (mimeType.startsWith("video/mp4")) {
-                            int height = format.optInt("height", 0);
-                            if (height > maxVideoHeight && height <= 720) {
-                                maxVideoHeight = height;
-                                bestVideoUrl = url;
+                        if (!TextUtils.isEmpty(cipher)) {
+                            try {
+                                String[] parts = cipher.split("&");
+                                String encodedUrl = null;
+                                String s = null;
+                                String sp = "sig";
+                                for (String part : parts) {
+                                    if (part.startsWith("url=")) {
+                                        encodedUrl = java.net.URLDecoder.decode(part.substring(4), StandardCharsets.UTF_8.name());
+                                    } else if (part.startsWith("s=")) {
+                                        s = java.net.URLDecoder.decode(part.substring(2), StandardCharsets.UTF_8.name());
+                                    } else if (part.startsWith("sp=")) {
+                                        sp = java.net.URLDecoder.decode(part.substring(3), StandardCharsets.UTF_8.name());
+                                    }
+                                }
+                                if (!TextUtils.isEmpty(encodedUrl)) {
+                                    if (!TextUtils.isEmpty(s)) {
+                                        url = encodedUrl + "&" + sp + "=" + s;
+                                    } else {
+                                        url = encodedUrl;
+                                    }
+                                }
+                            } catch (Exception ignored) {
                             }
                         }
                     }
 
-                    track.audioUrl = bestAudioUrl;
-                    track.videoCoverUrl = bestVideoUrl;
+                    if (TextUtils.isEmpty(url)) {
+                        continue;
+                    }
+
+                    if (mimeType.startsWith("audio/")) {
+                        int bitrate = format.optInt("bitrate", 0);
+                        if (bitrate > maxAudioBitrate) {
+                            maxAudioBitrate = bitrate;
+                            bestAudioUrl = url;
+                        }
+                    } else if (mimeType.startsWith("video/mp4")) {
+                        int height = format.optInt("height", 0);
+                        if (height > maxVideoHeight && height <= 720) {
+                            maxVideoHeight = height;
+                            bestVideoUrl = url;
+                        }
+                        if (bestAudioUrl == null) {
+                            bestAudioUrl = url;
+                        }
+                    } else if (bestAudioUrl == null) {
+                        bestAudioUrl = url;
+                    }
                 }
+
+                if (TextUtils.isEmpty(bestAudioUrl)) {
+                    bestAudioUrl = streamingData.optString("hlsManifestUrl", null);
+                }
+
+                track.audioUrl = bestAudioUrl;
+                track.videoCoverUrl = bestVideoUrl;
             }
 
             return track;
@@ -487,6 +550,16 @@ public final class MetrolistClient {
         if ("IOS".equals(clientName)) {
             conn.setRequestProperty("X-YouTube-Client-Name", "5");
             conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "20.03.02");
+            conn.setRequestProperty("Origin", "https://www.youtube.com");
+            conn.setRequestProperty("Referer", "https://www.youtube.com/");
+        } else if ("ANDROID_TESTSUITE".equals(clientName)) {
+            conn.setRequestProperty("X-YouTube-Client-Name", "89");
+            conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "1.9");
+            conn.setRequestProperty("Origin", "https://www.youtube.com");
+            conn.setRequestProperty("Referer", "https://www.youtube.com/");
+        } else if ("TVHTML5_SIMPLY_EMBEDDED_PLAYER".equals(clientName)) {
+            conn.setRequestProperty("X-YouTube-Client-Name", "85");
+            conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "2.0");
             conn.setRequestProperty("Origin", "https://www.youtube.com");
             conn.setRequestProperty("Referer", "https://www.youtube.com/");
         } else {

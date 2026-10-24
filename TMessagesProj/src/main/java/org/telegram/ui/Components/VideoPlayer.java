@@ -256,7 +256,7 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
     static int playerCounter = 0;
     public VideoPlayer(boolean pauseOther, boolean audioDisabled) {
         this.audioDisabled = audioDisabled;
-        mediaDataSourceFactory = new ExtendedDefaultDataSourceFactory(ApplicationLoader.applicationContext, "Mozilla/5.0 (X11; Linux x86_64; rv:10.0) Gecko/20150101 Firefox/47.0 (Chrome)");
+        mediaDataSourceFactory = new ExtendedDefaultDataSourceFactory(ApplicationLoader.applicationContext, "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
         trackSelector = new DefaultTrackSelector(ApplicationLoader.applicationContext, new AdaptiveTrackSelection.Factory());
         if (audioDisabled) {
             trackSelector.setParameters(trackSelector.getParameters().buildUpon().setTrackTypeDisabled(C.TRACK_TYPE_AUDIO, true).build());
@@ -432,6 +432,13 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
                 mediaSource = hlsMediaSourceFactory.createMediaSource(mediaItem);
                 break;
             default:
+                if (uri != null && (uri.toString().contains(".m3u8") || uri.toString().contains("manifest/hls"))) {
+                    if (hlsMediaSourceFactory == null) {
+                        hlsMediaSourceFactory = new HlsMediaSource.Factory(mediaDataSourceFactory);
+                    }
+                    mediaSource = hlsMediaSourceFactory.createMediaSource(mediaItem);
+                    break;
+                }
                 if (progressiveMediaSourceFactory == null) {
                     progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);
                 }

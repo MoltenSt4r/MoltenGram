@@ -43,10 +43,7 @@ object ChatsConfig {
     val md3ChatInput = addConfig("OEChatsMd3ChatInput", ConfigItem.configTypeBool, false)
 
     @JvmStatic
-    fun md3ChatInput(): Boolean {
-        ensureLoaded()
-        return md3ChatInput.Bool()
-    }
+    fun md3ChatInput(): Boolean = false
 
     // ---- Анимация сообщений ----
 

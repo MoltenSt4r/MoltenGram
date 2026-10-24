@@ -179,9 +179,27 @@ public final class MetrolistController {
         }
 
         if (!TextUtils.isEmpty(streamUrl) && (streamUrl.startsWith("http://") || streamUrl.startsWith("https://"))) {
-            final String downloadUrl = streamUrl;
+            final String inputUrl = streamUrl;
             Utilities.globalQueue.postRunnable(() -> {
                 try {
+                    String downloadUrl = inputUrl;
+                    String videoId = MetrolistUrlMatcher.extractVideoId(inputUrl);
+                    if (TextUtils.isEmpty(videoId) && mo.messageOwner != null) {
+                        videoId = MetrolistUrlMatcher.extractVideoId(mo.messageOwner.message);
+                    }
+                    if (TextUtils.isEmpty(videoId) && mo.messageOwner != null) {
+                        videoId = MetrolistUrlMatcher.extractVideoId(mo.messageOwner.attachPath);
+                    }
+                    if (!TextUtils.isEmpty(videoId)) {
+                        try {
+                            MetrolistClient.Track resolved = MetrolistClient.getInstance().fetchPlayer(videoId);
+                            if (resolved != null && !TextUtils.isEmpty(resolved.audioUrl)) {
+                                downloadUrl = resolved.audioUrl;
+                            }
+                        } catch (Exception ignored) {
+                        }
+                    }
+
                     File cacheDir = new File(ApplicationLoader.applicationContext.getCacheDir(), "metrolist");
                     if (!cacheDir.exists()) {
                         cacheDir.mkdirs();
@@ -194,7 +212,9 @@ public final class MetrolistController {
 
                     if (!targetFile.exists() || targetFile.length() == 0) {
                         HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
-                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
+                        conn.setRequestProperty("Referer", "https://music.youtube.com/");
+                        conn.setRequestProperty("Origin", "https://music.youtube.com");
                         conn.setConnectTimeout(20000);
                         conn.setReadTimeout(30000);
                         try (InputStream is = conn.getInputStream();
@@ -399,6 +419,24 @@ public final class MetrolistController {
         final String finalStreamUrl = streamUrl;
         Utilities.globalQueue.postRunnable(() -> {
             try {
+                String downloadUrl = finalStreamUrl;
+                String videoId = MetrolistUrlMatcher.extractVideoId(finalStreamUrl);
+                if (TextUtils.isEmpty(videoId) && mo.messageOwner != null) {
+                    videoId = MetrolistUrlMatcher.extractVideoId(mo.messageOwner.message);
+                }
+                if (TextUtils.isEmpty(videoId) && mo.messageOwner != null) {
+                    videoId = MetrolistUrlMatcher.extractVideoId(mo.messageOwner.attachPath);
+                }
+                if (!TextUtils.isEmpty(videoId)) {
+                    try {
+                        MetrolistClient.Track resolved = MetrolistClient.getInstance().fetchPlayer(videoId);
+                        if (resolved != null && !TextUtils.isEmpty(resolved.audioUrl)) {
+                            downloadUrl = resolved.audioUrl;
+                        }
+                    } catch (Exception ignored) {
+                    }
+                }
+
                 File cacheDir = new File(ApplicationLoader.applicationContext.getCacheDir(), "metrolist");
                 if (!cacheDir.exists()) {
                     cacheDir.mkdirs();
@@ -409,10 +447,12 @@ public final class MetrolistController {
                 String safeName = baseName.replaceAll("[^a-zA-Z0-9._\\-\\p{L}]", "_") + ".m4a";
                 File targetFile = new File(cacheDir, safeName);
 
-                if ((!targetFile.exists() || targetFile.length() == 0) && !TextUtils.isEmpty(finalStreamUrl) &&
-                        (finalStreamUrl.startsWith("http://") || finalStreamUrl.startsWith("https://"))) {
-                    HttpURLConnection conn = (HttpURLConnection) new URL(finalStreamUrl).openConnection();
-                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64)");
+                if ((!targetFile.exists() || targetFile.length() == 0) && !TextUtils.isEmpty(downloadUrl) &&
+                        (downloadUrl.startsWith("http://") || downloadUrl.startsWith("https://"))) {
+                    HttpURLConnection conn = (HttpURLConnection) new URL(downloadUrl).openConnection();
+                    conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/130.0.0.0 Safari/537.36");
+                    conn.setRequestProperty("Referer", "https://music.youtube.com/");
+                    conn.setRequestProperty("Origin", "https://music.youtube.com");
                     conn.setConnectTimeout(20000);
                     conn.setReadTimeout(30000);
                     try (InputStream is = conn.getInputStream();
@@ -479,13 +519,19 @@ public final class MetrolistController {
                     observer[0] = (id, account1, args) -> {
                         if (id == NotificationCenter.messageReceivedByServer) {
                             int oldId = (Integer) args[0];
-                            if (oldId == tempMsgId) {
+                            TLRPC.Message serverMsg = args[2] instanceof TLRPC.Message ? (TLRPC.Message) args[2] : null;
+                            TLRPC.Document serverDoc = serverMsg != null && serverMsg.media != null ? serverMsg.media.document : null;
+                            boolean matches = (oldId == tempMsgId);
+                            if (!matches && serverMsg != null && serverMsg.dialog_id == selfUserId && serverDoc != null && serverDoc.id != 0) {
+                                String docName = org.telegram.messenger.FileLoader.getDocumentFileName(serverDoc);
+                                if (targetFile.getName().equals(docName)) {
+                                    matches = true;
+                                }
+                            }
+                            if (matches && serverDoc != null && serverDoc.id != 0) {
                                 NotificationCenter.getInstance(safeAccount).removeObserver(observer[0], NotificationCenter.messageReceivedByServer);
                                 AndroidUtilities.cancelRunOnUIThread(timeoutRunnable[0]);
-                                TLRPC.Message serverMsg = args[2] instanceof TLRPC.Message ? (TLRPC.Message) args[2] : null;
-                                TLRPC.Document serverDoc = serverMsg != null && serverMsg.media != null ? serverMsg.media.document : null;
-                                if (serverDoc != null && serverDoc.id != 0) {
-                                    TLRPC.TL_account_saveMusic req = new TLRPC.TL_account_saveMusic();
+                                TLRPC.TL_account_saveMusic req = new TLRPC.TL_account_saveMusic();
                                     req.unsave = false;
                                     req.id = new TLRPC.TL_inputDocument();
                                     req.id.id = serverDoc.id;

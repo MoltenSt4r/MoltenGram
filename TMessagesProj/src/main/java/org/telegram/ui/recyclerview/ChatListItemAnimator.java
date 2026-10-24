@@ -389,6 +389,29 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         final View view = holder.itemView;
         mAddAnimations.add(holder);
 
+        ChatMessageCell chatMessageCell = holder.itemView instanceof ChatMessageCell ? (ChatMessageCell) holder.itemView : null;
+        boolean isOut = chatMessageCell != null && chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().isOutOwner();
+
+        boolean hasEnterTransition = false;
+        if (activity != null && chatMessageCell != null && activity.animatingMessageObjects.contains(chatMessageCell.getMessageObject())) {
+            hasEnterTransition = true;
+            activity.animatingMessageObjects.remove(chatMessageCell.getMessageObject());
+            if (activity.getChatActivityEnterView().canShowMessageTransition()) {
+                if (chatMessageCell.getMessageObject().isVoice()) {
+                    if (Math.abs(view.getTranslationY()) < view.getMeasuredHeight() * 3f) {
+                        VoiceMessageEnterTransition transition = new VoiceMessageEnterTransition(chatMessageCell, activity.getChatActivityEnterView(), recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
+                        transition.start();
+                    }
+                } else {
+                    if (SharedConfig.getDevicePerformanceClass() != SharedConfig.PERFORMANCE_CLASS_LOW && Math.abs(view.getTranslationY()) < recyclerListView.getMeasuredHeight()) {
+                        TextMessageEnterTransition transition = new TextMessageEnterTransition(chatMessageCell, activity, recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
+                        transition.start();
+                    }
+                }
+                activity.getChatActivityEnterView().startMessageTransition();
+            }
+        }
+
         int animType = getMessageAnimationType(holder);
         if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_NONE) {
             view.setAlpha(1f);
@@ -398,6 +421,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             view.setTranslationY(0f);
             if (view instanceof ChatMessageCell) {
                 ((ChatMessageCell) view).getTransitionParams().messageEntering = false;
+                ((ChatMessageCell) view).getTransitionParams().resetAnimation();
             }
             dispatchAddStarting(holder);
             if (mAddAnimations.remove(holder)) {
@@ -408,26 +432,32 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         }
 
         final ViewPropertyAnimator animation = view.animate();
-        ChatMessageCell chatMessageCell = holder.itemView instanceof ChatMessageCell ? (ChatMessageCell) holder.itemView : null;
-        boolean isOut = chatMessageCell != null && chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().isOutOwner();
+        if (addedItemsHeight != 0) {
+            view.setTranslationY(addedItemsHeight);
+        }
 
-        if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_FADE) {
-            view.setTranslationY(0);
-            view.setTranslationX(0);
+        if (hasEnterTransition) {
+            view.setTranslationX(0f);
+            holder.itemView.setScaleX(1f);
+            holder.itemView.setScaleY(1f);
+            if (!(chatMessageCell != null && chatMessageCell.getTransitionParams().ignoreAlpha)) {
+                holder.itemView.setAlpha(1f);
+            }
+            animation.translationY(0).translationX(0).setDuration(getMoveDuration())
+                    .setInterpolator(translationInterpolator);
+        } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_FADE) {
             view.setScaleX(1f);
             view.setScaleY(1f);
             view.setAlpha(0f);
-            animation.alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(DEFAULT_INTERPOLATOR);
+            animation.translationY(0).translationX(0).alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(DEFAULT_INTERPOLATOR);
         } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SLIDE) {
-            view.setTranslationY(0);
             float slideDist = isOut ? AndroidUtilities.dp(120) : -AndroidUtilities.dp(120);
             view.setTranslationX(slideDist);
             view.setScaleX(1f);
             view.setScaleY(1f);
             view.setAlpha(0f);
-            animation.translationX(0).alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            animation.translationY(0).translationX(0).alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(CubicBezierInterpolator.EASE_OUT);
         } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SCALE) {
-            view.setTranslationY(0);
             view.setTranslationX(0);
             if (chatMessageCell != null) {
                 float pivotX = chatMessageCell.getBackgroundDrawableLeft() + (chatMessageCell.getBackgroundDrawableRight() - chatMessageCell.getBackgroundDrawableLeft()) / 2f;
@@ -436,9 +466,8 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             view.setScaleX(0.4f);
             view.setScaleY(0.4f);
             view.setAlpha(0f);
-            animation.scaleX(1f).scaleY(1f).alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            animation.translationY(0).translationX(0).scaleX(1f).scaleY(1f).alpha(1f).setDuration(DEFAULT_DURATION).setInterpolator(CubicBezierInterpolator.EASE_OUT);
         } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_POP) {
-            view.setTranslationY(0);
             view.setTranslationX(0);
             if (chatMessageCell != null) {
                 float pivotX = chatMessageCell.getBackgroundDrawableLeft() + (chatMessageCell.getBackgroundDrawableRight() - chatMessageCell.getBackgroundDrawableLeft()) / 2f;
@@ -447,30 +476,12 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             view.setScaleX(0.3f);
             view.setScaleY(0.3f);
             view.setAlpha(0f);
-            animation.scaleX(1f).scaleY(1f).alpha(1f).setDuration(320).setInterpolator(new OvershootInterpolator(1.8f));
+            animation.translationY(0).translationX(0).scaleX(1f).scaleY(1f).alpha(1f).setDuration(320).setInterpolator(new OvershootInterpolator(1.8f));
         } else {
-            view.setTranslationY(addedItemsHeight);
             holder.itemView.setScaleX(1);
             holder.itemView.setScaleY(1);
             if (!(chatMessageCell != null && chatMessageCell.getTransitionParams().ignoreAlpha)) {
                 holder.itemView.setAlpha(1);
-            }
-            if (activity != null && chatMessageCell != null && activity.animatingMessageObjects.contains(chatMessageCell.getMessageObject())) {
-                activity.animatingMessageObjects.remove(chatMessageCell.getMessageObject());
-                if (activity.getChatActivityEnterView().canShowMessageTransition()) {
-                    if (chatMessageCell.getMessageObject().isVoice()) {
-                        if (Math.abs(view.getTranslationY()) < view.getMeasuredHeight() * 3f) {
-                            VoiceMessageEnterTransition transition = new VoiceMessageEnterTransition(chatMessageCell, activity.getChatActivityEnterView(), recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
-                            transition.start();
-                        }
-                    } else {
-                        if (SharedConfig.getDevicePerformanceClass() != SharedConfig.PERFORMANCE_CLASS_LOW && Math.abs(view.getTranslationY()) < recyclerListView.getMeasuredHeight()) {
-                            TextMessageEnterTransition transition = new TextMessageEnterTransition(chatMessageCell, activity, recyclerListView, activity.messageEnterTransitionContainer, resourcesProvider);
-                            transition.start();
-                        }
-                    }
-                    activity.getChatActivityEnterView().startMessageTransition();
-                }
             }
             animation.translationY(0).setDuration(getMoveDuration())
                     .setInterpolator(translationInterpolator);
@@ -491,6 +502,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 view.setAlpha(1f);
                 if (view instanceof ChatMessageCell) {
                     ((ChatMessageCell) view).getTransitionParams().messageEntering = false;
+                    ((ChatMessageCell) view).getTransitionParams().resetAnimation();
                 }
             }
 
@@ -503,6 +515,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 view.setAlpha(1f);
                 if (view instanceof ChatMessageCell) {
                     ((ChatMessageCell) view).getTransitionParams().messageEntering = false;
+                    ((ChatMessageCell) view).getTransitionParams().resetAnimation();
                 }
                 animation.setListener(null);
                 if (mAddAnimations.remove(holder)) {
@@ -1554,14 +1567,14 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             view.animate().translationX(0).translationY(0).setDuration(getAddDuration()).start();
         }
 
-        if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_FADE) {
+        if (holder != greetingsSticker && animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_FADE) {
             view.setAlpha(0f);
             view.setScaleX(1f);
             view.setScaleY(1f);
             view.setTranslationX(0f);
             animatorSet.playTogether(ObjectAnimator.ofFloat(view, View.ALPHA, 0f, 1f));
             animatorSet.setDuration(DEFAULT_DURATION);
-        } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SLIDE) {
+        } else if (holder != greetingsSticker && animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SLIDE) {
             view.setAlpha(0f);
             view.setScaleX(1f);
             view.setScaleY(1f);
@@ -1573,7 +1586,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             );
             animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT);
             animatorSet.setDuration(DEFAULT_DURATION);
-        } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SCALE) {
+        } else if (holder != greetingsSticker && animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_SCALE) {
             view.setAlpha(0f);
             view.setScaleX(0.4f);
             view.setScaleY(0.4f);
@@ -1585,7 +1598,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
             );
             animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT);
             animatorSet.setDuration(DEFAULT_DURATION);
-        } else if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_POP) {
+        } else if (holder != greetingsSticker && animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_POP) {
             view.setAlpha(0f);
             view.setScaleX(0.3f);
             view.setScaleY(0.3f);
@@ -1707,6 +1720,10 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 view.setScaleY(1f);
                 view.setTranslationX(0f);
                 view.setTranslationY(0f);
+                if (view instanceof ChatMessageCell) {
+                    ((ChatMessageCell) view).getTransitionParams().messageEntering = false;
+                    ((ChatMessageCell) view).getTransitionParams().resetAnimation();
+                }
             }
 
             @Override
@@ -1717,6 +1734,10 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 view.setScaleY(1f);
                 view.setTranslationX(0f);
                 view.setTranslationY(0f);
+                if (view instanceof ChatMessageCell) {
+                    ((ChatMessageCell) view).getTransitionParams().messageEntering = false;
+                    ((ChatMessageCell) view).getTransitionParams().resetAnimation();
+                }
                 animators.remove(holder);
                 if (mAddAnimations.remove(holder)) {
                     dispatchAddFinished(holder);
