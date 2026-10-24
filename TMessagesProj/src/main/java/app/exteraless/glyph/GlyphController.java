@@ -432,6 +432,22 @@ public final class GlyphController {
         return Glyph.DEVICE_20111;
     }
 
+    public static String getAppKey(Context context) {
+        if (context == null) {
+            return null;
+        }
+        try {
+            android.content.pm.ApplicationInfo ai = context.getPackageManager().getApplicationInfo(
+                    context.getPackageName(), android.content.pm.PackageManager.GET_META_DATA);
+            if (ai != null && ai.metaData != null) {
+                return ai.metaData.getString("NothingKey");
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+        return null;
+    }
+
     /**
      * Nothing Phone (1) glyph burst particle effect with haptic feedback.
      */
@@ -531,7 +547,7 @@ public final class GlyphController {
                             com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
                             registered = glyphService.register(targetDevice);
                             if (!registered) {
-                                String appKey = Common.getAppKey(context);
+                                String appKey = getAppKey(context);
                                 registered = glyphService.registerSDK(appKey, targetDevice);
                             }
                             if (registered) {
