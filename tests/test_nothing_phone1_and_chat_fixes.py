@@ -78,6 +78,11 @@ def test_md3_chat_input_styling_and_animations():
     assert "ObjectAnimator.ofFloat(audioVideoButtonContainer, View.SCALE_X" in content
     assert "ObjectAnimator.ofFloat(audioVideoButtonContainer, View.ALPHA" in content
 
+    # Yougram MD3 layout: attach '+' on the left, emoji button on the right
+    assert "attachButton.setImageResource(R.drawable.baseline_add_24);" in content
+    assert "messageEditTextContainer.addView(emojiButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 2, 0));" in content
+    assert "messageEditTextContainer.addView(attachButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.LEFT, 2, 0, 0, 0));" in content
+
 
 def test_chat_input_views_container_md3_draw_background():
     container_path = os.path.join(
