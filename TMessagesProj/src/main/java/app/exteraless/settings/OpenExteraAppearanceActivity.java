@@ -689,12 +689,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == md3ChatInputRow) {
             app.exteraless.chats.ChatsConfig.md3ChatInput.setConfigBool(!app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
-            }
-            if (listAdapter != null && md3GroupRow >= 0) {
-                listAdapter.notifyItemChanged(md3GroupRow);
-            }
+            rebuildAllAndSelf(view, app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
             return;
         } else if (position == mediaGroupCarouselRow) {
             AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
@@ -1309,6 +1304,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3SwitchRow || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow
                     || position == md3PlayerRow || position == md3MiniPlayerRow
+                    || position == md3ChatInputRow
                     || position == mediaGroupCarouselRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow

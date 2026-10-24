@@ -20,9 +20,7 @@ API_CREDENTIALS = [
 ]
 
 FALLBACK_BOT_TOKENS = [
-    "8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY",  # Molten Support Bot (@MoltenGramBot)
-    "8295727899:AAFtLe0gCghYo849pi3UfvV9_PBiq-lTtLY",  # Antigravity Bot (@ai_droidbot)
-    os.environ.get("TG_BOT_TOKEN"),
+    t for t in [os.environ.get("TG_BOT_TOKEN")] if t
 ]
 
 
