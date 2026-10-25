@@ -439,13 +439,18 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
                     mediaSource = hlsMediaSourceFactory.createMediaSource(mediaItem);
                     break;
                 }
-                if (progressiveMediaSourceFactory == null) {
-                    progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(
+                boolean isYoutube = uri != null && uri.getHost() != null && (uri.getHost().contains("googlevideo.com") || uri.getHost().contains("youtube.com"));
+                if (isYoutube) {
+                    mediaSource = new ProgressiveMediaSource.Factory(
                         mediaDataSourceFactory,
                         new app.exteraless.player.SeekableFragmentsExtractorsFactory()
-                    );
+                    ).createMediaSource(mediaItem);
+                } else {
+                    if (progressiveMediaSourceFactory == null) {
+                        progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);
+                    }
+                    mediaSource = progressiveMediaSourceFactory.createMediaSource(mediaItem);
                 }
-                mediaSource = progressiveMediaSourceFactory.createMediaSource(mediaItem);
                 break;
         }
         return withExternalSubtitle ? maybeWrapWithExternalSubtitle(mediaSource) : mediaSource;
@@ -1644,11 +1649,15 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
             return fallbackDuration;
         }
         long duration = player != null ? player.getDuration() : 0;
+        long declared = getDeclaredDuration();
         if (duration > 0) {
-            long declared = getDeclaredDuration();
             if (declared > duration + 1000) {
                 return declared;
             }
+            return duration;
+        }
+        if (declared > 0) {
+            return declared;
         }
         return duration;
     }

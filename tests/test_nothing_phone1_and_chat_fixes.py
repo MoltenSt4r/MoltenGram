@@ -215,3 +215,19 @@ def test_metrolist_controller_audio_url_resolution_and_profile_saving():
     assert "conn.setRequestProperty(\"Referer\", \"https://music.youtube.com/\");" in content
 
 
+def test_video_player_streaming_and_duration_fallback():
+    vp_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "VideoPlayer.java"
+    )
+    with open(vp_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Progressive media factory for general video must not force SeekableFragmentsExtractorsFactory
+    assert "boolean isYoutube = uri != null && uri.getHost() != null" in content
+    assert "progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);" in content
+
+    # getDuration fallback must check declared duration when duration <= 0
+    assert "if (declared > 0) {\n            return declared;\n        }" in content
+
+
+
