@@ -1020,7 +1020,7 @@ public class ChatActivity extends BaseFragment implements
     private int newMentionsCount;
     private boolean hasAllMentionsLocal;
 
-    private ArrayList<ChatMessageCell> animateSendingViews = new ArrayList<>();
+    public ArrayList<ChatMessageCell> animateSendingViews = new ArrayList<>();
 
     public SparseArray<MessageObject>[] messagesDict = new SparseArray[]{new SparseArray<>(), new SparseArray<>()};
     private SparseArray<MessageObject> repliesMessagesDict = new SparseArray<>();

@@ -8739,7 +8739,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
             builder.setView(layout);
             builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
-            builder.setNeutralButton(LocaleController.getString(R.string.ScanQR), (di, w) -> {
+            builder.setNeutralButton(LocaleController.getString(R.string.ScanQrCode), (di, w) -> {
                 openCameraScanActivityForLogin();
             });
             showDialog(builder.create());
@@ -8772,7 +8772,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 loginWithBotToken(token);
             }
         });
-        builder.setNeutralButton(LocaleController.getString(R.string.ScanQR), (dialog, which) -> {
+        builder.setNeutralButton(LocaleController.getString(R.string.ScanQrCode), (dialog, which) -> {
             openCameraScanActivityForLogin();
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);

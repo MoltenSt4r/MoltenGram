@@ -301,6 +301,7 @@
     <string name="PasskeyCreateQr">Create as QR Code</string>
     <string name="PasskeyCreateQrInfo">Scan this QR code with Bitwarden or another device to save your passkey.</string>
     <string name="PasskeyScanQr">Scan Passkey / QR</string>
+    <string name="ScanQR">Scan QR</string>
     <string name="BotTokenLogin">Bot Token Login</string>
     <string name="BotTokenLoginDescription">Log in to manage your Telegram Bot using its API token from @BotFather.</string>
     <string name="BotTokenHint">123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</string>
