@@ -8696,7 +8696,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             try {
                 Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
                 intent.setType("image/*");
-                getParentActivity().startActivityForResult(Intent.createChooser(intent, LocaleController.getString(R.string.SelectAnIcon)), 11);
+                getParentActivity().startActivityForResult(Intent.createChooser(intent, null), 11);
             } catch (Exception ex) {
                 FileLog.e(ex);
             }
@@ -8775,7 +8775,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
         boolean launched = PasskeysController.handlePasskeyQrIntent(getParentActivity(), trimmed);
         if (launched) {
-            AndroidUtilities.showToast(LocaleController.getString(R.string.PasskeyLogin));
+            tw.nekomimi.nekogram.utils.AlertUtil.showToast(LocaleController.getString(R.string.PasskeyLogin));
             return;
         }
 
