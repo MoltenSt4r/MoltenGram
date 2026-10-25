@@ -117,7 +117,6 @@ public class PasskeysActivity extends BaseFragment {
             addPasskeyRow = items.size();
             items.add(UItem.asButton(-1, R.drawable.menu_passkey_add, getString(R.string.PasskeyAdd)).accent());
             items.add(UItem.asButton(-3, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyCreateQr)).accent());
-            items.add(UItem.asButton(-4, R.drawable.msg_permissions, getString(R.string.PasskeyCompleteRegistration)).accent());
         }
         items.add(UItem.asButton(-2, R.drawable.menu_settings, getString(R.string.Settings)).accent());
         items.add(UItem.asShadow(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.PasskeyInfo), () -> {

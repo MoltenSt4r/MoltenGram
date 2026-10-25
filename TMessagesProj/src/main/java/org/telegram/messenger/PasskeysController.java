@@ -124,8 +124,13 @@ public class PasskeysController {
                     return;
                 }
 
-                final CreatePublicKeyCredentialRequest credentialRequest =
-                    new CreatePublicKeyCredentialRequest(requestJson, clientDataHash, false, null);
+                CreatePublicKeyCredentialRequest primaryRequest;
+                try {
+                    primaryRequest = new CreatePublicKeyCredentialRequest(requestJson);
+                } catch (Throwable t) {
+                    primaryRequest = new CreatePublicKeyCredentialRequest(requestJson, clientDataHash, false, null);
+                }
+                final CreatePublicKeyCredentialRequest credentialRequest = primaryRequest;
 
                 try {
                     credentialManager.createCredential(context, credentialRequest, ktxCallback((res2, err2) -> {
@@ -137,12 +142,11 @@ public class PasskeysController {
                             return;
                         } else if (err2 != null) {
                             FileLog.e(err2);
-                            // Many 3rd party providers (Bitwarden, KeePassDX, Proton Pass) fail when clientDataHash is provided.
-                            // Attempt a graceful retry without clientDataHash using the standard request if not cancelled and not DAL error.
-                            if (clientDataHash != null && !isProviderOrDalError(err2)) {
+                            // If primary standard request failed, attempt fallback with clientDataHash
+                            if (clientDataHash != null) {
                                 try {
                                     final CreatePublicKeyCredentialRequest retryRequest =
-                                        new CreatePublicKeyCredentialRequest(requestJson);
+                                        new CreatePublicKeyCredentialRequest(requestJson, clientDataHash, false, null);
                                     credentialManager.createCredential(context, retryRequest, ktxCallback((resRetry, errRetry) -> {
                                         if (errRetry != null) {
                                             FileLog.e(errRetry);
@@ -346,7 +350,13 @@ public class PasskeysController {
                 return;
             }
 
-            final GetPublicKeyCredentialOption passkeyOption = new GetPublicKeyCredentialOption(requestJson, clientDataHash);
+            GetPublicKeyCredentialOption primaryOption;
+            try {
+                primaryOption = new GetPublicKeyCredentialOption(requestJson);
+            } catch (Throwable t) {
+                primaryOption = new GetPublicKeyCredentialOption(requestJson, clientDataHash);
+            }
+            final GetPublicKeyCredentialOption passkeyOption = primaryOption;
             final GetCredentialRequest request = new GetCredentialRequest.Builder()
                     .addCredentialOption(passkeyOption)
                     .setPreferImmediatelyAvailableCredentials(!clickedButton)
@@ -364,6 +374,36 @@ public class PasskeysController {
 
                     @Override
                     public void onError(@NonNull GetCredentialException err2) {
+                        if (clientDataHash != null && (err2 instanceof NoCredentialException || isProviderOrDalError(err2))) {
+                            try {
+                                final GetPublicKeyCredentialOption fallbackOption = new GetPublicKeyCredentialOption(requestJson, clientDataHash);
+                                final GetCredentialRequest fallbackRequest = new GetCredentialRequest.Builder()
+                                        .addCredentialOption(fallbackOption)
+                                        .setPreferImmediatelyAvailableCredentials(!clickedButton)
+                                        .build();
+                                credentialManager.getCredentialAsync(context, fallbackRequest, new CancellationSignal(), context.getMainExecutor(), new CredentialManagerCallback<GetCredentialResponse, GetCredentialException>() {
+                                    @Override
+                                    public void onResult(GetCredentialResponse resFallback) {
+                                        final Credential credential = resFallback.getCredential();
+                                        final String responseJson = credential.getData().getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON");
+                                        finishPasskeyLoginWithJson(context, currentAccount, responseJson, clientDataJSON, done);
+                                    }
+
+                                    @Override
+                                    public void onError(@NonNull GetCredentialException errFallback) {
+                                        if (errFallback instanceof NoCredentialException) {
+                                            done.run(0L, null, "EMPTY");
+                                        } else if (errFallback instanceof GetCredentialCancellationException || errFallback instanceof GetCredentialInterruptedException) {
+                                            done.run(0L, null, "CANCELLED");
+                                        } else {
+                                            done.run(0L, null, errFallback.getMessage());
+                                        }
+                                    }
+                                });
+                                return;
+                            } catch (Exception ignored) {
+                            }
+                        }
                         if (err2 instanceof NoCredentialException) {
                             done.run(0L, null, "EMPTY");
                         } else if (err2 instanceof GetCredentialCancellationException) {

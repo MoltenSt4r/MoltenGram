@@ -821,7 +821,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                      phoneView.testBackendCheckBox.setVisibility(phoneView.testBackendCheckBox.getVisibility() == View.GONE ? View.VISIBLE : View.GONE);
                 }
             } else if (id == 4) {
-                showPasskeyLoginDialog();
+                PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
+                if (phoneView != null) {
+                    phoneView.requestPasskey(true, true);
+                } else {
+                    showPasskeyLoginDialog();
+                }
             } else if (id == 5) {
                 showBotTokenLoginDialog();
             } else if (id == 7) {
@@ -3556,6 +3561,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     }
                     if ("EMPTY".equals(err) && clickedButton) {
                         BulletinFactory.of(LoginActivity.this).createSimpleBulletin(R.raw.info, getString(R.string.PasskeyNoCredentialAvailable)).show();
+                        showPasskeyLoginDialog();
                     }
                     return;
                 }
