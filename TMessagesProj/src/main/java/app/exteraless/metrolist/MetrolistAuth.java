@@ -110,6 +110,10 @@ public final class MetrolistAuth {
      * Возвращает заголовок Authorization (SAPISIDHASH для cookies или Bearer для OAuth).
      */
     public String getAuthorizationHeader() {
+        return getAuthorizationHeader("https://music.youtube.com");
+    }
+
+    public String getAuthorizationHeader(String origin) {
         int mode = getAuthMode();
         if (mode == MODE_GOOGLE_OAUTH) {
             String token = getOAuthToken();
@@ -123,7 +127,7 @@ public final class MetrolistAuth {
                 sapisid = extractCookieValue(cookies, "__Secure-3PAPISID");
             }
             if (!TextUtils.isEmpty(sapisid)) {
-                return generateSapisidHash(sapisid, "https://music.youtube.com");
+                return generateSapisidHash(sapisid, !TextUtils.isEmpty(origin) ? origin : "https://music.youtube.com");
             }
         }
         return null;

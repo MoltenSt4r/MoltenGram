@@ -188,6 +188,8 @@ def test_metrolist_client_innertube_clients_and_cipher_fallback():
     assert "TVHTML5_SIMPLY_EMBEDDED_PLAYER" in content
     assert "signatureCipher" in content
     assert "hlsManifestUrl" in content
+    assert 'fetchPlayerWithClient(videoId, "IOS", "20.03.02"' in content
+    assert 'MetrolistAuth.getInstance().getAuthorizationHeader(origin)' in content
 
 
 def test_video_player_modern_user_agent_and_hls_fallback():

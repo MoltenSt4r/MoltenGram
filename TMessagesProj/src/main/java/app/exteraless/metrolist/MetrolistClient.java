@@ -136,32 +136,32 @@ public final class MetrolistClient {
      * Внутренний запрос к Innertube /player.
      */
     public Track fetchPlayer(String videoId) throws Exception {
-        // 1. ANDROID_VR (unthrottled, clean unencrypted streams)
-        Track track = fetchPlayerWithClient(videoId, "ANDROID_VR", "1.61.48", "com.google.android.apps.youtube.vr/1.61.48 (Linux; U; Android 12; Quest 2) gzip", false);
+        // 1. IOS контекст: возвращает прямые чистые несжатые потоки (AAC / itag 140) без ограничений PO-token
+        Track track = fetchPlayerWithClient(videoId, "IOS", "20.03.02", USER_AGENT_IOS, true);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 2. ANDROID_MUSIC (unthrottled official client)
+        // 2. ANDROID_VR (unthrottled, clean unencrypted streams fallback)
+        track = fetchPlayerWithClient(videoId, "ANDROID_VR", "1.61.48", "com.google.android.apps.youtube.vr/1.61.48 (Linux; U; Android 12; Quest 2) gzip", false);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 3. ANDROID_MUSIC (unthrottled official client)
         track = fetchPlayerWithClient(videoId, "ANDROID_MUSIC", "6.42.52", USER_AGENT_ANDROID, false);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 3. TVHTML5_SIMPLY_EMBEDDED_PLAYER (unthrottled embedded player)
+        // 4. TVHTML5_SIMPLY_EMBEDDED_PLAYER (unthrottled embedded player)
         track = fetchPlayerWithClient(videoId, "TVHTML5_SIMPLY_EMBEDDED_PLAYER", "2.0", USER_AGENT_WEB, true);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 4. ANDROID_TESTSUITE (возвращает прямые расшифрованные потоки)
+        // 5. ANDROID_TESTSUITE (прямые потоки)
         track = fetchPlayerWithClient(videoId, "ANDROID_TESTSUITE", "1.9", "GooglePlayServices/23.16.13 (Android 14; sdk 34)", true);
-        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
-            return track;
-        }
-
-        // 5. IOS контекст
-        track = fetchPlayerWithClient(videoId, "IOS", "20.03.02", USER_AGENT_IOS, true);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
@@ -254,22 +254,17 @@ public final class MetrolistClient {
                                 String[] parts = cipher.split("&");
                                 String encodedUrl = null;
                                 String s = null;
-                                String sp = "sig";
                                 for (String part : parts) {
                                     if (part.startsWith("url=")) {
                                         encodedUrl = java.net.URLDecoder.decode(part.substring(4), StandardCharsets.UTF_8.name());
                                     } else if (part.startsWith("s=")) {
                                         s = java.net.URLDecoder.decode(part.substring(2), StandardCharsets.UTF_8.name());
-                                    } else if (part.startsWith("sp=")) {
-                                        sp = java.net.URLDecoder.decode(part.substring(3), StandardCharsets.UTF_8.name());
                                     }
                                 }
-                                if (!TextUtils.isEmpty(encodedUrl)) {
-                                    if (!TextUtils.isEmpty(s)) {
-                                        url = encodedUrl + "&" + sp + "=" + s;
-                                    } else {
-                                        url = encodedUrl;
-                                    }
+                                // Примечание: шифрованная подпись s без JS deciphering даёт HTTP 403 Forbidden.
+                                // Используем только encodedUrl если подпись не зашифрована или уже вшита в URL.
+                                if (!TextUtils.isEmpty(encodedUrl) && TextUtils.isEmpty(s)) {
+                                    url = encodedUrl;
                                 }
                             } catch (Exception ignored) {
                             }
@@ -556,28 +551,27 @@ public final class MetrolistClient {
         conn.setRequestProperty("Content-Type", "application/json; charset=UTF-8");
         conn.setRequestProperty("User-Agent", userAgent);
 
+        String origin;
         if ("IOS".equals(clientName)) {
             conn.setRequestProperty("X-YouTube-Client-Name", "5");
             conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "20.03.02");
-            conn.setRequestProperty("Origin", "https://www.youtube.com");
-            conn.setRequestProperty("Referer", "https://www.youtube.com/");
+            origin = "https://www.youtube.com";
         } else if ("ANDROID_TESTSUITE".equals(clientName)) {
             conn.setRequestProperty("X-YouTube-Client-Name", "89");
             conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "1.9");
-            conn.setRequestProperty("Origin", "https://www.youtube.com");
-            conn.setRequestProperty("Referer", "https://www.youtube.com/");
+            origin = "https://www.youtube.com";
         } else if ("TVHTML5_SIMPLY_EMBEDDED_PLAYER".equals(clientName)) {
             conn.setRequestProperty("X-YouTube-Client-Name", "85");
             conn.setRequestProperty("X-YouTube-Client-Version", clientVersion != null ? clientVersion : "2.0");
-            conn.setRequestProperty("Origin", "https://www.youtube.com");
-            conn.setRequestProperty("Referer", "https://www.youtube.com/");
+            origin = "https://www.youtube.com";
         } else {
-            conn.setRequestProperty("Origin", "https://music.youtube.com");
-            conn.setRequestProperty("Referer", "https://music.youtube.com/");
+            origin = "https://music.youtube.com";
         }
+        conn.setRequestProperty("Origin", origin);
+        conn.setRequestProperty("Referer", origin + "/");
 
         // Аутентификация Metrolist
-        String authHeader = MetrolistAuth.getInstance().getAuthorizationHeader();
+        String authHeader = MetrolistAuth.getInstance().getAuthorizationHeader(origin);
         if (!TextUtils.isEmpty(authHeader)) {
             conn.setRequestProperty("Authorization", authHeader);
         }
