@@ -3602,11 +3602,16 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
-                    if (clickedButton && PasskeysController.isProviderOrDalError(err)) {
-                        showPasskeyLoginDialog();
-                    } else {
-                        // if (BuildVars.DEBUG_VERSION)
+                    if (clickedButton) {
+                        if (PasskeysController.isProviderOrDalError(err)) {
+                            showPasskeyLoginDialog();
+                        } else {
                             BulletinFactory.of(LoginActivity.this).showForError(err);
+                        }
+                    } else if (subtitleView != null) {
+                        subtitleView.setText(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.StartTextPasskey), () -> {
+                            requestPasskey(true, false);
+                        }), true));
                     }
                     return;
                 }

@@ -308,3 +308,121 @@ def test_bitwarden_screenshot_error_detection():
         lower = err_msg.lower()
         matched = any(p in lower for p in patterns)
         assert matched, f"Error message '{err_msg}' was not detected as a provider/DAL error by patterns: {patterns}"
+
+
+def test_login_activity_passive_passkey_silence():
+    """Verify that passive passkey check (!clickedButton) fails silently without showing error bulletins."""
+    with open(LOGIN_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Find the requestPasskey callback error handling block
+    match = re.search(
+        r"cancelRequestingPasskey = PasskeysController\.login\(.*?\}\);",
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "PasskeysController.login callback block not found in LoginActivity"
+    block = match.group(0)
+
+    # showForError must only be called if clickedButton is true
+    assert "clickedButton" in block
+    assert "showForError" in block
+    # Check that showForError is within the if (clickedButton) branch
+    match_clicked = re.search(r"if\s*\(clickedButton\)\s*\{(.+?)\}\s*else if", block, re.DOTALL)
+    assert match_clicked is not None, "if (clickedButton) branch not found in error handler"
+    assert "showForError" in match_clicked.group(1), "showForError must be guarded by clickedButton"
+
+
+def test_passkeys_controller_login_prioritizes_client_data_hash():
+    """Verify login() prioritizes GetPublicKeyCredentialOption with clientDataHash and falls back cleanly."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Locate login() method
+    match = re.search(
+        r"public static Runnable login\(Context context,.*?\n    public static byte\[\] computeClientDataHash",
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "login method not found in PasskeysController"
+    login_body = match.group(0)
+
+    # Check prioritization of clientDataHash
+    assert "new GetPublicKeyCredentialOption(requestJson, clientDataHash)" in login_body
+    assert "new GetPublicKeyCredentialOption(requestJson)" in login_body
+    # Ensure clientDataHash option appears before fallback request option
+    hash_pos = login_body.index("new GetPublicKeyCredentialOption(requestJson, clientDataHash)")
+    fallback_pos = login_body.index("fallbackOption = new GetPublicKeyCredentialOption(requestJson)")
+    assert hash_pos < fallback_pos, "Primary option must use clientDataHash before fallback without it"
+
+
+def test_passkeys_controller_is_provider_or_dal_error_throwable():
+    """Verify isProviderOrDalError(Throwable) handles GetCredentialException, GetCredentialUnknownException, and DAL error types."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(
+        r"public static boolean isProviderOrDalError\(Throwable throwable\)\s*\{(.*?)public static void handleCreateError",
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "isProviderOrDalError(Throwable) not found"
+    method_body = match.group(1)
+
+    assert "GetCredentialCustomException" in method_body
+    assert "GetCredentialUnknownException" in method_body
+    assert "GetCredentialException" in method_body
+    assert "SecurityError" in method_body
+    assert "DOMException" in method_body
+
+
+def test_finish_passkey_login_datacenter_migration_safety():
+    """Verify finishPasskeyLoginWithJson does not switch default datacenter before request succeeds."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(
+        r"public static void finishPasskeyLoginWithJson\(.*?sendRequestTyped\(req2,.*?\n    \}",
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "finishPasskeyLoginWithJson method not found"
+    body = match.group(0)
+
+    # setDefaultDatacenterId must not appear before sendRequestTyped
+    send_request_pos = body.index("sendRequestTyped")
+    assert "setDefaultDatacenterId" in body
+    set_dc_pos = body.index("setDefaultDatacenterId")
+    assert set_dc_pos > send_request_pos, "setDefaultDatacenterId must only be called after sendRequestTyped succeeds"
+
+
+def test_passkeys_controller_onresult_cancellation_and_empty_guard():
+    """Verify onResult in login() checks cancelled flag and empty/null credential safely."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    match = re.search(
+        r"public static Runnable login\(Context context,.*?\n    public static byte\[\] computeClientDataHash",
+        content,
+        re.DOTALL,
+    )
+    assert match is not None, "login method not found in PasskeysController"
+    login_body = match.group(0)
+
+    # Check that onResult methods check cancelled[0]
+    on_result_matches = re.findall(r"public void onResult\(GetCredentialResponse [^)]+\)\s*\{([^}]+)\}", login_body)
+    assert len(on_result_matches) >= 2, "Expected at least 2 onResult implementations (primary + fallback)"
+    for block in on_result_matches:
+        assert "if (cancelled[0]) return;" in block, "onResult must check cancelled flag before processing"
+        assert "responseJson == null" in block or "credential == null" in block, "onResult must validate credential"
+
+
+def test_passkeys_controller_extended_dal_exceptions():
+    """Verify isProviderOrDalError covers ProviderConfigurationException and UnsupportedException."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "GetCredentialProviderConfigurationException" in content
+    assert "GetCredentialUnsupportedException" in content
+    assert "CreateCredentialProviderConfigurationException" in content
+
