@@ -4,6 +4,7 @@ import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.content.pm.PackageManager;
 import android.net.Uri;
 import android.os.Build;
 import android.os.CancellationSignal;
@@ -239,87 +240,8 @@ public class PasskeysController {
                     @Override
                     public void onResult(GetCredentialResponse res2) {
                         final Credential credential = res2.getCredential();
-
-                        final int datacenterId;
-                        final long userId;
-
-                        final TL_account.finishPasskeyLogin req2 = new TL_account.finishPasskeyLogin();
-                        req2.credential = new TL_account.inputPasskeyCredentialPublicKey();
-
-                        try {
-                            final String responseJson = credential.getData().getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON");
-                            final JSONObject json = new JSONObject(responseJson);
-
-                            req2.credential.id = json.getString("id");
-                            req2.credential.raw_id = json.getString("rawId");
-
-                            final JSONObject response = json.getJSONObject("response");
-                            final TL_account.inputPasskeyResponseLogin passkeyResponse = new TL_account.inputPasskeyResponseLogin();
-                            passkeyResponse.client_data = new TLRPC.TL_dataJSON();
-                            if (response.has("clientDataJSON")) {
-                                try {
-                                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
-                                    passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : clientDataJSON;
-                                } catch (Exception ignored) {
-                                    passkeyResponse.client_data.data = clientDataJSON;
-                                }
-                            } else {
-                                passkeyResponse.client_data.data = clientDataJSON;
-                            }
-
-                            passkeyResponse.authenticator_data = safeDecodeBase64(response.getString("authenticatorData"));
-                            passkeyResponse.signature = safeDecodeBase64(response.getString("signature"));
-                            String rawUserHandle = response.optString("userHandle", "");
-                            passkeyResponse.user_handle = decodeUserHandle(rawUserHandle);
-
-                            int dcId = ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId();
-                            long uId = 0L;
-                            if (passkeyResponse.user_handle != null && passkeyResponse.user_handle.contains(":")) {
-                                try {
-                                    String[] parts = passkeyResponse.user_handle.split(":");
-                                    dcId = Integer.parseInt(parts[0]);
-                                    uId = Long.parseLong(parts[1]);
-                                } catch (Exception ignored) {
-                                }
-                            }
-                            datacenterId = dcId;
-                            userId = uId;
-
-                            req2.credential.response = passkeyResponse;
-
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                            done.run(0L, null, e.getMessage());
-                            return;
-                        }
-
-                        final AlertDialog progressDialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
-                        progressDialog.showDelayed(500);
-
-                        if (datacenterId != ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId()) {
-                            final int from_dc_id = ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId();
-                            final long from_auth_key_id = ConnectionsManager.getInstance(currentAccount).getCurrentAuthKeyId();
-
-                            ConnectionsManager.getInstance(currentAccount).setDefaultDatacenterId(datacenterId);
-
-                            req2.flags |= TLObject.FLAG_0;
-                            req2.from_dc_id = from_dc_id;
-                            req2.from_auth_key_id = from_auth_key_id;
-                        }
-
-                        final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req2, AndroidUtilities::runOnUIThread, (auth, err3) -> {
-                            progressDialog.dismiss();
-                            if (err3 != null) {
-                                done.run(userId, null, err3.text);
-                            } else {
-                                done.run(userId, auth, null);
-                            }
-                        }, datacenterId, ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagInvokeAfter);
-
-                        progressDialog.setOnCancelListener(d -> {
-                            ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
-                            done.run(userId, null, "CANCELLED");
-                        });
+                        final String responseJson = credential.getData().getString("androidx.credentials.BUNDLE_KEY_AUTHENTICATION_RESPONSE_JSON");
+                        finishPasskeyLoginWithJson(context, currentAccount, responseJson, clientDataJSON, done);
                     }
 
                     @Override
@@ -411,10 +333,92 @@ public class PasskeysController {
         return "fido:/" + Base64.encodeToString(requestJson.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
     }
 
+    public static void finishPasskeyLoginWithJson(Context context, int currentAccount, String responseJson, String fallbackClientDataJSON, Utilities.Callback3<Long, TLRPC.auth_Authorization, String> done) {
+        final int datacenterId;
+        final long userId;
+
+        final TL_account.finishPasskeyLogin req2 = new TL_account.finishPasskeyLogin();
+        req2.credential = new TL_account.inputPasskeyCredentialPublicKey();
+
+        try {
+            final JSONObject json = new JSONObject(responseJson);
+
+            req2.credential.id = json.getString("id");
+            req2.credential.raw_id = json.getString("rawId");
+
+            final JSONObject response = json.getJSONObject("response");
+            final TL_account.inputPasskeyResponseLogin passkeyResponse = new TL_account.inputPasskeyResponseLogin();
+            passkeyResponse.client_data = new TLRPC.TL_dataJSON();
+            if (response.has("clientDataJSON")) {
+                try {
+                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
+                    passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : fallbackClientDataJSON;
+                } catch (Exception ignored) {
+                    passkeyResponse.client_data.data = fallbackClientDataJSON;
+                }
+            } else {
+                passkeyResponse.client_data.data = fallbackClientDataJSON;
+            }
+
+            passkeyResponse.authenticator_data = safeDecodeBase64(response.getString("authenticatorData"));
+            passkeyResponse.signature = safeDecodeBase64(response.getString("signature"));
+            String rawUserHandle = response.optString("userHandle", "");
+            passkeyResponse.user_handle = decodeUserHandle(rawUserHandle);
+
+            int dcId = ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId();
+            long uId = 0L;
+            if (passkeyResponse.user_handle != null && passkeyResponse.user_handle.contains(":")) {
+                try {
+                    String[] parts = passkeyResponse.user_handle.split(":");
+                    dcId = Integer.parseInt(parts[0]);
+                    uId = Long.parseLong(parts[1]);
+                } catch (Exception ignored) {
+                }
+            }
+            datacenterId = dcId;
+            userId = uId;
+
+            req2.credential.response = passkeyResponse;
+
+        } catch (Exception e) {
+            FileLog.e(e);
+            done.run(0L, null, e.getMessage());
+            return;
+        }
+
+        final AlertDialog progressDialog = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.showDelayed(500);
+
+        if (datacenterId != ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId()) {
+            final int from_dc_id = ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId();
+            final long from_auth_key_id = ConnectionsManager.getInstance(currentAccount).getCurrentAuthKeyId();
+
+            ConnectionsManager.getInstance(currentAccount).setDefaultDatacenterId(datacenterId);
+
+            req2.flags |= TLObject.FLAG_0;
+            req2.from_dc_id = from_dc_id;
+            req2.from_auth_key_id = from_auth_key_id;
+        }
+
+        final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req2, AndroidUtilities::runOnUIThread, (auth, err3) -> {
+            progressDialog.dismiss();
+            if (err3 != null) {
+                done.run(userId, null, err3.text);
+            } else {
+                done.run(userId, auth, null);
+            }
+        }, datacenterId, ConnectionsManager.RequestFlagWithoutLogin | ConnectionsManager.RequestFlagInvokeAfter);
+
+        progressDialog.setOnCancelListener(d -> {
+            ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
+            done.run(userId, null, "CANCELLED");
+        });
+    }
+
     public static boolean isFidoOrPasskeyUri(String text) {
         if (text == null) return false;
         String lower = text.toLowerCase(Locale.ROOT).trim();
-        return lower.startsWith("fido:/") || lower.startsWith("fido:") || lower.startsWith("tg://passkey") || lower.startsWith("webauthn:");
+        return lower.startsWith("fido:/") || lower.startsWith("fido:") || lower.startsWith("tg://passkey") || lower.startsWith("webauthn:") || (lower.startsWith("{") && (lower.contains("authenticatordata") || lower.contains("response")));
     }
 
     public static boolean isBotToken(String text) {
@@ -428,12 +432,22 @@ public class PasskeysController {
         try {
             Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
             intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            context.startActivity(intent);
-            return true;
+            PackageManager pm = context.getPackageManager();
+            if (intent.resolveActivity(pm) != null) {
+                context.startActivity(intent);
+                return true;
+            }
+            Intent gmsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
+            gmsIntent.setPackage("com.google.android.gms");
+            gmsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            if (gmsIntent.resolveActivity(pm) != null) {
+                context.startActivity(gmsIntent);
+                return true;
+            }
         } catch (Exception e) {
             FileLog.e(e);
-            return false;
         }
+        return false;
     }
 
     public static void openSettings(Activity activity) {

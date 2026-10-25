@@ -108,20 +108,21 @@ def test_passkeys_activity_qr_generation():
 
 
 def test_login_activity_passkey_qr_and_bot_token():
-    """Verify LoginActivity handles passkey QR login, scanner launch, and bot token login."""
+    """Verify LoginActivity handles passkey login, scanner launch, and bot token login."""
     with open(LOGIN_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
         content = f.read()
 
     # More button options
     assert "moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));" in content
     assert "moreButtonView.addSubItem(5, R.drawable.msg_bots_solar, getString(R.string.BotTokenLogin));" in content
-    assert "moreButtonView.addSubItem(6, R.drawable.menu_passkey_add, getString(R.string.PasskeyQrLogin));" in content
-    assert "moreButtonView.addSubItem(7, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyScanQr));" in content
+    assert "moreButtonView.addSubItem(7, R.drawable.msg_qrcode_solar, getString(R.string.ScanQrCode));" in content
 
     # Handler methods
     assert "public void openCameraScanActivityForLogin()" in content
-    assert "public void handlePasskeyQrScanned(String qrData)" in content
-    assert "public void showPasskeyQrLoginDialog()" in content
+    assert "public void openGalleryForQrPicker()" in content
+    assert "public void showPasskeyLoginDialog()" in content
+    assert "public void handlePasskeyInput(String input)" in content
+    assert "public void handleFoundQrOrPasskey(String text)" in content
     assert "public void showBotTokenLoginDialog()" in content
     assert "public void loginWithBotToken(String token)" in content
     assert "TL_auth_importBotAuthorization" in content
@@ -135,6 +136,11 @@ def test_localization_strings():
         "PasskeyCreateQr",
         "PasskeyCreateQrInfo",
         "PasskeyScanQr",
+        "PasskeyInputHint",
+        "PasskeyInputDialogDescription",
+        "PasskeyPickFromGallery",
+        "PasskeyUseSystem",
+        "PasskeyScanQrInfo",
         "BotTokenLogin",
         "BotTokenLoginDescription",
         "BotTokenHint",

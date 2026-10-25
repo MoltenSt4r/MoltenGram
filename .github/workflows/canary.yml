@@ -164,7 +164,7 @@ jobs:
         continue-on-error: true
         if: ${{ contains(github.event.head_commit.message, '[skip publish]') }}
         env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN || '8877945448:AAGM8dnfAjLX50YIIMXB8zDVDQPQ5jB36iY' }}
+          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
           TG_CHAT_ID: "8451302032, 8673163423"
           RELEASE_TITLE: "🧪 MoltenGram Canary (Private Test Build)"
           COMMIT_SHA: ${{ github.sha }}

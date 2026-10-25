@@ -286,6 +286,11 @@
     <string name="PasskeyCreateQrInfo">Отсканируйте этот QR-код с помощью Bitwarden или другого устройства для сохранения ключа доступа.</string>
     <string name="PasskeyScanQr">Сканировать ключ доступа / QR</string>
     <string name="ScanQR">Сканировать QR</string>
+    <string name="PasskeyInputHint">Ссылка fido:/..., tg://passkey или JSON</string>
+    <string name="PasskeyInputDialogDescription">Вставьте ссылку fido:/..., ключ доступа, выберите QR-код из галереи или отсканируйте камерой.</string>
+    <string name="PasskeyPickFromGallery">Выбрать QR из галереи</string>
+    <string name="PasskeyUseSystem">Биометрия / Passkey устройства</string>
+    <string name="PasskeyScanQrInfo">Отсканируйте Passkey / QR или выберите скриншот из галереи</string>
     <string name="BotTokenLogin">Вход по токену бота</string>
     <string name="BotTokenLoginDescription">Войдите для управления ботом Telegram с помощью токена от @BotFather.</string>
     <string name="BotTokenHint">123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</string>

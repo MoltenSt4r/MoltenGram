@@ -63,6 +63,7 @@ import com.google.zxing.RGBLuminanceSource;
 import com.google.zxing.Result;
 import com.google.zxing.ResultPoint;
 import com.google.zxing.common.GlobalHistogramBinarizer;
+import com.google.zxing.common.HybridBinarizer;
 import com.google.zxing.qrcode.QRCodeReader;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -699,6 +700,14 @@ public class CameraScanActivity extends BaseFragment {
                                     if (info.path != null) {
                                         Point screenSize = AndroidUtilities.getRealScreenSize();
                                         Bitmap bitmap = ImageLoader.loadBitmap(info.path, null, screenSize.x, screenSize.y, true);
+                                        String qrText = readQrFromBitmap(bitmap);
+                                        if (qrText != null && !qrText.isEmpty()) {
+                                            if (delegate != null) {
+                                                delegate.didFindQr(qrText);
+                                            }
+                                            removeSelfFromStack();
+                                            return;
+                                        }
                                         QrResult res = tryReadQr(null, null, 0, 0, 0, bitmap);
                                         if (res != null) {
                                             if (delegate != null) {
@@ -989,6 +998,14 @@ public class CameraScanActivity extends BaseFragment {
             try {
                 Point screenSize = AndroidUtilities.getRealScreenSize();
                 Bitmap bitmap = ImageLoader.loadBitmap(null, data.getData(), screenSize.x, screenSize.y, true);
+                String qrText = readQrFromBitmap(bitmap);
+                if (qrText != null && !qrText.isEmpty()) {
+                    if (delegate != null) {
+                        delegate.didFindQr(qrText);
+                    }
+                    finishFragment();
+                    return;
+                }
                 QrResult res = tryReadQr(null, null, 0, 0, 0, bitmap);
                 if (res != null) {
                     if (delegate != null) {
@@ -1227,6 +1244,39 @@ public class CameraScanActivity extends BaseFragment {
         return out;
     }
 
+    public static String readQrFromBitmap(Bitmap bitmap) {
+        if (bitmap == null) return null;
+        try {
+            int width = bitmap.getWidth();
+            int height = bitmap.getHeight();
+            int[] intArray = new int[width * height];
+            bitmap.getPixels(intArray, 0, width, 0, 0, width, height);
+            LuminanceSource source = new RGBLuminanceSource(width, height, intArray);
+            BinaryBitmap binaryBitmap = new BinaryBitmap(new GlobalHistogramBinarizer(source));
+            QRCodeReader reader = new QRCodeReader();
+            Result result = reader.decode(binaryBitmap);
+            if (result != null && result.getText() != null) {
+                return result.getText();
+            }
+        } catch (Throwable e) {
+            try {
+                int width = bitmap.getWidth();
+                int height = bitmap.getHeight();
+                int[] intArray = new int[width * height];
+                bitmap.getPixels(intArray, 0, width, 0, 0, width, height);
+                LuminanceSource source = new RGBLuminanceSource(width, height, intArray);
+                BinaryBitmap binaryBitmap = new BinaryBitmap(new HybridBinarizer(source));
+                QRCodeReader reader = new QRCodeReader();
+                Result result = reader.decode(binaryBitmap);
+                if (result != null && result.getText() != null) {
+                    return result.getText();
+                }
+            } catch (Throwable ignore) {
+            }
+        }
+        return null;
+    }
+
     private QrResult tryReadQr(byte[] data, Size size, int x, int y, int side, Bitmap bitmap) {
         try {
             String text;
@@ -1374,17 +1424,12 @@ public class CameraScanActivity extends BaseFragment {
                 onNoQrFound();
                 return null;
             }
-            if (needGalleryButton) {
-                Uri uri = Uri.parse(text);
-                String path = uri.getPath().replace("/", "");
-            } else {
-                if (currentType == TYPE_QR_LOGIN && !text.startsWith("tg://login?token=") && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text) && !org.telegram.messenger.PasskeysController.isBotToken(text)) {
-                    onNoQrFound();
-                    return null;
-                } else if (currentType == TYPE_QR_PASSKEY && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text)) {
-                    onNoQrFound();
-                    return null;
-                }
+            if (currentType == TYPE_QR_LOGIN && !text.startsWith("tg://login?token=") && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text) && !org.telegram.messenger.PasskeysController.isBotToken(text) && !text.trim().startsWith("{")) {
+                onNoQrFound();
+                return null;
+            } else if (currentType == TYPE_QR_PASSKEY && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text) && !text.trim().startsWith("{")) {
+                onNoQrFound();
+                return null;
             }
             QrResult qrResult = new QrResult();
             if (bounds != null) {
