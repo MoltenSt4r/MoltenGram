@@ -3,7 +3,9 @@ package app.exteraless.glyph;
 import android.content.ComponentName;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
 import android.os.Handler;
@@ -827,7 +829,8 @@ public final class GlyphController {
         // монохромный знак дал бы кадр из одних нулей — тонируем в белый.
         icon = icon.mutate();
         icon.setTint(Color.WHITE);
-        Bitmap bitmap = GlyphMatrixUtils.drawableToBitmap(icon);
+        Bitmap rawBitmap = GlyphMatrixUtils.drawableToBitmap(icon);
+        Bitmap bitmap = cropTightMatrixBitmap(rawBitmap);
         if (resId == R.drawable.moltengram_icon_monochrome || resId == R.drawable.exteraless_icon_monochrome) {
             matrixLogoBitmap = bitmap;
         } else if (resId == R.drawable.baseline_call_24) {
@@ -836,6 +839,42 @@ public final class GlyphController {
             matrixMicBitmap = bitmap;
         }
         return bitmap;
+    }
+
+    private static Bitmap cropTightMatrixBitmap(Bitmap src) {
+        if (src == null) return null;
+        int width = src.getWidth();
+        int height = src.getHeight();
+        int minX = width, minY = height, maxX = -1, maxY = -1;
+        int[] row = new int[width];
+        for (int y = 0; y < height; y++) {
+            src.getPixels(row, 0, width, 0, y, width, 1);
+            for (int x = 0; x < width; x++) {
+                int alpha = (row[x] >>> 24);
+                if (alpha > 30) {
+                    if (x < minX) minX = x;
+                    if (x > maxX) maxX = x;
+                    if (y < minY) minY = y;
+                    if (y > maxY) maxY = y;
+                }
+            }
+        }
+        if (maxX < minX || maxY < minY) {
+            return src;
+        }
+        int cropW = maxX - minX + 1;
+        int cropH = maxY - minY + 1;
+        int maxDim = Math.max(cropW, cropH);
+        int pad = Math.max(1, Math.round(maxDim * 0.04f));
+        int targetDim = maxDim + pad * 2;
+        Bitmap cropped = Bitmap.createBitmap(targetDim, targetDim, Bitmap.Config.ARGB_8888);
+        Canvas canvas = new Canvas(cropped);
+        Rect srcRect = new Rect(minX, minY, maxX + 1, maxY + 1);
+        int left = pad + (maxDim - cropW) / 2;
+        int top = pad + (maxDim - cropH) / 2;
+        Rect dstRect = new Rect(left, top, left + cropW, top + cropH);
+        canvas.drawBitmap(src, srcRect, dstRect, null);
+        return cropped;
     }
 
     private Bitmap getMatrixLogoBitmap(Context context) {

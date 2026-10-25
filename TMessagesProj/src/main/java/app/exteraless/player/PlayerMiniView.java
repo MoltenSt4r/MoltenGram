@@ -177,6 +177,10 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         return cover.getImageReceiver().getBitmap();
     }
 
+    public int getCoverShapeId() {
+        return cover != null ? cover.getShapeId() : -1;
+    }
+
     public Bitmap captureCard() {
         int w = card.getWidth();
         int h = card.getHeight();

@@ -4,6 +4,7 @@ import android.graphics.Matrix
 import android.graphics.Path
 import android.util.LruCache
 import androidx.graphics.shapes.CornerRounding
+import androidx.graphics.shapes.Morph
 import androidx.graphics.shapes.RoundedPolygon
 import androidx.graphics.shapes.circle
 import androidx.graphics.shapes.rectangle
@@ -641,6 +642,72 @@ object Md3AvatarShapes {
         if (left == 0f && top == 0f) return basePath
         val path = Path(basePath)
         path.offset(left, top)
+        return path
+    }
+
+    @Synchronized
+    fun getPolygon(shapeId: Int): RoundedPolygon {
+        val id = shapeId.coerceIn(0, SHAPES_COUNT - 1)
+        var polygon = basePolygons[id]
+        if (polygon == null) {
+            polygon = try {
+                buildPolygon(id)
+            } catch (e: Throwable) {
+                RoundedPolygon.circle().normalized()
+            }
+            basePolygons[id] = polygon
+        }
+        return polygon
+    }
+
+    private val morphCache = object : LruCache<Int, Morph>(64) {}
+
+    @JvmStatic
+    @Synchronized
+    fun getMorph(fromShapeId: Int, toShapeId: Int): Morph {
+        val from = fromShapeId.coerceIn(0, SHAPES_COUNT - 1)
+        val to = toShapeId.coerceIn(0, SHAPES_COUNT - 1)
+        val key = (from shl 16) or to
+        val cached = morphCache.get(key)
+        if (cached != null) return cached
+
+        val polyFrom = getPolygon(from)
+        val polyTo = getPolygon(to)
+        val morph = Morph(polyFrom, polyTo)
+        morphCache.put(key, morph)
+        return morph
+    }
+
+    @JvmStatic
+    fun getMorphPath(
+        fromShapeId: Int,
+        toShapeId: Int,
+        progress: Float,
+        width: Float,
+        height: Float
+    ): Path {
+        return getMorphPath(fromShapeId, toShapeId, progress, 0f, 0f, width, height)
+    }
+
+    @JvmStatic
+    fun getMorphPath(
+        fromShapeId: Int,
+        toShapeId: Int,
+        progress: Float,
+        left: Float,
+        top: Float,
+        width: Float,
+        height: Float
+    ): Path {
+        val morph = getMorph(fromShapeId, toShapeId)
+        val path = Path()
+        morph.toPath(progress.coerceIn(0f, 1f), path)
+        val matrix = Matrix()
+        matrix.setScale(width, height)
+        if (left != 0f || top != 0f) {
+            matrix.postTranslate(left, top)
+        }
+        path.transform(matrix)
         return path
     }
 }

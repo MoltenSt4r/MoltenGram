@@ -1,5 +1,8 @@
 package app.exteraless.player;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
@@ -47,6 +50,10 @@ public class CoverImage extends FrameLayout {
     private Listener listener;
 
     private int shapeId = -1;
+    private int fromShapeId = -1;
+    private int toShapeId = -1;
+    private float morphProgress = 1f;
+    private ValueAnimator shapeMorphAnimator;
     private Path shapePath;
     private Path roundPath;
     private int lastW = -1;
@@ -72,27 +79,65 @@ public class CoverImage extends FrameLayout {
     }
 
     public void setShapeId(int shapeId) {
-        if (this.shapeId != shapeId) {
-            this.shapeId = shapeId;
-            this.shapePath = null;
-            if (defaultElevation < 0) {
-                defaultElevation = getElevation();
-            }
-            if (shapeId >= 0) {
-                setRoundRadius(0);
-                getImageReceiver().setRoundRadius(0);
-                setElevation(0);
-                setTranslationZ(0);
-            } else {
-                setRoundRadius(radius);
-                getImageReceiver().setRoundRadius(radius);
-                if (defaultElevation > 0) {
-                    setElevation(defaultElevation);
-                }
-            }
-            invalidateOutline();
-            invalidate();
+        setShapeId(shapeId, false);
+    }
+
+    public void setShapeId(int shapeId, boolean animated) {
+        if (this.shapeId == shapeId && morphProgress >= 1f) {
+            return;
         }
+        if (shapeMorphAnimator != null) {
+            shapeMorphAnimator.cancel();
+            shapeMorphAnimator = null;
+        }
+        int oldShape = this.shapeId;
+        this.shapeId = shapeId;
+        this.shapePath = null;
+        if (defaultElevation < 0) {
+            defaultElevation = getElevation();
+        }
+        if (shapeId >= 0) {
+            setRoundRadius(0);
+            getImageReceiver().setRoundRadius(0);
+            setElevation(0);
+            setTranslationZ(0);
+        } else {
+            setRoundRadius(radius);
+            getImageReceiver().setRoundRadius(radius);
+            if (defaultElevation > 0) {
+                setElevation(defaultElevation);
+            }
+        }
+        if (animated && oldShape >= 0 && shapeId >= 0 && oldShape != shapeId) {
+            fromShapeId = oldShape;
+            toShapeId = shapeId;
+            morphProgress = 0f;
+            shapeMorphAnimator = ValueAnimator.ofFloat(0f, 1f);
+            shapeMorphAnimator.setDuration(350);
+            shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            shapeMorphAnimator.addUpdateListener(animation -> {
+                morphProgress = (float) animation.getAnimatedValue();
+                shapePath = null;
+                invalidate();
+            });
+            shapeMorphAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    morphProgress = 1f;
+                    shapeMorphAnimator = null;
+                    shapePath = null;
+                    invalidateOutline();
+                    invalidate();
+                }
+            });
+            shapeMorphAnimator.start();
+        } else {
+            morphProgress = 1f;
+            fromShapeId = -1;
+            toShapeId = -1;
+        }
+        invalidateOutline();
+        invalidate();
     }
 
     public int getShapeId() {
@@ -232,6 +277,13 @@ public class CoverImage extends FrameLayout {
     }
 
     public void release() {
+        if (shapeMorphAnimator != null) {
+            shapeMorphAnimator.cancel();
+            shapeMorphAnimator = null;
+        }
+        morphProgress = 1f;
+        fromShapeId = -1;
+        toShapeId = -1;
         imageView.setImageDrawable(null);
     }
 
@@ -273,7 +325,11 @@ public class CoverImage extends FrameLayout {
                 if (shapePath == null || lastW != w || lastH != h) {
                     lastW = w;
                     lastH = h;
-                    shapePath = Md3AvatarShapes.getShapePath(shapeId, 0, 0, w, h);
+                    if (morphProgress < 1f && fromShapeId >= 0 && toShapeId >= 0) {
+                        shapePath = Md3AvatarShapes.getMorphPath(fromShapeId, toShapeId, morphProgress, 0, 0, w, h);
+                    } else {
+                        shapePath = Md3AvatarShapes.getShapePath(shapeId, 0, 0, w, h);
+                    }
                 }
                 if (shapePath != null) {
                     canvas.clipPath(shapePath);

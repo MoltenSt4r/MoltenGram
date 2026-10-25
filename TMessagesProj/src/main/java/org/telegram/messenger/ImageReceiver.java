@@ -1997,10 +1997,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     }
 
     public void skipDraw() {
-//        RLottieDrawable lottieDrawable = getLottieAnimation();
-//        if (lottieDrawable != null) {
-//            lottieDrawable.updateCurrentFrame();
-//        }
+        RLottieDrawable lottieDrawable = getLottieAnimation();
+        if (lottieDrawable != null) {
+            lottieDrawable.updateCurrentFrame();
+        }
     }
 
     public boolean draw(Canvas canvas) {

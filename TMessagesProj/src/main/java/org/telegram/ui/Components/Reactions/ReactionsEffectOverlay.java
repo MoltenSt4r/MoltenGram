@@ -94,6 +94,7 @@ public class ReactionsEffectOverlay {
     public long startTime;
     public boolean isStories;
     boolean isFinished;
+    private boolean isStaticEmoji;
 
     public ReactionsEffectOverlay(Context context, BaseFragment fragment, ReactionsContainerLayout reactionsLayout, View cell, View fromAnimationView, float x, float y, ReactionsLayoutInBubble.VisibleReaction visibleReaction, int currentAccount, int animationType, boolean isStories) {
         this.isStories = isStories;
@@ -453,7 +454,7 @@ public class ReactionsEffectOverlay {
 
                 super.dispatchDraw(canvas);
 
-                if ((animationType == SHORT_ANIMATION || emojiImageView.wasPlaying) && animateInProgress != 1f) {
+                if ((animationType == SHORT_ANIMATION || emojiImageView.wasPlaying || isStaticEmoji) && animateInProgress != 1f) {
                     if (fromHolder) {
                         animateInProgress += 16f / 350f;
                     } else {
@@ -464,8 +465,8 @@ public class ReactionsEffectOverlay {
                     }
                 }
 
-                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && (emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000)) ||
-                        (animationType == SHORT_ANIMATION && (effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000))) {
+                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((isStaticEmoji && System.currentTimeMillis() - startTime > 1200) || (emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000))) ||
+                        (animationType == SHORT_ANIMATION && ((isStaticEmoji && System.currentTimeMillis() - startTime > 1200) || (effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000)))) {
                     if (ReactionsEffectOverlay.this.animateOutProgress != 1f) {
                         if (animationType == SHORT_ANIMATION) {
                             ReactionsEffectOverlay.this.animateOutProgress = 1f;
@@ -644,6 +645,7 @@ public class ReactionsEffectOverlay {
                 }
 
                 if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                    isStaticEmoji = true;
                     Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
                     Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
                     emojiImageView.getImageReceiver().setImageBitmap(emojiDrawable);
@@ -710,6 +712,7 @@ public class ReactionsEffectOverlay {
             if (animationType != SHORT_ANIMATION && !isStories) {
                 if (availableReaction != null) {
                     if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                        isStaticEmoji = true;
                         Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
                         Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
                         emojiStaticImageView.getImageReceiver().setImageBitmap(emojiDrawable);
@@ -883,6 +886,9 @@ public class ReactionsEffectOverlay {
 
         @Override
         protected void onDraw(Canvas canvas) {
+            if (isStaticEmoji) {
+                wasPlaying = true;
+            }
             if (animatedEmojiDrawable != null) {
                 animatedEmojiDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
                 animatedEmojiDrawable.setAlpha(255);

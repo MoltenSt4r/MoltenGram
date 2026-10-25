@@ -348,6 +348,17 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         }
 
         ChatMessageCell chatMessageCell = holder.itemView instanceof ChatMessageCell ? (ChatMessageCell) holder.itemView : null;
+        boolean isSendingSticker = chatMessageCell != null && (chatMessageCell.getTransitionParams().ignoreAlpha || (chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().sendAnimationData != null) || (activity != null && (activity.animateSendingViews.contains(chatMessageCell) || activity.animatingMessageObjects.contains(chatMessageCell.getMessageObject()))));
+        if (isSendingSticker) {
+            holder.itemView.setAlpha(0f);
+            holder.itemView.setScaleX(1f);
+            holder.itemView.setScaleY(1f);
+            holder.itemView.setTranslationX(0f);
+            holder.itemView.setTranslationY(0f);
+            mPendingAdditions.add(holder);
+            return true;
+        }
+
         boolean isOut = chatMessageCell != null && chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().isOutOwner();
 
         if (animType == app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_FADE) {
@@ -390,6 +401,7 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         mAddAnimations.add(holder);
 
         ChatMessageCell chatMessageCell = holder.itemView instanceof ChatMessageCell ? (ChatMessageCell) holder.itemView : null;
+        boolean isSendingSticker = chatMessageCell != null && (chatMessageCell.getTransitionParams().ignoreAlpha || (chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().sendAnimationData != null) || (activity != null && (activity.animateSendingViews.contains(chatMessageCell) || activity.animatingMessageObjects.contains(chatMessageCell.getMessageObject()))));
         boolean isOut = chatMessageCell != null && chatMessageCell.getMessageObject() != null && chatMessageCell.getMessageObject().isOutOwner();
 
         boolean hasEnterTransition = false;
@@ -410,6 +422,8 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
                 }
                 activity.getChatActivityEnterView().startMessageTransition();
             }
+        } else if (isSendingSticker) {
+            hasEnterTransition = true;
         }
 
         int animType = getMessageAnimationType(holder);

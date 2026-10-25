@@ -6682,7 +6682,6 @@ public class ChatActivity extends BaseFragment implements
                             skipDraw = false;
                         }
                     }*/
-                    skipDraw = false;
                 }
 
                 boolean result;

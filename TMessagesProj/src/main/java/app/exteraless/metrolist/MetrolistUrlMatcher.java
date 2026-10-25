@@ -80,8 +80,8 @@ public final class MetrolistUrlMatcher {
                 }
             }
 
-            // 2. YouTube & YouTube Music (music.youtube.com, youtube.com, www.youtube.com, m.youtube.com)
-            if (host.equals("music.youtube.com") || host.endsWith(".music.youtube.com") || host.equals("youtube.com") || host.endsWith(".youtube.com")) {
+            // 2. YouTube Music (music.youtube.com)
+            if (host.equals("music.youtube.com") || host.endsWith(".music.youtube.com")) {
                 Matcher vm = V_PARAM_PATTERN.matcher(url);
                 if (vm.find()) {
                     return vm.group(1);

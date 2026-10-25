@@ -423,7 +423,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
 
         messagesHeaderRow = addRow("messagesHeader");
         removeMessageTailRow = addRow("removeMessageTail");
-        md3ChatInputRow = addRow("md3ChatInput");
+        md3ChatInputRow = -1;
         incomingMessageAnimationRow = addRow("incomingMessageAnimation");
         outgoingMessageAnimationRow = addRow("outgoingMessageAnimation");
         replaceEditedRow = addRow("replaceEdited");
@@ -1851,7 +1851,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
         if (position == keepAttachButtonRow) return ChatsConfig.keepAttachButton;
         if (position == removeMessageTailRow) return ChatsConfig.removeMessageTail;
-        if (position == md3ChatInputRow) return ChatsConfig.md3ChatInput;
+        if (position == md3ChatInputRow && md3ChatInputRow != -1) return ChatsConfig.md3ChatInput;
         if (position == replaceEditedRow) return NaConfig.INSTANCE.getUseEditedIcon();
         if (position == showOnlineStatusRow) return NaConfig.INSTANCE.getShowOnlineStatus();
         if (position == hideShareButtonRow) return NaConfig.INSTANCE.getHideShareButtonInChannel();
@@ -2524,7 +2524,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
             } else if (position == removeMessageTailRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsRemoveMessageTail), ChatsConfig.removeMessageTail.Bool(), true);
-            } else if (position == md3ChatInputRow) {
+            } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsMd3ChatInput),
                         getString(R.string.OEChatsMd3ChatInputInfo),
                         ChatsConfig.md3ChatInput.Bool(), true, true);

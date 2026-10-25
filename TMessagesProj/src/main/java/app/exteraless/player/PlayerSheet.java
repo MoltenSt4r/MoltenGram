@@ -936,14 +936,51 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         lerpRect(morphCoverFrom, morphCoverTo, p, morphCover);
         float r = morphCoverFromRadius + (morphCoverToRadius - morphCoverFromRadius) * p;
         morphPath.rewind();
-        if (cover.getShapeId() >= 0) {
-            Path customShape = app.exteraless.appearance.Md3AvatarShapes.getShapePath(
-                    cover.getShapeId(),
-                    morphCover.left,
-                    morphCover.top,
-                    morphCover.width(),
-                    morphCover.height()
-            );
+        int fullShape = cover.getShapeId();
+        int miniShape = miniSource != null ? miniSource.getCoverShapeId() : -1;
+        if (fullShape >= 0 || miniShape >= 0) {
+            Path customShape = null;
+            if (miniShape >= 0 && fullShape >= 0) {
+                if (miniShape == fullShape) {
+                    customShape = app.exteraless.appearance.Md3AvatarShapes.getShapePath(
+                            fullShape,
+                            morphCover.left,
+                            morphCover.top,
+                            morphCover.width(),
+                            morphCover.height()
+                    );
+                } else {
+                    customShape = app.exteraless.appearance.Md3AvatarShapes.getMorphPath(
+                            miniShape,
+                            fullShape,
+                            p,
+                            morphCover.left,
+                            morphCover.top,
+                            morphCover.width(),
+                            morphCover.height()
+                    );
+                }
+            } else if (miniShape >= 0) {
+                customShape = app.exteraless.appearance.Md3AvatarShapes.getMorphPath(
+                        miniShape,
+                        app.exteraless.appearance.Md3AvatarShapes.SHAPE_SQUARE,
+                        p,
+                        morphCover.left,
+                        morphCover.top,
+                        morphCover.width(),
+                        morphCover.height()
+                );
+            } else {
+                customShape = app.exteraless.appearance.Md3AvatarShapes.getMorphPath(
+                        app.exteraless.appearance.Md3AvatarShapes.SHAPE_SQUARE,
+                        fullShape,
+                        p,
+                        morphCover.left,
+                        morphCover.top,
+                        morphCover.width(),
+                        morphCover.height()
+                );
+            }
             if (customShape != null) {
                 morphPath.set(customShape);
             } else {
@@ -1122,8 +1159,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         smallTitle.setText(mo.getMusicTitle());
         smallArtist.setText(mo.getMusicAuthor());
         int shapeId = PlayerArt.getOrCycleShape(mo);
-        cover.setShapeId(shapeId);
-        smallCover.setShapeId(shapeId);
+        cover.setShapeId(shapeId, animated);
+        smallCover.setShapeId(shapeId, animated);
         cover.setMessage(mo);
         smallCover.setMessage(mo);
         if (changed) {

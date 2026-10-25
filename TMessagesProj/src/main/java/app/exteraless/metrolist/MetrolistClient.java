@@ -136,31 +136,37 @@ public final class MetrolistClient {
      * Внутренний запрос к Innertube /player.
      */
     public Track fetchPlayer(String videoId) throws Exception {
-        // 1. Попробуем извлечь через IOS контекст (наиболее стабилен без авторизации, отдает прямые потоки без блокировок)
-        Track track = fetchPlayerWithClient(videoId, "IOS", "20.03.02", USER_AGENT_IOS, true);
+        // 1. ANDROID_VR (unthrottled, clean unencrypted streams)
+        Track track = fetchPlayerWithClient(videoId, "ANDROID_VR", "1.61.48", "com.google.android.apps.youtube.vr/1.61.48 (Linux; U; Android 12; Quest 2) gzip", false);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 2. ANDROID_TESTSUITE (возвращает прямые расшифрованные потоки)
-        track = fetchPlayerWithClient(videoId, "ANDROID_TESTSUITE", "1.9", "GooglePlayServices/23.16.13 (Android 14; sdk 34)", true);
-        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
-            return track;
-        }
-
-        // 3. TVHTML5_SIMPLY_EMBEDDED_PLAYER
-        track = fetchPlayerWithClient(videoId, "TVHTML5_SIMPLY_EMBEDDED_PLAYER", "2.0", USER_AGENT_WEB, true);
-        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
-            return track;
-        }
-
-        // 4. Если есть cookies или OAuth, пробуем ANDROID_MUSIC
+        // 2. ANDROID_MUSIC (unthrottled official client)
         track = fetchPlayerWithClient(videoId, "ANDROID_MUSIC", "6.42.52", USER_AGENT_ANDROID, false);
         if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
             return track;
         }
 
-        // 5. Fallback: WEB_REMIX
+        // 3. TVHTML5_SIMPLY_EMBEDDED_PLAYER (unthrottled embedded player)
+        track = fetchPlayerWithClient(videoId, "TVHTML5_SIMPLY_EMBEDDED_PLAYER", "2.0", USER_AGENT_WEB, true);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 4. ANDROID_TESTSUITE (возвращает прямые расшифрованные потоки)
+        track = fetchPlayerWithClient(videoId, "ANDROID_TESTSUITE", "1.9", "GooglePlayServices/23.16.13 (Android 14; sdk 34)", true);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 5. IOS контекст
+        track = fetchPlayerWithClient(videoId, "IOS", "20.03.02", USER_AGENT_IOS, true);
+        if (track != null && !TextUtils.isEmpty(track.audioUrl)) {
+            return track;
+        }
+
+        // 6. Fallback: WEB_REMIX
         track = fetchPlayerWithClient(videoId, "WEB_REMIX", "1.20240101.01.00", USER_AGENT_WEB, false);
         return track;
     }
@@ -174,6 +180,9 @@ public final class MetrolistClient {
             client.put("clientVersion", clientVersion);
             if (isIos) {
                 client.put("deviceModel", "iPhone16,2");
+            } else if ("ANDROID_VR".equals(clientName)) {
+                client.put("deviceModel", "Quest 2");
+                client.put("androidSdkVersion", 32);
             } else if ("ANDROID_MUSIC".equals(clientName)) {
                 client.put("androidSdkVersion", 34);
             }
@@ -183,7 +192,7 @@ public final class MetrolistClient {
             requestObj.put("context", context);
             requestObj.put("videoId", videoId);
 
-            String endpoint = (isIos || "ANDROID_TESTSUITE".equals(clientName) || "TVHTML5_SIMPLY_EMBEDDED_PLAYER".equals(clientName) ? YOUTUBE_API_BASE : INNERTUBE_API_BASE) + "/player";
+            String endpoint = (isIos || "ANDROID_VR".equals(clientName) || "ANDROID_TESTSUITE".equals(clientName) || "TVHTML5_SIMPLY_EMBEDDED_PLAYER".equals(clientName) ? YOUTUBE_API_BASE : INNERTUBE_API_BASE) + "/player";
             String jsonResponse = postJson(endpoint, requestObj.toString(), userAgent, clientName, clientVersion);
             if (TextUtils.isEmpty(jsonResponse)) {
                 return null;

@@ -173,7 +173,7 @@ def test_metrolist_url_matcher_youtube_domains_and_endpoints():
     with open(matcher_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    assert 'host.equals("youtube.com") || host.endsWith(".youtube.com")' in content
+    assert 'host.equals("music.youtube.com") || host.endsWith(".music.youtube.com")' in content
     assert "YT_PATH_PATTERN" in content
 
 

@@ -258,7 +258,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ListItemsRow = addRow("md3ListItems");
             md3PlayerRow = addRow("md3Player", "playerSettings");
             md3MiniPlayerRow = addRow("md3MiniPlayer");
-            md3ChatInputRow = addRow("md3ChatInput");
+            md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
@@ -687,7 +687,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             AppearanceConfig.md3MiniPlayer.setConfigBool(!AppearanceConfig.md3MiniPlayer.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.md3MiniPlayer.Bool());
             return;
-        } else if (position == md3ChatInputRow) {
+        } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {
             app.exteraless.chats.ChatsConfig.md3ChatInput.setConfigBool(!app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
             rebuildAllAndSelf(view, app.exteraless.chats.ChatsConfig.md3ChatInput.Bool());
             return;
@@ -1138,7 +1138,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3MiniPlayerRow) {
                         cell.setText(getString(R.string.OEAppearanceMd3MiniPlayer), "",
                                 AppearanceConfig.md3MiniPlayer.Bool(), true, true);
-                    } else if (position == md3ChatInputRow) {
+                    } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {
                         cell.setText(getString(R.string.OEAppearanceMd3ChatInput), "",
                                 app.exteraless.chats.ChatsConfig.md3ChatInput.Bool(), true, true);
                     } else if (position == mediaGroupCarouselRow) {
@@ -1304,7 +1304,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3SwitchRow || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow
                     || position == md3PlayerRow || position == md3MiniPlayerRow
-                    || position == md3ChatInputRow
+                    || (position == md3ChatInputRow && md3ChatInputRow != -1)
                     || position == mediaGroupCarouselRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
@@ -1436,7 +1436,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (AppearanceConfig.m3ListItems.Bool()) n++;
         if (AppearanceConfig.md3Player.Bool()) n++;
         if (AppearanceConfig.md3MiniPlayer.Bool()) n++;
-        if (app.exteraless.chats.ChatsConfig.md3ChatInput.Bool()) n++;
         if (AppearanceConfig.mediaGroupCarousel.Bool()) n++;
         return n;
     }
