@@ -3,6 +3,8 @@ package org.telegram.messenger;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.os.Build;
 import android.os.CancellationSignal;
 import android.util.Base64;
@@ -43,6 +45,7 @@ import java.nio.charset.StandardCharsets;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.Arrays;
+import java.util.Locale;
 import java.util.concurrent.Executors;
 
 import kotlin.Result;
@@ -138,7 +141,7 @@ public class PasskeysController {
                             passkeyResponse.client_data = new TLRPC.TL_dataJSON();
                             if (response.has("clientDataJSON")) {
                                 try {
-                                    String decoded = new String(Base64.decode(response.getString("clientDataJSON"), Base64.URL_SAFE), StandardCharsets.UTF_8);
+                                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
                                     passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : clientDataJSON;
                                 } catch (Exception ignored) {
                                     passkeyResponse.client_data.data = clientDataJSON;
@@ -146,7 +149,7 @@ public class PasskeysController {
                             } else {
                                 passkeyResponse.client_data.data = clientDataJSON;
                             }
-                            passkeyResponse.attestation_object = Base64.decode(response.getString("attestationObject"), Base64.URL_SAFE);
+                            passkeyResponse.attestation_object = safeDecodeBase64(response.getString("attestationObject"));
 
                             FileLog.d("AAGUID: " + bytesToHex(Arrays.copyOfRange(passkeyResponse.attestation_object, 67, 67 + 16)));
 
@@ -255,7 +258,7 @@ public class PasskeysController {
                             passkeyResponse.client_data = new TLRPC.TL_dataJSON();
                             if (response.has("clientDataJSON")) {
                                 try {
-                                    String decoded = new String(Base64.decode(response.getString("clientDataJSON"), Base64.URL_SAFE), StandardCharsets.UTF_8);
+                                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
                                     passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : clientDataJSON;
                                 } catch (Exception ignored) {
                                     passkeyResponse.client_data.data = clientDataJSON;
@@ -264,12 +267,23 @@ public class PasskeysController {
                                 passkeyResponse.client_data.data = clientDataJSON;
                             }
 
-                            passkeyResponse.authenticator_data = Base64.decode(response.getString("authenticatorData"), Base64.URL_SAFE);
-                            passkeyResponse.signature = Base64.decode(response.getString("signature"), Base64.URL_SAFE);
-                            passkeyResponse.user_handle = new String(Base64.decode(response.getString("userHandle"), Base64.URL_SAFE));
+                            passkeyResponse.authenticator_data = safeDecodeBase64(response.getString("authenticatorData"));
+                            passkeyResponse.signature = safeDecodeBase64(response.getString("signature"));
+                            String rawUserHandle = response.optString("userHandle", "");
+                            passkeyResponse.user_handle = decodeUserHandle(rawUserHandle);
 
-                            datacenterId = Integer.parseInt(passkeyResponse.user_handle.split(":")[0]);
-                            userId = Long.parseLong(passkeyResponse.user_handle.split(":")[1]);
+                            int dcId = ConnectionsManager.getInstance(currentAccount).getCurrentDatacenterId();
+                            long uId = 0L;
+                            if (passkeyResponse.user_handle != null && passkeyResponse.user_handle.contains(":")) {
+                                try {
+                                    String[] parts = passkeyResponse.user_handle.split(":");
+                                    dcId = Integer.parseInt(parts[0]);
+                                    uId = Long.parseLong(parts[1]);
+                                } catch (Exception ignored) {
+                                }
+                            }
+                            datacenterId = dcId;
+                            userId = uId;
 
                             req2.credential.response = passkeyResponse;
 
@@ -353,7 +367,73 @@ public class PasskeysController {
         clientData.put("type", get ? "webauthn.get" : "webauthn.create");
         clientData.put("challenge", challenge);
         clientData.put("origin", rpId);
+        clientData.put("crossOrigin", false);
         return clientData.toString();
+    }
+
+    public static byte[] safeDecodeBase64(String str) {
+        if (str == null || str.isEmpty()) {
+            return new byte[0];
+        }
+        try {
+            return Base64.decode(str, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+        } catch (Exception e) {
+            try {
+                return Base64.decode(str, Base64.DEFAULT);
+            } catch (Exception e2) {
+                return new byte[0];
+            }
+        }
+    }
+
+    public static String decodeUserHandle(String rawUserHandle) {
+        if (rawUserHandle == null || rawUserHandle.isEmpty()) {
+            return "";
+        }
+        try {
+            byte[] decoded = safeDecodeBase64(rawUserHandle);
+            String str = new String(decoded, StandardCharsets.UTF_8);
+            if (str.contains(":")) {
+                return str;
+            }
+        } catch (Exception ignored) {
+        }
+        return rawUserHandle;
+    }
+
+    public static String createPasskeyRegistrationQrString(String requestJson) {
+        if (requestJson == null) return "";
+        return "fido:/" + Base64.encodeToString(requestJson.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+    }
+
+    public static String createPasskeyLoginQrString(String requestJson) {
+        if (requestJson == null) return "";
+        return "fido:/" + Base64.encodeToString(requestJson.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
+    }
+
+    public static boolean isFidoOrPasskeyUri(String text) {
+        if (text == null) return false;
+        String lower = text.toLowerCase(Locale.ROOT).trim();
+        return lower.startsWith("fido:/") || lower.startsWith("fido:") || lower.startsWith("tg://passkey") || lower.startsWith("webauthn:");
+    }
+
+    public static boolean isBotToken(String text) {
+        if (text == null) return false;
+        String trimmed = text.trim();
+        return trimmed.matches("^[0-9]{6,14}:[a-zA-Z0-9_-]{30,50}$");
+    }
+
+    public static boolean handlePasskeyQrIntent(Context context, String uriString) {
+        if (context == null || uriString == null || uriString.isEmpty()) return false;
+        try {
+            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
+            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
+            context.startActivity(intent);
+            return true;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
+        }
     }
 
     public static void openSettings(Activity activity) {

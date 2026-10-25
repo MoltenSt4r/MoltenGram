@@ -281,6 +281,14 @@
     <string name="NoQuoteForwardShort">Без автора</string>
     <string name="ViewDeleted">Просмотреть удалённые</string>
     <string name="PasskeyLogin">Вход по ключу доступа</string>
+    <string name="PasskeyQrLogin">Вход по QR-коду ключа доступа</string>
+    <string name="PasskeyCreateQr">Создать как QR-код</string>
+    <string name="PasskeyCreateQrInfo">Отсканируйте этот QR-код с помощью Bitwarden или другого устройства для сохранения ключа доступа.</string>
+    <string name="PasskeyScanQr">Сканировать ключ доступа / QR</string>
+    <string name="BotTokenLogin">Вход по токену бота</string>
+    <string name="BotTokenLoginDescription">Войдите для управления ботом Telegram с помощью токена от @BotFather.</string>
+    <string name="BotTokenHint">123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</string>
+    <string name="BotTokenInvalid">Неверный токен бота. Проверьте токен и попробуйте снова.</string>
     <string name="StartTextPasskey">Пожалуйста, введите свой номер телефона\nили **войдите по ключу доступа >**</string>
     <string name="PasskeyInfo2">Эта функция работает только с менеджерами паролей, которые позволяют пользователю управлять настройками доверия для привилегированных приложений, такими как **Bitwarden** и **KeePassDX**.</string>
     <string name="PasskeyUnsupportedTitle">Неподдерживаемый менеджер паролей</string>

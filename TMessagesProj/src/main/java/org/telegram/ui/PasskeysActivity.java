@@ -113,6 +113,7 @@ public class PasskeysActivity extends BaseFragment {
         if (passkeys.size() + 1 <= getMessagesController().config.passkeysAccountPasskeysMax.get()) {
             addPasskeyRow = items.size();
             items.add(UItem.asButton(-1, R.drawable.menu_passkey_add, getString(R.string.PasskeyAdd)).accent());
+            items.add(UItem.asButton(-3, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyCreateQr)).accent());
         }
         items.add(UItem.asButton(-2, R.drawable.menu_settings, getString(R.string.Settings)).accent());
         items.add(UItem.asShadow(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.PasskeyInfo), () -> {
@@ -201,9 +202,52 @@ public class PasskeysActivity extends BaseFragment {
             });
         } else if (item.id == -2) {
             PasskeysController.openSettings(getParentActivity());
+        } else if (item.id == -3) {
+            showPasskeyQrDialog();
         } else if (item.object != null) {
             openMenu(view);
         }
+    }
+
+    private void showPasskeyQrDialog() {
+        if (getContext() == null) return;
+        final AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.showDelayed(500);
+
+        ConnectionsManager.getInstance(currentAccount).sendRequestTyped(
+            new TL_account.initPasskeyRegistration(),
+            AndroidUtilities::runOnUIThread,
+            (res, err) -> {
+                progressDialog.dismiss();
+                if (err != null) {
+                    BulletinFactory.of(this).showForError(err.text);
+                    return;
+                }
+                if (res == null || res.options == null) return;
+
+                String qrData = PasskeysController.createPasskeyRegistrationQrString(res.options.data);
+                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+                builder.setTitle(getString(R.string.PasskeyCreateQr));
+                builder.setMessage(getString(R.string.PasskeyCreateQrInfo));
+
+                LinearLayout layout = new LinearLayout(getContext());
+                layout.setOrientation(LinearLayout.VERTICAL);
+                layout.setGravity(Gravity.CENTER_HORIZONTAL);
+                layout.setPadding(dp(20), dp(12), dp(20), dp(12));
+
+                tw.nekomimi.nekogram.ui.QrView qrView = new tw.nekomimi.nekogram.ui.QrView(getContext());
+                qrView.setData(qrData);
+                layout.addView(qrView, LayoutHelper.createLinear(240, 240, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+                builder.setView(layout);
+                builder.setPositiveButton(getString(R.string.OK), null);
+                builder.setNeutralButton(getString(R.string.Copy), (di, w) -> {
+                    AndroidUtilities.addToClipboard(qrData);
+                    BulletinFactory.of(this).createCopyBulletin(getString(R.string.LinkCopied)).show();
+                });
+                showDialog(builder.create());
+            }
+        );
     }
 
     public void added(TL_account.Passkey passkey) {

@@ -50526,6 +50526,47 @@ public class TLRPC {
         }
     }
 
+    public static class TL_auth_importBotAuthorization extends TLObject {
+        public static final int constructor = 0x67a3ff2c;
+
+        public int flags;
+        public int api_id;
+        public String api_hash;
+        public String bot_auth_token;
+
+        public static TL_auth_importBotAuthorization TLdeserialize(InputSerializedData stream, int constructor, boolean exception) {
+            if (constructor != TL_auth_importBotAuthorization.constructor) {
+                if (exception) {
+                    throw new RuntimeException(String.format("can't parse magic %x in TL_auth_importBotAuthorization", constructor));
+                } else {
+                    return null;
+                }
+            }
+            TL_auth_importBotAuthorization result = new TL_auth_importBotAuthorization();
+            result.readParams(stream, exception);
+            return result;
+        }
+
+        public TLObject deserializeResponse(InputSerializedData stream, int constructor, boolean exception) {
+            return auth_Authorization.TLdeserialize(stream, constructor, exception);
+        }
+
+        public void readParams(InputSerializedData stream, boolean exception) {
+            flags = stream.readInt32(exception);
+            api_id = stream.readInt32(exception);
+            api_hash = stream.readString(exception);
+            bot_auth_token = stream.readString(exception);
+        }
+
+        public void serializeToStream(OutputSerializedData stream) {
+            stream.writeInt32(constructor);
+            stream.writeInt32(flags);
+            stream.writeInt32(api_id);
+            stream.writeString(api_hash);
+            stream.writeString(bot_auth_token);
+        }
+    }
+
     public static class TL_auth_exportLoginToken extends TLObject {
         public static final int constructor = 0xb7e085fe;
 

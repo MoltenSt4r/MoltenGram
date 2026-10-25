@@ -297,6 +297,14 @@
     <string name="NoQuoteForwardShort">NoQuote</string>
     <string name="ViewDeleted">View Deleted</string>
     <string name="PasskeyLogin">Passkey Login</string>
+    <string name="PasskeyQrLogin">Passkey QR Login</string>
+    <string name="PasskeyCreateQr">Create as QR Code</string>
+    <string name="PasskeyCreateQrInfo">Scan this QR code with Bitwarden or another device to save your passkey.</string>
+    <string name="PasskeyScanQr">Scan Passkey / QR</string>
+    <string name="BotTokenLogin">Bot Token Login</string>
+    <string name="BotTokenLoginDescription">Log in to manage your Telegram Bot using its API token from @BotFather.</string>
+    <string name="BotTokenHint">123456789:ABCdefGhIJKlmNoPQRsTUVwxyZ</string>
+    <string name="BotTokenInvalid">Invalid bot token. Please check the token and try again.</string>
     <string name="PasskeyInfo2">This feature only works with password managers that allow the user to manage trust settings for privileged apps, such as **Bitwarden** and **KeePassDX**.</string>
     <string name="PasskeyUnsupportedTitle">Unsupported password manager</string>
     <string name="PasskeyUnsupportedMessage">Try other password managers like **Bitwarden** or **KeePassDX**.</string>

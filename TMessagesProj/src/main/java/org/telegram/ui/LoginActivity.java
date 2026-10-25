@@ -797,7 +797,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         moreButtonView.setIcon(R.drawable.ic_ab_other);
         moreButtonView.addSubItem(0, R.drawable.msg_policy_solar, getString(R.string.Proxy));
         moreButtonView.addSubItem(1, R.drawable.msg_qrcode_solar, getString(R.string.ImportLogin));
-        if (BuildVars.SUPPORTS_PASSKEYS) moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
+        if (BuildVars.SUPPORTS_PASSKEYS) {
+            moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
+            moreButtonView.addSubItem(6, R.drawable.menu_passkey_add, getString(R.string.PasskeyQrLogin));
+        }
+        moreButtonView.addSubItem(5, R.drawable.msg_bots_solar, getString(R.string.BotTokenLogin));
+        moreButtonView.addSubItem(7, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyScanQr));
         moreButtonView.addSubItem(2, R.drawable.msg_permissions_solar, getString(R.string.CustomApi)).setContentDescription(getString(R.string.CustomApi));
         moreButtonView.addSubItem(3, R.drawable.msg_retry_solar, getString(R.string.TestBackend));
         moreButtonView.setDelegate(id -> {
@@ -821,6 +826,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 if (phoneView != null) {
                     phoneView.requestPasskey(true, true);
                 }
+            } else if (id == 5) {
+                showBotTokenLoginDialog();
+            } else if (id == 6) {
+                showPasskeyQrLoginDialog();
+            } else if (id == 7) {
+                openCameraScanActivityForLogin();
             }
         });
         moreButtonView.setSubMenuOpenSide(1);
@@ -8500,7 +8511,16 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
 
             qrView = new QrView(context);
             qrView.setData(null);
-            addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 30, 30,30, 30));
+            addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 30, 30, 30, 16));
+
+            TextView scanQrButton = new TextView(context);
+            scanQrButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            scanQrButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            scanQrButton.setTextColor(Theme.getColor(Theme.key_chats_actionBackground));
+            scanQrButton.setGravity(Gravity.CENTER);
+            scanQrButton.setText(LocaleController.getString(R.string.PasskeyScanQr));
+            scanQrButton.setOnClickListener(v -> openCameraScanActivityForLogin());
+            addView(scanQrButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 8, 16, 16));
         }
 
         @Override
@@ -8650,6 +8670,145 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 exportLoginToken(false);
             }
         }
+    }
+
+    public void openCameraScanActivityForLogin() {
+        CameraScanActivity.showAsSheet(this, false, CameraScanActivity.TYPE_QR_LOGIN, new CameraScanActivity.CameraScanActivityDelegate() {
+            @Override
+            public void didFindQr(String text) {
+                if (text == null || text.trim().isEmpty()) return;
+                final String trimmed = text.trim();
+                if (PasskeysController.isBotToken(trimmed)) {
+                    loginWithBotToken(trimmed);
+                } else if (PasskeysController.isFidoOrPasskeyUri(trimmed)) {
+                    handlePasskeyQrScanned(trimmed);
+                } else if (trimmed.startsWith("tg://login?token=")) {
+                    if (currentViewNum == VIEW_QR_LOGIN) {
+                        SlideView currentView = views[VIEW_QR_LOGIN];
+                        if (currentView instanceof LoginActivityQrView) {
+                            ((LoginActivityQrView) currentView).exportLoginToken(false);
+                        }
+                    } else {
+                        setPage(VIEW_QR_LOGIN, true, null, false);
+                    }
+                }
+            }
+        });
+    }
+
+    public void handlePasskeyQrScanned(String qrData) {
+        if (getParentActivity() == null) return;
+        boolean launched = PasskeysController.handlePasskeyQrIntent(getParentActivity(), qrData);
+        if (!launched) {
+            PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
+            if (phoneView != null) {
+                phoneView.requestPasskey(true, true);
+            }
+        }
+    }
+
+    public void showPasskeyQrLoginDialog() {
+        if (getParentActivity() == null) return;
+        final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.showDelayed(500);
+
+        final TL_account.initPasskeyLogin req = new TL_account.initPasskeyLogin();
+        req.api_id = NekoXConfig.currentAppId();
+        req.api_hash = NekoXConfig.currentAppHash();
+        ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req, AndroidUtilities::runOnUIThread, (res, err) -> {
+            progressDialog.dismiss();
+            if (err != null) {
+                AlertsCreator.showSimpleAlert(LoginActivity.this, err.text);
+                return;
+            }
+            if (res == null || res.options == null) return;
+
+            String qrData = PasskeysController.createPasskeyLoginQrString(res.options.data);
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(LocaleController.getString(R.string.PasskeyQrLogin));
+            builder.setMessage(LocaleController.getString(R.string.PasskeyCreateQrInfo));
+
+            LinearLayout layout = new LinearLayout(getParentActivity());
+            layout.setOrientation(LinearLayout.VERTICAL);
+            layout.setGravity(Gravity.CENTER_HORIZONTAL);
+            layout.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(12));
+
+            tw.nekomimi.nekogram.ui.QrView qrView = new tw.nekomimi.nekogram.ui.QrView(getParentActivity());
+            qrView.setData(qrData);
+            layout.addView(qrView, LayoutHelper.createLinear(240, 240, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
+
+            builder.setView(layout);
+            builder.setPositiveButton(LocaleController.getString(R.string.OK), null);
+            builder.setNeutralButton(LocaleController.getString(R.string.ScanQR), (di, w) -> {
+                openCameraScanActivityForLogin();
+            });
+            showDialog(builder.create());
+        }, ConnectionsManager.RequestFlagWithoutLogin);
+    }
+
+    public void showBotTokenLoginDialog() {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString(R.string.BotTokenLogin));
+        builder.setMessage(LocaleController.getString(R.string.BotTokenLoginDescription));
+
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        editText.setHint(LocaleController.getString(R.string.BotTokenHint));
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setSingleLine(true);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
+
+        builder.setView(container);
+        builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> {
+            String token = editText.getText().toString().trim();
+            if (!token.isEmpty()) {
+                loginWithBotToken(token);
+            }
+        });
+        builder.setNeutralButton(LocaleController.getString(R.string.ScanQR), (dialog, which) -> {
+            openCameraScanActivityForLogin();
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    public void loginWithBotToken(String token) {
+        if (token == null || token.trim().isEmpty()) {
+            return;
+        }
+        final String cleanToken = token.trim();
+        final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+        progressDialog.showDelayed(500);
+
+        TLRPC.TL_auth_importBotAuthorization req = new TLRPC.TL_auth_importBotAuthorization();
+        req.flags = 0;
+        req.api_id = NekoXConfig.currentAppId();
+        req.api_hash = NekoXConfig.currentAppHash();
+        req.bot_auth_token = cleanToken;
+
+        final int reqId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            progressDialog.dismiss();
+            if (error != null) {
+                if ("ACCESS_TOKEN_INVALID".equals(error.text) || "ACCESS_TOKEN_EXPIRED".equals(error.text)) {
+                    AlertsCreator.showSimpleAlert(LoginActivity.this, LocaleController.getString(R.string.BotTokenInvalid));
+                } else {
+                    AlertsCreator.processError(currentAccount, error, LoginActivity.this, req);
+                }
+            } else if (response instanceof TLRPC.TL_auth_authorization) {
+                onAuthSuccess((TLRPC.TL_auth_authorization) response);
+            }
+        }), ConnectionsManager.RequestFlagWithoutLogin);
+
+        progressDialog.setOnCancelListener(d -> {
+            ConnectionsManager.getInstance(currentAccount).cancelRequest(reqId, true);
+        });
     }
 
     private boolean showKeyboard(View editText) {
