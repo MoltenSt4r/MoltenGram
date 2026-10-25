@@ -1417,8 +1417,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
-    /** Сколько стилей MD3 включено. Счётчик «N/10» рядом с шевроном. */
-    private static final int MD3_STYLE_COUNT = 10;
+    /** Сколько стилей MD3 включено. Счётчик «N/9» рядом с шевроном. */
+    private static final int MD3_STYLE_COUNT = 9;
     /** Значение селектора NagramX, соответствующее Material Design 3. */
     private static final int STYLE_MD3 = 2;
 
