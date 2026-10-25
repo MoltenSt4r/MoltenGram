@@ -1287,8 +1287,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         if (mo.getDocument() != null && mo.getId() > 0 && !PlayerActions.noForwards(mo)) {
             PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
-        } else {
-            app.exteraless.metrolist.MetrolistController.getInstance().addToSavedMessages(activity, mo);
         }
         Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
         BulletinFactory.of(root, rp)
@@ -2017,8 +2015,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 o.dismiss();
                 if (mo.getDocument() != null && mo.getId() > 0) {
                     PlayerActions.forwardTo(activity, mo, UserConfig.getInstance(mo.currentAccount).getClientUserId());
-                } else {
-                    app.exteraless.metrolist.MetrolistController.getInstance().addToSavedMessages(activity, mo);
                 }
             });
             sub.add(R.drawable.menu_download_round, getString(R.string.AudioSaveToMusicFolder), () -> {

@@ -106,17 +106,23 @@ def test_chat_message_cell_share_button_selection_guard():
     assert "delegate == null || (!delegate.hasSelectedMessages() && delegate.canPerformActions())" in content
 
 
-def test_metrolist_url_matcher_youtube_music_and_youtu_be():
-    matcher_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistUrlMatcher.java"
+def test_metrolist_removed_completely():
+    metrolist_dir = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist"
     )
-    with open(matcher_path, "r", encoding="utf-8") as f:
-        content = f.read()
+    assert not os.path.exists(metrolist_dir), "app.exteraless.metrolist directory must not exist"
 
-    assert "youtu.be" in content
-    assert "YOUTU_BE_PATTERN" in content
-    assert "music.youtube.com" in content
-    assert "metrolist.cc" in content
+    browser_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "messenger", "browser", "Browser.java"
+    )
+    with open(browser_path, "r", encoding="utf-8") as f:
+        browser_content = f.read()
+    assert "MetrolistController" not in browser_content, "Browser.java must not reference Metrolist"
+
+    seekable_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "SeekableFragmentsExtractorsFactory.java"
+    )
+    assert not os.path.exists(seekable_path), "SeekableFragmentsExtractorsFactory must not exist"
 
 
 def test_media_controller_http_audio_streaming():
@@ -128,26 +134,6 @@ def test_media_controller_http_audio_streaming():
 
     assert 'streamAttachPath.startsWith("http://") || streamAttachPath.startsWith("https://")' in content
     assert 'audioPlayer.preparePlayer(Uri.parse(streamAttachPath), "other");' in content
-
-
-def test_profile_music_saving_for_streaming_tracks():
-    controller_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistController.java"
-    )
-    with open(controller_path, "r", encoding="utf-8") as f:
-        c_content = f.read()
-
-    assert "public void saveStreamTrackToProfile(MessageObject mo, PlayerActions.ResultCallback callback)" in c_content
-    assert "TL_account_saveMusic req = new TLRPC.TL_account_saveMusic();" in c_content
-    assert "NotificationCenter.profileMusicUpdated" in c_content
-
-    actions_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "PlayerActions.java"
-    )
-    with open(actions_path, "r", encoding="utf-8") as f:
-        a_content = f.read()
-
-    assert "app.exteraless.metrolist.MetrolistController.getInstance().saveStreamTrackToProfile(messageObject, callback);" in a_content
 
 
 def test_chat_list_item_animator_enter_transition_and_added_items_height():
@@ -166,32 +152,6 @@ def test_chat_list_item_animator_enter_transition_and_added_items_height():
     assert "cell.getTransitionParams().resetAnimation();" in content or "((ChatMessageCell) view).getTransitionParams().resetAnimation();" in content
 
 
-def test_metrolist_url_matcher_youtube_domains_and_endpoints():
-    matcher_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistUrlMatcher.java"
-    )
-    with open(matcher_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    assert 'host.equals("music.youtube.com") || host.endsWith(".music.youtube.com")' in content
-    assert "YT_PATH_PATTERN" in content
-
-
-def test_metrolist_client_innertube_clients_and_cipher_fallback():
-    client_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistClient.java"
-    )
-    with open(client_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    assert "ANDROID_TESTSUITE" in content
-    assert "TVHTML5_SIMPLY_EMBEDDED_PLAYER" in content
-    assert "signatureCipher" in content
-    assert "hlsManifestUrl" in content
-    assert 'fetchPlayerWithClient(videoId, "IOS", "20.03.02"' in content
-    assert 'MetrolistAuth.getInstance().getAuthorizationHeader(origin)' in content
-
-
 def test_video_player_modern_user_agent_and_hls_fallback():
     vp_path = os.path.join(
         REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "VideoPlayer.java"
@@ -204,17 +164,6 @@ def test_video_player_modern_user_agent_and_hls_fallback():
     assert '.contains(".m3u8")' in content
 
 
-def test_metrolist_controller_audio_url_resolution_and_profile_saving():
-    controller_path = os.path.join(
-        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "metrolist", "MetrolistController.java"
-    )
-    with open(controller_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    assert "MetrolistClient.Track resolved = MetrolistClient.getInstance().fetchPlayer(videoId);" in content
-    assert "conn.setRequestProperty(\"Referer\", \"https://music.youtube.com/\");" in content
-
-
 def test_video_player_streaming_and_duration_fallback():
     vp_path = os.path.join(
         REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "VideoPlayer.java"
@@ -222,12 +171,49 @@ def test_video_player_streaming_and_duration_fallback():
     with open(vp_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Progressive media factory for general video must not force SeekableFragmentsExtractorsFactory
-    assert "boolean isYoutube = uri != null && uri.getHost() != null" in content
+    # Progressive media factory must not reference SeekableFragmentsExtractorsFactory
+    assert "SeekableFragmentsExtractorsFactory" not in content
     assert "progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);" in content
 
     # getDuration fallback must check declared duration when duration <= 0
     assert "if (declared > 0) {\n            return declared;\n        }" in content
+
+
+def test_moltengram_passkey_controller_and_device_login():
+    pk_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "passkeys", "MoltenPasskeysController.java"
+    )
+    assert os.path.exists(pk_path), "MoltenPasskeysController.java must exist"
+    with open(pk_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert 'public static final String TOKEN_PREFIX = "mgpasskey:v1:";' in content
+    assert "public static boolean hasSavedDevicePasskeys(Context context)" in content
+    assert "public static boolean saveDevicePasskey(Context context, int account)" in content
+    assert "public static String exportPasskeyToken(Context context, int account)" in content
+    assert "public static void promptBiometricLogin(" in content
+    assert "public static void restorePasskey(" in content
+
+    login_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "LoginActivity.java"
+    )
+    with open(login_path, "r", encoding="utf-8") as f:
+        l_content = f.read()
+
+    assert "MoltenPasskeysController.hasSavedDevicePasskeys" in l_content
+    assert "MoltenPasskeysController.promptBiometricLogin" in l_content
+    assert "MoltenPasskeysController.isMoltenPasskeyToken" in l_content
+
+    activity_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "PasskeysActivity.java"
+    )
+    with open(activity_path, "r", encoding="utf-8") as f:
+        a_content = f.read()
+
+    assert "MoltenPasskeysController.getDevicePasskeyObject" in a_content
+    assert "MoltenPasskeysController.saveDevicePasskey" in a_content
+    assert "MoltenPasskeysController.showExportDialog" in a_content
+
 
 
 

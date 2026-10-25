@@ -87,10 +87,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int systemEqualizerRow;
     private int audioShadowRow;
 
-    private int metrolistHeaderRow;
-    private int metrolistAuthRow;
-    private int metrolistShadowRow;
-
     @Override
     protected String getKey() {
         return "player_settings";
@@ -136,11 +132,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         sleepTimerRow = addRow("sleepTimer");
         systemEqualizerRow = addRow("systemEqualizer");
         audioShadowRow = addRow();
-
-        // Metrolist & YouTube Music
-        metrolistHeaderRow = addRow("metrolistHeader");
-        metrolistAuthRow = addRow("metrolistAuth");
-        metrolistShadowRow = addRow();
     }
 
     @Override
@@ -324,8 +315,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } catch (Throwable t) {
                 FileLog.e(t);
             }
-        } else if (position == metrolistAuthRow) {
-            showMetrolistAuthDialog();
         }
     }
 
@@ -343,7 +332,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow || position == metrolistHeaderRow) {
+            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
@@ -351,10 +340,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow
-                    || position == metrolistAuthRow) {
+                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow) {
                 return TYPE_SETTINGS;
-            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow || position == metrolistShadowRow) {
+            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
@@ -371,8 +359,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setText(getString(R.string.OEAppearancePlayerLyricsHeader));
                 } else if (position == audioHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerAudioHeader));
-                } else if (position == metrolistHeaderRow) {
-                    cell.setText(getString(R.string.OEPlayerMetrolistHeader));
                 }
             } else if (type == TYPE_CHECK) {
                 TextCheckCell cell = (TextCheckCell) holder.itemView;
@@ -463,18 +449,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerSleepTimer), timerStatus, true);
                 } else if (position == systemEqualizerRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerEqualizer), false);
-                } else if (position == metrolistAuthRow) {
-                    int mode = app.exteraless.metrolist.MetrolistAuth.getInstance().getAuthMode();
-                    String val;
-                    if (mode == app.exteraless.metrolist.MetrolistAuth.MODE_COOKIE) {
-                        val = getString(R.string.OEPlayerMetrolistCookies);
-                    } else if (mode == app.exteraless.metrolist.MetrolistAuth.MODE_GOOGLE_OAUTH) {
-                        String email = app.exteraless.metrolist.MetrolistAuth.getInstance().getAccountEmail();
-                        val = !android.text.TextUtils.isEmpty(email) ? email : getString(R.string.OEPlayerMetrolistGoogle);
-                    } else {
-                        val = getString(R.string.OEPlayerMetrolistGuest);
-                    }
-                    cell.setTextAndValue(getString(R.string.OEPlayerMetrolistAuth), val, false);
                 }
             }
         }
@@ -783,92 +757,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         builder.setTitle(title);
         builder.setItems(options, (dialog, which) -> {
             onSelected.run(which);
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        showDialog(builder.create());
-    }
-
-    private void showMetrolistAuthDialog() {
-        if (getParentActivity() == null) return;
-        CharSequence[] options = {
-                getString(R.string.OEPlayerMetrolistGuest),
-                getString(R.string.OEPlayerMetrolistCookies),
-                getString(R.string.OEPlayerMetrolistGoogle)
-        };
-        showSelector(getString(R.string.OEPlayerMetrolistAuth), options, which -> {
-            if (which == 0) {
-                app.exteraless.metrolist.MetrolistAuth.getInstance().setAuthMode(app.exteraless.metrolist.MetrolistAuth.MODE_GUEST);
-                if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
-            } else if (which == 1) {
-                showMetrolistCookieInputDialog();
-            } else if (which == 2) {
-                showMetrolistOAuthInputDialog();
-            }
-        });
-    }
-
-    private void showMetrolistCookieInputDialog() {
-        if (getParentActivity() == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
-        builder.setTitle(getString(R.string.OEPlayerMetrolistCookieDialogTitle));
-
-        final EditTextBoldCursor input = new EditTextBoldCursor(getParentActivity());
-        input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        input.setHint(getString(R.string.OEPlayerMetrolistCookieDialogHint));
-        input.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        input.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
-        input.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        input.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
-        input.setMaxLines(6);
-        input.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getRawCookies());
-
-        FrameLayout frameLayout = new FrameLayout(getParentActivity());
-        frameLayout.setPadding(dp(24), dp(12), dp(24), dp(8));
-        frameLayout.addView(input, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-        builder.setView(frameLayout);
-
-        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
-            String text = input.getText().toString().trim();
-            app.exteraless.metrolist.MetrolistAuth.getInstance().setCookies(text);
-            if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        showDialog(builder.create());
-    }
-
-    private void showMetrolistOAuthInputDialog() {
-        if (getParentActivity() == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
-        builder.setTitle(getString(R.string.OEPlayerMetrolistGoogle));
-
-        LinearLayout layout = new LinearLayout(getParentActivity());
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(24), dp(12), dp(24), dp(8));
-
-        final EditTextBoldCursor emailInput = new EditTextBoldCursor(getParentActivity());
-        emailInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        emailInput.setHint("Email / Login");
-        emailInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        emailInput.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
-        emailInput.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        emailInput.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getAccountEmail());
-        layout.addView(emailInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 12));
-
-        final EditTextBoldCursor tokenInput = new EditTextBoldCursor(getParentActivity());
-        tokenInput.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        tokenInput.setHint("OAuth Token (Bearer)");
-        tokenInput.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        tokenInput.setHintColor(Theme.getColor(Theme.key_dialogTextHint, getResourceProvider()));
-        tokenInput.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider()));
-        tokenInput.setText(app.exteraless.metrolist.MetrolistAuth.getInstance().getOAuthToken());
-        layout.addView(tokenInput, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        builder.setView(layout);
-        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
-            String email = emailInput.getText().toString().trim();
-            String token = tokenInput.getText().toString().trim();
-            app.exteraless.metrolist.MetrolistAuth.getInstance().setOAuthToken(token, email, "");
-            if (listAdapter != null) listAdapter.notifyItemChanged(metrolistAuthRow);
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());

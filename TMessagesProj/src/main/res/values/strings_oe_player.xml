@@ -136,14 +136,6 @@
     <string name="OEAppearancePlayerLyricsTranslating">Translating lyrics...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Lyrics translated</string>
 
-    <!-- Metrolist & YouTube Music -->
-    <string name="OEPlayerMetrolistHeader">YouTube Music &amp; Metrolist</string>
-    <string name="OEPlayerMetrolistAuth">Authorization</string>
-    <string name="OEPlayerMetrolistGuest">Guest mode</string>
-    <string name="OEPlayerMetrolistCookies">Cookie login (cookies.txt)</string>
-    <string name="OEPlayerMetrolistGoogle">Google account</string>
-    <string name="OEPlayerMetrolistCookieDialogTitle">Import YouTube Music cookies</string>
-    <string name="OEPlayerMetrolistCookieDialogHint">Paste cookies.txt or cookie string</string>
     <string name="OEPlayerLoadingTrack">Loading track...</string>
     <string name="OEPlayerLoadError">Failed to load track</string>
     <string name="OEPlayerAddedToSaved">Saved to Saved Messages</string>

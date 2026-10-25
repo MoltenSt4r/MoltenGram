@@ -16,8 +16,6 @@ import android.widget.FrameLayout;
 
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.Md3AvatarShapes;
-import app.exteraless.metrolist.MetrolistClient;
-import app.exteraless.metrolist.SongRecMatcher;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageLocation;
@@ -251,28 +249,6 @@ public class CoverImage extends FrameLayout {
             } else {
                 imageView.setImageDrawable(null);
             }
-        }
-
-        // If static cover is missing, match via SongRec / Innertube to get regular thumbnail cover
-        if (noteSizeDp >= 60 && !hasCover) {
-            final MessageObject reqMsg = messageObject;
-            SongRecMatcher.getInstance().findCover(reqMsg, new SongRecMatcher.MatchCallback() {
-                @Override
-                public void onMatched(String videoUrl, MetrolistClient.Track track) {
-                    AndroidUtilities.runOnUIThread(() -> {
-                        if (reqMsg != message) {
-                            return;
-                        }
-                        if (!imageView.getImageReceiver().hasBitmapImage() && track != null && !TextUtils.isEmpty(track.thumbnailUrl)) {
-                            imageView.setImage(track.thumbnailUrl, null, null);
-                        }
-                    });
-                }
-
-                @Override
-                public void onNotFound() {
-                }
-            });
         }
     }
 

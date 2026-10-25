@@ -173,16 +173,6 @@ public final class ExtendedDefaultDataSource implements DataSource {
             uri = mtprotoUris.get(docId);
             dataSpec = dataSpec.buildUpon().setUri(uri).build();
         }
-        if (uri != null && uri.getHost() != null && uri.getHost().contains("googlevideo.com")) {
-            Map<String, String> headers = new HashMap<>(dataSpec.httpRequestHeaders);
-            if (!headers.containsKey("Referer")) {
-                headers.put("Referer", "https://music.youtube.com/");
-            }
-            if (!headers.containsKey("Origin")) {
-                headers.put("Origin", "https://music.youtube.com/");
-            }
-            dataSpec = dataSpec.buildUpon().setHttpRequestHeaders(headers).build();
-        }
         // Choose the correct source for the scheme.
         String scheme = uri.getScheme();
         if (Util.isLocalFileUri(uri)) {

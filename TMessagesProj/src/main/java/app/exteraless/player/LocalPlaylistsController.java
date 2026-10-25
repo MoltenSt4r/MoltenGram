@@ -87,8 +87,8 @@ public class LocalPlaylistsController {
         public String attachPath = "";
         public byte[] fileReference;
 
-        // Extended fields for external sources (YouTube Music / Metrolist)
-        public String source = "telegram"; // "telegram", "youtube", "metrolist", "local"
+        // Extended fields for external sources
+        public String source = "telegram"; // "telegram", "local", "external"
         public String streamUrl = "";
         public String coverUrl = "";
         public String externalId = "";
@@ -132,7 +132,7 @@ public class LocalPlaylistsController {
         }
 
         public boolean isExternal() {
-            return "youtube".equalsIgnoreCase(source) || "metrolist".equalsIgnoreCase(source);
+            return "external".equalsIgnoreCase(source);
         }
 
         public boolean isTelegram() {

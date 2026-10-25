@@ -136,14 +136,6 @@
     <string name="OEAppearancePlayerLyricsTranslating">Перевод текста...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Текст переведён</string>
 
-    <!-- Metrolist & YouTube Music -->
-    <string name="OEPlayerMetrolistHeader">YouTube Music и Metrolist</string>
-    <string name="OEPlayerMetrolistAuth">Авторизация</string>
-    <string name="OEPlayerMetrolistGuest">Гостевой режим</string>
-    <string name="OEPlayerMetrolistCookies">Вход по cookie (cookies.txt)</string>
-    <string name="OEPlayerMetrolistGoogle">Google аккаунт</string>
-    <string name="OEPlayerMetrolistCookieDialogTitle">Импорт cookies YouTube Music</string>
-    <string name="OEPlayerMetrolistCookieDialogHint">Вставьте cookies.txt или строку куки</string>
     <string name="OEPlayerLoadingTrack">Загрузка трека...</string>
     <string name="OEPlayerLoadError">Не удалось загрузить трек</string>
     <string name="OEPlayerAddedToSaved">Сохранено в Избранное</string>

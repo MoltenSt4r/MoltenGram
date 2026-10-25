@@ -439,18 +439,10 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
                     mediaSource = hlsMediaSourceFactory.createMediaSource(mediaItem);
                     break;
                 }
-                boolean isYoutube = uri != null && uri.getHost() != null && (uri.getHost().contains("googlevideo.com") || uri.getHost().contains("youtube.com"));
-                if (isYoutube) {
-                    mediaSource = new ProgressiveMediaSource.Factory(
-                        mediaDataSourceFactory,
-                        new app.exteraless.player.SeekableFragmentsExtractorsFactory()
-                    ).createMediaSource(mediaItem);
-                } else {
-                    if (progressiveMediaSourceFactory == null) {
-                        progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);
-                    }
-                    mediaSource = progressiveMediaSourceFactory.createMediaSource(mediaItem);
+                if (progressiveMediaSourceFactory == null) {
+                    progressiveMediaSourceFactory = new ProgressiveMediaSource.Factory(mediaDataSourceFactory);
                 }
+                mediaSource = progressiveMediaSourceFactory.createMediaSource(mediaItem);
                 break;
         }
         return withExternalSubtitle ? maybeWrapWithExternalSubtitle(mediaSource) : mediaSource;
