@@ -9,6 +9,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -21,8 +22,10 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
+import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.messenger.PasskeysController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
@@ -114,6 +117,7 @@ public class PasskeysActivity extends BaseFragment {
             addPasskeyRow = items.size();
             items.add(UItem.asButton(-1, R.drawable.menu_passkey_add, getString(R.string.PasskeyAdd)).accent());
             items.add(UItem.asButton(-3, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyCreateQr)).accent());
+            items.add(UItem.asButton(-4, R.drawable.msg_permissions, getString(R.string.PasskeyCompleteRegistration)).accent());
         }
         items.add(UItem.asButton(-2, R.drawable.menu_settings, getString(R.string.Settings)).accent());
         items.add(UItem.asShadow(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.PasskeyInfo), () -> {
@@ -192,6 +196,8 @@ public class PasskeysActivity extends BaseFragment {
                                         () -> Browser.openUrl(getContext(), KEEPASSDX_URL)
                                 )
                         ).show();
+                    } else if ("PROVIDER_ERROR".equalsIgnoreCase(error) || PasskeysController.isProviderOrDalError(error)) {
+                        showPasskeyProviderErrorDialog();
                     } else {
                         BulletinFactory.of(this).showForError(error, true);
                     }
@@ -204,12 +210,29 @@ public class PasskeysActivity extends BaseFragment {
             PasskeysController.openSettings(getParentActivity());
         } else if (item.id == -3) {
             showPasskeyQrDialog();
+        } else if (item.id == -4) {
+            showCompleteRegistrationDialog();
         } else if (item.object != null) {
             openMenu(view);
         }
     }
 
-    private void showPasskeyQrDialog() {
+    public void showPasskeyProviderErrorDialog() {
+        if (getContext() == null) return;
+        new AlertDialog.Builder(getContext())
+                .setTitle(getString(R.string.PasskeyProviderErrorTitle))
+                .setMessage(getString(R.string.PasskeyProviderErrorMessage))
+                .setPositiveButton(getString(R.string.PasskeyShowQr), (di, w) -> {
+                    showPasskeyQrDialog();
+                })
+                .setNeutralButton(getString(R.string.PasskeyEnterResponse), (di, w) -> {
+                    showCompleteRegistrationDialog();
+                })
+                .setNegativeButton(getString(R.string.Cancel), null)
+                .show();
+    }
+
+    public void showPasskeyQrDialog() {
         if (getContext() == null) return;
         final AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
         progressDialog.showDelayed(500);
@@ -245,9 +268,97 @@ public class PasskeysActivity extends BaseFragment {
                     AndroidUtilities.addToClipboard(qrData);
                     BulletinFactory.of(this).createCopyBulletin(getString(R.string.LinkCopied)).show();
                 });
+                builder.setNegativeButton(getString(R.string.PasskeyEnterResponse), (di, w) -> {
+                    showCompleteRegistrationDialog();
+                });
                 showDialog(builder.create());
             }
         );
+    }
+
+    public void showCompleteRegistrationDialog() {
+        if (getContext() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
+        builder.setTitle(getString(R.string.PasskeyCompleteRegistration));
+        builder.setMessage(getString(R.string.PasskeyCompleteRegistrationDescription));
+
+        LinearLayout container = new LinearLayout(getContext());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+
+        final EditTextBoldCursor editText = new EditTextBoldCursor(getContext());
+        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        editText.setHint(getString(R.string.PasskeyInputHint));
+        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
+        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
+        editText.setSingleLine(false);
+        editText.setMaxLines(4);
+        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+        TextView pasteBtn = new TextView(getContext());
+        pasteBtn.setText(getString(R.string.Paste));
+        pasteBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
+        pasteBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        pasteBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+        pasteBtn.setOnClickListener(v -> {
+            try {
+                android.content.ClipboardManager cm = (android.content.ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
+                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
+                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
+                    if (text != null) {
+                        editText.setText(text.toString().trim());
+                        editText.setSelection(editText.getText().length());
+                    }
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+        container.addView(pasteBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        TextView scanBtn = new TextView(getContext());
+        scanBtn.setText("• " + getString(R.string.PasskeyScanQr));
+        scanBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
+        scanBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        scanBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
+        scanBtn.setOnClickListener(v -> {
+            openCameraScanActivityForPasskey();
+        });
+        container.addView(scanBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        builder.setView(container);
+        builder.setPositiveButton(getString(R.string.Done), (di, w) -> {
+            String input = editText.getText().toString().trim();
+            if (!input.isEmpty()) {
+                handlePasskeyRegistrationResponse(input);
+            }
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    public void openCameraScanActivityForPasskey() {
+        CameraScanActivity.showAsSheet(this, true, CameraScanActivity.TYPE_QR_PASSKEY, new CameraScanActivity.CameraScanActivityDelegate() {
+            @Override
+            public void didFindQr(String text) {
+                if (text != null && !text.isEmpty()) {
+                    handlePasskeyRegistrationResponse(text);
+                }
+            }
+        });
+    }
+
+    public void handlePasskeyRegistrationResponse(String input) {
+        if (input == null || input.isEmpty() || getContext() == null) return;
+        PasskeysController.finishPasskeyRegistrationWithJson(getContext(), currentAccount, input, null, (passkey, err) -> {
+            if (err != null) {
+                BulletinFactory.of(this).showForError(err, true);
+            } else if (passkey != null) {
+                MessagesController.getInstance(currentAccount).removeSuggestion(0, "SETUP_PASSKEY");
+                added(passkey);
+            }
+        });
     }
 
     public void added(TL_account.Passkey passkey) {
@@ -447,6 +558,17 @@ public class PasskeysActivity extends BaseFragment {
                                         () -> Browser.openUrl(context, KEEPASSDX_URL)
                                 )
                         ).show();
+                    } else if ("PROVIDER_ERROR".equalsIgnoreCase(error) || PasskeysController.isProviderOrDalError(error)) {
+                        sheet.dismiss();
+                        if (fragment instanceof PasskeysActivity) {
+                            ((PasskeysActivity) fragment).showPasskeyProviderErrorDialog();
+                        } else {
+                            new AlertDialog.Builder(context)
+                                    .setTitle(context.getString(R.string.PasskeyProviderErrorTitle))
+                                    .setMessage(context.getString(R.string.PasskeyProviderErrorMessage))
+                                    .setPositiveButton(context.getString(R.string.OK), null)
+                                    .show();
+                        }
                     } else {
                         BulletinFactory.of(sheet.topBulletinContainer, sheet.getResourcesProvider()).showForError(error);
                     }

@@ -3596,8 +3596,12 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
-                    // if (BuildVars.DEBUG_VERSION)
-                        BulletinFactory.of(LoginActivity.this).showForError(err);
+                    if (clickedButton && PasskeysController.isProviderOrDalError(err)) {
+                        showPasskeyLoginDialog();
+                    } else {
+                        // if (BuildVars.DEBUG_VERSION)
+                            BulletinFactory.of(LoginActivity.this).showForError(err);
+                    }
                     return;
                 }
                 if (authObject instanceof TLRPC.TL_auth_authorization) {

@@ -300,6 +300,12 @@
     <string name="PasskeyUnsupportedTitle">Неподдерживаемый менеджер паролей</string>
     <string name="PasskeyUnsupportedMessage">Попробуйте другие менеджеры паролей. Например, Bitwarden или KeePassDX.</string>
     <string name="PasskeyNoCredentialAvailable">Нет действительных учётных данных.</string>
+    <string name="PasskeyProviderErrorTitle">Ключ доступа не сохранён</string>
+    <string name="PasskeyProviderErrorMessage">Менеджер паролей (Bitwarden, KeePassDX и др.) не смог напрямую сохранить ключ доступа из-за ограничений проверки Digital Asset Links в Android. Вы можете создать QR-код для сканирования или экспортировать его вручную.</string>
+    <string name="PasskeyShowQr">Показать QR-код</string>
+    <string name="PasskeyCompleteRegistration">Завершить регистрацию ключа</string>
+    <string name="PasskeyCompleteRegistrationDescription">Вставьте ответ в формате JSON или данные учётных данных, созданные вашим менеджером паролей.</string>
+    <string name="PasskeyEnterResponse">Ввести ответ</string>
     <string name="BookmarksManager">Закладки</string>
     <string name="AddBookmark">Добавить в закладки</string>
     <string name="RemoveBookmark">Удалить закладку</string>

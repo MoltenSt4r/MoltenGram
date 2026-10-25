@@ -90,7 +90,27 @@ public class PasskeysController {
                 String clientDataJSON;
                 try {
                     final JSONObject obj = new JSONObject(res.options.data);
-                    final JSONObject publicKeyObj = obj.getJSONObject("publicKey");
+                    final JSONObject publicKeyObj = obj.has("publicKey") ? obj.getJSONObject("publicKey") : obj;
+
+                    // Ensure required WebAuthn L3 fields for password managers (Bitwarden, KeePassDX, Proton)
+                    if (!publicKeyObj.has("authenticatorSelection")) {
+                        JSONObject authSelection = new JSONObject();
+                        authSelection.put("residentKey", "preferred");
+                        authSelection.put("requireResidentKey", false);
+                        authSelection.put("userVerification", "preferred");
+                        publicKeyObj.put("authenticatorSelection", authSelection);
+                    } else {
+                        JSONObject authSelection = publicKeyObj.getJSONObject("authenticatorSelection");
+                        if (!authSelection.has("userVerification")) {
+                            authSelection.put("userVerification", "preferred");
+                        }
+                    }
+                    if (!publicKeyObj.has("attestation")) {
+                        publicKeyObj.put("attestation", "none");
+                    }
+                    if (!publicKeyObj.has("timeout")) {
+                        publicKeyObj.put("timeout", 60000);
+                    }
                     requestJson = publicKeyObj.toString();
 
                     final JSONObject rpObj = publicKeyObj.getJSONObject("rp");
@@ -110,85 +130,183 @@ public class PasskeysController {
                 try {
                     credentialManager.createCredential(context, credentialRequest, ktxCallback((res2, err2) -> {
                         if (err2 instanceof CreateCredentialCancellationException || err2 instanceof CreateCredentialInterruptedException) {
-                            AndroidUtilities.runOnUIThread(() -> {
-                                done.run(null, "CANCELLED");
-                            });
+                            AndroidUtilities.runOnUIThread(() -> done.run(null, "CANCELLED"));
                             return;
                         } else if (err2 instanceof CreateCredentialNoCreateOptionException) {
-                            AndroidUtilities.runOnUIThread(() -> {
-                                done.run(null, "EMPTY");
-                            });
+                            AndroidUtilities.runOnUIThread(() -> done.run(null, "EMPTY"));
                             return;
                         } else if (err2 != null) {
                             FileLog.e(err2);
-                            AndroidUtilities.runOnUIThread(() -> {
-                                done.run(null, err2.getMessage());
-                            });
-                            return;
-                        }
-
-                        final TL_account.registerPasskey req2 = new TL_account.registerPasskey();
-
-                        try {
-                            final String responseJson = res2.getData().getString("androidx.credentials.BUNDLE_KEY_REGISTRATION_RESPONSE_JSON");
-                            final JSONObject json = new JSONObject(responseJson);
-
-                            req2.credential = new TL_account.inputPasskeyCredentialPublicKey();
-                            req2.credential.id = json.getString("id");
-                            req2.credential.raw_id = json.getString("rawId");
-
-                            final JSONObject response = json.getJSONObject("response");
-                            final TL_account.inputPasskeyResponseRegister passkeyResponse = new TL_account.inputPasskeyResponseRegister();
-                            passkeyResponse.client_data = new TLRPC.TL_dataJSON();
-                            if (response.has("clientDataJSON")) {
+                            // Many 3rd party providers (Bitwarden, KeePassDX, Proton Pass) fail when clientDataHash is provided.
+                            // Attempt a graceful retry without clientDataHash using the standard request if not cancelled and not DAL error.
+                            if (clientDataHash != null && !isProviderOrDalError(err2)) {
                                 try {
-                                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
-                                    passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : clientDataJSON;
-                                } catch (Exception ignored) {
-                                    passkeyResponse.client_data.data = clientDataJSON;
+                                    final CreatePublicKeyCredentialRequest retryRequest =
+                                        new CreatePublicKeyCredentialRequest(requestJson);
+                                    credentialManager.createCredential(context, retryRequest, ktxCallback((resRetry, errRetry) -> {
+                                        if (errRetry != null) {
+                                            FileLog.e(errRetry);
+                                            handleCreateError(errRetry, done);
+                                        } else {
+                                            processCreateResponse(context, currentAccount, resRetry, clientDataJSON, done);
+                                        }
+                                    }));
+                                    return;
+                                } catch (Exception retryEx) {
+                                    FileLog.e(retryEx);
                                 }
-                            } else {
-                                passkeyResponse.client_data.data = clientDataJSON;
                             }
-                            passkeyResponse.attestation_object = safeDecodeBase64(response.getString("attestationObject"));
-
-                            FileLog.d("AAGUID: " + bytesToHex(Arrays.copyOfRange(passkeyResponse.attestation_object, 67, 67 + 16)));
-
-                            req2.credential.response = passkeyResponse;
-                        } catch (Exception e) {
-                            FileLog.e(e);
-                            AndroidUtilities.runOnUIThread(() -> {
-                                done.run(null, e.getMessage());
-                            });
+                            handleCreateError(err2, done);
                             return;
                         }
 
-                        AndroidUtilities.runOnUIThread(() -> {
-                            final AlertDialog progressDialog2 = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
-                            progressDialog2.showDelayed(500);
-
-                            final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req2, AndroidUtilities::runOnUIThread, (passkey, err3) -> {
-                                progressDialog2.dismiss();
-                                if (err3 != null) {
-                                    done.run(null, err3.text);
-                                } else {
-                                    done.run(passkey, null);
-                                }
-                            });
-                            progressDialog2.setOnCancelListener(d -> {
-                                ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
-                                done.run(null, "CANCELLED");
-                            });
-                        });
+                        processCreateResponse(context, currentAccount, res2, clientDataJSON, done);
                     }));
                 } catch (Exception e) {
                     FileLog.e(e);
-                    AndroidUtilities.runOnUIThread(() -> {
-                        done.run(null, e.getMessage());
-                    });
+                    handleCreateError(e, done);
                 }
             }
         );
+    }
+
+    public static void processCreateResponse(Context context, int currentAccount, CreateCredentialResponse res2, String clientDataJSON, Utilities.Callback2<TL_account.Passkey, String> done) {
+        try {
+            final String responseJson = res2.getData().getString("androidx.credentials.BUNDLE_KEY_REGISTRATION_RESPONSE_JSON");
+            finishPasskeyRegistrationWithJson(context, currentAccount, responseJson, clientDataJSON, done);
+        } catch (Exception e) {
+            FileLog.e(e);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (done != null) done.run(null, e.getMessage());
+            });
+        }
+    }
+
+    public static void finishPasskeyRegistrationWithJson(Context context, int currentAccount, String responseJson, String fallbackClientDataJSON, Utilities.Callback2<TL_account.Passkey, String> done) {
+        if (responseJson == null || responseJson.trim().isEmpty()) {
+            if (done != null) {
+                AndroidUtilities.runOnUIThread(() -> done.run(null, "EMPTY"));
+            }
+            return;
+        }
+
+        String cleaned = responseJson.trim();
+        if (cleaned.startsWith("fido:/")) {
+            try {
+                byte[] decoded = safeDecodeBase64(cleaned.substring(6));
+                cleaned = new String(decoded, StandardCharsets.UTF_8).trim();
+            } catch (Exception ignored) {
+            }
+        }
+
+        final TL_account.registerPasskey req2 = new TL_account.registerPasskey();
+
+        try {
+            final JSONObject root = new JSONObject(cleaned);
+            final JSONObject target = root.has("credential") ? root.getJSONObject("credential") : root;
+
+            req2.credential = new TL_account.inputPasskeyCredentialPublicKey();
+            req2.credential.id = target.optString("id", "");
+            req2.credential.raw_id = target.optString("rawId", req2.credential.id);
+
+            final JSONObject response = target.has("response") ? target.getJSONObject("response") : target;
+            final TL_account.inputPasskeyResponseRegister passkeyResponse = new TL_account.inputPasskeyResponseRegister();
+            passkeyResponse.client_data = new TLRPC.TL_dataJSON();
+            if (response.has("clientDataJSON")) {
+                try {
+                    String decoded = new String(safeDecodeBase64(response.getString("clientDataJSON")), StandardCharsets.UTF_8);
+                    passkeyResponse.client_data.data = decoded != null && !decoded.isEmpty() ? decoded : fallbackClientDataJSON;
+                } catch (Exception ignored) {
+                    passkeyResponse.client_data.data = fallbackClientDataJSON;
+                }
+            } else {
+                passkeyResponse.client_data.data = fallbackClientDataJSON;
+            }
+
+            String attestationStr = response.optString("attestationObject", target.optString("attestationObject", ""));
+            passkeyResponse.attestation_object = safeDecodeBase64(attestationStr);
+
+            if (passkeyResponse.attestation_object != null && passkeyResponse.attestation_object.length >= 83) {
+                FileLog.d("AAGUID: " + bytesToHex(Arrays.copyOfRange(passkeyResponse.attestation_object, 67, 67 + 16)));
+            }
+
+            req2.credential.response = passkeyResponse;
+        } catch (Exception e) {
+            FileLog.e(e);
+            AndroidUtilities.runOnUIThread(() -> {
+                if (done != null) done.run(null, e.getMessage());
+            });
+            return;
+        }
+
+        AndroidUtilities.runOnUIThread(() -> {
+            final AlertDialog progressDialog2 = new AlertDialog(context, AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog2.showDelayed(500);
+
+            final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req2, AndroidUtilities::runOnUIThread, (passkey, err3) -> {
+                progressDialog2.dismiss();
+                if (done != null) {
+                    if (err3 != null) {
+                        done.run(null, err3.text);
+                    } else {
+                        done.run(passkey, null);
+                    }
+                }
+            });
+            progressDialog2.setOnCancelListener(d -> {
+                ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
+                if (done != null) done.run(null, "CANCELLED");
+            });
+        });
+    }
+
+    public static boolean isProviderOrDalError(String error) {
+        if (error == null || error.isEmpty()) return false;
+        String lower = error.toLowerCase(Locale.ROOT);
+        return lower.contains("будет сохранен")
+                || lower.contains("будет сохранён")
+                || lower.contains("will be saved")
+                || lower.contains("хранилищ")
+                || lower.contains("vault")
+                || lower.contains("bitwarden")
+                || lower.contains("keepass")
+                || lower.contains("proton")
+                || lower.contains("1password")
+                || lower.contains("provider_")
+                || lower.contains("provider error")
+                || lower.contains("securityerror")
+                || lower.contains("rp id")
+                || lower.contains("cannot be validated")
+                || lower.contains("asset links")
+                || lower.contains("assetlinks")
+                || lower.contains("domexception")
+                || lower.contains("customexception")
+                || lower.contains("notallowederror");
+    }
+
+    public static boolean isProviderOrDalError(Throwable throwable) {
+        if (throwable == null) return false;
+        if (throwable instanceof CreateCredentialCustomException) return true;
+        String className = throwable.getClass().getName();
+        if (className.contains("DomException") || className.contains("CustomException") || className.contains("ProviderConfigurationException")) return true;
+        return isProviderOrDalError(throwable.getMessage());
+    }
+
+    public static void handleCreateError(Throwable err, Utilities.Callback2<TL_account.Passkey, String> done) {
+        if (err instanceof CreateCredentialCancellationException || err instanceof CreateCredentialInterruptedException) {
+            AndroidUtilities.runOnUIThread(() -> done.run(null, "CANCELLED"));
+            return;
+        }
+        if (err instanceof CreateCredentialNoCreateOptionException) {
+            AndroidUtilities.runOnUIThread(() -> done.run(null, "EMPTY"));
+            return;
+        }
+        if (isProviderOrDalError(err)) {
+            AndroidUtilities.runOnUIThread(() -> done.run(null, "PROVIDER_ERROR"));
+            return;
+        }
+        String message = err != null ? err.getMessage() : "";
+        AndroidUtilities.runOnUIThread(() -> done.run(null, message != null && !message.isEmpty() ? message : "PROVIDER_ERROR"));
     }
 
     public static Runnable login(Context context, int currentAccount, boolean clickedButton, Utilities.Callback3<Long, TLRPC.auth_Authorization, String> done) {
@@ -296,6 +414,10 @@ public class PasskeysController {
     public static byte[] safeDecodeBase64(String str) {
         if (str == null || str.isEmpty()) {
             return new byte[0];
+        }
+        str = str.trim();
+        if (str.startsWith("\"") && str.endsWith("\"") && str.length() >= 2) {
+            str = str.substring(1, str.length() - 1);
         }
         try {
             return Base64.decode(str, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);

@@ -145,6 +145,12 @@ def test_localization_strings():
         "BotTokenLoginDescription",
         "BotTokenHint",
         "BotTokenInvalid",
+        "PasskeyProviderErrorTitle",
+        "PasskeyProviderErrorMessage",
+        "PasskeyShowQr",
+        "PasskeyCompleteRegistration",
+        "PasskeyCompleteRegistrationDescription",
+        "PasskeyEnterResponse",
     ]
 
     for xml_path, lang in [(STRINGS_EN, "en"), (STRINGS_RU, "ru")]:
@@ -216,3 +222,89 @@ def test_client_data_json_structure():
     assert parsed["crossOrigin"] is False
     assert parsed["type"] == "webauthn.get"
     assert parsed["origin"] == "telegram.org"
+
+
+def test_passkey_creation_provider_error_handling():
+    """Verify PasskeysController and PasskeysActivity handle Bitwarden/KeePass/Proton DAL errors and subtitles."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        controller_content = f.read()
+
+    with open(PASSKEYS_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
+        activity_content = f.read()
+
+    with open(LOGIN_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
+        login_content = f.read()
+
+    # PasskeysController methods
+    assert "public static boolean isProviderOrDalError(String error)" in controller_content
+    assert "public static boolean isProviderOrDalError(Throwable throwable)" in controller_content
+    assert "public static void handleCreateError" in controller_content
+    assert "processCreateResponse" in controller_content
+    assert "finishPasskeyRegistrationWithJson" in controller_content
+    assert "retryRequest" in controller_content or "CreatePublicKeyCredentialRequest(requestJson)" in controller_content
+    assert "authenticatorSelection" in controller_content
+
+    # Check that isProviderOrDalError matches the Russian Bitwarden screenshot phrase and English equivalents
+    bitwarden_phrases = [
+        "будет сохранен",
+        "будет сохранён",
+        "will be saved",
+        "хранилищ",
+        "vault",
+        "bitwarden",
+        "keepass",
+        "proton",
+        "provider_",
+        "securityerror",
+        "rp id",
+        "cannot be validated",
+        "asset links",
+        "domexception",
+        "customexception",
+        "notallowederror",
+    ]
+    for phrase in bitwarden_phrases:
+        assert phrase in controller_content.lower()
+
+    # Check PasskeysActivity error routing and dialog
+    assert "PasskeysController.isProviderOrDalError" in activity_content
+    assert "showPasskeyProviderErrorDialog()" in activity_content
+    assert "PasskeyProviderErrorTitle" in activity_content
+    assert "PasskeyProviderErrorMessage" in activity_content
+    assert "showCompleteRegistrationDialog()" in activity_content
+    assert "openCameraScanActivityForPasskey()" in activity_content
+    assert "handlePasskeyRegistrationResponse" in activity_content
+    assert "PasskeyCompleteRegistration" in activity_content
+    assert "PasskeyEnterResponse" in activity_content
+
+    # Check LoginActivity error routing
+    assert "PasskeysController.isProviderOrDalError" in login_content
+
+
+def test_bitwarden_screenshot_error_detection():
+    """Verify exact strings from user screenshot and real-world provider errors match isProviderOrDalError patterns."""
+    with open(PASSKEYS_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Extract all string literals checked in isProviderOrDalError(String error)
+    match = re.search(r"public static boolean isProviderOrDalError\(String error\)\s*\{(.*?)\}", content, re.DOTALL)
+    assert match is not None, "isProviderOrDalError method body not found"
+    body = match.group(1)
+    patterns = re.findall(r'contains\("([^"]+)"\)', body)
+    assert len(patterns) >= 10, f"Expected at least 10 patterns, got {len(patterns)}"
+
+    test_inputs = [
+        "Неизвестная ошибка: Ваш ключ доступа будет сохранен в вашем хранилище Bitwarden",
+        "Ваш ключ доступа будет сохранён в вашем хранилище Bitwarden",
+        "Your passkey will be saved in your Bitwarden vault",
+        "SecurityError: The operation is insecure.",
+        "SecurityError: RP ID cannot be validated",
+        "Asset Links verification failed for telegram.org",
+        "androidx.credentials.exceptions.CreateCredentialCustomException: DOMException: NotAllowedError",
+        "CreateCredentialProviderConfigurationException: Provider error",
+    ]
+
+    for err_msg in test_inputs:
+        lower = err_msg.lower()
+        matched = any(p in lower for p in patterns)
+        assert matched, f"Error message '{err_msg}' was not detected as a provider/DAL error by patterns: {patterns}"
