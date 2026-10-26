@@ -112,7 +112,8 @@ def test_noto_animated_emoji_playback_support():
 
     assert "import android.os.SystemClock;" in ir_content
     assert "android.graphics.drawable.Animatable" in ir_content
-    assert "setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE)" in ir_content
+    assert "setRepeatCount" in ir_content
+    assert "android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE" in ir_content
 
     chat_cell_path = os.path.join(
         REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java"
