@@ -455,19 +455,8 @@ public final class GlyphController {
      */
     public void playPhone1BurstEffect(Context context) {
         handler.post(() -> {
-            if (!supported) {
+            if (!ensureReady()) {
                 return;
-            }
-            if (!stripSessionOpen && !initialized) {
-                Context appCtx = ApplicationLoader.applicationContext;
-                if (appCtx != null) {
-                    try {
-                        initStrip(appCtx);
-                        initialized = true;
-                    } catch (Throwable t) {
-                        FileLog.e(t);
-                    }
-                }
             }
             if (stripManager != null && stripSessionOpen) {
                 try {
