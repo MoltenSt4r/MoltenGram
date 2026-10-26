@@ -813,23 +813,25 @@ public class MoltenPasskeysController {
         System.arraycopy(credId, 0, authData, ap, credId.length); ap += credId.length;
         System.arraycopy(cose, 0, authData, ap, cose.length);
 
-        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-        baos.write(0xa3);
-        baos.write(new byte[]{0x63, 'f', 'm', 't'});
-        baos.write(new byte[]{0x64, 'n', 'o', 'n', 'e'});
-        baos.write(new byte[]{0x67, 'a', 't', 't', 'S', 't', 'm', 't'});
-        baos.write(0xa0);
-        baos.write(new byte[]{0x68, 'a', 'u', 't', 'h', 'D', 'a', 't', 'a'});
+        int headerLen = 1 + 4 + 5 + 8 + 1 + 9 + (authDataLen < 256 ? 2 : 3);
+        byte[] res = new byte[headerLen + authDataLen];
+        int p = 0;
+        res[p++] = (byte) 0xa3;
+        res[p++] = 0x63; res[p++] = 'f'; res[p++] = 'm'; res[p++] = 't';
+        res[p++] = 0x64; res[p++] = 'n'; res[p++] = 'o'; res[p++] = 'n'; res[p++] = 'e';
+        res[p++] = 0x67; res[p++] = 'a'; res[p++] = 't'; res[p++] = 't'; res[p++] = 'S'; res[p++] = 't'; res[p++] = 'm'; res[p++] = 't';
+        res[p++] = (byte) 0xa0;
+        res[p++] = 0x68; res[p++] = 'a'; res[p++] = 'u'; res[p++] = 't'; res[p++] = 'h'; res[p++] = 'D'; res[p++] = 'a'; res[p++] = 't'; res[p++] = 'a';
         if (authDataLen < 256) {
-            baos.write(0x58);
-            baos.write(authDataLen);
+            res[p++] = 0x58;
+            res[p++] = (byte) authDataLen;
         } else {
-            baos.write(0x59);
-            baos.write((authDataLen >> 8) & 0xff);
-            baos.write(authDataLen & 0xff);
+            res[p++] = 0x59;
+            res[p++] = (byte) ((authDataLen >> 8) & 0xff);
+            res[p++] = (byte) (authDataLen & 0xff);
         }
-        baos.write(authData, 0, authDataLen);
-        return baos.toByteArray();
+        System.arraycopy(authData, 0, res, p, authDataLen);
+        return res;
     }
 
     public static void showExportDialog(BaseFragment fragment, int account) {
