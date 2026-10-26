@@ -11648,7 +11648,7 @@ public class ChatActivity extends BaseFragment implements
 
                 searchPhotoButton = new ImageView(getContext());
                 searchPhotoButton.setScaleType(ImageView.ScaleType.CENTER);
-                searchPhotoButton.setImageResource(R.drawable.msg_photo);
+                searchPhotoButton.setImageResource(R.drawable.msg_photos);
                 searchPhotoButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
                 searchPhotoButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
                 searchPhotoButton.setContentDescription(LocaleController.getString(R.string.OpenClipSearchByPhoto));

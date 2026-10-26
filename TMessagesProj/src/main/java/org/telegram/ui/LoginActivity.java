@@ -799,6 +799,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         moreButtonView.setIcon(R.drawable.ic_ab_other);
         moreButtonView.addSubItem(0, R.drawable.msg_policy_solar, getString(R.string.Proxy));
         moreButtonView.addSubItem(1, R.drawable.msg_qrcode_solar, getString(R.string.ImportLogin));
+        if (BuildVars.SUPPORTS_PASSKEYS) moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
         moreButtonView.addSubItem(5, R.drawable.msg_bots_solar, getString(R.string.BotTokenLogin));
         moreButtonView.addSubItem(2, R.drawable.msg_permissions_solar, getString(R.string.CustomApi)).setContentDescription(getString(R.string.CustomApi));
         moreButtonView.addSubItem(3, R.drawable.msg_retry_solar, getString(R.string.TestBackend));
@@ -817,6 +818,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 PhoneView phoneView = (PhoneView)views[VIEW_PHONE_INPUT];
                 if (phoneView.testBackendCheckBox != null) {
                      phoneView.testBackendCheckBox.setVisibility(phoneView.testBackendCheckBox.getVisibility() == View.GONE ? View.VISIBLE : View.GONE);
+                }
+            } else if (id == 4) {
+                PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
+                if (phoneView != null) {
+                    phoneView.requestPasskey(true, true);
                 }
             } else if (id == 5) {
                 showBotTokenLoginDialog();
@@ -8745,11 +8751,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (getParentActivity() == null) return;
         new AlertDialog.Builder(getParentActivity())
                 .setTitle(LocaleController.getString(R.string.PasskeyLogin))
-                .setMessage("Системные ключи доступа (Passkey) недоступны в сторонних клиентах из-за ограничений Google Digital Asset Links для домена telegram.org. Используйте вход по QR-коду с другого устройства или код из Telegram/SMS.")
-                .setPositiveButton("Войти по QR-коду", (di, w) -> {
+                .setMessage(LocaleController.getString(R.string.PasskeyInfo2) + "\n\n" + LocaleController.getString(R.string.PasskeyNoCredentialAvailable))
+                .setPositiveButton(LocaleController.getString(R.string.OK), null)
+                .setNegativeButton("QR-код", (di, w) -> {
                     setPage(VIEW_QR_LOGIN, true, null, false);
                 })
-                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
                 .show();
     }
 
