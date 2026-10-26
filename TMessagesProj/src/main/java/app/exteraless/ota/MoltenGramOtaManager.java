@@ -1294,7 +1294,7 @@ public class MoltenGramOtaManager {
         if (notifColor == 0) notifColor = 0xFF2196F3;
 
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
-                .setSmallIcon(R.drawable.notification)
+                .setSmallIcon(getNotificationIconResId())
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setContentIntent(pendingIntent)
@@ -1308,7 +1308,7 @@ public class MoltenGramOtaManager {
                     .bigText(contentText + "\n\n" + update.changelog));
         }
 
-        builder.addAction(R.drawable.notification, "Обновить", pendingIntent);
+        builder.addAction(getNotificationIconResId(), "Обновить", pendingIntent);
 
         try {
             nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
@@ -1349,7 +1349,7 @@ public class MoltenGramOtaManager {
         if (notifColor == 0) notifColor = 0xFF2196F3;
 
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
-                .setSmallIcon(R.drawable.notification)
+                .setSmallIcon(getNotificationIconResId())
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setContentIntent(pendingIntent)
@@ -1397,7 +1397,7 @@ public class MoltenGramOtaManager {
         if (notifColor == 0) notifColor = 0xFF2196F3;
 
         androidx.core.app.NotificationCompat.Builder builder = new androidx.core.app.NotificationCompat.Builder(context, NOTIFICATION_CHANNEL_UPDATES)
-                .setSmallIcon(R.drawable.notification)
+                .setSmallIcon(getNotificationIconResId())
                 .setContentTitle(title)
                 .setContentText(contentText)
                 .setContentIntent(pendingIntent)
@@ -1407,13 +1407,24 @@ public class MoltenGramOtaManager {
                 .setColor(notifColor)
                 .setPriority(androidx.core.app.NotificationCompat.PRIORITY_HIGH);
 
-        builder.addAction(R.drawable.notification, "Установить", pendingIntent);
+        builder.addAction(getNotificationIconResId(), "Установить", pendingIntent);
 
         try {
             nm.notify(NOTIFICATION_ID_UPDATE, builder.build());
         } catch (Exception e) {
             FileLog.e(e);
         }
+    }
+
+    private int getNotificationIconResId() {
+        try {
+            int notificationIconConfigValue = xyz.nextalone.nagram.NaConfig.INSTANCE.getNotificationIcon().Int();
+            if (notificationIconConfigValue == 0) {
+                return R.drawable.notification;
+            }
+        } catch (Throwable ignored) {
+        }
+        return R.drawable.exteraless_notification;
     }
 
     private void ensureNotificationChannel(NotificationManager nm) {

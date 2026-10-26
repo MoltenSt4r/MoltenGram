@@ -97,16 +97,32 @@ def test_launcher_icon_halloween_has_bleed_false():
 
 
 def test_exteraless_notification_icon_scaled_properly():
-    import xml.etree.ElementTree as ET
-    path = '/root/ExteraMS/TMessagesProj/src/main/res/drawable-anydpi/exteraless_notification.xml'
-    tree = ET.parse(path)
-    root = tree.getroot()
-    assert root.tag == 'vector', "exteraless_notification must be a vector drawable"
-    groups = root.findall('group')
-    assert len(groups) == 1, "exteraless_notification must wrap paths in a scaling group to prevent microscopic size"
-    group = groups[0]
-    scale_x = float(group.attrib['{http://schemas.android.com/apk/res/android}scaleX'])
-    scale_y = float(group.attrib['{http://schemas.android.com/apk/res/android}scaleY'])
-    assert scale_x >= 1.5 and scale_y >= 1.5, f"exteraless_notification group scale {scale_x} is too small"
+    for density, canvas_size in [('mdpi', 24), ('hdpi', 36), ('xhdpi', 48), ('xxhdpi', 72), ('xxxhdpi', 96)]:
+        path = f'/root/ExteraMS/TMessagesProj/src/main/res/drawable-{density}/exteraless_notification.png'
+        assert os.path.exists(path), f'{path} must exist'
+        with Image.open(path) as im:
+            assert im.size == (canvas_size, canvas_size)
+            bbox = im.getbbox()
+            assert bbox is not None
+            content_h = bbox[3] - bbox[1]
+            # Must fill at least 75% of the height (no microscopic icon)
+            assert content_h >= int(canvas_size * 0.75), f'{density} content height {content_h} is too small'
+
+
+def test_ota_manager_uses_moltengram_notification_icon():
+    path = '/root/ExteraMS/TMessagesProj/src/main/java/app/exteraless/ota/MoltenGramOtaManager.java'
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    # Ensure R.drawable.notification is not hardcoded for OTA update notifications
+    assert '.setSmallIcon(R.drawable.notification)' not in content, (
+        "MoltenGramOtaManager should not hardcode R.drawable.notification for small icon"
+    )
+    assert 'builder.addAction(R.drawable.notification' not in content, (
+        "MoltenGramOtaManager should not hardcode R.drawable.notification for action buttons"
+    )
+    assert 'getNotificationIconResId()' in content, (
+        "MoltenGramOtaManager must provide getNotificationIconResId() returning exteraless_notification"
+    )
+
 
 
