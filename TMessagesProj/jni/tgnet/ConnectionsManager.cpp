@@ -3773,6 +3773,18 @@ void ConnectionsManager::setLangCode(std::string langCode) {
     });
 }
 
+void ConnectionsManager::setAppId(int32_t appId) {
+    scheduleTask([&, appId] {
+        if (currentApiId == appId) {
+            return;
+        }
+        currentApiId = appId;
+        for (auto & datacenter : datacenters) {
+            datacenter.second->resetInitVersion();
+        }
+    });
+}
+
 void ConnectionsManager::setRegId(std::string regId) {
     scheduleTask([&, regId] {
         if (currentRegId == regId) {

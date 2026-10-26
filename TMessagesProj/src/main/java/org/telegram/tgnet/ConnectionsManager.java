@@ -160,61 +160,9 @@ public class ConnectionsManager extends BaseController {
     };
 
     private boolean forceTryIpV6;
-    private int currentApiId = NekoXConfig.currentAppId();
 
-    public int getCurrentApiId() {
-        return currentApiId;
-    }
-
-    public void reinitForApiId(int apiId) {
-        if (currentApiId == apiId) {
-            return;
-        }
-        currentApiId = apiId;
-        String langCode;
-        String systemLangCode;
-        String deviceModel;
-        String appVersion;
-        String systemVersion;
-        try {
-            systemLangCode = LocaleController.getSystemLocaleStringIso639().toLowerCase();
-            langCode = LocaleController.getLocaleStringIso639().toLowerCase();
-            deviceModel = Build.MANUFACTURER + " " + Build.MODEL;
-            appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "12.10.6");
-            systemVersion = "SDK " + Build.VERSION.SDK_INT;
-        } catch (Exception e) {
-            systemLangCode = "en";
-            langCode = "";
-            deviceModel = "Android unknown";
-            appVersion = "App version unknown";
-            systemVersion = "SDK " + Build.VERSION.SDK_INT;
-        }
-        if (systemLangCode.trim().length() == 0) {
-            systemLangCode = "en";
-        }
-        if (deviceModel.trim().length() == 0) {
-            deviceModel = "Android unknown";
-        }
-        if (appVersion.trim().length() == 0) {
-            appVersion = "App version unknown";
-        }
-        if (systemVersion.trim().length() == 0) {
-            systemVersion = "SDK Unknown";
-        }
-        File config = ApplicationLoader.getFilesDirFixed();
-        if (currentAccount != 0) {
-            File dir = new File(config, "account" + currentAccount);
-            dir.mkdirs();
-            config = dir;
-        }
-        String configPath = config.toString();
-        String pushString = getRegId();
-        String fingerprint = AndroidUtilities.getCertificateSHA256Fingerprint();
-        int timezoneOffset = (TimeZone.getDefault().getRawOffset() + TimeZone.getDefault().getDSTSavings()) / 1000;
-        boolean userPremium = getUserConfig().getCurrentUser() != null && getUserConfig().getCurrentUser().premium;
-        boolean enablePushConnection = isPushConnectionEnabled();
-
-        init(SharedConfig.buildVersion(), TLRPC.LAYER, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+    public void setAppId(int appId) {
+        native_setAppId(currentAccount, appId);
     }
 
     static {
@@ -785,7 +733,6 @@ public class ConnectionsManager extends BaseController {
     }
 
     public void init(int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection) {
-        currentApiId = apiId;
         final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("mainconfig", Activity.MODE_PRIVATE);
         final ProxySettings proxySettings = ProxySettings.fromSharedPreferences(preferences);
         if (preferences.getBoolean("proxy_enabled", false) && proxySettings.isValid()) {
@@ -1193,6 +1140,7 @@ public class ConnectionsManager extends BaseController {
     public static native void native_init(int currentAccount, int version, int layer, int apiId, String deviceModel, String systemVersion, String appVersion, String langCode, String systemLangCode, String configPath, String logPath, String regId, String cFingerprint, String installer, String packageId, int timezoneOffset, long userId, boolean userPremium, boolean enablePushConnection, boolean hasNetwork, int networkType, int performanceClass);
     public static native void native_moveToDatacenter(int currentAccount, int datacenterId);
     public static native void native_setProxySettings(int currentAccount, String address, int port, String username, String password, String secret);
+    public static native void native_setAppId(int currentAccount, int appId);
     public static native void native_setLangCode(int currentAccount, String langCode);
     public static native void native_setRegId(int currentAccount, String regId);
     public static native void native_setSystemLangCode(int currentAccount, String langCode);

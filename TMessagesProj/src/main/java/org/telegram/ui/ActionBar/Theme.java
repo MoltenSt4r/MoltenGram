@@ -147,6 +147,7 @@ import java.util.Locale;
 import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
+import java.util.concurrent.TimeUnit;
 
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
@@ -9857,17 +9858,20 @@ public class Theme {
                 scaleFactor = 1;
             }
             opts.inJustDecodeBounds = false;
-            if (scaleFactor > 1.0f && (photoW > w_filter || photoH > h_filter)) {
+            if (scaleFactor > 1.0f && !Float.isNaN(scaleFactor) && !Float.isInfinite(scaleFactor) && (photoW > w_filter || photoH > h_filter)) {
                 int sample = 1;
                 do {
                     sample *= 2;
-                } while (sample * 2 < scaleFactor);
+                } while (sample * 2 < scaleFactor && sample < 128);
                 opts.inSampleSize = sample;
             } else {
-                opts.inSampleSize = (int) scaleFactor;
+                opts.inSampleSize = Math.max(1, (int) scaleFactor);
             }
             stream.getChannel().position(offset);
             Bitmap bitmap = BitmapFactory.decodeStream(stream, null, opts);
+            if (bitmap == null) {
+                return null;
+            }
             if (bitmap.getWidth() < w_filter || bitmap.getHeight() < h_filter) {
                 float scale = Math.max((float) w_filter / bitmap.getWidth(), (float) h_filter / bitmap.getHeight());
                 if (scale >= 1.02f) {
@@ -10034,7 +10038,7 @@ public class Theme {
             CountDownLatch countDownLatch = new CountDownLatch(1);
             Utilities.themeQueue.postRunnable(countDownLatch::countDown);
             try {
-                countDownLatch.await();
+                countDownLatch.await(500, TimeUnit.MILLISECONDS);
             } catch (Exception e) {
                 FileLog.e(e);
             }

@@ -438,6 +438,10 @@ void discardConnection(JNIEnv *env, jclass c,  jint instanceNum, jint datacenerI
     ConnectionsManager::getInstance(instanceNum).reconnect(datacenerId, connectionType);
 }
 
+void setAppId(JNIEnv *env, jclass c, jint instanceNum, jint appId) {
+    ConnectionsManager::getInstance(instanceNum).setAppId(appId);
+}
+
 void setLangCode(JNIEnv *env, jclass c, jint instanceNum, jstring langCode) {
     const char *langCodeStr = env->GetStringUTFChars(langCode, 0);
 
@@ -545,6 +549,7 @@ static JNINativeMethod ConnectionsManagerMethods[] = {
         {"native_getConnectionState", "(I)I", (void *) getConnectionState},
         {"native_setUserId", "(IJ)V", (void *) setUserId},
         {"native_init", "(IIIILjava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IJZZZII)V", (void *) init},
+        {"native_setAppId", "(II)V", (void *) setAppId},
         {"native_setLangCode", "(ILjava/lang/String;)V", (void *) setLangCode},
         {"native_setRegId", "(ILjava/lang/String;)V", (void *) setRegId},
         {"native_setSystemLangCode", "(ILjava/lang/String;)V", (void *) setSystemLangCode},
