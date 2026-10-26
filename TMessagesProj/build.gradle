@@ -176,9 +176,9 @@ android {
             }
         }
 
-        // obtain your own keys at https://core.telegram.org/api/obtaining_api_id
-        def appId = '6'
-        def appHash = 'eb06d4abfb49dc3eeb1aeb98ae0f581e'
+        // Official ExteraMS Telegram API credentials
+        def appId = '39205442'
+        def appHash = '1090b570704d1d97975994ee9c177dba'
 
         // obtain your own key at https://developers.google.com/maps/documentation/android-sdk/get-api-key
         // Android keys are restricted by package name and signing certificate,

@@ -181,23 +181,21 @@ public class PasskeysController {
     public static Runnable login(Context context, int currentAccount, boolean clickedButton, Utilities.Callback3<Long, TLRPC.auth_Authorization, String> done) {
         if (!BuildVars.SUPPORTS_PASSKEYS) return null;
 
+        final int previousApiId = ConnectionsManager.getInstance(currentAccount).getCurrentApiId();
+        ConnectionsManager.getInstance(currentAccount).reinitForApiId(6);
+
         final CredentialManager credentialManager = CredentialManager.create(context);
 
         final boolean[] cancelled = new boolean[1];
         final Runnable[] cancel = new Runnable[1];
 
         final TL_account.initPasskeyLogin req = new TL_account.initPasskeyLogin();
-        int apiId = NekoXConfig.currentAppId();
-        String apiHash = NekoXConfig.currentAppHash();
-        if (apiId != 4 && apiId != 6 && apiId != 2040) {
-            apiId = 6;
-            apiHash = "eb06d4abfb49dc3eeb1aeb98ae0f581e";
-        }
-        req.api_id = apiId;
-        req.api_hash = apiHash;
+        req.api_id = 6;
+        req.api_hash = "eb06d4abfb49dc3eeb1aeb98ae0f581e";
         final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req, AndroidUtilities::runOnUIThread, (res, err) -> {
             if (cancelled[0]) return;
             if (err != null) {
+                ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                 done.run(0L, null, err.text);
                 return;
             }
@@ -217,6 +215,7 @@ public class PasskeysController {
                 clientDataHash = computeClientDataHash(clientDataJSON);
             } catch (Exception e) {
                 FileLog.e(e);
+                ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                 done.run(0L, null, e.getMessage());
                 return;
             }
@@ -301,6 +300,7 @@ public class PasskeysController {
                         final int requestId = ConnectionsManager.getInstance(currentAccount).sendRequestTyped(req2, AndroidUtilities::runOnUIThread, (auth, err3) -> {
                             progressDialog.dismiss();
                             if (err3 != null) {
+                                ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                                 done.run(userId, null, err3.text);
                             } else {
                                 done.run(userId, auth, null);
@@ -309,12 +309,14 @@ public class PasskeysController {
 
                         progressDialog.setOnCancelListener(d -> {
                             ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
+                            ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                             done.run(userId, null, "CANCELLED");
                         });
                     }
 
                     @Override
                     public void onError(@NonNull GetCredentialException err2) {
+                        ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                         if (err2 instanceof NoCredentialException) {
                             done.run(0L, null, "EMPTY");
                         } else if (err2 instanceof GetCredentialCancellationException) {
@@ -329,15 +331,20 @@ public class PasskeysController {
 
                 cancel[0] = cancellationSignal::cancel;
             } catch (Exception e) {
+                ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
                 done.run(0L, null, e.getMessage());
             }
 
         }, ConnectionsManager.RequestFlagWithoutLogin);
 
-        cancel[0] = () -> ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
+        cancel[0] = () -> {
+            ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
+            ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+        };
 
         return () -> {
             cancelled[0] = true;
+            ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
             if (cancel[0] != null) {
                 cancel[0].run();
             }
