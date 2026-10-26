@@ -142,7 +142,7 @@ public class LauncherIconController {
         MOLTENGRAM_EXTERAGRAM("MoltenGramExteraGramIcon", R.drawable.moltengram_exteragram_icon_background,
                 0, R.string.AppIconMoltenGramExteraGram, IconGroup.MOLTENGRAM, "@moltenst4r", "Classic ExteraGram signature style", 0xFFE83030),
         MOLTENGRAM_HALLOWEEN("MoltenGramHalloweenIcon", R.drawable.moltengram_halloween_icon_background,
-                0, R.string.AppIconMoltenGramHalloween, IconGroup.MOLTENGRAM, "@moltenst4r", "Spooky Halloween night flame", 0xFFFF7701),
+                0, R.string.AppIconMoltenGramHalloween, IconGroup.MOLTENGRAM, "@moltenst4r", "Spooky Halloween night flame", 0xFFFF7701, false),
         MOLTENGRAM_NOTHING("MoltenGramNothingIcon", R.drawable.moltengram_nothing_icon_background,
                 0, R.string.AppIconMoltenGramNothing, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS red glyph matrix", 0xFFFF0401),
 

@@ -85,3 +85,13 @@ def test_launcher_icon_dotted_has_bleed_true():
     match = re.search(r'MOLTENGRAM_DOTTED\([^)]+\)', content)
     assert match is not None, "MOLTENGRAM_DOTTED must be declared in LauncherIconController"
     assert 'false' not in match.group(0), "MOLTENGRAM_DOTTED must not set hasBleed=false"
+
+
+def test_launcher_icon_halloween_has_bleed_false():
+    path = '/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/LauncherIconController.java'
+    with open(path, 'r', encoding='utf-8') as f:
+        content = f.read()
+    match = re.search(r'MOLTENGRAM_HALLOWEEN\([^)]+\)', content)
+    assert match is not None, "MOLTENGRAM_HALLOWEEN must be declared in LauncherIconController"
+    assert 'false' in match.group(0), "MOLTENGRAM_HALLOWEEN must set hasBleed=false to prevent preview zoom/cropping"
+
