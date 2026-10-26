@@ -8927,27 +8927,16 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         container.addView(galleryBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
         container.addView(cameraBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
 
+        final TextView biometricBtn;
         if (app.exteraless.passkeys.MoltenPasskeysController.hasSavedDevicePasskeys(getParentActivity()) && getParentActivity() instanceof androidx.fragment.app.FragmentActivity) {
-            TextView biometricBtn = new TextView(getParentActivity());
+            biometricBtn = new TextView(getParentActivity());
             biometricBtn.setText("• " + LocaleController.getString(R.string.PasskeyLogin) + " (Биометрия)");
             biometricBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
             biometricBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             biometricBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
-            biometricBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getParentActivity())) {
-                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
-                        onPasskeyAuthResult(userId, authObject, err);
-                    });
-                } else {
-                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
-                        if (success) {
-                            finishFragment();
-                        }
-                    });
-                }
-            });
             container.addView(biometricBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
+        } else {
+            biometricBtn = null;
         }
 
         TextView systemBtn = null;
@@ -8970,6 +8959,22 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         final AlertDialog dialog = builder.create();
 
+        if (biometricBtn != null) {
+            biometricBtn.setOnClickListener(v -> {
+                dialog.dismiss();
+                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getParentActivity())) {
+                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
+                        onPasskeyAuthResult(userId, authObject, err);
+                    });
+                } else {
+                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
+                        if (success) {
+                            finishFragment();
+                        }
+                    });
+                }
+            });
+        }
         galleryBtn.setOnClickListener(v -> {
             dialog.dismiss();
             openGalleryForQrPicker();
