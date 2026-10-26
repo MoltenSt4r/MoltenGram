@@ -3549,13 +3549,13 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 cancelRequestingPasskey = null;
                 requestingPasskey = false;
                 if (err != null && ("EMPTY".equals(err) || "CANCELLED".equals(err))) {
-                    if (subtitleView != null) {
+                    if (subtitleView != null && "CANCELLED".equals(err)) {
                         subtitleView.setText(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.StartTextPasskey), () -> {
                             requestPasskey(true, false);
                         }), true));
                     }
-                    if ("EMPTY".equals(err) && clickedButton) {
-                        showPasskeyProviderErrorDialog();
+                    if ("EMPTY".equals(err)) {
+                        BulletinFactory.of(LoginActivity.this).createSimpleBulletin(R.raw.info, getString(R.string.PasskeyNoCredentialAvailable)).show();
                     }
                     return;
                 }
@@ -3597,11 +3597,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                     }), ConnectionsManager.RequestFlagFailOnServerErrors | ConnectionsManager.RequestFlagWithoutLogin);
                 } else if (err != null) {
                     if (clickedButton) {
-                        if (PasskeysController.isProviderOrDalError(err)) {
-                            showPasskeyProviderErrorDialog();
-                        } else {
-                            BulletinFactory.of(LoginActivity.this).showForError(err);
-                        }
+                        BulletinFactory.of(LoginActivity.this).showForError(err);
                     } else if (subtitleView != null) {
                         subtitleView.setText(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.StartTextPasskey), () -> {
                             requestPasskey(true, false);
@@ -8745,18 +8741,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         } else if (authObject instanceof TLRPC.TL_auth_authorization) {
             onAuthSuccess((TLRPC.TL_auth_authorization) authObject);
         }
-    }
-
-    public void showPasskeyProviderErrorDialog() {
-        if (getParentActivity() == null) return;
-        new AlertDialog.Builder(getParentActivity())
-                .setTitle(LocaleController.getString(R.string.PasskeyLogin))
-                .setMessage(LocaleController.getString(R.string.PasskeyInfo2) + "\n\n" + LocaleController.getString(R.string.PasskeyNoCredentialAvailable))
-                .setPositiveButton(LocaleController.getString(R.string.OK), null)
-                .setNegativeButton("QR-код", (di, w) -> {
-                    setPage(VIEW_QR_LOGIN, true, null, false);
-                })
-                .show();
     }
 
     public void showBotTokenLoginDialog() {

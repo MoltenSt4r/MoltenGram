@@ -9,7 +9,6 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.text.TextUtils;
-import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -22,10 +21,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.RequiresApi;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
-import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.messenger.PasskeysController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
@@ -194,8 +191,6 @@ public class PasskeysActivity extends BaseFragment {
                                         () -> Browser.openUrl(getContext(), KEEPASSDX_URL)
                                 )
                         ).show();
-                    } else if ("PROVIDER_ERROR".equalsIgnoreCase(error) || PasskeysController.isProviderOrDalError(error)) {
-                        showPasskeyProviderErrorDialog();
                     } else {
                         BulletinFactory.of(this).showForError(error, true);
                     }
@@ -209,15 +204,6 @@ public class PasskeysActivity extends BaseFragment {
         } else if (item.object != null) {
             openMenu(view);
         }
-    }
-
-    public void showPasskeyProviderErrorDialog() {
-        if (getContext() == null) return;
-        new AlertDialog.Builder(getContext())
-                .setTitle(getString(R.string.PasskeyProviderErrorTitle))
-                .setMessage(LocaleController.getString(R.string.PasskeyInfo2) + "\n\nВ системном Google Password Manager ключи сторонних клиентов блокируются политикой Digital Asset Links. Используйте Bitwarden или KeePassDX.")
-                .setPositiveButton(getString(R.string.OK), null)
-                .show();
     }
 
     public void added(TL_account.Passkey passkey) {
@@ -417,17 +403,6 @@ public class PasskeysActivity extends BaseFragment {
                                         () -> Browser.openUrl(context, KEEPASSDX_URL)
                                 )
                         ).show();
-                    } else if ("PROVIDER_ERROR".equalsIgnoreCase(error) || PasskeysController.isProviderOrDalError(error)) {
-                        sheet.dismiss();
-                        if (fragment instanceof PasskeysActivity) {
-                            ((PasskeysActivity) fragment).showPasskeyProviderErrorDialog();
-                        } else {
-                            new AlertDialog.Builder(context)
-                                    .setTitle(context.getString(R.string.PasskeyProviderErrorTitle))
-                                    .setMessage(context.getString(R.string.PasskeyProviderErrorMessage))
-                                    .setPositiveButton(context.getString(R.string.OK), null)
-                                    .show();
-                        }
                     } else {
                         BulletinFactory.of(sheet.topBulletinContainer, sheet.getResourcesProvider()).showForError(error);
                     }
