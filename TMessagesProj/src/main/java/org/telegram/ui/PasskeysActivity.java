@@ -199,15 +199,15 @@ public class PasskeysActivity extends BaseFragment {
 
     private void onItemClick(UItem item, View view, int position, float x, float y) {
         if (item.id == -10) {
-            boolean saved = app.exteraless.passkeys.MoltenPasskeysController.saveDevicePasskey(getContext(), currentAccount);
-            if (saved) {
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram сохранён", "Вход по отпечатку включён").show();
-                if (listView != null && listView.adapter != null) {
-                    listView.adapter.update(true);
+            app.exteraless.passkeys.MoltenPasskeysController.saveDevicePasskey(getContext(), currentAccount);
+            app.exteraless.passkeys.MoltenPasskeysController.registerDevicePasskey(this, currentAccount, (passkey, err) -> {
+                if (err != null) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.error, "Ошибка создания ключа", err).show();
+                } else if (passkey != null) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram создан", "Зарегистрирован на сервере Telegram").show();
+                    added(passkey);
                 }
-            } else {
-                BulletinFactory.of(this).createSimpleBulletin(R.raw.error, "Ошибка сохранения").show();
-            }
+            });
         } else if (item.id == -11) {
             app.exteraless.passkeys.MoltenPasskeysController.showExportDialog(this, currentAccount);
         } else if (item.id == -1) {
@@ -259,11 +259,14 @@ public class PasskeysActivity extends BaseFragment {
                 .setTitle(getString(R.string.PasskeyProviderErrorTitle))
                 .setMessage(getString(R.string.PasskeyProviderErrorMessage))
                 .setPositiveButton("Создать ключ MoltenGram", (di, w) -> {
-                    boolean saved = app.exteraless.passkeys.MoltenPasskeysController.saveDevicePasskey(getContext(), currentAccount);
-                    if (saved) {
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram создан", "Вход по отпечатку включён").show();
-                        if (listView != null && listView.adapter != null) listView.adapter.update(true);
-                    }
+                    app.exteraless.passkeys.MoltenPasskeysController.registerDevicePasskey(this, currentAccount, (passkey, err) -> {
+                        if (err != null) {
+                            BulletinFactory.of(this).createSimpleBulletin(R.raw.error, "Ошибка создания ключа", err).show();
+                        } else if (passkey != null) {
+                            BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram создан", "Зарегистрирован на сервере Telegram").show();
+                            added(passkey);
+                        }
+                    });
                 })
                 .setNeutralButton("Экспорт ключа (QR)", (di, w) -> {
                     app.exteraless.passkeys.MoltenPasskeysController.showExportDialog(this, currentAccount);

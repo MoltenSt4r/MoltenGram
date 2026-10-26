@@ -105,7 +105,7 @@ public final class SettingsBackupHelper {
                 || "exteraless_plugins_foreign".equals(spName) || (spName != null && spName.startsWith("exteraless_plugin_"))) {
             return SECTION_PLUGINS;
         }
-        if ("media_saved_pos".equals(spName) || "metrolist_auth".equals(spName) || "video_subtitles".equals(spName)) {
+        if ("media_saved_pos".equals(spName) || "video_subtitles".equals(spName)) {
             return SECTION_MEDIA;
         }
         if ("Notifications".equals(spName) || "exteraless_notifications".equals(spName)) {
@@ -205,7 +205,6 @@ public final class SettingsBackupHelper {
 
         if (enabledSections == null || enabledSections.contains(SECTION_MEDIA)) {
             spToJSON("media_saved_pos", configJson, null);
-            spToJSON("metrolist_auth", configJson, null);
             spToJSON("video_subtitles", configJson, null);
         }
 

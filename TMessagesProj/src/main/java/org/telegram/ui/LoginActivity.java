@@ -3548,15 +3548,22 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             }
             if (requestingPasskey || !clickedButton && requestedPasskey) return;
 
-            if (clickedButton && app.exteraless.passkeys.MoltenPasskeysController.hasSavedDevicePasskeys(getContext()) && getParentActivity() instanceof androidx.fragment.app.FragmentActivity) {
-                app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
-                    if (success) {
-                        finishFragment();
-                    } else if (!"CANCELLED".equalsIgnoreCase(err)) {
-                        showPasskeyLoginDialog();
-                    }
-                });
-                return;
+            if (clickedButton && getParentActivity() instanceof androidx.fragment.app.FragmentActivity) {
+                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getContext())) {
+                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
+                        onPasskeyAuthResult(userId, authObject, err);
+                    });
+                    return;
+                } else if (app.exteraless.passkeys.MoltenPasskeysController.hasSavedDevicePasskeys(getContext())) {
+                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
+                        if (success) {
+                            finishFragment();
+                        } else if (!"CANCELLED".equalsIgnoreCase(err)) {
+                            showPasskeyLoginDialog();
+                        }
+                    });
+                    return;
+                }
             }
 
             requestingPasskey = true;
@@ -8928,11 +8935,17 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             biometricBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
             biometricBtn.setOnClickListener(v -> {
                 dialog.dismiss();
-                app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
-                    if (success) {
-                        finishFragment();
-                    }
-                });
+                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getParentActivity())) {
+                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
+                        onPasskeyAuthResult(userId, authObject, err);
+                    });
+                } else {
+                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
+                        if (success) {
+                            finishFragment();
+                        }
+                    });
+                }
             });
             container.addView(biometricBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
         }
