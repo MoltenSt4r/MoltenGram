@@ -95,3 +95,18 @@ def test_launcher_icon_halloween_has_bleed_false():
     assert match is not None, "MOLTENGRAM_HALLOWEEN must be declared in LauncherIconController"
     assert 'false' in match.group(0), "MOLTENGRAM_HALLOWEEN must set hasBleed=false to prevent preview zoom/cropping"
 
+
+def test_exteraless_notification_icon_scaled_properly():
+    import xml.etree.ElementTree as ET
+    path = '/root/ExteraMS/TMessagesProj/src/main/res/drawable-anydpi/exteraless_notification.xml'
+    tree = ET.parse(path)
+    root = tree.getroot()
+    assert root.tag == 'vector', "exteraless_notification must be a vector drawable"
+    groups = root.findall('group')
+    assert len(groups) == 1, "exteraless_notification must wrap paths in a scaling group to prevent microscopic size"
+    group = groups[0]
+    scale_x = float(group.attrib['{http://schemas.android.com/apk/res/android}scaleX'])
+    scale_y = float(group.attrib['{http://schemas.android.com/apk/res/android}scaleY'])
+    assert scale_x >= 1.5 and scale_y >= 1.5, f"exteraless_notification group scale {scale_x} is too small"
+
+

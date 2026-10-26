@@ -455,8 +455,19 @@ public final class GlyphController {
      */
     public void playPhone1BurstEffect(Context context) {
         handler.post(() -> {
-            if (!ensureReady()) {
+            if (!supported) {
                 return;
+            }
+            if (!stripSessionOpen && !initialized) {
+                Context appCtx = ApplicationLoader.applicationContext;
+                if (appCtx != null) {
+                    try {
+                        initStrip(appCtx);
+                        initialized = true;
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
             }
             if (stripManager != null && stripSessionOpen) {
                 try {
@@ -579,6 +590,21 @@ public final class GlyphController {
                     }
                 }
                 if (!registered) {
+                    try {
+                        Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
+                        authField.setAccessible(true);
+                        authField.setBoolean(stripManager, true);
+
+                        Field devField = GlyphManager.class.getDeclaredField("mDevice");
+                        devField.setAccessible(true);
+                        devField.set(stripManager, targetDevice);
+
+                        stripManager.openSession();
+                        stripSessionOpen = true;
+                        runPendingPreview();
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
                     return;
                 }
                 try {
