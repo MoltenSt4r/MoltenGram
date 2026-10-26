@@ -215,7 +215,7 @@ public class PasskeysActivity extends BaseFragment {
         if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
                 .setTitle(getString(R.string.PasskeyProviderErrorTitle))
-                .setMessage("Системные ключи доступа (Passkey) недоступны в сторонних клиентах из-за ограничений Google Digital Asset Links для домена telegram.org. Настройка ключей доступа поддерживается только в официальном приложении Telegram.")
+                .setMessage(LocaleController.getString(R.string.PasskeyInfo2) + "\n\nВ системном Google Password Manager ключи сторонних клиентов блокируются политикой Digital Asset Links. Используйте Bitwarden или KeePassDX.")
                 .setPositiveButton(getString(R.string.OK), null)
                 .show();
     }
