@@ -688,9 +688,6 @@ public class PasskeysController {
 
     public static boolean isFidoOrPasskeyUri(String text) {
         if (text == null) return false;
-        if (app.exteraless.passkeys.MoltenPasskeysController.isMoltenPasskeyToken(text)) {
-            return true;
-        }
         String lower = text.toLowerCase(Locale.ROOT).trim();
         return lower.startsWith("fido:/") || lower.startsWith("fido:") || lower.startsWith("tg://passkey") || lower.startsWith("webauthn:") || (lower.startsWith("{") && (lower.contains("authenticatordata") || lower.contains("response")));
     }

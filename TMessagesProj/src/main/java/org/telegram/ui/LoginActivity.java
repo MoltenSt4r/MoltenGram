@@ -3548,24 +3548,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             }
             if (requestingPasskey || !clickedButton && requestedPasskey) return;
 
-            if (clickedButton && getParentActivity() instanceof androidx.fragment.app.FragmentActivity) {
-                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getContext())) {
-                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
-                        onPasskeyAuthResult(userId, authObject, err);
-                    });
-                    return;
-                } else if (app.exteraless.passkeys.MoltenPasskeysController.hasSavedDevicePasskeys(getContext())) {
-                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
-                        if (success) {
-                            finishFragment();
-                        } else if (!"CANCELLED".equalsIgnoreCase(err)) {
-                            showPasskeyLoginDialog();
-                        }
-                    });
-                    return;
-                }
-            }
-
             requestingPasskey = true;
             requestedPasskey = true;
             cancelRequestingPasskey = PasskeysController.login(getContext(), currentAccount, clickedButton, (userId, authObject, err) -> {
@@ -3578,8 +3560,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                         }), true));
                     }
                     if ("EMPTY".equals(err) && clickedButton) {
-                        BulletinFactory.of(LoginActivity.this).createSimpleBulletin(R.raw.info, getString(R.string.PasskeyNoCredentialAvailable)).show();
-                        showPasskeyLoginDialog();
+                        showPasskeyProviderErrorDialog();
                     }
                     return;
                 }
@@ -3622,7 +3603,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 } else if (err != null) {
                     if (clickedButton) {
                         if (PasskeysController.isProviderOrDalError(err)) {
-                            showPasskeyLoginDialog();
+                            showPasskeyProviderErrorDialog();
                         } else {
                             BulletinFactory.of(LoginActivity.this).showForError(err);
                         }
@@ -8771,17 +8752,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         if (getParentActivity() == null || input == null || input.trim().isEmpty()) return;
         final String trimmed = input.trim();
 
-        if (app.exteraless.passkeys.MoltenPasskeysController.isMoltenPasskeyToken(trimmed)) {
-            app.exteraless.passkeys.MoltenPasskeysController.restorePasskeyFromToken(getParentActivity(), trimmed, (success, err) -> {
-                if (success) {
-                    finishFragment();
-                } else {
-                    needShowAlert(LocaleController.getString(R.string.PasskeyLogin), err != null ? err : "Error restoring passkey");
-                }
-            });
-            return;
-        }
-
         if (trimmed.startsWith("{") && (trimmed.contains("authenticatorData") || trimmed.contains("response"))) {
             PasskeysController.finishPasskeyLoginWithJson(getParentActivity(), currentAccount, trimmed, "", (userId, auth, error) -> {
                 onPasskeyAuthResult(userId, auth, error);
@@ -8871,6 +8841,18 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
+    public void showPasskeyProviderErrorDialog() {
+        if (getParentActivity() == null) return;
+        new AlertDialog.Builder(getParentActivity())
+                .setTitle(LocaleController.getString(R.string.PasskeyLogin))
+                .setMessage("Системные ключи доступа (Passkey) недоступны в сторонних клиентах из-за ограничений Google Digital Asset Links для домена telegram.org. Используйте вход по QR-коду с другого устройства или код из Telegram/SMS.")
+                .setPositiveButton("Войти по QR-коду", (di, w) -> {
+                    setPage(VIEW_QR_LOGIN, true, null, false);
+                })
+                .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
+                .show();
+    }
+
     public void showPasskeyLoginDialog() {
         if (getParentActivity() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -8927,18 +8909,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         container.addView(galleryBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
         container.addView(cameraBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
 
-        final TextView biometricBtn;
-        if (app.exteraless.passkeys.MoltenPasskeysController.hasSavedDevicePasskeys(getParentActivity()) && getParentActivity() instanceof androidx.fragment.app.FragmentActivity) {
-            biometricBtn = new TextView(getParentActivity());
-            biometricBtn.setText("• " + LocaleController.getString(R.string.PasskeyLogin) + " (Биометрия)");
-            biometricBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-            biometricBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            biometricBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
-            container.addView(biometricBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
-        } else {
-            biometricBtn = null;
-        }
-
         TextView systemBtn = null;
         if (BuildVars.SUPPORTS_PASSKEYS) {
             systemBtn = new TextView(getParentActivity());
@@ -8959,22 +8929,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         final AlertDialog dialog = builder.create();
 
-        if (biometricBtn != null) {
-            biometricBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                if (app.exteraless.passkeys.MoltenPasskeysController.hasLocalPasskey(getParentActivity())) {
-                    app.exteraless.passkeys.MoltenPasskeysController.loginWithPasskey((androidx.fragment.app.FragmentActivity) getParentActivity(), currentAccount, (userId, authObject, err) -> {
-                        onPasskeyAuthResult(userId, authObject, err);
-                    });
-                } else {
-                    app.exteraless.passkeys.MoltenPasskeysController.promptBiometricLogin((androidx.fragment.app.FragmentActivity) getParentActivity(), (success, err) -> {
-                        if (success) {
-                            finishFragment();
-                        }
-                    });
-                }
-            });
-        }
         galleryBtn.setOnClickListener(v -> {
             dialog.dismiss();
             openGalleryForQrPicker();

@@ -109,21 +109,12 @@ public class PasskeysActivity extends BaseFragment {
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         addPasskeyRow = -1;
         items.add(UItem.asTopView(getString(R.string.PasskeyTopInfo), R.raw.passkey));
-        TL_account.Passkey devicePasskey = app.exteraless.passkeys.MoltenPasskeysController.getDevicePasskeyObject(getContext(), currentAccount);
-        if (devicePasskey != null) {
-            items.add(PasskeyCell.Factory.of(devicePasskey, this::openMenu));
-        }
         for (int i = 0; i < passkeys.size(); ++i) {
             final TL_account.Passkey passkey = passkeys.get(i);
-            if (devicePasskey != null && devicePasskey.id.equals(passkey.id)) {
-                continue;
-            }
             items.add(PasskeyCell.Factory.of(passkey, this::openMenu));
         }
         if (passkeys.size() + 1 <= getMessagesController().config.passkeysAccountPasskeysMax.get()) {
             addPasskeyRow = items.size();
-            items.add(UItem.asButton(-10, R.drawable.menu_passkey_add, "Создать ключ доступа MoltenGram").accent());
-            items.add(UItem.asButton(-11, R.drawable.msg_qrcode_solar, "Экспорт ключа доступа (Passkey QR)").accent());
             items.add(UItem.asButton(-1, R.drawable.menu_passkey_add, getString(R.string.PasskeyAdd)).accent());
             items.add(UItem.asButton(-3, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyCreateQr)).accent());
         }
@@ -140,22 +131,6 @@ public class PasskeysActivity extends BaseFragment {
     private void openMenu(View view) {
         final PasskeyCell cell = view instanceof ImageView ? (PasskeyCell) view.getParent() : (PasskeyCell) view;
         final String id = cell.id;
-        if (id != null && id.startsWith("mg_")) {
-            ItemOptions.makeOptions(this, cell)
-                .add(R.drawable.msg_qrcode_solar, "Экспорт ключа доступа", () -> {
-                    app.exteraless.passkeys.MoltenPasskeysController.showExportDialog(this, currentAccount);
-                })
-                .add(R.drawable.msg_delete, getString(R.string.Delete), true, () -> {
-                    app.exteraless.passkeys.MoltenPasskeysController.removeDevicePasskey(getContext(), currentAccount);
-                    BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ устройства удалён").show();
-                    if (listView != null && listView.adapter != null) {
-                        listView.adapter.update(true);
-                    }
-                })
-                .setScrimViewBackground(listView.getClipBackground(cell))
-                .show();
-            return;
-        }
         int _index = -1;
         for (int i = 0; i < passkeys.size(); ++i) {
             if (id.equals(passkeys.get(i).id)) {
@@ -198,19 +173,7 @@ public class PasskeysActivity extends BaseFragment {
     }
 
     private void onItemClick(UItem item, View view, int position, float x, float y) {
-        if (item.id == -10) {
-            app.exteraless.passkeys.MoltenPasskeysController.saveDevicePasskey(getContext(), currentAccount);
-            app.exteraless.passkeys.MoltenPasskeysController.registerDevicePasskey(this, currentAccount, (passkey, err) -> {
-                if (err != null) {
-                    BulletinFactory.of(this).createSimpleBulletin(R.raw.error, "Ошибка создания ключа", err).show();
-                } else if (passkey != null) {
-                    BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram создан", "Зарегистрирован на сервере Telegram").show();
-                    added(passkey);
-                }
-            });
-        } else if (item.id == -11) {
-            app.exteraless.passkeys.MoltenPasskeysController.showExportDialog(this, currentAccount);
-        } else if (item.id == -1) {
+        if (item.id == -1) {
             PasskeysController.create(getContext(), currentAccount, (passkey, error) -> {
                 if (error != null) {
                     if ("CANCELLED".equalsIgnoreCase(error))
@@ -257,21 +220,8 @@ public class PasskeysActivity extends BaseFragment {
         if (getContext() == null) return;
         new AlertDialog.Builder(getContext())
                 .setTitle(getString(R.string.PasskeyProviderErrorTitle))
-                .setMessage(getString(R.string.PasskeyProviderErrorMessage))
-                .setPositiveButton("Создать ключ MoltenGram", (di, w) -> {
-                    app.exteraless.passkeys.MoltenPasskeysController.registerDevicePasskey(this, currentAccount, (passkey, err) -> {
-                        if (err != null) {
-                            BulletinFactory.of(this).createSimpleBulletin(R.raw.error, "Ошибка создания ключа", err).show();
-                        } else if (passkey != null) {
-                            BulletinFactory.of(this).createSimpleBulletin(R.raw.passcode_lock_close, "Ключ MoltenGram создан", "Зарегистрирован на сервере Telegram").show();
-                            added(passkey);
-                        }
-                    });
-                })
-                .setNeutralButton("Экспорт ключа (QR)", (di, w) -> {
-                    app.exteraless.passkeys.MoltenPasskeysController.showExportDialog(this, currentAccount);
-                })
-                .setNegativeButton(getString(R.string.Cancel), null)
+                .setMessage("Системные ключи доступа (Passkey) недоступны в сторонних клиентах из-за ограничений Google Digital Asset Links для домена telegram.org. Настройка ключей доступа поддерживается только в официальном приложении Telegram.")
+                .setPositiveButton(getString(R.string.OK), null)
                 .show();
     }
 
