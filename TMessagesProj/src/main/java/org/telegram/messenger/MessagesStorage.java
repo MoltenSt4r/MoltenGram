@@ -7282,6 +7282,9 @@ public class MessagesStorage extends BaseController {
                     TLRPC.UserFull info = TLRPC.UserFull.TLdeserialize(data, data.readInt32(false), false);
                     info.pinned_msg_id = cursor.intValue(1);
                     arrayList.add(info);
+                    if (info.about != null) {
+                        app.exteraless.chats.CustomEmojiStatusHelper.processUserBio(currentAccount, info.id, info.about);
+                    }
                     data.reuse();
 
                 }

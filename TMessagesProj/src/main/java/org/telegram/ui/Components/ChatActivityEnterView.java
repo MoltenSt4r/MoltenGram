@@ -7404,9 +7404,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         allowGifs = needGifs;
         if (emojiView != null) {
             emojiView.setAllow(allowStickers, allowGifs, true);
-            if (xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()) {
-                emojiView.allowEmojisForNonPremium(true);
-            }
+            emojiView.allowEmojisForNonPremium(LinkedCustomEmoji.canSend(currentAccount));
         }
         setEmojiButtonImage(false, !isPaused);
     }
@@ -8791,8 +8789,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             return false;
         }
         final boolean isPremium = UserConfig.getInstance(currentAccount).isPremium()
-                || LinkedCustomEmoji.canSend(currentAccount)
-                || xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool();
+                || LinkedCustomEmoji.canSend(currentAccount);
         if (!isPremium && UserConfig.getInstance(currentAccount).getClientUserId() != dialogId && message instanceof Spanned) {
             AnimatedEmojiSpan[] animatedEmojis = ((Spanned) message).getSpans(0, message.length(), AnimatedEmojiSpan.class);
             if (animatedEmojis != null) {
@@ -13360,8 +13357,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             emojiView.updateColors();
         }
         emojiView.setAllow(allowStickers, allowGifs, true);
-        emojiView.allowLocalPremiumEmojis(LinkedCustomEmoji.canSend(currentAccount)
-                || xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool());
+        emojiView.allowLocalPremiumEmojis(LinkedCustomEmoji.canSend(currentAccount));
         emojiView.setVisibility(GONE);
         emojiView.setShowing(false);
         if (windowInsetsInAppController != null) {
@@ -13416,7 +13412,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             @Override
             public boolean allowNonPremiumCustomEmoji() {
                 return !UserConfig.getInstance(currentAccount).isPremium()
-                    && !xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()
+                    && !LinkedCustomEmoji.canSend(currentAccount)
                     && NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool()
                     && dialog_id != UserConfig.getInstance(currentAccount).getClientUserId();
             }

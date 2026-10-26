@@ -1106,7 +1106,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         }
         final int account = UserConfig.selectedAccount;
         final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
-        if (user == null || !MessagesController.getInstance(account).isPremiumUser(user)) {
+        if (user == null || (!MessagesController.getInstance(account).isPremiumUser(user) && !app.exteraless.chats.CustomEmojiStatusHelper.isEnabled())) {
             return;
         }
         final SimpleTextView nameView = headerView.getNameView();
@@ -1154,7 +1154,8 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
             }
         };
         dialog.setExpireDateHint(DialogObject.getEmojiStatusUntil(user.emoji_status));
-        final long currentStatusId = DialogObject.getEmojiStatusDocumentId(user.emoji_status);
+        Long userDocId = org.telegram.messenger.UserObject.getEmojiStatusDocumentId(user);
+        final long currentStatusId = userDocId != null ? userDocId : DialogObject.getEmojiStatusDocumentId(user.emoji_status);
         dialog.setSelected(currentStatusId != 0 ? Long.valueOf(currentStatusId) : null);
         dialog.setSaveState(3);
 

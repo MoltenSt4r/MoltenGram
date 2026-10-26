@@ -14,6 +14,7 @@ import java.util.HashSet;
 import java.util.List;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import xyz.nextalone.nagram.NaConfig;
 
 public final class LinkedCustomEmoji {
 
@@ -23,7 +24,8 @@ public final class LinkedCustomEmoji {
     }
 
     public static boolean canSend(int account) {
-        return NekoConfig.localPremium.Bool() && !UserConfig.getInstance(account).isPremium();
+        return NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()
+                && !UserConfig.getInstance(account).isPremium();
     }
 
     public static boolean isLink(TLRPC.MessageEntity entity) {

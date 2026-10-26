@@ -652,6 +652,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private final static int delete_group = 45;
     private final static int enable_no_forwards = 46;
     private final static int disable_no_forwards = 47;
+    private final static int set_emoji_status_menu = 48;
 
     private final static int event_log = 102;
     private final static int message_filter = 103;
@@ -2922,6 +2923,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     AndroidUtilities.addToClipboard(getMessagesController().linkPrefix + "/" + UserObject.getPublicUsername(user));
                 } else if (id == set_username) {
                     presentFragment(new ChangeUsernameActivity());
+                } else if (id == set_emoji_status_menu) {
+                    showStatusSelect();
                 } else if (id == logout) {
                     presentFragment(new LogoutActivity());
                 } else if (id == set_as_main) {
@@ -7831,7 +7834,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             } else if (position == channelInfoRow) {
                 about = chatInfo != null ? chatInfo.about : null;
             } else {
-                about = userInfo != null ? userInfo.about : null;
+                about = userInfo != null ? app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about) : null;
             }
             BottomBuilder builder = new BottomBuilder(getParentActivity());
             builder.addItem(getString(R.string.Copy), R.drawable.msg_copy, __ -> {
@@ -11909,13 +11912,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         nameTextView[a].setRightDrawable2(null);
                         nameTextViewRightDrawable2ContentDescription = null;
                     }
-                    Long selfEmojiDocId = (user != null && user.self) ? UserObject.getEmojiStatusDocumentId(user) : null;
-                    if (user != null/* && !getMessagesController().premiumFeaturesBlocked()*/ && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (user.self && selfEmojiDocId != null && selfEmojiDocId != 0))) {
+                    Long userEmojiDocId = user != null ? UserObject.getEmojiStatusDocumentId(user) : null;
+                    if (user != null/* && !getMessagesController().premiumFeaturesBlocked()*/ && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (userEmojiDocId != null && userEmojiDocId != 0))) {
                         rightIconIsStatus = true;
                         rightIconIsPremium = false;
-                        if (user.self && (selfEmojiDocId != null && selfEmojiDocId != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
+                        if ((userEmojiDocId != null && userEmojiDocId != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
                             TLRPC.TL_emojiStatus status = new TLRPC.TL_emojiStatus();
-                            status.document_id = selfEmojiDocId;
+                            status.document_id = userEmojiDocId;
                             nameTextView[a].setRightDrawable(getEmojiStatusDrawable(status, false, false, a));
                         } else {
                             nameTextView[a].setRightDrawable(getEmojiStatusDrawable(user.emoji_status, false, false, a));
@@ -11943,13 +11946,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     } else {
                         nameTextView[a].setRightDrawable2(null);
                     }
-                    Long selfEmojiDocId2 = (user != null && user.self) ? UserObject.getEmojiStatusDocumentId(user) : null;
-                    if (/*!getMessagesController().premiumFeaturesBlocked() && */user != null && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (user.self && selfEmojiDocId2 != null && selfEmojiDocId2 != 0))) {
+                    Long userEmojiDocId2 = user != null ? UserObject.getEmojiStatusDocumentId(user) : null;
+                    if (/*!getMessagesController().premiumFeaturesBlocked() && */user != null && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (userEmojiDocId2 != null && userEmojiDocId2 != 0))) {
                         rightIconIsStatus = true;
                         rightIconIsPremium = false;
-                        if (user.self && (selfEmojiDocId2 != null && selfEmojiDocId2 != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
+                        if ((userEmojiDocId2 != null && userEmojiDocId2 != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
                             TLRPC.TL_emojiStatus status = new TLRPC.TL_emojiStatus();
-                            status.document_id = selfEmojiDocId2;
+                            status.document_id = userEmojiDocId2;
                             nameTextView[a].setRightDrawable(getEmojiStatusDrawable(status, true, true, a));
                         } else {
                             nameTextView[a].setRightDrawable(getEmojiStatusDrawable(user.emoji_status, true, true, a));
@@ -11975,7 +11978,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (a == 1 && (rightIconIsStatus || rightIconIsPremium)) {
                     nameTextView[a].setRightDrawableOutside(true);
                 }
-                if (user.self && getMessagesController().isPremiumUser(user)) {
+                if (user.self && (getMessagesController().isPremiumUser(user) || app.exteraless.chats.CustomEmojiStatusHelper.isEnabled())) {
                     nameTextView[a].setRightDrawableOnClick(v -> {
                         showStatusSelect();
                     });
@@ -12588,6 +12591,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 editColorItem = otherItem.addSubItem(edit_color, R.drawable.menu_profile_colors, LocaleController.getString(R.string.ProfileColorEdit));
                 updateEditColorIcon();
                 if (myProfile) {
+                    if (app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() || getMessagesController().isPremiumUser(user)) {
+                        otherItem.addSubItem(set_emoji_status_menu, R.drawable.msg_emoji_smiles, LocaleController.getString(R.string.SetEmojiStatus));
+                    }
                     setUsernameItem = otherItem.addSubItem(set_username, R.drawable.menu_username_change, getString(R.string.ProfileUsernameEdit));
                     linkItem = otherItem.addSubItem(copy_link_profile, R.drawable.msg_link2, getString(R.string.ProfileCopyLink));
                     otherItem.addSubItem(clear_cache, R.drawable.msg_delete, getString(R.string.ClearCache));
@@ -14282,7 +14288,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     if (position == userInfoRow) {
                         // TLRPC.User user = userInfo.user != null ? userInfo.user : getMessagesController().getUser(userInfo.id);
                         // boolean addlinks = isBot || (user != null && user.premium && userInfo.about != null);
-                        aboutLinkCell.setTextAndValue(MessageHelper.zalgoFilter(userInfo.about), LocaleController.getString(R.string.UserBio), true);
+                        aboutLinkCell.setTextAndValue(MessageHelper.zalgoFilter(app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about)), LocaleController.getString(R.string.UserBio), true);
                     } else if (position == channelInfoRow) {
                         String text = chatInfo.about;
                         while (text.contains("\n\n\n")) {
@@ -14292,7 +14298,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     } else if (position == bioRow) {
                         String value;
                         if (userInfo == null || !TextUtils.isEmpty(userInfo.about)) {
-                            value = userInfo == null ? LocaleController.getString(R.string.Loading) : userInfo.about;
+                            value = userInfo == null ? LocaleController.getString(R.string.Loading) : app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about);
                             aboutLinkCell.setTextAndValue(MessageHelper.zalgoFilter(value), LocaleController.getString(R.string.UserBio), true/*getUserConfig().isPremium()*/);
                             currentBio = userInfo != null ? userInfo.about : null;
                         } else {
@@ -17139,7 +17145,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
         String copyButton = getString(R.string.Copy);
         String textToCopy = null;
         if (position == channelInfoRow || position == userInfoRow || position == bioRow) {
-            textToCopy = userFull.about;
+            textToCopy = app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userFull.about);
         } else if (position == bizHoursRow) {
             textToCopy = OpeningHoursActivity.toString(currentAccount, user, userFull.business_work_hours);
             copyButton = getString(R.string.ProfileHoursCopy);

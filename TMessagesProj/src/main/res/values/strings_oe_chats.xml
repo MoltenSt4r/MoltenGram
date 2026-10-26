@@ -225,4 +225,11 @@
     <string name="OEChatsMessageAnimSlide">Slide</string>
     <string name="OEChatsMessageAnimScale">Scale</string>
     <string name="OEChatsMessageAnimPop">Pop</string>
+
+    <string name="OECustomEmojiStatus">Custom Emoji Status</string>
+    <string name="OECustomEmojiStatusInfo">Set and see custom emoji statuses without Telegram Premium via invisible code in Bio.</string>
+    <string name="OECleanBioDisplay">Hide Code in Bio</string>
+    <string name="OECleanBioDisplayInfo">Hide invisible encoding characters when viewing profile bios.</string>
+    <string name="OESetEmojiStatus">Choose Emoji Status</string>
+    <string name="OESetEmojiStatusInfo">Select an animated or custom emoji to display next to your name.</string>
 </resources>

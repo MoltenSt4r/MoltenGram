@@ -176,7 +176,7 @@ public class ChangeBioActivity extends BaseFragment {
 
         TLRPC.UserFull userFull = MessagesController.getInstance(currentAccount).getUserFull(UserConfig.getInstance(currentAccount).getClientUserId());
         if (userFull != null && userFull.about != null) {
-            firstNameField.setText(userFull.about);
+            firstNameField.setText(app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userFull.about));
             firstNameField.setSelection(firstNameField.length());
         }
 
@@ -199,7 +199,7 @@ public class ChangeBioActivity extends BaseFragment {
         if (getParentActivity() == null || userFull == null) {
             return;
         }
-        String currentName = userFull.about;
+        String currentName = app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userFull.about);
         if (currentName == null) {
             currentName = "";
         }
@@ -211,8 +211,11 @@ public class ChangeBioActivity extends BaseFragment {
 
         final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
 
-        final TL_account.updateProfile req = new TL_account.updateProfile();
-        req.about = newName;
+        String tag = app.exteraless.chats.CustomEmojiStatusHelper.getTagForCurrentUser(currentAccount);
+        final String newAbout = (!tag.isEmpty())
+                ? app.exteraless.chats.CustomEmojiStatusHelper.formatBioWithTag(newName, tag, userFull.user != null && userFull.user.premium)
+                : app.exteraless.chats.CustomEmojiStatusHelper.cleanBio(newName);
+        req.about = newAbout;
         req.flags |= 4;
 
         final int reqId = ConnectionsManager.getInstance(currentAccount).sendRequest(req, (response, error) -> {
@@ -224,7 +227,7 @@ public class ChangeBioActivity extends BaseFragment {
                     } catch (Exception e) {
                         FileLog.e(e);
                     }
-                    userFull.about = newName;
+                    userFull.about = newAbout;
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.userInfoDidLoad, user.id, userFull);
                     finishFragment();
                 });

@@ -400,8 +400,8 @@ public class DialogObject {
     public static long getEmojiStatusDocumentId(long dialogId) {
         if (dialogId >= 0) {
             final TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
-            if (user == null) return 0;
-            return getEmojiStatusDocumentId(user.emoji_status);
+            Long docId = UserObject.getEmojiStatusDocumentId(user);
+            return docId != null ? docId : 0;
         } else {
             final TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
             if (chat == null) return 0;

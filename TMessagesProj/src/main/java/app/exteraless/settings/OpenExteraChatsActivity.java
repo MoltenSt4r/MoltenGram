@@ -26,11 +26,16 @@ import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
+import org.telegram.tgnet.TLRPC;
+import org.telegram.tgnet.tl.TL_stars;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.SelectAnimatedEmojiDialog;
+import app.exteraless.chats.CustomEmojiStatusHelper;
 import app.exteraless.links.LinkCleaner;
 import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Cells.TextCell;
@@ -170,6 +175,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int pluginCommandSuggestionsRow;
     private int pluginCommandPrefixesRow;
     private int customCommandsRow;
+    private int customEmojiStatusRow;
+    private int cleanBioDisplayRow;
+    private int setEmojiStatusRow;
     private int inlineMathRow;
     private int inlineMathCurrencyRow;
     private int hideSendAsPeerRow;
@@ -413,6 +421,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         pluginCommandSuggestionsRow = addRow("pluginCommandSuggestions");
         pluginCommandPrefixesRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("pluginCommandPrefixes") : -1;
         customCommandsRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("customCommands") : -1;
+        customEmojiStatusRow = addRow("customEmojiStatus");
+        cleanBioDisplayRow = OpenExteraConfig.customEmojiStatus.Bool() ? addRow("cleanBioDisplay") : -1;
+        setEmojiStatusRow = OpenExteraConfig.customEmojiStatus.Bool() ? addRow("setEmojiStatus") : -1;
         inlineMathRow = addRow("inlineMathResult");
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
         hideSendAsPeerRow = addRow("hideSendAsPeer");
@@ -1369,6 +1380,99 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
+    private SelectAnimatedEmojiDialog.SelectAnimatedEmojiDialogWindow selectAnimatedEmojiDialog;
+
+    private void showSelectEmojiStatusDialog(View cell) {
+        if (selectAnimatedEmojiDialog != null) {
+            return;
+        }
+        final int account = currentAccount;
+        final TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
+        if (user == null) {
+            return;
+        }
+        final SelectAnimatedEmojiDialog.SelectAnimatedEmojiDialogWindow[] popup = new SelectAnimatedEmojiDialog.SelectAnimatedEmojiDialogWindow[1];
+        int popupWidth = (int) Math.min(AndroidUtilities.dp(340 - 16), AndroidUtilities.displaySize.x * .95f);
+        int popupX = Math.max(0, (AndroidUtilities.displaySize.x - popupWidth) / 2);
+        int popupY = AndroidUtilities.displaySize.y / 4;
+        if (cell != null) {
+            int[] location = new int[2];
+            cell.getLocationInWindow(location);
+            popupY = location[1] + cell.getHeight();
+            if (popupY + AndroidUtilities.dp(400) > AndroidUtilities.displaySize.y) {
+                popupY = Math.max(0, location[1] - AndroidUtilities.dp(400));
+            }
+        }
+        SelectAnimatedEmojiDialog dialog = new SelectAnimatedEmojiDialog(this, getContext(), true,
+                popupWidth / 2, SelectAnimatedEmojiDialog.TYPE_EMOJI_STATUS, true, resourcesProvider, 16) {
+            @Override
+            protected void onEmojiSelected(View emojiView, Long documentId, TLRPC.Document document, TL_stars.TL_starGiftUnique gift, Integer until) {
+                final TLRPC.EmojiStatus status;
+                if (gift != null) {
+                    final TLRPC.TL_inputEmojiStatusCollectible collectible = new TLRPC.TL_inputEmojiStatusCollectible();
+                    collectible.collectible_id = gift.id;
+                    if (until != null) {
+                        collectible.flags |= 1;
+                        collectible.until = until;
+                    }
+                    status = collectible;
+                } else if (documentId == null) {
+                    status = new TLRPC.TL_emojiStatusEmpty();
+                } else {
+                    final TLRPC.TL_emojiStatus emojiStatus = new TLRPC.TL_emojiStatus();
+                    emojiStatus.document_id = documentId;
+                    if (until != null) {
+                        emojiStatus.flags |= 1;
+                        emojiStatus.until = until;
+                    }
+                    status = emojiStatus;
+                }
+                MessagesController.getInstance(account).updateEmojiStatus(0L, status, gift);
+                if (popup[0] != null) {
+                    selectAnimatedEmojiDialog = null;
+                    popup[0].dismiss();
+                }
+                if (listAdapter != null && setEmojiStatusRow != -1) {
+                    listAdapter.notifyItemChanged(setEmojiStatusRow);
+                }
+            }
+        };
+        dialog.setExpireDateHint(DialogObject.getEmojiStatusUntil(user.emoji_status));
+        Long userDocId = UserObject.getEmojiStatusDocumentId(user);
+        final long currentStatusId = userDocId != null ? userDocId : DialogObject.getEmojiStatusDocumentId(user.emoji_status);
+        dialog.setSelected(currentStatusId != 0 ? Long.valueOf(currentStatusId) : null);
+        dialog.setSaveState(3);
+
+        SelectAnimatedEmojiDialog.SelectAnimatedEmojiDialogWindow window =
+                new SelectAnimatedEmojiDialog.SelectAnimatedEmojiDialogWindow(dialog,
+                        LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT) {
+                    @Override
+                    public void dismiss() {
+                        super.dismiss();
+                        selectAnimatedEmojiDialog = null;
+                    }
+                };
+        selectAnimatedEmojiDialog = window;
+        popup[0] = window;
+        final int[] selfLocation = new int[2];
+        if (fragmentView != null) {
+            fragmentView.getLocationInWindow(selfLocation);
+            window.showAsDropDown(fragmentView, popupX, popupY - selfLocation[1], Gravity.LEFT | Gravity.TOP);
+        } else if (cell != null) {
+            window.showAsDropDown(cell, 0, 0, Gravity.CENTER_HORIZONTAL | Gravity.TOP);
+        }
+        window.dimBehind();
+    }
+
+    @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        if (selectAnimatedEmojiDialog != null) {
+            selectAnimatedEmojiDialog.dismiss();
+            selectAnimatedEmojiDialog = null;
+        }
+    }
+
 
     /**
      * «Безлимит недавних стикеров» из exteraGram — один тумблер поверх двух рабочих ключей
@@ -1626,6 +1730,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else if (position == customCommandsRow) {
             presentFragment(new app.exteraless.plugins.ui.CustomCommandsActivity());
             return;
+        } else if (position == setEmojiStatusRow) {
+            showSelectEmojiStatusDialog(view);
+            return;
         }
 
         if (position == tapToSwitchRecordRow) {
@@ -1673,6 +1780,27 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     listAdapter.notifyItemRangeRemoved(wasPrefixesRow, 2);
                 } else if (wasPrefixesRow == -1 && pluginCommandPrefixesRow != -1) {
                     listAdapter.notifyItemRangeInserted(pluginCommandPrefixesRow, 2);
+                }
+            }
+        } else if (position == customEmojiStatusRow) {
+            int wasCleanBioRow = cleanBioDisplayRow;
+            updateRows();
+            if (listAdapter != null) {
+                if (wasCleanBioRow != -1 && cleanBioDisplayRow == -1) {
+                    listAdapter.notifyItemRangeRemoved(wasCleanBioRow, 2);
+                } else if (wasCleanBioRow == -1 && cleanBioDisplayRow != -1) {
+                    listAdapter.notifyItemRangeInserted(cleanBioDisplayRow, 2);
+                }
+            }
+            for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
+                if (UserConfig.getInstance(i).isClientActivated()) {
+                    NotificationCenter.getInstance(i).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_EMOJI_STATUS | MessagesController.UPDATE_MASK_NAME);
+                }
+            }
+        } else if (position == customEmojiWithoutPremiumRow) {
+            for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
+                if (UserConfig.getInstance(i).isClientActivated()) {
+                    NotificationCenter.getInstance(i).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_EMOJI_STATUS);
                 }
             }
         } else if (position == hideTimeOnStickersRow && stickerSizeCell != null) {
@@ -1846,6 +1974,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == addCommaRow) return OpenExteraConfig.addCommaAfterMention;
         if (position == disableMarkdownRow) return NaConfig.INSTANCE.getDisableMarkdown();
         if (position == pluginCommandSuggestionsRow) return OpenExteraConfig.pluginCommandSuggestions;
+        if (position == customEmojiStatusRow) return OpenExteraConfig.customEmojiStatus;
+        if (position == cleanBioDisplayRow) return OpenExteraConfig.cleanBioDisplay;
         if (position == inlineMathRow) return ChatsConfig.inlineMathResult;
         if (position == inlineMathCurrencyRow) return ChatsConfig.inlineMathCurrency;
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
@@ -2508,6 +2638,14 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndValueAndCheck(getString(R.string.OEPluginCommandSuggestions),
                         getString(R.string.OEPluginCommandSuggestionsInfo),
                         OpenExteraConfig.pluginCommandSuggestions.Bool(), true, true);
+            } else if (position == customEmojiStatusRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OECustomEmojiStatus),
+                        getString(R.string.OECustomEmojiStatusInfo),
+                        OpenExteraConfig.customEmojiStatus.Bool(), true, true);
+            } else if (position == cleanBioDisplayRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OECleanBioDisplay),
+                        getString(R.string.OECleanBioDisplayInfo),
+                        OpenExteraConfig.cleanBioDisplay.Bool(), true, true);
             } else if (position == inlineMathRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsInlineMath),
                         getString(R.string.OEChatsInlineMathInfo),
@@ -2689,6 +2827,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                         OpenExteraConfig.pluginCommandPrefixes(), true);
             } else if (position == customCommandsRow) {
                 cell.setText(getString(R.string.CustomCommandsTitle), false);
+            } else if (position == setEmojiStatusRow) {
+                cell.setText(getString(R.string.OESetEmojiStatus), true);
             } else if (position == incomingMessageAnimationRow) {
                 CharSequence[] options = messageAnimationOptions();
                 cell.setTextAndValue(getString(R.string.OEChatsIncomingMessageAnimation),
@@ -2789,6 +2929,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || position == openAiCredentialsRow || position == voskModelsRow
                     || position == textAnimationRow || position == trackingFilterRow
                     || position == pluginCommandPrefixesRow || position == customCommandsRow
+                    || position == setEmojiStatusRow
                     || position == incomingMessageAnimationRow || position == outgoingMessageAnimationRow;
         }
     }

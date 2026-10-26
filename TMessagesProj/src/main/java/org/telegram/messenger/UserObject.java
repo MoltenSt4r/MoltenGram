@@ -164,6 +164,10 @@ public class UserObject {
         if (local != null && local != 0) {
             return local;
         }
+        Long custom = app.exteraless.chats.CustomEmojiStatusHelper.getEmojiStatusDocumentId(user.id);
+        if (custom != null && custom != 0) {
+            return custom;
+        }
         return null;
     }
 

@@ -20854,7 +20854,16 @@ public class ChatActivity extends BaseFragment implements
                     }
                 } else if (threadMessageId > 0) {
                     final TLRPC.User user = getMessagesController().getUser(threadMessageId);
-                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(user))), user.scam, user.fake, user.verified, user.premium, user.emoji_status, animated);
+                    TLRPC.EmojiStatus emojiStatus = user != null ? user.emoji_status : null;
+                    if (emojiStatus == null && user != null) {
+                        Long customDocId = UserObject.getEmojiStatusDocumentId(user);
+                        if (customDocId != null && customDocId != 0) {
+                            TLRPC.TL_emojiStatus s = new TLRPC.TL_emojiStatus();
+                            s.document_id = customDocId;
+                            emojiStatus = s;
+                        }
+                    }
+                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(user))), user.scam, user.fake, user.verified, user.premium, emojiStatus, animated);
                 } else {
                     TLRPC.Chat chat = getMessagesController().getChat(-threadMessageId);
                     if (chat == null) chat = currentChat;
@@ -20930,14 +20939,25 @@ public class ChatActivity extends BaseFragment implements
         } else if (currentUser != null) {
             if (currentUser.self) {
                 avatarContainer.setTitle(LocaleController.getString(R.string.SavedMessages));
-            } else if (!MessagesController.isSupportUser(currentUser) && getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
-                if (!TextUtils.isEmpty(currentUser.phone)) {
-                    avatarContainer.setTitle(PhoneFormat.getInstance().format("+" + currentUser.phone), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
-                } else {
-                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), currentUser.emoji_status, animated);
-                }
             } else {
-                avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), !MessagesController.isSupportUser(currentUser) ? currentUser.emoji_status : null, animated);
+                TLRPC.EmojiStatus emojiStatus = !MessagesController.isSupportUser(currentUser) ? currentUser.emoji_status : null;
+                if (emojiStatus == null && !MessagesController.isSupportUser(currentUser)) {
+                    Long customDocId = UserObject.getEmojiStatusDocumentId(currentUser);
+                    if (customDocId != null && customDocId != 0) {
+                        TLRPC.TL_emojiStatus s = new TLRPC.TL_emojiStatus();
+                        s.document_id = customDocId;
+                        emojiStatus = s;
+                    }
+                }
+                if (getContactsController().contactsDict.get(currentUser.id) == null && (getContactsController().contactsDict.size() != 0 || !getContactsController().isLoadingContacts())) {
+                    if (!TextUtils.isEmpty(currentUser.phone)) {
+                        avatarContainer.setTitle(PhoneFormat.getInstance().format("+" + currentUser.phone), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), emojiStatus, animated);
+                    } else {
+                        avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), emojiStatus, animated);
+                    }
+                } else {
+                    avatarContainer.setTitle(AndroidUtilities.removeRTL(AndroidUtilities.removeDiacritics(UserObject.getUserName(currentUser))), currentUser.scam, currentUser.fake, currentUser.verified, getMessagesController().isPremiumUser(currentUser), emojiStatus, animated);
+                }
             }
         }
         setParentActivityTitle(avatarContainer.getTitleTextView().getText());

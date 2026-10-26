@@ -2659,7 +2659,8 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         pack.needLoadSet = null;
                     }
                     boolean lock = false;
-                    if (type != TYPE_SET_REPLY_ICON && type != TYPE_SET_REPLY_ICON_BOTTOM && type != TYPE_CHAT_REACTIONS) {
+                    if (type != TYPE_SET_REPLY_ICON && type != TYPE_SET_REPLY_ICON_BOTTOM && type != TYPE_CHAT_REACTIONS
+                            && !(app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() && (type == TYPE_EMOJI_STATUS || type == TYPE_EMOJI_STATUS_TOP))) {
                         lock = !pack.free && !UserConfig.getInstance(currentAccount).isPremium();
                     }
                     header.setText(pack.set.title, lock);
@@ -2792,8 +2793,10 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 if (packIndex >= 0 && packIndex < packs.size()) {
                     EmojiView.EmojiPack pack = packs.get(packIndex);
                     if (pack != null) {
-                        button.set(pack.set.title, !pack.free && !UserConfig.getInstance(currentAccount).isPremium(), pack.installed, e -> {
-                            if (!pack.free && !UserConfig.getInstance(currentAccount).isPremium()) {
+                        boolean isLocked = !pack.free && !UserConfig.getInstance(currentAccount).isPremium()
+                                && !(app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() && (type == TYPE_EMOJI_STATUS || type == TYPE_EMOJI_STATUS_TOP));
+                        button.set(pack.set.title, isLocked, pack.installed, e -> {
+                            if (isLocked) {
                                 BaseFragment fragment = LaunchActivity.getLastFragment();
                                 if (fragment != null) {
                                     fragment.showDialog(new PremiumFeatureBottomSheet(baseFragment, getContext(), currentAccount, PremiumPreviewFragment.PREMIUM_FEATURE_ANIMATED_EMOJI, false));

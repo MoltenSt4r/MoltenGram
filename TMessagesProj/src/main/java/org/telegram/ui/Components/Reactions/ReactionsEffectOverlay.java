@@ -92,6 +92,7 @@ public class ReactionsEffectOverlay {
     private static long lastHapticTime;
     ArrayList<AvatarParticle> avatars = new ArrayList<>();
     public long startTime;
+    public long peakStartTime;
     public boolean isStories;
     boolean isFinished;
     private boolean isStaticEmoji;
@@ -390,10 +391,10 @@ public class ReactionsEffectOverlay {
                 }
 
                 float animateInProgressX, animateInProgressY;
-                float animateOutProgress = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
+                float animateOutProgress = CubicBezierInterpolator.DEFAULT.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
                 if (animationType == ONLY_MOVE_ANIMATION) {
-                    animateInProgressX = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
-                    animateInProgressY = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
+                    animateInProgressX = CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animateOutProgress);
+                    animateInProgressY = CubicBezierInterpolator.DEFAULT.getInterpolation(animateOutProgress);
                 } else if (fromHolder) {
                     animateInProgressX = CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animateInProgress);
                     animateInProgressY = CubicBezierInterpolator.DEFAULT.getInterpolation(animateInProgress);
@@ -465,8 +466,13 @@ public class ReactionsEffectOverlay {
                     }
                 }
 
-                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((isStaticEmoji && System.currentTimeMillis() - startTime > 1200) || (emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000))) ||
-                        (animationType == SHORT_ANIMATION && ((isStaticEmoji && System.currentTimeMillis() - startTime > 1200) || (effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && System.currentTimeMillis() - startTime > 2000)))) {
+                if (animateInProgress >= 1f && peakStartTime == 0) {
+                    peakStartTime = System.currentTimeMillis();
+                }
+
+                boolean peakHoldDone = peakStartTime != 0 && System.currentTimeMillis() - peakStartTime > 380;
+                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((isStaticEmoji && peakHoldDone) || (emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || ((visibleReaction.documentId != 0 || emojiImageView.getImageReceiver().getLottieAnimation() == null) && peakHoldDone) || System.currentTimeMillis() - startTime > 2000)) ||
+                        (animationType == SHORT_ANIMATION && ((isStaticEmoji && peakHoldDone) || (effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && peakHoldDone) || System.currentTimeMillis() - startTime > 2000))) {
                     if (ReactionsEffectOverlay.this.animateOutProgress != 1f) {
                         if (animationType == SHORT_ANIMATION) {
                             ReactionsEffectOverlay.this.animateOutProgress = 1f;

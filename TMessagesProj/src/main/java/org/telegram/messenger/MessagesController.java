@@ -2661,6 +2661,18 @@ public class MessagesController extends BaseController implements NotificationCe
                 getNotificationCenter().postNotificationName(NotificationCenter.userEmojiStatusUpdated, user);
             }
             LocalPremiumStatusHelper.apply(new_emoji_status);
+            if (app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() && !getUserConfig().isPremium()) {
+                if (new_emoji_status != null && !(new_emoji_status instanceof TLRPC.TL_emojiStatusEmpty)) {
+                    long docId = DialogObject.getEmojiStatusDocumentId(new_emoji_status);
+                    if (docId != 0) {
+                        app.exteraless.chats.CustomEmojiStatusHelper.setCustomEmojiStatus(currentAccount, docId, null);
+                    } else {
+                        app.exteraless.chats.CustomEmojiStatusHelper.clearCustomEmojiStatus(currentAccount, null);
+                    }
+                } else {
+                    app.exteraless.chats.CustomEmojiStatusHelper.clearCustomEmojiStatus(currentAccount, null);
+                }
+            }
         } else {
             TLRPC.TL_channels_updateEmojiStatus req = new TLRPC.TL_channels_updateEmojiStatus();
             req.channel = getInputChannel(-dialogId);
@@ -7917,6 +7929,7 @@ public class MessagesController extends BaseController implements NotificationCe
                         }
                     }
                     fullUsers.put(user.id, userFull);
+                    app.exteraless.chats.CustomEmojiStatusHelper.processUserBio(currentAccount, user.id, userFull.about);
                     getTranslateController().updateDialogFull(user.id);
                     StarsController.getInstance(currentAccount).invalidateProfileGifts(userFull);
                     loadingFullUsers.remove(user.id);
@@ -10762,6 +10775,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             }
             if (info != null) {
+                app.exteraless.chats.CustomEmojiStatusHelper.processUserBio(currentAccount, user.id, info.about);
                 if (fullUsers.get(user.id) == null) {
                     fullUsers.put(user.id, info);
                     getTranslateController().updateDialogFull(user.id);

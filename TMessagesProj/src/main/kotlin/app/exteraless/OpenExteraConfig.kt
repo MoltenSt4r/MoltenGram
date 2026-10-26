@@ -61,7 +61,21 @@ object OpenExteraConfig {
     @JvmField
     val useCurrentEmojiForReactions = addConfig("OEUseCurrentEmojiForReactions", ConfigItem.configTypeBool, false)
 
+    /** Пользовательские эмодзи-статусы без Telegram Premium через код в Bio */
+    @JvmField
+    val customEmojiStatus = addConfig("OECustomEmojiStatus", ConfigItem.configTypeBool, true)
+
+    /** Скрывать невидимый код эмодзи-статуса при отображении описания (Bio) */
+    @JvmField
+    val cleanBioDisplay = addConfig("OECleanBioDisplay", ConfigItem.configTypeBool, true)
+
     // ---- Статические геттеры для вызова из Java в горячих местах ----
+
+    @JvmStatic
+    fun customEmojiStatus(): Boolean = customEmojiStatus.Bool()
+
+    @JvmStatic
+    fun cleanBioDisplay(): Boolean = cleanBioDisplay.Bool()
 
     @JvmStatic
     fun downloadEmojiPacks(): Boolean = downloadEmojiPacks.Bool()

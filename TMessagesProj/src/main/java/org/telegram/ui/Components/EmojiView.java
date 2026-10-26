@@ -317,7 +317,7 @@ public class EmojiView extends FrameLayout implements
 
     private boolean allowEmojisForNonPremium;
     public boolean allowEmojisForNonPremium() {
-        return allowEmojisForNonPremium || xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool();
+        return allowEmojisForNonPremium;
     }
     private boolean localPremiumEmojis;
     public void allowEmojisForNonPremium(boolean allow) {
