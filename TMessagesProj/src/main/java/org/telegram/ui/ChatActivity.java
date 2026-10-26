@@ -48,6 +48,7 @@ import android.content.SharedPreferences;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.graphics.BitmapShader;
 import android.graphics.Canvas;
 import android.graphics.Color;
@@ -1412,6 +1413,11 @@ public class ChatActivity extends BaseFragment implements
     private final static int OPTION_COPY_PHOTO = 150;
     private final static int OPTION_COPY_PHOTO_AS_STICKER = 151;
     private final static int OPTION_COPY_FRAME = 152;
+    private final static int OPTION_FIND_SIMILAR_PHOTOS = 153;
+
+    private ImageView searchSemanticButton;
+    private ImageView searchPhotoButton;
+    private boolean isSemanticSearch = false;
 
     private final static int[] allowedNotificationsDuringChatListAnimations = new int[]{
             AyuConstants.MESSAGES_DELETED_NOTIFICATION,
@@ -11467,6 +11473,12 @@ public class ChatActivity extends BaseFragment implements
                     if (searchFilterButton != null && searchFilterButton.getVisibility() != GONE) {
                         leftMargin += 48;
                     }
+                    if (searchSemanticButton != null && searchSemanticButton.getVisibility() != GONE) {
+                        leftMargin += 48;
+                    }
+                    if (searchPhotoButton != null && searchPhotoButton.getVisibility() != GONE) {
+                        leftMargin += 48;
+                    }
                     ((MarginLayoutParams) child.getLayoutParams()).leftMargin = AndroidUtilities.dp(leftMargin);
                 }
                 super.measureChildWithMargins(child, parentWidthMeasureSpec, widthUsed, parentHeightMeasureSpec, heightUsed);
@@ -11534,6 +11546,8 @@ public class ChatActivity extends BaseFragment implements
                 searchCalendarButton.setVisibility(View.GONE);
                 searchUserButton.setVisibility(View.GONE);
                 searchFilterButton.setVisibility(View.GONE);
+                if (searchSemanticButton != null) searchSemanticButton.setVisibility(View.GONE);
+                if (searchPhotoButton != null) searchPhotoButton.setVisibility(View.GONE);
                 searchingForUser = true;
                 searchingUserMessages = null;
                 searchingChatMessages = null;
@@ -11600,6 +11614,67 @@ public class ChatActivity extends BaseFragment implements
                 }
                 filterPopup.show();
             });
+
+            if (app.exteraless.clip.OpenClipConfig.isEnabled()) {
+                searchSemanticButton = new ImageView(getContext());
+                searchSemanticButton.setScaleType(ImageView.ScaleType.CENTER);
+                searchSemanticButton.setImageResource(R.drawable.magic_stick_solar);
+                searchSemanticButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
+                searchSemanticButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
+                searchSemanticButton.setContentDescription(LocaleController.getString(R.string.OpenClipSemanticSearch));
+                float leftOffset = 48;
+                if (searchUserButton != null) leftOffset += 48;
+                if (searchFilterButton != null) leftOffset += 48;
+                searchContainer.addView(searchSemanticButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP, leftOffset, 0, 0, 0));
+                searchSemanticButton.setOnClickListener(view -> {
+                    if (!app.exteraless.clip.OpenClipManager.getInstance().isModelInstalled()) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                        builder.setTitle(LocaleController.getString(R.string.OpenClipSettingsTitle));
+                        builder.setMessage(LocaleController.getString(R.string.OpenClipModelRequired));
+                        builder.setPositiveButton(LocaleController.getString(R.string.OpenClipDownloadModel), (dialog, which) -> {
+                            presentFragment(new app.exteraless.clip.OpenClipSettingsActivity());
+                        });
+                        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                        showDialog(builder.create());
+                        return;
+                    }
+                    isSemanticSearch = !isSemanticSearch;
+                    int color = isSemanticSearch ? getThemedColor(Theme.key_featuredStickers_addButton) : getThemedColor(Theme.key_chat_searchPanelIcons);
+                    searchSemanticButton.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY));
+                    if (searchItem != null && searchItem.getSearchField() != null) {
+                        searchItem.setSearchFieldHint(isSemanticSearch ? LocaleController.getString(R.string.OpenClipSemanticSearch) : LocaleController.getString(R.string.Search));
+                    }
+                });
+
+                searchPhotoButton = new ImageView(getContext());
+                searchPhotoButton.setScaleType(ImageView.ScaleType.CENTER);
+                searchPhotoButton.setImageResource(R.drawable.msg_photo);
+                searchPhotoButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_chat_searchPanelIcons), PorterDuff.Mode.MULTIPLY));
+                searchPhotoButton.setBackground(Theme.createSelectorDrawable(getThemedColor(Theme.key_actionBarActionModeDefaultSelector), 1));
+                searchPhotoButton.setContentDescription(LocaleController.getString(R.string.OpenClipSearchByPhoto));
+                leftOffset += 48;
+                searchContainer.addView(searchPhotoButton, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP, leftOffset, 0, 0, 0));
+                searchPhotoButton.setOnClickListener(view -> {
+                    if (!app.exteraless.clip.OpenClipManager.getInstance().isModelInstalled()) {
+                        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                        builder.setTitle(LocaleController.getString(R.string.OpenClipSettingsTitle));
+                        builder.setMessage(LocaleController.getString(R.string.OpenClipModelRequired));
+                        builder.setPositiveButton(LocaleController.getString(R.string.OpenClipDownloadModel), (dialog, which) -> {
+                            presentFragment(new app.exteraless.clip.OpenClipSettingsActivity());
+                        });
+                        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+                        showDialog(builder.create());
+                        return;
+                    }
+                    try {
+                        Intent intent = new Intent(Intent.ACTION_PICK);
+                        intent.setType("image/*");
+                        startActivityForResult(intent, 9991);
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    }
+                });
+            }
         }
     }
 
@@ -21769,6 +21844,22 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
         if (resultCode == Activity.RESULT_OK) {
+            if (requestCode == 9991) {
+                if (data != null && data.getData() != null) {
+                    try {
+                        Uri uri = data.getData();
+                        InputStream is = ApplicationLoader.applicationContext.getContentResolver().openInputStream(uri);
+                        Bitmap bitmap = BitmapFactory.decodeStream(is);
+                        if (is != null) is.close();
+                        if (bitmap != null) {
+                            executePhotoSearchWithBitmap(bitmap, dialog_id);
+                        }
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
+                return;
+            }
             if (requestCode == 0 || requestCode == 2) {
                 createChatAttachView();
                 if (chatAttachAlert != null) {
@@ -36688,6 +36779,10 @@ public class ChatActivity extends BaseFragment implements
                 });
                 break;
             }
+            case OPTION_FIND_SIMILAR_PHOTOS: {
+                findSimilarPhotosForMessage(selectedObject);
+                break;
+            }
             case OPTION_COPY_FRAME: {
                 final MessageObject messageObject = selectedObject;
                 BaseCell cell = findMessageCell(messageObject.getId(), true);
@@ -37706,6 +37801,12 @@ public class ChatActivity extends BaseFragment implements
         if (searchFilterButton != null) {
             searchFilterButton.setVisibility(View.GONE);
         }
+        if (searchSemanticButton != null) {
+            searchSemanticButton.setVisibility(View.GONE);
+        }
+        if (searchPhotoButton != null) {
+            searchPhotoButton.setVisibility(View.GONE);
+        }
         if (channelHashtags || forcePublic || ChatObject.isChannelAndNotMegaGroup(currentChat) && ChatObject.isPublic(currentChat) && searchingHashtag != null) {
             defaultSearchPage = 2;
             defaultSearchPage = NaConfig.INSTANCE.getSearchHashtagDefaultPageChannel().Int();
@@ -37805,6 +37906,12 @@ public class ChatActivity extends BaseFragment implements
             if (searchFilterButton != null) {
                 searchFilterButton.setVisibility(View.GONE);
             }
+            if (searchSemanticButton != null) {
+                searchSemanticButton.setVisibility(View.GONE);
+            }
+            if (searchPhotoButton != null) {
+                searchPhotoButton.setVisibility(View.GONE);
+            }
         }
         if (searchItem != null) {
             preventReopenSearchWithText = true;
@@ -37866,6 +37973,12 @@ public class ChatActivity extends BaseFragment implements
             }
             if (searchFilterButton != null) {
                 searchFilterButton.setVisibility(View.GONE);
+            }
+            if (searchSemanticButton != null) {
+                searchSemanticButton.setVisibility(View.GONE);
+            }
+            if (searchPhotoButton != null) {
+                searchPhotoButton.setVisibility(View.GONE);
             }
         }
         if (searchItem != null) {
@@ -41838,6 +41951,12 @@ public class ChatActivity extends BaseFragment implements
             if (searchFilterButton != null) {
                 searchFilterButton.setVisibility(View.VISIBLE);
             }
+            if (searchSemanticButton != null && app.exteraless.clip.OpenClipConfig.isEnabled()) {
+                searchSemanticButton.setVisibility(View.VISIBLE);
+            }
+            if (searchPhotoButton != null && app.exteraless.clip.OpenClipConfig.isEnabled()) {
+                searchPhotoButton.setVisibility(View.VISIBLE);
+            }
             if (searchingForUser) {
                 mentionContainer.getAdapter().searchUsernameOrHashtag(null, 0, null, false, true);
                 searchingForUser = false;
@@ -42027,6 +42146,10 @@ public class ChatActivity extends BaseFragment implements
             boolean hashtags = false;
             boolean channelHashtags = false;
             searchingQuery = editText != null ? editText.getText().toString() : searchingQuery;
+            if (isSemanticSearch && !TextUtils.isEmpty(searchingQuery) && app.exteraless.clip.OpenClipInference.getInstance().isReady()) {
+                executeSemanticTextSearch(searchingQuery);
+                return;
+            }
             if (!TextUtils.isEmpty(searchingQuery) && (searchingQuery.startsWith("$") || searchingQuery.startsWith("#"))) {
                 hashtags = true;
                 createSearchHashtagViewsIfNeeded();
@@ -48312,6 +48435,12 @@ public class ChatActivity extends BaseFragment implements
                 if (searchFilterButton != null) {
                     searchFilterButton.setVisibility(View.GONE);
                 }
+                if (searchSemanticButton != null) {
+                    searchSemanticButton.setVisibility(View.GONE);
+                }
+                if (searchPhotoButton != null) {
+                    searchPhotoButton.setVisibility(View.GONE);
+                }
                 // same as "search_from_user_id"
                 TLRPC.Peer peer = selectedObject.messageOwner.from_id;
                 if ((threadMessageId == 0 || isTopic) && !UserObject.isReplyUser(currentUser)) {
@@ -50428,6 +50557,11 @@ public class ChatActivity extends BaseFragment implements
                                     options.add(OPTION_COPY_PHOTO_AS_STICKER);
                                     icons.add(R.drawable.msg_copy_photo);
                                 }
+                                if (app.exteraless.clip.OpenClipConfig.isEnabled()) {
+                                    items.add(LocaleController.getString(R.string.OpenClipFindSimilar));
+                                    options.add(OPTION_FIND_SIMILAR_PHOTOS);
+                                    icons.add(R.drawable.magic_stick_solar);
+                                }
                             }
                         }
                     }
@@ -50853,6 +50987,11 @@ public class ChatActivity extends BaseFragment implements
                             items.add(LocaleController.getString(R.string.CopyPhotoAsSticker));
                             options.add(OPTION_COPY_PHOTO_AS_STICKER);
                             icons.add(R.drawable.msg_copy_photo);
+                        }
+                        if (app.exteraless.clip.OpenClipConfig.isEnabled()) {
+                            items.add(LocaleController.getString(R.string.OpenClipFindSimilar));
+                            options.add(OPTION_FIND_SIMILAR_PHOTOS);
+                            icons.add(R.drawable.magic_stick_solar);
                         }
                     }
                 } else if (type == MESSAGE_TYPE_XML) {
@@ -52055,6 +52194,123 @@ public class ChatActivity extends BaseFragment implements
             getThreadMessage(),
             true, 0, 0, null, 0, getSendMonoForumPeerId(), 0
         );
+    }
+
+    private void findSimilarPhotosForMessage(final MessageObject messageObject) {
+        if (messageObject == null || getParentActivity() == null) {
+            return;
+        }
+        if (!app.exteraless.clip.OpenClipManager.getInstance().isModelInstalled()) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(LocaleController.getString(R.string.OpenClipSettingsTitle));
+            builder.setMessage(LocaleController.getString(R.string.OpenClipModelRequired));
+            builder.setPositiveButton(LocaleController.getString(R.string.OpenClipDownloadModel), (dialog, which) -> {
+                presentFragment(new app.exteraless.clip.OpenClipSettingsActivity());
+            });
+            builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+            showDialog(builder.create());
+            return;
+        }
+
+        ItemOptions options = ItemOptions.makeOptions(this, contentView);
+        options.add(R.drawable.msg_search, LocaleController.getString(R.string.OpenClipSearchInChat), () -> {
+            executePhotoSearchForMessage(messageObject, dialog_id);
+        });
+        options.add(R.drawable.msg_search, LocaleController.getString(R.string.OpenClipSearchGlobal), () -> {
+            executePhotoSearchForMessage(messageObject, 0);
+        });
+        options.show();
+    }
+
+    private void executePhotoSearchForMessage(final MessageObject messageObject, final long targetDialogId) {
+        if (messageObject == null) return;
+        String path = tw.nekomimi.nekogram.helpers.MessageHelper.getPathToMessage(messageObject);
+        if (TextUtils.isEmpty(path)) {
+            File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
+            if (f != null && f.exists()) {
+                path = f.getAbsolutePath();
+            }
+        }
+        if (!TextUtils.isEmpty(path)) {
+            Bitmap bitmap = BitmapFactory.decodeFile(path);
+            if (bitmap != null) {
+                executePhotoSearchWithBitmap(bitmap, targetDialogId);
+                return;
+            }
+        }
+        if (BulletinFactory.canShowBulletin(this)) {
+            BulletinFactory.of(this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+        }
+    }
+
+    private void executePhotoSearchWithBitmap(final Bitmap bitmap, final long targetDialogId) {
+        if (bitmap == null) return;
+        if (BulletinFactory.canShowBulletin(this)) {
+            BulletinFactory.of(this).createSimpleBulletin(R.drawable.magic_stick_solar, LocaleController.getString(R.string.OpenClipSearching)).show();
+        }
+        app.exteraless.clip.OpenClipInference.getInstance().encodeImage(bitmap, embedding -> {
+            if (embedding == null) {
+                if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                    BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+                }
+                return;
+            }
+            float threshold = app.exteraless.clip.OpenClipConfig.getThreshold();
+            app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, targetDialogId, 50, threshold, results -> {
+                if (results == null || results.isEmpty()) {
+                    if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                        BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+                    }
+                    return;
+                }
+                app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
+                if (targetDialogId == dialog_id || top.dialogId == dialog_id) {
+                    scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
+                    if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                        String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
+                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+                    }
+                } else {
+                    Bundle args = new Bundle();
+                    if (top.dialogId < 0) {
+                        args.putLong("chat_id", -top.dialogId);
+                    } else {
+                        args.putLong("user_id", top.dialogId);
+                    }
+                    args.putInt("message_id", (int) top.messageId);
+                    presentFragment(new ChatActivity(args));
+                }
+            });
+        });
+    }
+
+    private void executeSemanticTextSearch(final String query) {
+        if (BulletinFactory.canShowBulletin(this)) {
+            BulletinFactory.of(this).createSimpleBulletin(R.drawable.magic_stick_solar, LocaleController.getString(R.string.OpenClipSearching)).show();
+        }
+        app.exteraless.clip.OpenClipInference.getInstance().encodeText(query, embedding -> {
+            if (embedding == null) {
+                if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                    BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+                }
+                return;
+            }
+            float threshold = app.exteraless.clip.OpenClipConfig.getThreshold();
+            app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, dialog_id, 100, threshold, results -> {
+                if (results == null || results.isEmpty()) {
+                    if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                        BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+                    }
+                    return;
+                }
+                app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
+                scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
+                if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                    String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
+                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+                }
+            });
+        });
     }
 
     private abstract class ChatListRecyclerView extends RecyclerListViewInternal {

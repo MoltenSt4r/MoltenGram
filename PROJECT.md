@@ -1,129 +1,147 @@
-# Project: MoltenGram Audio Modernization
+# Project: MoltenGram Multimodal Semantic Search (MobileCLIP-S0 ONNX INT8)
 
 ## Architecture
-MoltenGram's audio modernization introduces a clean, modular layer across the UI, storage, streaming engine, and recognition services:
-1. **Application-Level Storage (`app.exteraless.player.GlobalPlaylistsStore`)**:
-   - Resides in `ApplicationLoader.applicationContext.getFilesDir()/extera_local_playlists.json`.
-   - Independent of `currentAccount` and survives account switch, logout, and deletion.
-   - Provides thread-safe CRUD, atomic disk writes (`.tmp` write and rename), and tracks active local playlist.
-2. **Audio UI Layer (`app.exteraless.player.PlayerSheet`, `AudioPlayerAlert`, `PlayerSettingsActivity`)**:
-   - Header awareness: Checks `GlobalPlaylistsStore.getInstance().getPlayingPlaylist()`. If set, displays "Из плейлиста" (`R.string.OEPlayerFromPlaylist`) and playlist name.
-   - Settings integration: "Локальные плейлисты" in `PlayerSettingsActivity` routes to playlist management dialog.
-3. **Metrolist / InnerTube Audio Client (`app.exteraless.player.ytmusic`)**:
-   - Pure Kotlin/JVM modular client communicating with `https://music.youtube.com/youtubei/v1/`.
-   - 3 Auth Modes: Guest mode (visitor token), Cookie auth (Netscape `cookies.txt` / raw cookies with SAPISIDHASH computation), and Google OAuth via `WebView`.
-   - ExoPlayer streaming integration via Media3 `CacheDataSource` + `SimpleCache` (256MB LRU) and queue management via synthetic `MessageObject` instances.
-4. **Strict URL Interceptor (`app.exteraless.player.ytmusic.MetrolistUrlInterceptor`)**:
-   - Hooked into `Browser.openUrl` and `ChatActivity`.
-   - Strict filter whitelist: `music.youtube.com`, `metrolist.cc`, `www.metrolist.cc`.
-   - Strict filter blacklist: Rejects `youtube.com`, `www.youtube.com`, `m.youtube.com`, `youtu.be`.
-   - Resolves stream asynchronously and starts playback in native player.
-5. **1-Click Actions (`app.exteraless.player.PlayerActions`)**:
-   - 1-click Save to Saved Messages (`UserConfig.getClientUserId()`).
-   - 1-click Pin to Profile (`TLRPC.TL_account_saveMusic`).
-   - 1-click Save to Local Playlist (`LocalPlaylistsController.showAddToPlaylistDialog`).
-6. **Acoustic Fingerprinting & Canvas Video Covers (`app.exteraless.player.videocover`)**:
-   - Multi-segment acoustic fingerprinting fallback cascade: Intro (10-22s) -> Chorus (~35-45% duration) -> Bridge (~60-70% duration) for complex tracks like *Afterglow*.
-   - YouTube video catalog metadata matching (duration ±15s, title similarity score).
-   - Looping Canvas video cover playback in `PlayerSheet` masked by active Material 3 avatar shape.
+MoltenGram's on-device multimodal semantic search introduces a modular, lightweight, high-performance ML and search layer across core app packages:
+1. **Core ML & Tokenization (`app.exteraless.clip`)**:
+   - `ClipTokenizer`: Pure-Java/Kotlin BPE tokenizer (48,894 ranked merge rules), byte-to-unicode decomposition, `<|startoftext|>` / `<|endoftext|>` sequence framing, context length 77, Cyrillic/multilingual support without Python/C++ binaries.
+   - `ClipImageProcessor`: Resizes images/bitmaps to 256x256 RGB planar NCHW FloatBuffer with center crop and normalization.
+   - `VectorMath`: SIMD-friendly loop-unrolled dot product for L2-normalized 512-dimensional vectors.
+   - `OpenClipManager`: On-demand model download manager based on `VoskManager` (streaming via OkHttpClient, MD5/SHA256 verification, anti-ZipSlip extraction into `.tmp` staging, atomic rename, `.ready` marker, unmapped deletion). Keeps base APK at ~70 MB.
+   - `OpenClipInference`: Wraps ONNX Runtime (`OrtEnvironment`, `OrtSession`) using memory-mapped files and 2 intra-op threads on a dedicated looper `DispatchQueue("openClipQueue")`. Hooks `ForegroundDetector` to unload sessions on app backgrounding.
+2. **Persistence & Vector Cache (`app.exteraless.clip.ClipDatabase`)**:
+   - Dedicated SQLite database (`clip_cache.db` / `clip_embeddings` table) storing precomputed 512-dim L2-normalized vectors (2048-byte binary BLOBs) indexed by dialog_id and message/media ID.
+   - Fast background dot-product similarity search executing in single-digit milliseconds for thousands of messages without main UI blocking.
+3. **Configuration & Settings (`app.exteraless.clip.OpenClipConfig`, `OpenClipSettingsActivity`)**:
+   - Persistent settings via SharedPreferences: master toggle, similarity threshold (0.35–0.80), auto-indexing toggles.
+   - Reusable `SeekBarView` precision slider modeled after `AiSettingsActivity.TemperatureCell`.
+   - Settings entry in `OpenExteraChatsActivity` under the Chats section.
+4. **UI & Context Menu Integration (`org.telegram.ui`)**:
+   - Chat photo context menu item in `ChatActivity.createMenu`: "Найти похожие фото / сообщения" with in-chat and global search scope options.
+   - In-chat search container (`ChatActivity.searchContainer`): photo search button and semantic search mode toggle.
+   - Global search bar (`DialogsActivity`, `FragmentSearchField.additionalIconsLayout`): camera/photo query button and semantic query integration.
+5. **VPS Guardrails & Remote CI Delivery**:
+   - Strict adherence to 1 vCPU / 1.9 GiB RAM constraint: zero local `./gradlew` execution.
+   - Verification via automated Python test harnesses.
+   - Final release build compilation verified on GitHub Actions CI upon git push to `origin main`.
 
 ---
 
 ## Feature Inventory
 | # | Feature | Description | Milestone | Source |
 |---|---------|-------------|-----------|--------|
-| F1 | Player UI Header "Из плейлиста" | Header label "Из плейлиста" and playlist title in PlayerSheet and AudioPlayerAlert | M1 | ORIGINAL_REQUEST §R1 |
-| F2 | GlobalPlaylistsStore Account Decoupling | App-level storage in filesDir surviving account logout/switch/reset | M1 | ORIGINAL_REQUEST §R1 |
-| F3 | Settings Menu Entry "Локальные плейлисты" | Entry in PlayerSettingsActivity under Audio section opening playlist manager | M1 | ORIGINAL_REQUEST §R1 |
-| F4 | Metrolist InnerTube Client (Guest Mode) | Modular client for music.youtube.com querying search & playback without auth | M2 | ORIGINAL_REQUEST §R2 |
-| F5 | Cookie & SAPISID Authentication | Netscape cookies.txt & raw string parsing + SAPISIDHASH header generation | M2 | ORIGINAL_REQUEST §R2 |
-| F6 | Google OAuth via WebView | Interactive login form capturing music.youtube.com session cookies | M2 | ORIGINAL_REQUEST §R2 |
-| F7 | ExoPlayer Streaming, Caching & Queues | Remote audio playback with 256MB SimpleCache and synthetic MessageObject queues | M2 | ORIGINAL_REQUEST §R2 |
-| F8 | Strict URL Interceptor | Strictly intercept music.youtube.com and metrolist.cc; strictly ignore youtube.com & youtu.be | M2 | ORIGINAL_REQUEST §R2 |
-| F9 | 1-Click Audio Actions | 1-click save to Saved Messages, pin to profile, save to local playlist | M2 | ORIGINAL_REQUEST §R2 |
-| F10 | Multi-Segment SongRec Fingerprinting | Intro -> Chorus -> Bridge acoustic fingerprinting cascade for difficult tracks | M3 | ORIGINAL_REQUEST §R3 |
-| F11 | YouTube Video Catalog Metadata Matching | Duration ±15s and metadata similarity scoring to find official clips / Canvases | M3 | ORIGINAL_REQUEST §R3 |
-| F12 | MD3 Shaped Canvas Playback | Looping video cover in PlayerSheet masked to current MD3 avatar shape | M3 | ORIGINAL_REQUEST §R3 |
-| F13 | Automated Unit Testing & Build Verification | Persistence tests across account switch/reset, URL filtering tests, compileStaging verification | Final | ORIGINAL_REQUEST §Verification |
+| F1 | ONNX Runtime Android & Proguard Setup | Add onnxruntime-android:1.18.0 to build.gradle, configure ABI filters (arm64-v8a) & keep rules | M1 | ORIGINAL_REQUEST §R1 |
+| F2 | Pure Java CLIP BPE Tokenizer | Self-contained BPE tokenizer (77 context length, Cyrillic/multilingual) without native/Python deps | M1 | ORIGINAL_REQUEST §R1 |
+| F3 | Image Preprocessor & Vector Math | 256x256 RGB NCHW planar FloatBuffer converter & unrolled L2 dot-product similarity engine | M1 | ORIGINAL_REQUEST §R1, §R2 |
+| F4 | On-Demand Model Downloader & Manager | OpenClipManager with streaming download, checksum validation, anti-ZipSlip extraction & deletion | M1 | ORIGINAL_REQUEST §R1 |
+| F5 | ONNX Inference Engine & Threading | OrtEnvironment/OrtSession management on dedicated openClipQueue with ForegroundDetector hook | M1 | ORIGINAL_REQUEST §R1, §R4 |
+| F6 | SQLite Embedding Cache Table | clip_embeddings table with 2048-byte BLOB vectors, indexes, and background similarity search | M1 | ORIGINAL_REQUEST §R1 |
+| F7 | Settings, Master Switch & Threshold Slider | OpenClipConfig, OpenClipSettingsActivity, OpenExteraChatsActivity entry, and 0.35-0.80 SeekBarView | M2 | ORIGINAL_REQUEST §R3 |
+| F8 | Photo Message Context Menu | "Найти похожие фото / сообщения" option in ChatActivity with in-chat & global search scopes | M2 | ORIGINAL_REQUEST §R2 |
+| F9 | In-Chat Multimodal Search UI | Semantic toggle & photo search button in ChatActivity searchContainer | M2 | ORIGINAL_REQUEST §R2 |
+| F10 | Global Multimodal Search UI | Photo search icon in DialogsActivity / FragmentSearchField & semantic matching in search adapter | M2 | ORIGINAL_REQUEST §R2 |
+| F11 | E2E & Regression Test Harness | Automated test suite validating tokenizer, math, schema, UI bindings, and regression safety | Final | ORIGINAL_REQUEST §Acceptance Criteria |
+| F12 | Git Commit & GitHub Actions CI Release | Push changes to origin main and monitor remote GitHub Actions release build completion | Final | ORIGINAL_REQUEST §R4, §Acceptance Criteria |
 
 ---
 
 ## Milestones
 | # | Name | Scope | Dependencies | Status |
 |---|------|-------|-------------|--------|
-| M1 | UI & GlobalPlaylistsStore Decoupling | F1, F2, F3 | None | IN_PROGRESS |
-| M2 | Metrolist / YT Music Integration & URL Interceptor | F4, F5, F6, F7, F8, F9 | M1 | PLANNED |
-| M3 | Video Cover Accuracy & Multi-Segment SongRec | F10, F11, F12 | M1 | PLANNED |
-| Final | E2E Testing, Hardening & Final Gate | F13, full regression tests, audit, compilation | M1, M2, M3 | PLANNED |
+| M1 | Core ML, Tokenizer, Storage & Runtime | F1, F2, F3, F4, F5, F6 | none | DONE |
+| M2 | UI & Search Integration: Settings, Precision Slider, Search UI & Photo Context Menu | F7, F8, F9, F10 | M1 | IN_PROGRESS |
+| Final | E2E Test Suite Pass, Hardening & CI Delivery | F11, F12 | M1, M2 | PLANNED |
 
 ---
 
 ## Interface Contracts
 
-### 1. `GlobalPlaylistsStore` ↔ `Player UI` (`PlayerSheet` / `AudioPlayerAlert`)
+### `app.exteraless.clip.ClipTokenizer`
 ```java
-public class GlobalPlaylistsStore {
-    public static GlobalPlaylistsStore getInstance();
-    public LocalPlaylistsController.LocalPlaylist getPlayingPlaylist();
-    public void setPlayingPlaylist(LocalPlaylistsController.LocalPlaylist playlist);
-    public List<LocalPlaylistsController.LocalPlaylist> getPlaylists();
-    public LocalPlaylistsController.LocalPlaylist createPlaylist(String name);
-    public boolean addTrack(String playlistId, LocalPlaylistsController.PlaylistItem track);
-    public void removeTrack(String playlistId, int index);
-    public void deletePlaylist(String playlistId);
+public class ClipTokenizer {
+    public static ClipTokenizer getInstance();
+    public boolean isLoaded();
+    public void loadVocabulary(File vocabFile) throws IOException;
+    public long[] tokenize(String text); // returns long[77]
 }
 ```
 
-### 2. `MetrolistUrlInterceptor` ↔ `Browser.openUrl` & `ChatActivity`
+### `app.exteraless.clip.ClipImageProcessor`
 ```java
-public class MetrolistUrlInterceptor {
-    public static boolean shouldIntercept(Uri uri);
-    public static boolean handleUrl(Context context, Uri uri);
-}
-```
-Contract:
-- `shouldIntercept`: Returns `true` if and only if host is `music.youtube.com`, `metrolist.cc`, or `www.metrolist.cc`. Returns `false` for `youtube.com`, `youtu.be`, and any other domains.
-- `handleUrl`: Returns `true` if successfully scheduled for native playback, preventing browser launch.
-
-### 3. `InnerTubeClient` ↔ `MediaController`
-```kotlin
-data class YtTrack(
-    val videoId: String,
-    val title: String,
-    val artist: String,
-    val durationSeconds: Int,
-    val streamUrl: String?,
-    val artworkUrl: String?
-)
-
-class InnerTubeClient {
-    suspend fun search(query: String): List<YtTrack>
-    suspend fun getStreamUrl(videoId: String): String
-    fun toMessageObject(track: YtTrack, account: Int): MessageObject
+public class ClipImageProcessor {
+    public static FloatBuffer toPlanarFloatBuffer(Bitmap bitmap, int targetWidth, int targetHeight);
 }
 ```
 
-### 4. `AcousticFingerprintEngine` ↔ `VideoCoverManager`
-```kotlin
-object AcousticFingerprintEngine {
-    fun recognizeMultiSegment(audioFile: File, totalDurationSeconds: Int): RecognizedTrack?
+### `app.exteraless.clip.VectorMath`
+```java
+public class VectorMath {
+    public static void normalizeL2(float[] v);
+    public static float dotProduct(float[] a, float[] b); // cosine similarity for normalized vectors
 }
+```
 
-object YouTubeVideoCatalogMatcher {
-    fun findOfficialVideoOrCanvas(artist: String, title: String, durationSeconds: Int): VideoCoverResult?
+### `app.exteraless.clip.OpenClipManager`
+```java
+public class OpenClipManager {
+    public interface DownloadListener {
+        void onProgress(long done, long total);
+        void onFinished(boolean success, String error);
+    }
+    public static OpenClipManager getInstance();
+    public boolean isModelInstalled();
+    public File getModelDirectory();
+    public void startDownload(DownloadListener listener);
+    public void cancelDownload();
+    public void deleteModel();
+}
+```
+
+### `app.exteraless.clip.OpenClipInference`
+```java
+public class OpenClipInference {
+    public static OpenClipInference getInstance();
+    public boolean isReady();
+    public void encodeText(String text, Utilities.Callback<float[]> callback);
+    public void encodeImage(Bitmap bitmap, Utilities.Callback<float[]> callback);
+    public void releaseSessions();
+}
+```
+
+### `app.exteraless.clip.ClipDatabase`
+```java
+public class ClipDatabase {
+    public static ClipDatabase getInstance();
+    public void putEmbedding(long dialogId, long msgId, long mediaId, int type, float[] embedding);
+    public void findSimilar(float[] queryEmbedding, long dialogId, int limit, float minScore, Utilities.Callback<List<SearchResult>> callback);
+}
+```
+
+### `app.exteraless.clip.OpenClipConfig`
+```java
+public class OpenClipConfig {
+    public static boolean isEnabled();
+    public static void setEnabled(boolean enabled);
+    public static float getThreshold(); // 0.35f to 0.80f, default 0.55f
+    public static void setThreshold(float threshold);
 }
 ```
 
 ---
 
 ## Code Layout
-- `TMessagesProj/src/main/java/app/exteraless/player/GlobalPlaylistsStore.java`: Global app-level playlist repository.
-- `TMessagesProj/src/main/java/app/exteraless/player/LocalPlaylistsController.java`: High-level controller & UI dialogs.
-- `TMessagesProj/src/main/java/app/exteraless/player/PlayerSheet.java`: Bottom sheet audio player UI.
-- `TMessagesProj/src/main/java/org/telegram/ui/Components/AudioPlayerAlert.java`: Native audio player alert UI.
-- `TMessagesProj/src/main/java/app/exteraless/player/PlayerSettingsActivity.java`: Player settings activity.
-- `TMessagesProj/src/main/java/app/exteraless/player/ytmusic/`: Metrolist / InnerTube client, auth, URL interceptor.
-- `TMessagesProj/src/main/java/app/exteraless/player/videocover/`: Multi-segment acoustic fingerprinting, YT catalog matching, Canvas playback.
-- `TMessagesProj/src/test/java/app/exteraless/player/`: Unit test suite (persistence, URL interception, auth).
-- `TMessagesProj/src/main/res/values/strings_oe_player.xml`: Default English string resources.
-- `TMessagesProj/src/main/res/values-ru-rRU/strings_oe_player.xml`: Russian string resources.
+- `TMessagesProj/build.gradle`: ONNX Runtime Android dependency
+- `TMessagesProj/proguard-rules.pro`: Keep rules for `ai.onnxruntime.**`
+- `TMessagesProj/src/main/java/app/exteraless/clip/`:
+  - `ClipTokenizer.java`
+  - `ClipImageProcessor.java`
+  - `VectorMath.java`
+  - `OpenClipManager.java`
+  - `OpenClipInference.java`
+  - `ClipDatabase.java`
+  - `OpenClipConfig.java`
+  - `OpenClipSettingsActivity.java`
+- `TMessagesProj/src/main/java/app/exteraless/settings/OpenExteraChatsActivity.java`: Settings entry hook
+- `TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java`: Context menu and in-chat search integration
+- `TMessagesProj/src/main/java/org/telegram/ui/DialogsActivity.java`: Global search integration
+- `TMessagesProj/src/main/res/values/strings_oe.xml` & `values-ru/strings_oe.xml`: Localized strings
+- `tests/`: Automated Python test harnesses

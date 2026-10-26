@@ -220,6 +220,10 @@
 -dontwarn java.awt.**
 -dontwarn com.sun.jna.**
 
+# ONNX Runtime (MobileCLIP-S0 multimodal semantic search)
+-keep class ai.onnxruntime.** { *; }
+-dontwarn ai.onnxruntime.**
+
 # Text Animation & Chip Folders built-in modules
 -keep class app.exteraless.chats.TextAnimation** { *; }
 -keep class app.exteraless.appearance.ChipFolders** { *; }

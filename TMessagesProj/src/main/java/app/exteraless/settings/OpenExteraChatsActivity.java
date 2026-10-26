@@ -135,6 +135,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     // Links
     private int linksHeaderRow;
     private int aiChatRow;
+    private int openClipRow;
     private int chatSettingsRow;
     private int linksDividerRow;
 
@@ -367,6 +368,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
 
         linksHeaderRow = addRow("linksHeader");
         aiChatRow = addRow("aiChat");
+        openClipRow = addRow("openClipSettings");
         chatSettingsRow = addRow("chatSettings");
         linksDividerRow = addRow();
 
@@ -1655,6 +1657,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else if (position == aiChatRow) {
             presentFragment(new app.exteraless.ai.ui.AiSettingsActivity());
             return;
+        } else if (position == openClipRow) {
+            presentFragment(new app.exteraless.clip.OpenClipSettingsActivity());
+            return;
         } else if (position == feedSettingsRow) {
             presentFragment(new app.exteraless.feed.ui.FeedChannelsActivity());
             return;
@@ -2759,6 +2764,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == aiChatRow) {
                 cell.setTextAndIcon(getString(R.string.OEChatsAiChat), aiChatIcon(), true);
                 cell.setSubtitle(getString(R.string.OEChatsAiChatInfo));
+            } else if (position == openClipRow) {
+                cell.setTextAndIcon(getString(R.string.OpenClipSettingsTitle), R.drawable.magic_stick_solar, true);
+                cell.setSubtitle(getString(R.string.OpenClipSettingsSubtitle));
             } else if (position == chatSettingsRow) {
                 cell.setTextAndIcon(getString(R.string.OEChatsChatSettings), R.drawable.msg_discussion, false);
                 cell.setSubtitle(getString(R.string.OEChatsChatSettingsInfo));
@@ -2880,7 +2888,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
-            if (position == aiChatRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
+            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
             if (isGroupHeader(position)) return TYPE_EXPANDABLE_SWITCH;
             if (groupHeaderFor(position) != -1) return TYPE_ROUND_CHECK;
             if (isSettings(position)) return TYPE_SETTINGS;

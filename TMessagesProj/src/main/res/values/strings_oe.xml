@@ -115,4 +115,43 @@
     <string name="OEProfileJoinedChannel">You subscribed to **%1$s** on %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** was created on %2$s</string>
     <string name="OEProfileJoinDateUnknown">Join date is unavailable</string>
+
+    <!-- OpenCLIP Multimodal Search -->
+    <string name="OpenClipSettingsTitle">OpenCLIP Settings</string>
+    <string name="OpenClipSettingsSubtitle">Semantic search by meaning and photo</string>
+    <string name="OpenClipMasterSwitch">Enable OpenCLIP search</string>
+    <string name="OpenClipMasterSwitchInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
+    <string name="OpenClipEnable">Enable OpenCLIP search</string>
+    <string name="OpenClipEnableInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
+    <string name="OpenClipModelHeader">Neural Model</string>
+    <string name="OpenClipModelInfo">MobileCLIP-S0 (INT8, ~30 MB) quantized on-device model.</string>
+    <string name="OpenClipModelName">MobileCLIP-S0 (INT8, ~30 MB)</string>
+    <string name="OpenClipStatusNotInstalled">Not installed</string>
+    <string name="OpenClipStatusDownloading">Downloading: %d%%</string>
+    <string name="OpenClipStatusReady">Ready</string>
+    <string name="OpenClipModelStatusNotInstalled">Not installed</string>
+    <string name="OpenClipModelStatusDownloading">Downloading: %d%%</string>
+    <string name="OpenClipModelStatusReady">Ready</string>
+    <string name="OpenClipDownloadModel">Download model</string>
+    <string name="OpenClipDeleteModel">Delete model</string>
+    <string name="OpenClipDeleteConfirm">Are you sure you want to delete the downloaded OpenCLIP model?</string>
+    <string name="OpenClipThresholdTitle">Similarity Threshold</string>
+    <string name="OpenClipThresholdHeader">Similarity Threshold</string>
+    <string name="OpenClipThresholdBroad">Broad (0.35)</string>
+    <string name="OpenClipThresholdStrict">Strict (0.80)</string>
+    <string name="OpenClipThresholdInfo">Determines minimum similarity threshold. Lower threshold finds more associations, higher finds exact matches.</string>
+    <string name="OpenClipAutoIndexHeader">Auto-Indexing</string>
+    <string name="OpenClipAutoIndexPhotos">Auto-index photos</string>
+    <string name="OpenClipAutoIndexPhotosInfo">Index photos locally in background when viewed or downloaded.</string>
+    <string name="OpenClipAutoIndexText">Auto-index messages</string>
+    <string name="OpenClipAutoIndexTextInfo">Index text messages locally in background for semantic search.</string>
+    <string name="OpenClipFindSimilar">Find similar photos / messages</string>
+    <string name="OpenClipSearchInChat">Search in this chat</string>
+    <string name="OpenClipSearchGlobal">Search in all chats</string>
+    <string name="OpenClipSemanticSearch">Semantic Search</string>
+    <string name="OpenClipSearchByPhoto">Search by photo</string>
+    <string name="OpenClipModelRequired">OpenCLIP model (~30 MB) must be downloaded for semantic search.</string>
+    <string name="OpenClipSearchNoResults">No similar messages or photos found.</string>
+    <string name="OpenClipSearching">Searching semantically…</string>
 </resources>
+

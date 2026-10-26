@@ -110,4 +110,43 @@
     <string name="OEProfileJoinedChannel">Вы подписались на **%1$s** %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** создан %2$s</string>
     <string name="OEProfileJoinDateUnknown">Дата вступления недоступна</string>
+
+    <!-- OpenCLIP Multimodal Search -->
+    <string name="OpenClipSettingsTitle">Настройки OpenCLIP</string>
+    <string name="OpenClipSettingsSubtitle">Семантический поиск по смыслу и фото</string>
+    <string name="OpenClipMasterSwitch">Включить поиск OpenCLIP</string>
+    <string name="OpenClipMasterSwitchInfo">Позволяет находить сообщения и фотографии по их смысловому содержанию с помощью нейросети на устройстве.</string>
+    <string name="OpenClipEnable">Включить поиск OpenCLIP</string>
+    <string name="OpenClipEnableInfo">Позволяет находить сообщения и фотографии по их смысловому содержанию с помощью нейросети на устройстве.</string>
+    <string name="OpenClipModelHeader">Нейросетевая модель</string>
+    <string name="OpenClipModelInfo">MobileCLIP-S0 (INT8, ~30 МБ) квантованная локальная модель.</string>
+    <string name="OpenClipModelName">MobileCLIP-S0 (INT8, ~30 МБ)</string>
+    <string name="OpenClipStatusNotInstalled">Не установлена</string>
+    <string name="OpenClipStatusDownloading">Загрузка: %d%%</string>
+    <string name="OpenClipStatusReady">Готова к работе</string>
+    <string name="OpenClipModelStatusNotInstalled">Не установлена</string>
+    <string name="OpenClipModelStatusDownloading">Загрузка: %d%%</string>
+    <string name="OpenClipModelStatusReady">Готова к работе</string>
+    <string name="OpenClipDownloadModel">Скачать модель</string>
+    <string name="OpenClipDeleteModel">Удалить модель</string>
+    <string name="OpenClipDeleteConfirm">Вы уверены, что хотите удалить загруженную модель OpenCLIP?</string>
+    <string name="OpenClipThresholdTitle">Порог точности</string>
+    <string name="OpenClipThresholdHeader">Порог точности</string>
+    <string name="OpenClipThresholdBroad">Широкий (0.35)</string>
+    <string name="OpenClipThresholdStrict">Точный (0.80)</string>
+    <string name="OpenClipThresholdInfo">Определяет минимальный порог сходства. Низкий порог находит больше ассоциаций, высокий — только точные совпадения.</string>
+    <string name="OpenClipAutoIndexHeader">Автоиндексация</string>
+    <string name="OpenClipAutoIndexPhotos">Автоматически индексировать фото</string>
+    <string name="OpenClipAutoIndexPhotosInfo">Индексировать фотографии локально в фоне при просмотре или загрузке.</string>
+    <string name="OpenClipAutoIndexText">Автоматически индексировать сообщения</string>
+    <string name="OpenClipAutoIndexTextInfo">Индексировать текстовые сообщения локально в фоне для семантического поиска.</string>
+    <string name="OpenClipFindSimilar">Найти похожие фото / сообщения</string>
+    <string name="OpenClipSearchInChat">Искать в этом чате</string>
+    <string name="OpenClipSearchGlobal">Искать во всех чатах</string>
+    <string name="OpenClipSemanticSearch">Семантический поиск</string>
+    <string name="OpenClipSearchByPhoto">Поиск по фото</string>
+    <string name="OpenClipModelRequired">Для семантического поиска требуется загрузить модель OpenCLIP (~30 МБ).</string>
+    <string name="OpenClipSearchNoResults">Похожих сообщений или фотографий не найдено.</string>
+    <string name="OpenClipSearching">Семантический поиск…</string>
 </resources>
+
