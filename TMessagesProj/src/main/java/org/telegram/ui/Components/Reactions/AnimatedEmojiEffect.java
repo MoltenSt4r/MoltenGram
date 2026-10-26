@@ -292,16 +292,27 @@ public class AnimatedEmojiEffect {
             if (!longAnimation) {
                 float bottomBound = bounds.height() * 0.8f;
                 if (cy > bottomBound) {
-                    outAlpha = 1f - Utilities.clamp(((cy - bottomBound) / AndroidUtilities.dp(16)), 1f, 0f);
+                    outAlpha = 1f - Utilities.clamp(((cy - bottomBound) / (float) AndroidUtilities.dp(36)), 1f, 0f);
                 }
             }
-            float sizeHalf = size / 2f * outAlpha;
+            float fadeIn = Utilities.clamp(progress / 0.15f, 1f, 0f);
+            float fadeOut = progress > 0.75f ? (1f - progress) / 0.25f : 1f;
+            float alpha = Utilities.clamp(outAlpha * fadeIn * fadeOut, 1f, 0f);
+            if (alpha <= 0.001f) {
+                return;
+            }
+
+            float scaleProgress = progress > 0.85f ? 1f - 0.2f * ((progress - 0.85f) / 0.15f) : 1f;
+            float sizeHalf = size / 2f * scaleProgress;
             canvas.save();
             if (mirror) {
                 canvas.scale(-1f, 1f, cx, cy);
             }
             canvas.rotate(randomRotation, cx, cy);
-            animatedEmojiDrawable.setAlpha((int) (255 * outAlpha * Utilities.clamp(progress / 0.2f, 1f, 0f)));
+            if (animatedEmojiDrawable != null && !animatedEmojiDrawable.canOverrideColor()) {
+                animatedEmojiDrawable.setColorFilter(null);
+            }
+            animatedEmojiDrawable.setAlpha((int) (255 * alpha));
             animatedEmojiDrawable.setBounds((int) (cx - sizeHalf), (int) (cy - sizeHalf), (int) (cx + sizeHalf), (int) (cy + sizeHalf));
             animatedEmojiDrawable.draw(canvas);
             animatedEmojiDrawable.setAlpha(255);

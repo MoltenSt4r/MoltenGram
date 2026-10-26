@@ -999,7 +999,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         } else if (bitmap instanceof android.graphics.drawable.Animatable) {
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) bitmap;
             if (Build.VERSION.SDK_INT >= 28 && bitmap instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                ((android.graphics.drawable.AnimatedImageDrawable) bitmap).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                ((android.graphics.drawable.AnimatedImageDrawable) bitmap).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
             }
             bitmap.setCallback(new Drawable.Callback() {
                 @Override
@@ -2938,6 +2938,12 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (drawable != null) {
             drawable.setAutoRepeat(value);
         }
+        if (Build.VERSION.SDK_INT >= 28) {
+            Drawable anim = currentImageDrawable != null ? currentImageDrawable : (currentMediaDrawable != null ? currentMediaDrawable : staticThumbDrawable);
+            if (anim instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                ((android.graphics.drawable.AnimatedImageDrawable) anim).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+            }
+        }
     }
 
     public int getAutoRepeat() {
@@ -2985,16 +2991,25 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             if (rLottieDrawable != null && !rLottieDrawable.isRunning()) {
                 rLottieDrawable.restart(force);
             } else if (currentMediaDrawable instanceof android.graphics.drawable.Animatable) {
+                if (Build.VERSION.SDK_INT >= 28 && currentMediaDrawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                    ((android.graphics.drawable.AnimatedImageDrawable) currentMediaDrawable).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                }
                 if (force) {
                     ((android.graphics.drawable.Animatable) currentMediaDrawable).stop();
                 }
                 ((android.graphics.drawable.Animatable) currentMediaDrawable).start();
             } else if (currentImageDrawable instanceof android.graphics.drawable.Animatable) {
+                if (Build.VERSION.SDK_INT >= 28 && currentImageDrawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                    ((android.graphics.drawable.AnimatedImageDrawable) currentImageDrawable).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                }
                 if (force) {
                     ((android.graphics.drawable.Animatable) currentImageDrawable).stop();
                 }
                 ((android.graphics.drawable.Animatable) currentImageDrawable).start();
             } else if (staticThumbDrawable instanceof android.graphics.drawable.Animatable) {
+                if (Build.VERSION.SDK_INT >= 28 && staticThumbDrawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                    ((android.graphics.drawable.AnimatedImageDrawable) staticThumbDrawable).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                }
                 if (force) {
                     ((android.graphics.drawable.Animatable) staticThumbDrawable).stop();
                 }
@@ -3309,7 +3324,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         } else if (drawable instanceof android.graphics.drawable.Animatable) {
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) drawable;
             if (Build.VERSION.SDK_INT >= 28 && drawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                ((android.graphics.drawable.AnimatedImageDrawable) drawable).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                ((android.graphics.drawable.AnimatedImageDrawable) drawable).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
             }
             drawable.setCallback(new Drawable.Callback() {
                 @Override

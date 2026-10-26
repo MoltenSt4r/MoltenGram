@@ -973,12 +973,18 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
                     } catch (Exception ignored) {}
                     ImageViewEmoji imageViewEmoji = (ImageViewEmoji) view;
-                    if (!imageViewEmoji.isDefaultReaction && !UserConfig.getInstance(currentAccount).isPremium()) {
-                        TLRPC.Document document = imageViewEmoji.span.document;
-                        if (document == null) {
-                            document = AnimatedEmojiDrawable.findDocument(currentAccount, imageViewEmoji.span.documentId);
+                    boolean isEmojiconReaction = imageViewEmoji.isDefaultReaction || (imageViewEmoji.reaction != null && imageViewEmoji.reaction.emojicon != null);
+                    if (!isEmojiconReaction && !UserConfig.getInstance(currentAccount).isPremium()) {
+                        if (imageViewEmoji.span != null) {
+                            TLRPC.Document document = imageViewEmoji.span.document;
+                            if (document == null) {
+                                document = AnimatedEmojiDrawable.findDocument(currentAccount, imageViewEmoji.span.documentId);
+                            }
+                            onEmojiSelected(imageViewEmoji, imageViewEmoji.span.documentId, document, imageViewEmoji.starGift, null);
+                        } else if (imageViewEmoji.reaction != null && imageViewEmoji.reaction.documentId != 0) {
+                            TLRPC.Document document = AnimatedEmojiDrawable.findDocument(currentAccount, imageViewEmoji.reaction.documentId);
+                            onEmojiSelected(imageViewEmoji, imageViewEmoji.reaction.documentId, document, imageViewEmoji.starGift, null);
                         }
-                        onEmojiSelected(imageViewEmoji, imageViewEmoji.span.documentId, document, imageViewEmoji.starGift, null);
                         return true;
                     }
                     selectedReactionView = imageViewEmoji;
@@ -991,14 +997,16 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                             ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
                         }
                         bigReactionImageReceiver.setImageBitmap(emojiDrawable);
-                    } else if (selectedReactionView.isDefaultReaction) {
+                    } else if (selectedReactionView.isDefaultReaction || (selectedReactionView.reaction != null && selectedReactionView.reaction.emojicon != null)) {
                         setBigReactionAnimatedEmoji(null);
-                        TLRPC.TL_availableReaction reaction = MediaDataController.getInstance(currentAccount).getReactionsMap().get(selectedReactionView.reaction.emojicon);
+                        TLRPC.TL_availableReaction reaction = selectedReactionView.reaction != null ? MediaDataController.getInstance(currentAccount).getReactionsMap().get(selectedReactionView.reaction.emojicon) : null;
                         if (reaction != null) {
                             bigReactionImageReceiver.setImage(ImageLocation.getForDocument(reaction.select_animation), ReactionsUtils.SELECT_ANIMATION_FILTER, null, null, null, 0, "tgs", selectedReactionView.reaction, 0);
                         }
-                    } else {
+                    } else if (selectedReactionView.span != null) {
                         setBigReactionAnimatedEmoji(new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_LARGE, currentAccount, selectedReactionView.span.documentId));
+                    } else if (selectedReactionView.reaction != null && selectedReactionView.reaction.documentId != 0) {
+                        setBigReactionAnimatedEmoji(new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_LARGE, currentAccount, selectedReactionView.reaction.documentId));
                     }
                     emojiGridView.invalidate();
                     invalidateParent();

@@ -1081,7 +1081,7 @@ public class ImageLoader {
                                 decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
                             });
                             if (decoded instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                                ((android.graphics.drawable.AnimatedImageDrawable) decoded).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                                ((android.graphics.drawable.AnimatedImageDrawable) decoded).setRepeatCount(0);
                             }
                             if (decoded instanceof android.graphics.drawable.Animatable) {
                                 ((android.graphics.drawable.Animatable) decoded).start();

@@ -260,10 +260,12 @@ public class CustomEmojiReactionsWindow {
         selectAnimatedEmojiDialog.setOnLongPressedListener(new SelectAnimatedEmojiDialog.onLongPressedListener() {
             @Override
             public void onLongPressed(SelectAnimatedEmojiDialog.ImageViewEmoji view) {
-                if (view.isDefaultReaction) {
+                if (view.isDefaultReaction || (view.reaction != null && view.reaction.emojicon != null)) {
                     reactionsContainerLayout.onReactionClicked(view, view.reaction, true);
-                } else {
+                } else if (view.span != null) {
                     reactionsContainerLayout.onReactionClicked(view, ReactionsLayoutInBubble.VisibleReaction.fromCustomEmoji(view.span.documentId), true);
+                } else if (view.reaction != null) {
+                    reactionsContainerLayout.onReactionClicked(view, view.reaction, true);
                 }
             }
         });

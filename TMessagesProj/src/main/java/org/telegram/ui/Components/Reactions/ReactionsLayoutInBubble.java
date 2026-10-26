@@ -474,8 +474,9 @@ public class ReactionsLayoutInBubble {
             }
             float alpha = 1f;
             if (animationProgress != 1f && reactionButton.animationType == ANIMATION_TYPE_IN) {
-                float s = 0.5f + 0.5f * animationProgress;
-                alpha = animationProgress;
+                float bounceScale = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(animationProgress);
+                float s = 0.3f + 0.7f * bounceScale;
+                alpha = Utilities.clamp(animationProgress / 0.5f, 1f, 0f);
                 canvas.scale(s, s, totalX + x + reactionButton.width / 2f, totalY + y + reactionButton.height / 2f);
             }
             reactionButton.draw(canvas, totalX + x, totalY + y, reactionButton.animationType == ANIMATION_TYPE_MOVE ? animationProgress : 1f, alpha, drawOnlyReaction != null, scrimDirection, scrimProgress);
@@ -524,8 +525,9 @@ public class ReactionsLayoutInBubble {
             }
             float alpha = 1f;
             if (animationProgress != 1f && reactionButton.animationType == ANIMATION_TYPE_IN) {
-                float s = 0.5f + 0.5f * animationProgress;
-                alpha = animationProgress;
+                float bounceScale = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(animationProgress);
+                float s = 0.3f + 0.7f * bounceScale;
+                alpha = Utilities.clamp(animationProgress / 0.5f, 1f, 0f);
                 canvas.scale(s, s, totalX + x + reactionButton.width / 2f, totalY + y + reactionButton.height / 2f);
             }
             needsInvalidate = needsInvalidate || reactionButton.drawOverlay(canvas, totalX + x, totalY + y, reactionButton.animationType == ANIMATION_TYPE_MOVE ? animationProgress : 1f, alpha, false);
@@ -1652,6 +1654,14 @@ public class ReactionsLayoutInBubble {
     }
 
     public void animateReaction(VisibleReaction reaction) {
+        for (int i = 0; i < reactionButtons.size(); ++i) {
+            if (reaction.isSame(reactionButtons.get(i).reaction)) {
+                ReactionButton btn = reactionButtons.get(i);
+                btn.bounce.setPressed(true);
+                AndroidUtilities.runOnUIThread(() -> btn.bounce.setPressed(false), 80);
+                break;
+            }
+        }
         if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
             return;
         }

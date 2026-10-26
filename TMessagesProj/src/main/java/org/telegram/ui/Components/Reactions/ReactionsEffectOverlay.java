@@ -390,10 +390,10 @@ public class ReactionsEffectOverlay {
                 }
 
                 float animateInProgressX, animateInProgressY;
-                float animateOutProgress = CubicBezierInterpolator.DEFAULT.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
+                float animateOutProgress = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
                 if (animationType == ONLY_MOVE_ANIMATION) {
-                    animateInProgressX = CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animateOutProgress);
-                    animateInProgressY = CubicBezierInterpolator.DEFAULT.getInterpolation(animateOutProgress);
+                    animateInProgressX = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
+                    animateInProgressY = CubicBezierInterpolator.EASE_OUT_BACK.getInterpolation(ReactionsEffectOverlay.this.animateOutProgress);
                 } else if (fromHolder) {
                     animateInProgressX = CubicBezierInterpolator.EASE_OUT_QUINT.getInterpolation(animateInProgress);
                     animateInProgressY = CubicBezierInterpolator.DEFAULT.getInterpolation(animateInProgress);
@@ -505,6 +505,12 @@ public class ReactionsEffectOverlay {
                                     ((ChatMessageCell) cell).reactionsLayoutInBubble.animateReaction(reaction);
                                 } else if (cell instanceof ChatActionCell) {
                                     ((ChatActionCell) cell).reactionsLayoutInBubble.animateReaction(reaction);
+                                }
+                                if (cell != null && !NekoConfig.disableVibration.Bool()) {
+                                    try {
+                                        int haptic = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R ? HapticFeedbackConstants.CONFIRM : HapticFeedbackConstants.KEYBOARD_TAP;
+                                        cell.performHapticFeedback(haptic);
+                                    } catch (Exception ignored) {}
                                 }
                             }
                             ReactionsEffectOverlay.this.animateOutProgress = 1f;
@@ -662,10 +668,10 @@ public class ReactionsEffectOverlay {
                 if (animationType == LONG_ANIMATION) {
                     emojiImageView.setAnimatedReactionDrawable(new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES_LARGE, currentAccount, visibleReaction.documentId));
                 } else if (animationType == ONLY_MOVE_ANIMATION) {
-                    emojiImageView.setAnimatedReactionDrawable(new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_KEYBOARD, currentAccount, visibleReaction.documentId));
+                    emojiImageView.setAnimatedReactionDrawable(new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_LARGE, currentAccount, visibleReaction.documentId));
                 }
                 if (animationType == LONG_ANIMATION || animationType == SHORT_ANIMATION) {
-                    AnimatedEmojiDrawable animatedEmojiDrawable = new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_KEYBOARD, currentAccount, visibleReaction.documentId);
+                    AnimatedEmojiDrawable animatedEmojiDrawable = new AnimatedEmojiDrawable(AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_LARGE, currentAccount, visibleReaction.documentId);
                     int color;
                     if (messageObject != null) {
                         color = Theme.getColor(
@@ -677,7 +683,9 @@ public class ReactionsEffectOverlay {
                     } else {
                         color = Color.WHITE;
                     }
-                    animatedEmojiDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                    if (animatedEmojiDrawable.canOverrideColor()) {
+                        animatedEmojiDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN));
+                    }
                     boolean longAnimation = animationType == LONG_ANIMATION;
                     effectImageView.setAnimatedEmojiEffect(AnimatedEmojiEffect.createFrom(animatedEmojiDrawable, longAnimation, !longAnimation));
                     windowView.setClipChildren(false);
@@ -822,7 +830,12 @@ public class ReactionsEffectOverlay {
             currentOverlay.startTime = System.currentTimeMillis();
             if (currentOverlay.animationType == LONG_ANIMATION && System.currentTimeMillis() - lastHapticTime > 200) {
                 lastHapticTime = System.currentTimeMillis();
-                if (!NekoConfig.disableVibration.Bool()) currentOverlay.cell.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                if (!NekoConfig.disableVibration.Bool() && currentOverlay.cell != null) {
+                    try {
+                        int haptic = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R ? HapticFeedbackConstants.GESTURE_START : HapticFeedbackConstants.KEYBOARD_TAP;
+                        currentOverlay.cell.performHapticFeedback(haptic);
+                    } catch (Exception ignored) {}
+                }
             }
         } else {
             startShortAnimation();
@@ -843,7 +856,12 @@ public class ReactionsEffectOverlay {
             if (currentShortOverlay.animationType == SHORT_ANIMATION && System.currentTimeMillis() - lastHapticTime > 200) {
                 lastHapticTime = System.currentTimeMillis();
                 if (currentShortOverlay.cell != null) {
-                    if (!NekoConfig.disableVibration.Bool()) currentShortOverlay.cell.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                    if (!NekoConfig.disableVibration.Bool()) {
+                        try {
+                            int haptic = android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.R ? HapticFeedbackConstants.GESTURE_START : HapticFeedbackConstants.KEYBOARD_TAP;
+                            currentShortOverlay.cell.performHapticFeedback(haptic);
+                        } catch (Exception ignored) {}
+                    }
                 }
             }
         }

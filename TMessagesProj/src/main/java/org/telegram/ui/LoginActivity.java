@@ -800,7 +800,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         moreButtonView.addSubItem(0, R.drawable.msg_policy_solar, getString(R.string.Proxy));
         moreButtonView.addSubItem(1, R.drawable.msg_qrcode_solar, getString(R.string.ImportLogin));
         moreButtonView.addSubItem(5, R.drawable.msg_bots_solar, getString(R.string.BotTokenLogin));
-        moreButtonView.addSubItem(7, R.drawable.msg_qrcode_solar, getString(R.string.ScanQrCode));
         moreButtonView.addSubItem(2, R.drawable.msg_permissions_solar, getString(R.string.CustomApi)).setContentDescription(getString(R.string.CustomApi));
         moreButtonView.addSubItem(3, R.drawable.msg_retry_solar, getString(R.string.TestBackend));
         moreButtonView.setDelegate(id -> {
@@ -821,8 +820,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 }
             } else if (id == 5) {
                 showBotTokenLoginDialog();
-            } else if (id == 7) {
-                openCameraScanActivityForLogin();
             }
         });
         moreButtonView.setSubMenuOpenSide(1);
@@ -8528,15 +8525,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             qrView = new QrView(context);
             qrView.setData(null);
             addView(qrView, LayoutHelper.createLinear(280, 280, Gravity.CENTER_HORIZONTAL, 30, 30, 30, 16));
-
-            TextView scanQrButton = new TextView(context);
-            scanQrButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            scanQrButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
-            scanQrButton.setTextColor(Theme.getColor(Theme.key_chats_actionBackground));
-            scanQrButton.setGravity(Gravity.CENTER);
-            scanQrButton.setText(LocaleController.getString(R.string.ScanQrCode));
-            scanQrButton.setOnClickListener(v -> openCameraScanActivityForLogin());
-            addView(scanQrButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 8, 16, 16));
         }
 
         @Override
@@ -8688,15 +8676,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
-    public void openCameraScanActivityForLogin() {
-        CameraScanActivity.showAsSheet(this, true, CameraScanActivity.TYPE_QR_LOGIN, new CameraScanActivity.CameraScanActivityDelegate() {
-            @Override
-            public void didFindQr(String text) {
-                handleFoundQrOrPasskey(text);
-            }
-        });
-    }
-
     public void handleFoundQrOrPasskey(String text) {
         if (text == null || text.trim().isEmpty()) return;
         final String trimmed = text.trim();
@@ -8799,9 +8778,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             if (!token.isEmpty()) {
                 loginWithBotToken(token);
             }
-        });
-        builder.setNeutralButton(LocaleController.getString(R.string.ScanQrCode), (dialog, which) -> {
-            openCameraScanActivityForLogin();
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(builder.create());
