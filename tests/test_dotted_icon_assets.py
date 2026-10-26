@@ -125,4 +125,24 @@ def test_ota_manager_uses_moltengram_notification_icon():
     )
 
 
+def test_halloween_icon_safe_zone_radius():
+    import math
+    path = '/root/ExteraMS/TMessagesProj/src/main/res/drawable-xxxhdpi/moltengram_halloween_icon_background.png'
+    with Image.open(path) as im:
+        assert im.size == (432, 432)
+        cx, cy = 216, 216
+        pixels = im.load()
+        pts = []
+        for y in range(432):
+            for x in range(432):
+                r, g, b = pixels[x, y][:3]
+                if r > 30 or g > 30 or b > 30:
+                    pts.append((x, y))
+        assert pts, "Halloween icon background must contain graphic content"
+        max_r = max(math.hypot(p[0] - cx, p[1] - cy) for p in pts)
+        # Must fit within circular mask radius 33dp (132px) to prevent clipping in Pixel Launcher
+        assert max_r <= 132.0, f"Halloween icon max radius {max_r}px ({max_r/4:.1f}dp) exceeds 33dp safe zone"
+
+
+
 
