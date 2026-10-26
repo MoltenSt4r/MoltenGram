@@ -906,6 +906,10 @@ JNIEXPORT jboolean JNICALL Java_org_telegram_messenger_Utilities_drawDitheredGra
     const int32_t vx = endX - startX;
     const int32_t vy = endY - startY;
     const float vSquaredMag = vx * vx + vy * vy;
+    if (vSquaredMag <= 0.0001f || info.width <= 0 || info.height <= 0 || info.stride <= 0) {
+        AndroidBitmap_unlockPixels(env, bitmap);
+        return JNI_FALSE;
+    }
 
     float noise, fraction, error, componentF;
     float *pixelsComponentsF = new float[info.height * info.stride * 4];
@@ -949,13 +953,13 @@ JNIEXPORT jboolean JNICALL Java_org_telegram_messenger_Utilities_drawDitheredGra
                 if (x + 1 < info.width) {
                     pixelsComponentsF[position + 4] += error * 7.F / 16.F;
                     if (y + 1 < info.height) {
-                        pixelsComponentsF[position + info.height + 4] += error * 1.F / 16.F;
+                        pixelsComponentsF[position + info.stride + 4] += error * 1.F / 16.F;
                     }
                 }
                 if (y + 1 < info.height) {
-                    pixelsComponentsF[position + info.height] += error * 5.F / 16.F;
+                    pixelsComponentsF[position + info.stride] += error * 5.F / 16.F;
                     if (x - 1 >= 0) {
-                        pixelsComponentsF[position + info.height - 4] += error * 3.F / 16.F;
+                        pixelsComponentsF[position + info.stride - 4] += error * 3.F / 16.F;
                     }
                 }
             }

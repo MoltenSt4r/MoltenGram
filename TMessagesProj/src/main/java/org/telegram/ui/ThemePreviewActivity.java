@@ -3310,26 +3310,31 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
             lastDrawableToBlur.clear();
         }
         lastDrawableToBlur = null;
-        if (d == null || d.getIntrinsicWidth() == 0 || d.getIntrinsicHeight() == 0) {
+        if (d == null || d.getIntrinsicWidth() <= 0 || d.getIntrinsicHeight() <= 0) {
             return blurredDrawable = null;
         }
         lastDrawableToBlur = new WeakReference<>(d);
 
-        final int h = 24;
-        final int w = (int) ((float) d.getIntrinsicWidth() / d.getIntrinsicHeight() * h);
-        Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        d.setBounds(0, 0, w, h);
-        final ColorFilter wasColorFilter = d.getColorFilter();
-        ColorMatrix colorMatrix = new ColorMatrix();
-        colorMatrix.setSaturation(1.3f);
-        AndroidUtilities.multiplyBrightnessColorMatrix(colorMatrix, .94f);
-        d.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
-        d.draw(new Canvas(bitmap));
-        d.setColorFilter(wasColorFilter);
-        Utilities.blurBitmap(bitmap, 3);
-        blurredDrawable = new BitmapDrawable(getContext().getResources(), bitmap);
-        blurredDrawable.setFilterBitmap(true);
-        return blurredDrawable;
+        try {
+            final int h = 24;
+            final int w = Math.max(1, (int) ((float) d.getIntrinsicWidth() / d.getIntrinsicHeight() * h));
+            Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            d.setBounds(0, 0, w, h);
+            final ColorFilter wasColorFilter = d.getColorFilter();
+            ColorMatrix colorMatrix = new ColorMatrix();
+            colorMatrix.setSaturation(1.3f);
+            AndroidUtilities.multiplyBrightnessColorMatrix(colorMatrix, .94f);
+            d.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
+            d.draw(new Canvas(bitmap));
+            d.setColorFilter(wasColorFilter);
+            Utilities.blurBitmap(bitmap, 3);
+            blurredDrawable = new BitmapDrawable(getContext().getResources(), bitmap);
+            blurredDrawable.setFilterBitmap(true);
+            return blurredDrawable;
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return blurredDrawable = null;
+        }
     }
 
     private void invalidateBlur() {
@@ -5847,6 +5852,9 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                     background.draw(canvas);
                 } else if (background instanceof BitmapDrawable) {
                     BitmapDrawable bitmapDrawable = (BitmapDrawable) background;
+                    if (bitmapDrawable.getBitmap() == null || bitmapDrawable.getBitmap().isRecycled()) {
+                        return;
+                    }
                     if (bitmapDrawable.getTileModeX() == Shader.TileMode.REPEAT) {
                         canvas.save();
                         float scale = 2.0f / AndroidUtilities.density;
@@ -5856,11 +5864,23 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                         canvas.restore();
                     } else {
                         int viewHeight = getMeasuredHeight();
-                        float scaleX = (float) getMeasuredWidth() / (float) background.getIntrinsicWidth();
-                        float scaleY = (float) (viewHeight) / (float) background.getIntrinsicHeight();
+                        int intrW = background.getIntrinsicWidth();
+                        int intrH = background.getIntrinsicHeight();
+                        if (intrW <= 0 || intrH <= 0 || viewHeight <= 0) {
+                            return;
+                        }
+                        float scaleX = (float) getMeasuredWidth() / (float) intrW;
+                        float scaleY = (float) (viewHeight) / (float) intrH;
                         float scale = Math.max(scaleX, scaleY);
-                        int width = (int) Math.ceil(background.getIntrinsicWidth() * scale * parallaxScale);
-                        int height = (int) Math.ceil(background.getIntrinsicHeight() * scale * parallaxScale);
+                        if (Float.isNaN(scale) || Float.isInfinite(scale) || scale <= 0) {
+                            scale = 1.0f;
+                        }
+                        float pScale = parallaxScale;
+                        if (Float.isNaN(pScale) || Float.isInfinite(pScale) || pScale <= 0) {
+                            pScale = 1.0f;
+                        }
+                        int width = (int) Math.ceil(intrW * scale * pScale);
+                        int height = (int) Math.ceil(intrH * scale * pScale);
                         int x = (getMeasuredWidth() - width) / 2;
                         int y = (viewHeight - height) / 2;
                         ty = y;
@@ -6169,17 +6189,25 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 } else if (drawable instanceof BitmapDrawable) {
                     newBitmap = ((BitmapDrawable) drawable).getBitmap();
                 }
-                if (serviceBitmap != newBitmap) {
-                    serviceBitmap = newBitmap;
-                    serviceBitmapShader = new BitmapShader(serviceBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-                    if (serviceBitmapMatrix == null) {
-                        serviceBitmapMatrix = new Matrix();
+                if (newBitmap != null && !newBitmap.isRecycled()) {
+                    if (serviceBitmap != newBitmap) {
+                        serviceBitmap = newBitmap;
+                        serviceBitmapShader = new BitmapShader(serviceBitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                        if (serviceBitmapMatrix == null) {
+                            serviceBitmapMatrix = new Matrix();
+                        }
                     }
+                    chat_actionTextPaint.setColor(0xffffffff);
+                    chat_actionTextPaint2.setColor(0xffffffff);
+                    chat_actionTextPaint.linkColor = 0xffffffff;
+                    chat_botButtonPaint.setColor(0xffffffff);
+                } else {
+                    serviceBitmap = null;
+                    serviceBitmapShader = null;
+                    chat_actionTextPaint.setColor(getColor(Theme.key_chat_serviceText));
+                    chat_actionTextPaint2.setColor(getColor(Theme.key_chat_serviceText));
+                    chat_actionTextPaint.linkColor = getColor(Theme.key_chat_serviceLink);
                 }
-                chat_actionTextPaint.setColor(0xffffffff);
-                chat_actionTextPaint2.setColor(0xffffffff);
-                chat_actionTextPaint.linkColor = 0xffffffff;
-                chat_botButtonPaint.setColor(0xffffffff);
             } else {
                 serviceBitmap = null;
                 serviceBitmapShader = null;

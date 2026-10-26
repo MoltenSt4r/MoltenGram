@@ -5495,16 +5495,18 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                             TLRPC.TL_wallPaper object;
                             if (settings.wallpaper instanceof TLRPC.TL_wallPaper) {
                                 object = (TLRPC.TL_wallPaper) settings.wallpaper;
-                                File path = FileLoader.getInstance(currentAccount).getPathToAttach(object.document, true);
-                                if (!path.exists()) {
-                                    loadingThemeProgressDialog = progressDialog;
-                                    loadingThemeAccent = true;
-                                    loadingThemeInfo = info;
-                                    loadingTheme = t;
-                                    loadingThemeWallpaper = object;
-                                    loadingThemeWallpaperName = FileLoader.getAttachFileName(object.document);
-                                    FileLoader.getInstance(currentAccount).loadFile(object.document, object, FileLoader.PRIORITY_NORMAL, 1);
-                                    return;
+                                if (object.document != null) {
+                                    File path = FileLoader.getInstance(currentAccount).getPathToAttach(object.document, true);
+                                    if (path != null && !path.exists()) {
+                                        loadingThemeProgressDialog = progressDialog;
+                                        loadingThemeAccent = true;
+                                        loadingThemeInfo = info;
+                                        loadingTheme = t;
+                                        loadingThemeWallpaper = object;
+                                        loadingThemeWallpaperName = FileLoader.getAttachFileName(object.document);
+                                        FileLoader.getInstance(currentAccount).loadFile(object.document, object, FileLoader.PRIORITY_NORMAL, 1);
+                                        return;
+                                    }
                                 }
                             } else {
                                 object = null;
@@ -7781,6 +7783,12 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                 if (loadingThemeFileName.equals(path)) {
                     loadingThemeFileName = null;
                     File locFile = new File(ApplicationLoader.getFilesDirFixed(), "remote" + loadingTheme.id + ".attheme");
+                    if (!locFile.exists() && args.length > 1 && args[1] instanceof File) {
+                        File downloadedFile = (File) args[1];
+                        if (downloadedFile.exists()) {
+                            AndroidUtilities.copyFile(downloadedFile, locFile);
+                        }
+                    }
                     Theme.ThemeInfo themeInfo = Theme.fillThemeValues(locFile, loadingTheme.title, loadingTheme);
                     if (themeInfo != null) {
                         if (themeInfo.pathToWallpaper != null) {
@@ -7827,6 +7835,12 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                     return;
                                 }
                                 File locFile = new File(ApplicationLoader.getFilesDirFixed(), "remote" + loadingTheme.id + ".attheme");
+                                if (!locFile.exists() && args.length > 1 && args[1] instanceof File) {
+                                    File downloadedFile = (File) args[1];
+                                    if (downloadedFile.exists()) {
+                                        AndroidUtilities.copyFile(downloadedFile, locFile);
+                                    }
+                                }
                                 Theme.ThemeInfo finalThemeInfo = Theme.applyThemeFile(locFile, loadingTheme.title, loadingTheme, true);
                                 if (finalThemeInfo != null) {
                                     presentFragment(new ThemePreviewActivity(finalThemeInfo, true, ThemePreviewActivity.SCREEN_TYPE_PREVIEW, false, false));

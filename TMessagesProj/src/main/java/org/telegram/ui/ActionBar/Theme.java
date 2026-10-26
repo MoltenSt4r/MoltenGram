@@ -7396,7 +7396,7 @@ public class Theme {
             if (accent != null) {
                 checkIsDark(colors, accent.parentTheme);
             }
-            int wallpaperFileOffset = currentColorsNoAccent.get(key_wallpaperFileOffset, -1);
+            int wallpaperFileOffset = colors.get(key_wallpaperFileOffset, -1);
             Bitmap bitmap = Bitmaps.createBitmap(560, 678, Bitmap.Config.ARGB_8888);
             Canvas canvas = new Canvas(bitmap);
 
@@ -7512,10 +7512,10 @@ public class Theme {
                         float side = 560.0f;
                         float scale = Math.min(options.outWidth / side, options.outHeight / side);
                         options.inSampleSize = 1;
-                        if (scale > 1.0f) {
+                        if (scale > 1.0f && !Float.isNaN(scale) && !Float.isInfinite(scale)) {
                             do {
                                 options.inSampleSize *= 2;
-                            } while (options.inSampleSize < scale);
+                            } while (options.inSampleSize < scale && options.inSampleSize < 128);
                         }
                         options.inPreferredConfig = Bitmap.Config.ALPHA_8;
                         options.inJustDecodeBounds = false;
@@ -7582,10 +7582,10 @@ public class Theme {
                     if (options.outWidth > 0 && options.outHeight > 0) {
                         float scale = Math.min(options.outWidth / 560.0f, options.outHeight / 560.0f);
                         options.inSampleSize = 1;
-                        if (scale > 1.0f) {
+                        if (scale > 1.0f && !Float.isNaN(scale) && !Float.isInfinite(scale)) {
                             do {
                                 options.inSampleSize *= 2;
-                            } while (options.inSampleSize < scale);
+                            } while (options.inSampleSize < scale && options.inSampleSize < 128);
                         }
                         options.inJustDecodeBounds = false;
                         Bitmap wallpaper;
@@ -7712,6 +7712,9 @@ public class Theme {
             if (assetName != null) {
                 file = getAssetFile(assetName);
             }
+            if (file == null || !file.exists()) {
+                return stringMap;
+            }
             stream = new FileInputStream(file);
             int idx;
             int read;
@@ -7723,7 +7726,11 @@ public class Theme {
                 for (int a = 0; a < read; a++) {
                     if (bytes[a] == '\n') {
                         int len = a - start + 1;
-                        String line = new String(bytes, start, len - 1);
+                        int lineLen = len - 1;
+                        if (lineLen > 0 && bytes[start + lineLen - 1] == '\r') {
+                            lineLen--;
+                        }
+                        String line = new String(bytes, start, lineLen);
                         if (line.startsWith("WLS=")) {
                             if (wallpaperLink != null && wallpaperLink.length > 0) {
                                 wallpaperLink[0] = line.substring(4);
@@ -7734,7 +7741,7 @@ public class Theme {
                             break;
                         } else {
                             if ((idx = line.indexOf('=')) != -1) {
-                                String key = line.substring(0, idx);
+                                String key = line.substring(0, idx).trim();
                                 String param = line.substring(idx + 1).trim();
                                 int value;
                                 if (param.length() > 0 && param.charAt(0) == '#') {
@@ -8950,24 +8957,29 @@ public class Theme {
             lastDrawableToBlur.clear();
         }
         lastDrawableToBlur = null;
-        if (d == null || d.getIntrinsicWidth() == 0 || d.getIntrinsicHeight() == 0) {
+        if (d == null || d.getIntrinsicWidth() <= 0 || d.getIntrinsicHeight() <= 0) {
             return blurredBitmap = null;
         }
         lastDrawableToBlur = new WeakReference<>(d);
 
-        final int h = 24;
-        final int w = (int) ((float) d.getIntrinsicWidth() / d.getIntrinsicHeight() * h);
-        Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-        d.setBounds(0, 0, w, h);
-        final ColorFilter wasColorFilter = d.getColorFilter();
-        ColorMatrix colorMatrix = new ColorMatrix();
-        colorMatrix.setSaturation(1.3f);
-        AndroidUtilities.multiplyBrightnessColorMatrix(colorMatrix, .94f);
-        d.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
-        d.draw(new Canvas(bitmap));
-        d.setColorFilter(wasColorFilter);
-        Utilities.blurBitmap(bitmap, 3);
-        return blurredBitmap = bitmap;
+        try {
+            final int h = 24;
+            final int w = Math.max(1, (int) ((float) d.getIntrinsicWidth() / d.getIntrinsicHeight() * h));
+            Bitmap bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+            d.setBounds(0, 0, w, h);
+            final ColorFilter wasColorFilter = d.getColorFilter();
+            ColorMatrix colorMatrix = new ColorMatrix();
+            colorMatrix.setSaturation(1.3f);
+            AndroidUtilities.multiplyBrightnessColorMatrix(colorMatrix, .94f);
+            d.setColorFilter(new ColorMatrixColorFilter(colorMatrix));
+            d.draw(new Canvas(bitmap));
+            d.setColorFilter(wasColorFilter);
+            Utilities.blurBitmap(bitmap, 3);
+            return blurredBitmap = bitmap;
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return blurredBitmap = null;
+        }
     }
 
     public static void applyChatMessageSelectedBackgroundColor() {
@@ -9839,26 +9851,34 @@ public class Theme {
 
     private static Bitmap loadScreenSizedBitmap(FileInputStream stream, int offset) {
         try {
+            if (stream == null) {
+                return null;
+            }
             BitmapFactory.Options opts = new BitmapFactory.Options();
             opts.inSampleSize = 1;
             opts.inJustDecodeBounds = true;
-            stream.getChannel().position(offset);
+            stream.getChannel().position(Math.max(0, offset));
             BitmapFactory.decodeStream(stream, null, opts);
+            if (opts.outWidth <= 0 || opts.outHeight <= 0) {
+                return null;
+            }
             float photoW = opts.outWidth;
             float photoH = opts.outHeight;
             float scaleFactor;
             int w_filter = Math.min(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y);
             int h_filter = Math.max(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y);
+            if (w_filter <= 0) w_filter = 1080;
+            if (h_filter <= 0) h_filter = 1920;
             if (w_filter >= h_filter && photoW > photoH) {
                 scaleFactor = Math.max(photoW / w_filter, photoH / h_filter);
             } else {
                 scaleFactor = Math.min(photoW / w_filter, photoH / h_filter);
             }
-            if (scaleFactor < 1.2f) {
+            if (scaleFactor < 1.2f || Float.isNaN(scaleFactor) || Float.isInfinite(scaleFactor)) {
                 scaleFactor = 1;
             }
             opts.inJustDecodeBounds = false;
-            if (scaleFactor > 1.0f && !Float.isNaN(scaleFactor) && !Float.isInfinite(scaleFactor) && (photoW > w_filter || photoH > h_filter)) {
+            if (scaleFactor > 1.0f && (photoW > w_filter || photoH > h_filter)) {
                 int sample = 1;
                 do {
                     sample *= 2;
@@ -9867,21 +9887,21 @@ public class Theme {
             } else {
                 opts.inSampleSize = Math.max(1, (int) scaleFactor);
             }
-            stream.getChannel().position(offset);
+            stream.getChannel().position(Math.max(0, offset));
             Bitmap bitmap = BitmapFactory.decodeStream(stream, null, opts);
             if (bitmap == null) {
                 return null;
             }
             if (bitmap.getWidth() < w_filter || bitmap.getHeight() < h_filter) {
                 float scale = Math.max((float) w_filter / bitmap.getWidth(), (float) h_filter / bitmap.getHeight());
-                if (scale >= 1.02f) {
+                if (scale >= 1.02f && !Float.isNaN(scale) && !Float.isInfinite(scale) && scale < 10.0f) {
                     Bitmap scaledBitmap = Bitmap.createScaledBitmap(bitmap, (int) (bitmap.getWidth() * scale), (int) (bitmap.getHeight() * scale), true);
                     bitmap.recycle();
                     return scaledBitmap;
                 }
             }
             return bitmap;
-        } catch (Exception e) {
+        } catch (Throwable e) {
             FileLog.e(e);
         } finally {
             try {
