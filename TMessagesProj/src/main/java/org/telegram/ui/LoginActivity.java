@@ -8590,14 +8590,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             }
 
             TLRPC.TL_auth_exportLoginToken req = new TLRPC.TL_auth_exportLoginToken();
-            int apiId = NekoXConfig.currentAppId();
-            String apiHash = NekoXConfig.currentAppHash();
-            if (apiId != 4 && apiId != 6 && apiId != 2040) {
-                apiId = 6;
-                apiHash = "eb06d4abfb49dc3eeb1aeb98ae0f581e";
-            }
-            req.api_id = apiId;
-            req.api_hash = apiHash;
+            req.api_hash = NekoXConfig.currentAppHash();
+            req.api_id = NekoXConfig.currentAppId();
             for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
                 UserConfig userConfig = UserConfig.getInstance(a);
                 if (userConfig.isClientActivated()) {

@@ -183,6 +183,7 @@ public class PasskeysController {
 
         final int previousApiId = ConnectionsManager.getInstance(currentAccount).getCurrentApiId();
         ConnectionsManager.getInstance(currentAccount).reinitForApiId(6);
+        ConnectionsManager.getInstance(currentAccount).cleanup(false);
 
         final CredentialManager credentialManager = CredentialManager.create(context);
 
@@ -196,6 +197,7 @@ public class PasskeysController {
             if (cancelled[0]) return;
             if (err != null) {
                 ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+                ConnectionsManager.getInstance(currentAccount).cleanup(false);
                 done.run(0L, null, err.text);
                 return;
             }
@@ -317,6 +319,7 @@ public class PasskeysController {
                     @Override
                     public void onError(@NonNull GetCredentialException err2) {
                         ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+                        ConnectionsManager.getInstance(currentAccount).cleanup(false);
                         if (err2 instanceof NoCredentialException) {
                             done.run(0L, null, "EMPTY");
                         } else if (err2 instanceof GetCredentialCancellationException) {
@@ -332,6 +335,7 @@ public class PasskeysController {
                 cancel[0] = cancellationSignal::cancel;
             } catch (Exception e) {
                 ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+                ConnectionsManager.getInstance(currentAccount).cleanup(false);
                 done.run(0L, null, e.getMessage());
             }
 
@@ -340,11 +344,13 @@ public class PasskeysController {
         cancel[0] = () -> {
             ConnectionsManager.getInstance(currentAccount).cancelRequest(requestId, true);
             ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+            ConnectionsManager.getInstance(currentAccount).cleanup(false);
         };
 
         return () -> {
             cancelled[0] = true;
             ConnectionsManager.getInstance(currentAccount).reinitForApiId(previousApiId);
+            ConnectionsManager.getInstance(currentAccount).cleanup(false);
             if (cancel[0] != null) {
                 cancel[0].run();
             }
