@@ -27,8 +27,8 @@ public class BuildVars {
     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
     public static String BUILD_COMMIT_ID = BuildConfig.BUILD_COMMIT_ID;
 
-    public static int APP_ID = 39205442;
-    public static String APP_HASH = "1090b570704d1d97975994ee9c177dba";
+    public static int APP_ID = 6;
+    public static String APP_HASH = "eb06d4abfb49dc3eeb1aeb98ae0f581e";
     private static final int EXTERA_APP_ID;
     private static final String EXTERA_APP_HASH;
 

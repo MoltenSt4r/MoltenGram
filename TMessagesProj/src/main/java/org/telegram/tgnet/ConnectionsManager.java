@@ -242,9 +242,9 @@ public class ConnectionsManager extends BaseController {
         try {
             systemLangCode = LocaleController.getSystemLocaleStringIso639().toLowerCase();
             langCode = LocaleController.getLocaleStringIso639().toLowerCase();
-            deviceModel = Build.MANUFACTURER + Build.MODEL;
+            deviceModel = Build.MANUFACTURER + " " + Build.MODEL;
             //PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
-            appVersion = BuildConfig.VERSION_NAME.split("-")[0];
+            appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "12.10.6");
             /*if (BuildVars.DEBUG_PRIVATE_VERSION) {
                 appVersion += " pbeta";
             } else if (BuildVars.DEBUG_VERSION) {
