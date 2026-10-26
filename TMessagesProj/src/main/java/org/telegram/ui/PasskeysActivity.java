@@ -116,7 +116,6 @@ public class PasskeysActivity extends BaseFragment {
         if (passkeys.size() + 1 <= getMessagesController().config.passkeysAccountPasskeysMax.get()) {
             addPasskeyRow = items.size();
             items.add(UItem.asButton(-1, R.drawable.menu_passkey_add, getString(R.string.PasskeyAdd)).accent());
-            items.add(UItem.asButton(-3, R.drawable.msg_qrcode_solar, getString(R.string.PasskeyCreateQr)).accent());
         }
         items.add(UItem.asButton(-2, R.drawable.menu_settings, getString(R.string.Settings)).accent());
         items.add(UItem.asShadow(AndroidUtilities.replaceArrows(AndroidUtilities.replaceSingleTag(getString(R.string.PasskeyInfo), () -> {
@@ -207,10 +206,6 @@ public class PasskeysActivity extends BaseFragment {
             });
         } else if (item.id == -2) {
             PasskeysController.openSettings(getParentActivity());
-        } else if (item.id == -3) {
-            showPasskeyQrDialog();
-        } else if (item.id == -4) {
-            showCompleteRegistrationDialog();
         } else if (item.object != null) {
             openMenu(view);
         }
@@ -223,135 +218,6 @@ public class PasskeysActivity extends BaseFragment {
                 .setMessage("Системные ключи доступа (Passkey) недоступны в сторонних клиентах из-за ограничений Google Digital Asset Links для домена telegram.org. Настройка ключей доступа поддерживается только в официальном приложении Telegram.")
                 .setPositiveButton(getString(R.string.OK), null)
                 .show();
-    }
-
-    public void showPasskeyQrDialog() {
-        if (getContext() == null) return;
-        final AlertDialog progressDialog = new AlertDialog(getContext(), AlertDialog.ALERT_TYPE_SPINNER);
-        progressDialog.showDelayed(500);
-
-        ConnectionsManager.getInstance(currentAccount).sendRequestTyped(
-            new TL_account.initPasskeyRegistration(),
-            AndroidUtilities::runOnUIThread,
-            (res, err) -> {
-                progressDialog.dismiss();
-                if (err != null) {
-                    BulletinFactory.of(this).showForError(err.text);
-                    return;
-                }
-                if (res == null || res.options == null) return;
-
-                String qrData = PasskeysController.createPasskeyRegistrationQrString(res.options.data);
-                AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-                builder.setTitle(getString(R.string.PasskeyCreateQr));
-                builder.setMessage(getString(R.string.PasskeyCreateQrInfo));
-
-                LinearLayout layout = new LinearLayout(getContext());
-                layout.setOrientation(LinearLayout.VERTICAL);
-                layout.setGravity(Gravity.CENTER_HORIZONTAL);
-                layout.setPadding(dp(20), dp(12), dp(20), dp(12));
-
-                tw.nekomimi.nekogram.ui.QrView qrView = new tw.nekomimi.nekogram.ui.QrView(getContext());
-                qrView.setData(qrData);
-                layout.addView(qrView, LayoutHelper.createLinear(240, 240, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 16));
-
-                builder.setView(layout);
-                builder.setPositiveButton(getString(R.string.OK), null);
-                builder.setNeutralButton(getString(R.string.Copy), (di, w) -> {
-                    AndroidUtilities.addToClipboard(qrData);
-                    BulletinFactory.of(this).createCopyBulletin(getString(R.string.LinkCopied)).show();
-                });
-                builder.setNegativeButton(getString(R.string.PasskeyEnterResponse), (di, w) -> {
-                    showCompleteRegistrationDialog();
-                });
-                showDialog(builder.create());
-            }
-        );
-    }
-
-    public void showCompleteRegistrationDialog() {
-        if (getContext() == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-        builder.setTitle(getString(R.string.PasskeyCompleteRegistration));
-        builder.setMessage(getString(R.string.PasskeyCompleteRegistrationDescription));
-
-        LinearLayout container = new LinearLayout(getContext());
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
-
-        final EditTextBoldCursor editText = new EditTextBoldCursor(getContext());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        editText.setHint(getString(R.string.PasskeyInputHint));
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
-        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setSingleLine(false);
-        editText.setMaxLines(4);
-        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
-
-        TextView pasteBtn = new TextView(getContext());
-        pasteBtn.setText(getString(R.string.Paste));
-        pasteBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-        pasteBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        pasteBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
-        pasteBtn.setOnClickListener(v -> {
-            try {
-                android.content.ClipboardManager cm = (android.content.ClipboardManager) getContext().getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
-                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
-                    if (text != null) {
-                        editText.setText(text.toString().trim());
-                        editText.setSelection(editText.getText().length());
-                    }
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        });
-        container.addView(pasteBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        TextView scanBtn = new TextView(getContext());
-        scanBtn.setText("• " + getString(R.string.PasskeyScanQr));
-        scanBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-        scanBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        scanBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
-        scanBtn.setOnClickListener(v -> {
-            openCameraScanActivityForPasskey();
-        });
-        container.addView(scanBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        builder.setView(container);
-        builder.setPositiveButton(getString(R.string.Done), (di, w) -> {
-            String input = editText.getText().toString().trim();
-            if (!input.isEmpty()) {
-                handlePasskeyRegistrationResponse(input);
-            }
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        showDialog(builder.create());
-    }
-
-    public void openCameraScanActivityForPasskey() {
-        CameraScanActivity.showAsSheet(this, true, CameraScanActivity.TYPE_QR_PASSKEY, new CameraScanActivity.CameraScanActivityDelegate() {
-            @Override
-            public void didFindQr(String text) {
-                if (text != null && !text.isEmpty()) {
-                    handlePasskeyRegistrationResponse(text);
-                }
-            }
-        });
-    }
-
-    public void handlePasskeyRegistrationResponse(String input) {
-        if (input == null || input.isEmpty() || getContext() == null) return;
-        PasskeysController.finishPasskeyRegistrationWithJson(getContext(), currentAccount, input, null, (passkey, err) -> {
-            if (err != null) {
-                BulletinFactory.of(this).showForError(err, true);
-            } else if (passkey != null) {
-                MessagesController.getInstance(currentAccount).removeSuggestion(0, "SETUP_PASSKEY");
-                added(passkey);
-            }
-        });
     }
 
     public void added(TL_account.Passkey passkey) {

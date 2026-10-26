@@ -3,9 +3,6 @@ package org.telegram.messenger;
 import android.app.Activity;
 import android.app.PendingIntent;
 import android.content.Context;
-import android.content.Intent;
-import android.content.pm.PackageManager;
-import android.net.Uri;
 import android.os.Build;
 import android.os.CancellationSignal;
 import android.util.Base64;
@@ -578,16 +575,6 @@ public class PasskeysController {
         return rawUserHandle;
     }
 
-    public static String createPasskeyRegistrationQrString(String requestJson) {
-        if (requestJson == null) return "";
-        return "fido:/" + Base64.encodeToString(requestJson.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-    }
-
-    public static String createPasskeyLoginQrString(String requestJson) {
-        if (requestJson == null) return "";
-        return "fido:/" + Base64.encodeToString(requestJson.getBytes(StandardCharsets.UTF_8), Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-    }
-
     public static void finishPasskeyLoginWithJson(Context context, int currentAccount, String responseJson, String fallbackClientDataJSON, Utilities.Callback3<Long, TLRPC.auth_Authorization, String> done) {
         final int datacenterId;
         final long userId;
@@ -686,39 +673,10 @@ public class PasskeysController {
         });
     }
 
-    public static boolean isFidoOrPasskeyUri(String text) {
-        if (text == null) return false;
-        String lower = text.toLowerCase(Locale.ROOT).trim();
-        return lower.startsWith("fido:/") || lower.startsWith("fido:") || lower.startsWith("tg://passkey") || lower.startsWith("webauthn:") || (lower.startsWith("{") && (lower.contains("authenticatordata") || lower.contains("response")));
-    }
-
     public static boolean isBotToken(String text) {
         if (text == null) return false;
         String trimmed = text.trim();
         return trimmed.matches("^[0-9]{6,14}:[a-zA-Z0-9_-]{30,50}$");
-    }
-
-    public static boolean handlePasskeyQrIntent(Context context, String uriString) {
-        if (context == null || uriString == null || uriString.isEmpty()) return false;
-        try {
-            Intent intent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
-            intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            PackageManager pm = context.getPackageManager();
-            if (intent.resolveActivity(pm) != null) {
-                context.startActivity(intent);
-                return true;
-            }
-            Intent gmsIntent = new Intent(Intent.ACTION_VIEW, Uri.parse(uriString));
-            gmsIntent.setPackage("com.google.android.gms");
-            gmsIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK);
-            if (gmsIntent.resolveActivity(pm) != null) {
-                context.startActivity(gmsIntent);
-                return true;
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-        return false;
     }
 
     public static void openSettings(Activity activity) {

@@ -158,7 +158,6 @@ public class CameraScanActivity extends BaseFragment {
     public static final int TYPE_QR = 1;
     public static final int TYPE_QR_LOGIN = 2;
     public static final int TYPE_QR_WEB_BOT = 3;
-    public static final int TYPE_QR_PASSKEY = 4;
 
     public interface CameraScanActivityDelegate {
         default void didFindMrzInfo(MrzRecognizer.Result result) {
@@ -505,7 +504,7 @@ public class CameraScanActivity extends BaseFragment {
             viewGroup.addView(actionBar);
         }
 
-        if (currentType == TYPE_QR_LOGIN || currentType == TYPE_QR_WEB_BOT || currentType == TYPE_QR_PASSKEY) {
+        if (currentType == TYPE_QR_LOGIN || currentType == TYPE_QR_WEB_BOT) {
             actionBar.setTitle(LocaleController.getString(R.string.AuthAnotherClientScan));
         }
 
@@ -1424,10 +1423,7 @@ public class CameraScanActivity extends BaseFragment {
                 onNoQrFound();
                 return null;
             }
-            if (currentType == TYPE_QR_LOGIN && !text.startsWith("tg://login?token=") && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text) && !org.telegram.messenger.PasskeysController.isBotToken(text) && !text.trim().startsWith("{")) {
-                onNoQrFound();
-                return null;
-            } else if (currentType == TYPE_QR_PASSKEY && !org.telegram.messenger.PasskeysController.isFidoOrPasskeyUri(text) && !text.trim().startsWith("{")) {
+            if (currentType == TYPE_QR_LOGIN && !text.startsWith("tg://login?token=") && !org.telegram.messenger.PasskeysController.isBotToken(text)) {
                 onNoQrFound();
                 return null;
             }
@@ -1453,7 +1449,7 @@ public class CameraScanActivity extends BaseFragment {
 
 
     private boolean isQr() {
-        return currentType == TYPE_QR || currentType == TYPE_QR_LOGIN || currentType == TYPE_QR_WEB_BOT || currentType == TYPE_QR_PASSKEY;
+        return currentType == TYPE_QR || currentType == TYPE_QR_LOGIN || currentType == TYPE_QR_WEB_BOT;
     }
 
     @Override

@@ -799,7 +799,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         moreButtonView.setIcon(R.drawable.ic_ab_other);
         moreButtonView.addSubItem(0, R.drawable.msg_policy_solar, getString(R.string.Proxy));
         moreButtonView.addSubItem(1, R.drawable.msg_qrcode_solar, getString(R.string.ImportLogin));
-        moreButtonView.addSubItem(4, R.drawable.menu_passkey_add, getString(R.string.PasskeyLogin));
         moreButtonView.addSubItem(5, R.drawable.msg_bots_solar, getString(R.string.BotTokenLogin));
         moreButtonView.addSubItem(7, R.drawable.msg_qrcode_solar, getString(R.string.ScanQrCode));
         moreButtonView.addSubItem(2, R.drawable.msg_permissions_solar, getString(R.string.CustomApi)).setContentDescription(getString(R.string.CustomApi));
@@ -819,13 +818,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 PhoneView phoneView = (PhoneView)views[VIEW_PHONE_INPUT];
                 if (phoneView.testBackendCheckBox != null) {
                      phoneView.testBackendCheckBox.setVisibility(phoneView.testBackendCheckBox.getVisibility() == View.GONE ? View.VISIBLE : View.GONE);
-                }
-            } else if (id == 4) {
-                PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
-                if (phoneView != null) {
-                    phoneView.requestPasskey(true, true);
-                } else {
-                    showPasskeyLoginDialog();
                 }
             } else if (id == 5) {
                 showBotTokenLoginDialog();
@@ -8542,7 +8534,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             scanQrButton.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             scanQrButton.setTextColor(Theme.getColor(Theme.key_chats_actionBackground));
             scanQrButton.setGravity(Gravity.CENTER);
-            scanQrButton.setText(LocaleController.getString(R.string.PasskeyScanQr));
+            scanQrButton.setText(LocaleController.getString(R.string.ScanQrCode));
             scanQrButton.setOnClickListener(v -> openCameraScanActivityForLogin());
             addView(scanQrButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 16, 8, 16, 16));
         }
@@ -8696,33 +8688,11 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
-    public void openGalleryForQrPicker() {
-        if (getParentActivity() == null) return;
-        try {
-            Intent photoPickerIntent = new Intent(Intent.ACTION_PICK);
-            photoPickerIntent.setType("image/*");
-            getParentActivity().startActivityForResult(photoPickerIntent, 11);
-        } catch (Exception e) {
-            try {
-                Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
-                intent.setType("image/*");
-                getParentActivity().startActivityForResult(Intent.createChooser(intent, null), 11);
-            } catch (Exception ex) {
-                FileLog.e(ex);
-            }
-        }
-    }
-
     public void openCameraScanActivityForLogin() {
         CameraScanActivity.showAsSheet(this, true, CameraScanActivity.TYPE_QR_LOGIN, new CameraScanActivity.CameraScanActivityDelegate() {
             @Override
             public void didFindQr(String text) {
                 handleFoundQrOrPasskey(text);
-            }
-
-            @Override
-            public String getSubtitleText() {
-                return LocaleController.getString(R.string.PasskeyScanQrInfo);
             }
         });
     }
@@ -8741,57 +8711,8 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
             } else {
                 setPage(VIEW_QR_LOGIN, true, null, false);
             }
-        } else if (PasskeysController.isFidoOrPasskeyUri(trimmed) || trimmed.startsWith("{") || trimmed.toLowerCase(Locale.ROOT).startsWith("fido:") || trimmed.toLowerCase(Locale.ROOT).startsWith("fido:/")) {
-            handlePasskeyInput(trimmed);
         } else {
             needShowAlert(LocaleController.getString(R.string.AppName), trimmed);
-        }
-    }
-
-    public void handlePasskeyInput(String input) {
-        if (getParentActivity() == null || input == null || input.trim().isEmpty()) return;
-        final String trimmed = input.trim();
-
-        if (trimmed.startsWith("{") && (trimmed.contains("authenticatorData") || trimmed.contains("response"))) {
-            PasskeysController.finishPasskeyLoginWithJson(getParentActivity(), currentAccount, trimmed, "", (userId, auth, error) -> {
-                onPasskeyAuthResult(userId, auth, error);
-            });
-            return;
-        }
-
-        String raw = trimmed;
-        if (raw.toLowerCase(Locale.ROOT).startsWith("fido:/")) {
-            raw = raw.substring(6);
-        } else if (raw.toLowerCase(Locale.ROOT).startsWith("fido:")) {
-            raw = raw.substring(5);
-        }
-        while (raw.startsWith("/")) {
-            raw = raw.substring(1);
-        }
-
-        try {
-            byte[] decoded = Base64.decode(raw, Base64.URL_SAFE | Base64.NO_WRAP | Base64.NO_PADDING);
-            if (decoded != null && decoded.length > 0) {
-                String decodedStr = new String(decoded, StandardCharsets.UTF_8).trim();
-                if (decodedStr.startsWith("{") && (decodedStr.contains("authenticatorData") || decodedStr.contains("response"))) {
-                    PasskeysController.finishPasskeyLoginWithJson(getParentActivity(), currentAccount, decodedStr, "", (userId, auth, error) -> {
-                        onPasskeyAuthResult(userId, auth, error);
-                    });
-                    return;
-                }
-            }
-        } catch (Exception ignored) {
-        }
-
-        boolean launched = PasskeysController.handlePasskeyQrIntent(getParentActivity(), trimmed);
-        if (launched) {
-            tw.nekomimi.nekogram.utils.AlertUtil.showToast(LocaleController.getString(R.string.PasskeyLogin));
-            return;
-        }
-
-        PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
-        if (phoneView != null) {
-            phoneView.requestPasskey(true, true);
         }
     }
 
@@ -8851,103 +8772,6 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 })
                 .setNegativeButton(LocaleController.getString(R.string.Cancel), null)
                 .show();
-    }
-
-    public void showPasskeyLoginDialog() {
-        if (getParentActivity() == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle(LocaleController.getString(R.string.PasskeyLogin));
-        builder.setMessage(LocaleController.getString(R.string.PasskeyInputDialogDescription));
-
-        LinearLayout container = new LinearLayout(getParentActivity());
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(8), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
-
-        final EditTextBoldCursor editText = new EditTextBoldCursor(getParentActivity());
-        editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        editText.setHint(LocaleController.getString(R.string.PasskeyInputHint));
-        editText.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setHintTextColor(Theme.getColor(Theme.key_dialogTextHint));
-        editText.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack));
-        editText.setSingleLine(false);
-        editText.setMaxLines(4);
-        container.addView(editText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
-
-        TextView pasteBtn = new TextView(getParentActivity());
-        pasteBtn.setText(LocaleController.getString(R.string.Paste));
-        pasteBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-        pasteBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        pasteBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4), AndroidUtilities.dp(4));
-        pasteBtn.setOnClickListener(v -> {
-            try {
-                android.content.ClipboardManager cm = (android.content.ClipboardManager) getParentActivity().getSystemService(Context.CLIPBOARD_SERVICE);
-                if (cm != null && cm.hasPrimaryClip() && cm.getPrimaryClip().getItemCount() > 0) {
-                    CharSequence text = cm.getPrimaryClip().getItemAt(0).getText();
-                    if (text != null) {
-                        editText.setText(text.toString().trim());
-                        editText.setSelection(editText.getText().length());
-                    }
-                }
-            } catch (Exception e) {
-                FileLog.e(e);
-            }
-        });
-        container.addView(pasteBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
-        TextView galleryBtn = new TextView(getParentActivity());
-        galleryBtn.setText("• " + LocaleController.getString(R.string.PasskeyPickFromGallery));
-        galleryBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-        galleryBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        galleryBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
-
-        TextView cameraBtn = new TextView(getParentActivity());
-        cameraBtn.setText("• " + LocaleController.getString(R.string.ScanQrCode));
-        cameraBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-        cameraBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        cameraBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
-
-        container.addView(galleryBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
-        container.addView(cameraBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
-
-        TextView systemBtn = null;
-        if (BuildVars.SUPPORTS_PASSKEYS) {
-            systemBtn = new TextView(getParentActivity());
-            systemBtn.setText("• " + LocaleController.getString(R.string.PasskeyUseSystem));
-            systemBtn.setTextColor(Theme.getColor(Theme.key_dialogTextBlue2));
-            systemBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            systemBtn.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6));
-            container.addView(systemBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 2));
-        }
-
-        builder.setView(container);
-        builder.setPositiveButton(LocaleController.getString(R.string.OK), (d, w) -> {
-            String text = editText.getText().toString().trim();
-            if (!text.isEmpty()) {
-                handleFoundQrOrPasskey(text);
-            }
-        });
-        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        final AlertDialog dialog = builder.create();
-
-        galleryBtn.setOnClickListener(v -> {
-            dialog.dismiss();
-            openGalleryForQrPicker();
-        });
-        cameraBtn.setOnClickListener(v -> {
-            dialog.dismiss();
-            openCameraScanActivityForLogin();
-        });
-        if (systemBtn != null) {
-            systemBtn.setOnClickListener(v -> {
-                dialog.dismiss();
-                PhoneView phoneView = (PhoneView) views[VIEW_PHONE_INPUT];
-                if (phoneView != null) {
-                    phoneView.requestPasskey(true, true);
-                }
-            });
-        }
-
-        showDialog(dialog);
     }
 
     public void showBotTokenLoginDialog() {
