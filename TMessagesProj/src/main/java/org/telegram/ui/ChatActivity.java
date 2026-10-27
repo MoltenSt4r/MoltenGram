@@ -52257,31 +52257,41 @@ public class ChatActivity extends BaseFragment implements
             }
             float threshold = app.exteraless.clip.OpenClipConfig.getEffectiveThreshold();
             app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, targetDialogId, 50, threshold, results -> {
-                if (results == null || results.isEmpty()) {
-                    if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                        BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
-                    }
+                if ((results == null || results.isEmpty()) && targetDialogId != 0) {
+                    app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, 0, 50, threshold, fallbackResults -> {
+                        showPhotoSearchResults(fallbackResults);
+                    });
                     return;
                 }
-                app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
-                if (targetDialogId == dialog_id || top.dialogId == dialog_id) {
-                    scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
-                    if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                        String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
-                        BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
-                    }
-                } else {
-                    Bundle args = new Bundle();
-                    if (top.dialogId < 0) {
-                        args.putLong("chat_id", -top.dialogId);
-                    } else {
-                        args.putLong("user_id", top.dialogId);
-                    }
-                    args.putInt("message_id", (int) top.messageId);
-                    presentFragment(new ChatActivity(args));
-                }
+                showPhotoSearchResults(results);
             });
         });
+    }
+
+    private void showPhotoSearchResults(java.util.List<app.exteraless.clip.ClipDatabase.SearchResult> results) {
+        if (results == null || results.isEmpty()) {
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+            }
+            return;
+        }
+        app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
+        if (top.dialogId == dialog_id) {
+            scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
+                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+            }
+        } else {
+            Bundle args = new Bundle();
+            if (top.dialogId < 0) {
+                args.putLong("chat_id", -top.dialogId);
+            } else {
+                args.putLong("user_id", top.dialogId);
+            }
+            args.putInt("message_id", (int) top.messageId);
+            presentFragment(new ChatActivity(args));
+        }
     }
 
     private void executeSemanticTextSearch(final String query) {

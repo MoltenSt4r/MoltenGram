@@ -15,6 +15,7 @@ public final class OpenClipConfig {
 
     public static final String KEY_ENABLED = "enabled";
     public static final String KEY_THRESHOLD = "threshold";
+    public static final String KEY_AUTO_INDEX_ENABLED = "autoIndexEnabled";
     public static final String KEY_AUTO_INDEX_PHOTOS = "autoIndexPhotos";
     public static final String KEY_AUTO_INDEX_TEXT = "autoIndexText";
 
@@ -22,6 +23,7 @@ public final class OpenClipConfig {
     public static final float DEFAULT_THRESHOLD = 0.55f;
     public static final float MIN_THRESHOLD = 0.35f;
     public static final float MAX_THRESHOLD = 0.80f;
+    public static final boolean DEFAULT_AUTO_INDEX_ENABLED = true;
     public static final boolean DEFAULT_AUTO_INDEX_PHOTOS = true;
     public static final boolean DEFAULT_AUTO_INDEX_TEXT = true;
 
@@ -119,6 +121,25 @@ public final class OpenClipConfig {
         }
     }
 
+    public static boolean isAutoIndexEnabled() {
+        try {
+            SharedPreferences prefs = getPreferences();
+            return prefs == null ? DEFAULT_AUTO_INDEX_ENABLED : prefs.getBoolean(KEY_AUTO_INDEX_ENABLED, DEFAULT_AUTO_INDEX_ENABLED);
+        } catch (Throwable e) {
+            return DEFAULT_AUTO_INDEX_ENABLED;
+        }
+    }
+
+    public static void setAutoIndexEnabled(boolean value) {
+        try {
+            SharedPreferences.Editor editor = getEditor();
+            if (editor != null) {
+                editor.putBoolean(KEY_AUTO_INDEX_ENABLED, value).apply();
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
     public static float clampThreshold(float val) {
         if (Float.isNaN(val) || Float.isInfinite(val)) {
             return DEFAULT_THRESHOLD;
@@ -129,6 +150,6 @@ public final class OpenClipConfig {
     public static float getEffectiveThreshold() {
         float uiThreshold = getThreshold();
         float norm = (uiThreshold - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
-        return 0.15f + norm * (0.38f - 0.15f);
+        return 0.10f + norm * (0.38f - 0.10f);
     }
 }

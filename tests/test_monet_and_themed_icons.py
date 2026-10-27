@@ -448,6 +448,35 @@ def test_noto_animated_emoji_and_current_emoji_reactions():
     assert 'IndexingProgressCell' in clip_settings_content
 
 
+def test_openclip_auto_indexer_and_chat_photo_search_enhancements():
+    indexer_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/ClipAutoIndexer.java')
+    with open(indexer_path, 'r', encoding='utf-8') as f:
+        indexer_content = f.read()
+    assert 'getPathToMessage' in indexer_content
+    assert 'sortedSizes' in indexer_content
+
+    ca_path = os.path.join(JAVA_DIR, 'org/telegram/ui/ChatActivity.java')
+    with open(ca_path, 'r', encoding='utf-8') as f:
+        ca_content = f.read()
+    assert 'targetDialogId != 0' in ca_content
+    assert 'findSimilar(embedding, 0, 50, threshold' in ca_content
+
+    clip_cfg_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/OpenClipConfig.java')
+    with open(clip_cfg_path, 'r', encoding='utf-8') as f:
+        clip_cfg_content = f.read()
+    assert 'KEY_AUTO_INDEX_ENABLED' in clip_cfg_content
+    assert 'isAutoIndexEnabled' in clip_cfg_content
+    assert '0.10f' in clip_cfg_content
+
+    clip_settings_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/OpenClipSettingsActivity.java')
+    with open(clip_settings_path, 'r', encoding='utf-8') as f:
+        clip_settings_content = f.read()
+    assert 'indexAllChatsRow' in clip_settings_content
+    assert 'autoIndexEnabledRow' in clip_settings_content
+    assert 'startIndexing(currentAccount, allDialogIds)' in clip_settings_content
+
+
+
 
 
 

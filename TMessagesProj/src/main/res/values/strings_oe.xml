@@ -158,5 +158,16 @@
     <string name="OpenClipChooseChatsInfo">Pre-index messages and downloaded photos in selected chats for instant semantic search.</string>
     <string name="OpenClipIndexingProgress">Indexing chats…</string>
     <string name="OpenClipIndexingFinished">Indexing finished! %d items indexed.</string>
+    <string name="OpenClipIndexAllChats">Index all chats</string>
+    <string name="OpenClipIndexAllChatsSubtitle">Index messages and photos across all dialogs</string>
+    <string name="OpenClipAutoIndexEnabled">Enable automatic indexing</string>
+    <string name="OpenClipAutoIndexEnabledDesc">Automatically analyze and index messages and photos in the background</string>
+
+    <!-- Semantic Search Results Plurals -->
+    <string name="FoundMessages_one">%1$d message found</string>
+    <string name="FoundMessages_two">%1$d messages found</string>
+    <string name="FoundMessages_few">%1$d messages found</string>
+    <string name="FoundMessages_many">%1$d messages found</string>
+    <string name="FoundMessages_other">%1$d messages found</string>
 </resources>
 

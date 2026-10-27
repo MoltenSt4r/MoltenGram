@@ -218,18 +218,39 @@ public class ClipAutoIndexer {
                         if (OpenClipConfig.isAutoIndexPhotos() && msg.media instanceof TLRPC.TL_messageMediaPhoto) {
                             TLRPC.TL_messageMediaPhoto photoMedia = (TLRPC.TL_messageMediaPhoto) msg.media;
                             if (photoMedia.photo != null && photoMedia.photo.sizes != null) {
-                                TLRPC.PhotoSize photoSize = FileLoader.getClosestPhotoSizeWithSize(photoMedia.photo.sizes, 320);
-                                if (photoSize != null) {
-                                    File attachFile = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, true);
-                                    if (attachFile != null && attachFile.exists() && attachFile.length() > 0) {
-                                        Bitmap bitmap = decodeSampledBitmap(attachFile.getAbsolutePath(), 256, 256);
-                                        if (bitmap != null) {
-                                            float[] imgEmb = OpenClipInference.getInstance().encodeImageDirect(bitmap);
-                                            bitmap.recycle();
-                                            if (imgEmb != null) {
-                                                ClipDatabase.getInstance().putEmbeddingDirect(did, msg.id, photoMedia.photo.id, ClipDatabase.TYPE_PHOTO, imgEmb);
-                                                totalIndexedOverall++;
-                                            }
+                                File attachFile = FileLoader.getInstance(currentAccount).getPathToMessage(msg);
+                                if (attachFile == null || !attachFile.exists() || attachFile.length() <= 0) {
+                                    attachFile = null;
+                                    ArrayList<TLRPC.PhotoSize> sortedSizes = new ArrayList<>(photoMedia.photo.sizes);
+                                    java.util.Collections.sort(sortedSizes, (o1, o2) -> {
+                                        int s1 = Math.max(o1 != null ? o1.w : 0, o1 != null ? o1.h : 0);
+                                        int s2 = Math.max(o2 != null ? o2.w : 0, o2 != null ? o2.h : 0);
+                                        return Integer.compare(s2, s1);
+                                    });
+                                    for (TLRPC.PhotoSize photoSize : sortedSizes) {
+                                        if (photoSize == null || photoSize instanceof TLRPC.TL_photoStrippedSize || photoSize instanceof TLRPC.TL_photoPathSize) {
+                                            continue;
+                                        }
+                                        File f = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, true);
+                                        if (f != null && f.exists() && f.length() > 0) {
+                                            attachFile = f;
+                                            break;
+                                        }
+                                        f = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, false);
+                                        if (f != null && f.exists() && f.length() > 0) {
+                                            attachFile = f;
+                                            break;
+                                        }
+                                    }
+                                }
+                                if (attachFile != null && attachFile.exists() && attachFile.length() > 0) {
+                                    Bitmap bitmap = decodeSampledBitmap(attachFile.getAbsolutePath(), 256, 256);
+                                    if (bitmap != null) {
+                                        float[] imgEmb = OpenClipInference.getInstance().encodeImageDirect(bitmap);
+                                        bitmap.recycle();
+                                        if (imgEmb != null) {
+                                            ClipDatabase.getInstance().putEmbeddingDirect(did, msg.id, photoMedia.photo.id, ClipDatabase.TYPE_PHOTO, imgEmb);
+                                            totalIndexedOverall++;
                                         }
                                     }
                                 }

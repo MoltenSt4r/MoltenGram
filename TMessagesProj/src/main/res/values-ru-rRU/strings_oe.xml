@@ -153,5 +153,16 @@
     <string name="OpenClipChooseChatsInfo">Индексирует сообщения и сохранённые фото в выбранных чатах для быстрого офлайн-поиска.</string>
     <string name="OpenClipIndexingProgress">Индексация чатов…</string>
     <string name="OpenClipIndexingFinished">Индексация завершена! Обработано %d элементов.</string>
+    <string name="OpenClipIndexAllChats">Индексировать все чаты</string>
+    <string name="OpenClipIndexAllChatsSubtitle">Индексировать сообщения и фото во всех диалогах</string>
+    <string name="OpenClipAutoIndexEnabled">Включить автоиндексацию</string>
+    <string name="OpenClipAutoIndexEnabledDesc">Автоматически анализировать и индексировать сообщения и фото в фоне</string>
+
+    <!-- Плюральные строки результатов семантического поиска -->
+    <string name="FoundMessages_one">Найдено %1$d сообщение</string>
+    <string name="FoundMessages_two">Найдено %1$d сообщения</string>
+    <string name="FoundMessages_few">Найдено %1$d сообщения</string>
+    <string name="FoundMessages_many">Найдено %1$d сообщений</string>
+    <string name="FoundMessages_other">Найдено %1$d сообщений</string>
 </resources>
 

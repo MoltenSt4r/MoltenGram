@@ -34,8 +34,21 @@ def compare_semver(ver1, ver2):
     return 0
 
 
+def extract_build_code(text):
+    if not text:
+        return 0
+    m = re.search(r'(?:\(|\bb|build|#)(\d{4,9})(?:\)|\b)', text, re.IGNORECASE)
+    if m:
+        try:
+            return int(m.group(1))
+        except Exception:
+            pass
+    return 0
+
+
 def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_canary,
-                     current_ver, current_commit, current_timestamp, current_is_canary):
+                     current_ver, current_commit, current_timestamp, current_is_canary,
+                     current_build_code=0):
     if not remote_ver:
         return False
     cmp = compare_semver(remote_ver, current_ver)
@@ -47,6 +60,14 @@ def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_cana
             return False
     if cmp > 0:
         return True
+    # At this point, cmp == 0 and current_is_canary == effective_remote_is_canary
+    if not current_is_canary and not effective_remote_is_canary:
+        remote_build = extract_build_code(remote_ver)
+        cur_build = current_build_code if current_build_code > 0 else extract_build_code(current_ver)
+        if remote_build > 0 and remote_build > cur_build:
+            return True
+        return False
+
     if remote_commit and current_commit:
         if remote_commit.lower() == current_commit.lower():
             return False
@@ -103,4 +124,24 @@ def test_semver_lower_rejects_update():
     assert not is_newer_version(
         remote_ver='12.10.5', remote_timestamp=1700000000, remote_commit='abc1234', remote_is_canary=True,
         current_ver='12.10.6', current_commit='0240f22', current_timestamp=1699999999, current_is_canary=True
+    )
+
+
+def test_stable_same_semver_post_build_timestamp_loop_prevented():
+    # Stable release with identical semver and post-build upload timestamp must NOT trigger update loop
+    assert not is_newer_version(
+        remote_ver='12.10.6', remote_timestamp=1700000060, remote_commit='', remote_is_canary=False,
+        current_ver='12.10.6', current_commit='', current_timestamp=1700000000, current_is_canary=False
+    )
+
+
+def test_stable_same_semver_higher_build_code_triggers_update():
+    # Stable release with identical semver but higher build code in version string triggers update
+    assert is_newer_version(
+        remote_ver='12.10.6 (126102)', remote_timestamp=1700000060, remote_commit='', remote_is_canary=False,
+        current_ver='12.10.6 (126101)', current_commit='', current_timestamp=1700000000, current_is_canary=False
+    )
+    assert not is_newer_version(
+        remote_ver='12.10.6 (126101)', remote_timestamp=1700000060, remote_commit='', remote_is_canary=False,
+        current_ver='12.10.6 (126102)', current_commit='', current_timestamp=1700000000, current_is_canary=False
     )

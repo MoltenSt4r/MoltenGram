@@ -2953,7 +2953,19 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (Build.VERSION.SDK_INT >= 28) {
             Drawable anim = currentImageDrawable != null ? currentImageDrawable : (currentMediaDrawable != null ? currentMediaDrawable : staticThumbDrawable);
             if (anim instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                ((android.graphics.drawable.AnimatedImageDrawable) anim).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) anim;
+                boolean noRepeat = (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
+                aid.setRepeatCount(noRepeat ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                if (noRepeat) {
+                    aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {
+                        @Override
+                        public void onAnimationEnd(Drawable d) {
+                            try {
+                                aid.stop();
+                            } catch (Throwable ignored) {}
+                        }
+                    });
+                }
             }
         }
     }
@@ -3336,7 +3348,19 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         } else if (drawable instanceof android.graphics.drawable.Animatable) {
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) drawable;
             if (Build.VERSION.SDK_INT >= 28 && drawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                ((android.graphics.drawable.AnimatedImageDrawable) drawable).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) drawable;
+                boolean noRepeat = (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
+                aid.setRepeatCount(noRepeat ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                if (noRepeat) {
+                    aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {
+                        @Override
+                        public void onAnimationEnd(Drawable d) {
+                            try {
+                                aid.stop();
+                            } catch (Throwable ignored) {}
+                        }
+                    });
+                }
             }
             drawable.setCallback(new Drawable.Callback() {
                 @Override

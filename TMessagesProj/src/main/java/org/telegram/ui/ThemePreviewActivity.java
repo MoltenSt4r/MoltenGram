@@ -558,38 +558,40 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
         deleteOnCancel = deleteFile;
         editingTheme = edit;
 
-        if (screenType == SCREEN_TYPE_ACCENT_COLOR) {
-            accent = applyingTheme.getAccent(!edit);
+        if (applyingTheme != null) {
+            if (screenType == SCREEN_TYPE_ACCENT_COLOR) {
+                accent = applyingTheme.getAccent(!edit);
+                if (accent != null) {
+                    useDefaultThemeForButtons = false;
+                    backupAccentColor = accent.accentColor;
+                    backupAccentColor2 = accent.accentColor2;
+                    backupMyMessagesAccentColor = accent.myMessagesAccentColor;
+                    backupMyMessagesGradientAccentColor1 = accent.myMessagesGradientAccentColor1;
+                    backupMyMessagesGradientAccentColor2 = accent.myMessagesGradientAccentColor2;
+                    backupMyMessagesGradientAccentColor3 = accent.myMessagesGradientAccentColor3;
+                    backupMyMessagesAnimated = accent.myMessagesAnimated;
+                    backupBackgroundOverrideColor = accent.backgroundOverrideColor;
+                    backupBackgroundGradientOverrideColor1 = accent.backgroundGradientOverrideColor1;
+                    backupBackgroundGradientOverrideColor2 = accent.backgroundGradientOverrideColor2;
+                    backupBackgroundGradientOverrideColor3 = accent.backgroundGradientOverrideColor3;
+                    backupIntensity = accent.patternIntensity;
+                    backupSlug = accent.patternSlug;
+                    backupBackgroundRotation = accent.backgroundRotation;
+                }
+            } else {
+                if (screenType == SCREEN_TYPE_PREVIEW) {
+                    useDefaultThemeForButtons = false;
+                }
+                accent = applyingTheme.getAccent(false);
+                if (accent != null) {
+                    selectedPattern = accent.pattern;
+                }
+            }
             if (accent != null) {
-                useDefaultThemeForButtons = false;
-                backupAccentColor = accent.accentColor;
-                backupAccentColor2 = accent.accentColor2;
-                backupMyMessagesAccentColor = accent.myMessagesAccentColor;
-                backupMyMessagesGradientAccentColor1 = accent.myMessagesGradientAccentColor1;
-                backupMyMessagesGradientAccentColor2 = accent.myMessagesGradientAccentColor2;
-                backupMyMessagesGradientAccentColor3 = accent.myMessagesGradientAccentColor3;
-                backupMyMessagesAnimated = accent.myMessagesAnimated;
-                backupBackgroundOverrideColor = accent.backgroundOverrideColor;
-                backupBackgroundGradientOverrideColor1 = accent.backgroundGradientOverrideColor1;
-                backupBackgroundGradientOverrideColor2 = accent.backgroundGradientOverrideColor2;
-                backupBackgroundGradientOverrideColor3 = accent.backgroundGradientOverrideColor3;
-                backupIntensity = accent.patternIntensity;
-                backupSlug = accent.patternSlug;
-                backupBackgroundRotation = accent.backgroundRotation;
-            }
-        } else {
-            if (screenType == SCREEN_TYPE_PREVIEW) {
-                useDefaultThemeForButtons = false;
-            }
-            accent = applyingTheme.getAccent(false);
-            if (accent != null) {
-                selectedPattern = accent.pattern;
-            }
-        }
-        if (accent != null) {
-            isMotion = accent.patternMotion;
-            if (!TextUtils.isEmpty(accent.patternSlug)) {
-                currentIntensity = accent.patternIntensity;
+                isMotion = accent.patternMotion;
+                if (!TextUtils.isEmpty(accent.patternSlug)) {
+                    currentIntensity = accent.patternIntensity;
+                }
             }
             Theme.applyThemeTemporary(applyingTheme, true);
         }
@@ -1133,13 +1135,13 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 dropDown.setPadding(0, 0, dp(10), 0);
                 dropDownContainer.addView(dropDown, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 16, 0, 0, 1));
             } else {
-                String name = applyingTheme.info != null ? applyingTheme.info.title : applyingTheme.getName();
+                String name = applyingTheme != null ? (applyingTheme.info != null ? applyingTheme.info.title : applyingTheme.getName()) : "";
                 int index = name.lastIndexOf(".attheme");
                 if (index >= 0) {
                     name = name.substring(0, index);
                 }
                 actionBar2.setTitle(name);
-                if (applyingTheme.info != null && applyingTheme.info.installs_count > 0) {
+                if (applyingTheme != null && applyingTheme.info != null && applyingTheme.info.installs_count > 0) {
                     actionBar2.setSubtitle(LocaleController.formatPluralString("ThemeInstallCount", applyingTheme.info.installs_count));
                 } else {
                     actionBar2.setSubtitle(LocaleController.formatDateOnline(System.currentTimeMillis() / 1000 - 60 * 60, null));
@@ -2139,7 +2141,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                         colorPicker.setResourcesProvider(getResourceProvider());
                         if (screenType == SCREEN_TYPE_ACCENT_COLOR) {
                             patternLayout[a].addView(colorPicker, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_HORIZONTAL));
-                            if (applyingTheme.isDark()) {
+                            if (applyingTheme != null && applyingTheme.isDark()) {
                                 colorPicker.setMinBrightness(0.2f);
                             } else {
                                 colorPicker.setMinBrightness(0.05f);
@@ -2995,7 +2997,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 }
             }
             if (id == 1) {
-                if (applyingTheme.isDark()) {
+                if (applyingTheme != null && applyingTheme.isDark()) {
                     colorPicker.setMinBrightness(0.2f);
                 } else {
                     colorPicker.setMinBrightness(0.05f);
@@ -3691,7 +3693,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 Theme.saveThemeAccents(applyingTheme, false, deleteOnCancel, false, false);
             }
             parentLayout.rebuildAllFragmentViews(false, false);
-            if (deleteOnCancel && applyingTheme.pathToFile != null && !Theme.isThemeInstalled(applyingTheme)) {
+            if (deleteOnCancel && applyingTheme != null && applyingTheme.pathToFile != null && !Theme.isThemeInstalled(applyingTheme)) {
                 new File(applyingTheme.pathToFile).delete();
             }
         }

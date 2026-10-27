@@ -10033,7 +10033,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else if (messageObject.isAnimatedEmoji()) {
                         if (messageObject.notoAnimatedEmojiUrl != null) {
                             filter = String.format(Locale.US, "%d_%d", w, h);
-                            photoImage.setAutoRepeat(SharedConfig.loopStickers() ? 1 : 2);
+                            photoImage.setAutoRepeat(2);
                         } else if (!LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_CHAT)) {
                             filter = String.format(Locale.US, "%d_%d_nr_messageId=%d" + messageObject.emojiAnimatedStickerColor, w, h, messageObject.stableId);
                             thumb = DocumentObject.getCircleThumb(.4f, Theme.key_chat_serviceBackground, resourcesProvider, 0.65f);

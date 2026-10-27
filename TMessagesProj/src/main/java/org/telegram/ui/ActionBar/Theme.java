@@ -427,9 +427,13 @@ public class Theme {
                     int h = Math.max(AndroidUtilities.displaySize.x, AndroidUtilities.displaySize.y);
                     if (svg) {
                         patternBitmap = SvgHelper.getBitmap(patternPath, w, h, false, SvgHelper.ScaleMode.ByWidth);
-                    } else {
-                        patternBitmap = loadScreenSizedBitmap(new FileInputStream(patternPath), 0);
+                    } else if (patternPath != null && patternPath.exists()) {
+                        patternBitmap = loadScreenSizedBitmap(patternPath, 0);
                     }
+                }
+
+                if (patternBitmap == null) {
+                    return null;
                 }
 
                 if (background != null) {
@@ -5586,6 +5590,12 @@ public class Theme {
     }
 
     public static ThemeInfo fillThemeValues(File file, String themeName, TLRPC.TL_theme theme) {
+        if (file == null || !file.exists()) {
+            return null;
+        }
+        if (themeName == null) {
+            themeName = theme != null && theme.title != null ? theme.title : "Theme.attheme";
+        }
         try {
             ThemeInfo themeInfo = new ThemeInfo();
             themeInfo.name = themeName;
@@ -5667,6 +5677,12 @@ public class Theme {
     }
 
     public static ThemeInfo applyThemeFile(File file, String themeName, TLRPC.TL_theme theme, boolean temporary) {
+        if (file == null || !file.exists()) {
+            return null;
+        }
+        if (themeName == null) {
+            themeName = theme != null && theme.title != null ? theme.title : "Theme.attheme";
+        }
         try {
             if (!themeName.toLowerCase().endsWith(".attheme")) {
                 themeName += ".attheme";
@@ -9712,7 +9728,7 @@ public class Theme {
             } else if (themedWallpaperLink != null) {
                 try {
                     File pathToWallpaper = new File(ApplicationLoader.getFilesDirFixed(), Utilities.MD5(themedWallpaperLink) + ".wp");
-                    Bitmap bitmap = loadScreenSizedBitmap(new FileInputStream(pathToWallpaper), 0);
+                    Bitmap bitmap = loadScreenSizedBitmap(pathToWallpaper, 0);
                     if (bitmap != null) {
                         settings.wallpaper = new BitmapDrawable(bitmap);
                         settings.themedWallpaper = settings.wallpaper;
@@ -9729,7 +9745,7 @@ public class Theme {
                     } else {
                         file = new File(currentTheme.pathToFile);
                     }
-                    Bitmap bitmap = loadScreenSizedBitmap(new FileInputStream(file), themedWallpaperFileOffset);
+                    Bitmap bitmap = loadScreenSizedBitmap(file, themedWallpaperFileOffset);
                     if (bitmap != null) {
                         settings.wallpaper = settings.themedWallpaper = wallpaper = new BitmapDrawable(bitmap);
                         wallpaper.setFilterBitmap(true);
@@ -9754,7 +9770,7 @@ public class Theme {
                             if (settings.isPatternWallpaper) {
                                 File toFile = new File(ApplicationLoader.getFilesDirFixed(), overrideWallpaper.fileName);
                                 if (toFile.exists()) {
-                                    motionBackgroundDrawable.setPatternBitmap((int) (overrideWallpaper.intensity * 100), loadScreenSizedBitmap(new FileInputStream(toFile), 0));
+                                    motionBackgroundDrawable.setPatternBitmap((int) (overrideWallpaper.intensity * 100), loadScreenSizedBitmap(toFile, 0));
                                     settings.isCustomTheme = true;
                                 }
                             }
@@ -9762,7 +9778,7 @@ public class Theme {
                         } else if (settings.isPatternWallpaper) {
                             File toFile = new File(ApplicationLoader.getFilesDirFixed(), overrideWallpaper.fileName);
                             if (toFile.exists()) {
-                                Bitmap bitmap = loadScreenSizedBitmap(new FileInputStream(toFile), 0);
+                                Bitmap bitmap = loadScreenSizedBitmap(toFile, 0);
                                 if (bitmap != null) {
                                     settings.wallpaper = new BitmapDrawable(bitmap);
                                     settings.wallpaper.setFilterBitmap(true);
@@ -9791,7 +9807,7 @@ public class Theme {
                     } else {
                         File toFile = new File(ApplicationLoader.getFilesDirFixed(), overrideWallpaper.fileName);
                         if (toFile.exists()) {
-                            Bitmap bitmap = loadScreenSizedBitmap(new FileInputStream(toFile), 0);
+                            Bitmap bitmap = loadScreenSizedBitmap(toFile, 0);
                             if (bitmap != null) {
                                 settings.wallpaper = new BitmapDrawable(bitmap);
                                 settings.wallpaper.setFilterBitmap(true);
@@ -9847,6 +9863,18 @@ public class Theme {
         motionBackgroundDrawable.setPatternBitmap(34, SvgHelper.getBitmap(R.raw.default_pattern, w, h, Color.BLACK, 1f, SvgHelper.ScaleMode.ByWidth));
         motionBackgroundDrawable.setPatternColorFilter(motionBackgroundDrawable.getPatternColor());
         return motionBackgroundDrawable;
+    }
+
+    public static Bitmap loadScreenSizedBitmap(File file, int offset) {
+        if (file == null || !file.exists() || file.length() <= 0) {
+            return null;
+        }
+        try {
+            return loadScreenSizedBitmap(new FileInputStream(file), offset);
+        } catch (Throwable t) {
+            FileLog.e(t);
+            return null;
+        }
     }
 
     private static Bitmap loadScreenSizedBitmap(FileInputStream stream, int offset) {

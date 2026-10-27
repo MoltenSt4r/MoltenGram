@@ -213,6 +213,7 @@ public class MoltenGramOtaManager {
             schedulePeriodicCheck();
         } else {
             cancelPeriodicCheck();
+            clearPendingUpdate();
         }
     }
 
@@ -536,6 +537,33 @@ public class MoltenGramOtaManager {
         return "staging".equalsIgnoreCase(BuildConfig.BUILD_TYPE);
     }
 
+    public static int extractBuildCode(String text) {
+        if (TextUtils.isEmpty(text)) {
+            return 0;
+        }
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#)(\\d{4,9})(?:\\)|\\b)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        if (m.find()) {
+            try {
+                return Integer.parseInt(m.group(1));
+            } catch (Exception ignored) {}
+        }
+        return 0;
+    }
+
+    public static boolean verifyApkFile(Context context, File apkFile) {
+        if (context == null || apkFile == null || !apkFile.exists() || apkFile.length() <= 0) {
+            return false;
+        }
+        try {
+            PackageManager pm = context.getPackageManager();
+            android.content.pm.PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_ACTIVITIES);
+            return info != null && !TextUtils.isEmpty(info.packageName);
+        } catch (Throwable t) {
+            FileLog.e("Failed to verify apk archive: " + apkFile, t);
+            return false;
+        }
+    }
+
     public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit) {
         boolean remoteIsCanary = remoteVer != null && remoteVer.toLowerCase().contains("canary");
         return isNewerVersion(remoteVer, remoteTimestamp, remoteCommit, remoteIsCanary);
@@ -566,6 +594,18 @@ public class MoltenGramOtaManager {
         }
 
         // At this point, cmp == 0 and currentIsCanary == effectiveRemoteIsCanary
+        // For stable (non-canary) releases with identical semver:
+        // GitHub release upload timestamp is always post-compilation, so comparing timestamps creates an infinite loop.
+        // Reject update unless remote build code is strictly higher than current version code.
+        if (!currentIsCanary && !effectiveRemoteIsCanary) {
+            int remoteBuild = extractBuildCode(remoteVer);
+            if (remoteBuild > 0 && remoteBuild > BuildConfig.VERSION_CODE) {
+                return true;
+            }
+            return false;
+        }
+
+        // For canary channel with identical semver:
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
@@ -591,6 +631,68 @@ public class MoltenGramOtaManager {
         }
 
         return false;
+    }
+
+    public void showUpdateAvailableDialog(Activity activity, OtaUpdate update) {
+        if (activity == null || activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed()) || update == null) {
+            return;
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            try {
+                if (activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
+                    return;
+                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(activity);
+                String title = !TextUtils.isEmpty(update.title) ? update.title : ("MoltenGram " + update.version);
+                builder.setTitle(title);
+
+                StringBuilder sb = new StringBuilder();
+                sb.append(LocaleController.getString(R.string.OpenExteraUpdatesAvailable)).append(": ").append(update.version);
+                if (update.fileSize > 0) {
+                    sb.append(" (").append(AndroidUtilities.formatFileSize(update.fileSize)).append(")");
+                }
+                if (!TextUtils.isEmpty(update.changelog)) {
+                    sb.append("\n\n").append(update.changelog);
+                }
+                builder.setMessage(sb.toString());
+
+                String positiveText = update.isDownloaded() ?
+                        LocaleController.getString(R.string.OpenExteraUpdatesInstallNow) :
+                        LocaleController.getString(R.string.OpenExteraUpdatesDownloadNow);
+
+                builder.setPositiveButton(positiveText, (dialog, which) -> {
+                    if (update.isDownloaded()) {
+                        installUpdate(activity);
+                    } else {
+                        startDownload(new DownloadCallback() {
+                            @Override
+                            public void onProgress(float progress) {}
+
+                            @Override
+                            public void onComplete(File file) {
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    showUpdateAvailableDialog(activity, update);
+                                });
+                            }
+
+                            @Override
+                            public void onError(String error) {
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    if (activity != null && !activity.isFinishing()) {
+                                        Toast.makeText(activity, error, Toast.LENGTH_SHORT).show();
+                                    }
+                                });
+                            }
+                        });
+                    }
+                });
+
+                builder.setNegativeButton(LocaleController.getString(R.string.Cancel), (dialog, which) -> dialog.dismiss());
+                builder.show();
+            } catch (Throwable t) {
+                FileLog.e("Failed to show update dialog", t);
+            }
+        });
     }
 
     // --- Download APK ---
@@ -640,21 +742,25 @@ public class MoltenGramOtaManager {
                 }
 
                 URL url = new URL(pendingUpdate.downloadUrl);
-                conn = (HttpURLConnection) url.openConnection();
-                conn.setRequestProperty("User-Agent", "MoltenGram/" + BuildConfig.BUILD_VERSION_STRING + " (Android)");
-                conn.setConnectTimeout(20000);
-                conn.setReadTimeout(30000);
-                conn.setInstanceFollowRedirects(true);
-
-                int status = conn.getResponseCode();
-                if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
-                    String newUrl = conn.getHeaderField("Location");
-                    conn.disconnect();
-                    url = new URL(newUrl);
+                int redirects = 0;
+                while (redirects < 5) {
                     conn = (HttpURLConnection) url.openConnection();
                     conn.setRequestProperty("User-Agent", "MoltenGram/" + BuildConfig.BUILD_VERSION_STRING + " (Android)");
                     conn.setConnectTimeout(20000);
                     conn.setReadTimeout(30000);
+                    conn.setInstanceFollowRedirects(true);
+
+                    int status = conn.getResponseCode();
+                    if (status == HttpURLConnection.HTTP_MOVED_TEMP || status == HttpURLConnection.HTTP_MOVED_PERM || status == 307 || status == 308) {
+                        String newUrl = conn.getHeaderField("Location");
+                        conn.disconnect();
+                        url = new URL(newUrl);
+                        redirects++;
+                    } else if (status == HttpURLConnection.HTTP_OK) {
+                        break;
+                    } else {
+                        throw new Exception("HTTP status " + status);
+                    }
                 }
 
                 long totalBytes = conn.getContentLength();
@@ -699,6 +805,13 @@ public class MoltenGramOtaManager {
                 fos = null;
                 is.close();
                 is = null;
+
+                if (!verifyApkFile(ApplicationLoader.applicationContext, tempFile)) {
+                    if (tempFile.exists()) {
+                        tempFile.delete();
+                    }
+                    throw new Exception("Downloaded APK is corrupt or invalid");
+                }
 
                 if (targetFile.exists()) {
                     targetFile.delete();
@@ -793,7 +906,15 @@ public class MoltenGramOtaManager {
     }
 
     private void installApkFile(Activity activity, File apkFile, app.exteraless.shizuku.ShizukuController.InstallListener listener) {
-        if (apkFile == null || !apkFile.exists()) {
+        if (apkFile == null || !apkFile.exists() || !verifyApkFile(activity != null ? activity : ApplicationLoader.applicationContext, apkFile)) {
+            if (apkFile != null && apkFile.exists()) {
+                apkFile.delete();
+            }
+            if (listener != null) {
+                listener.onError("Corrupt APK file");
+            } else if (activity != null) {
+                Toast.makeText(activity, "Corrupt APK file", Toast.LENGTH_SHORT).show();
+            }
             return;
         }
 
@@ -1511,10 +1632,12 @@ public class MoltenGramOtaManager {
                 }
                 PendingIntent pi = PendingIntent.getBroadcast(context, 7702, intent, flags);
                 am.cancel(pi);
+                pi.cancel();
             }
         } catch (Throwable t) {
             FileLog.e(t);
         }
+        dismissUpdateNotification();
     }
 
     public void checkUpdatesInBackground() {

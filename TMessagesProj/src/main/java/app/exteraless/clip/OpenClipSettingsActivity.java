@@ -17,8 +17,11 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
+import org.telegram.SQLite.SQLiteCursor;
+import org.telegram.SQLite.SQLiteDatabase;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessagesStorage;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
@@ -63,8 +66,10 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
     private int thresholdInfoRow;
 
     private int indexingHeaderRow;
+    private int autoIndexEnabledRow;
     private int autoIndexPhotosRow;
     private int autoIndexTextRow;
+    private int indexAllChatsRow;
     private int chooseChatsRow;
     private int indexingProgressRow = -1;
     private int indexingInfoRow;
@@ -100,8 +105,10 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         thresholdInfoRow = addRow();
 
         indexingHeaderRow = addRow("openClipIndexingHeader");
+        autoIndexEnabledRow = addRow("openClipAutoIndexEnabled");
         autoIndexPhotosRow = addRow("openClipAutoIndexPhotos");
         autoIndexTextRow = addRow("openClipAutoIndexText");
+        indexAllChatsRow = addRow("openClipIndexAllChats");
         chooseChatsRow = addRow("openClipChooseChats");
         if (ClipAutoIndexer.getInstance().isIndexing()) {
             indexingProgressRow = addRow("openClipIndexingProgress");
@@ -129,6 +136,12 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+        } else if (position == autoIndexEnabledRow) {
+            boolean autoIndex = !OpenClipConfig.isAutoIndexEnabled();
+            OpenClipConfig.setAutoIndexEnabled(autoIndex);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(autoIndex);
+            }
         } else if (position == autoIndexPhotosRow) {
             boolean photos = !OpenClipConfig.isAutoIndexPhotos();
             OpenClipConfig.setAutoIndexPhotos(photos);
@@ -141,6 +154,40 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(text);
             }
+        } else if (position == indexAllChatsRow) {
+            if (!OpenClipManager.getInstance().isModelInstalled()) {
+                if (BulletinFactory.canShowBulletin(this)) {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.OpenClipModelRequired)).show();
+                }
+                return;
+            }
+            MessagesStorage.getInstance(currentAccount).getStorageQueue().postRunnable(() -> {
+                ArrayList<Long> allDialogIds = new ArrayList<>();
+                SQLiteCursor cursor = null;
+                try {
+                    SQLiteDatabase db = MessagesStorage.getInstance(currentAccount).getDatabase();
+                    if (db != null) {
+                        cursor = db.queryFinalized("SELECT did FROM dialogs");
+                        while (cursor.next()) {
+                            long did = cursor.longValue(0);
+                            allDialogIds.add(did);
+                        }
+                    }
+                } catch (Exception e) {
+                    org.telegram.messenger.FileLog.e(e);
+                } finally {
+                    if (cursor != null) {
+                        cursor.dispose();
+                    }
+                }
+                AndroidUtilities.runOnUIThread(() -> {
+                    if (!allDialogIds.isEmpty()) {
+                        ClipAutoIndexer.getInstance().startIndexing(currentAccount, allDialogIds);
+                        updateRows();
+                        safeNotifyDataSetChanged();
+                    }
+                });
+            });
         } else if (position == chooseChatsRow) {
             if (!OpenClipManager.getInstance().isModelInstalled()) {
                 if (BulletinFactory.canShowBulletin(this)) {
@@ -330,11 +377,11 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
 
         @Override
         public int getItemViewType(int position) {
-            if (position == masterSwitchRow || position == autoIndexPhotosRow || position == autoIndexTextRow) {
+            if (position == masterSwitchRow || position == autoIndexEnabledRow || position == autoIndexPhotosRow || position == autoIndexTextRow) {
                 return TYPE_CHECK;
             } else if (position == modelHeaderRow || position == thresholdHeaderRow || position == indexingHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == modelCardRow || position == chooseChatsRow) {
+            } else if (position == modelCardRow || position == indexAllChatsRow || position == chooseChatsRow) {
                 return TYPE_SETTINGS;
             } else if (position == modelActionRow) {
                 return TYPE_TEXT;
@@ -351,8 +398,8 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int pos = holder.getAdapterPosition();
-            return pos == masterSwitchRow || pos == autoIndexPhotosRow || pos == autoIndexTextRow
-                    || pos == modelCardRow || pos == modelActionRow || pos == chooseChatsRow;
+            return pos == masterSwitchRow || pos == autoIndexEnabledRow || pos == autoIndexPhotosRow || pos == autoIndexTextRow
+                    || pos == modelCardRow || pos == modelActionRow || pos == indexAllChatsRow || pos == chooseChatsRow;
         }
 
         @NonNull
@@ -381,6 +428,8 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 TextCheckCell checkCell = (TextCheckCell) holder.itemView;
                 if (position == masterSwitchRow) {
                     checkCell.setTextAndCheck(getString(R.string.OpenClipEnable), OpenClipConfig.isEnabled(), false);
+                } else if (position == autoIndexEnabledRow) {
+                    checkCell.setTextAndValueAndCheck(getString(R.string.OpenClipAutoIndexEnabled), getString(R.string.OpenClipAutoIndexEnabledDesc), OpenClipConfig.isAutoIndexEnabled(), true, true);
                 } else if (position == autoIndexPhotosRow) {
                     checkCell.setTextAndCheck(getString(R.string.OpenClipAutoIndexPhotos), OpenClipConfig.isAutoIndexPhotos(), true);
                 } else if (position == autoIndexTextRow) {
@@ -399,6 +448,8 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 TextSettingsCell settingsCell = (TextSettingsCell) holder.itemView;
                 if (position == modelCardRow) {
                     settingsCell.setTextAndValue(getString(R.string.OpenClipModelName), getModelStatusText(), true);
+                } else if (position == indexAllChatsRow) {
+                    settingsCell.setTextAndValue(getString(R.string.OpenClipIndexAllChats), getString(R.string.OpenClipIndexAllChatsSubtitle), true);
                 } else if (position == chooseChatsRow) {
                     settingsCell.setTextAndValue(getString(R.string.OpenClipChooseChats), getString(R.string.OpenClipChooseChatsSubtitle), true);
                 }

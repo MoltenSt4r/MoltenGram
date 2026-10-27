@@ -45,13 +45,6 @@ public class UpdateLayout extends IUpdateLayout {
 
     public void updateFileProgress(Object[] args) {
         if (updateTextView == null) return;
-        MoltenGramOtaManager ota = MoltenGramOtaManager.getInstance();
-        if (ota.isDownloading()) {
-            float loadProgress = ota.getDownloadProgress();
-            updateLayoutIcon.setProgress(loadProgress, true);
-            updateTextView.setText(LocaleController.formatString(R.string.AppUpdateDownloading, (int) (loadProgress * 100)));
-            return;
-        }
         if (args == null) return;
         if (SharedConfig.isAppUpdateAvailable()) {
             String location = (String) args[0];
@@ -77,34 +70,6 @@ public class UpdateLayout extends IUpdateLayout {
         updateLayout.setBackground(Theme.getSelectorDrawable(Theme.multAlpha(themeColor, 0.25f), false));
         sideMenuContainer.addView(updateLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.LEFT | Gravity.BOTTOM));
         updateLayout.setOnClickListener(v -> {
-            MoltenGramOtaManager ota = MoltenGramOtaManager.getInstance();
-            if (ota.isUpdateAvailable()) {
-                if (ota.isDownloaded()) {
-                    ota.installUpdate(activity);
-                } else if (ota.isDownloading()) {
-                    ota.cancelDownload();
-                    updateAppUpdateViews(currentAccount, true);
-                } else {
-                    ota.startDownload(new MoltenGramOtaManager.DownloadCallback() {
-                        @Override
-                        public void onProgress(float progress) {
-                            updateAppUpdateViews(currentAccount, false);
-                        }
-
-                        @Override
-                        public void onComplete(File file) {
-                            updateAppUpdateViews(currentAccount, true);
-                        }
-
-                        @Override
-                        public void onError(String error) {
-                            updateAppUpdateViews(currentAccount, true);
-                        }
-                    });
-                    updateAppUpdateViews(currentAccount, true);
-                }
-                return;
-            }
             if (!SharedConfig.isAppUpdateAvailable()) {
                 return;
             }
@@ -179,38 +144,7 @@ public class UpdateLayout extends IUpdateLayout {
         if (updateSizeTextView != null) {
             updateSizeTextView.setTextColor(Theme.multAlpha(buttonTextColor, 0.8f));
         }
-        MoltenGramOtaManager ota = MoltenGramOtaManager.getInstance();
-        if (ota.isUpdateAvailable()) {
-            createUpdateUI(currentAccount);
-            MoltenGramOtaManager.OtaUpdate u = ota.getPendingUpdate();
-            boolean showSize;
-            if (ota.isDownloaded()) {
-                updateLayoutIcon.setIcon(MediaActionDrawable.ICON_UPDATE, true, animated);
-                setUpdateText(LocaleController.getString(R.string.OpenExteraUpdatesInstallNow), animated);
-                showSize = false;
-            } else if (ota.isDownloading()) {
-                updateLayoutIcon.setIcon(MediaActionDrawable.ICON_CANCEL, true, animated);
-                float p = ota.getDownloadProgress();
-                updateLayoutIcon.setProgress(p, animated);
-                setUpdateText(LocaleController.formatString(R.string.AppUpdateDownloading, (int) (p * 100)), animated);
-                showSize = false;
-            } else {
-                updateLayoutIcon.setIcon(MediaActionDrawable.ICON_DOWNLOAD, true, animated);
-                setUpdateText("MoltenGram " + (u != null ? u.version : ""), animated);
-                showSize = u != null && u.fileSize > 0;
-            }
-            updateSizeTextView.setText(showSize && u != null ? AndroidUtilities.formatFileSize(u.fileSize) : null, animated);
-            if (updateLayout.getTag() != null) {
-                return;
-            }
-            updateLayout.setVisibility(View.VISIBLE);
-            updateLayout.setTag(1);
-            if (animated) {
-                updateLayout.animate().translationY(0).setInterpolator(CubicBezierInterpolator.EASE_OUT).setListener(null).setDuration(180).start();
-            } else {
-                updateLayout.setTranslationY(0);
-            }
-        } else if (SharedConfig.isAppUpdateAvailable()) {
+        if (SharedConfig.isAppUpdateAvailable()) {
             createUpdateUI(currentAccount);
 
             String fileName = FileLoader.getAttachFileName(SharedConfig.pendingAppUpdate.document);

@@ -78,12 +78,22 @@ public class UpdateLayoutWrapper extends ViewGroup {
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
+        if (!isUpdateLayoutVisible()) {
+            super.dispatchDraw(canvas);
+            return;
+        }
         final int navigationHeight = getPaddingBottom();
         final float alpha = AndroidUtilities.getNavigationBarThirdButtonsFactor(0.1f, 0.75f, navigationHeight);
 
-        final int backgroundColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-        final int navigationColor = ColorUtils.compositeColors(Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhite), alpha), backgroundColor);
-
+        int backgroundColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (backgroundColor == 0) {
+            backgroundColor = Theme.isCurrentThemeDark() ? 0xFF2A2A2A : 0xFF2196F3;
+        }
+        int windowBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+        if (windowBg == 0) {
+            windowBg = Theme.isCurrentThemeDark() ? 0xFF121212 : 0xFFFFFFFF;
+        }
+        final int navigationColor = ColorUtils.compositeColors(Theme.multAlpha(windowBg, alpha), backgroundColor);
 
         paint.setColor(backgroundColor);
         canvas.drawRect(0, 0, getMeasuredWidth(), getMeasuredHeight() - navigationHeight, paint);
