@@ -7786,7 +7786,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                     if (!locFile.exists() && args.length > 1 && args[1] instanceof File) {
                         File downloadedFile = (File) args[1];
                         if (downloadedFile.exists()) {
-                            AndroidUtilities.copyFile(downloadedFile, locFile);
+                            AndroidUtilities.copyFileSafe(downloadedFile, locFile);
                         }
                     }
                     Theme.ThemeInfo themeInfo = Theme.fillThemeValues(locFile, loadingTheme.title, loadingTheme);
@@ -7838,7 +7838,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                 if (!locFile.exists() && args.length > 1 && args[1] instanceof File) {
                                     File downloadedFile = (File) args[1];
                                     if (downloadedFile.exists()) {
-                                        AndroidUtilities.copyFile(downloadedFile, locFile);
+                                        AndroidUtilities.copyFileSafe(downloadedFile, locFile);
                                     }
                                 }
                                 Theme.ThemeInfo finalThemeInfo = Theme.applyThemeFile(locFile, loadingTheme.title, loadingTheme, true);
