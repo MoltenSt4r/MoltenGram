@@ -291,19 +291,29 @@ public class FileLoadOperation {
         // Ускорение загрузки, три уровня — перенос FileLoadOperation.updateParams
         // exteraGram (12.9.0, строка 1758). Уровень 2 берёт куски по мегабайту и
         // двенадцать параллельных запросов.
-        if (app.exteraless.general.GeneralConfig.INSTANCE.downloadSpeedBoost() == 2) {
+        int boost = app.exteraless.general.GeneralConfig.INSTANCE.downloadSpeedBoost();
+        if (boost == 2) {
             downloadChunkSizeBig = 1024 * 1024;
             maxDownloadRequests = 12;
             maxDownloadRequestsBig = 12;
+            downloadChunkSize = 1024 * 256;
+            downloadChunkSizeAnimation = 1024 * 512;
+            maxDownloadRequestsAnimation = 8;
         } else if ((preloadPrefixSize > 0 || MessagesController.getInstance(currentAccount).getfileExperimentalParams
-                || app.exteraless.general.GeneralConfig.INSTANCE.downloadSpeedBoost() == 1) && !forceSmallChunk) {
+                || boost == 1) && !forceSmallChunk) {
             downloadChunkSizeBig = 1024 * 512;
             maxDownloadRequests = 8;
             maxDownloadRequestsBig = 8;
+            downloadChunkSize = 1024 * 128;
+            downloadChunkSizeAnimation = 1024 * 256;
+            maxDownloadRequestsAnimation = 6;
         } else {
             downloadChunkSizeBig = 1024 * 128;
             maxDownloadRequests = 4;
             maxDownloadRequestsBig = 4;
+            downloadChunkSize = 1024 * 32;
+            downloadChunkSizeAnimation = 1024 * 128;
+            maxDownloadRequestsAnimation = 4;
         }
         maxCdnParts = (int) (FileLoader.DEFAULT_MAX_FILE_SIZE / downloadChunkSizeBig);
     }
@@ -856,7 +866,7 @@ public class FileLoadOperation {
                 currentDownloadChunkSize = downloadChunkSizeAnimation;
                 currentMaxDownloadRequests = maxDownloadRequestsAnimation;
             } else {
-                boolean bigChunk = totalBytesCount >= bigFileSizeFrom;
+                boolean bigChunk = totalBytesCount >= bigFileSizeFrom || stream != null;
                 currentDownloadChunkSize = bigChunk ? downloadChunkSizeBig : downloadChunkSize;
                 currentMaxDownloadRequests = bigChunk ? maxDownloadRequestsBig : maxDownloadRequests;
             }

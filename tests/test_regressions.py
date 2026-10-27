@@ -2,6 +2,7 @@ import importlib.util
 import os
 import re
 import sys
+from pathlib import Path
 
 import pytest
 
@@ -272,3 +273,22 @@ def test_release_mapping_did_not_remove_tgnet_tl():
         name for name in corpus.r8_removed()
         if name.startswith("org.telegram.tgnet.tl."))
     assert not removed, "R8 removed tgnet TL containers: " + ", ".join(removed[:20])
+
+
+def test_video_streaming_defaults_and_speed_boost():
+    shared_config = Path("/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/messenger/SharedConfig.java").read_text(encoding="utf-8")
+    assert "public static boolean streamAllVideo = true;" in shared_config
+    assert "public static boolean streamMkv = true;" in shared_config
+    assert 'streamAllVideo = preferences.getBoolean("streamAllVideo", true);' in shared_config
+    assert 'streamMkv = preferences.getBoolean("streamMkv", true);' in shared_config
+
+    file_load = Path("/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/messenger/FileLoadOperation.java").read_text(encoding="utf-8")
+    assert "downloadChunkSizeAnimation = 1024 * 512;" in file_load
+    assert "boolean bigChunk = totalBytesCount >= bigFileSizeFrom || stream != null;" in file_load
+
+    video_player = Path("/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/Components/VideoPlayer.java").read_text(encoding="utf-8")
+    assert "isStory ? 1000 : 500" in video_player
+    assert "isStory ? 1000 : 1000" in video_player
+
+    photo_viewer = Path("/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/PhotoViewer.java").read_text(encoding="utf-8")
+    assert "Math.abs(SystemClock.elapsedRealtime() - startedPlayTime) >= (bigFile ? 30000 : 15000)" in photo_viewer
