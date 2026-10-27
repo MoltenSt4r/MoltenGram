@@ -541,7 +541,7 @@ public class MoltenGramOtaManager {
         if (TextUtils.isEmpty(text)) {
             return 0;
         }
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#)(\\d{4,9})(?:\\)|\\b)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,9})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -594,18 +594,6 @@ public class MoltenGramOtaManager {
         }
 
         // At this point, cmp == 0 and currentIsCanary == effectiveRemoteIsCanary
-        // For stable (non-canary) releases with identical semver:
-        // GitHub release upload timestamp is always post-compilation, so comparing timestamps creates an infinite loop.
-        // Reject update unless remote build code is strictly higher than current version code.
-        if (!currentIsCanary && !effectiveRemoteIsCanary) {
-            int remoteBuild = extractBuildCode(remoteVer);
-            if (remoteBuild > 0 && remoteBuild > BuildConfig.VERSION_CODE) {
-                return true;
-            }
-            return false;
-        }
-
-        // For canary channel with identical semver:
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
@@ -615,19 +603,37 @@ public class MoltenGramOtaManager {
             if (minLen >= 7 && remoteCommit.regionMatches(true, 0, currentCommit, 0, minLen)) {
                 return false;
             }
+            long currentSec = BuildConfig.BUILD_TIMESTAMP;
+            if (currentSec > 100000000000L) {
+                currentSec /= 1000L;
+            }
+            long remoteSec = remoteTimestamp;
+            if (remoteSec > 100000000000L) {
+                remoteSec /= 1000L;
+            }
+            if (remoteSec > 0 && currentSec > 0) {
+                return remoteSec > currentSec;
+            }
+            return true;
         }
 
-        long currentSec = BuildConfig.BUILD_TIMESTAMP;
-        if (currentSec > 100000000000L) {
-            currentSec /= 1000L;
-        }
-        long remoteSec = remoteTimestamp;
-        if (remoteSec > 100000000000L) {
-            remoteSec /= 1000L;
+        int remoteBuild = extractBuildCode(remoteVer);
+        if (remoteBuild > 0 && remoteBuild > BuildConfig.VERSION_CODE) {
+            return true;
         }
 
-        if (remoteSec > 0 && currentSec > 0) {
-            return remoteSec > currentSec;
+        if (currentIsCanary) {
+            long currentSec = BuildConfig.BUILD_TIMESTAMP;
+            if (currentSec > 100000000000L) {
+                currentSec /= 1000L;
+            }
+            long remoteSec = remoteTimestamp;
+            if (remoteSec > 100000000000L) {
+                remoteSec /= 1000L;
+            }
+            if (remoteSec > 0 && currentSec > 0) {
+                return remoteSec > currentSec;
+            }
         }
 
         return false;
@@ -1087,22 +1093,17 @@ public class MoltenGramOtaManager {
                         ? MonetHelper.getWallpaperPrimarySeed(activity)
                         : null;
 
-                // Dynamic Monet / active theme surface color (never baseline purple 0x141218 or 0xfef7ff)
-                int bgColor = Theme.getColor(isDark ? Theme.key_windowBackgroundWhite : Theme.key_dialogBackground);
-                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
-                    bgColor = Theme.getColor(isDark ? Theme.key_dialogBackground : Theme.key_windowBackgroundWhite);
-                }
-                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
+                // Baseline purple theme matching OS PackageInstaller screen exactly (#141218, #D0BCFF)
+                int bgColor = 0xFF141218;
+                if (MonetHelper.isStaticBaselineFrameworkRole(Theme.getColor(isDark ? Theme.key_windowBackgroundWhite : Theme.key_dialogBackground)) && false) {
                     bgColor = MonetHelper.getColor(isDark ? "surface_dark" : "surface_light");
                 }
-                if (bgColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(bgColor)) {
-                    if (wpSeed != null && !MonetHelper.isStaticBaselineFrameworkRole(wpSeed)) {
-                        com.google.android.material.color.utilities.Hct hct = com.google.android.material.color.utilities.Hct.fromInt(wpSeed);
-                        bgColor = com.google.android.material.color.utilities.Hct.from(hct.getHue(), Math.min(4d, hct.getChroma() * 0.12d), isDark ? 6d : 98d).toInt();
-                    } else {
-                        bgColor = isDark ? 0xff121212 : 0xfff8f9fa;
-                    }
+                int accentColor = 0xFFD0BCFF;
+                if (MonetHelper.isStaticBaselineFrameworkRole(Theme.getColor(Theme.key_featuredStickers_addButton)) && false) {
+                    accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
                 }
+                int trackColor = 0xFF49454F;
+                int textColor = 0xFFE6E0E9;
 
                 FrameLayout root = new FrameLayout(activity);
                 root.setBackgroundColor(bgColor);
@@ -1110,51 +1111,6 @@ public class MoltenGramOtaManager {
                 LinearLayout content = new LinearLayout(activity);
                 content.setOrientation(LinearLayout.VERTICAL);
                 content.setGravity(Gravity.CENTER);
-
-                // Dynamic Monet wallpaper / active theme accent and track colors
-                int accentColor = MonetHelper.getColor(isDark ? "primary_dark" : "primary_light");
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = MonetHelper.getColor(isDark ? "a1_200" : "a1_600");
-                }
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-                }
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    accentColor = Theme.getColor(Theme.key_chats_actionBackground);
-                }
-                if (accentColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(accentColor)) {
-                    if (wpSeed != null && !MonetHelper.isStaticBaselineFrameworkRole(wpSeed)) {
-                        com.google.android.material.color.utilities.Hct hct = com.google.android.material.color.utilities.Hct.fromInt(wpSeed);
-                        accentColor = com.google.android.material.color.utilities.Hct.from(hct.getHue(), Math.max(36d, hct.getChroma()), isDark ? 80d : 40d).toInt();
-                    } else {
-                        accentColor = isDark ? 0xff8ab4f8 : 0xff527da3;
-                    }
-                }
-                // Guarantee high-contrast Monet primary tone for the active wavy arc
-                try {
-                    com.google.android.material.color.utilities.Hct accentHct = com.google.android.material.color.utilities.Hct.fromInt(accentColor);
-                    if (isDark && accentHct.getTone() < 65d) {
-                        accentColor = com.google.android.material.color.utilities.Hct.from(accentHct.getHue(), Math.max(36d, accentHct.getChroma()), 80d).toInt();
-                    } else if (!isDark && accentHct.getTone() > 55d) {
-                        accentColor = com.google.android.material.color.utilities.Hct.from(accentHct.getHue(), Math.max(36d, accentHct.getChroma()), 40d).toInt();
-                    }
-                } catch (Throwable ignored) {}
-
-                int trackColor = MonetHelper.getColor(isDark ? "primary_container_dark" : "primary_container_light");
-                if (trackColor == 0 || trackColor == accentColor || MonetHelper.isStaticBaselineFrameworkRole(trackColor)) {
-                    trackColor = Theme.multAlpha(accentColor, isDark ? 0.24f : 0.20f);
-                } else {
-                    try {
-                        com.google.android.material.color.utilities.Hct trackHct = com.google.android.material.color.utilities.Hct.fromInt(trackColor);
-                        if (isDark && trackHct.getTone() > 42d) {
-                            trackColor = com.google.android.material.color.utilities.Hct.from(trackHct.getHue(), Math.min(32d, trackHct.getChroma()), 28d).toInt();
-                        } else if (!isDark && trackHct.getTone() < 75d) {
-                            trackColor = com.google.android.material.color.utilities.Hct.from(trackHct.getHue(), Math.min(32d, trackHct.getChroma()), 88d).toInt();
-                        }
-                    } catch (Throwable ignored) {
-                        trackColor = Theme.multAlpha(accentColor, isDark ? 0.24f : 0.20f);
-                    }
-                }
 
                 RadialProgressView progressView = new RadialProgressView(activity);
                 progressView.setSize(AndroidUtilities.dp(96));
@@ -1165,14 +1121,6 @@ public class MoltenGramOtaManager {
                 progressView.setWavy(true);
                 progressView.setWavyValues(AndroidUtilities.dp(33), AndroidUtilities.dp(4f), AndroidUtilities.dp(12), 0.05f);
                 progressView.setProgressImmediate(0.75f);
-
-                int textColor = MonetHelper.getColor(isDark ? "on_surface_dark" : "on_surface_light");
-                if (textColor == 0 || MonetHelper.isStaticBaselineFrameworkRole(textColor)) {
-                    textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
-                }
-                if (textColor == 0) {
-                    textColor = isDark ? 0xffe6e1e5 : 0xff1c1b1f;
-                }
 
                 TextView messageView = new TextView(activity);
                 messageView.setText(LocaleController.getString("Updating", R.string.Updating));
@@ -1196,16 +1144,9 @@ public class MoltenGramOtaManager {
                     }
                     if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
                         int flags = dialog.getWindow().getDecorView().getSystemUiVisibility();
-                        if (!isDark) {
-                            flags |= View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                flags |= View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-                            }
-                        } else {
-                            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
-                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-                                flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
-                            }
+                        flags &= ~View.SYSTEM_UI_FLAG_LIGHT_STATUS_BAR;
+                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                            flags &= ~View.SYSTEM_UI_FLAG_LIGHT_NAVIGATION_BAR;
                         }
                         dialog.getWindow().getDecorView().setSystemUiVisibility(flags);
                     }

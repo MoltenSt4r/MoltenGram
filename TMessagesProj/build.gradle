@@ -45,7 +45,8 @@ def shortCommit = commitId?.take(7) ?: ''
 def rawTimestamp = System.getenv('BUILD_TIMESTAMP') ?: getGitCommitTimestamp()
 def buildTimestamp = String.valueOf(Long.parseLong(rawTimestamp.toString().split('\\.')[0]))
 def verName = "${APP_VERSION_NAME}${shortCommit ? "-${shortCommit}" : ''}"
-def verCode = 1261
+def runNum = System.getenv('GITHUB_RUN_NUMBER')
+def verCode = (runNum && runNum.isInteger()) ? (runNum.toInteger() >= 1261 ? runNum.toInteger() : 1261 + runNum.toInteger()) : 1261
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE

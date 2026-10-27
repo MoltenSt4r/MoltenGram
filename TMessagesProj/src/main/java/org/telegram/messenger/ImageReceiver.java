@@ -1000,7 +1000,9 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) bitmap;
             if (Build.VERSION.SDK_INT >= 28 && bitmap instanceof android.graphics.drawable.AnimatedImageDrawable) {
                 android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) bitmap;
-                if (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0) {
+                if (isNotoEmojiLocation()) {
+                    aid.setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                } else if (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0) {
                     aid.setRepeatCount(0);
                 } else {
                     aid.setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
@@ -2951,7 +2953,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             Drawable anim = currentImageDrawable != null ? currentImageDrawable : (currentMediaDrawable != null ? currentMediaDrawable : staticThumbDrawable);
             if (anim instanceof android.graphics.drawable.AnimatedImageDrawable) {
                 android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) anim;
-                boolean noRepeat = (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
+                boolean isNoto = isNotoEmojiLocation();
+                boolean noRepeat = !isNoto && (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
                 aid.setRepeatCount(noRepeat ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
                 if (noRepeat) {
                     aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {
@@ -3010,8 +3013,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             Drawable d = currentImageDrawable != null ? currentImageDrawable : (currentMediaDrawable != null ? currentMediaDrawable : staticThumbDrawable);
             if (d instanceof android.graphics.drawable.AnimatedImageDrawable) {
                 android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) d;
-                aid.stop();
-                aid.start();
+                aid.setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                if (force || !aid.isRunning()) {
+                    aid.start();
+                }
                 invalidate();
                 return;
             }
@@ -3359,7 +3364,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) drawable;
             if (Build.VERSION.SDK_INT >= 28 && drawable instanceof android.graphics.drawable.AnimatedImageDrawable) {
                 android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) drawable;
-                boolean noRepeat = (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
+                boolean isNoto = isNotoEmojiLocation();
+                boolean noRepeat = !isNoto && (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0);
                 aid.setRepeatCount(noRepeat ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
                 if (noRepeat) {
                     aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {

@@ -37,7 +37,7 @@ def compare_semver(ver1, ver2):
 def extract_build_code(text):
     if not text:
         return 0
-    m = re.search(r'(?:\(|\bb|build|#)(\d{4,9})(?:\)|\b)', text, re.IGNORECASE)
+    m = re.search(r'(?:\(|\bb|build|#|\.)(\d{4,9})(?:\)|\b|\.apk)', text, re.IGNORECASE)
     if m:
         try:
             return int(m.group(1))
@@ -60,24 +60,31 @@ def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_cana
             return False
     if cmp > 0:
         return True
-    # At this point, cmp == 0 and current_is_canary == effective_remote_is_canary
-    if not current_is_canary and not effective_remote_is_canary:
-        remote_build = extract_build_code(remote_ver)
-        cur_build = current_build_code if current_build_code > 0 else extract_build_code(current_ver)
-        if remote_build > 0 and remote_build > cur_build:
-            return True
-        return False
 
+    # At this point, cmp == 0 and current_is_canary == effective_remote_is_canary
     if remote_commit and current_commit:
         if remote_commit.lower() == current_commit.lower():
             return False
         min_len = min(len(remote_commit), len(current_commit))
         if min_len >= 7 and remote_commit[:min_len].lower() == current_commit[:min_len].lower():
             return False
-    remote_sec = remote_timestamp // 1000 if remote_timestamp > 100000000000 else remote_timestamp
-    current_sec = current_timestamp // 1000 if current_timestamp > 100000000000 else current_timestamp
-    if remote_sec > 0 and current_sec > 0:
-        return remote_sec > current_sec
+        remote_sec = remote_timestamp // 1000 if remote_timestamp > 100000000000 else remote_timestamp
+        current_sec = current_timestamp // 1000 if current_timestamp > 100000000000 else current_timestamp
+        if remote_sec > 0 and current_sec > 0:
+            return remote_sec > current_sec
+        return True
+
+    remote_build = extract_build_code(remote_ver)
+    cur_build = current_build_code if current_build_code > 0 else extract_build_code(current_ver)
+    if remote_build > 0 and remote_build > cur_build:
+        return True
+
+    if current_is_canary:
+        remote_sec = remote_timestamp // 1000 if remote_timestamp > 100000000000 else remote_timestamp
+        current_sec = current_timestamp // 1000 if current_timestamp > 100000000000 else current_timestamp
+        if remote_sec > 0 and current_sec > 0:
+            return remote_sec > current_sec
+
     return False
 
 
@@ -144,4 +151,17 @@ def test_stable_same_semver_higher_build_code_triggers_update():
     assert not is_newer_version(
         remote_ver='12.10.6 (126101)', remote_timestamp=1700000060, remote_commit='', remote_is_canary=False,
         current_ver='12.10.6 (126102)', current_commit='', current_timestamp=1700000000, current_is_canary=False
+    )
+
+
+def test_stable_same_semver_different_commit_triggers_update():
+    # Stable release with identical semver but different newer commit must trigger update
+    assert is_newer_version(
+        remote_ver='12.10.6', remote_timestamp=1700000060, remote_commit='af5c2fa', remote_is_canary=False,
+        current_ver='12.10.6', current_commit='2592699', current_timestamp=1700000000, current_is_canary=False
+    )
+    # If remote commit matches current commit prefix, reject
+    assert not is_newer_version(
+        remote_ver='12.10.6', remote_timestamp=1700000060, remote_commit='af5c2fa', remote_is_canary=False,
+        current_ver='12.10.6', current_commit='af5c2fa66cad', current_timestamp=1700000000, current_is_canary=False
     )

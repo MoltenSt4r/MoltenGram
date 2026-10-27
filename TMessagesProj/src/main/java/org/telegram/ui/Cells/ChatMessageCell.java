@@ -1065,9 +1065,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean isSiblingGroupCarouselMessage() {
-        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
-            return false;
-        }
         if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
             MessageObject primary = getCarouselPrimaryMessage(currentMessagesGroup);
             if (primary != null && currentMessageObject != null) {
@@ -1079,9 +1076,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean isMediaCarouselMessage() {
-        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
-            return true;
-        }
         return currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !isSiblingGroupCarouselMessage();
     }
 
@@ -6975,6 +6969,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public MultiLayoutTypingAnimator botDraftTypingAnimator;
 
     private void setMessageContent(MessageObject messageObject, MessageObject.GroupedMessages groupedMessages, boolean bottomNear, boolean topNear, boolean firstInChat, boolean lastInChatList) {
+        if (md3MediaCarouselView != null && (groupedMessages == null || groupedMessages.messages.size() <= 1 || groupedMessages.isDocuments || !app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel())) {
+            md3MediaCarouselView.setVisibility(GONE);
+        }
         if (groupedMessages != null) {
             int groupedMediaViewportWidth = WideChannelPostLayout.groupedMediaViewportWidth(
                     getGroupPhotosBaseWidth(messageObject), getWideChannelPostLeadingInset(messageObject));
@@ -10039,7 +10036,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else if (messageObject.isAnimatedEmoji()) {
                         if (messageObject.notoAnimatedEmojiUrl != null) {
                             filter = String.format(Locale.US, "%d_%d", w, h);
-                            photoImage.setAutoRepeat(2);
+                            photoImage.setAutoRepeat(1);
                         } else if (!LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_CHAT)) {
                             filter = String.format(Locale.US, "%d_%d_nr_messageId=%d" + messageObject.emojiAnimatedStickerColor, w, h, messageObject.stableId);
                             thumb = DocumentObject.getCircleThumb(.4f, Theme.key_chat_serviceBackground, resourcesProvider, 0.65f);
@@ -17249,7 +17246,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private boolean allowDrawPhotoImage() {
-        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+        if (isMediaCarouselMessage()) {
             return false;
         }
         return !currentMessageObject.hasMediaSpoilers() || currentMessageObject.isMediaSpoilersRevealed || mediaSpoilerRevealProgress != 0f || blurredPhotoImage.getBitmap() == null;
