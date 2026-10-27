@@ -87,10 +87,6 @@ public class OpenClipInference implements ForegroundDetector.Listener {
      * Encodes a text query string into a 512-dimensional L2-normalized embedding vector.
      * The callback is always invoked on the Android UI thread.
      */
-    public DispatchQueue getQueue() {
-        return openClipQueue;
-    }
-
     public float[] encodeTextDirect(final String query) {
         if (TextUtils.isEmpty(query)) {
             return null;
