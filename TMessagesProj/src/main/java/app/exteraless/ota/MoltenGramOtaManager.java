@@ -943,9 +943,6 @@ public class MoltenGramOtaManager {
             return;
         }
         isInstalling = true;
-        if (activity != null) {
-            showUpdateProgressDialog(activity);
-        }
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
         Utilities.globalQueue.postRunnable(() -> {
@@ -1073,7 +1070,7 @@ public class MoltenGramOtaManager {
     private Dialog updateProgressDialog;
 
     public void showUpdateProgressDialog(Activity activity) {
-        if (activity == null || activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
+        if (true || activity == null || activity.isFinishing() || (Build.VERSION.SDK_INT >= 17 && activity.isDestroyed())) {
             return;
         }
         AndroidUtilities.runOnUIThread(() -> {
