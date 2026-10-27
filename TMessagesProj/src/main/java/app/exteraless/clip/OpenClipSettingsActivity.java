@@ -136,7 +136,13 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
-        } else if (position == autoIndexEnabledRow) {
+            safeNotifyDataSetChanged();
+            return;
+        }
+        if (!OpenClipConfig.isEnabled()) {
+            return;
+        }
+        if (position == autoIndexEnabledRow) {
             boolean autoIndex = !OpenClipConfig.isAutoIndexEnabled();
             OpenClipConfig.setAutoIndexEnabled(autoIndex);
             if (view instanceof TextCheckCell) {
@@ -155,6 +161,9 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 ((TextCheckCell) view).setChecked(text);
             }
         } else if (position == indexAllChatsRow) {
+            if (ClipAutoIndexer.getInstance().isIndexing()) {
+                return;
+            }
             if (!OpenClipManager.getInstance().isModelInstalled()) {
                 if (BulletinFactory.canShowBulletin(this)) {
                     BulletinFactory.of(this).createErrorBulletin(getString(R.string.OpenClipModelRequired)).show();
@@ -189,6 +198,9 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 });
             });
         } else if (position == chooseChatsRow) {
+            if (ClipAutoIndexer.getInstance().isIndexing()) {
+                return;
+            }
             if (!OpenClipManager.getInstance().isModelInstalled()) {
                 if (BulletinFactory.canShowBulletin(this)) {
                     BulletinFactory.of(this).createErrorBulletin(getString(R.string.OpenClipModelRequired)).show();
@@ -398,6 +410,14 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int pos = holder.getAdapterPosition();
+            if (!OpenClipConfig.isEnabled()) {
+                return pos == masterSwitchRow;
+            }
+            if (ClipAutoIndexer.getInstance().isIndexing()) {
+                if (pos == indexAllChatsRow || pos == chooseChatsRow) {
+                    return false;
+                }
+            }
             return pos == masterSwitchRow || pos == autoIndexEnabledRow || pos == autoIndexPhotosRow || pos == autoIndexTextRow
                     || pos == modelCardRow || pos == modelActionRow || pos == indexAllChatsRow || pos == chooseChatsRow;
         }

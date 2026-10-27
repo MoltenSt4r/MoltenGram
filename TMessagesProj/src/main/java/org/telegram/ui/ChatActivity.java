@@ -52227,12 +52227,41 @@ public class ChatActivity extends BaseFragment implements
         String path = tw.nekomimi.nekogram.helpers.MessageHelper.getPathToMessage(messageObject);
         if (TextUtils.isEmpty(path)) {
             File f = FileLoader.getInstance(currentAccount).getPathToMessage(messageObject.messageOwner);
-            if (f != null && f.exists()) {
+            if (f != null && f.exists() && f.length() > 0) {
                 path = f.getAbsolutePath();
             }
         }
+        if (TextUtils.isEmpty(path) && messageObject.messageOwner != null && messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaPhoto) {
+            TLRPC.TL_messageMediaPhoto photoMedia = (TLRPC.TL_messageMediaPhoto) messageObject.messageOwner.media;
+            if (photoMedia.photo != null && photoMedia.photo.sizes != null) {
+                ArrayList<TLRPC.PhotoSize> sortedSizes = new ArrayList<>(photoMedia.photo.sizes);
+                java.util.Collections.sort(sortedSizes, (o1, o2) -> {
+                    int s1 = o1 != null ? Math.max(o1.size, Math.max(o1.w, o1.h)) : 0;
+                    int s2 = o2 != null ? Math.max(o2.size, Math.max(o2.w, o2.h)) : 0;
+                    return Integer.compare(s2, s1);
+                });
+                for (TLRPC.PhotoSize photoSize : sortedSizes) {
+                    if (photoSize == null || photoSize.location == null || photoSize instanceof TLRPC.TL_photoStrippedSize || photoSize instanceof TLRPC.TL_photoPathSize || photoSize instanceof TLRPC.TL_photoSizeEmpty) {
+                        continue;
+                    }
+                    File f = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, true);
+                    if (f != null && f.exists() && f.length() > 0) {
+                        path = f.getAbsolutePath();
+                        break;
+                    }
+                    f = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, false);
+                    if (f != null && f.exists() && f.length() > 0) {
+                        path = f.getAbsolutePath();
+                        break;
+                    }
+                }
+            }
+        }
         if (!TextUtils.isEmpty(path)) {
-            Bitmap bitmap = BitmapFactory.decodeFile(path);
+            Bitmap bitmap = app.exteraless.clip.ClipAutoIndexer.decodeSampledBitmap(path, 256, 256);
+            if (bitmap == null) {
+                bitmap = BitmapFactory.decodeFile(path);
+            }
             if (bitmap != null) {
                 executePhotoSearchWithBitmap(bitmap, targetDialogId);
                 return;

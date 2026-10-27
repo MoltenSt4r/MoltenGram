@@ -223,12 +223,12 @@ public class ClipAutoIndexer {
                                     attachFile = null;
                                     ArrayList<TLRPC.PhotoSize> sortedSizes = new ArrayList<>(photoMedia.photo.sizes);
                                     java.util.Collections.sort(sortedSizes, (o1, o2) -> {
-                                        int s1 = Math.max(o1 != null ? o1.w : 0, o1 != null ? o1.h : 0);
-                                        int s2 = Math.max(o2 != null ? o2.w : 0, o2 != null ? o2.h : 0);
+                                        int s1 = o1 != null ? Math.max(o1.size, Math.max(o1.w, o1.h)) : 0;
+                                        int s2 = o2 != null ? Math.max(o2.size, Math.max(o2.w, o2.h)) : 0;
                                         return Integer.compare(s2, s1);
                                     });
                                     for (TLRPC.PhotoSize photoSize : sortedSizes) {
-                                        if (photoSize == null || photoSize instanceof TLRPC.TL_photoStrippedSize || photoSize instanceof TLRPC.TL_photoPathSize) {
+                                        if (photoSize == null || photoSize.location == null || photoSize instanceof TLRPC.TL_photoStrippedSize || photoSize instanceof TLRPC.TL_photoPathSize || photoSize instanceof TLRPC.TL_photoSizeEmpty) {
                                             continue;
                                         }
                                         File f = FileLoader.getInstance(currentAccount).getPathToAttach(photoSize, true);
@@ -308,7 +308,7 @@ public class ClipAutoIndexer {
         return "Chat " + dialogId;
     }
 
-    private static Bitmap decodeSampledBitmap(String path, int reqWidth, int reqHeight) {
+    public static Bitmap decodeSampledBitmap(String path, int reqWidth, int reqHeight) {
         try {
             BitmapFactory.Options options = new BitmapFactory.Options();
             options.inJustDecodeBounds = true;

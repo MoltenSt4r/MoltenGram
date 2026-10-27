@@ -654,6 +654,17 @@ class TestTier1FeatureCoverage:
         assert restored.enabled is False
         assert math.isclose(restored.threshold, 0.42, abs_tol=1e-4)
 
+    def test_config_effective_threshold_calibration(self):
+        """6.6 Effective threshold scales from 0.10f at MIN_THRESHOLD up to 0.38f at MAX_THRESHOLD."""
+        cfg = OpenClipConfigRef()
+        def calc_effective(val: float) -> float:
+            norm = (val - cfg.MIN_THRESHOLD) / (cfg.MAX_THRESHOLD - cfg.MIN_THRESHOLD)
+            return 0.10 + norm * (0.38 - 0.10)
+
+        assert math.isclose(calc_effective(0.35), 0.10, abs_tol=1e-5)
+        assert math.isclose(calc_effective(0.80), 0.38, abs_tol=1e-5)
+        assert math.isclose(calc_effective(0.55), 0.10 + (0.20 / 0.45) * 0.28, abs_tol=1e-5)
+
 
 # ==============================================================================
 # TIER 2: BOUNDARY & CORNER CASES (>= 5 TEST CASES PER CATEGORY)
@@ -1101,6 +1112,28 @@ class TestTier4RealWorldScenarios:
         dialog_ids = {r["dialog_id"] for r in global_results}
         assert dialog_ids == {100, 200}
         assert 300 not in dialog_ids
+        db.close()
+
+    def test_photo_search_fallback_to_global_when_in_chat_empty(self, tmp_path):
+        """4.2.1 In-chat search yielding 0 results falls back to global search across all dialogs."""
+        db_path = str(tmp_path / "fallback_scopes.db")
+        db = ClipDatabaseRef(db_path)
+
+        reference_photo = VectorMathRef.normalize_l2([1.0 if i % 2 == 0 else 0.0 for i in range(512)])
+
+        # Dialog 100 has matching photo
+        db.put_embedding(dialog_id=100, msg_id=10, media_id=0, type_=1, vector=reference_photo)
+        # Dialog 200 (Saved messages) has identical photo
+        db.put_embedding(dialog_id=200, msg_id=20, media_id=0, type_=1, vector=reference_photo)
+
+        # Scoped search in Dialog 400 (which has no matches)
+        in_chat_results = db.find_similar(reference_photo, dialog_id=400, min_score=0.20)
+        assert len(in_chat_results) == 0
+
+        # Automatic fallback to global search across all dialogs
+        fallback_results = db.find_similar(reference_photo, dialog_id=None, min_score=0.20)
+        assert len(fallback_results) == 2
+        assert {r["dialog_id"] for r in fallback_results} == {100, 200}
         db.close()
 
     def test_dynamic_threshold_slider_interactive_filtering(self, tmp_path):
