@@ -52368,12 +52368,17 @@ public class ChatActivity extends BaseFragment implements
 
     private void applyClipSearchResults(java.util.List<app.exteraless.clip.ClipDatabase.SearchResult> results) {
         if (results == null || results.isEmpty()) {
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+            }
             return;
         }
+        float topScore = results.get(0).score;
+        float minScoreAllowed = Math.max(app.exteraless.clip.OpenClipConfig.getEffectiveThreshold(), topScore - 0.06f);
         ArrayList<MessageObject> found = new ArrayList<>();
         java.util.HashSet<Long> seen = new java.util.HashSet<>();
         for (app.exteraless.clip.ClipDatabase.SearchResult r : results) {
-            if (r.dialogId != dialog_id || !seen.add(r.messageId)) {
+            if (r.dialogId != dialog_id || r.score < minScoreAllowed || !seen.add(r.messageId)) {
                 continue;
             }
             MessageObject existing = messagesDict[0].get((int) r.messageId);
@@ -52389,6 +52394,9 @@ public class ChatActivity extends BaseFragment implements
             }
         }
         if (found.isEmpty()) {
+            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+                BulletinFactory.of(ChatActivity.this).createErrorBulletin(LocaleController.getString(R.string.OpenClipSearchNoResults)).show();
+            }
             return;
         }
         getMediaDataController().setExternalSearchResults(classGuid, found);

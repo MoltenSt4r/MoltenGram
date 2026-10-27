@@ -235,6 +235,24 @@ public class RussianConceptTranslator {
         put(new String[]{"солнечно", "ясно"}, "sunny clear bright");
         put(new String[]{"лед", "ледок", "льдина", "льдины"}, "ice icy frozen");
         put(new String[]{"радуга"}, "rainbow");
+
+        // --- People & Portraits ---
+        put(new String[]{"человек", "люди"}, "person people human portrait");
+        put(new String[]{"парень", "парни", "мальчик", "мальчики"}, "man boy male guy");
+        put(new String[]{"девушка", "девушки", "девочка", "девочки"}, "woman girl female lady");
+        put(new String[]{"мужчина", "мужчины", "мужик"}, "man men male adult");
+        put(new String[]{"женщина", "женщины"}, "woman women female lady");
+        put(new String[]{"ребенок", "дети", "малыш", "детки"}, "baby child children toddler kid");
+        put(new String[]{"лицо", "лица"}, "face portrait close-up");
+        put(new String[]{"селфи"}, "selfie front camera portrait");
+        put(new String[]{"рука", "руки"}, "hand hands");
+
+        // --- Screenshots, Documents & Memes ---
+        put(new String[]{"скриншот", "скрин", "скриншоты"}, "screenshot screen capture ui interface");
+        put(new String[]{"мем", "мемы", "мемчик"}, "meme funny internet humor joke");
+        put(new String[]{"документ", "документы", "паспорт", "чек"}, "document paper text receipt contract");
+        put(new String[]{"текст", "переписка", "чат"}, "text chat conversation message");
+        put(new String[]{"рисунок", "арт", "иллюстрация"}, "drawing digital art illustration artwork");
     }
 
     private static void put(String[] keys, String value) {

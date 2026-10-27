@@ -243,15 +243,31 @@ public class ClipAutoIndexer {
                                         }
                                     }
                                 }
+                                Bitmap bitmap = null;
                                 if (attachFile != null && attachFile.exists() && attachFile.length() > 0) {
-                                    Bitmap bitmap = decodeSampledBitmap(attachFile.getAbsolutePath(), 256, 256);
-                                    if (bitmap != null) {
-                                        float[] imgEmb = OpenClipInference.getInstance().encodeImageDirect(bitmap);
-                                        bitmap.recycle();
-                                        if (imgEmb != null) {
-                                            ClipDatabase.getInstance().putEmbeddingDirect(did, msg.id, photoMedia.photo.id, ClipDatabase.TYPE_PHOTO, imgEmb);
-                                            totalIndexedOverall++;
+                                    bitmap = decodeSampledBitmap(attachFile.getAbsolutePath(), 256, 256);
+                                }
+                                if (bitmap == null && photoMedia.photo != null) {
+                                    if (photoMedia.photo.sizes != null) {
+                                        for (TLRPC.PhotoSize photoSize : photoMedia.photo.sizes) {
+                                            if (photoSize instanceof TLRPC.TL_photoStrippedSize && photoSize.bytes != null && photoSize.bytes.length > 0) {
+                                                bitmap = org.telegram.messenger.ImageLoader.getStrippedPhotoBitmap(photoSize.bytes, "b");
+                                                if (bitmap != null) {
+                                                    break;
+                                                }
+                                            }
                                         }
+                                    }
+                                    if (bitmap == null && photoMedia.photo.stripped_thumb != null && photoMedia.photo.stripped_thumb.length > 0) {
+                                        bitmap = org.telegram.messenger.ImageLoader.getStrippedPhotoBitmap(photoMedia.photo.stripped_thumb, "b");
+                                    }
+                                }
+                                if (bitmap != null) {
+                                    float[] imgEmb = OpenClipInference.getInstance().encodeImageDirect(bitmap);
+                                    bitmap.recycle();
+                                    if (imgEmb != null) {
+                                        ClipDatabase.getInstance().putEmbeddingDirect(did, msg.id, photoMedia.photo.id, ClipDatabase.TYPE_PHOTO, imgEmb);
+                                        totalIndexedOverall++;
                                     }
                                 }
                             }
