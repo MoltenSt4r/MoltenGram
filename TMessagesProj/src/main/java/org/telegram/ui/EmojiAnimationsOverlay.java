@@ -427,6 +427,10 @@ public class EmojiAnimationsOverlay implements NotificationCenter.NotificationCe
     }
 
     public boolean onTapItem(ChatMessageCell view, ChatActivity chatActivity, boolean userTapped) {
+        if (userTapped && view != null && view.getMessageObject() != null && view.getMessageObject().notoAnimatedEmojiUrl != null) {
+            // Noto animated emoji: tap replays from the start up to the peak frame (never pauses).
+            view.getPhotoImage().startAnimation(true);
+        }
         if (!NaConfig.INSTANCE.getPremiumItemStickerEffects().Bool()) {
             return false;
         }

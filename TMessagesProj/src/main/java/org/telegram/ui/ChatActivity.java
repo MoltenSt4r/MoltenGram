@@ -40014,7 +40014,25 @@ public class ChatActivity extends BaseFragment implements
             MediaController.getInstance().cleanupPlayer(true, true, false, playingObject.equals(message));
         }
         MessageObject.GroupedMessages feedGroup = isFeedSearch() ? getValidGroupedMessage(message) : null;
-        if (feedGroup != null && (message.isVideo() || message.type == MessageObject.TYPE_PHOTO)) {
+        MessageObject.GroupedMessages carouselGroup = cell != null && cell.isMediaCarouselMessage() ? cell.getCurrentMessagesGroup() : null;
+        if (feedGroup == null && carouselGroup != null && carouselGroup.messages != null && carouselGroup.messages.size() > 1 && (message.isVideo() || message.type == MessageObject.TYPE_PHOTO)) {
+            PhotoViewer.getInstance().setParentChatActivity(ChatActivity.this);
+            ArrayList<MessageObject> album = new ArrayList<>();
+            for (int a = 0, N = carouselGroup.messages.size(); a < N; a++) {
+                MessageObject m = carouselGroup.messages.get(a);
+                if (m.isVideo() || m.type == MessageObject.TYPE_PHOTO) {
+                    album.add(m);
+                }
+            }
+            int index = -1;
+            for (int a = 0; a < album.size(); a++) {
+                if (album.get(a).getId() == message.getId()) {
+                    index = a;
+                    break;
+                }
+            }
+            PhotoViewer.getInstance().openPhoto(album, index < 0 ? 0 : index, dialog_id, mergeDialogId, getTopicId(), photoViewerProvider);
+        } else if (feedGroup != null && (message.isVideo() || message.type == MessageObject.TYPE_PHOTO)) {
             PhotoViewer.getInstance().setParentChatActivity(ChatActivity.this);
             ArrayList<MessageObject> album = new ArrayList<>();
             for (int a = 0, N = feedGroup.messages.size(); a < N; a++) {
@@ -52306,10 +52324,11 @@ public class ChatActivity extends BaseFragment implements
         }
         app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
         if (top.dialogId == dialog_id) {
-            scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
-            if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
-                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+            if (!actionBar.isSearchFieldVisible()) {
+                openSearchWithText("");
+                AndroidUtilities.runOnUIThread(() -> applyClipSearchResults(results), 350);
+            } else {
+                applyClipSearchResults(results);
             }
         } else {
             Bundle args = new Bundle();
@@ -52342,14 +52361,41 @@ public class ChatActivity extends BaseFragment implements
                     }
                     return;
                 }
-                app.exteraless.clip.ClipDatabase.SearchResult top = results.get(0);
-                scrollToMessageId((int) top.messageId, 0, false, 0, true, 0);
-                if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
-                    String text = LocaleController.formatPluralString("FoundMessages", results.size(), results.size());
-                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
-                }
+                applyClipSearchResults(results);
             });
         });
+    }
+
+    private void applyClipSearchResults(java.util.List<app.exteraless.clip.ClipDatabase.SearchResult> results) {
+        if (results == null || results.isEmpty()) {
+            return;
+        }
+        ArrayList<MessageObject> found = new ArrayList<>();
+        java.util.HashSet<Long> seen = new java.util.HashSet<>();
+        for (app.exteraless.clip.ClipDatabase.SearchResult r : results) {
+            if (r.dialogId != dialog_id || !seen.add(r.messageId)) {
+                continue;
+            }
+            MessageObject existing = messagesDict[0].get((int) r.messageId);
+            if (existing != null) {
+                found.add(existing);
+            } else {
+                TLRPC.TL_message stub = new TLRPC.TL_message();
+                stub.id = (int) r.messageId;
+                stub.dialog_id = dialog_id;
+                stub.peer_id = getMessagesController().getPeer(dialog_id);
+                stub.message = "";
+                found.add(new MessageObject(currentAccount, stub, false, false));
+            }
+        }
+        if (found.isEmpty()) {
+            return;
+        }
+        getMediaDataController().setExternalSearchResults(classGuid, found);
+        if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
+            String text = LocaleController.formatPluralString("FoundMessages", found.size(), found.size());
+            BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+        }
     }
 
     private abstract class ChatListRecyclerView extends RecyclerListViewInternal {

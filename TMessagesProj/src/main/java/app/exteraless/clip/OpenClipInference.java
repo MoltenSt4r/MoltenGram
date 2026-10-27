@@ -97,7 +97,8 @@ public class OpenClipInference implements ForegroundDetector.Listener {
         }
 
         try {
-            long[] tokenIds = ClipTokenizer.getInstance().tokenize(query);
+            String effectiveQuery = RussianConceptTranslator.translateToEnglishConcepts(query);
+            long[] tokenIds = ClipTokenizer.getInstance().tokenize(effectiveQuery);
             if (tokenIds == null || tokenIds.length != CONTEXT_LENGTH) {
                 FileLog.e(TAG + ": tokenization failed, invalid token length");
                 return null;

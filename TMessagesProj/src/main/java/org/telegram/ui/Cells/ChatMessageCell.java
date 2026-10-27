@@ -17494,7 +17494,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
         if (firstVisibleBlockNum >= 0) {
             float right;
-            if (currentMessagesGroup == null || currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
+            if (currentMessagesGroup == null || currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
                 right = getBackgroundDrawableRight() + transitionParams.deltaRight;
             } else {
                 int end, dWidth;
@@ -17978,7 +17978,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             return maxWidth - backgroundWidth - dp(57);
         }
-        if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
+        if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
             int dWidth;
             if (AndroidUtilities.isTablet()) {
                 dWidth = AndroidUtilities.getMinTabletSide();
@@ -21317,7 +21317,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             backgroundDrawableLeft = layoutWidth - backgroundWidth - (!mediaBackground ? 0 : dp(9));
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
-            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
                     backgroundDrawableRight += dp(10);
                 }
@@ -21397,7 +21397,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
             backgroundDrawableLeft = dp(isSideMenuEnabled ? ChatActivity.SIDE_MENU_WIDTH : (isChat || currentMessageObject != null && (currentMessageObject.isRepostPreview || currentMessageObject.forceAvatar || currentMessageObject.messageOwner.guestchat_via_from != null) || currentMessageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible ? 48 : 0) + dp(!mediaBackground ? 3 : 9);
             backgroundDrawableRight = backgroundWidth - (mediaBackground ? 0 : dp(3));
-            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (!currentPosition.edge) {
                     backgroundDrawableLeft -= dp(10);
                     backgroundDrawableRight += dp(10);
@@ -22152,7 +22152,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             float end;
-            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
                 int dWidth = getGroupPhotosWidth();
                 int firstLineWidth = 0;
                 for (int a = 0; a < currentMessagesGroup.posArray.size(); a++) {
@@ -22296,7 +22296,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
 
         float right;
-        if (currentMessagesGroup == null || currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
+        if (currentMessagesGroup == null || currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
             right = getBackgroundDrawableRight() + transitionParams.deltaRight;
         } else {
             int end, dWidth;
@@ -22647,7 +22647,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 r = dp(isSideMenuLeftMargin() ? ChatActivity.SIDE_MENU_WIDTH : ((isChat || messageObject != null && (messageObject.isRepostPreview || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) || messageObject.getDialogId() == UserObject.VERIFY) && isAvatarVisible ? 48 : 0)) + dp(!mediaBackground ? 3 : 9);
             }
-            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
                 if (currentPosition.leftSpanOffset != 0) {
                     r += (int) Math.ceil(currentPosition.leftSpanOffset / 1000.0f * getGroupPhotosWidth());
                 }
@@ -23034,7 +23034,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             canvas.restore();
 
             float end;
-            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments) {
+            if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && !isMediaCarouselMessage()) {
                 int dWidth = getGroupPhotosWidth();
                 int firstLineWidth = 0;
                 for (int a = 0; a < currentMessagesGroup.posArray.size(); a++) {
@@ -23620,7 +23620,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         rightRad = SharedConfig.bubbleRadius / 3f;
                     }
                     float right;
-                    if (currentMessagesGroup == null || currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
+                    if (currentMessagesGroup == null || currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
                         right = getBackgroundDrawableRight() + transitionParams.deltaRight;
                     } else {
                         int end, dWidth;
@@ -23828,7 +23828,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (summaryAlpha > 0) {
                 final float height = dp(4) + summaryTitle.getHeight() + summarySubtitle.getHeight();
                 float right;
-                if (currentMessagesGroup == null || currentPosition == null || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
+                if (currentMessagesGroup == null || currentPosition == null || isMediaCarouselMessage() || (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_RIGHT) != 0) {
                     right = getBackgroundDrawableRight() + transitionParams.deltaRight;
                 } else {
                     int end, dWidth;

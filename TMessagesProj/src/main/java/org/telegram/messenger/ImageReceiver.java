@@ -1002,12 +1002,8 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) bitmap;
                 if (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0) {
                     aid.setRepeatCount(0);
-                    if (currentImageLocation != null && currentImageLocation.path != null && currentImageLocation.path.contains("notoemoji")) {
-                        AndroidUtilities.runOnUIThread(() -> {
-                            try {
-                                aid.stop();
-                            } catch (Throwable ignored) {}
-                        }, 850);
+                    if (isNotoEmojiLocation()) {
+                        scheduleNotoFreeze(aid);
                     }
                 } else {
                     aid.setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
@@ -1383,6 +1379,11 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     }
 
     protected void drawDrawable(Canvas canvas, Drawable drawable, int alpha, BitmapShader shader, int orientation, int invert, int isPressed, BackgroundThreadDrawHolder backgroundThreadDrawHolder) {
+        if (drawable != null && drawable == notoFrozenSource && notoFrozenFrame != null) {
+            notoFrozenFrame.setBounds(drawable.getBounds());
+            drawable = notoFrozenFrame;
+            shader = null;
+        }
         float imageX, imageY, imageH, imageW;
         RectF drawRegion;
         ColorFilter colorFilter;
@@ -2944,6 +2945,54 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         allowDecodeSingleFrame = value;
     }
 
+    private Drawable notoFrozenSource;
+    private BitmapDrawable notoFrozenFrame;
+    private Runnable notoFreezeRunnable;
+    private static final long NOTO_PEAK_DELAY_MS = 850;
+
+    private boolean isNotoEmojiLocation() {
+        return currentImageLocation != null && currentImageLocation.path != null && currentImageLocation.path.contains("notoemoji");
+    }
+
+    private void clearNotoFreeze() {
+        if (notoFreezeRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(notoFreezeRunnable);
+            notoFreezeRunnable = null;
+        }
+        notoFrozenSource = null;
+        notoFrozenFrame = null;
+    }
+
+    /** Captures the expressive peak frame of a Noto animated emoji and holds it instead of snapping back to frame 0. */
+    private void scheduleNotoFreeze(Drawable drawable) {
+        if (Build.VERSION.SDK_INT < 28 || !(drawable instanceof android.graphics.drawable.AnimatedImageDrawable)) {
+            return;
+        }
+        clearNotoFreeze();
+        final android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) drawable;
+        notoFreezeRunnable = () -> {
+            notoFreezeRunnable = null;
+            try {
+                int w = aid.getIntrinsicWidth();
+                int h = aid.getIntrinsicHeight();
+                if (w <= 0 || h <= 0) {
+                    return;
+                }
+                Bitmap frame = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(frame);
+                android.graphics.Rect old = new android.graphics.Rect(aid.getBounds());
+                aid.setBounds(0, 0, w, h);
+                aid.draw(c);
+                aid.setBounds(old);
+                notoFrozenFrame = new BitmapDrawable(null, frame);
+                notoFrozenSource = aid;
+                aid.stop();
+                invalidate();
+            } catch (Throwable ignored) {}
+        };
+        AndroidUtilities.runOnUIThread(notoFreezeRunnable, NOTO_PEAK_DELAY_MS);
+    }
+
     public void setAutoRepeat(int value) {
         autoRepeat = value;
         RLottieDrawable drawable = getLottieAnimation();
@@ -2960,6 +3009,9 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                     aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {
                         @Override
                         public void onAnimationEnd(Drawable d) {
+                            if (isNotoEmojiLocation()) {
+                                return;
+                            }
                             try {
                                 aid.stop();
                             } catch (Throwable ignored) {}
@@ -3006,6 +3058,20 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         startAnimation(false);
     }
     public void startAnimation(boolean force) {
+        if (Build.VERSION.SDK_INT >= 28 && isNotoEmojiLocation()) {
+            Drawable d = currentImageDrawable != null ? currentImageDrawable : (currentMediaDrawable != null ? currentMediaDrawable : staticThumbDrawable);
+            if (d instanceof android.graphics.drawable.AnimatedImageDrawable) {
+                android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) d;
+                if (force || notoFrozenSource != null || !aid.isRunning()) {
+                    aid.setRepeatCount(0);
+                    aid.stop();
+                    aid.start();
+                    scheduleNotoFreeze(aid);
+                    invalidate();
+                }
+                return;
+            }
+        }
         AnimatedFileDrawable animation = getAnimation();
         if (animation != null) {
             animation.setUseSharedQueue(useSharedAnimationQueue);
@@ -3355,6 +3421,9 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                     aid.registerAnimationCallback(new android.graphics.drawable.Animatable2.AnimationCallback() {
                         @Override
                         public void onAnimationEnd(Drawable d) {
+                            if (isNotoEmojiLocation()) {
+                                return;
+                            }
                             try {
                                 aid.stop();
                             } catch (Throwable ignored) {}

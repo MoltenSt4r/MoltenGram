@@ -3871,6 +3871,39 @@ public class MediaDataController extends BaseController {
         searchMessagesInChat(query, dialogId, mergeDialogId, guid, direction, replyMessageId, false, user, chat, true, reaction, filter);
     }
 
+    /**
+     * Fills in-chat search state with externally found messages (e.g. OpenCLIP semantic search),
+     * so the native ▲/▼ navigation and "N of M" counter work over them.
+     */
+    public void setExternalSearchResults(int guid, ArrayList<MessageObject> results) {
+        if (reqId != 0) {
+            getConnectionsManager().cancelRequest(reqId, true);
+            reqId = 0;
+        }
+        if (mergeReqId != 0) {
+            getConnectionsManager().cancelRequest(mergeReqId, true);
+            mergeReqId = 0;
+        }
+        loadingMoreSearchMessages = false;
+        searchResultMessages.clear();
+        searchServerResultMessages.clear();
+        searchLocalResultMessages.clear();
+        searchServerResultMessagesMap[0].clear();
+        searchServerResultMessagesMap[1].clear();
+        if (results == null || results.isEmpty()) {
+            return;
+        }
+        searchResultMessages.addAll(results);
+        messagesSearchEndReached[0] = messagesSearchEndReached[1] = true;
+        messagesSearchCount[0] = results.size();
+        messagesSearchCount[1] = 0;
+        messagesLocalSearchCount = 0;
+        lastReturnedNum = 0;
+        lastGuid = guid;
+        MessageObject messageObject = searchResultMessages.get(0);
+        getNotificationCenter().postNotificationName(NotificationCenter.chatSearchResultsAvailable, guid, messageObject.getId(), getMask(), messageObject.getDialogId(), lastReturnedNum, getSearchCount(), true);
+    }
+
     public void jumpToSearchedMessage(int guid, int index) {
         if (index < 0 || index >= searchResultMessages.size()) {
             return;
