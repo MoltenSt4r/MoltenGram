@@ -19,13 +19,13 @@ public final class OpenClipConfig {
     public static final String KEY_AUTO_INDEX_PHOTOS = "autoIndexPhotos";
     public static final String KEY_AUTO_INDEX_TEXT = "autoIndexText";
 
-    public static final boolean DEFAULT_ENABLED = true;
+    public static final boolean DEFAULT_ENABLED = false;
     public static final float DEFAULT_THRESHOLD = 0.55f;
     public static final float MIN_THRESHOLD = 0.35f;
     public static final float MAX_THRESHOLD = 0.80f;
-    public static final boolean DEFAULT_AUTO_INDEX_ENABLED = true;
-    public static final boolean DEFAULT_AUTO_INDEX_PHOTOS = true;
-    public static final boolean DEFAULT_AUTO_INDEX_TEXT = true;
+    public static final boolean DEFAULT_AUTO_INDEX_ENABLED = false;
+    public static final boolean DEFAULT_AUTO_INDEX_PHOTOS = false;
+    public static final boolean DEFAULT_AUTO_INDEX_TEXT = false;
 
     private OpenClipConfig() {
     }
@@ -44,12 +44,7 @@ public final class OpenClipConfig {
     }
 
     public static boolean isEnabled() {
-        try {
-            SharedPreferences prefs = getPreferences();
-            return prefs == null ? DEFAULT_ENABLED : prefs.getBoolean(KEY_ENABLED, DEFAULT_ENABLED);
-        } catch (Throwable e) {
-            return DEFAULT_ENABLED;
-        }
+        return false;
     }
 
     public static void setEnabled(boolean value) {
@@ -122,12 +117,7 @@ public final class OpenClipConfig {
     }
 
     public static boolean isAutoIndexEnabled() {
-        try {
-            SharedPreferences prefs = getPreferences();
-            return prefs == null ? DEFAULT_AUTO_INDEX_ENABLED : prefs.getBoolean(KEY_AUTO_INDEX_ENABLED, DEFAULT_AUTO_INDEX_ENABLED);
-        } catch (Throwable e) {
-            return DEFAULT_AUTO_INDEX_ENABLED;
-        }
+        return false;
     }
 
     public static void setAutoIndexEnabled(boolean value) {

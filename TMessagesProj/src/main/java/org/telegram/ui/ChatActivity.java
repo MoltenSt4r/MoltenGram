@@ -21547,7 +21547,23 @@ public class ChatActivity extends BaseFragment implements
                 if (needPreview) {
                     object.thumb = imageReceiver.getBitmapSafe();
                 }
-                object.radius = imageReceiver.getRoundRadius(true);
+                if (isCarousel) {
+                    int r = AndroidUtilities.dp(24);
+                    object.radius = new int[]{r, r, r, r};
+                    if (view instanceof ChatMessageCell) {
+                        ChatMessageCell cell = (ChatMessageCell) view;
+                        View carouselItem = cell.getCarouselItemView(index);
+                        if (carouselItem instanceof com.google.android.material.carousel.MaskableFrameLayout) {
+                            com.google.android.material.carousel.MaskableFrameLayout maskable = (com.google.android.material.carousel.MaskableFrameLayout) carouselItem;
+                            android.graphics.RectF maskRect = maskable.getMaskRectF();
+                            if (maskRect != null && maskRect.width() > 0 && maskRect.width() < carouselItem.getWidth()) {
+                                object.clipHorizontalAddition = (int) ((carouselItem.getWidth() - maskRect.width()) / 2f);
+                            }
+                        }
+                    }
+                } else {
+                    object.radius = imageReceiver.getRoundRadius(true);
+                }
                 if (view instanceof ChatActionCell && currentChat != null) {
                     object.dialogId = -currentChat.id;
                 }

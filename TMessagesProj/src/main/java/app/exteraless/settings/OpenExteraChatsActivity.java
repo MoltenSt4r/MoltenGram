@@ -368,7 +368,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
 
         linksHeaderRow = addRow("linksHeader");
         aiChatRow = addRow("aiChat");
-        openClipRow = addRow("openClipSettings");
+        openClipRow = -1;
         chatSettingsRow = addRow("chatSettings");
         linksDividerRow = addRow();
 

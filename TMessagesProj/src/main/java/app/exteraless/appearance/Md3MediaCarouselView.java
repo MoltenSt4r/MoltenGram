@@ -330,12 +330,12 @@ public class Md3MediaCarouselView extends FrameLayout {
             frameLayout.setLayoutParams(params);
 
             ShapeAppearanceModel shapeModel = ShapeAppearanceModel.builder()
-                    .setAllCornerSizes(AndroidUtilities.dp(16))
+                    .setAllCornerSizes(AndroidUtilities.dp(24))
                     .build();
             frameLayout.setShapeAppearanceModel(shapeModel);
 
             BackupImageView imageView = new BackupImageView(parent.getContext());
-            imageView.setRoundRadius(AndroidUtilities.dp(16));
+            imageView.setRoundRadius(AndroidUtilities.dp(24));
             imageView.getImageReceiver().setAspectFit(false);
             frameLayout.addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
