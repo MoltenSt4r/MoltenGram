@@ -153,5 +153,10 @@
     <string name="OpenClipModelRequired">OpenCLIP model (~30 MB) must be downloaded for semantic search.</string>
     <string name="OpenClipSearchNoResults">No similar messages or photos found.</string>
     <string name="OpenClipSearching">Searching semantically…</string>
+    <string name="OpenClipChooseChats">Index selected chats &amp; channels…</string>
+    <string name="OpenClipChooseChatsSubtitle">Tap to select chats to pre-index</string>
+    <string name="OpenClipChooseChatsInfo">Pre-index messages and downloaded photos in selected chats for instant semantic search.</string>
+    <string name="OpenClipIndexingProgress">Indexing chats…</string>
+    <string name="OpenClipIndexingFinished">Indexing finished! %d items indexed.</string>
 </resources>
 

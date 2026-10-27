@@ -999,7 +999,19 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         } else if (bitmap instanceof android.graphics.drawable.Animatable) {
             android.graphics.drawable.Animatable animatable = (android.graphics.drawable.Animatable) bitmap;
             if (Build.VERSION.SDK_INT >= 28 && bitmap instanceof android.graphics.drawable.AnimatedImageDrawable) {
-                ((android.graphics.drawable.AnimatedImageDrawable) bitmap).setRepeatCount(autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0 ? 0 : android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                android.graphics.drawable.AnimatedImageDrawable aid = (android.graphics.drawable.AnimatedImageDrawable) bitmap;
+                if (autoRepeat == 2 || autoRepeat == 3 || autoRepeat == 0) {
+                    aid.setRepeatCount(0);
+                    if (currentImageLocation != null && currentImageLocation.path != null && currentImageLocation.path.contains("notoemoji")) {
+                        AndroidUtilities.runOnUIThread(() -> {
+                            try {
+                                aid.stop();
+                            } catch (Throwable ignored) {}
+                        }, 850);
+                    }
+                } else {
+                    aid.setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);
+                }
             }
             bitmap.setCallback(new Drawable.Callback() {
                 @Override

@@ -52255,7 +52255,7 @@ public class ChatActivity extends BaseFragment implements
                 }
                 return;
             }
-            float threshold = app.exteraless.clip.OpenClipConfig.getThreshold();
+            float threshold = app.exteraless.clip.OpenClipConfig.getEffectiveThreshold();
             app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, targetDialogId, 50, threshold, results -> {
                 if (results == null || results.isEmpty()) {
                     if (BulletinFactory.canShowBulletin(ChatActivity.this)) {
@@ -52295,7 +52295,7 @@ public class ChatActivity extends BaseFragment implements
                 }
                 return;
             }
-            float threshold = app.exteraless.clip.OpenClipConfig.getThreshold();
+            float threshold = app.exteraless.clip.OpenClipConfig.getEffectiveThreshold();
             app.exteraless.clip.ClipDatabase.getInstance().findSimilar(embedding, dialog_id, 100, threshold, results -> {
                 if (results == null || results.isEmpty()) {
                     if (BulletinFactory.canShowBulletin(ChatActivity.this)) {

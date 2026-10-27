@@ -426,6 +426,27 @@ def test_noto_animated_emoji_and_current_emoji_reactions():
         cmc_content = f.read()
     assert 'ImageLocation.getForVideoPath(messageObject.notoAnimatedEmojiUrl)' in cmc_content
 
+    assert 'isStaticEmoji' not in reo_content, "ReactionsEffectOverlay must not use static raster emoji fallback"
+    assert 'getLottieUrl' in noto_content, "NotoEmojiHelper must provide getLottieUrl"
+
+    indexer_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/ClipAutoIndexer.java')
+    assert os.path.exists(indexer_path)
+    with open(indexer_path, 'r', encoding='utf-8') as f:
+        indexer_content = f.read()
+    assert 'startIndexing' in indexer_content
+    assert 'cancelIndexing' in indexer_content
+
+    clip_cfg_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/OpenClipConfig.java')
+    with open(clip_cfg_path, 'r', encoding='utf-8') as f:
+        clip_cfg_content = f.read()
+    assert 'getEffectiveThreshold' in clip_cfg_content
+
+    clip_settings_path = os.path.join(JAVA_DIR, 'app/exteraless/clip/OpenClipSettingsActivity.java')
+    with open(clip_settings_path, 'r', encoding='utf-8') as f:
+        clip_settings_content = f.read()
+    assert 'chooseChatsRow' in clip_settings_content
+    assert 'IndexingProgressCell' in clip_settings_content
+
 
 
 

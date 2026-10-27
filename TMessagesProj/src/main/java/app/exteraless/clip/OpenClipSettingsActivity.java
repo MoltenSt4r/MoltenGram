@@ -9,6 +9,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.ViewParent;
+import android.text.TextUtils;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.TextView;
@@ -29,9 +30,12 @@ import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.LineProgressView;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SeekBarView;
+import org.telegram.ui.DialogsActivity;
 
+import java.util.ArrayList;
 import java.util.Locale;
 
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
@@ -41,9 +45,10 @@ import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
  * Provides master switch, model downloader & lifecycle manager card,
  * precision threshold slider (0.35 - 0.80), and automatic indexing toggles.
  */
-public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implements OpenClipManager.DownloadListener {
+public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implements OpenClipManager.DownloadListener, ClipAutoIndexer.IndexerListener {
 
     private static final int TYPE_THRESHOLD_SLIDER = 101;
+    private static final int TYPE_INDEXING_PROGRESS = 102;
 
     private int masterSwitchRow;
     private int masterInfoRow;
@@ -60,17 +65,21 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
     private int indexingHeaderRow;
     private int autoIndexPhotosRow;
     private int autoIndexTextRow;
+    private int chooseChatsRow;
+    private int indexingProgressRow = -1;
     private int indexingInfoRow;
 
     @Override
     public boolean onFragmentCreate() {
         OpenClipManager.getInstance().addListener(this);
+        ClipAutoIndexer.getInstance().addListener(this);
         return super.onFragmentCreate();
     }
 
     @Override
     public void onFragmentDestroy() {
         OpenClipManager.getInstance().removeListener(this);
+        ClipAutoIndexer.getInstance().removeListener(this);
         super.onFragmentDestroy();
     }
 
@@ -93,6 +102,12 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         indexingHeaderRow = addRow("openClipIndexingHeader");
         autoIndexPhotosRow = addRow("openClipAutoIndexPhotos");
         autoIndexTextRow = addRow("openClipAutoIndexText");
+        chooseChatsRow = addRow("openClipChooseChats");
+        if (ClipAutoIndexer.getInstance().isIndexing()) {
+            indexingProgressRow = addRow("openClipIndexingProgress");
+        } else {
+            indexingProgressRow = -1;
+        }
         indexingInfoRow = addRow();
     }
 
@@ -126,6 +141,32 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(text);
             }
+        } else if (position == chooseChatsRow) {
+            if (!OpenClipManager.getInstance().isModelInstalled()) {
+                if (BulletinFactory.canShowBulletin(this)) {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.OpenClipModelRequired)).show();
+                }
+                return;
+            }
+            android.os.Bundle args = new android.os.Bundle();
+            args.putBoolean("onlySelect", true);
+            args.putBoolean("checkCanWrite", false);
+            args.putBoolean("allowGlobalSearch", false);
+            DialogsActivity activity = new DialogsActivity(args);
+            activity.setDelegate((fragment, dids, message, param, notify, scheduleDate, scheduleRepeatPeriod, topicsFragment) -> {
+                activity.finishFragment();
+                if (dids != null && !dids.isEmpty()) {
+                    ArrayList<Long> dialogIds = new ArrayList<>();
+                    for (int i = 0; i < dids.size(); i++) {
+                        dialogIds.add(dids.get(i).dialogId);
+                    }
+                    ClipAutoIndexer.getInstance().startIndexing(currentAccount, dialogIds);
+                    updateRows();
+                    safeNotifyDataSetChanged();
+                }
+                return true;
+            });
+            presentFragment(activity);
         } else if (position == modelCardRow || position == modelActionRow) {
             handleModelAction();
         }
@@ -230,6 +271,46 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
     }
 
     @Override
+    public void onProgress(long dialogId, String title, int currentInDialog, int totalInDialog, float overallProgress) {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (indexingProgressRow == -1) {
+                updateRows();
+                safeNotifyDataSetChanged();
+                return;
+            }
+            if (listView != null) {
+                RecyclerView.ViewHolder holder = listView.findViewHolderForAdapterPosition(indexingProgressRow);
+                if (holder != null && holder.itemView instanceof IndexingProgressCell) {
+                    ((IndexingProgressCell) holder.itemView).updateProgress(title, currentInDialog, totalInDialog, overallProgress);
+                }
+            }
+        });
+    }
+
+    @Override
+    public void onFinished(int totalIndexed) {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (BulletinFactory.canShowBulletin(this)) {
+                String text = String.format(Locale.US, getString(R.string.OpenClipIndexingFinished), totalIndexed);
+                BulletinFactory.of(this).createSimpleBulletin(R.drawable.magic_stick_solar, text).show();
+            }
+            updateRows();
+            safeNotifyDataSetChanged();
+        });
+    }
+
+    @Override
+    public void onError(String error) {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (BulletinFactory.canShowBulletin(this) && error != null) {
+                BulletinFactory.of(this).createErrorBulletin(error).show();
+            }
+            updateRows();
+            safeNotifyDataSetChanged();
+        });
+    }
+
+    @Override
     public void onFinished(boolean success, String error) {
         AndroidUtilities.runOnUIThread(() -> {
             if (!success && error != null && !error.toLowerCase(Locale.ROOT).contains("cancel")) {
@@ -253,12 +334,14 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 return TYPE_CHECK;
             } else if (position == modelHeaderRow || position == thresholdHeaderRow || position == indexingHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == modelCardRow) {
+            } else if (position == modelCardRow || position == chooseChatsRow) {
                 return TYPE_SETTINGS;
             } else if (position == modelActionRow) {
                 return TYPE_TEXT;
             } else if (position == thresholdSliderRow) {
                 return TYPE_THRESHOLD_SLIDER;
+            } else if (position == indexingProgressRow) {
+                return TYPE_INDEXING_PROGRESS;
             } else if (position == masterInfoRow || position == modelInfoRow || position == thresholdInfoRow || position == indexingInfoRow) {
                 return TYPE_INFO_PRIVACY;
             }
@@ -269,7 +352,7 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int pos = holder.getAdapterPosition();
             return pos == masterSwitchRow || pos == autoIndexPhotosRow || pos == autoIndexTextRow
-                    || pos == modelCardRow || pos == modelActionRow;
+                    || pos == modelCardRow || pos == modelActionRow || pos == chooseChatsRow;
         }
 
         @NonNull
@@ -281,6 +364,12 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                         ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 sliderCell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                 return new RecyclerListView.Holder(sliderCell);
+            } else if (viewType == TYPE_INDEXING_PROGRESS) {
+                IndexingProgressCell cell = new IndexingProgressCell(mContext);
+                cell.setLayoutParams(new RecyclerView.LayoutParams(
+                        ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                return new RecyclerListView.Holder(cell);
             }
             return super.onCreateViewHolder(parent, viewType);
         }
@@ -310,7 +399,13 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                 TextSettingsCell settingsCell = (TextSettingsCell) holder.itemView;
                 if (position == modelCardRow) {
                     settingsCell.setTextAndValue(getString(R.string.OpenClipModelName), getModelStatusText(), true);
+                } else if (position == chooseChatsRow) {
+                    settingsCell.setTextAndValue(getString(R.string.OpenClipChooseChats), getString(R.string.OpenClipChooseChatsSubtitle), true);
                 }
+            } else if (viewType == TYPE_INDEXING_PROGRESS) {
+                IndexingProgressCell cell = (IndexingProgressCell) holder.itemView;
+                ClipAutoIndexer indexer = ClipAutoIndexer.getInstance();
+                cell.updateProgress(indexer.getCurrentChatTitle(), indexer.getCurrentItemCount(), indexer.getTotalItemCount(), indexer.getProgress());
             } else if (viewType == TYPE_TEXT) {
                 TextCell textCell = (TextCell) holder.itemView;
                 if (position == modelActionRow) {
@@ -440,6 +535,63 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             super.onMeasure(MeasureSpec.makeMeasureSpec(
                             MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(118), MeasureSpec.EXACTLY));
+        }
+    }
+
+    private class IndexingProgressCell extends FrameLayout {
+        private final TextView titleView;
+        private final TextView statusView;
+        private final LineProgressView progressBar;
+        private final TextView cancelBtn;
+
+        public IndexingProgressCell(Context context) {
+            super(context);
+            setWillNotDraw(false);
+
+            LinearLayout container = new LinearLayout(context);
+            container.setOrientation(LinearLayout.VERTICAL);
+            container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(14), AndroidUtilities.dp(20), AndroidUtilities.dp(14));
+            addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            LinearLayout header = new LinearLayout(context);
+            header.setOrientation(LinearLayout.HORIZONTAL);
+            header.setGravity(Gravity.CENTER_VERTICAL);
+            container.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
+
+            titleView = new TextView(context);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            titleView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            titleView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
+            titleView.setText(getString(R.string.OpenClipIndexingProgress));
+            header.addView(titleView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f));
+
+            cancelBtn = new TextView(context);
+            cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            cancelBtn.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+            cancelBtn.setTextColor(getThemedColor(Theme.key_text_RedRegular));
+            cancelBtn.setText(getString(R.string.Cancel));
+            cancelBtn.setPadding(AndroidUtilities.dp(8), AndroidUtilities.dp(4), AndroidUtilities.dp(8), AndroidUtilities.dp(4));
+            cancelBtn.setOnClickListener(v -> {
+                ClipAutoIndexer.getInstance().cancelIndexing();
+                safeNotifyDataSetChanged();
+            });
+            header.addView(cancelBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+
+            statusView = new TextView(context);
+            statusView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            statusView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText2));
+            container.addView(statusView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+            progressBar = new LineProgressView(context);
+            progressBar.setProgressColor(getThemedColor(Theme.key_featuredStickers_addButton));
+            progressBar.setBackColor(getThemedColor(Theme.key_featuredStickers_addButton) & 0x33ffffff);
+            container.addView(progressBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 4));
+        }
+
+        public void updateProgress(String chatTitle, int current, int total, float progress) {
+            String title = TextUtils.isEmpty(chatTitle) ? "" : chatTitle;
+            statusView.setText(String.format(Locale.US, "%s (%d / %d)", title, current, Math.max(current, total)));
+            progressBar.setProgress(Math.max(0.02f, progress), true);
         }
     }
 }

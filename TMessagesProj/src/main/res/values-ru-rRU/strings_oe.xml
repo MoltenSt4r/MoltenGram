@@ -148,5 +148,10 @@
     <string name="OpenClipModelRequired">Для семантического поиска требуется загрузить модель OpenCLIP (~30 МБ).</string>
     <string name="OpenClipSearchNoResults">Похожих сообщений или фотографий не найдено.</string>
     <string name="OpenClipSearching">Семантический поиск…</string>
+    <string name="OpenClipChooseChats">Индексировать выбранные чаты и каналы…</string>
+    <string name="OpenClipChooseChatsSubtitle">Нажмите для выбора чатов</string>
+    <string name="OpenClipChooseChatsInfo">Индексирует сообщения и сохранённые фото в выбранных чатах для быстрого офлайн-поиска.</string>
+    <string name="OpenClipIndexingProgress">Индексация чатов…</string>
+    <string name="OpenClipIndexingFinished">Индексация завершена! Обработано %d элементов.</string>
 </resources>
 

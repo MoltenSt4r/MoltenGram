@@ -180,6 +180,30 @@ public class ClipDatabase extends SQLiteOpenHelper {
     }
 
     /**
+     * Synchronously inserts or replaces an embedding vector. Must be called from background threads.
+     */
+    public void putEmbeddingDirect(final long dialogId, final long msgId, final long mediaId, final int type, final float[] embedding) {
+        if (embedding == null || embedding.length != EMBEDDING_DIM) {
+            return;
+        }
+        final byte[] blob = serializeEmbedding(embedding);
+        final long now = System.currentTimeMillis();
+        try {
+            SQLiteDatabase db = getWritableDatabase();
+            ContentValues cv = new ContentValues();
+            cv.put(COL_DIALOG_ID, dialogId);
+            cv.put(COL_MESSAGE_ID, msgId);
+            cv.put(COL_MEDIA_ID, mediaId);
+            cv.put(COL_TYPE, type);
+            cv.put(COL_EMBEDDING, blob);
+            cv.put(COL_CREATED_AT, now);
+            db.insertWithOnConflict(TABLE_EMBEDDINGS, null, cv, SQLiteDatabase.CONFLICT_REPLACE);
+        } catch (Exception e) {
+            FileLog.e(TAG + ": putEmbeddingDirect failed", e);
+        }
+    }
+
+    /**
      * Synchronously retrieves a cached 512-dim embedding vector. Safe to call on background threads.
      */
     public float[] getEmbedding(long dialogId, long msgId, int type) {

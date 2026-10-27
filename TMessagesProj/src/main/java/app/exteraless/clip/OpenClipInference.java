@@ -87,6 +87,42 @@ public class OpenClipInference implements ForegroundDetector.Listener {
      * Encodes a text query string into a 512-dimensional L2-normalized embedding vector.
      * The callback is always invoked on the Android UI thread.
      */
+    public DispatchQueue getQueue() {
+        return openClipQueue;
+    }
+
+    public float[] encodeTextDirect(final String query) {
+        if (TextUtils.isEmpty(query)) {
+            return null;
+        }
+        if (!ensureSessionsLoadedInternal()) {
+            FileLog.e(TAG + ": sessions could not be loaded for text encoding");
+            return null;
+        }
+
+        try {
+            long[] tokenIds = ClipTokenizer.getInstance().tokenize(query);
+            if (tokenIds == null || tokenIds.length != CONTEXT_LENGTH) {
+                FileLog.e(TAG + ": tokenization failed, invalid token length");
+                return null;
+            }
+
+            LongBuffer longBuffer = LongBuffer.wrap(tokenIds);
+            long[] shape = new long[]{1, CONTEXT_LENGTH};
+
+            try (OnnxTensor inputTensor = OnnxTensor.createTensor(environment, longBuffer, shape)) {
+                Map<String, OnnxTensor> inputs = Collections.singletonMap(textInputName, inputTensor);
+                try (OrtSession.Result result = textSession.run(inputs)) {
+                    OnnxValue outputValue = result.get(0);
+                    return extractAndNormalizeEmbedding(outputValue);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(TAG + ": encodeText exception", e);
+            return null;
+        }
+    }
+
     public void encodeText(final String query, final Utilities.Callback<float[]> callback) {
         if (TextUtils.isEmpty(query)) {
             if (callback != null) {
@@ -96,44 +132,42 @@ public class OpenClipInference implements ForegroundDetector.Listener {
         }
 
         openClipQueue.postRunnable(() -> {
-            if (!ensureSessionsLoadedInternal()) {
-                FileLog.e(TAG + ": sessions could not be loaded for text encoding");
-                if (callback != null) {
-                    AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                }
-                return;
-            }
-
-            try {
-                long[] tokenIds = ClipTokenizer.getInstance().tokenize(query);
-                if (tokenIds == null || tokenIds.length != CONTEXT_LENGTH) {
-                    FileLog.e(TAG + ": tokenization failed, invalid token length");
-                    if (callback != null) {
-                        AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                    }
-                    return;
-                }
-
-                LongBuffer longBuffer = LongBuffer.wrap(tokenIds);
-                long[] shape = new long[]{1, CONTEXT_LENGTH};
-
-                try (OnnxTensor inputTensor = OnnxTensor.createTensor(environment, longBuffer, shape)) {
-                    Map<String, OnnxTensor> inputs = Collections.singletonMap(textInputName, inputTensor);
-                    try (OrtSession.Result result = textSession.run(inputs)) {
-                        OnnxValue outputValue = result.get(0);
-                        float[] embedding = extractAndNormalizeEmbedding(outputValue);
-                        if (callback != null) {
-                            AndroidUtilities.runOnUIThread(() -> callback.run(embedding));
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                FileLog.e(TAG + ": encodeText exception", e);
-                if (callback != null) {
-                    AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                }
+            float[] embedding = encodeTextDirect(query);
+            if (callback != null) {
+                AndroidUtilities.runOnUIThread(() -> callback.run(embedding));
             }
         });
+    }
+
+    public float[] encodeImageDirect(final Bitmap bitmap) {
+        if (bitmap == null || bitmap.isRecycled()) {
+            return null;
+        }
+        if (!ensureSessionsLoadedInternal()) {
+            FileLog.e(TAG + ": sessions could not be loaded for image encoding");
+            return null;
+        }
+
+        try {
+            FloatBuffer planarBuffer = ClipImageProcessor.toPlanarFloatBuffer(bitmap, IMAGE_SIZE, IMAGE_SIZE);
+            if (planarBuffer == null) {
+                FileLog.e(TAG + ": bitmap preprocessing returned null buffer");
+                return null;
+            }
+
+            long[] shape = new long[]{1, 3, IMAGE_SIZE, IMAGE_SIZE};
+
+            try (OnnxTensor inputTensor = OnnxTensor.createTensor(environment, planarBuffer, shape)) {
+                Map<String, OnnxTensor> inputs = Collections.singletonMap(imageInputName, inputTensor);
+                try (OrtSession.Result result = imageSession.run(inputs)) {
+                    OnnxValue outputValue = result.get(0);
+                    return extractAndNormalizeEmbedding(outputValue);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(TAG + ": encodeImage exception", e);
+            return null;
+        }
     }
 
     /**
@@ -150,41 +184,9 @@ public class OpenClipInference implements ForegroundDetector.Listener {
         }
 
         openClipQueue.postRunnable(() -> {
-            if (!ensureSessionsLoadedInternal()) {
-                FileLog.e(TAG + ": sessions could not be loaded for image encoding");
-                if (callback != null) {
-                    AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                }
-                return;
-            }
-
-            try {
-                FloatBuffer planarBuffer = ClipImageProcessor.toPlanarFloatBuffer(bitmap, IMAGE_SIZE, IMAGE_SIZE);
-                if (planarBuffer == null) {
-                    FileLog.e(TAG + ": bitmap preprocessing returned null buffer");
-                    if (callback != null) {
-                        AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                    }
-                    return;
-                }
-
-                long[] shape = new long[]{1, 3, IMAGE_SIZE, IMAGE_SIZE};
-
-                try (OnnxTensor inputTensor = OnnxTensor.createTensor(environment, planarBuffer, shape)) {
-                    Map<String, OnnxTensor> inputs = Collections.singletonMap(imageInputName, inputTensor);
-                    try (OrtSession.Result result = imageSession.run(inputs)) {
-                        OnnxValue outputValue = result.get(0);
-                        float[] embedding = extractAndNormalizeEmbedding(outputValue);
-                        if (callback != null) {
-                            AndroidUtilities.runOnUIThread(() -> callback.run(embedding));
-                        }
-                    }
-                }
-            } catch (Exception e) {
-                FileLog.e(TAG + ": encodeImage exception", e);
-                if (callback != null) {
-                    AndroidUtilities.runOnUIThread(() -> callback.run(null));
-                }
+            float[] embedding = encodeImageDirect(bitmap);
+            if (callback != null) {
+                AndroidUtilities.runOnUIThread(() -> callback.run(embedding));
             }
         });
     }

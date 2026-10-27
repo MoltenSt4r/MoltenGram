@@ -125,4 +125,10 @@ public final class OpenClipConfig {
         }
         return Math.max(MIN_THRESHOLD, Math.min(MAX_THRESHOLD, val));
     }
+
+    public static float getEffectiveThreshold() {
+        float uiThreshold = getThreshold();
+        float norm = (uiThreshold - MIN_THRESHOLD) / (MAX_THRESHOLD - MIN_THRESHOLD);
+        return 0.15f + norm * (0.38f - 0.15f);
+    }
 }

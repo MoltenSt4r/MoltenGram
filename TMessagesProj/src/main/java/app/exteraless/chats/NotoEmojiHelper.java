@@ -32,4 +32,12 @@ public class NotoEmojiHelper {
         }
         return BASE_URL + codePoints + "/512.webp";
     }
+
+    public static String getLottieUrl(String emoji) {
+        String codePoints = getEmojiCodePoints(emoji);
+        if (TextUtils.isEmpty(codePoints)) {
+            return null;
+        }
+        return BASE_URL + codePoints + "/lottie.json";
+    }
 }

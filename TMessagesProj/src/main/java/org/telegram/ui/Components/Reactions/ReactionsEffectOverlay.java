@@ -95,7 +95,6 @@ public class ReactionsEffectOverlay {
     public long peakStartTime;
     public boolean isStories;
     boolean isFinished;
-    private boolean isStaticEmoji;
 
     public ReactionsEffectOverlay(Context context, BaseFragment fragment, ReactionsContainerLayout reactionsLayout, View cell, View fromAnimationView, float x, float y, ReactionsLayoutInBubble.VisibleReaction visibleReaction, int currentAccount, int animationType, boolean isStories) {
         this.isStories = isStories;
@@ -455,7 +454,7 @@ public class ReactionsEffectOverlay {
 
                 super.dispatchDraw(canvas);
 
-                if ((animationType == SHORT_ANIMATION || emojiImageView.wasPlaying || isStaticEmoji) && animateInProgress != 1f) {
+                if ((animationType == SHORT_ANIMATION || emojiImageView.wasPlaying) && animateInProgress != 1f) {
                     if (fromHolder) {
                         animateInProgress += 16f / 350f;
                     } else {
@@ -471,8 +470,8 @@ public class ReactionsEffectOverlay {
                 }
 
                 boolean peakHoldDone = peakStartTime != 0 && System.currentTimeMillis() - peakStartTime > 380;
-                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((isStaticEmoji && peakHoldDone) || (emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || ((visibleReaction.documentId != 0 || emojiImageView.getImageReceiver().getLottieAnimation() == null) && peakHoldDone) || System.currentTimeMillis() - startTime > 2000)) ||
-                        (animationType == SHORT_ANIMATION && ((isStaticEmoji && peakHoldDone) || (effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && peakHoldDone) || System.currentTimeMillis() - startTime > 2000))) {
+                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || ((visibleReaction.documentId != 0 || emojiImageView.getImageReceiver().getLottieAnimation() == null) && peakHoldDone) || System.currentTimeMillis() - startTime > 2000)) ||
+                        (animationType == SHORT_ANIMATION && ((effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && peakHoldDone) || System.currentTimeMillis() - startTime > 2000))) {
                     if (ReactionsEffectOverlay.this.animateOutProgress != 1f) {
                         if (animationType == SHORT_ANIMATION) {
                             ReactionsEffectOverlay.this.animateOutProgress = 1f;
@@ -656,12 +655,7 @@ public class ReactionsEffectOverlay {
                     }
                 }
 
-                if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
-                    isStaticEmoji = true;
-                    Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
-                    Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
-                    emojiImageView.getImageReceiver().setImageBitmap(emojiDrawable);
-                } else if (animationType == ONLY_MOVE_ANIMATION) {
+                if (animationType == ONLY_MOVE_ANIMATION) {
                     TLRPC.Document document = isStories ? availableReaction.select_animation : availableReaction.appear_animation;
                     emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                     emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
@@ -726,9 +720,10 @@ public class ReactionsEffectOverlay {
             if (animationType != SHORT_ANIMATION && !isStories) {
                 if (availableReaction != null) {
                     if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
-                        isStaticEmoji = true;
-                        Drawable emojiBigDrawable = Emoji.getEmojiBigDrawable(visibleReaction.emojicon);
-                        Drawable emojiDrawable = emojiBigDrawable != null ? emojiBigDrawable : Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
                         emojiStaticImageView.getImageReceiver().setImageBitmap(emojiDrawable);
                     } else {
                         emojiStaticImageView.getImageReceiver().setImage(ImageLocation.getForDocument(availableReaction.center_icon), "40_40_lastreactframe", null, "webp", availableReaction, 1);
@@ -910,9 +905,6 @@ public class ReactionsEffectOverlay {
 
         @Override
         protected void onDraw(Canvas canvas) {
-            if (isStaticEmoji) {
-                wasPlaying = true;
-            }
             if (animatedEmojiDrawable != null) {
                 animatedEmojiDrawable.setBounds(0, 0, getMeasuredWidth(), getMeasuredHeight());
                 animatedEmojiDrawable.setAlpha(255);
