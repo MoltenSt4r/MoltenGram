@@ -228,7 +228,9 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     @Override
     public void onResume() {
         super.onResume();
-        if (listAdapter != null) {
+        if (listView != null) {
+            AndroidUtilities.notifyDataSetChanged(listView);
+        } else if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
     }

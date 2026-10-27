@@ -55,9 +55,8 @@ public final class OpenClipManager {
     public static final int BUFFER_SIZE = 64 * 1024; // 64 KB
 
     public static final String[] DOWNLOAD_URLS = new String[]{
-            "https://github.com/MoltenSt4r/MoltenGram/releases/download/v11.2.0-canary/mobileclip_s0_int8.zip",
-            "https://cdn.exteragram.app/models/mobileclip_s0_int8.zip",
-            "https://raw.githubusercontent.com/MoltenSt4r/model-assets/main/mobileclip_s0_int8.zip"
+            "https://github.com/MoltenSt4r/MoltenGram/releases/download/v12.10.6/mobileclip_s0_int8.zip",
+            "https://github.com/MoltenSt4r/MoltenGram/releases/download/canary/mobileclip_s0_int8.zip"
     };
 
     /**
@@ -293,8 +292,17 @@ public final class OpenClipManager {
 
         deleteRecursive(target);
         if (!staging.renameTo(target)) {
+            target.mkdirs();
+            File[] files = staging.listFiles();
+            if (files != null) {
+                for (File f : files) {
+                    f.renameTo(new File(target, f.getName()));
+                }
+            }
             deleteRecursive(staging);
-            throw new IOException("Failed to move staging directory to final target");
+            if (!new File(target, TEXT_MODEL_NAME).exists()) {
+                throw new IOException("Failed to move staging directory to final target");
+            }
         }
 
         File readyMarker = new File(target, READY_MARKER);
@@ -307,6 +315,8 @@ public final class OpenClipManager {
         OkHttpClient client = HttpClient.INSTANCE.getInstance().newBuilder()
                 .callTimeout(0, TimeUnit.SECONDS)
                 .readTimeout(0, TimeUnit.SECONDS)
+                .followRedirects(true)
+                .followSslRedirects(true)
                 .build();
 
         Request request = new Request.Builder().url(url).build();

@@ -131,14 +131,46 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         }
     }
 
+    private void safeNotifyItemChanged(int row) {
+        if (listAdapter == null || row == -1) return;
+        if (listView != null && listView.isComputingLayout()) {
+            listView.post(() -> {
+                if (listAdapter != null && row != -1) {
+                    listAdapter.notifyItemChanged(row);
+                }
+            });
+        } else {
+            listAdapter.notifyItemChanged(row);
+        }
+    }
+
+    private void safeNotifyItemChanged(int row, Object payload) {
+        if (listAdapter == null || row == -1) return;
+        if (listView != null && listView.isComputingLayout()) {
+            listView.post(() -> {
+                if (listAdapter != null && row != -1) {
+                    listAdapter.notifyItemChanged(row, payload);
+                }
+            });
+        } else {
+            listAdapter.notifyItemChanged(row, payload);
+        }
+    }
+
+    private void safeNotifyDataSetChanged() {
+        if (listView != null) {
+            AndroidUtilities.notifyDataSetChanged(listView);
+        } else if (listAdapter != null) {
+            listAdapter.notifyDataSetChanged();
+        }
+    }
+
     private void handleModelAction() {
         OpenClipManager manager = OpenClipManager.getInstance();
         if (manager.isDownloading()) {
             manager.cancelDownload();
-            if (listAdapter != null) {
-                listAdapter.notifyItemChanged(modelCardRow);
-                listAdapter.notifyItemChanged(modelActionRow);
-            }
+            safeNotifyItemChanged(modelCardRow);
+            safeNotifyItemChanged(modelActionRow);
             return;
         }
 
@@ -151,10 +183,8 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
             builder.setMessage(getString(R.string.OpenClipDeleteConfirm));
             builder.setPositiveButton(getString(R.string.Delete), (dialog, which) -> {
                 manager.deleteModel();
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(modelCardRow);
-                    listAdapter.notifyItemChanged(modelActionRow);
-                }
+                safeNotifyItemChanged(modelCardRow);
+                safeNotifyItemChanged(modelActionRow);
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);
             AlertDialog dialog = builder.create();
@@ -167,10 +197,8 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
         }
 
         manager.startDownload(this);
-        if (listAdapter != null) {
-            listAdapter.notifyItemChanged(modelCardRow);
-            listAdapter.notifyItemChanged(modelActionRow);
-        }
+        safeNotifyItemChanged(modelCardRow);
+        safeNotifyItemChanged(modelActionRow);
     }
 
     private String getModelStatusText() {
@@ -198,11 +226,7 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
 
     @Override
     public void onProgress(long done, long total) {
-        AndroidUtilities.runOnUIThread(() -> {
-            if (listAdapter != null && modelCardRow != -1) {
-                listAdapter.notifyItemChanged(modelCardRow, PARTIAL);
-            }
-        });
+        AndroidUtilities.runOnUIThread(() -> safeNotifyItemChanged(modelCardRow, PARTIAL));
     }
 
     @Override
@@ -213,9 +237,7 @@ public class OpenClipSettingsActivity extends BaseNekoSettingsActivity implement
                     BulletinFactory.of(this).createErrorBulletin(error).show();
                 }
             }
-            if (listAdapter != null) {
-                listAdapter.notifyDataSetChanged();
-            }
+            safeNotifyDataSetChanged();
         });
     }
 

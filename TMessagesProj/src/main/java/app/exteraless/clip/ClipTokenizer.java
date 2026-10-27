@@ -176,7 +176,7 @@ public class ClipTokenizer {
             int rank = 0;
             while ((line = reader.readLine()) != null) {
                 line = line.trim();
-                if (line.isEmpty() || line.startsWith("#")) {
+                if (line.isEmpty() || line.startsWith("#") || line.contains("#version") || line.startsWith("\"")) {
                     continue;
                 }
                 int spaceIdx = line.indexOf(' ');
