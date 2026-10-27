@@ -1033,12 +1033,6 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             });
             if (allowStartAnimation && currentOpenedLayerFlags == 0) {
                 animatable.start();
-                if (isNotoEmojiLocation()) {
-                    scheduleNotoFreeze(drawable);
-                }
-            } else if (isNotoEmojiLocation()) {
-                animatable.start();
-                scheduleNotoFreeze(drawable);
             }
             if (parentView != null) {
                 parentView.invalidate();

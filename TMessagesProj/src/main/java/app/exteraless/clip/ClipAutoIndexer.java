@@ -258,9 +258,6 @@ public class ClipAutoIndexer {
                                             }
                                         }
                                     }
-                                    if (bitmap == null && photoMedia.photo.stripped_thumb != null && photoMedia.photo.stripped_thumb.length > 0) {
-                                        bitmap = org.telegram.messenger.ImageLoader.getStrippedPhotoBitmap(photoMedia.photo.stripped_thumb, "b");
-                                    }
                                 }
                                 if (bitmap != null) {
                                     float[] imgEmb = OpenClipInference.getInstance().encodeImageDirect(bitmap);
