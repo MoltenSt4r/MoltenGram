@@ -6815,6 +6815,10 @@ public class ChatActivityEnterView extends FrameLayout implements
 
             @Override
             public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
+                if (i2 > app.exteraless.chats.TextAnimationController.BULK_CHANGE_THRESHOLD || i3 > app.exteraless.chats.TextAnimationController.BULK_CHANGE_THRESHOLD) {
+                    // Paste / select-all delete / send: skip per-char animation to avoid freezes (#56)
+                    app.exteraless.chats.TextAnimationController.getInstance().suppressBriefly();
+                }
                 if (ignorePrevTextChange) {
                     return;
                 }

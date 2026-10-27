@@ -148,13 +148,49 @@ public class TextAnimationController {
         }
     }
 
-    public void updateSettings() {
+    public static final int BULK_CHANGE_THRESHOLD = 30;
+    private static final long SUPPRESS_DURATION_MS = 600;
+    private boolean suppressed;
+    private final Runnable restoreRunnable = () -> {
+        suppressed = false;
+        updateSettings();
+    };
+
+    /**
+     * Temporarily disables the per-character animation for bulk text changes
+     * (paste, select-all delete, sending a long message), then restores it.
+     */
+    public void suppressBriefly() {
         if (!isRunning || coreClass == null || updateSettingsMethod == null) {
             return;
         }
+        org.telegram.messenger.AndroidUtilities.cancelRunOnUIThread(restoreRunnable);
+        if (!suppressed) {
+            suppressed = true;
+            try {
+                updateSettingsMethod.invoke(null, buildSettingsJson(false).toString());
+            } catch (Throwable t) {
+                FileLog.e(TAG + ": Failed to suppress: " + t.getMessage(), t);
+            }
+        }
+        org.telegram.messenger.AndroidUtilities.runOnUIThread(restoreRunnable, SUPPRESS_DURATION_MS);
+    }
+
+    public void updateSettings() {
+        if (!isRunning || coreClass == null || updateSettingsMethod == null || suppressed) {
+            return;
+        }
         try {
+            updateSettingsMethod.invoke(null, buildSettingsJson(true).toString());
+        } catch (Throwable t) {
+            FileLog.e(TAG + ": Failed to update settings: " + t.getMessage(), t);
+        }
+    }
+
+    private JSONObject buildSettingsJson(boolean enabled) throws org.json.JSONException {
+        {
             JSONObject json = new JSONObject();
-            json.put("enabled", true);
+            json.put("enabled", enabled);
             json.put("duration", String.valueOf(ChatsConfig.textAnimationDuration.Int()));
             json.put("blur_enabled", ChatsConfig.textAnimationBlurEnabled.Bool());
             json.put("blur_duration", String.valueOf(ChatsConfig.textAnimationBlurDuration.Int()));
@@ -184,10 +220,7 @@ public class TextAnimationController {
             json.put("ignore_spaces", ChatsConfig.textAnimationIgnoreSpaces.Bool());
             json.put("animate_all_lines", ChatsConfig.textAnimationAnimateAllLines.Bool());
             json.put("debug_mode", false);
-
-            updateSettingsMethod.invoke(null, json.toString());
-        } catch (Throwable t) {
-            FileLog.e(TAG + ": Failed to update settings: " + t.getMessage(), t);
+            return json;
         }
     }
 
