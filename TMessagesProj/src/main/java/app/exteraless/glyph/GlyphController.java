@@ -457,7 +457,7 @@ public final class GlyphController {
         if ("Nothing Phone (2a) Plus".equals(name)) return Glyph.DEVICE_23113;
         if ("Nothing Phone (2a)".equals(name)) return Glyph.DEVICE_23111;
         if ("Nothing Phone (4a)".equals(name) || "Nothing Phone (4b)".equals(name)) return Glyph.DEVICE_25111;
-        if ("Nothing Phone (3a) Lite".equals(name) || "Nothing Phone (3a)".equals(name)) return Glyph.DEVICE_24111;
+        if ("Nothing Phone (3a) Pro".equals(name) || "Nothing Phone (3a)".equals(name) || "Nothing Phone (3a) Lite".equals(name)) return Glyph.DEVICE_24111;
 
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
@@ -467,7 +467,7 @@ public final class GlyphController {
                 || device.contains("FROGGER") || device.contains("BLASTOISE") || device.contains("SUPERCONTRA")) {
             return Glyph.DEVICE_25111;
         }
-        // Phone (3a) Lite / Phone (3a) -> A059 (точка / 36 LED)
+        // Phone (3a) Pro / Phone (3a) / Phone (3a) Lite -> A059 (полоски 3a/3a Pro или индикатор 3a Lite)
         if (model.contains("A059") || model.contains("A001T") || model.contains("3A")
                 || device.contains("GALAXIAN") || device.contains("ASTEROIDS")) {
             return Glyph.DEVICE_24111;
@@ -576,12 +576,13 @@ public final class GlyphController {
             }
         } catch (Throwable ignored) {}
         String name = NothingPhoneEasterEgg.getDeviceDisplayName();
-        if ("Nothing Phone (3)".equals(name) || "Nothing Phone (4a) Pro".equals(name) || "Nothing Phone (3a) Pro".equals(name)) {
+        if ("Nothing Phone (3)".equals(name) || "Nothing Phone (4a) Pro".equals(name)) {
             return true;
         }
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
         return model.contains("A024") || model.contains("A069P") || model.contains("PHONE (3)") || model.contains("PHONE 3")
+                || (model.contains("4A") && model.contains("PRO"))
                 || device.contains("METROID") || device.contains("FROGGERPRO");
     }
 
@@ -591,7 +592,7 @@ public final class GlyphController {
             if (Common.is25111p()) return Glyph.DEVICE_25111p;
         } catch (Throwable ignored) {}
         String name = NothingPhoneEasterEgg.getDeviceDisplayName();
-        if ("Nothing Phone (4a) Pro".equals(name) || "Nothing Phone (3a) Pro".equals(name)) {
+        if ("Nothing Phone (4a) Pro".equals(name)) {
             return Glyph.DEVICE_25111p;
         }
         if ("Nothing Phone (3)".equals(name)) {
