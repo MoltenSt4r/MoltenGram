@@ -1065,6 +1065,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean isSiblingGroupCarouselMessage() {
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            return false;
+        }
         if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
             MessageObject primary = getCarouselPrimaryMessage(currentMessagesGroup);
             if (primary != null && currentMessageObject != null) {
@@ -1076,6 +1079,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean isMediaCarouselMessage() {
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            return true;
+        }
         return currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel() && !isSiblingGroupCarouselMessage();
     }
 
@@ -7128,7 +7134,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentPosition = null;
             }
             if (currentMessagesGroup != null && !currentMessagesGroup.isDocuments && currentMessagesGroup.messages.size() > 1 && app.exteraless.appearance.AppearanceConfig.mediaGroupCarousel()) {
-                if (!isSiblingGroupCarouselMessage()) {
+                MessageObject primary = getCarouselPrimaryMessage(currentMessagesGroup);
+                boolean isPrimary = primary != null && currentMessageObject != null && primary.getId() == currentMessageObject.getId();
+                if (isPrimary) {
                     if (md3MediaCarouselView == null) {
                         md3MediaCarouselView = new app.exteraless.appearance.Md3MediaCarouselView(getContext());
                         addView(md3MediaCarouselView);

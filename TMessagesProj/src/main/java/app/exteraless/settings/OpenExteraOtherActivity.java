@@ -148,7 +148,7 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
         importEtgRow = addRow("importEtgSettings");
         etgDividerRow = addRow();
 
-        if (Build.MANUFACTURER.equalsIgnoreCase("Nothing")) {
+        if (app.exteraless.glyph.GlyphController.isNothingGlyphDevice()) {
             glyphRow = addRow("glyph");
             glyphDividerRow = addRow();
         } else {

@@ -71,7 +71,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
         }
-        if (NothingPhoneEasterEgg.isNothingOrCmfDevice()) {
+        if (GlyphController.isNothingGlyphDevice()) {
             glyphBurstRow = addRow("glyphBurst");
         } else {
             glyphBurstRow = -1;

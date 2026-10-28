@@ -306,3 +306,15 @@ def test_glyph_controller_hardware_support_for_all_devices():
     assert 'supported = isNothingGlyphDevice();' in content
     assert 'isNothingGlyphDevice()' in content
     assert 'name.startsWith("CMF")' in content
+
+    # 5. Dedicated single dot channel A for Phone (3a) Lite
+    assert '"Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())' in content
+    assert 'builder.buildChannelA();' in content
+
+    # 6. Verify OpenExteraOtherActivity excludes CMF
+    other_activity_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/settings/OpenExteraOtherActivity.java"
+    )
+    with open(other_activity_java, "r", encoding="utf-8") as f:
+        other_content = f.read()
+    assert 'if (app.exteraless.glyph.GlyphController.isNothingGlyphDevice())' in other_content

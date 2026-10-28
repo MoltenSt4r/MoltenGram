@@ -121,10 +121,14 @@ public final class GlyphController {
                     int sq = callWaveStep % 6;
                     b.buildChannel(sq);
                 } else if (Glyph.DEVICE_24111.equals(targetDev)) {
-                    switch (callWaveStep % 3) {
-                        case 0: b.buildChannelA(); break;
-                        case 1: b.buildChannelB(); break;
-                        case 2: b.buildChannelC(); break;
+                    if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                        b.buildChannelA();
+                    } else {
+                        switch (callWaveStep % 3) {
+                            case 0: b.buildChannelA(); break;
+                            case 1: b.buildChannelB(); break;
+                            case 2: b.buildChannelC(); break;
+                        }
                     }
                 } else if (Glyph.DEVICE_23111.equals(targetDev) || Glyph.DEVICE_23113.equals(targetDev)) {
                     switch (callWaveStep % 3) {
@@ -617,10 +621,13 @@ public final class GlyphController {
                 builder.buildChannel(i);
             }
         } else if (Glyph.DEVICE_24111.equals(device)) {
-            // Phone (3a Lite / CMF Phone) - A, B, C активны:
-            builder.buildChannelA()
-                    .buildChannelB()
-                    .buildChannelC();
+            if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                builder.buildChannelA();
+            } else {
+                builder.buildChannelA()
+                        .buildChannelB()
+                        .buildChannelC();
+            }
         } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
             // Phone (2a / 2a Plus) - A, B, C активны:
             builder.buildChannelA()
