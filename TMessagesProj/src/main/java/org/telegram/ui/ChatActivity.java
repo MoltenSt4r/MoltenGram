@@ -21550,17 +21550,6 @@ public class ChatActivity extends BaseFragment implements
                 if (isCarousel) {
                     int r = AndroidUtilities.dp(24);
                     object.radius = new int[]{r, r, r, r};
-                    if (view instanceof ChatMessageCell) {
-                        ChatMessageCell cell = (ChatMessageCell) view;
-                        View carouselItem = cell.getCarouselItemView(index);
-                        if (carouselItem instanceof com.google.android.material.carousel.MaskableFrameLayout) {
-                            com.google.android.material.carousel.MaskableFrameLayout maskable = (com.google.android.material.carousel.MaskableFrameLayout) carouselItem;
-                            android.graphics.RectF maskRect = maskable.getMaskRectF();
-                            if (maskRect != null && maskRect.width() > 0 && maskRect.width() < carouselItem.getWidth()) {
-                                object.clipHorizontalAddition = (int) ((carouselItem.getWidth() - maskRect.width()) / 2f);
-                            }
-                        }
-                    }
                 } else {
                     object.radius = imageReceiver.getRoundRadius(true);
                 }
@@ -40034,10 +40023,19 @@ public class ChatActivity extends BaseFragment implements
         if (feedGroup == null && carouselGroup != null && carouselGroup.messages != null && carouselGroup.messages.size() > 1 && (message.isVideo() || message.type == MessageObject.TYPE_PHOTO)) {
             PhotoViewer.getInstance().setParentChatActivity(ChatActivity.this);
             ArrayList<MessageObject> album = new ArrayList<>();
-            for (int a = 0, N = carouselGroup.messages.size(); a < N; a++) {
-                MessageObject m = carouselGroup.messages.get(a);
-                if (m.isVideo() || m.type == MessageObject.TYPE_PHOTO) {
-                    album.add(m);
+            if (carouselGroup.reversed) {
+                for (int a = carouselGroup.messages.size() - 1; a >= 0; a--) {
+                    MessageObject m = carouselGroup.messages.get(a);
+                    if (m.isVideo() || m.type == MessageObject.TYPE_PHOTO) {
+                        album.add(m);
+                    }
+                }
+            } else {
+                for (int a = 0, N = carouselGroup.messages.size(); a < N; a++) {
+                    MessageObject m = carouselGroup.messages.get(a);
+                    if (m.isVideo() || m.type == MessageObject.TYPE_PHOTO) {
+                        album.add(m);
+                    }
                 }
             }
             int index = -1;

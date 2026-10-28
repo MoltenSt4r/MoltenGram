@@ -278,3 +278,29 @@ def test_dialog_chooser_wired_to_all_models():
     assert "showDeviceBurstChooserDialog()" in content
     assert "NothingPhoneEasterEgg.ALL_MODELS" in content
     assert "NothingPhoneEasterEgg.playBurstForModel(" in content
+
+
+def test_glyph_controller_hardware_support_for_all_devices():
+    """Verify GlyphController.java properly handles all Nothing/CMF device categories."""
+    glyph_controller_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphController.java"
+    )
+    with open(glyph_controller_java, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 1. Device resolution & matrix support
+    assert "resolveStripDevice()" in content
+    assert "resolveMatrixDevice()" in content
+    assert "isMatrixDevice()" in content
+    assert "applyFullChannels(" in content
+    assert "applyAccentChannels(" in content
+
+    # 2. Checks for squares (Phone 4a / 4b)
+    assert 'Glyph.DEVICE_25111.equals(device)' in content
+    assert 'b.buildChannel(sq)' in content or 'builder.buildChannel(i)' in content
+
+    # 3. Checks for dot/36-LED (Phone 3a Lite / CMF Phone 1 / CMF Phone 2 Pro)
+    assert 'Glyph.DEVICE_24111' in content
+
+    # 4. Universal support check in constructor
+    assert 'supported = NothingPhoneEasterEgg.isNothingOrCmfDevice() || isPhone1();' in content

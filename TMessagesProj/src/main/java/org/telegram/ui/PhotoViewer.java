@@ -18561,9 +18561,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                     if (object.imageReceiver.isAspectFit()) {
                         clipHorizontal = 0;
                     }
-                    if (object != null && object.clipHorizontalAddition != 0) {
-                        clipHorizontal += object.clipHorizontalAddition;
-                    }
 
                     int[] coords2 = new int[2];
                     object.parentView.getLocationInWindow(coords2);
@@ -19247,9 +19244,6 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
 
                     if (object.imageReceiver.isAspectFit()) {
                         clipHorizontal = 0;
-                    }
-                    if (object.clipHorizontalAddition != 0) {
-                        clipHorizontal += object.clipHorizontalAddition;
                     }
 
                     int[] coords2 = new int[2];

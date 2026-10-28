@@ -116,19 +116,37 @@ public final class GlyphController {
                 b.buildPeriod(200)
                         .buildCycles(1)
                         .buildInterval(0);
-                switch (callWaveStep % 4) {
-                    case 0:
-                        b.buildChannelA();
-                        break;
-                    case 1:
-                        b.buildChannelB();
-                        break;
-                    case 2:
-                        b.buildChannelD();
-                        break;
-                    case 3:
-                        b.buildChannelC().buildChannelE();
-                        break;
+                String targetDev = resolveStripDevice();
+                if (Glyph.DEVICE_25111.equals(targetDev)) {
+                    int sq = callWaveStep % 6;
+                    b.buildChannel(sq);
+                } else if (Glyph.DEVICE_24111.equals(targetDev)) {
+                    switch (callWaveStep % 3) {
+                        case 0: b.buildChannelA(); break;
+                        case 1: b.buildChannelB(); break;
+                        case 2: b.buildChannelC(); break;
+                    }
+                } else if (Glyph.DEVICE_23111.equals(targetDev) || Glyph.DEVICE_23113.equals(targetDev)) {
+                    switch (callWaveStep % 3) {
+                        case 0: b.buildChannelA(); break;
+                        case 1: b.buildChannelB(); break;
+                        case 2: b.buildChannelC(); break;
+                    }
+                } else {
+                    switch (callWaveStep % 4) {
+                        case 0:
+                            b.buildChannelA();
+                            break;
+                        case 1:
+                            b.buildChannelB();
+                            break;
+                        case 2:
+                            b.buildChannelD();
+                            break;
+                        case 3:
+                            b.buildChannelC().buildChannelE();
+                            break;
+                    }
                 }
                 stripManager.animate(b.build());
             } catch (Throwable t) {
@@ -166,9 +184,7 @@ public final class GlyphController {
     };
 
     private GlyphController() {
-        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toLowerCase() : "";
-        String brand = Build.BRAND != null ? Build.BRAND.toLowerCase() : "";
-        supported = manufacturer.contains("nothing") || brand.contains("nothing") || isPhone1();
+        supported = NothingPhoneEasterEgg.isNothingOrCmfDevice() || isPhone1();
     }
 
     public boolean isSupported() {
@@ -177,7 +193,7 @@ public final class GlyphController {
 
     /** Идемпотентный биндинг к системному сервису глифов. */
     public synchronized void init() {
-        if (initialized || !supported || !GlyphConfig.enabled()) {
+        if (initialized || !supported) {
             return;
         }
         Context context = ApplicationLoader.applicationContext;
@@ -406,30 +422,52 @@ public final class GlyphController {
     }
 
     public static String resolveStripDevice() {
-        if (isPhone1() || Common.is20111()) {
-            return Glyph.DEVICE_20111;
-        }
-        if (Common.is22111()) {
-            return Glyph.DEVICE_22111;
-        }
-        if (Common.is23111()) {
-            return Glyph.DEVICE_23111;
-        }
-        if (Common.is23113()) {
-            return Glyph.DEVICE_23113;
-        }
-        if (Common.is24111()) {
-            return Glyph.DEVICE_24111;
-        }
-        if (Common.is25111()) {
+        try {
+            if (Common.is20111()) return Glyph.DEVICE_20111;
+            if (Common.is22111()) return Glyph.DEVICE_22111;
+            if (Common.is23113()) return Glyph.DEVICE_23113;
+            if (Common.is23111()) return Glyph.DEVICE_23111;
+            if (Common.is24111()) return Glyph.DEVICE_24111;
+            if (Common.is25111()) return Glyph.DEVICE_25111;
+        } catch (Throwable ignored) {}
+
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        if ("Nothing Phone (1)".equals(name)) return Glyph.DEVICE_20111;
+        if ("Nothing Phone (2)".equals(name)) return Glyph.DEVICE_22111;
+        if ("Nothing Phone (2a) Plus".equals(name)) return Glyph.DEVICE_23113;
+        if ("Nothing Phone (2a)".equals(name)) return Glyph.DEVICE_23111;
+        if ("Nothing Phone (4a)".equals(name) || "Nothing Phone (4b)".equals(name)) return Glyph.DEVICE_25111;
+        if ("Nothing Phone (3a) Lite".equals(name) || "Nothing Phone (3a)".equals(name)
+                || "CMF Phone 1".equals(name) || "CMF Phone 2 Pro".equals(name)) return Glyph.DEVICE_24111;
+
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+
+        // Phone (4a) / Phone (4b) -> A069 (квадраты)
+        if (model.contains("A069") || model.contains("A009") || model.contains("4A") || model.contains("4B")
+                || device.contains("FROGGER") || device.contains("BLASTOISE") || device.contains("SUPERCONTRA")) {
             return Glyph.DEVICE_25111;
         }
-        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
-        if (model.contains("A065") || model.contains("PHONE (2)")) {
+        // Phone (3a) Lite / CMF Phone 1 / CMF Phone 2 Pro -> A059 (точка / 36 LED)
+        if (model.contains("A059") || model.contains("A015") || model.contains("A001") || model.contains("3A")
+                || model.contains("CMF") || device.contains("TETRIS") || device.contains("GALAGA") || device.contains("GALAXIAN") || device.contains("ASTEROIDS")) {
+            return Glyph.DEVICE_24111;
+        }
+        // Phone (2a) Plus -> A142P
+        if (model.contains("A142P") || model.contains("2A PLUS") || model.contains("2A+") || device.contains("PACMANPRO")) {
+            return Glyph.DEVICE_23113;
+        }
+        // Phone (2a) -> A142
+        if (model.contains("A142") || model.contains("2A") || device.contains("PACMAN") || device.contains("AERODACTYL")) {
+            return Glyph.DEVICE_23111;
+        }
+        // Phone (2) -> A065
+        if (model.contains("A065") || model.contains("AIN065") || model.contains("PHONE (2)") || model.contains("PHONE 2") || device.contains("PONG")) {
             return Glyph.DEVICE_22111;
         }
-        if (model.contains("A142") || model.contains("PHONE (2A)") || model.contains("PHONE 2A")) {
-            return Glyph.DEVICE_23111;
+        // Phone (1) -> A063
+        if (model.contains("A063") || isPhone1()) {
+            return Glyph.DEVICE_20111;
         }
         return Glyph.DEVICE_20111;
     }
@@ -451,23 +489,22 @@ public final class GlyphController {
     }
 
     /**
-     * Nothing Phone (1) glyph burst particle effect with haptic feedback.
+     * Nothing Phone glyph burst particle effect with haptic feedback.
      */
     public void playPhone1BurstEffect(Context context) {
         handler.post(() -> {
             if (!ensureReady()) {
                 return;
             }
+            if (matrixManager != null && matrixRegistered) {
+                showMatrixLogo();
+            }
             if (stripManager != null && stripSessionOpen) {
                 try {
                     GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
                     if (builder != null) {
-                        builder.buildChannelB()
-                                .buildChannelA()
-                                .buildChannelE()
-                                .buildChannelC()
-                                .buildChannelD()
-                                .buildPeriod(80)
+                        applyFullChannels(builder);
+                        builder.buildPeriod(80)
                                 .buildCycles(4)
                                 .buildInterval(30);
                         stripManager.animate(builder.build());
@@ -504,7 +541,7 @@ public final class GlyphController {
     }
 
     private boolean ensureReady() {
-        if (!supported || !GlyphConfig.enabled()) {
+        if (!supported) {
             return false;
         }
         if (!initialized) {
@@ -513,11 +550,83 @@ public final class GlyphController {
         return initialized && (stripSessionOpen || matrixRegistered);
     }
 
-    private boolean isMatrixDevice() {
+    public static boolean isMatrixDevice() {
         try {
-            return Common.is23112() || Common.is25111p();
-        } catch (Throwable t) {
-            return false;
+            if (Common.is23112() || Common.is25111p()) {
+                return true;
+            }
+        } catch (Throwable ignored) {}
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        if ("Nothing Phone (3)".equals(name) || "Nothing Phone (4a) Pro".equals(name) || "Nothing Phone (3a) Pro".equals(name)) {
+            return true;
+        }
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+        return model.contains("A024") || model.contains("A069P") || model.contains("PHONE (3)") || model.contains("PHONE 3")
+                || device.contains("METROID") || device.contains("FROGGERPRO");
+    }
+
+    public static String resolveMatrixDevice() {
+        try {
+            if (Common.is23112()) return Glyph.DEVICE_23112;
+            if (Common.is25111p()) return Glyph.DEVICE_25111p;
+        } catch (Throwable ignored) {}
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        if ("Nothing Phone (4a) Pro".equals(name) || "Nothing Phone (3a) Pro".equals(name)) {
+            return Glyph.DEVICE_25111p;
+        }
+        if ("Nothing Phone (3)".equals(name)) {
+            return Glyph.DEVICE_23112;
+        }
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+        if (model.contains("A069P") || device.contains("FROGGERPRO")) {
+            return Glyph.DEVICE_25111p;
+        }
+        return Glyph.DEVICE_23112;
+    }
+
+    public static void applyFullChannels(GlyphFrame.Builder builder) {
+        if (builder == null) {
+            return;
+        }
+        String device = resolveStripDevice();
+        if (Glyph.DEVICE_25111.equals(device)) {
+            // Nothing Phone (4a / 4b) - 6 квадратных зон:
+            for (int i = 0; i < 6; i++) {
+                builder.buildChannel(i);
+            }
+        } else if (Glyph.DEVICE_24111.equals(device)) {
+            // Phone (3a Lite / CMF Phone) - A, B, C активны:
+            builder.buildChannelA()
+                    .buildChannelB()
+                    .buildChannelC();
+        } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
+            // Phone (2a / 2a Plus) - A, B, C активны:
+            builder.buildChannelA()
+                    .buildChannelB()
+                    .buildChannelC();
+        } else {
+            // Phone (1 / 2) - классические 5 зон A, B, C, D, E:
+            builder.buildChannelA()
+                    .buildChannelB()
+                    .buildChannelC()
+                    .buildChannelD()
+                    .buildChannelE();
+        }
+    }
+
+    public static void applyAccentChannels(GlyphFrame.Builder builder) {
+        if (builder == null) {
+            return;
+        }
+        String device = resolveStripDevice();
+        if (Glyph.DEVICE_25111.equals(device)) {
+            builder.buildChannel(0);
+        } else if (Glyph.DEVICE_24111.equals(device)) {
+            builder.buildChannelA();
+        } else {
+            builder.buildChannelB();
         }
     }
 
@@ -617,8 +726,12 @@ public final class GlyphController {
         matrixManager.init(new GlyphMatrixManager.Callback() {
             @Override
             public void onServiceConnected(ComponentName componentName) {
-                matrixRegistered = matrixManager.register(
-                        Common.is23112() ? Glyph.DEVICE_23112 : Glyph.DEVICE_25111p);
+                String targetMatrix = resolveMatrixDevice();
+                matrixRegistered = matrixManager.register(targetMatrix);
+                if (!matrixRegistered) {
+                    String fallback = Glyph.DEVICE_23112.equals(targetMatrix) ? Glyph.DEVICE_25111p : Glyph.DEVICE_23112;
+                    matrixRegistered = matrixManager.register(fallback);
+                }
                 if (matrixRegistered) {
                     runPendingPreview();
                 }
@@ -647,39 +760,27 @@ public final class GlyphController {
             }
             switch (style) {
                 case GlyphConfig.MESSAGE_ANIM_STROBE:
-                    builder.buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(140)
+                    applyFullChannels(builder);
+                    builder.buildPeriod(140)
                             .buildCycles(3)
                             .buildInterval(60);
                     break;
                 case GlyphConfig.MESSAGE_ANIM_SOFT_PULSE:
-                    builder.buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(550)
+                    applyFullChannels(builder);
+                    builder.buildPeriod(550)
                             .buildCycles(1)
                             .buildInterval(0);
                     break;
                 case GlyphConfig.MESSAGE_ANIM_ACCENT_RING:
-                    builder.buildChannelB()
-                            .buildPeriod(300)
+                    applyAccentChannels(builder);
+                    builder.buildPeriod(300)
                             .buildCycles(2)
                             .buildInterval(100);
                     break;
                 case GlyphConfig.MESSAGE_ANIM_DOUBLE_FLASH:
                 default:
-                    builder.buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(250)
+                    applyFullChannels(builder);
+                    builder.buildPeriod(250)
                             .buildCycles(2)
                             .buildInterval(80);
                     break;
@@ -708,12 +809,8 @@ public final class GlyphController {
                 case GlyphConfig.CALL_ANIM_BREATHING: {
                     GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
                     if (b != null) {
+                        applyFullChannels(b);
                         GlyphFrame breathingFrame = b
-                                .buildChannelA()
-                                .buildChannelB()
-                                .buildChannelC()
-                                .buildChannelD()
-                                .buildChannelE()
                                 .buildPeriod(1200)
                                 .buildCycles(RECORDING_MAX_CYCLES)
                                 .buildInterval(0)
@@ -726,12 +823,8 @@ public final class GlyphController {
                 default: {
                     GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
                     if (b != null) {
+                        applyFullChannels(b);
                         GlyphFrame pulseFrame = b
-                                .buildChannelA()
-                                .buildChannelB()
-                                .buildChannelC()
-                                .buildChannelD()
-                                .buildChannelE()
                                 .buildPeriod(600)
                                 .buildCycles(RECORDING_MAX_CYCLES)
                                 .buildInterval(150)
@@ -761,26 +854,29 @@ public final class GlyphController {
             }
             switch (style) {
                 case GlyphConfig.RECORDING_ANIM_ACCENT_RING:
-                    builder.buildChannelB()
-                            .buildPeriod(1600)
+                    applyAccentChannels(builder);
+                    builder.buildPeriod(1600)
                             .buildCycles(RECORDING_MAX_CYCLES)
                             .buildInterval(0);
                     break;
-                case GlyphConfig.RECORDING_ANIM_HEARTBEAT:
-                    builder.buildChannelB()
-                            .buildChannelD()
-                            .buildPeriod(800)
+                case GlyphConfig.RECORDING_ANIM_HEARTBEAT: {
+                    String device = resolveStripDevice();
+                    if (Glyph.DEVICE_25111.equals(device)) {
+                        builder.buildChannel(0).buildChannel(2);
+                    } else if (Glyph.DEVICE_24111.equals(device)) {
+                        builder.buildChannelA().buildChannelB();
+                    } else {
+                        builder.buildChannelB().buildChannelD();
+                    }
+                    builder.buildPeriod(800)
                             .buildCycles(RECORDING_MAX_CYCLES)
                             .buildInterval(200);
                     break;
+                }
                 case GlyphConfig.RECORDING_ANIM_BREATHING:
                 default:
-                    builder.buildChannelA()
-                            .buildChannelB()
-                            .buildChannelC()
-                            .buildChannelD()
-                            .buildChannelE()
-                            .buildPeriod(1800)
+                    applyFullChannels(builder);
+                    builder.buildPeriod(1800)
                             .buildCycles(RECORDING_MAX_CYCLES)
                             .buildInterval(0);
                     break;
