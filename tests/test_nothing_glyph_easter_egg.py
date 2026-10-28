@@ -461,3 +461,56 @@ def test_nothing_phone_burst_overlay_liquid_fill_and_reverse_dismissal():
     assert "dismissStage" in overlay_content
     assert "floorDisabled = true" in overlay_content
 
+
+def test_nothing_phone_burst_overlay_fill_settle_and_haptic_throttling():
+    """Verify NothingPhoneBurstOverlay has 60ms haptic throttle, offscreen item pruning, and reliable top fill triggers."""
+    burst_overlay_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/NothingPhoneBurstOverlay.java"
+    )
+    with open(burst_overlay_java, "r", encoding="utf-8") as f:
+        overlay_content = f.read()
+
+    # 1. Haptic throttle >= 60ms
+    assert "now - lastHapticTime < 60L" in overlay_content
+
+    # 2. Prune offscreen items spawned far above the screen (-60dp)
+    assert "-AndroidUtilities.dp(60)" in overlay_content
+    assert "item.y < cutoffY" in overlay_content or "item.y < -AndroidUtilities.dp(60)" in overlay_content
+
+    # 3. Freeze velocities and cancel vibrator on screen fill
+    assert "item.settled = true;" in overlay_content
+    assert "item.vx = 0f;" in overlay_content
+    assert "item.vy = 0f;" in overlay_content
+    assert "item.vRot = 0f;" in overlay_content
+
+    # 4. Reliable filled-to-top trigger: avgFloor <= dp(36) and TARGET_SPAWN_ITEMS unconditional trigger
+    assert "avgFloor <= AndroidUtilities.dp(36)" in overlay_content
+    assert "spawnedCount >= TARGET_SPAWN_ITEMS" in overlay_content
+
+
+def test_nothing_phone_burst_overlay_dismiss_cleanup_and_safety():
+    """Verify dismissal safely cancels animators, cancels vibrator, and completes stage 3 drop without hang."""
+    burst_overlay_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/NothingPhoneBurstOverlay.java"
+    )
+    with open(burst_overlay_java, "r", encoding="utf-8") as f:
+        overlay_content = f.read()
+
+    # 1. Dismissal cancels running animators immediately
+    assert "liquidAnimator.cancel();" in overlay_content
+    assert "cookieAnimator.cancel();" in overlay_content
+
+    # 2. Dismissal stops vibration immediately
+    assert "isDismissing = true;\n\n        if (vibrator != null) {" in overlay_content or (
+        "isDismissing = true;" in overlay_content and "vibrator.cancel();" in overlay_content
+    )
+
+    # 3. Dismiss stage 3 completion does not hang on empty items list
+    assert "!anyVisible && !items.isEmpty()" not in overlay_content
+    assert "if (!anyVisible) {\n                        finishAndRemove();" in overlay_content
+
+    # 4. Cookie reveal and celebration haptic guarded by isDismissing
+    assert "if (isDismissing) {\n                    return;\n                }\n                liquidProgress = 1f;\n                triggerCookieReveal();" in overlay_content
+
+
+
