@@ -128,8 +128,8 @@ def test_website_exists_and_indexes_unique_settings():
     assert "OEChatsMd3ChatInput" in html
 
     # Must have deep links
-    assert "tg://settings/neko?target=glyph" in html
-    assert "tg://settings/neko?target=avatar_shapes" in html
+    assert "tg://moltengram/glyph" in html
+    assert "tg://moltengram/avatar_shapes" in html
 
 
 def test_settings_helper_handles_avatar_shapes_deeplink():

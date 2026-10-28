@@ -35,7 +35,7 @@
 ## Схема наименования релизов
 
 В проекте принята строгая концепция именования каналов обновлений:
-* **Release (Стабильные):** Десерты (текущий релиз — **Tiramisu**). Минорные фиксы не меняют название десерта, а функциональные обновления MoltenGram переходят к следующему десерту независимо от версии Telegram.
+* **Release (Стабильные):** Десерты (текущий релиз — **Tiramisu**, прошлые: **Éclair** (v12.10.3), **Soufflé** (v12.10.4), **Macaron** (v12.10.5)). Минорные фиксы не меняют название десерта, а функциональные обновления MoltenGram переходят к следующему десерту независимо от версии Telegram.
 * **Beta (Бета):** Ингредиенты и специи релизного десерта (для Tiramisu: *Mascarpone*, *Espresso*, *Cocoa*, *Savoiardi*, *Marsala*).
 * **Canary (Канарейки):** Химические элементы и соединения (*Titanium*, *Xenon*, *Cobalt*, *Neon*, *Graphene*, *Helium*, *Argon*).
 
@@ -156,7 +156,7 @@ It brings a refined **Material 3 / Material You** experience, an interactive med
 ### Release Naming Scheme
 
 The project follows a structured naming convention:
-* **Release (Stable):** Desserts (current release: **Tiramisu**). Minor patch updates retain the dessert codename; significant feature updates advance to the next dessert regardless of Telegram upstream version changes.
+* **Release (Stable):** Desserts (current release: **Tiramisu**, previous: **Éclair** (v12.10.3), **Soufflé** (v12.10.4), **Macaron** (v12.10.5)). Minor patch updates retain the dessert codename; significant feature updates advance to the next dessert regardless of Telegram upstream version changes.
 * **Beta:** Ingredients or spices associated with the release dessert (for Tiramisu: *Mascarpone*, *Espresso*, *Cocoa*, *Savoiardi*, *Marsala*).
 * **Canary:** Chemical elements and compounds (*Titanium*, *Xenon*, *Cobalt*, *Neon*, *Graphene*, *Helium*, *Argon*).
 
