@@ -5,20 +5,23 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.app.Activity;
 import android.content.Context;
 import android.view.View;
+import android.view.ViewGroup;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.R;
-import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.RecyclerListView;
 
 import app.exteraless.glyph.GlyphConfig;
 import app.exteraless.glyph.GlyphController;
+import app.exteraless.glyph.GlyphDevicePreviewCell;
 import app.exteraless.glyph.NothingPhoneEasterEgg;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
@@ -27,8 +30,11 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
  * Экран «Nothing Glyph» раздела exteraless: подсветка задней панели Nothing Phone
  * на события клиента с поддержкой различных стилей анимаций для звонков,
  * голосовых сообщений и входящих уведомлений.
+ * Внизу экрана расположен интерактивный виджет предпросмотра текущего устройства и его глифов.
  */
 public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
+
+    private static final int TYPE_DEVICE_PREVIEW = 101;
 
     private int glyphHeaderRow;
     private int glyphEnableRow;
@@ -38,7 +44,9 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
     private int glyphScreenOffRow;
     private int glyphDividerRow;
     private int glyphPreviewRow;
-    private int glyphBurstRow;
+    private int glyphDevicePreviewRow;
+
+    private String selectedDeviceModel;
 
     public OpenExteraGlyphActivity() {
         super();
@@ -71,11 +79,9 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
         }
-        if (GlyphController.isNothingGlyphDevice()) {
-            glyphBurstRow = addRow("glyphBurst");
-        } else {
-            glyphBurstRow = -1;
-        }
+
+        // Dedicated bottom preview showing current phone and its glyphs (or centered for CMF)
+        glyphDevicePreviewRow = addRow("glyphDevicePreview");
     }
 
     private void update() {
@@ -84,7 +90,6 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             listAdapter.notifyDataSetChanged();
         }
     }
-
 
     @Override
     protected String getActionBarTitle() {
@@ -174,23 +179,40 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                 } else if (which == 2) {
                     GlyphController.getInstance().previewRecording();
                 }
+                notifyPreviewCell(which);
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);
             showDialog(builder.create());
-        } else if (position == glyphBurstRow) {
+        } else if (position == glyphDevicePreviewRow) {
             view.performHapticFeedback(android.view.HapticFeedbackConstants.KEYBOARD_TAP);
-            NothingPhoneEasterEgg.playBurst(getParentActivity() != null ? getParentActivity() : (Activity) getContext(), this);
+            if (view instanceof GlyphDevicePreviewCell) {
+                ((GlyphDevicePreviewCell) view).triggerPreviewAnimation(0);
+            }
+            String model = selectedDeviceModel != null ? selectedDeviceModel : NothingPhoneEasterEgg.getDeviceDisplayName();
+            NothingPhoneEasterEgg.playBurstForModel(getParentActivity() != null ? getParentActivity() : (Activity) getContext(), this, model);
         }
     }
 
     @Override
     protected boolean onItemLongClick(View view, int position, float x, float y) {
-        if (position == glyphBurstRow) {
+        if (position == glyphDevicePreviewRow) {
             view.performHapticFeedback(android.view.HapticFeedbackConstants.LONG_PRESS);
             showDeviceBurstChooserDialog();
             return true;
         }
         return super.onItemLongClick(view, position, x, y);
+    }
+
+    private void notifyPreviewCell(int type) {
+        if (listView == null) return;
+        int count = listView.getChildCount();
+        for (int i = 0; i < count; i++) {
+            View child = listView.getChildAt(i);
+            if (child instanceof GlyphDevicePreviewCell) {
+                ((GlyphDevicePreviewCell) child).triggerPreviewAnimation(type);
+                break;
+            }
+        }
     }
 
     private void showDeviceBurstChooserDialog() {
@@ -200,8 +222,11 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(getString(R.string.OEGlyphBurst));
         builder.setItems(NothingPhoneEasterEgg.ALL_MODELS, (dialog, which) -> {
-            String selectedModel = NothingPhoneEasterEgg.ALL_MODELS[which];
-            NothingPhoneEasterEgg.playBurstForModel(getParentActivity(), this, selectedModel);
+            selectedDeviceModel = NothingPhoneEasterEgg.ALL_MODELS[which];
+            if (listAdapter != null) {
+                listAdapter.notifyDataSetChanged();
+            }
+            NothingPhoneEasterEgg.playBurstForModel(getParentActivity(), this, selectedDeviceModel);
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
@@ -211,6 +236,17 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
 
         public ListAdapter(Context context) {
             super(context);
+        }
+
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_DEVICE_PREVIEW) {
+                GlyphDevicePreviewCell cell = new GlyphDevicePreviewCell(mContext);
+                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(cell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
@@ -250,12 +286,6 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndIcon(getString(R.string.OEGlyphPreview),
                                 R.drawable.deproko_baseline_lamp_filled_24, true);
-                    } else if (position == glyphBurstRow) {
-                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
-                                Theme.key_windowBackgroundWhiteBlackText);
-                        cell.setTextAndValueAndIcon(getString(R.string.OEGlyphBurst),
-                                NothingPhoneEasterEgg.getDeviceDisplayName(),
-                                R.drawable.baseline_flash_on_24, false);
                     }
                     break;
                 }
@@ -268,6 +298,11 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                     }
                     break;
                 }
+                case TYPE_DEVICE_PREVIEW: {
+                    GlyphDevicePreviewCell cell = (GlyphDevicePreviewCell) holder.itemView;
+                    cell.setModel(selectedDeviceModel != null ? selectedDeviceModel : NothingPhoneEasterEgg.getDeviceDisplayName());
+                    break;
+                }
             }
         }
 
@@ -275,10 +310,12 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == glyphHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == glyphPreviewRow || position == glyphBurstRow) {
+            } else if (position == glyphPreviewRow) {
                 return TYPE_TEXT;
             } else if (position == glyphDividerRow) {
                 return TYPE_INFO_PRIVACY;
+            } else if (position == glyphDevicePreviewRow) {
+                return TYPE_DEVICE_PREVIEW;
             }
             return TYPE_CHECK;
         }

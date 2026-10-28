@@ -249,15 +249,7 @@ public class NothingPhoneEasterEgg {
             FileLog.e(t);
         }
 
-        // 3. On-screen Particle Explosion of the specified phone model
+        // 3. On-screen MD3 physics falling overlay of the specified phone model
         NothingPhoneBurstOverlay.show(activity, getDrawablesForModelName(modelName));
-
-        // 4. Bulletin info
-        if (fragment != null) {
-            String title = "💥 " + modelName;
-            BulletinFactory.of(fragment)
-                    .createSimpleBulletin(R.raw.info, title)
-                    .show();
-        }
     }
 }

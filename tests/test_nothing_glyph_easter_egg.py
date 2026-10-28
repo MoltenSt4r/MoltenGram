@@ -318,3 +318,78 @@ def test_glyph_controller_hardware_support_for_all_devices():
     with open(other_activity_java, "r", encoding="utf-8") as f:
         other_content = f.read()
     assert 'if (app.exteraless.glyph.GlyphController.isNothingGlyphDevice())' in other_content
+
+
+def test_nothing_phone_burst_overlay_physics_and_cookie_shapes():
+    """Verify NothingPhoneBurstOverlay has falling MD3 physics, authentic shapes, pairwise collisions, bouncy 2/3 cookie, and back gesture dismissal."""
+    burst_overlay_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/NothingPhoneBurstOverlay.java"
+    )
+    with open(burst_overlay_java, "r", encoding="utf-8") as f:
+        overlay_content = f.read()
+
+    # 1. Static show contract
+    assert "public static void show(Activity activity, int[] drawableResIds)" in overlay_content
+
+    # 2. Silhouette hitbox calculation (>50% alpha / alpha > 128)
+    assert "computeSilhouette(Bitmap" in overlay_content
+    assert "alpha > 128" in overlay_content
+    assert "effectiveRadius" in overlay_content
+
+    # 3. MD3 shapes from Md3AvatarShapes and 100% opacity
+    assert "Md3AvatarShapes" in overlay_content
+    assert "MD3_FALLING_SHAPES" in overlay_content
+    assert "SHAPE_CIRCLE" in overlay_content
+    assert "SHAPE_PILL" in overlay_content
+    assert "SHAPE_CLOVER" in overlay_content
+    assert "SHAPE_SCALLOP" in overlay_content
+    assert "setAlpha(255)" in overlay_content
+    assert "getThemeColors()" in overlay_content
+    assert "Theme.key_featuredStickers_addButton" in overlay_content
+
+    # 4. Falling physics, pairwise inter-item collision, and stacking accumulation
+    assert "gravity" in overlay_content
+    assert "columnFloors" in overlay_content
+    assert "minDist * minDist" in overlay_content or "distSq < minDist * minDist" in overlay_content
+    assert "isScreenFilled" in overlay_content
+
+    # 5. MD3 Scalloped Cookie (2/3 width, NO white border) and prominent MoltenGram logo
+    assert "drawMd3Cookie" in overlay_content
+    assert "2f / 3f" in overlay_content
+    assert "cookieBorderPaint" not in overlay_content
+    assert "OvershootInterpolator" in overlay_content
+    assert "moltengram_icon_monochrome" in overlay_content
+
+    # 6. Tactile haptic feedback and Back gesture / key dismissal dropping the floor
+    assert "playImpactHaptic" in overlay_content
+    assert "playCookieCelebrationHaptic" in overlay_content
+    assert "KEYCODE_BACK" in overlay_content
+    assert "startDismissAnimation" in overlay_content
+    assert "floorDisabled" in overlay_content
+    assert "dismissCookieProgress" in overlay_content
+
+
+def test_glyph_device_preview_cell_and_activity_integration():
+    """Verify GlyphDevicePreviewCell provides a centered phone model card and is wired to OpenExteraGlyphActivity."""
+    preview_cell_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphDevicePreviewCell.java"
+    )
+    with open(preview_cell_java, "r", encoding="utf-8") as f:
+        cell_content = f.read()
+
+    # 1. Preview cell component exists with centered phone card presentation
+    assert "public class GlyphDevicePreviewCell extends View" in cell_content
+    assert "setModel(String" in cell_content
+    assert "triggerPreviewAnimation(int" in cell_content
+    assert "ensureDrawableLoaded()" in cell_content
+    assert "phoneDrawable" in cell_content
+
+    # 2. Activity replaces glyphBurstRow with glyphDevicePreviewRow
+    with open(GLYPH_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
+        activity_content = f.read()
+
+    assert "glyphDevicePreviewRow" in activity_content
+    assert "glyphBurstRow" not in activity_content
+    assert "TYPE_DEVICE_PREVIEW" in activity_content
+    assert "GlyphDevicePreviewCell" in activity_content
+    assert "showDeviceBurstChooserDialog()" in activity_content
