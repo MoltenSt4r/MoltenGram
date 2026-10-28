@@ -831,13 +831,6 @@ public final class GlyphController {
         });
     }
 
-            @Override
-            public void onServiceDisconnected(ComponentName componentName) {
-                stripSessionOpen = false;
-            }
-        });
-    }
-
     private void initMatrix(Context context) {
         matrixManager = GlyphMatrixManager.getInstance(context);
         matrixManager.init(new GlyphMatrixManager.Callback() {
