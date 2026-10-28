@@ -1,0 +1,1468 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>MoltenGram — Telegram-клиент с Material Design 3 и Nothing Glyph</title>
+  <meta name="description" content="MoltenGram — минималистичный Android-клиент Telegram с глубокой интеграцией Material Design 3, Nothing Glyph Interface и динамической палитрой Monet.">
+  <meta property="og:title" content="MoltenGram • Релиз Tiramisu">
+  <meta property="og:description" content="Минималистичный клиент Telegram с поддержкой Nothing Glyph, экспрессивных аватарок MD3 и динамического Monet.">
+  <meta property="og:image" content="assets/logo.png">
+  <meta name="theme-color" content="#0d0f14">
+  <link rel="icon" type="image/png" href="assets/logo.png">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #090a0f;
+      --surface: #12141c;
+      --surface-elevated: #171b26;
+      --card-bg: rgba(18, 20, 28, 0.75);
+      --card-border: rgba(255, 255, 255, 0.08);
+      --card-border-hover: rgba(255, 87, 34, 0.35);
+      --accent: #ff5722;
+      --accent-glow: rgba(255, 87, 34, 0.28);
+      --accent-secondary: #ff7043;
+      --cyan: #00e5bf;
+      --cyan-soft: rgba(0, 229, 191, 0.15);
+      --text: #f0f2f7;
+      --text-muted: #8e95a5;
+      --text-dim: #606778;
+      --radius: 18px;
+      --radius-sm: 10px;
+      --radius-pill: 9999px;
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+    }
+
+    body {
+      background-color: var(--bg);
+      color: var(--text);
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      overflow-x: hidden;
+      line-height: 1.6;
+      background-image: 
+        radial-gradient(circle at 50% 0%, rgba(255, 87, 34, 0.12) 0%, transparent 55%),
+        radial-gradient(circle at 10% 35%, rgba(0, 229, 191, 0.05) 0%, transparent 45%),
+        radial-gradient(circle at 90% 65%, rgba(255, 112, 67, 0.06) 0%, transparent 45%);
+      background-attachment: fixed;
+    }
+
+    .container {
+      max-width: 1140px;
+      margin: 0 auto;
+      padding: 0 24px;
+    }
+
+    /* Navigation */
+    nav {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 24px 0;
+      position: sticky;
+      top: 0;
+      z-index: 100;
+      backdrop-filter: blur(20px);
+      background: rgba(9, 10, 15, 0.7);
+      border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+      margin-bottom: 20px;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      text-decoration: none;
+      color: var(--text);
+      font-weight: 800;
+      font-size: 1.25rem;
+      letter-spacing: -0.3px;
+    }
+
+    .brand img {
+      width: 38px;
+      height: 38px;
+      border-radius: 10px;
+      box-shadow: 0 6px 20px var(--accent-glow);
+    }
+
+    .nav-links {
+      display: flex;
+      align-items: center;
+      gap: 18px;
+      list-style: none;
+    }
+
+    .nav-links a {
+      color: var(--text-muted);
+      text-decoration: none;
+      font-weight: 600;
+      font-size: 0.9rem;
+      transition: color 0.2s ease;
+    }
+
+    .nav-links a:hover {
+      color: var(--text);
+    }
+
+    .lang-btn {
+      background: rgba(255, 255, 255, 0.05);
+      border: 1px solid var(--card-border);
+      color: var(--text);
+      font-family: 'JetBrains Mono', monospace;
+      font-weight: 600;
+      font-size: 0.8rem;
+      padding: 6px 14px;
+      border-radius: var(--radius-pill);
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .lang-btn:hover {
+      background: rgba(255, 255, 255, 0.1);
+      border-color: rgba(255, 255, 255, 0.18);
+    }
+
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: 50px 0 55px;
+    }
+
+    .hero-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      background: rgba(255, 87, 34, 0.08);
+      border: 1px solid rgba(255, 87, 34, 0.25);
+      color: var(--accent-secondary);
+      border-radius: var(--radius-pill);
+      font-size: 0.82rem;
+      font-weight: 700;
+      margin-bottom: 24px;
+      text-transform: uppercase;
+      letter-spacing: 0.6px;
+    }
+
+    .hero-badge .dot {
+      width: 7px;
+      height: 7px;
+      background: var(--accent);
+      border-radius: 50%;
+      box-shadow: 0 0 10px var(--accent);
+    }
+
+    .hero h1 {
+      font-size: clamp(2.4rem, 5.5vw, 3.8rem);
+      font-weight: 800;
+      letter-spacing: -1.2px;
+      line-height: 1.15;
+      margin-bottom: 18px;
+      background: linear-gradient(135deg, #ffffff 50%, #ff8a65 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+    }
+
+    .hero p {
+      font-size: 1.1rem;
+      color: var(--text-muted);
+      max-width: 660px;
+      margin: 0 auto 32px;
+      font-weight: 400;
+    }
+
+    .cta-group {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 14px;
+      margin-bottom: 36px;
+    }
+
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 12px 24px;
+      border-radius: var(--radius-pill);
+      font-weight: 600;
+      font-size: 0.95rem;
+      text-decoration: none;
+      transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+      cursor: pointer;
+    }
+
+    .btn-primary {
+      background: linear-gradient(135deg, #ff5722, #ff7043);
+      color: #fff;
+      box-shadow: 0 6px 24px var(--accent-glow);
+    }
+
+    .btn-primary:hover {
+      transform: translateY(-2px);
+      box-shadow: 0 10px 32px rgba(255, 87, 34, 0.45);
+    }
+
+    .btn-secondary {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(10px);
+    }
+
+    .btn-secondary:hover {
+      background: rgba(255, 255, 255, 0.09);
+      border-color: rgba(255, 255, 255, 0.16);
+      transform: translateY(-2px);
+    }
+
+    /* Release Schema Banner */
+    .naming-scheme-card {
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 24px 28px;
+      margin: 0 auto 60px;
+      max-width: 860px;
+      text-align: left;
+    }
+
+    .scheme-title {
+      font-size: 0.85rem;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      color: var(--text-dim);
+      font-weight: 700;
+      margin-bottom: 14px;
+    }
+
+    .scheme-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 16px;
+    }
+
+    .scheme-item {
+      padding: 12px 14px;
+      background: rgba(255, 255, 255, 0.02);
+      border: 1px solid rgba(255, 255, 255, 0.04);
+      border-radius: 12px;
+    }
+
+    .scheme-channel {
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      font-weight: 600;
+      margin-bottom: 4px;
+    }
+
+    .scheme-name {
+      font-weight: 700;
+      font-size: 1rem;
+      color: var(--text);
+      margin-bottom: 4px;
+    }
+
+    .scheme-desc {
+      font-size: 0.82rem;
+      color: var(--text-muted);
+      line-height: 1.4;
+    }
+
+    /* Section Headers */
+    .section-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .section-title {
+      font-size: 2rem;
+      font-weight: 800;
+      letter-spacing: -0.5px;
+      margin-bottom: 10px;
+    }
+
+    .section-desc {
+      color: var(--text-muted);
+      font-size: 1rem;
+      max-width: 580px;
+      margin: 0 auto;
+    }
+
+    /* Settings Search Subsystem */
+    .settings-section {
+      padding: 50px 0 70px;
+      position: relative;
+    }
+
+    .search-box-wrap {
+      max-width: 760px;
+      margin: 0 auto 28px;
+    }
+
+    .search-input-container {
+      position: relative;
+      display: flex;
+      align-items: center;
+    }
+
+    .search-icon {
+      position: absolute;
+      left: 18px;
+      width: 20px;
+      height: 20px;
+      color: var(--text-muted);
+      pointer-events: none;
+    }
+
+    .search-input {
+      width: 100%;
+      padding: 16px 48px 16px 50px;
+      background: var(--surface);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius-pill);
+      color: var(--text);
+      font-family: inherit;
+      font-size: 1rem;
+      outline: none;
+      transition: all 0.25s ease;
+      box-shadow: 0 4px 20px rgba(0, 0, 0, 0.2);
+    }
+
+    .search-input:focus {
+      border-color: var(--accent);
+      box-shadow: 0 4px 25px var(--accent-glow);
+      background: var(--surface-elevated);
+    }
+
+    .search-clear {
+      position: absolute;
+      right: 18px;
+      background: none;
+      border: none;
+      color: var(--text-muted);
+      cursor: pointer;
+      font-size: 1.2rem;
+      line-height: 1;
+      display: none;
+      padding: 4px;
+    }
+
+    .search-clear:hover {
+      color: var(--text);
+    }
+
+    /* Category filter pills */
+    .filters-bar {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 30px;
+    }
+
+    .filter-pill {
+      background: rgba(255, 255, 255, 0.04);
+      border: 1px solid var(--card-border);
+      color: var(--text-muted);
+      padding: 8px 16px;
+      border-radius: var(--radius-pill);
+      font-size: 0.85rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .filter-pill:hover {
+      background: rgba(255, 255, 255, 0.08);
+      color: var(--text);
+    }
+
+    .filter-pill.active {
+      background: rgba(255, 87, 34, 0.15);
+      border-color: rgba(255, 87, 34, 0.4);
+      color: #fff;
+    }
+
+    .filter-count {
+      font-size: 0.75rem;
+      padding: 2px 7px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.08);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .filter-pill.active .filter-count {
+      background: var(--accent);
+      color: #fff;
+    }
+
+    /* Results Grid */
+    .settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(330px, 1fr));
+      gap: 20px;
+    }
+
+    .setting-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 22px;
+      backdrop-filter: blur(14px);
+      transition: all 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+      display: flex;
+      flex-direction: column;
+      justify-content: space-between;
+      position: relative;
+    }
+
+    .setting-card:hover {
+      border-color: var(--card-border-hover);
+      transform: translateY(-3px);
+      box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+    }
+
+    .setting-top {
+      margin-bottom: 12px;
+    }
+
+    .setting-meta {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 10px;
+    }
+
+    .setting-category-tag {
+      font-size: 0.75rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      padding: 4px 10px;
+      border-radius: var(--radius-pill);
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+    }
+
+    .setting-category-tag.glyph {
+      background: rgba(0, 229, 191, 0.1);
+      color: var(--cyan);
+      border: 1px solid rgba(0, 229, 191, 0.2);
+    }
+
+    .setting-category-tag.avatar {
+      background: rgba(255, 87, 34, 0.1);
+      color: var(--accent-secondary);
+      border: 1px solid rgba(255, 87, 34, 0.2);
+    }
+
+    .setting-category-tag.monet {
+      background: rgba(186, 104, 200, 0.12);
+      color: #ce93d8;
+      border: 1px solid rgba(186, 104, 200, 0.25);
+    }
+
+    .setting-category-tag.media {
+      background: rgba(66, 165, 245, 0.12);
+      color: #64b5f6;
+      border: 1px solid rgba(66, 165, 245, 0.25);
+    }
+
+    .setting-category-tag.system {
+      background: rgba(255, 183, 77, 0.12);
+      color: #ffb74d;
+      border: 1px solid rgba(255, 183, 77, 0.25);
+    }
+
+    .setting-key {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.76rem;
+      color: var(--text-dim);
+    }
+
+    .setting-name {
+      font-size: 1.12rem;
+      font-weight: 700;
+      color: var(--text);
+      margin-bottom: 6px;
+      line-height: 1.35;
+    }
+
+    .setting-desc {
+      font-size: 0.88rem;
+      color: var(--text-muted);
+      line-height: 1.45;
+      margin-bottom: 16px;
+    }
+
+    .setting-breadcrumb {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      margin-bottom: 16px;
+      font-family: 'JetBrains Mono', monospace;
+      overflow-x: auto;
+      white-space: nowrap;
+    }
+
+    .setting-actions {
+      display: flex;
+      gap: 10px;
+      margin-top: auto;
+      padding-top: 14px;
+      border-top: 1px solid rgba(255, 255, 255, 0.04);
+    }
+
+    .btn-action {
+      padding: 8px 14px;
+      border-radius: var(--radius-sm);
+      font-size: 0.82rem;
+      font-weight: 600;
+      text-decoration: none;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      transition: all 0.2s ease;
+      border: none;
+    }
+
+    .btn-open {
+      background: rgba(255, 87, 34, 0.12);
+      color: #ff8a65;
+      border: 1px solid rgba(255, 87, 34, 0.25);
+      flex: 1;
+      justify-content: center;
+    }
+
+    .btn-open:hover {
+      background: var(--accent);
+      color: #fff;
+      border-color: var(--accent);
+    }
+
+    .btn-copy {
+      background: rgba(255, 255, 255, 0.05);
+      color: var(--text-muted);
+      border: 1px solid var(--card-border);
+      padding: 8px 12px;
+    }
+
+    .btn-copy:hover {
+      background: rgba(255, 255, 255, 0.1);
+      color: var(--text);
+    }
+
+    .btn-copy.copied {
+      background: rgba(0, 229, 191, 0.15);
+      color: var(--cyan);
+      border-color: rgba(0, 229, 191, 0.3);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      grid-column: 1 / -1;
+      color: var(--text-muted);
+    }
+
+    .empty-state h3 {
+      font-size: 1.25rem;
+      color: var(--text);
+      margin-bottom: 8px;
+    }
+
+    /* Launcher Icons Showcase */
+    .icons-showcase {
+      padding: 60px 0;
+    }
+
+    .icons-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+      gap: 16px;
+    }
+
+    .icon-card {
+      background: var(--card-bg);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      padding: 20px 16px;
+      text-align: center;
+      backdrop-filter: blur(14px);
+      transition: all 0.25s ease;
+    }
+
+    .icon-card:hover {
+      transform: translateY(-4px);
+      border-color: rgba(255, 255, 255, 0.2);
+    }
+
+    .icon-card img {
+      width: 76px;
+      height: 76px;
+      border-radius: 18px;
+      margin-bottom: 12px;
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.35);
+      transition: transform 0.2s;
+    }
+
+    .icon-card:hover img {
+      transform: scale(1.05);
+    }
+
+    .icon-card h4 {
+      font-size: 1rem;
+      margin-bottom: 4px;
+      font-weight: 700;
+    }
+
+    .icon-card p {
+      font-size: 0.8rem;
+      color: var(--text-muted);
+      line-height: 1.35;
+    }
+
+    /* F-Droid Box */
+    .repo-box {
+      margin: 60px 0;
+      background: linear-gradient(135deg, rgba(255, 87, 34, 0.08), rgba(0, 229, 191, 0.04));
+      border: 1px solid rgba(255, 255, 255, 0.08);
+      border-radius: var(--radius);
+      padding: 36px;
+      text-align: center;
+    }
+
+    .repo-box h3 {
+      font-size: 1.5rem;
+      margin-bottom: 10px;
+    }
+
+    .repo-box p {
+      color: var(--text-muted);
+      max-width: 600px;
+      margin: 0 auto 20px;
+      font-size: 0.95rem;
+    }
+
+    .code-badge {
+      display: inline-block;
+      background: rgba(0, 0, 0, 0.5);
+      padding: 10px 18px;
+      border-radius: 10px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      color: var(--cyan);
+      user-select: all;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      word-break: break-all;
+      max-width: 100%;
+    }
+
+    /* Footer */
+    footer {
+      border-top: 1px solid rgba(255, 255, 255, 0.06);
+      padding: 40px 0 30px;
+      text-align: center;
+      color: var(--text-muted);
+      font-size: 0.85rem;
+    }
+
+    footer a {
+      color: var(--text);
+      text-decoration: none;
+      font-weight: 600;
+    }
+
+    footer a:hover {
+      text-decoration: underline;
+    }
+
+    .footer-links {
+      display: flex;
+      justify-content: center;
+      gap: 20px;
+      margin-bottom: 16px;
+    }
+
+    @media (max-width: 768px) {
+      .nav-links {
+        gap: 12px;
+      }
+      .nav-links li:not(:last-child) {
+        display: none;
+      }
+      .settings-grid {
+        grid-template-columns: 1fr;
+      }
+      .icons-grid {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="container">
+    <nav>
+      <a href="#" class="brand">
+        <img src="assets/logo.png" alt="MoltenGram Logo">
+        <span>MoltenGram</span>
+      </a>
+      <ul class="nav-links">
+        <li><a href="#settings-search" data-i18n="nav_settings">Настройки</a></li>
+        <li><a href="#icons" data-i18n="nav_icons">Иконки</a></li>
+        <li><a href="#scheme" data-i18n="nav_scheme">Релизы</a></li>
+        <li><a href="#fdroid" data-i18n="nav_fdroid">F-Droid</a></li>
+        <li><a href="https://github.com/MoltenSt4r/ExteraMS" target="_blank">GitHub</a></li>
+        <li>
+          <button class="lang-btn" id="langToggle">EN</button>
+        </li>
+      </ul>
+    </nav>
+
+    <header class="hero">
+      <div class="hero-badge">
+        <span class="dot"></span>
+        <span data-i18n="hero_badge">Релиз v12.10.6 • Tiramisu</span>
+      </div>
+      <h1 data-i18n="hero_title">Telegram с Material Design 3</h1>
+      <p data-i18n="hero_desc">
+        Лаконичный форк на базе exteraless с аппаратной поддержкой Nothing Glyph, экспрессивными формами аватарок и честной системной палитрой Monet.
+      </p>
+      <div class="cta-group">
+        <a href="https://github.com/MoltenSt4r/ExteraMS/releases/tag/v12.10.6" class="btn btn-primary" target="_blank">
+          <span data-i18n="btn_download">Скачать v12.10.6 (Tiramisu)</span>
+        </a>
+        <a href="https://github.com/MoltenSt4r/ExteraMS/releases" class="btn btn-secondary" target="_blank">
+          <span data-i18n="btn_releases">Все релизы</span>
+        </a>
+        <a href="#settings-search" class="btn btn-secondary">
+          <span data-i18n="btn_search_settings">Поиск настроек</span>
+        </a>
+      </div>
+    </header>
+
+    <!-- Release Naming Scheme Card -->
+    <section id="scheme" class="naming-scheme-card">
+      <div class="scheme-title" data-i18n="scheme_title">Концепция версионирования и наименования</div>
+      <div class="scheme-grid">
+        <div class="scheme-item">
+          <div class="scheme-channel">RELEASE</div>
+          <div class="scheme-name" data-i18n="scheme_rel_name">Десерты (Tiramisu)</div>
+          <div class="scheme-desc" data-i18n="scheme_rel_desc">Стабильные релизы. Минорные фиксы сохраняют имя; функциональные обновления меняют десерт.</div>
+        </div>
+        <div class="scheme-item">
+          <div class="scheme-channel">BETA</div>
+          <div class="scheme-name" data-i18n="scheme_beta_name">Ингредиенты (Mascarpone)</div>
+          <div class="scheme-desc" data-i18n="scheme_beta_desc">Компоненты релизного десерта: Espresso, Cocoa, Savoiardi, Marsala.</div>
+        </div>
+        <div class="scheme-item">
+          <div class="scheme-channel">CANARY</div>
+          <div class="scheme-name" data-i18n="scheme_canary_name">Хим. элементы (Titanium)</div>
+          <div class="scheme-desc" data-i18n="scheme_canary_desc">Ночные и экспериментальные сборки: Xenon, Cobalt, Neon, Graphene.</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Interactive Unique Settings Search Subsystem -->
+    <section id="settings-search" class="settings-section">
+      <div class="section-header">
+        <h2 class="section-title" data-i18n="search_title">Уникальные настройки MoltenGram</h2>
+        <p class="section-desc" data-i18n="search_desc">
+          Только эксклюзивные функции MoltenGram (за исключением стандартных настроек exteraless). Мгновенный поиск и глубокие ссылки для открытия прямо в клиенте.
+        </p>
+      </div>
+
+      <div class="search-box-wrap">
+        <div class="search-input-container">
+          <svg class="search-icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="11" cy="11" r="8"></circle>
+            <line x1="21" y1="21" x2="16.65" y2="16.65"></line>
+          </svg>
+          <input type="text" id="settingsSearchInput" class="search-input" placeholder="Поиск по названию, ключу (OEGlyph, Monet, MD3)..." autocomplete="off" spellcheck="false">
+          <button id="searchClearBtn" class="search-clear" title="Очистить">✕</button>
+        </div>
+      </div>
+
+      <div class="filters-bar" id="categoryFilters">
+        <button class="filter-pill active" data-filter="all">
+          <span data-i18n="filter_all">Все</span>
+          <span class="filter-count" id="count-all">0</span>
+        </button>
+        <button class="filter-pill" data-filter="glyph">
+          <span>Nothing Glyph</span>
+          <span class="filter-count" id="count-glyph">0</span>
+        </button>
+        <button class="filter-pill" data-filter="avatar">
+          <span data-i18n="filter_avatars">Формы аватарок MD3</span>
+          <span class="filter-count" id="count-avatar">0</span>
+        </button>
+        <button class="filter-pill" data-filter="monet">
+          <span data-i18n="filter_monet">Monet и иконки</span>
+          <span class="filter-count" id="count-monet">0</span>
+        </button>
+        <button class="filter-pill" data-filter="media">
+          <span data-i18n="filter_media">Карусель и чат</span>
+          <span class="filter-count" id="count-media">0</span>
+        </button>
+        <button class="filter-pill" data-filter="system">
+          <span data-i18n="filter_system">Система и обновления</span>
+          <span class="filter-count" id="count-system">0</span>
+        </button>
+      </div>
+
+      <div class="settings-grid" id="settingsGrid">
+        <!-- Rendered dynamically by JavaScript -->
+      </div>
+    </section>
+
+    <!-- Curated Launcher Icons Showcase -->
+    <section id="icons" class="icons-showcase">
+      <div class="section-header">
+        <h2 class="section-title" data-i18n="icons_title">10 стилей иконки приложения</h2>
+        <p class="section-desc" data-i18n="icons_desc">
+          Коллекция иконок лаунчера с нативной поддержкой динамических монохромных слоев Android 13+ под Nothing OS и Pixel.
+        </p>
+      </div>
+
+      <div class="icons-grid">
+        <div class="icon-card">
+          <img src="assets/icons/moltengram.png" alt="Obsidian Default">
+          <h4>Default</h4>
+          <p data-i18n="icon_default">Обсидиановый силуэт с огненным ядром</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/dotted.png" alt="Nothing Glyph">
+          <h4>Dotted</h4>
+          <p data-i18n="icon_dotted">Точечная матрица Nothing Glyph</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/neon.png" alt="Neon Glass">
+          <h4>Neon</h4>
+          <p data-i18n="icon_neon">Многослойное полупрозрачное стекло</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/lava.png" alt="Molten Lava">
+          <h4>Lava</h4>
+          <p data-i18n="icon_lava">Пылающее расплавленное ядро магмы</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/aero.png" alt="Frutiger Aero">
+          <h4>Aero</h4>
+          <p data-i18n="icon_aero">Глянцевый объемный стиль Frutiger Aero</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/pixel.png" alt="Cyber Pixel">
+          <h4>Pixel</h4>
+          <p data-i18n="icon_pixel">Ретро 8-битный киберарт</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/mint.png" alt="Pastel Mint">
+          <h4>Mint</h4>
+          <p data-i18n="icon_mint">Органические пастельные волны</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/mocha.png" alt="Warm Mocha">
+          <h4>Mocha</h4>
+          <p data-i18n="icon_mocha">Текстурный мраморный кофейный мокко</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/sunset.png" alt="Sunset Glow">
+          <h4>Sunset</h4>
+          <p data-i18n="icon_sunset">Мягкий вечерний закатный градиент</p>
+        </div>
+        <div class="icon-card">
+          <img src="assets/icons/azure.png" alt="Electric Azure">
+          <h4>Azure</h4>
+          <p data-i18n="icon_azure">Электрический циан-градиент</p>
+        </div>
+      </div>
+    </section>
+
+    <!-- F-Droid Repository Box -->
+    <div id="fdroid" class="repo-box">
+      <h3 data-i18n="fdroid_title">Официальный репозиторий F-Droid</h3>
+      <p data-i18n="fdroid_desc">
+        Подключите репозиторий в F-Droid, Neo Store, Droid-ify или Obtainium для автоматических фоновых обновлений:
+      </p>
+      <div class="code-badge">https://moltenst4r.github.io/MoltenGram/fdroid/repo</div>
+    </div>
+
+    <footer>
+      <div class="footer-links">
+        <a href="https://github.com/MoltenSt4r/ExteraMS" target="_blank">GitHub</a>
+        <a href="https://t.me/MoltenGram" target="_blank">Telegram</a>
+        <a href="https://github.com/exteraless/exteraless" target="_blank">exteraless</a>
+      </div>
+      <p>© 2026 MoltenGram. Based on exteraless. Licensed under GNU GPL v2 or later.</p>
+    </footer>
+  </div>
+
+  <script>
+    // Verified UNIQUE MoltenGram settings registry
+    // Strictly contains only exclusive features verified in MoltenGram
+    const UNIQUE_SETTINGS = [
+      // 1. Nothing Glyph Subsystem
+      {
+        id: "glyph_enable",
+        category: "glyph",
+        key: "OEGlyphEnabled",
+        title_ru: "Интерфейс Glyph (Мастер-переключатель)",
+        title_en: "Glyph Interface Master Toggle",
+        desc_ru: "Подключение к системному сервису Nothing Glyph; управление светодиодными лентами и матрицей задней панели Nothing Phone.",
+        desc_en: "Hardware binding to Nothing OS Glyph Service; turns rear light matrix & strips on or off for Telegram client events.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphEnabled"
+      },
+      {
+        id: "glyph_new_message",
+        category: "glyph",
+        key: "OEGlyphNewMessage",
+        title_ru: "Вспышка при новых сообщениях",
+        title_en: "Flash on New Messages",
+        desc_ru: "Световая индикация задней панели Nothing Phone при поступлении входящих сообщений.",
+        desc_en: "Customizable LED flash pulses on the back of Nothing Phone upon receiving incoming chat messages.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphNewMessage"
+      },
+      {
+        id: "glyph_msg_anim",
+        category: "glyph",
+        key: "OEGlyphMessageAnim",
+        title_ru: "Стиль анимации сообщений",
+        title_en: "Message Animation Pattern",
+        desc_ru: "Выбор светового паттерна: двойная вспышка, быстрый стробоскоп, мягкая пульсация или акцентное кольцо.",
+        desc_en: "Selection of message light pattern: Double Flash, Quick Strobe, Soft Pulse, or Accent Ring.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphMessageAnim"
+      },
+      {
+        id: "glyph_calls",
+        category: "glyph",
+        key: "OEGlyphCalls",
+        title_ru: "Свечение при входящем звонке",
+        title_en: "Glow on Incoming Calls",
+        desc_ru: "Непрерывная анимация глифов во время входящего VoIP-вызова.",
+        desc_en: "Continuous rhythmic illumination of rear Glyph strips during incoming voice and video calls.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphCalls"
+      },
+      {
+        id: "glyph_calls_anim",
+        category: "glyph",
+        key: "OEGlyphCallAnim",
+        title_ru: "Стиль анимации звонка",
+        title_en: "Call Animation Style",
+        desc_ru: "Режимы анимации вызова: энергичный пульс, бегущая каскадная волна, дыхание или сердцебиение.",
+        desc_en: "VoIP call animation patterns: Energetic Pulse, Cascading Wave, Breathing, or Heartbeat.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphCallAnim"
+      },
+      {
+        id: "glyph_recording",
+        category: "glyph",
+        key: "OEGlyphRecording",
+        title_ru: "Индикация записи голосовых",
+        title_en: "Glow While Recording Audio",
+        desc_ru: "Свечение глифов задней панели при удержании записи голосового или видеосообщения.",
+        desc_en: "Soft lighting indication on the rear Glyph channels while holding to record voice or video notes.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphRecording"
+      },
+      {
+        id: "glyph_recording_anim",
+        category: "glyph",
+        key: "OEGlyphRecordAnim",
+        title_ru: "Стиль анимации записи",
+        title_en: "Recording Light Pattern",
+        desc_ru: "Паттерн индикации записи: плавное дыхание, акцентное кольцо или деликатный пульс.",
+        desc_en: "Recording light patterns: Smooth Breathing, Accent Ring, or Deliberate Heartbeat.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphRecordAnim"
+      },
+      {
+        id: "glyph_screen_off",
+        category: "glyph",
+        key: "OEGlyphScreenOff",
+        title_ru: "Только при выключенном экране",
+        title_en: "Messages Only When Screen Off",
+        desc_ru: "Срабатывание световой индикации глифов исключительно при выключенном дисплее для энергосбережения.",
+        desc_en: "Triggers Glyph lights only when the device display is asleep to save battery while actively using the device.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=OEGlyphScreenOff"
+      },
+      {
+        id: "glyph_preview",
+        category: "glyph",
+        key: "glyphPreview",
+        title_ru: "Предпросмотр световых эффектов",
+        title_en: "Live Glyph Light Preview",
+        desc_ru: "Тестовый запуск аппаратных паттернов для проверки корректности адресации зон глифов.",
+        desc_en: "Instant test triggering of Glyph patterns for diagnostic verification of light zones.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=glyphPreview"
+      },
+      {
+        id: "glyph_device_preview",
+        category: "glyph",
+        key: "glyphDevicePreview",
+        title_ru: "Карточки устройств и адресация матриц",
+        title_en: "Interactive Device Cards & 15-Channel Matrix",
+        desc_ru: "Аппаратный предпросмотр для 13 моделей Nothing и CMF Phone (Phone 1, 2, 2a, 2a Plus, 3, 3a, 3a Pro, 3a Lite, 4, 4a, 4a Pro, 4b, CMF 1, CMF 2 Pro).",
+        desc_en: "Hardware cards and matrix channel mapping for 13 Nothing and CMF Phone models with channel addressing.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=glyphDevicePreview"
+      },
+      {
+        id: "glyph_easter_egg",
+        category: "glyph",
+        key: "NothingPhoneEasterEgg",
+        title_ru: "MD3 Физическая пасхалка с жидкостью",
+        title_en: "MD3 Physics Particle Easter Egg",
+        desc_ru: "Интерактивное падение геометрических фигур Material Design 3 с физикой столкновений и заполнением контура жидкой заливкой по тапу на карточку телефона.",
+        desc_en: "Interactive falling Material Design 3 physics particles with collision dynamics and theme liquid fill upon tapping device preview cards.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Nothing Glyph",
+        deepLink: "tg://settings/neko?target=glyph&row=glyphDevicePreview"
+      },
+
+      // 2. Material Design 3 Expressive Avatar Shapes
+      {
+        id: "avatar_shapes_master",
+        category: "avatar",
+        key: "md3_avatar_shapes",
+        title_ru: "Экспрессивные формы аватарок Material 3",
+        title_en: "Material 3 Expressive Avatar Shapes",
+        desc_ru: "Параметрический генератор 15 экспрессивных геометрических форм (Pill, Clover 4/8, Cookie 4/9/12, Flower, Puffy, Heart, Star 4, Hexagon, Scallop, Clamshell, Sunny) через AndroidX Graphics Shapes.",
+        desc_en: "Parametric avatar shape engine featuring 15 custom shapes (Pill, Clover, Cookie, Flower, Heart, Star, Hexagon, Scallop, Clamshell, Sunny) using AndroidX polygon morphing.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes"
+      },
+      {
+        id: "avatar_shape_users",
+        category: "avatar",
+        key: "Md3AvatarShapeUsers",
+        title_ru: "Форма аватарок: Пользователи",
+        title_en: "Avatar Shape: Users",
+        desc_ru: "Индивидуальная геометрическая форма для личных диалогов и профилей пользователей.",
+        desc_en: "Dedicated expressive shape assignment for private 1-on-1 user contacts and chats.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapeUsers"
+      },
+      {
+        id: "avatar_shape_bots",
+        category: "avatar",
+        key: "Md3AvatarShapeBots",
+        title_ru: "Форма аватарок: Боты",
+        title_en: "Avatar Shape: Bots",
+        desc_ru: "Отдельная геометрическая форма аватаров для ботов и сервисных аккаунтов.",
+        desc_en: "Dedicated expressive shape assigned specifically to Telegram bots and automated services.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapeBots"
+      },
+      {
+        id: "avatar_shape_groups",
+        category: "avatar",
+        key: "Md3AvatarShapeGroups",
+        title_ru: "Форма аватарок: Группы",
+        title_en: "Avatar Shape: Groups",
+        desc_ru: "Параметрическая форма аватара для групповых чатов и супергрупп.",
+        desc_en: "Custom parametric geometry tailored for group chats and discussion forums.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapeGroups"
+      },
+      {
+        id: "avatar_shape_channels",
+        category: "avatar",
+        key: "Md3AvatarShapeChannels",
+        title_ru: "Форма аватарок: Каналы",
+        title_en: "Avatar Shape: Channels",
+        desc_ru: "Индивидуальная форма для публичных и приватных новостных каналов.",
+        desc_en: "Unique expressive shape styling for broadcast channels.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapeChannels"
+      },
+      {
+        id: "avatar_shape_self",
+        category: "avatar",
+        key: "Md3AvatarShapeSelf",
+        title_ru: "Форма: Избранное и личный профиль",
+        title_en: "Avatar Shape: Saved Messages & Self",
+        desc_ru: "Выделенная форма для диалога «Избранное» и собственного профиля.",
+        desc_en: "Distinct expressive shape for personal profile and Saved Messages bookmark hub.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapeSelf"
+      },
+      {
+        id: "avatar_shape_reset",
+        category: "avatar",
+        key: "Md3AvatarShapesReset",
+        title_ru: "Сброс всех форм к стандартному кругу",
+        title_en: "Reset Shapes to Default Circle",
+        desc_ru: "Быстрый возврат классических круглых аватарок для всех категорий диалогов.",
+        desc_en: "One-tap restoration of classic circular avatars across all chat categories.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Формы аватарок",
+        deepLink: "tg://settings/neko?target=avatar_shapes&row=Md3AvatarShapesReset"
+      },
+
+      // 3. Dynamic Monet & Themed Icons
+      {
+        id: "monet_palette_engine",
+        category: "monet",
+        key: "monetPalette",
+        title_ru: "Движок динамической палитры Monet",
+        title_en: "Dynamic Monet System Engine",
+        desc_ru: "Глубокая синхронизация с системными цветами Android 12+ с распределением ролей Neutral 1 (n1:6, n1:12, n1:90) и фильтрацией статических фиолетовых заглушек.",
+        desc_en: "Direct synchronization with Android 12+ system colors using Neutral 1 roles while rejecting OEM purple baseline fallbacks.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Палитра Monet",
+        deepLink: "tg://settings/neko?target=exteraless_appearance&row=monetPalette"
+      },
+      {
+        id: "moltengram_app_icons",
+        category: "monet",
+        key: "appIcon",
+        title_ru: "Монохромные адаптивные иконки лаунчера",
+        title_en: "Adaptive Launcher Themed Icons",
+        desc_ru: "10 кураторских вариантов оформления иконки лаунчера с монохромным адаптивным вектором Android 13+ для Nothing OS и Pixel.",
+        desc_en: "10 styled launcher icons with unified Android 13+ adaptive monochrome layers for Nothing OS and Pixel.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Иконка приложения",
+        deepLink: "tg://settings/neko?target=exteraless_appearance&row=appIcon"
+      },
+
+      // 4. Media Carousel & MD3 Chat Layout
+      {
+        id: "media_group_carousel",
+        category: "media",
+        key: "mediaGroupCarousel",
+        title_ru: "Альбомы медиа как карусель",
+        title_en: "Media Albums as Carousel",
+        desc_ru: "Отображение сгруппированных фото и видео в чатах в виде плавной горизонтальной карусели Material 3 вместо сетки с подгонкой пузыря сообщений.",
+        desc_en: "Horizontal Material Design 3 swipeable card carousel for grouped photos and videos, replacing classic rigid grids with overflow prevention.",
+        breadcrumb: "Настройки → ExteraLess → Внешний вид → Альбомы медиа как карусель",
+        deepLink: "tg://settings/neko?target=exteraless_appearance&row=mediaGroupCarousel"
+      },
+      {
+        id: "md3_chat_input",
+        category: "media",
+        key: "OEChatsMd3ChatInput",
+        title_ru: "Плавающее поле ввода MD3",
+        title_en: "MD3 Floating Chat Input",
+        desc_ru: "Островное плавающее поле ввода сообщений в стиле Material Design 3 с динамическим скруглением и тенью.",
+        desc_en: "Floating pill-shaped chat input bar with dynamic elevation and rounded corner geometry.",
+        breadcrumb: "Настройки → ExteraLess → Чаты → MD3 поле ввода",
+        deepLink: "tg://settings/neko?target=exteraless_chats&row=OEChatsMd3ChatInput"
+      },
+      {
+        id: "md3_message_anims",
+        category: "media",
+        key: "OEChatsIncomingMessageAnimation",
+        title_ru: "Кинетические анимации сообщений MD3",
+        title_en: "MD3 Kinetic Message Animations",
+        desc_ru: "Деликатные физические эффекты появления и отправки сообщений в чате (Fade, Slide, Scale, Pop).",
+        desc_en: "Subtle physics-based kinetic animations for arriving and outgoing chat messages (Fade, Slide, Scale, Pop).",
+        breadcrumb: "Настройки → ExteraLess → Чаты → Анимации сообщений",
+        deepLink: "tg://settings/neko?target=exteraless_chats&row=OEChatsIncomingMessageAnimation"
+      },
+
+      // 5. System & Custom Integrations
+      {
+        id: "shizuku_updates",
+        category: "system",
+        key: "OEShizukuInstall",
+        title_ru: "Фоновое обновление через Shizuku",
+        title_en: "Silent Background Updates via Shizuku",
+        desc_ru: "Бесшовная фоновая установка обновлений приложения без системных диалогов установщика пакетов Android.",
+        desc_en: "Seamless background client updates using Shizuku privileges without manual package installer confirmation prompts.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Обновления",
+        deepLink: "tg://settings/neko?target=exteraless_other&row=OEShizukuInstall"
+      },
+      {
+        id: "custom_emoji_status",
+        category: "system",
+        key: "OEBioCustomEmojiStatus",
+        title_ru: "Кастомный эмодзи-статус без Premium",
+        title_en: "Custom Animated Emoji Status without Premium",
+        desc_ru: "Отображение анимированного эмодзи рядом с именем через специальный невидимый маркер в описании профиля.",
+        desc_en: "Display an animated emoji status badge next to your profile name without Telegram Premium subscription via profile bio encoding.",
+        breadcrumb: "Настройки → ExteraLess → Прочее → Эмодзи статус",
+        deepLink: "tg://settings/neko?target=exteraless_other&row=OEBioCustomEmojiStatus"
+      }
+    ];
+
+    const translations = {
+      ru: {
+        nav_settings: "Настройки",
+        nav_icons: "Иконки",
+        nav_scheme: "Релизы",
+        nav_fdroid: "F-Droid",
+        hero_badge: "Релиз v12.10.6 • Tiramisu",
+        hero_title: "Telegram с Material Design 3",
+        hero_desc: "Лаконичный форк на базе exteraless с аппаратной поддержкой Nothing Glyph, экспрессивными формами аватарок и честной системной палитрой Monet.",
+        btn_download: "Скачать v12.10.6 (Tiramisu)",
+        btn_releases: "Все релизы",
+        btn_search_settings: "Поиск настроек",
+        scheme_title: "Концепция версионирования и наименования",
+        scheme_rel_name: "Десерты (Tiramisu)",
+        scheme_rel_desc: "Стабильные релизы. Минорные фиксы сохраняют имя; функциональные обновления меняют десерт.",
+        scheme_beta_name: "Ингредиенты (Mascarpone)",
+        scheme_beta_desc: "Компоненты релизного десерта: Espresso, Cocoa, Savoiardi, Marsala.",
+        scheme_canary_name: "Хим. элементы (Titanium)",
+        scheme_canary_desc: "Ночные и экспериментальные сборки: Xenon, Cobalt, Neon, Graphene.",
+        search_title: "Уникальные настройки MoltenGram",
+        search_desc: "Только эксклюзивные функции MoltenGram (за исключением стандартных настроек exteraless). Мгновенный поиск и глубокие ссылки для открытия прямо в клиенте.",
+        search_placeholder: "Поиск по названию, ключу (OEGlyph, Monet, MD3)...",
+        filter_all: "Все",
+        filter_avatars: "Формы аватарок MD3",
+        filter_monet: "Monet и иконки",
+        filter_media: "Карусель и чат",
+        filter_system: "Система и обновления",
+        btn_open: "Открыть в клиенте",
+        btn_copy: "Копировать ссылку",
+        copied: "Скопировано!",
+        empty_title: "Настройки не найдены",
+        empty_desc: "Попробуйте изменить поисковый запрос или выбрать другую категорию.",
+        icons_title: "10 стилей иконки приложения",
+        icons_desc: "Коллекция иконок лаунчера с нативной поддержкой динамических монохромных слоев Android 13+ под Nothing OS и Pixel.",
+        icon_default: "Обсидиановый силуэт с огненным ядром",
+        icon_dotted: "Точечная матрица Nothing Glyph",
+        icon_neon: "Многослойное полупрозрачное стекло",
+        icon_lava: "Пылающее расплавленное ядро магмы",
+        icon_aero: "Глянцевый объемный стиль Frutiger Aero",
+        icon_pixel: "Ретро 8-битный киберарт",
+        icon_mint: "Органические пастельные волны",
+        icon_mocha: "Текстурный мраморный кофейный мокко",
+        icon_sunset: "Мягкий вечерний закатный градиент",
+        icon_azure: "Электрический циан-градиент",
+        fdroid_title: "Официальный репозиторий F-Droid",
+        fdroid_desc: "Подключите репозиторий в F-Droid, Neo Store, Droid-ify или Obtainium для автоматических фоновых обновлений:"
+      },
+      en: {
+        nav_settings: "Settings",
+        nav_icons: "Icons",
+        nav_scheme: "Releases",
+        nav_fdroid: "F-Droid",
+        hero_badge: "Release v12.10.6 • Tiramisu",
+        hero_title: "Telegram with Material Design 3",
+        hero_desc: "A refined fork based on exteraless featuring Nothing Glyph hardware control, expressive MD3 avatar shapes, and authentic Monet dynamic theming.",
+        btn_download: "Download v12.10.6 (Tiramisu)",
+        btn_releases: "All Releases",
+        btn_search_settings: "Search Settings",
+        scheme_title: "Release Naming & Channel Concept",
+        scheme_rel_name: "Desserts (Tiramisu)",
+        scheme_rel_desc: "Stable releases. Minor patches keep the dessert name; feature upgrades advance to the next dessert.",
+        scheme_beta_name: "Ingredients (Mascarpone)",
+        scheme_beta_desc: "Components of the current dessert: Espresso, Cocoa, Savoiardi, Marsala.",
+        scheme_canary_name: "Chemical Elements (Titanium)",
+        scheme_canary_desc: "Bleeding edge nightlies: Xenon, Cobalt, Neon, Graphene, Helium.",
+        search_title: "Unique MoltenGram Settings",
+        search_desc: "Exclusively verified MoltenGram features (excluding generic exteraless upstream settings). Real-time search with direct deep links to open in the app.",
+        search_placeholder: "Search by name, key (OEGlyph, Monet, MD3)...",
+        filter_all: "All",
+        filter_avatars: "MD3 Avatar Shapes",
+        filter_monet: "Monet & Icons",
+        filter_media: "Carousel & Chat",
+        filter_system: "System & Updates",
+        btn_open: "Open in App",
+        btn_copy: "Copy Link",
+        copied: "Copied!",
+        empty_title: "No settings found",
+        empty_desc: "Try a different search query or select another category filter.",
+        icons_title: "10 Launcher Icon Styles",
+        icons_desc: "Crafted launcher icon collection with native Android 13+ dynamic monochrome layers for Nothing OS and Pixel.",
+        icon_default: "Signature obsidian silhouette with molten core",
+        icon_dotted: "Nothing Glyph dot-matrix layout",
+        icon_neon: "Multi-layered translucent neon glass",
+        icon_lava: "Glowing molten magma core",
+        icon_aero: "Glossy 3D Frutiger Aero aesthetic",
+        icon_pixel: "Retro 8-bit cyber pixel art",
+        icon_mint: "Organic soothing pastel curves",
+        icon_mocha: "Warm marble mocha coffee gradient",
+        icon_sunset: "Soft twilight evening sunset glow",
+        icon_azure: "Electric cyan-blue linear gradient",
+        fdroid_title: "Official F-Droid Repository",
+        fdroid_desc: "Add this repository in F-Droid, Neo Store, Droid-ify, or Obtainium to receive seamless updates:"
+      }
+    };
+
+    let curLang = 'ru';
+    let activeFilter = 'all';
+    let searchQuery = '';
+
+    const langBtn = document.getElementById('langToggle');
+    const searchInput = document.getElementById('settingsSearchInput');
+    const clearBtn = document.getElementById('searchClearBtn');
+    const settingsGrid = document.getElementById('settingsGrid');
+    const categoryFilters = document.getElementById('categoryFilters');
+
+    function updateCounts() {
+      const counts = { all: UNIQUE_SETTINGS.length, glyph: 0, avatar: 0, monet: 0, media: 0, system: 0 };
+      UNIQUE_SETTINGS.forEach(item => {
+        if (counts[item.category] !== undefined) {
+          counts[item.category]++;
+        }
+      });
+      document.getElementById('count-all').textContent = counts.all;
+      document.getElementById('count-glyph').textContent = counts.glyph;
+      document.getElementById('count-avatar').textContent = counts.avatar;
+      document.getElementById('count-monet').textContent = counts.monet;
+      document.getElementById('count-media').textContent = counts.media;
+      const sysEl = document.getElementById('count-system');
+      if (sysEl) sysEl.textContent = counts.system;
+    }
+
+    function renderSettings() {
+      const query = searchQuery.trim().toLowerCase();
+      const filtered = UNIQUE_SETTINGS.filter(item => {
+        const matchesFilter = (activeFilter === 'all' || item.category === activeFilter);
+        if (!matchesFilter) return false;
+        if (!query) return true;
+        const title = (curLang === 'ru' ? item.title_ru : item.title_en).toLowerCase();
+        const desc = (curLang === 'ru' ? item.desc_ru : item.desc_en).toLowerCase();
+        const key = item.key.toLowerCase();
+        const breadcrumb = item.breadcrumb.toLowerCase();
+        return title.includes(query) || desc.includes(query) || key.includes(query) || breadcrumb.includes(query);
+      });
+
+      if (filtered.length === 0) {
+        settingsGrid.innerHTML = `
+          <div class="empty-state">
+            <h3>${translations[curLang].empty_title}</h3>
+            <p>${translations[curLang].empty_desc}</p>
+          </div>
+        `;
+        return;
+      }
+
+      settingsGrid.innerHTML = filtered.map(item => {
+        const title = curLang === 'ru' ? item.title_ru : item.title_en;
+        const desc = curLang === 'ru' ? item.desc_ru : item.desc_en;
+        const catLabel = item.category === 'glyph' ? 'Nothing Glyph' :
+                         item.category === 'avatar' ? 'MD3 Avatars' :
+                         item.category === 'monet' ? 'Monet' :
+                         item.category === 'system' ? (curLang === 'ru' ? 'Система' : 'System') :
+                         'Media / Chat';
+        return `
+          <div class="setting-card" data-id="${item.id}">
+            <div class="setting-top">
+              <div class="setting-meta">
+                <span class="setting-category-tag ${item.category}">${catLabel}</span>
+                <span class="setting-key">${item.key}</span>
+              </div>
+              <h3 class="setting-name">${title}</h3>
+              <p class="setting-desc">${desc}</p>
+            </div>
+            <div>
+              <div class="setting-breadcrumb" title="${item.breadcrumb}">
+                <span>📍</span>
+                <span>${item.breadcrumb}</span>
+              </div>
+              <div class="setting-actions">
+                <a href="${item.deepLink}" class="btn-action btn-open" title="${item.deepLink}">
+                  <span>⚡</span>
+                  <span>${translations[curLang].btn_open}</span>
+                </a>
+                <button class="btn-action btn-copy" onclick="copyLink('${item.deepLink}', this)" title="${translations[curLang].btn_copy}">
+                  <span>📋</span>
+                </button>
+              </div>
+            </div>
+          </div>
+        `;
+      }).join('');
+    }
+
+    window.copyLink = function(link, btn) {
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(link).then(() => {
+          showCopied(btn);
+        });
+      } else {
+        const input = document.createElement('input');
+        input.value = link;
+        document.body.appendChild(input);
+        input.select();
+        document.execCommand('copy');
+        document.body.removeChild(input);
+        showCopied(btn);
+      }
+    };
+
+    function showCopied(btn) {
+      const orig = btn.innerHTML;
+      btn.innerHTML = `<span>✓</span>`;
+      btn.classList.add('copied');
+      setTimeout(() => {
+        btn.innerHTML = orig;
+        btn.classList.remove('copied');
+      }, 1600);
+    }
+
+    // Search input handlers
+    searchInput.addEventListener('input', (e) => {
+      searchQuery = e.target.value;
+      clearBtn.style.display = searchQuery ? 'block' : 'none';
+      renderSettings();
+    });
+
+    clearBtn.addEventListener('click', () => {
+      searchInput.value = '';
+      searchQuery = '';
+      clearBtn.style.display = 'none';
+      searchInput.focus();
+      renderSettings();
+    });
+
+    // Filter pills handler
+    categoryFilters.addEventListener('click', (e) => {
+      const pill = e.target.closest('.filter-pill');
+      if (!pill) return;
+      categoryFilters.querySelectorAll('.filter-pill').forEach(p => p.classList.remove('active'));
+      pill.classList.add('active');
+      activeFilter = pill.getAttribute('data-filter');
+      renderSettings();
+    });
+
+    // Language toggle
+    langBtn.addEventListener('click', () => {
+      curLang = curLang === 'ru' ? 'en' : 'ru';
+      langBtn.textContent = curLang === 'ru' ? 'EN' : 'RU';
+      document.documentElement.lang = curLang;
+      document.querySelectorAll('[data-i18n]').forEach(el => {
+        const key = el.getAttribute('data-i18n');
+        if (translations[curLang][key]) {
+          el.textContent = translations[curLang][key];
+        }
+      });
+      searchInput.placeholder = translations[curLang].search_placeholder;
+      renderSettings();
+    });
+
+    // Keyboard shortcut '/' to search
+    window.addEventListener('keydown', (e) => {
+      if (e.key === '/' && document.activeElement !== searchInput) {
+        e.preventDefault();
+        searchInput.focus();
+        searchInput.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      }
+    });
+
+    // Initial render
+    updateCounts();
+    renderSettings();
+  </script>
+</body>
+</html>

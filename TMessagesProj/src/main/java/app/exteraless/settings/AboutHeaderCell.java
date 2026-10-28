@@ -96,7 +96,11 @@ public class AboutHeaderCell extends LinearLayout {
 
     /** "12.9.2 (1258)" — версия плюс versionCode из PackageInfo, как в оригинале. */
     private static String buildVersionString() {
-        StringBuilder sb = new StringBuilder(BuildVars.BUILD_VERSION_STRING);
+        StringBuilder sb = new StringBuilder();
+        if (!TextUtils.isEmpty(BuildVars.BUILD_CODENAME)) {
+            sb.append(BuildVars.BUILD_CODENAME).append(" · ");
+        }
+        sb.append(BuildVars.BUILD_VERSION_STRING);
         try {
             PackageInfo info = ApplicationLoader.applicationContext.getPackageManager()
                     .getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);

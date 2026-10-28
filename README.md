@@ -32,44 +32,48 @@
 
 ---
 
-## Что нового в v12.10.6
+## Схема наименования релизов
 
-- 🔥 **Карусель медиа (Media Carousel):** горизонтальная прокрутка карточек медиа в чатах и каналах.
-- 📐 **Исправление границ и подписи:** устранен выход текста подписи за пределы пузыря сообщения, точный учет `captionOffsetX` и ширины.
-- 📰 **Широкие посты в каналах:** карусели корректно поддерживают полноразмерный режим постов каналов.
-- 💬 **Позиционирование:** исправлено размещение текста над каруселью (`captionAbove`) и плашки времени в чатах.
-- 🔄 **Плавный скролл:** сброс позиции карусели на начало альбома и корректный реверсивный порядок.
-- 🎨 **Калибровка иконок лаунчера:** Классическая (выпуск за пределы без рамок), переработанная Star, Ледник, Google, Точки и др.
-- 🧩 **Стабильность:** исправления каталога Plugin Store и движка PythonPluginsEngine.
-- 🚀 **База Telegram:** обновление базы до официальной версии 12.10.6.
+В проекте принята строгая концепция именования каналов обновлений:
+* **Release (Стабильные):** Десерты (текущий релиз — **Tiramisu**). Минорные фиксы не меняют название десерта, а функциональные обновления MoltenGram переходят к следующему десерту независимо от версии Telegram.
+* **Beta (Бета):** Ингредиенты и специи релизного десерта (для Tiramisu: *Mascarpone*, *Espresso*, *Cocoa*, *Savoiardi*, *Marsala*).
+* **Canary (Канарейки):** Химические элементы и соединения (*Titanium*, *Xenon*, *Cobalt*, *Neon*, *Graphene*, *Helium*, *Argon*).
+
+---
+
+## Что нового в v12.10.6 — Tiramisu
+
+- **Формы аватарок Material 3:** 15 параметрических экспрессивных форм аватаров с раздельной настройкой для пользователей, групп, каналов и избранного.
+- **Карусель альбомов:** отображение сгруппированных фото и видео в виде горизонтальной карусели Material 3 с точной подгонкой границ сообщений.
+- **Nothing Glyph Interface:** полная интеграция подсветки задней панели для 13 моделей Nothing Phone и CMF Phone.
+- **Динамический Monet:** нативная системная палитра Material You с корректными ролями Neutral 1 / Neutral 2.
+- **Адаптивные иконки:** монохромные векторы под Nothing OS и Google Pixel для всех фирменных вариантов иконки.
+- **Плавающее поле ввода:** стиль ввода Material 3 и деликатные анимации отправки и получения сообщений.
+- **Мультимедиа:** локальные плейлисты аудио с экспортом M3U8/.mplaylist, карусель альбомов и ползунок перемотки видео в стиле Material 3.
+- **База Telegram:** обновление официальной базы до версии 12.10.6.
 
 ---
 
 ## Ключевые особенности
 
-### 🎨 Material 3 и оформление
-- **Карусель медиа (Media Carousel):** отображение альбомов с фото и видео в виде плавной горизонтальной карусели карточек вместо привычной сетки.
-- **Формы аватарок:** раздельная настройка геометрических форм аватаров для пользователей, групп и каналов (Squircle, Rounded, скругления).
+### 🎨 Material 3 и интерфейс
+- **Карусель медиа (Media Carousel):** отображение альбомов с фото и видео в виде плавной горизонтальной карусели карточек вместо жесткой сетки.
+- **Формы аватарок:** раздельная настройка геометрических форм аватаров для пользователей, групп и каналов (Squircle, Rounded, Cookie, Clover и др.).
 - **Папки-чипсы:** настраиваемая панель папок чатов со стилями (Filled, Outlined, Ghost), плавным морфингом скруглений и анимациями перехода.
 - **Анимации ввода:** плавный курсор, эффекты появления текста и частицы при удалении символов.
-- **Набор иконок:** коллекция уникальных стилей лаунчера (MoltenGram, Dotted, Neon, Lava, Cyber, Cosmic, Mocha, Glacier, Lavender, Beer, Magma, Holo) и адаптивные монохромные иконки под Nothing OS и Google Pixel.
+- **Коллекция иконок:** фирменные стили оформления лаунчера с адаптивными монохромными слоями под Nothing OS и Google Pixel.
 
-### 🎵 Медиаплеер и видео
-- **Material 3 Video Seekbar:** удобный и красивый ползунок перемотки видео в чатах.
-- **Плеер в стиле MetroList:** эргономичный модальный экран воспроизведения музыки.
-- **Синхронизированные тексты песен (Lyrics):** загрузка текста из нескольких провайдеров с drag-and-drop сортировкой приоритетов и возможностью перевода.
+### 🎵 Медиа и плеер
+- **Material 3 Video Seekbar:** удобный ползунок перемотки видео в чатах.
+- **Локальные плейлисты:** создание и управление пользовательскими списками воспроизведения музыки с поддержкой M3U8 и .mplaylist.
+- **Синхронизированные тексты песен:** отображение текстов треков с поддержкой нескольких провайдеров.
 - **Управление воспроизведением:** слайдер скорости и непрерывный фоновый звук.
 
-### 🧩 Плагины и кастомизация
-- **Встроенный Plugin Store:** каталог дополнений прямо в приложении — установка и обновление в один клик.
-- **Движок Python-плагинов:** поддержка плагинов экосистемы exteraless с безопасной моделью изоляции и разрешений.
-- **Импорт и экспорт:** прямая поддержка скриптов `.py`, автоконвертация в `.plugin`, резервное копирование всех плагинов и настроек.
-
-### ⚡ Удобство и производительность
-- **Интеграция с Shizuku:** бесшовное фоновое обновление клиента без всплывающих окон подтверждения.
-- **Fastest Proxy:** автоматический тест пинга и подключение к самому быстрому прокси-серверу.
-- **AI-инструменты:** саммаризация сообщений в чатах и быстрое распознавание голосовых заметок (Groq Whisper, Requesty).
-- **Безопасность:** вход по ключам доступа Passkey (Google Password Manager, Bitwarden, KeePassDX и др.).
+### ⚡ Система и интеграции
+- **Nothing Glyph:** аппаратное управление светодиодными лентами и матрицей на Nothing Phone (1, 2, 2a, 3, 4) при событиях вызовов, сообщений и записи.
+- **Интеграция с Shizuku:** бесшовное фоновое обновление клиента без диалогов системного инсталлятора.
+- **Кастомный эмодзи-статус:** установка анимированных статусов без подписки Telegram Premium через невидимый био-код.
+- **Быстрый прокси:** автоматический тест задержки и подключение к самому быстрому серверу.
 
 ---
 
@@ -149,15 +153,22 @@ It brings a refined **Material 3 / Material You** experience, an interactive med
   * Add to F-Droid client: `fdroidrepos://moltenst4r.github.io/MoltenGram/fdroid/repo?fingerprint=4B4EFFEE9D4CCBCB75DC3BF2E2A21655F2F35747B2D95FCF836E186FCE9D5030`
 * **Release Channel:** [@MoltenGram](https://t.me/MoltenGram)
 
-### What's New in v12.10.6
-- 🔥 **Media Carousel:** Horizontal smooth card carousel in chats and channels.
-- 📐 **Bubble bounds & caption overflow fix:** Fixed caption text protruding outside message bubbles with exact measurement.
-- 📰 **Wide channel posts:** Full-width support for media carousels in channels.
-- 💬 **Layout fixes:** Proper placement for `captionAbove` headers and time badge in chats.
-- 🔄 **Carousel reset:** Auto-scroll to album start and correct reverse ordering.
-- 🎨 **Launcher icons calibrated:** Classic full bleed, updated Star, Glacier, Google, Dotted, etc.
-- 🧩 **Plugin Store & engine:** Enhanced catalog stability and Python plugins compatibility.
-- 🚀 **Telegram base:** Updated to upstream version 12.10.6.
+### Release Naming Scheme
+
+The project follows a structured naming convention:
+* **Release (Stable):** Desserts (current release: **Tiramisu**). Minor patch updates retain the dessert codename; significant feature updates advance to the next dessert regardless of Telegram upstream version changes.
+* **Beta:** Ingredients or spices associated with the release dessert (for Tiramisu: *Mascarpone*, *Espresso*, *Cocoa*, *Savoiardi*, *Marsala*).
+* **Canary:** Chemical elements and compounds (*Titanium*, *Xenon*, *Cobalt*, *Neon*, *Graphene*, *Helium*, *Argon*).
+
+### What's New in v12.10.6 — Tiramisu
+- **Material 3 Avatar Shapes:** 15 custom parametric shapes with independent configuration for users, groups, channels, and saved messages.
+- **Media Carousel:** Smooth horizontal card carousel for grouped photos and videos with exact bubble boundary padding.
+- **Nothing Glyph Interface:** Full hardware integration for 13 Nothing Phone and CMF Phone models.
+- **Dynamic Monet:** Native Material You dynamic theming with proper Neutral 1 / Neutral 2 palette roles.
+- **Monochrome Icons:** System adaptive monochrome vectors under Nothing OS and Google Pixel.
+- **Floating Input & Animations:** Material 3 chat input bar with restrained physics message animations.
+- **MetroList Player & Synced Lyrics:** Modernized audio playback interface with multi-source synchronized lyrics.
+- **Telegram Base:** Updated upstream Telegram engine to version 12.10.6.
 
 ### Key Features
 - **Media Carousel:** View grouped photos and videos in a smooth horizontal card carousel instead of the classic grid.

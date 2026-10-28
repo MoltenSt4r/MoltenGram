@@ -1,1 +1,1 @@
-Material Design 3 Telegram client with media carousel, MetroList player, and plugin store.
+Minimalist Telegram client with Material Design 3, Nothing Glyph support, and media carousel.

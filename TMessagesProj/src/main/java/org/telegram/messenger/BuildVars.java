@@ -26,6 +26,7 @@ public class BuildVars {
     public static boolean NO_SCOPED_STORAGE = Build.VERSION.SDK_INT <= 29;
     public static String BUILD_VERSION_STRING = BuildConfig.BUILD_VERSION_STRING;
     public static String BUILD_COMMIT_ID = BuildConfig.BUILD_COMMIT_ID;
+    public static String BUILD_CODENAME = (BuildConfig.BUILD_CODENAME != null && !BuildConfig.BUILD_CODENAME.isEmpty()) ? BuildConfig.BUILD_CODENAME : "Tiramisu";
 
     public static int APP_ID = 39205442;
     public static String APP_HASH = "1090b570704d1d97975994ee9c177dba";

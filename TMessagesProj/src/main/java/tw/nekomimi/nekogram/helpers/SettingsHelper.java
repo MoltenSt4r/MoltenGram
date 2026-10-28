@@ -330,6 +330,10 @@ public class SettingsHelper {
                 case "glyph":
                     fragment = neko_fragment = new OpenExteraGlyphActivity();
                     break;
+                case "md3_avatar_shapes":
+                case "avatar_shapes":
+                    fragment = neko_fragment = new app.exteraless.appearance.Md3AvatarShapesActivity();
+                    break;
                 case "ghost_mode":
                     fragment = neko_fragment = new GhostModeActivity();
                     break;
@@ -419,6 +423,10 @@ public class SettingsHelper {
                 case "exteraless_glyph":
                 case "glyph":
                     fragment = neko_fragment = new OpenExteraGlyphActivity();
+                    break;
+                case "md3_avatar_shapes":
+                case "avatar_shapes":
+                    fragment = neko_fragment = new app.exteraless.appearance.Md3AvatarShapesActivity();
                     break;
                 case "ghost_mode":
                 case "ghost":

@@ -50,6 +50,7 @@ def verCode = (runNum && runNum.isInteger()) ? (runNum.toInteger() >= 1261 ? run
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
+def appCodename = (project.hasProperty('APP_CODENAME') ? APP_CODENAME : 'Tiramisu')
 
 def keystorePwd = null
 def alias = null
@@ -203,6 +204,7 @@ android {
         manifestPlaceholders += [MAPS_API_KEY: mapsKey, GLYPH_API_KEY: glyphKey]
 
         buildConfigField 'String', 'BUILD_VERSION_STRING', '"' + APP_VERSION_NAME + '"'
+        buildConfigField 'String', 'BUILD_CODENAME', '"' + appCodename + '"'
         buildConfigField 'String', 'BUILD_COMMIT_ID', '"' + shortCommit + '"'
         buildConfigField 'String', 'OFFICIAL_VERSION', '"' + officialVer + '"'
         buildConfigField 'int', 'OFFICIAL_VERSION_CODE', officialCode + ''

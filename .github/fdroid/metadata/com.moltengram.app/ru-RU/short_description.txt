@@ -1,1 +1,1 @@
-Свободный Android-клиент Telegram с каруселью медиа, Material Design 3, плеером MetroList и плагинами.
+Минималистичный клиент Telegram с поддержкой Material Design 3, Nothing Glyph и каруселью медиа.

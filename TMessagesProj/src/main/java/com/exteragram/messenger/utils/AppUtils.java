@@ -194,6 +194,9 @@ public final class AppUtils {
     public static String getVersionText() {
         StringBuilder builder = new StringBuilder();
         builder.append(LocaleUtils.getAppName());
+        if (!android.text.TextUtils.isEmpty(BuildVars.BUILD_CODENAME)) {
+            builder.append(" ").append(BuildVars.BUILD_CODENAME);
+        }
         builder.append(" ");
         builder.append(BuildVars.BUILD_VERSION_STRING);
         try {
