@@ -6096,6 +6096,11 @@ public class ChatActivityEnterView extends FrameLayout implements
         @Override
         protected void onSelectionChanged(int selStart, int selEnd) {
             super.onSelectionChanged(selStart, selEnd);
+            boolean hasSelection = selStart != selEnd;
+            setAllowDrawCursor(!hasSelection);
+            if (app.exteraless.chats.ChatsConfig.textAnimationEnabled.Bool()) {
+                app.exteraless.chats.TextAnimationController.getInstance().setSelectionActive(hasSelection);
+            }
             if (delegate != null) {
                 delegate.onTextSelectionChanged(selStart, selEnd);
             }

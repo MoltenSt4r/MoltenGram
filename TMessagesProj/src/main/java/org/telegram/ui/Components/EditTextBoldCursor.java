@@ -928,7 +928,7 @@ public class EditTextBoldCursor extends EditTextEffects {
                     showCursor = cursorDrawn;
                     cursorDrawn = false;
                 }
-                if (allowDrawCursor && showCursor) {
+                if (allowDrawCursor && showCursor && !hasSelection()) {
                     canvas.save();
                     int voffsetCursor = 0;
                     if (getVerticalOffsetMethod != null) {
@@ -965,7 +965,7 @@ public class EditTextBoldCursor extends EditTextEffects {
                 }
             }
         } else {
-            if (cursorDrawn && allowDrawCursor) {
+            if (cursorDrawn && allowDrawCursor && !hasSelection()) {
                 try {
                     canvas.save();
                     int voffsetCursor = 0;

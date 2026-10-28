@@ -151,10 +151,23 @@ public class TextAnimationController {
     public static final int BULK_CHANGE_THRESHOLD = 30;
     private static final long SUPPRESS_DURATION_MS = 600;
     private boolean suppressed;
+    private boolean selectionActive;
     private final Runnable restoreRunnable = () -> {
         suppressed = false;
         updateSettings();
     };
+
+    /**
+     * Hides the animated cursor when text is selected in the input field.
+     */
+    public void setSelectionActive(boolean active) {
+        if (selectionActive != active) {
+            selectionActive = active;
+            if (isRunning) {
+                updateSettings();
+            }
+        }
+    }
 
     /**
      * Temporarily disables the per-character animation for bulk text changes
@@ -209,7 +222,8 @@ public class TextAnimationController {
             json.put("particle_speed", String.valueOf(ChatsConfig.textAnimationParticleSpeed.Int()));
             json.put("particle_spread", String.valueOf(ChatsConfig.textAnimationParticleSpread.Int()));
             json.put("particle_size", String.valueOf(ChatsConfig.textAnimationParticleSize.Int()));
-            json.put("cursor_enabled", ChatsConfig.textAnimationCursorEnabled.Bool());
+            boolean cursorEnabled = ChatsConfig.textAnimationCursorEnabled.Bool() && !selectionActive;
+            json.put("cursor_enabled", cursorEnabled);
             json.put("cursor_speed", String.valueOf(ChatsConfig.textAnimationCursorSpeed.Int()));
             json.put("cursor_width", String.valueOf(ChatsConfig.textAnimationCursorWidth.Int()));
             json.put("liquid_cursor_enabled", ChatsConfig.textAnimationLiquidCursorEnabled.Bool());

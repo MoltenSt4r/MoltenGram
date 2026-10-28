@@ -122,3 +122,45 @@ def test_noto_animated_emoji_playback_support():
         cell_content = f.read()
 
     assert "messageObject.notoAnimatedEmojiUrl != null" in cell_content
+
+
+def test_cursor_hidden_on_selection_and_carousel_smooth_two_photo():
+    # 1. Verify cursor hidden on selection in ChatActivityEnterView
+    enter_view_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "ChatActivityEnterView.java"
+    )
+    with open(enter_view_path, "r", encoding="utf-8") as f:
+        enter_view_content = f.read()
+
+    assert "boolean hasSelection = selStart != selEnd;" in enter_view_content
+    assert "setAllowDrawCursor(!hasSelection);" in enter_view_content
+    assert "setSelectionActive(hasSelection)" in enter_view_content
+
+    # 2. Verify TextAnimationController supports setSelectionActive
+    tac_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "chats", "TextAnimationController.java"
+    )
+    with open(tac_path, "r", encoding="utf-8") as f:
+        tac_content = f.read()
+
+    assert "public void setSelectionActive(boolean active)" in tac_content
+    assert "!selectionActive" in tac_content
+
+    # 3. Verify TwoPhotoCarouselStrategy has anchor keylines for smooth scrolling
+    carousel_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "Md3MediaCarouselView.java"
+    )
+    with open(carousel_path, "r", encoding="utf-8") as f:
+        carousel_content = f.read()
+
+    assert "addAnchorKeyline" in carousel_content
+    assert "smallMask" in carousel_content
+
+    # 4. Verify PhotoViewer clipHorizontalAddition restored
+    pv_path = os.path.join(
+        REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "PhotoViewer.java"
+    )
+    with open(pv_path, "r", encoding="utf-8") as f:
+        pv_content = f.read()
+
+    assert "clipHorizontal += object.clipHorizontalAddition;" in pv_content

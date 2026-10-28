@@ -308,11 +308,22 @@ public class Md3MediaCarouselView extends FrameLayout {
                     ? (ViewGroup.MarginLayoutParams) child.getLayoutParams()
                     : null;
             int leftMargin = lp != null ? lp.leftMargin : AndroidUtilities.dp(4);
-            float itemSize = Math.max(1f, (containerWidth - AndroidUtilities.dp(16)) / 2f);
+
+            float itemSize = Math.max(1f, (containerWidth - AndroidUtilities.dp(8)) * 0.78f);
+            float smallSize = Math.max(1f, (containerWidth - AndroidUtilities.dp(8)) * 0.18f);
+
             float firstCenter = leftMargin + itemSize / 2f;
+            float leftAnchor = firstCenter - itemSize / 2f - smallSize / 2f;
+            float secondCenter = firstCenter + itemSize / 2f + smallSize / 2f;
+            float rightAnchor = secondCenter + smallSize / 2f + smallSize / 2f;
+
+            float smallMask = 1f - (smallSize / itemSize);
 
             return new KeylineState.Builder(itemSize, containerWidth)
-                    .addKeylineRange(firstCenter, 0f, itemSize, 2, true)
+                    .addAnchorKeyline(leftAnchor, smallMask, smallSize)
+                    .addKeyline(firstCenter, 0f, itemSize, true)
+                    .addKeyline(secondCenter, smallMask, smallSize, false)
+                    .addAnchorKeyline(rightAnchor, smallMask, smallSize)
                     .build();
         }
     }
