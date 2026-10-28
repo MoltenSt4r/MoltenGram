@@ -22,7 +22,9 @@ import android.view.KeyEvent;
 import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.AccelerateDecelerateInterpolator;
 import android.view.animation.AccelerateInterpolator;
+import android.view.animation.DecelerateInterpolator;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 
@@ -105,6 +107,8 @@ public class NothingPhoneBurstOverlay extends View {
     private final Paint bitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
     private final Paint shapePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint cookiePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint liquidPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Path liquidPath = new Path();
     private final Matrix drawMatrix = new Matrix();
 
     private Drawable logoDrawable;
@@ -113,19 +117,24 @@ public class NothingPhoneBurstOverlay extends View {
     private ValueAnimator simulationAnimator;
     private ValueAnimator cookieAnimator;
     private ValueAnimator dismissAnimator;
+    private ValueAnimator liquidAnimator;
+    private ValueAnimator drainLiquidAnimator;
 
     private float cookieProgress = 0f;
     private float dismissCookieProgress = 0f;
+    private float liquidProgress = 0f;
     private boolean isScreenFilled = false;
     private boolean isDismissing = false;
     private boolean floorDisabled = false;
+    private boolean physicsDisabled = false;
+    private int dismissStage = 0;
 
     private float[] columnFloors;
     private static final int COLUMNS_COUNT = 9;
 
     private long lastHapticTime = 0;
     private int spawnedCount = 0;
-    private static final int TARGET_SPAWN_ITEMS = 160;
+    private static final int TARGET_SPAWN_ITEMS = 280;
 
     private android.window.OnBackInvokedCallback backCallback;
 
@@ -133,6 +142,7 @@ public class NothingPhoneBurstOverlay extends View {
         super(context);
         shapePaint.setStyle(Paint.Style.FILL);
         cookiePaint.setStyle(Paint.Style.FILL);
+        liquidPaint.setStyle(Paint.Style.FILL);
 
         setFocusable(true);
         setFocusableInTouchMode(true);
@@ -254,9 +264,19 @@ public class NothingPhoneBurstOverlay extends View {
             int width = getWidth() > 0 ? getWidth() : AndroidUtilities.displaySize.x;
             int height = getHeight() > 0 ? getHeight() : AndroidUtilities.displaySize.y;
 
-            // 1. Spawning items continuously until screen is properly filled
-            if (!isDismissing && !isScreenFilled && spawnedCount < TARGET_SPAWN_ITEMS) {
-                int spawnBatch = 2;
+            // 1. Spawning items continuously until screen is properly filled all the way to the top
+            boolean allColsAtTop = false;
+            if (columnFloors != null) {
+                allColsAtTop = true;
+                for (float f : columnFloors) {
+                    if (f > AndroidUtilities.dp(16)) {
+                        allColsAtTop = false;
+                        break;
+                    }
+                }
+            }
+            if (!isDismissing && !isScreenFilled && !allColsAtTop && spawnedCount < TARGET_SPAWN_ITEMS) {
+                int spawnBatch = 3;
                 for (int b = 0; b < spawnBatch && spawnedCount < TARGET_SPAWN_ITEMS; b++) {
                     PhysicsItem item = new PhysicsItem();
                     item.isDevice = !deviceBitmaps.isEmpty() && (rand.nextInt(3) == 0 || spawnedCount % 3 == 0);
@@ -273,10 +293,10 @@ public class NothingPhoneBurstOverlay extends View {
                         item.scale = 1.0f;
                     }
 
-                    item.x = AndroidUtilities.dp(24) + rand.nextFloat() * (width - AndroidUtilities.dp(48));
+                    item.x = AndroidUtilities.dp(20) + rand.nextFloat() * (width - AndroidUtilities.dp(40));
                     item.y = -AndroidUtilities.dp(40) - rand.nextFloat() * AndroidUtilities.dp(70);
                     item.vx = (rand.nextFloat() - 0.5f) * AndroidUtilities.dp(2.0f);
-                    item.vy = AndroidUtilities.dp(4.5f + rand.nextFloat() * 4.5f);
+                    item.vy = AndroidUtilities.dp(5.0f + rand.nextFloat() * 4.5f);
                     item.rotation = rand.nextFloat() * 360f;
                     item.vRot = (rand.nextFloat() - 0.5f) * 3f; // gentle initial rotation
                     item.settled = false;
@@ -286,138 +306,164 @@ public class NothingPhoneBurstOverlay extends View {
             }
 
             // 2. Physics simulation step
-            float gravity = isDismissing ? AndroidUtilities.dp(1.5f) : AndroidUtilities.dp(0.52f);
-            float colWidth = width / (float) COLUMNS_COUNT;
-            boolean anyImpact = false;
+            if (!physicsDisabled) {
+                float gravity = isDismissing ? AndroidUtilities.dp(1.6f) : AndroidUtilities.dp(0.55f);
+                float colWidth = width / (float) COLUMNS_COUNT;
+                boolean anyImpact = false;
 
-            for (PhysicsItem item : items) {
-                if (!item.settled) {
-                    item.x += item.vx;
-                    item.y += item.vy;
-                    item.vy += gravity;
-                    item.rotation += item.vRot;
+                for (PhysicsItem item : items) {
+                    if (!item.settled) {
+                        item.x += item.vx;
+                        item.y += item.vy;
+                        item.vy += gravity;
+                        item.rotation += item.vRot;
 
-                    // Strong rotational and horizontal damping to avoid spinning wildly
-                    item.vRot *= 0.92f;
-                    item.vx *= 0.96f;
+                        // Strong rotational and horizontal damping to avoid spinning wildly
+                        item.vRot *= 0.92f;
+                        item.vx *= 0.96f;
 
-                    float r = getItemRadius(item);
+                        float r = getItemRadius(item);
 
-                    // Left/Right screen wall boundaries
-                    if (item.x - r < 0) {
-                        item.x = r;
-                        item.vx = -item.vx * 0.35f;
-                    } else if (item.x + r > width) {
-                        item.x = width - r;
-                        item.vx = -item.vx * 0.35f;
-                    }
-
-                    // Floor collision (when floor is active)
-                    if (!floorDisabled && columnFloors != null) {
-                        int col = Math.max(0, Math.min(COLUMNS_COUNT - 1, (int) (item.x / colWidth)));
-                        float floorY = columnFloors[col];
-
-                        if (item.y + r >= floorY) {
-                            item.y = floorY - r;
-                            item.vy = -item.vy * 0.22f;
-                            item.vx *= 0.55f;
-                            item.vRot *= 0.50f;
-                            anyImpact = true;
-
-                            if (Math.abs(item.vy) < AndroidUtilities.dp(1.2f)) {
-                                item.settled = true;
-                                item.vx = 0f;
-                                item.vy = 0f;
-                                item.vRot = 0f;
-
-                                float addedHeight = r * 1.30f;
-                                columnFloors[col] = Math.max(AndroidUtilities.dp(30), columnFloors[col] - addedHeight);
-                                if (col > 0) {
-                                    columnFloors[col - 1] = Math.max(AndroidUtilities.dp(30), columnFloors[col - 1] - addedHeight * 0.40f);
-                                }
-                                if (col < COLUMNS_COUNT - 1) {
-                                    columnFloors[col + 1] = Math.max(AndroidUtilities.dp(30), columnFloors[col + 1] - addedHeight * 0.40f);
-                                }
-                            }
+                        // Left/Right screen wall boundaries
+                        if (item.x - r < 0) {
+                            item.x = r;
+                            item.vx = -item.vx * 0.35f;
+                        } else if (item.x + r > width) {
+                            item.x = width - r;
+                            item.vx = -item.vx * 0.35f;
                         }
-                    }
-                } else {
-                    // Settled items have strictly zero angular velocity
-                    item.vRot = 0f;
-                    item.vx = 0f;
-                    item.vy = 0f;
-                }
-            }
 
-            // 3. Stiff pairwise inter-item collision separation (resolves overlaps completely)
-            if (!floorDisabled) {
-                int count = items.size();
-                for (int iter = 0; iter < 3; iter++) {
-                    for (int i = 0; i < count; i++) {
-                        PhysicsItem a = items.get(i);
-                        float rA = getItemRadius(a);
+                        // Floor collision (when floor is active)
+                        if (!floorDisabled && columnFloors != null) {
+                            int col = Math.max(0, Math.min(COLUMNS_COUNT - 1, (int) (item.x / colWidth)));
+                            float floorY = columnFloors[col];
 
-                        for (int j = i + 1; j < count; j++) {
-                            PhysicsItem b = items.get(j);
-                            float rB = getItemRadius(b);
-
-                            float dx = b.x - a.x;
-                            float dy = b.y - a.y;
-                            float distSq = dx * dx + dy * dy;
-                            float minDist = rA + rB;
-
-                            if (distSq < minDist * minDist && distSq > 0.0001f) {
-                                float dist = (float) Math.sqrt(distSq);
-                                float overlap = minDist - dist;
-                                float nx = dx / dist;
-                                float ny = dy / dist;
-
-                                // Positional separation so items NEVER stay overlapping
-                                float pushA = a.settled ? (b.settled ? 0.5f : 0.0f) : (b.settled ? 1.0f : 0.5f);
-                                float pushB = b.settled ? (a.settled ? 0.5f : 0.0f) : (a.settled ? 1.0f : 0.5f);
-
-                                a.x -= nx * overlap * pushA;
-                                a.y -= ny * overlap * pushA;
-                                b.x += nx * overlap * pushB;
-                                b.y += ny * overlap * pushB;
-
-                                // Gentle velocity exchange without excessive torque
-                                float rvx = b.vx - a.vx;
-                                float rvy = b.vy - a.vy;
-                                float velAlongNormal = rvx * nx + rvy * ny;
-                                if (velAlongNormal < 0) {
-                                    float restitution = 0.22f;
-                                    float impulse = -(1f + restitution) * velAlongNormal / 2f;
-                                    if (!a.settled) {
-                                        a.vx -= impulse * nx;
-                                        a.vy -= impulse * ny;
-                                    }
-                                    if (!b.settled) {
-                                        b.vx += impulse * nx;
-                                        b.vy += impulse * ny;
-                                    }
+                            if (item.y + r >= floorY) {
+                                item.y = floorY - r;
+                                item.vy = -item.vy * 0.22f;
+                                item.vx *= 0.55f;
+                                item.vRot *= 0.50f;
+                                if (!isDismissing) {
                                     anyImpact = true;
                                 }
+
+                                if (Math.abs(item.vy) < AndroidUtilities.dp(1.2f)) {
+                                    item.settled = true;
+                                    item.vx = 0f;
+                                    item.vy = 0f;
+                                    item.vRot = 0f;
+
+                                    float addedHeight = r * 1.30f;
+                                    columnFloors[col] = Math.max(-AndroidUtilities.dp(20), columnFloors[col] - addedHeight);
+                                    if (col > 0) {
+                                        columnFloors[col - 1] = Math.max(-AndroidUtilities.dp(20), columnFloors[col - 1] - addedHeight * 0.40f);
+                                    }
+                                    if (col < COLUMNS_COUNT - 1) {
+                                        columnFloors[col + 1] = Math.max(-AndroidUtilities.dp(20), columnFloors[col + 1] - addedHeight * 0.40f);
+                                    }
+                                }
+                            }
+                        }
+                    } else {
+                        // Settled items have strictly zero angular and linear velocity
+                        item.vRot = 0f;
+                        item.vx = 0f;
+                        item.vy = 0f;
+                    }
+                }
+
+                // 3. Stiff pairwise inter-item collision separation (resolves overlaps)
+                if (!floorDisabled) {
+                    int count = items.size();
+                    for (int iter = 0; iter < 2; iter++) {
+                        for (int i = 0; i < count; i++) {
+                            PhysicsItem a = items.get(i);
+                            float rA = getItemRadius(a);
+
+                            for (int j = i + 1; j < count; j++) {
+                                PhysicsItem b = items.get(j);
+                                // Skip calculation when both items are settled to avoid jitter & ongoing haptics
+                                if (a.settled && b.settled) {
+                                    continue;
+                                }
+
+                                float rB = getItemRadius(b);
+                                float dx = b.x - a.x;
+                                float dy = b.y - a.y;
+                                float distSq = dx * dx + dy * dy;
+                                float minDist = rA + rB;
+
+                                if (distSq < minDist * minDist && distSq > 0.0001f) {
+                                    float dist = (float) Math.sqrt(distSq);
+                                    float overlap = minDist - dist;
+                                    float nx = dx / dist;
+                                    float ny = dy / dist;
+
+                                    // Positional separation so items NEVER stay overlapping
+                                    float pushA = a.settled ? 0.0f : (b.settled ? 1.0f : 0.5f);
+                                    float pushB = b.settled ? 0.0f : (a.settled ? 1.0f : 0.5f);
+
+                                    a.x -= nx * overlap * pushA;
+                                    a.y -= ny * overlap * pushA;
+                                    b.x += nx * overlap * pushB;
+                                    b.y += ny * overlap * pushB;
+
+                                    // Gentle velocity exchange without excessive torque
+                                    float rvx = b.vx - a.vx;
+                                    float rvy = b.vy - a.vy;
+                                    float velAlongNormal = rvx * nx + rvy * ny;
+                                    if (velAlongNormal < 0) {
+                                        float restitution = 0.22f;
+                                        float impulse = -(1f + restitution) * velAlongNormal / 2f;
+                                        if (!a.settled) {
+                                            a.vx -= impulse * nx;
+                                            a.vy -= impulse * ny;
+                                        }
+                                        if (!b.settled) {
+                                            b.vx += impulse * nx;
+                                            b.vy += impulse * ny;
+                                        }
+                                        if (!isDismissing) {
+                                            anyImpact = true;
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (anyImpact && !isDismissing) {
-                playImpactHaptic();
-            }
-
-            // 4. Reliable 100% screen fill condition: trigger cookie when pile reaches the top
-            if (!isScreenFilled && !isDismissing && columnFloors != null) {
-                float avgFloor = 0;
-                for (float f : columnFloors) {
-                    avgFloor += f;
+                if (anyImpact && !isDismissing && !physicsDisabled) {
+                    playImpactHaptic();
                 }
-                avgFloor /= COLUMNS_COUNT;
-                // Guaranteed trigger when pile fills up towards top or enough items stacked
-                if (avgFloor <= height * 0.26f || (spawnedCount >= 110 && allItemsSettled()) || spawnedCount >= TARGET_SPAWN_ITEMS) {
-                    triggerCookieReveal();
+
+                // Check if all items in drop dismissal stage 3 are off-screen
+                if (dismissStage == 3) {
+                    boolean anyVisible = false;
+                    for (PhysicsItem it : items) {
+                        if (it.y - getItemRadius(it) < height) {
+                            anyVisible = true;
+                            break;
+                        }
+                    }
+                    if (!anyVisible && !items.isEmpty()) {
+                        finishAndRemove();
+                        return;
+                    }
+                }
+
+                // 4. Reliable 100% screen fill condition: trigger liquid fill when pile reaches the very top
+                if (!isScreenFilled && !isDismissing && columnFloors != null) {
+                    float maxFloor = 0;
+                    for (float f : columnFloors) {
+                        if (f > maxFloor) {
+                            maxFloor = f;
+                        }
+                    }
+                    boolean filledToTop = (maxFloor <= AndroidUtilities.dp(36)) || (spawnedCount >= 180 && allItemsSettled());
+                    if (filledToTop) {
+                        triggerScreenFilled();
+                    }
                 }
             }
 
@@ -440,16 +486,50 @@ public class NothingPhoneBurstOverlay extends View {
         return (item.baseWidth / 2f) * item.scale;
     }
 
-    private void triggerCookieReveal() {
+    private void triggerScreenFilled() {
         if (isScreenFilled) {
             return;
         }
         isScreenFilled = true;
+        physicsDisabled = true; // Отрубаем физику, чтобы исключить дрожание и паразитные вибрации
+        for (PhysicsItem item : items) {
+            item.settled = true;
+            item.vx = 0f;
+            item.vy = 0f;
+            item.vRot = 0f;
+        }
+        if (vibrator != null) {
+            try {
+                vibrator.cancel();
+            } catch (Throwable ignored) {}
+        }
+        triggerLiquidFill();
+    }
+
+    private void triggerLiquidFill() {
+        liquidAnimator = ValueAnimator.ofFloat(0f, 1f);
+        liquidAnimator.setDuration(800L);
+        liquidAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        liquidAnimator.addUpdateListener(anim -> {
+            liquidProgress = (float) anim.getAnimatedValue();
+            invalidate();
+        });
+        liquidAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                liquidProgress = 1f;
+                triggerCookieReveal();
+            }
+        });
+        liquidAnimator.start();
+    }
+
+    private void triggerCookieReveal() {
         playCookieCelebrationHaptic();
 
         cookieAnimator = ValueAnimator.ofFloat(0f, 1f);
-        cookieAnimator.setDuration(950L);
-        cookieAnimator.setInterpolator(new OvershootInterpolator(2.4f));
+        cookieAnimator.setDuration(900L);
+        cookieAnimator.setInterpolator(new OvershootInterpolator(2.2f));
         cookieAnimator.addUpdateListener(anim -> {
             cookieProgress = (float) anim.getAnimatedValue();
             invalidate();
@@ -541,29 +621,65 @@ public class NothingPhoneBurstOverlay extends View {
             return;
         }
         isDismissing = true;
-        floorDisabled = true;
 
-        // Release settled items so they fall freely through bottom
-        for (PhysicsItem item : items) {
-            item.settled = false;
-            item.vy = Math.max(item.vy, AndroidUtilities.dp(6.0f));
+        if (cookieProgress > 0.01f) {
+            // Stage 1: Logo reverse spin and shrink to 0
+            dismissStage = 1;
+            dismissAnimator = ValueAnimator.ofFloat(0f, 1f);
+            dismissAnimator.setDuration(300L);
+            dismissAnimator.setInterpolator(new AccelerateInterpolator(1.6f));
+            dismissAnimator.addUpdateListener(anim -> {
+                dismissCookieProgress = (float) anim.getAnimatedValue();
+                invalidate();
+            });
+            dismissAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    dismissCookieProgress = 1.0f;
+                    cookieProgress = 0f;
+                    startLiquidDrainAnimation();
+                }
+            });
+            dismissAnimator.start();
+        } else if (liquidProgress > 0.01f) {
+            startLiquidDrainAnimation();
+        } else {
+            startFiguresDropAnimation();
         }
+    }
 
-        // Animate cookie reverse-spin and scale-down
-        dismissAnimator = ValueAnimator.ofFloat(0f, 1f);
-        dismissAnimator.setDuration(460L);
-        dismissAnimator.setInterpolator(new AccelerateInterpolator(1.6f));
-        dismissAnimator.addUpdateListener(anim -> {
-            dismissCookieProgress = (float) anim.getAnimatedValue();
+    private void startLiquidDrainAnimation() {
+        dismissStage = 2;
+        drainLiquidAnimator = ValueAnimator.ofFloat(liquidProgress > 0f ? liquidProgress : 1f, 0f);
+        drainLiquidAnimator.setDuration(450L);
+        drainLiquidAnimator.setInterpolator(new AccelerateDecelerateInterpolator());
+        drainLiquidAnimator.addUpdateListener(anim -> {
+            liquidProgress = (float) anim.getAnimatedValue();
             invalidate();
         });
-        dismissAnimator.addListener(new AnimatorListenerAdapter() {
+        drainLiquidAnimator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                finishAndRemove();
+                liquidProgress = 0f;
+                startFiguresDropAnimation();
             }
         });
-        dismissAnimator.start();
+        drainLiquidAnimator.start();
+    }
+
+    private void startFiguresDropAnimation() {
+        dismissStage = 3;
+        floorDisabled = true;
+        physicsDisabled = false; // Re-enable falling physics under gravity without floor
+
+        Random rand = new Random();
+        for (PhysicsItem item : items) {
+            item.settled = false;
+            item.vy = AndroidUtilities.dp(5.0f + rand.nextFloat() * 6.5f);
+            item.vx = (rand.nextFloat() - 0.5f) * AndroidUtilities.dp(3.0f);
+            item.vRot = (rand.nextFloat() - 0.5f) * 4f;
+        }
+        invalidate();
     }
 
     private void finishAndRemove() {
@@ -578,6 +694,14 @@ public class NothingPhoneBurstOverlay extends View {
         if (dismissAnimator != null) {
             dismissAnimator.cancel();
             dismissAnimator = null;
+        }
+        if (liquidAnimator != null) {
+            liquidAnimator.cancel();
+            liquidAnimator = null;
+        }
+        if (drainLiquidAnimator != null) {
+            drainLiquidAnimator.cancel();
+            drainLiquidAnimator = null;
         }
         items.clear();
         deviceBitmaps.clear();
@@ -628,6 +752,14 @@ public class NothingPhoneBurstOverlay extends View {
             dismissAnimator.cancel();
             dismissAnimator = null;
         }
+        if (liquidAnimator != null) {
+            liquidAnimator.cancel();
+            liquidAnimator = null;
+        }
+        if (drainLiquidAnimator != null) {
+            drainLiquidAnimator.cancel();
+            drainLiquidAnimator = null;
+        }
         items.clear();
         deviceBitmaps.clear();
         deviceSilhouettes.clear();
@@ -669,10 +801,43 @@ public class NothingPhoneBurstOverlay extends View {
             }
         }
 
-        // 2. Draw animated 2/3-screen MD3 cookie with prominent MoltenGram logo
-        if (isScreenFilled && (cookieProgress > 0.01f || isDismissing)) {
+        // 2. Draw rising/draining liquid background layer (uniform dark/light theme background)
+        if (liquidProgress > 0.001f) {
+            drawThemeLiquid(canvas, width, height);
+        }
+
+        // 3. Draw animated 2/3-screen MD3 cookie with prominent MoltenGram logo
+        if (cookieProgress > 0.001f && dismissCookieProgress < 0.999f) {
             drawMd3Cookie(canvas, width, height);
         }
+    }
+
+    private void drawThemeLiquid(Canvas canvas, int width, int height) {
+        int themeBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+        liquidPaint.setColor(themeBg);
+        liquidPaint.setStyle(Paint.Style.FILL);
+        liquidPaint.setAlpha(255);
+
+        if (liquidProgress >= 0.999f) {
+            canvas.drawRect(0, 0, width, height, liquidPaint);
+            return;
+        }
+
+        float surfaceY = height * (1f - liquidProgress);
+        float waveAmp = (float) Math.sin(liquidProgress * Math.PI) * AndroidUtilities.dp(12);
+
+        liquidPath.reset();
+        liquidPath.moveTo(0, height);
+        liquidPath.lineTo(0, surfaceY);
+        liquidPath.cubicTo(
+                width * 0.28f, surfaceY - waveAmp,
+                width * 0.72f, surfaceY + waveAmp,
+                width, surfaceY
+        );
+        liquidPath.lineTo(width, height);
+        liquidPath.close();
+
+        canvas.drawPath(liquidPath, liquidPaint);
     }
 
     private void drawMd3Shape(Canvas canvas, PhysicsItem item) {

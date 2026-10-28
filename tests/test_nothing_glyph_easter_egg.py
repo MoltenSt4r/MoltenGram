@@ -393,3 +393,71 @@ def test_glyph_device_preview_cell_and_activity_integration():
     assert "TYPE_DEVICE_PREVIEW" in activity_content
     assert "GlyphDevicePreviewCell" in activity_content
     assert "showDeviceBurstChooserDialog()" in activity_content
+
+
+def test_phone1_hardware_glyph_initialization_and_channel_mapping():
+    """Verify Nothing Phone (1) has complete hardware support, fallback paths, and 15-channel addressing."""
+    glyph_controller_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphController.java"
+    )
+    with open(glyph_controller_java, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 1. isPhone1 checks
+    assert "public static boolean isPhone1()" in content
+    assert '"Nothing Phone (1)".equals(name)' in content
+    assert 'model.contains("A063")' in content
+    assert 'device.contains("SPACEWAR")' in content
+
+    # 2. resolveStripDevice Phone 1 prioritization
+    assert "if (isPhone1()) {\n            return Glyph.DEVICE_20111;\n        }" in content
+
+    # 3. applyFullChannels Phone 1: full 15-channel illumination
+    assert "Glyph.DEVICE_20111.equals(device) || isPhone1()" in content
+    assert "for (int i = 0; i < 15; i++)" in content
+    assert "builder.buildChannel(i);" in content
+
+    # 4. applyAccentChannels Phone 1
+    assert "builder.buildChannel(Glyph.Code_20111.B1);" in content
+
+    # 5. Call wave animation Phone 1 sequence
+    assert "Glyph.Code_20111.A1" in content
+    assert "Glyph.Code_20111.B1" in content
+    assert "Glyph.Code_20111.D1_1" in content
+    assert "Glyph.Code_20111.C1" in content
+    assert "Glyph.Code_20111.E1" in content
+
+    # 6. flashDirectFallback and registration fallbacks
+    assert "public void flashDirectFallback()" in content
+    assert "gs.setFrameColors(frame);" in content
+    assert 'glyphService.register("20111")' in content
+    assert 'glyphService.register("A063")' in content
+
+
+def test_nothing_phone_burst_overlay_liquid_fill_and_reverse_dismissal():
+    """Verify NothingPhoneBurstOverlay has liquid fill to the top, stops physics/vibration, and runs reverse dismissal."""
+    burst_overlay_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/NothingPhoneBurstOverlay.java"
+    )
+    with open(burst_overlay_java, "r", encoding="utf-8") as f:
+        overlay_content = f.read()
+
+    # 1. Liquid fill variables and methods
+    assert "liquidPaint" in overlay_content
+    assert "liquidPath" in overlay_content
+    assert "liquidProgress" in overlay_content
+    assert "triggerLiquidFill()" in overlay_content
+    assert "drawThemeLiquid(Canvas" in overlay_content
+
+    # 2. Stop physics & vibration cutoff
+    assert "physicsDisabled" in overlay_content
+    assert "vibrator.cancel()" in overlay_content
+    assert "triggerScreenFilled()" in overlay_content
+
+    # 3. Multi-stage reverse dismissal: Logo -> Liquid -> Figures drop
+    assert "startLiquidDrainAnimation()" in overlay_content
+    assert "startFiguresDropAnimation()" in overlay_content
+    assert "drainLiquidAnimator" in overlay_content
+    assert "dismissStage" in overlay_content
+    assert "floorDisabled = true" in overlay_content
+

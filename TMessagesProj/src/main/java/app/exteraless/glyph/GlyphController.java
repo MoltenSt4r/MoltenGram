@@ -136,6 +136,33 @@ public final class GlyphController {
                         case 1: b.buildChannelB(); break;
                         case 2: b.buildChannelC(); break;
                     }
+                } else if (Glyph.DEVICE_20111.equals(targetDev) || isPhone1()) {
+                    switch (callWaveStep % 4) {
+                        case 0:
+                            try { b.buildChannel(Glyph.Code_20111.A1); } catch (Throwable ignored) {}
+                            b.buildChannelA();
+                            break;
+                        case 1:
+                            try { b.buildChannel(Glyph.Code_20111.B1); } catch (Throwable ignored) {}
+                            b.buildChannelB();
+                            break;
+                        case 2:
+                            for (int i = Glyph.Code_20111.D1_1; i <= Glyph.Code_20111.D1_8; i++) {
+                                try { b.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            b.buildChannelD();
+                            break;
+                        case 3:
+                            try {
+                                b.buildChannel(Glyph.Code_20111.C1)
+                                        .buildChannel(Glyph.Code_20111.C2)
+                                        .buildChannel(Glyph.Code_20111.C3)
+                                        .buildChannel(Glyph.Code_20111.C4)
+                                        .buildChannel(Glyph.Code_20111.E1);
+                            } catch (Throwable ignored) {}
+                            b.buildChannelC().buildChannelE();
+                            break;
+                    }
                 } else {
                     switch (callWaveStep % 4) {
                         case 0:
@@ -155,6 +182,7 @@ public final class GlyphController {
                 stripManager.animate(b.build());
             } catch (Throwable t) {
                 FileLog.e(t);
+                flashDirectFallback();
             }
             callWaveStep++;
             handler.postDelayed(this, 180L);
@@ -417,6 +445,10 @@ public final class GlyphController {
     }
 
     public static boolean isPhone1() {
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        if ("Nothing Phone (1)".equals(name)) {
+            return true;
+        }
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
         String product = Build.PRODUCT != null ? Build.PRODUCT.toUpperCase() : "";
@@ -446,6 +478,9 @@ public final class GlyphController {
     }
 
     public static String resolveStripDevice() {
+        if (isPhone1()) {
+            return Glyph.DEVICE_20111;
+        }
         try {
             if (Common.is20111()) return Glyph.DEVICE_20111;
             if (Common.is22111()) return Glyph.DEVICE_22111;
@@ -517,6 +552,7 @@ public final class GlyphController {
     public void playPhone1BurstEffect(Context context) {
         handler.post(() -> {
             if (!ensureReady()) {
+                previewPending = true;
                 return;
             }
             if (matrixManager != null && matrixRegistered) {
@@ -534,7 +570,10 @@ public final class GlyphController {
                     }
                 } catch (Throwable t) {
                     FileLog.e(t);
+                    flashDirectFallback();
                 }
+            } else {
+                flashDirectFallback();
             }
             if (context != null) {
                 try {
@@ -633,8 +672,20 @@ public final class GlyphController {
             builder.buildChannelA()
                     .buildChannelB()
                     .buildChannelC();
+        } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
+            // Phone (1) - 15 адресных зон A1, B1, C1..C4, E1, D1_1..D1_8:
+            for (int i = 0; i < 15; i++) {
+                try {
+                    builder.buildChannel(i);
+                } catch (Throwable ignored) {}
+            }
+            builder.buildChannelA()
+                    .buildChannelB()
+                    .buildChannelC()
+                    .buildChannelD()
+                    .buildChannelE();
         } else {
-            // Phone (1 / 2) - классические 5 зон A, B, C, D, E:
+            // Phone (2) - классические 5 зон A, B, C, D, E:
             builder.buildChannelA()
                     .buildChannelB()
                     .buildChannelC()
@@ -652,9 +703,40 @@ public final class GlyphController {
             builder.buildChannel(0);
         } else if (Glyph.DEVICE_24111.equals(device)) {
             builder.buildChannelA();
+        } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
+            try {
+                builder.buildChannel(Glyph.Code_20111.B1);
+            } catch (Throwable ignored) {}
+            builder.buildChannelB();
         } else {
             builder.buildChannelB();
         }
+    }
+
+    public void flashDirectFallback() {
+        try {
+            Field serviceField = GlyphManager.class.getDeclaredField("mService");
+            serviceField.setAccessible(true);
+            Object serviceObj = stripManager != null ? serviceField.get(stripManager) : null;
+            if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
+                com.nothing.thirdparty.IGlyphService gs = (com.nothing.thirdparty.IGlyphService) serviceObj;
+                try {
+                    gs.openSession();
+                } catch (Throwable ignored) {}
+                String device = resolveStripDevice();
+                int size = (Glyph.DEVICE_20111.equals(device) || isPhone1()) ? 15 : 33;
+                int[] frame = new int[size];
+                for (int i = 0; i < size; i++) {
+                    frame[i] = 4096;
+                }
+                gs.setFrameColors(frame);
+                handler.postDelayed(() -> {
+                    try {
+                        gs.setFrameColors(new int[size]);
+                    } catch (Throwable ignored) {}
+                }, 220L);
+            }
+        } catch (Throwable ignored) {}
     }
 
     private void initStrip(Context context) {
@@ -676,70 +758,78 @@ public final class GlyphController {
                         FileLog.e(t);
                     }
                 }
-                if (!registered) {
+                try {
+                    Field serviceField = GlyphManager.class.getDeclaredField("mService");
+                    serviceField.setAccessible(true);
+                    Object serviceObj = serviceField.get(stripManager);
+                    if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
+                        com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
+                        if (!registered) {
+                            try { registered = glyphService.register(targetDevice); } catch (Throwable ignored) {}
+                        }
+                        if (!registered) {
+                            try { registered = glyphService.register("20111"); } catch (Throwable ignored) {}
+                        }
+                        if (!registered) {
+                            try { registered = glyphService.register("A063"); } catch (Throwable ignored) {}
+                        }
+                        if (!registered && context != null) {
+                            try { registered = glyphService.register(context.getPackageName()); } catch (Throwable ignored) {}
+                        }
+                        if (!registered) {
+                            try { registered = glyphService.register(""); } catch (Throwable ignored) {}
+                        }
+                        String appKey = getAppKey(context);
+                        if (!registered && appKey != null) {
+                            try { registered = glyphService.registerSDK(appKey, targetDevice); } catch (Throwable ignored) {}
+                            if (!registered) {
+                                try { registered = glyphService.registerSDK(appKey, "20111"); } catch (Throwable ignored) {}
+                            }
+                        }
+                        if (!registered) {
+                            try { registered = glyphService.registerSDK("test", targetDevice); } catch (Throwable ignored) {}
+                        }
+                    }
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+
+                try {
+                    Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
+                    authField.setAccessible(true);
+                    authField.setBoolean(stripManager, true);
+
+                    Field devField = GlyphManager.class.getDeclaredField("mDevice");
+                    devField.setAccessible(true);
+                    devField.set(stripManager, targetDevice);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+
+                try {
+                    stripManager.openSession();
+                    stripSessionOpen = true;
+                } catch (Throwable e) {
+                    FileLog.e(e);
                     try {
                         Field serviceField = GlyphManager.class.getDeclaredField("mService");
                         serviceField.setAccessible(true);
                         Object serviceObj = serviceField.get(stripManager);
                         if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
-                            com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
-                            registered = glyphService.register(targetDevice);
-                            if (!registered) {
-                                String appKey = getAppKey(context);
-                                registered = glyphService.registerSDK(appKey, targetDevice);
-                            }
-                            if (registered) {
-                                Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
-                                authField.setAccessible(true);
-                                authField.setBoolean(stripManager, true);
-
-                                Field devField = GlyphManager.class.getDeclaredField("mDevice");
-                                devField.setAccessible(true);
-                                devField.set(stripManager, targetDevice);
-                            }
+                            ((com.nothing.thirdparty.IGlyphService) serviceObj).openSession();
                         }
-                    } catch (Throwable t) {
-                        FileLog.e(t);
-                    }
-                }
-                if (registered) {
-                    try {
-                        Field devField = GlyphManager.class.getDeclaredField("mDevice");
-                        devField.setAccessible(true);
-                        Object currentDev = devField.get(stripManager);
-                        if (currentDev == null || !targetDevice.equals(currentDev)) {
-                            devField.set(stripManager, targetDevice);
-                        }
-                    } catch (Throwable t) {
-                        FileLog.e(t);
-                    }
-                }
-                if (!registered) {
-                    try {
-                        Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
-                        authField.setAccessible(true);
-                        authField.setBoolean(stripManager, true);
-
-                        Field devField = GlyphManager.class.getDeclaredField("mDevice");
-                        devField.setAccessible(true);
-                        devField.set(stripManager, targetDevice);
-
-                        stripManager.openSession();
-                        stripSessionOpen = true;
-                        runPendingPreview();
-                    } catch (Throwable e) {
-                        FileLog.e(e);
-                    }
-                    return;
-                }
-                try {
-                    stripManager.openSession();
+                    } catch (Throwable ignored) {}
                     stripSessionOpen = true;
-                    runPendingPreview();
-                } catch (GlyphException e) {
-                    FileLog.e(e);
                 }
+                runPendingPreview();
             }
+
+            @Override
+            public void onServiceDisconnected(ComponentName componentName) {
+                stripSessionOpen = false;
+            }
+        });
+    }
 
             @Override
             public void onServiceDisconnected(ComponentName componentName) {
@@ -815,6 +905,7 @@ public final class GlyphController {
             stripManager.animate(builder.build());
         } catch (Throwable t) {
             FileLog.e(t);
+            flashDirectFallback();
         }
     }
 
@@ -911,6 +1002,7 @@ public final class GlyphController {
             stripManager.animate(builder.build());
         } catch (Throwable t) {
             FileLog.e(t);
+            flashDirectFallback();
         }
     }
 
