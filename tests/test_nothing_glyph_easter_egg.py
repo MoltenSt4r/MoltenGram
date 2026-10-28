@@ -299,8 +299,10 @@ def test_glyph_controller_hardware_support_for_all_devices():
     assert 'Glyph.DEVICE_25111.equals(device)' in content
     assert 'b.buildChannel(sq)' in content or 'builder.buildChannel(i)' in content
 
-    # 3. Checks for dot/36-LED (Phone 3a Lite / CMF Phone 1 / CMF Phone 2 Pro)
+    # 3. Checks for dot/36-LED (Phone 3a Lite / Phone 3a)
     assert 'Glyph.DEVICE_24111' in content
 
-    # 4. Universal support check in constructor
-    assert 'supported = NothingPhoneEasterEgg.isNothingOrCmfDevice() || isPhone1();' in content
+    # 4. Strict Glyph device check excluding CMF (CMF has no physical glyphs)
+    assert 'supported = isNothingGlyphDevice();' in content
+    assert 'isNothingGlyphDevice()' in content
+    assert 'name.startsWith("CMF")' in content

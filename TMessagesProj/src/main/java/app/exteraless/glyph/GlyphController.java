@@ -184,7 +184,7 @@ public final class GlyphController {
     };
 
     private GlyphController() {
-        supported = NothingPhoneEasterEgg.isNothingOrCmfDevice() || isPhone1();
+        supported = isNothingGlyphDevice();
     }
 
     public boolean isSupported() {
@@ -421,6 +421,26 @@ public final class GlyphController {
                 || device.contains("SPACEWAR") || product.contains("SPACEWAR") || board.contains("SPACEWAR");
     }
 
+    public static boolean isNothingGlyphDevice() {
+        if (isPhone1()) {
+            return true;
+        }
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        if (name != null && name.startsWith("CMF")) {
+            return false;
+        }
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String brand = Build.BRAND != null ? Build.BRAND.toUpperCase() : "";
+        String manufacturer = Build.MANUFACTURER != null ? Build.MANUFACTURER.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+        if (model.contains("CMF") || brand.contains("CMF") || manufacturer.contains("CMF")
+                || model.contains("A015") || (model.contains("A001") && !model.contains("A001T"))
+                || device.contains("TETRIS") || device.contains("GALAGA")) {
+            return false;
+        }
+        return NothingPhoneEasterEgg.isNothingOrCmfDevice();
+    }
+
     public static String resolveStripDevice() {
         try {
             if (Common.is20111()) return Glyph.DEVICE_20111;
@@ -437,8 +457,7 @@ public final class GlyphController {
         if ("Nothing Phone (2a) Plus".equals(name)) return Glyph.DEVICE_23113;
         if ("Nothing Phone (2a)".equals(name)) return Glyph.DEVICE_23111;
         if ("Nothing Phone (4a)".equals(name) || "Nothing Phone (4b)".equals(name)) return Glyph.DEVICE_25111;
-        if ("Nothing Phone (3a) Lite".equals(name) || "Nothing Phone (3a)".equals(name)
-                || "CMF Phone 1".equals(name) || "CMF Phone 2 Pro".equals(name)) return Glyph.DEVICE_24111;
+        if ("Nothing Phone (3a) Lite".equals(name) || "Nothing Phone (3a)".equals(name)) return Glyph.DEVICE_24111;
 
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
@@ -448,9 +467,9 @@ public final class GlyphController {
                 || device.contains("FROGGER") || device.contains("BLASTOISE") || device.contains("SUPERCONTRA")) {
             return Glyph.DEVICE_25111;
         }
-        // Phone (3a) Lite / CMF Phone 1 / CMF Phone 2 Pro -> A059 (точка / 36 LED)
-        if (model.contains("A059") || model.contains("A015") || model.contains("A001") || model.contains("3A")
-                || model.contains("CMF") || device.contains("TETRIS") || device.contains("GALAGA") || device.contains("GALAXIAN") || device.contains("ASTEROIDS")) {
+        // Phone (3a) Lite / Phone (3a) -> A059 (точка / 36 LED)
+        if (model.contains("A059") || model.contains("A001T") || model.contains("3A")
+                || device.contains("GALAXIAN") || device.contains("ASTEROIDS")) {
             return Glyph.DEVICE_24111;
         }
         // Phone (2a) Plus -> A142P
