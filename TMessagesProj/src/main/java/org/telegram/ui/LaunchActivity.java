@@ -2241,6 +2241,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                                         rightActionBarLayout.showLastFragment();
                                                     }
                                                 }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                                pushOpened = true;
+                                                return pushOpened;
                                             } else if (path.startsWith("msg/") || path.startsWith("share/")) {
                                                 message = data.getQueryParameter("url");
                                                 if (message == null) {
@@ -2758,7 +2760,22 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                         data = Uri.parse(url);
                                         theme = data.getQueryParameter("slug");
                                     } else if (url.startsWith("tg:settings") || url.startsWith("tg://settings")) {
-                                        if (url.contains("themes") || url.contains("theme")) {
+                                        if (url.startsWith("tg://settings/neko") || url.startsWith("tg:settings/neko")
+                                                || url.startsWith("tg://settings/moltengram") || url.startsWith("tg:settings/moltengram")
+                                                || url.startsWith("tg://settings/exteraless") || url.startsWith("tg:settings/exteraless")
+                                                || url.startsWith("tg://settings/exterams") || url.startsWith("tg:settings/exterams")) {
+                                            String prefix = url.startsWith("tg://settings/") ? url.substring(14) : (url.startsWith("tg:settings/") ? url.substring(12) : url.substring(url.indexOf('/') + 1));
+                                            data = Uri.parse("https://t.me/" + prefix);
+                                            SettingsHelper.processDeepLink(this, data, fragment -> {
+                                                AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
+                                                if (AndroidUtilities.isTablet()) {
+                                                    actionBarLayout.showLastFragment();
+                                                    rightActionBarLayout.showLastFragment();
+                                                }
+                                            }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                            pushOpened = true;
+                                            return pushOpened;
+                                        } else if (url.contains("themes") || url.contains("theme")) {
                                             open_settings = 2;
                                         } else if (url.contains("devices")) {
                                             open_settings = 3;
@@ -2816,6 +2833,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                     } else if (url.startsWith("tg:neko") || url.startsWith("tg://neko")
                                             || url.startsWith("tg:nasettings") || url.startsWith("tg://nasettings")
                                             || url.startsWith("tg:moltengram") || url.startsWith("tg://moltengram")
+                                            || url.startsWith("tg:exteraless") || url.startsWith("tg://exteraless")
+                                            || url.startsWith("tg:exterams") || url.startsWith("tg://exterams")
                                             || url.startsWith("tg:ms") || url.startsWith("tg://ms")) {
                                         String prefix;
                                         if (url.startsWith("tg://")) {
@@ -2827,6 +2846,12 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             prefix = "moltengram" + prefix.substring(4);
                                         } else if (prefix.startsWith("ms")) {
                                             prefix = "moltengram" + prefix.substring(2);
+                                        } else if (prefix.startsWith("nasettings")) {
+                                            prefix = "moltengram" + prefix.substring(10);
+                                        } else if (prefix.startsWith("exteraless")) {
+                                            prefix = "moltengram" + prefix.substring(10);
+                                        } else if (prefix.startsWith("exterams")) {
+                                            prefix = "moltengram" + prefix.substring(8);
                                         }
                                         data = Uri.parse("https://t.me/" + prefix);
                                         SettingsHelper.processDeepLink(this, data, fragment -> {
@@ -2836,6 +2861,8 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                                 rightActionBarLayout.showLastFragment();
                                             }
                                         }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                        pushOpened = true;
+                                        return pushOpened;
                                     } else if ((url.startsWith("tg:search") || url.startsWith("tg://search"))) {
                                         url = url.replace("tg:search", "tg://telegram.org").replace("tg://search", "tg://telegram.org");
                                         data = Uri.parse(url);

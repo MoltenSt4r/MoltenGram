@@ -145,6 +145,27 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("feedSettings", "chats");
         NAGRAM_ROWS.put("feed", "chats");
         NAGRAM_ROWS.put("wideFeedPosts", "chats");
+        NAGRAM_ROWS.put("OEGlyphEnabled", "glyph");
+        NAGRAM_ROWS.put("OEGlyphNewMessage", "glyph");
+        NAGRAM_ROWS.put("OEGlyphCalls", "glyph");
+        NAGRAM_ROWS.put("OEGlyphRecording", "glyph");
+        NAGRAM_ROWS.put("OEGlyphScreenOff", "glyph");
+        NAGRAM_ROWS.put("glyphPreview", "glyph");
+        NAGRAM_ROWS.put("glyphDevicePreview", "glyph");
+        NAGRAM_ROWS.put("NothingPhoneEasterEgg", "glyph");
+        NAGRAM_ROWS.put("Md3AvatarShapeUsers", "avatar_shapes");
+        NAGRAM_ROWS.put("Md3AvatarShapeBots", "avatar_shapes");
+        NAGRAM_ROWS.put("Md3AvatarShapeGroups", "avatar_shapes");
+        NAGRAM_ROWS.put("Md3AvatarShapeChannels", "avatar_shapes");
+        NAGRAM_ROWS.put("Md3AvatarShapeSelf", "avatar_shapes");
+        NAGRAM_ROWS.put("Md3AvatarShapesReset", "avatar_shapes");
+        NAGRAM_ROWS.put("avatar_shapes", "avatar_shapes");
+        NAGRAM_ROWS.put("md3_avatar_shapes", "avatar_shapes");
+        NAGRAM_ROWS.put("monetPalette", "appearance");
+        NAGRAM_ROWS.put("OEChatsMd3ChatInput", "chats");
+        NAGRAM_ROWS.put("OEChatsIncomingMessageAnimation", "chats");
+        NAGRAM_ROWS.put("OEShizukuInstall", "other");
+        NAGRAM_ROWS.put("OEBioCustomEmojiStatus", "other");
     }
 
     private static void moveRows(String from, String to, String... rows) {
@@ -166,21 +187,33 @@ public class SettingsHelper {
             "ai_settings", "ai",
             "exteraless_cloud", "cloud",
             "exteraless_glyph", "glyph",
+            "md3_avatar_shapes", "avatar_shapes",
             "ghost_mode", "ghost"));
 
     public static boolean isDeepLink(String path) {
         if (path == null) {
             return false;
         }
-        if (path.startsWith(HOST_NAGRAM + "/") || path.startsWith(HOST_MOLTENGRAM + "/")
-                || path.equals(HOST_MOLTENGRAM) || path.equals(HOST_NAGRAM)) {
+        if (path.startsWith(HOST_NAGRAM + "/") || path.equals(HOST_NAGRAM)) {
             return true;
         }
+        if (path.startsWith(HOST_MOLTENGRAM + "/")) {
+            String sub = path.substring(HOST_MOLTENGRAM.length() + 1);
+            int qIdx = sub.indexOf('?');
+            if (qIdx >= 0) sub = sub.substring(0, qIdx);
+            return !sub.isEmpty() && (EXTERALESS_SCREENS.contains(sub) || EXTERALESS_SCREENS.contains(sub.toLowerCase()));
+        }
         if (path.startsWith(HOST_EXTERAMS + "/")) {
-            return EXTERALESS_SCREENS.contains(path.substring(HOST_EXTERAMS.length() + 1));
+            String sub = path.substring(HOST_EXTERAMS.length() + 1);
+            int qIdx = sub.indexOf('?');
+            if (qIdx >= 0) sub = sub.substring(0, qIdx);
+            return EXTERALESS_SCREENS.contains(sub);
         }
         if (path.startsWith(HOST_EXTERALESS + "/")) {
-            return EXTERALESS_SCREENS.contains(path.substring(HOST_EXTERALESS.length() + 1));
+            String sub = path.substring(HOST_EXTERALESS.length() + 1);
+            int qIdx = sub.indexOf('?');
+            if (qIdx >= 0) sub = sub.substring(0, qIdx);
+            return EXTERALESS_SCREENS.contains(sub);
         }
         return false;
     }
@@ -234,21 +267,40 @@ public class SettingsHelper {
             unknown.run();
             return;
         }
-        var segments = uri.getPathSegments();
-        if (segments.isEmpty() || segments.size() > 2) {
+        var segments = new ArrayList<>(uri.getPathSegments());
+        if (segments.isEmpty()) {
             unknown.run();
             return;
         }
-        final boolean exteraless = HOST_MOLTENGRAM.equals(segments.get(0)) || HOST_EXTERAMS.equals(segments.get(0)) || HOST_EXTERALESS.equals(segments.get(0));
-        if (!exteraless && !HOST_NAGRAM.equals(segments.get(0))) {
-            unknown.run();
-            return;
+        if ("settings".equalsIgnoreCase(segments.get(0)) && segments.size() > 1) {
+            segments.remove(0);
         }
+        String prefix0 = segments.get(0).toLowerCase();
+        boolean hasHostPrefix = HOST_MOLTENGRAM.equals(prefix0) || HOST_EXTERAMS.equals(prefix0)
+                || HOST_EXTERALESS.equals(prefix0) || HOST_NAGRAM.equals(prefix0)
+                || "neko".equals(prefix0) || "ms".equals(prefix0);
+
+        String targetScreen = uri.getQueryParameter("target");
+        if (TextUtils.isEmpty(targetScreen)) {
+            targetScreen = uri.getQueryParameter("screen");
+        }
+
+        String rawScreen = null;
+        if (!TextUtils.isEmpty(targetScreen)) {
+            rawScreen = targetScreen;
+        } else if (hasHostPrefix) {
+            if (segments.size() >= 2) {
+                rawScreen = segments.get(1);
+            }
+        } else {
+            rawScreen = segments.get(0);
+        }
+
         var row = uri.getQueryParameter("r");
         if (TextUtils.isEmpty(row)) {
             row = uri.getQueryParameter("row");
         }
-        if (exteraless && segments.size() < 2 && TextUtils.isEmpty(row)) {
+        if (rawScreen == null && TextUtils.isEmpty(row)) {
             unknown.run();
             return;
         }
@@ -259,7 +311,7 @@ public class SettingsHelper {
         BaseNekoSettingsActivity neko_fragment = null;
         BaseNekoXSettingsActivity nekox_fragment = null;
         OpenExteraAppNavigationActivity navigation_fragment = null;
-        final String screen = nagramScreen(segments.size() == 1 ? null : segments.get(1), row);
+        final String screen = nagramScreen(rawScreen, row);
         if (screen != null) {
             switch (screen) {
                 case "settings":
@@ -574,6 +626,10 @@ public class SettingsHelper {
             case "exteraless_glyph":
             case "glyph":
                 fallback = "glyph";
+                break;
+            case "md3_avatar_shapes":
+            case "avatar_shapes":
+                fallback = "avatar_shapes";
                 break;
             case "ghost_mode":
             case "ghost":

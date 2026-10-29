@@ -140,3 +140,22 @@ def test_settings_helper_handles_avatar_shapes_deeplink():
         content = f.read()
     assert "avatar_shapes" in content
     assert "Md3AvatarShapesActivity" in content
+    assert "OEGlyphEnabled" in content
+    assert "Md3AvatarShapeUsers" in content
+    assert '"md3_avatar_shapes", "avatar_shapes"' in content
+
+
+def test_launch_activity_deep_links_support_push_opened_and_settings_neko():
+    launch_path = os.path.join(
+        REPO_ROOT, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "LaunchActivity.java"
+    )
+    with open(launch_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # SettingsHelper.isDeepLink branch must set pushOpened and return
+    assert "pushOpened = true;\n                                                return pushOpened;" in content
+
+    # Must intercept tg://settings/neko and tg://settings/moltengram
+    assert "url.startsWith(\"tg://settings/neko\")" in content
+    assert "url.startsWith(\"tg://settings/moltengram\")" in content
+
