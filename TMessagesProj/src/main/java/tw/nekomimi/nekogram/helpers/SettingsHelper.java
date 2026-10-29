@@ -257,6 +257,12 @@ public class SettingsHelper {
             case "updates":
             case "update":
                 return HOST_MOLTENGRAM + "/updates";
+            case "glyph":
+            case "exteraless_glyph":
+                return HOST_MOLTENGRAM + "/glyph";
+            case "avatar_shapes":
+            case "md3_avatar_shapes":
+                return HOST_MOLTENGRAM + "/avatar_shapes";
             default:
                 return HOST_MOLTENGRAM + "/" + key;
         }
