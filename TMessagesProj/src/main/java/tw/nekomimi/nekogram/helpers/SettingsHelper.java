@@ -54,6 +54,7 @@ public class SettingsHelper {
     private static final String HOST_EXTERALESS = "exteraless";
     private static final String HOST_EXTERAMS = "exterams";
     private static final String HOST_MOLTENGRAM = "moltengram";
+    private static final String HOST_MGSETTINGS = "mgsettings";
 
     private static final Map<String, String> SEARCH_TITLE_ALIASES = new HashMap<>();
     private static final Map<String, String> TRANSLATOR_ROWS = new HashMap<>();
@@ -153,6 +154,7 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("OEGlyphRecording", "glyph");
         NAGRAM_ROWS.put("OEGlyphRecordAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphScreenOff", "glyph");
+        NAGRAM_ROWS.put("OEGlyphMatrixShowIcon", "glyph");
         NAGRAM_ROWS.put("glyphPreview", "glyph");
         NAGRAM_ROWS.put("glyphDevicePreview", "glyph");
         NAGRAM_ROWS.put("NothingPhoneEasterEgg", "glyph");
@@ -178,8 +180,9 @@ public class SettingsHelper {
     }
 
     private static final Set<String> EXTERALESS_SCREENS = new HashSet<>(Arrays.asList(
-            "settings", "general", "appearance", "chats", "plugins", "pillstack", "other",
-            "ayumoments", "navigation", "privacy", "powersaving",
+            "settings", "s", "general", "g", "appearance", "a", "chats", "chat", "c",
+            "experimental", "e", "plugins", "pillstack", "other",
+            "ayumoments", "ayu", "navigation", "privacy", "powersaving",
             "ota_updates", "updates", "update",
             "plugin_store_settings", "plugin_store", "plugins_store",
             "shizuku_settings", "shizuku",
@@ -187,24 +190,29 @@ public class SettingsHelper {
             "player_settings", "player",
             "chip_folders_settings", "chip_folders", "chips",
             "text_animation_settings", "text_animation",
-            "ai_settings", "ai",
+            "ai_settings", "ai", "exteraless_ai",
             "exteraless_cloud", "cloud",
             "exteraless_glyph", "glyph",
             "md3_avatar_shapes", "avatar_shapes",
-            "ghost_mode", "ghost"));
+            "ghost_mode", "ghost",
+            "translator", "translate", "t", "emoji", "about", "passcode", "send_logs",
+            "iconpacks", "pillstackweather"));
 
     public static boolean isDeepLink(String path) {
         if (path == null) {
             return false;
         }
-        if (path.startsWith(HOST_NAGRAM + "/") || path.equals(HOST_NAGRAM)) {
+        if (path.startsWith(HOST_NAGRAM + "/") || path.equals(HOST_NAGRAM)
+                || path.startsWith(HOST_MGSETTINGS + "/") || path.equals(HOST_MGSETTINGS)) {
             return true;
         }
         if (path.startsWith(HOST_MOLTENGRAM + "/")) {
             String sub = path.substring(HOST_MOLTENGRAM.length() + 1);
             int qIdx = sub.indexOf('?');
             if (qIdx >= 0) sub = sub.substring(0, qIdx);
-            return !sub.isEmpty() && (EXTERALESS_SCREENS.contains(sub) || EXTERALESS_SCREENS.contains(sub.toLowerCase()));
+            return !sub.isEmpty() && (EXTERALESS_SCREENS.contains(sub)
+                    || EXTERALESS_SCREENS.contains(sub.toLowerCase())
+                    || sub.equals(PasscodeHelper.getSettingsKey()));
         }
         if (path.startsWith(HOST_EXTERAMS + "/")) {
             String sub = path.substring(HOST_EXTERAMS.length() + 1);
@@ -229,45 +237,45 @@ public class SettingsHelper {
             case "moltengram":
             case "exteraless":
             case "exterams":
-                return HOST_NAGRAM + "/settings";
+                return HOST_MOLTENGRAM + "/settings";
             case "moltengram_general":
             case "exteraless_general":
             case "exterams_general":
-                return HOST_NAGRAM + "/general";
+                return HOST_MOLTENGRAM + "/general";
             case "moltengram_appearance":
             case "exteraless_appearance":
             case "exterams_appearance":
-                return HOST_NAGRAM + "/appearance";
+                return HOST_MOLTENGRAM + "/appearance";
             case "moltengram_chats":
             case "exteraless_chats":
             case "exterams_chats":
-                return HOST_NAGRAM + "/chats";
+                return HOST_MOLTENGRAM + "/chats";
             case "moltengram_other":
             case "exteraless_other":
             case "exterams_other":
-                return HOST_NAGRAM + "/other";
+                return HOST_MOLTENGRAM + "/other";
             case "moltengram_ayumoments":
             case "exteraless_ayumoments":
             case "exterams_ayumoments":
-                return HOST_NAGRAM + "/ayumoments";
+                return HOST_MOLTENGRAM + "/ayumoments";
             case "pillstack":
-                return HOST_NAGRAM + "/pillstack";
+                return HOST_MOLTENGRAM + "/pillstack";
             case "moltengram_navigation":
             case "exteraless_navigation":
             case "exterams_navigation":
-                return HOST_NAGRAM + "/navigation";
+                return HOST_MOLTENGRAM + "/navigation";
             case "ota_updates":
             case "updates":
             case "update":
-                return HOST_NAGRAM + "/updates";
+                return HOST_MOLTENGRAM + "/updates";
             case "glyph":
             case "exteraless_glyph":
-                return HOST_NAGRAM + "/glyph";
+                return HOST_MOLTENGRAM + "/glyph";
             case "avatar_shapes":
             case "md3_avatar_shapes":
-                return HOST_NAGRAM + "/avatar_shapes";
+                return HOST_MOLTENGRAM + "/avatar_shapes";
             default:
-                return HOST_NAGRAM + "/" + key;
+                return HOST_MOLTENGRAM + "/" + key;
         }
     }
 
@@ -285,9 +293,9 @@ public class SettingsHelper {
             segments.remove(0);
         }
         String prefix0 = segments.get(0).toLowerCase();
-        boolean hasHostPrefix = HOST_MOLTENGRAM.equals(prefix0) || HOST_EXTERAMS.equals(prefix0)
-                || HOST_EXTERALESS.equals(prefix0) || HOST_NAGRAM.equals(prefix0)
-                || "neko".equals(prefix0) || "ms".equals(prefix0);
+        boolean hasHostPrefix = HOST_MOLTENGRAM.equals(prefix0) || HOST_MGSETTINGS.equals(prefix0)
+                || HOST_EXTERAMS.equals(prefix0) || HOST_EXTERALESS.equals(prefix0)
+                || HOST_NAGRAM.equals(prefix0) || "neko".equals(prefix0) || "ms".equals(prefix0);
 
         String targetScreen = uri.getQueryParameter("target");
         if (TextUtils.isEmpty(targetScreen)) {
@@ -626,6 +634,7 @@ public class SettingsHelper {
                 break;
             case "ai_settings":
             case "ai":
+            case "exteraless_ai":
                 fallback = "ai_settings";
                 break;
             case "exteraless_cloud":

@@ -291,7 +291,7 @@ public class NekoPasscodeSettingsActivity extends BaseNekoSettingsActivity {
                     } else if (position == panicCode2Row) {
                         cell.setText(getString(R.string.PasscodePanicCodeAbout));
                     } else if (position == showInSettings2Row) {
-                        var link = String.format(Locale.ENGLISH, "https://t.me/nasettings/%s", PasscodeHelper.getSettingsKey());
+                        var link = String.format(Locale.ENGLISH, "https://t.me/moltengram/%s", PasscodeHelper.getSettingsKey());
                         var stringBuilder = new SpannableStringBuilder(AndroidUtilities.replaceTags(getString(R.string.PasscodeShowInSettingsAbout)));
                         stringBuilder.append("\n").append(link);
                         stringBuilder.setSpan(new URLSpanNoUnderline(null) {

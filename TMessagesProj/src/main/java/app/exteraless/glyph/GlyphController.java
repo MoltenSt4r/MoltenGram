@@ -160,7 +160,8 @@ public final class GlyphController {
                 return;
             }
             int len = getMatrixGridLength();
-            Bitmap logo = getMatrixIconBitmap(context, R.drawable.moltengram_icon_monochrome);
+            boolean showIcon = GlyphConfig.matrixShowIcon();
+            Bitmap logo = showIcon ? getMatrixIconBitmap(context, R.drawable.moltengram_icon_monochrome) : null;
             int step = matrixMessageStep++;
 
             try {
@@ -171,15 +172,18 @@ public final class GlyphController {
                         return;
                     }
                     if (step % 2 == 0) {
-                        int[] frame = renderMatrixBitmap(logo, 255, len);
+                        int[] frame = showIcon ? renderMatrixBitmap(logo, 255, len) : new int[len * len];
                         addMatrixPerimeterRing(frame, len, 1.0f, 3200);
+                        if (!showIcon) {
+                            addMatrixExpandingRing(frame, len, 0.52f, 3600);
+                        }
                         pushMatrixFrame(frame);
                     } else {
                         pushMatrixFrame(new int[len * len]);
                     }
                     handler.postDelayed(this, 85L);
                 } else if (matrixMessageStyle == GlyphConfig.MESSAGE_ANIM_SOFT_PULSE) {
-                    // Плавное синусоидальное разгорание и затухание логотипа (14 кадров)
+                    // Плавное синусоидальное разгорание и затухание (14 кадров)
                     int totalSteps = 14;
                     if (step >= totalSteps) {
                         hideMatrixLogo();
@@ -187,10 +191,16 @@ public final class GlyphController {
                     }
                     double phase = Math.sin(Math.PI * (step + 1) / (double) totalSteps);
                     int brightness = Math.max(18, Math.min(255, (int) Math.round(255.0 * phase)));
-                    showMatrixIcon(R.drawable.moltengram_icon_monochrome, brightness, false);
+                    if (showIcon) {
+                        showMatrixIcon(R.drawable.moltengram_icon_monochrome, brightness, false);
+                    } else {
+                        int[] frame = new int[len * len];
+                        addMatrixExpandingRing(frame, len, (float) (0.35 + 0.55 * phase), brightness * 16);
+                        pushMatrixFrame(frame);
+                    }
                     handler.postDelayed(this, 70L);
                 } else if (matrixMessageStyle == GlyphConfig.MESSAGE_ANIM_ACCENT_RING) {
-                    // Расходящееся световое кольцо вокруг логотипа MoltenGram (12 кадров)
+                    // Расходящееся световое кольцо (с инверсией иконки при пересечении) (12 кадров)
                     int totalSteps = 12;
                     if (step >= totalSteps) {
                         hideMatrixLogo();
@@ -198,20 +208,35 @@ public final class GlyphController {
                     }
                     float progress = (step + 1) / (float) totalSteps;
                     int logoBright = step < 9 ? 235 : Math.max(0, 235 - (step - 8) * 65);
-                    int[] frame = renderMatrixBitmap(logo, logoBright, len);
+                    int[] frame = showIcon ? renderMatrixBitmap(logo, logoBright, len) : new int[len * len];
                     addMatrixExpandingRing(frame, len, progress, 4095);
                     pushMatrixFrame(frame);
                     handler.postDelayed(this, 75L);
                 } else {
-                    // MESSAGE_ANIM_DOUBLE_FLASH: фирменная двойная вспышка + удержание логотипа
+                    // MESSAGE_ANIM_DOUBLE_FLASH: фирменная двойная вспышка + удержание
                     if (step == 0 || step == 2) {
-                        showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, false);
+                        if (showIcon) {
+                            showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, false);
+                        } else {
+                            int[] frame = new int[len * len];
+                            addMatrixPerimeterRing(frame, len, 0.92f, 4095);
+                            addMatrixExpandingRing(frame, len, 0.45f, 3800);
+                            pushMatrixFrame(frame);
+                        }
                         handler.postDelayed(this, 130L);
                     } else if (step == 1) {
                         pushMatrixFrame(new int[len * len]);
                         handler.postDelayed(this, 90L);
                     } else if (step == 3) {
-                        showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, true);
+                        if (showIcon) {
+                            showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, true);
+                        } else {
+                            int[] frame = new int[len * len];
+                            addMatrixPerimeterRing(frame, len, 0.92f, 4095);
+                            pushMatrixFrame(frame);
+                            handler.removeCallbacks(hideLogoRunnable);
+                            handler.postDelayed(hideLogoRunnable, 1200L);
+                        }
                     }
                 }
             } catch (Throwable t) {
@@ -239,26 +264,27 @@ public final class GlyphController {
                 return;
             }
             int len = getMatrixGridLength();
+            boolean showIcon = GlyphConfig.matrixShowIcon();
             int iconRes = callActive
                     ? R.drawable.baseline_call_24
                     : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
-            Bitmap iconBitmap = getMatrixIconBitmap(context, iconRes);
+            Bitmap iconBitmap = showIcon ? getMatrixIconBitmap(context, iconRes) : null;
 
             if (callActive) {
                 int callStyle = GlyphConfig.callAnimationStyle();
                 if (callStyle == GlyphConfig.CALL_ANIM_WAVE) {
-                    // Вращающаяся радарная волна по периметру матрицы + иконка трубки в центре
-                    int[] frame = renderMatrixBitmap(iconBitmap, 225, len);
+                    // Вращающаяся радарная волна по периметру матрицы (+ иконка трубки в центре с инверсией)
+                    int[] frame = showIcon ? renderMatrixBitmap(iconBitmap, 225, len) : new int[len * len];
                     float angle = (breathSteps * 24f) % 360f;
                     addMatrixRadarWave(frame, len, angle, 4095);
                     pushMatrixFrame(frame);
                     handler.postDelayed(this, 65L);
                     return;
                 } else if (callStyle == GlyphConfig.CALL_ANIM_PULSE) {
-                    // Пульсирующая трубка + расходящиеся звуковые кольца
+                    // Пульсирующая трубка + расходящиеся звуковые кольца (с инверсией иконки при пересечении)
                     float ringPhase = (breathSteps % 10) / 9.0f;
                     int iconBright = (breathSteps % 10 < 5) ? 255 : 130;
-                    int[] frame = renderMatrixBitmap(iconBitmap, iconBright, len);
+                    int[] frame = showIcon ? renderMatrixBitmap(iconBitmap, iconBright, len) : new int[len * len];
                     addMatrixExpandingRing(frame, len, ringPhase, 3800);
                     pushMatrixFrame(frame);
                     handler.postDelayed(this, 75L);
@@ -268,7 +294,7 @@ public final class GlyphController {
                 int recStyle = GlyphConfig.recordingAnimationStyle();
                 if (recStyle == GlyphConfig.RECORDING_ANIM_ACCENT_RING) {
                     // Заполняющееся кольцо прогресса вокруг микрофона
-                    int[] frame = renderMatrixBitmap(iconBitmap, 210, len);
+                    int[] frame = showIcon ? renderMatrixBitmap(iconBitmap, 210, len) : new int[len * len];
                     float progress = ((breathSteps % 20) + 1) / 20.0f;
                     addMatrixPerimeterProgress(frame, len, progress, 4095);
                     pushMatrixFrame(frame);
@@ -287,9 +313,9 @@ public final class GlyphController {
                     } else {
                         hbBright = Math.max(20, 90 - (phase - 5) * 12);
                     }
-                    int[] frame = renderMatrixBitmap(iconBitmap, hbBright, len);
-                    if (phase == 0 || phase == 3) {
-                        addMatrixPerimeterRing(frame, len, 0.88f, hbBright * 14);
+                    int[] frame = showIcon ? renderMatrixBitmap(iconBitmap, hbBright, len) : new int[len * len];
+                    if (phase == 0 || phase == 3 || !showIcon) {
+                        addMatrixPerimeterRing(frame, len, 0.88f, hbBright * 15);
                     }
                     pushMatrixFrame(frame);
                     handler.postDelayed(this, 80L);
@@ -307,7 +333,14 @@ public final class GlyphController {
                 breathBrightness = BREATH_MAX;
                 breathDirection = -1;
             }
-            showMatrixIcon(iconRes, breathBrightness, false);
+            if (showIcon) {
+                showMatrixIcon(iconRes, breathBrightness, false);
+            } else {
+                int[] frame = new int[len * len];
+                float breathFrac = 0.42f + 0.50f * (breathBrightness / 255.0f);
+                addMatrixExpandingRing(frame, len, breathFrac, breathBrightness * 16);
+                pushMatrixFrame(frame);
+            }
             long delay = callActive ? 65L : BREATH_STEP_MS;
             handler.postDelayed(this, delay);
         }
@@ -1587,7 +1620,23 @@ public final class GlyphController {
         return out;
     }
 
-    /** Добавляет расходящееся круговое кольцо (радиус от 0 до R) поверх кадра матрицы. */
+    /**
+     * Смешивает пиксель светового эффекта (кольца, радара, волны) с пикселем центральной иконки:
+     * если пиксель иконки уже зажжён (`iconVal > 500`), то при прохождении поверх него яркого
+     * светового эффекта (`effectVal > 700`) яркость пикселя контрастно инвертируется
+     * (`effectVal - iconVal`), чтобы силуэт иконки чётко выделялся негативом на фоне кольца.
+     */
+    public static int blendMatrixEffectWithIconInversion(int existingIconVal, int effectVal) {
+        if (effectVal <= 0) {
+            return Math.max(0, Math.min(4095, existingIconVal));
+        }
+        if (existingIconVal > 500 && effectVal > 700) {
+            return Math.max(0, Math.min(4095, effectVal - existingIconVal));
+        }
+        return Math.max(0, Math.min(4095, Math.max(existingIconVal, effectVal)));
+    }
+
+    /** Добавляет расходящееся круговое кольцо (радиус от 0 до R) поверх кадра матрицы с контрастной инверсией иконки. */
     public static void addMatrixExpandingRing(int[] frame, int len, float progress, int maxLed) {
         if (frame == null || len <= 0 || frame.length < len * len) return;
         float center = (len - 1) / 2.0f;
@@ -1601,9 +1650,7 @@ public final class GlyphController {
                 if (diff <= thickness) {
                     int val = Math.round(maxLed * (1.0f - diff / (thickness + 0.25f)));
                     int idx = r * len + c;
-                    if (val > frame[idx]) {
-                        frame[idx] = Math.min(4095, val);
-                    }
+                    frame[idx] = blendMatrixEffectWithIconInversion(frame[idx], val);
                 }
             }
         }
@@ -1614,7 +1661,7 @@ public final class GlyphController {
         addMatrixExpandingRing(frame, len, radiusFraction, maxLed);
     }
 
-    /** Добавляет вращающуюся радарную дугу по периметру круглой матрицы (`CALL_ANIM_WAVE`). */
+    /** Добавляет вращающуюся радарную дугу по периметру круглой матрицы (`CALL_ANIM_WAVE`) с контрастной инверсией. */
     public static void addMatrixRadarWave(int[] frame, int len, float headAngleDeg, int maxLed) {
         if (frame == null || len <= 0 || frame.length < len * len) return;
         float center = (len - 1) / 2.0f;
@@ -1630,16 +1677,14 @@ public final class GlyphController {
                     if (delta <= 135f) {
                         int val = Math.round(maxLed * (1.0f - delta / 145f));
                         int idx = r * len + c;
-                        if (val > frame[idx]) {
-                            frame[idx] = Math.min(4095, val);
-                        }
+                        frame[idx] = blendMatrixEffectWithIconInversion(frame[idx], val);
                     }
                 }
             }
         }
     }
 
-    /** Добавляет заполняющуюся дугу прогресса по периметру матрицы (`RECORDING_ANIM_ACCENT_RING`). */
+    /** Добавляет заполняющуюся дугу прогресса по периметру матрицы (`RECORDING_ANIM_ACCENT_RING`) с контрастной инверсией. */
     public static void addMatrixPerimeterProgress(int[] frame, int len, float progress, int maxLed) {
         if (frame == null || len <= 0 || frame.length < len * len) return;
         float center = (len - 1) / 2.0f;
@@ -1655,9 +1700,7 @@ public final class GlyphController {
                     if (deg < 0) deg += 360f;
                     if (deg <= maxDeg) {
                         int idx = r * len + c;
-                        if (maxLed > frame[idx]) {
-                            frame[idx] = Math.min(4095, maxLed);
-                        }
+                        frame[idx] = blendMatrixEffectWithIconInversion(frame[idx], maxLed);
                     }
                 }
             }

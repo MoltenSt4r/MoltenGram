@@ -46,6 +46,10 @@ object GlyphConfig {
     @JvmField
     val screenOffOnly = addConfig("OEGlyphScreenOff", ConfigItem.configTypeBool, false)
 
+    /** Показывать иконку (с контрастной инверсией поверх колец/эффектов) на матрице Glyph Matrix. */
+    @JvmField
+    val matrixShowIcon = addConfig("OEGlyphMatrixShowIcon", ConfigItem.configTypeBool, true)
+
     const val CALL_ANIM_PULSE = 0
     const val CALL_ANIM_WAVE = 1
     const val CALL_ANIM_BREATHING = 2
@@ -85,6 +89,9 @@ object GlyphConfig {
 
     @JvmStatic
     fun screenOffOnly(): Boolean = screenOffOnly.Bool()
+
+    @JvmStatic
+    fun matrixShowIcon(): Boolean = matrixShowIcon.Bool()
 
     @JvmStatic
     fun callAnimationStyle(): Int = callAnimationStyle.Int()

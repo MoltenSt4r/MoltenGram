@@ -339,8 +339,8 @@ def test_glyph_controller_hardware_support_for_all_devices():
     assert 'android:name="targetNothingSDKVersion"' not in manifest_content
 
 
-def test_deep_links_restored_to_nasettings_and_neko():
-    """Verify deep links use nasettings / tg://neko as before so they never redirect to the @moltengram Telegram channel."""
+def test_deep_links_use_moltengram_brand_without_opening_channel():
+    """Verify deep links use moltengram / tg://moltengram (and support mgsettings / nasettings / neko) while bare t.me/moltengram still opens the channel."""
     settings_helper_java = os.path.join(
         REPO_ROOT, "TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/SettingsHelper.java"
     )
@@ -354,28 +354,27 @@ def test_deep_links_restored_to_nasettings_and_neko():
 
     with open(settings_helper_java, "r", encoding="utf-8") as f:
         sh_content = f.read()
-    assert 'return HOST_NAGRAM + "/settings";' in sh_content
-    assert 'return HOST_NAGRAM + "/glyph";' in sh_content
-    assert 'return HOST_NAGRAM + "/avatar_shapes";' in sh_content
-    assert 'return HOST_MOLTENGRAM + "/"' not in sh_content
+    assert 'return HOST_MOLTENGRAM + "/settings";' in sh_content
+    assert 'return HOST_MOLTENGRAM + "/glyph";' in sh_content
+    assert 'return HOST_MOLTENGRAM + "/avatar_shapes";' in sh_content
     assert 'NAGRAM_ROWS.put("OEGlyphMessageAnim", "glyph");' in sh_content
     assert 'NAGRAM_ROWS.put("OEGlyphCallAnim", "glyph");' in sh_content
     assert 'NAGRAM_ROWS.put("OEGlyphRecordAnim", "glyph");' in sh_content
+    assert 'NAGRAM_ROWS.put("OEGlyphMatrixShowIcon", "glyph");' in sh_content
 
     with open(launch_activity_java, "r", encoding="utf-8") as f:
         la_content = f.read()
-    assert 'prefix = "nasettings" + prefix.substring(4);' in la_content
-    assert 'prefix = "moltengram" + prefix.substring(' not in la_content
+    assert 'prefix = "moltengram" + prefix.substring(4);' in la_content
+    assert 'prefix = "moltengram" + prefix.substring(10);' in la_content
 
     with open(ota_manager_java, "r", encoding="utf-8") as f:
         ota_content = f.read()
-    assert "https://t.me/nasettings/settings?r=updates" in ota_content
-    assert "https://t.me/moltengram/settings?r=updates" not in ota_content
+    assert "https://t.me/moltengram/settings?r=updates" in ota_content
 
     with open(website_html, "r", encoding="utf-8") as f:
         web_content = f.read()
-    assert "tg://neko/" in web_content
-    assert "tg://moltengram/" not in web_content
+    assert "tg://moltengram/" in web_content
+    assert "tg://neko/" not in web_content
 
 
 def test_nothing_phone_burst_overlay_physics_and_cookie_shapes():
@@ -541,9 +540,10 @@ def test_nothing_phone_burst_overlay_fill_settle_and_haptic_throttling():
     assert "item.vy = 0f;" in overlay_content
     assert "item.vRot = 0f;" in overlay_content
 
-    # 4. Reliable filled-to-top trigger: avgFloor <= dp(36) and TARGET_SPAWN_ITEMS unconditional trigger
-    assert "avgFloor <= AndroidUtilities.dp(36)" in overlay_content
+    # 4. Reliable filled-to-top trigger: avgFloor <= dp(18) / dp(32) and TARGET_SPAWN_ITEMS unconditional trigger
+    assert "avgFloor <= AndroidUtilities.dp(18)" in overlay_content or "avgFloor <= AndroidUtilities.dp(32)" in overlay_content
     assert "spawnedCount >= TARGET_SPAWN_ITEMS" in overlay_content
+    assert "supported[" in overlay_content
 
 
 def test_nothing_phone_burst_overlay_dismiss_cleanup_and_safety():
@@ -611,6 +611,20 @@ def test_per_model_sdk_contract_and_visual_preview_animations():
     assert "drawMatrixOverlay(canvas" in preview_cell
     assert "computeZoneIntensity(" in preview_cell
     assert "computeMatrixPixelAlpha(" in preview_cell
+    assert "blendPreviewIconAndEffect(" in preview_cell
+    assert "left + w * 0.791f, top + h * 0.0938f, w * 0.132f" in preview_cell
+    assert "left + w * 0.706f, top + h * 0.1406f, w * 0.155f" in preview_cell
+
+    # 5. Matrix icon contrast inversion and toggle
+    assert "public static int blendMatrixEffectWithIconInversion(" in controller
+    assert "GlyphConfig.matrixShowIcon()" in controller
+    glyph_config_kt = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/kotlin/app/exteraless/glyph/GlyphConfig.kt"
+    )
+    with open(glyph_config_kt, "r", encoding="utf-8") as f:
+        cfg_content = f.read()
+    assert 'val matrixShowIcon = addConfig("OEGlyphMatrixShowIcon", ConfigItem.configTypeBool, true)' in cfg_content
+    assert "fun matrixShowIcon(): Boolean" in cfg_content
 
 
 

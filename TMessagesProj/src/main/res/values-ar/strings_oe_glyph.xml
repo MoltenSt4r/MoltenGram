@@ -6,6 +6,7 @@
     <string name="OEGlyphCalls">توهج عند المكالمات الواردة</string>
     <string name="OEGlyphRecording">توهج أثناء التسجيل</string>
     <string name="OEGlyphScreenOff">الرسائل فقط عندما تكون الشاشة مطفأة</string>
+    <string name="OEGlyphMatrixShowIcon">إظهار الأيقونة على مصفوفة Glyph</string>
     <string name="OEGlyphPreview">معاينة</string>
     <string name="OEGlyphUnsupported">واجهة Glyph متاحة فقط على هواتف Nothing</string>
     <string name="OEGlyphInfo">تُضيء واجهة Glyph على ظهر هاتف Nothing: وميض للرسائل الواردة، وشعار exteraless على Glyph Matrix في Phone (3)، وتوهج متنفّس أثناء تسجيل الرسائل الصوتية أو استقبال مكالمة. المحادثات المكتومة لا تُطلق الوميض أبدًا.</string>

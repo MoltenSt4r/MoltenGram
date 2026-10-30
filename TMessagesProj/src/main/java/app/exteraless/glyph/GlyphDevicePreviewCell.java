@@ -343,11 +343,11 @@ public class GlyphDevicePreviewCell extends View {
             return;
         }
         if ("Nothing Phone (3)".equals(model)) {
-            // Матрица 25x25 в правом верхнем углу корпуса Phone (3)
-            drawMatrixOverlay(canvas, left + w * 0.742f, top + h * 0.138f, w * 0.195f, 11);
+            // Матрица 25x25 строго внутри чёрного круглого окна в правом верхнем углу корпуса Phone (3)
+            drawMatrixOverlay(canvas, left + w * 0.791f, top + h * 0.0938f, w * 0.132f, 11);
         } else if ("Nothing Phone (4a) Pro".equals(model)) {
-            // Матрица 13x13 справа от блока камер Phone (4a) Pro
-            drawMatrixOverlay(canvas, left + w * 0.703f, top + h * 0.144f, w * 0.165f, 9);
+            // Матрица 13x13 строго внутри круглого окна справа от блока камер Phone (4a) Pro
+            drawMatrixOverlay(canvas, left + w * 0.706f, top + h * 0.1406f, w * 0.155f, 9);
         } else if ("Nothing Phone (4a)".equals(model) || "Nothing Phone (4b)".equals(model)) {
             // Glyph Bar из 6 квадратных светодиодов справа от камеры
             boolean is4b = "Nothing Phone (4b)".equals(model);
@@ -442,12 +442,12 @@ public class GlyphDevicePreviewCell extends View {
         if (!animRunning) {
             return;
         }
-        canvas.drawCircle(cx, cy, radius * 0.96f, matrixBgPaint);
+        canvas.drawCircle(cx, cy, radius * 0.94f, matrixBgPaint);
 
-        float cellStep = (radius * 1.72f) / gridN;
-        float dotRadius = cellStep * 0.36f;
+        float cellStep = (radius * 1.62f) / gridN;
+        float dotRadius = cellStep * 0.34f;
         float half = (gridN - 1) / 2.0f;
-        float maxDist = half + 0.35f;
+        float maxDist = half + 0.25f;
 
         for (int r = 0; r < gridN; r++) {
             for (int c = 0; c < gridN; c++) {
@@ -471,9 +471,20 @@ public class GlyphDevicePreviewCell extends View {
         }
     }
 
+    private static float blendPreviewIconAndEffect(float iconVal, float effectVal) {
+        if (effectVal <= 0.05f) {
+            return iconVal;
+        }
+        if (iconVal > 0.25f && effectVal > 0.35f) {
+            return Math.max(0.04f, effectVal - iconVal);
+        }
+        return Math.max(iconVal, effectVal);
+    }
+
     private float computeMatrixPixelAlpha(float dr, float dc, float normDist, float angleDeg) {
         float p = animProgress;
-        boolean isCenterIcon = normDist < 0.48f && (Math.abs(dr) + Math.abs(dc) < 3.2f);
+        boolean showIcon = GlyphConfig.matrixShowIcon();
+        boolean isCenterIcon = showIcon && normDist < 0.48f && (Math.abs(dr) + Math.abs(dc) < 3.2f);
 
         if (activePreviewType == 0) {
             int style = GlyphConfig.messageAnimationStyle();
@@ -481,59 +492,79 @@ public class GlyphDevicePreviewCell extends View {
                 float ringPos = (p * 1.35f) % 1.0f;
                 float ringDiff = Math.abs(normDist - ringPos);
                 float ringVal = ringDiff < 0.22f ? (1.0f - ringDiff / 0.22f) : 0f;
-                return Math.max(isCenterIcon ? 0.85f * (1.0f - p * 0.5f) : 0f, ringVal);
+                float iconVal = isCenterIcon ? 0.85f * (1.0f - p * 0.5f) : 0f;
+                return blendPreviewIconAndEffect(iconVal, ringVal);
             } else if (style == GlyphConfig.MESSAGE_ANIM_STROBE) {
                 float cycle = (p * 3.5f);
                 if (cycle >= 3.0f) return 0f;
                 boolean on = (cycle - (int) cycle) < 0.5f;
-                return on && (isCenterIcon || normDist > 0.78f) ? 1.0f : 0.06f;
+                boolean inRing = normDist > 0.78f || (!showIcon && Math.abs(normDist - 0.52f) < 0.16f);
+                return on && (isCenterIcon || inRing) ? 1.0f : 0.06f;
             } else if (style == GlyphConfig.MESSAGE_ANIM_SOFT_PULSE) {
                 float wave = (float) Math.sin(p * Math.PI);
+                if (!showIcon) {
+                    float ringTarget = 0.35f + 0.55f * wave;
+                    float diff = Math.abs(normDist - ringTarget);
+                    return diff < 0.22f ? wave * (1.0f - diff / 0.22f) : 0f;
+                }
                 return isCenterIcon ? wave : (normDist < 0.72f ? wave * 0.45f : 0f);
             } else {
                 // Double Flash
                 float flash = (p < 0.36f) ? (float) Math.sin((p / 0.36f) * Math.PI)
                         : (p >= 0.48f && p < 0.88f ? (float) Math.sin(((p - 0.48f) / 0.40f) * Math.PI) : 0f);
+                if (!showIcon) {
+                    return (normDist > 0.78f || Math.abs(normDist - 0.45f) < 0.16f) ? flash : 0f;
+                }
                 return isCenterIcon ? flash : (normDist > 0.78f ? flash * 0.6f : 0f);
             }
         } else if (activePreviewType == 1) {
             int style = GlyphConfig.callAnimationStyle();
             if (style == GlyphConfig.CALL_ANIM_WAVE) {
-                // Вращающийся радар по периметру + иконка в центре
-                if (isCenterIcon) return 0.9f;
+                // Вращающийся радар по периметру (+ иконка в центре)
+                float effectVal = 0.05f;
                 if (normDist > 0.68f) {
                     float head = (p * 720f) % 360f;
                     float diff = (head - angleDeg + 360f) % 360f;
-                    if (diff < 140f) return 1.0f - diff / 140f;
+                    if (diff < 140f) effectVal = 1.0f - diff / 140f;
                 }
-                return 0.05f;
+                return blendPreviewIconAndEffect(isCenterIcon ? 0.9f : 0f, effectVal);
             } else if (style == GlyphConfig.CALL_ANIM_PULSE) {
                 float ringPos = (p * 3.0f) % 1.0f;
                 float ringDiff = Math.abs(normDist - ringPos);
                 float ringVal = ringDiff < 0.22f ? (1.0f - ringDiff / 0.22f) : 0f;
-                return Math.max(isCenterIcon ? 0.92f : 0f, ringVal);
+                return blendPreviewIconAndEffect(isCenterIcon ? 0.92f : 0f, ringVal);
             } else {
                 float breath = 0.2f + 0.8f * (float) Math.abs(Math.sin(p * 2.0f * Math.PI));
+                if (!showIcon) {
+                    float ringTarget = 0.42f + 0.50f * breath;
+                    float diff = Math.abs(normDist - ringTarget);
+                    return diff < 0.22f ? breath * (1.0f - diff / 0.22f) : 0f;
+                }
                 return isCenterIcon ? breath : (normDist < 0.68f ? breath * 0.4f : 0f);
             }
         } else {
             int style = GlyphConfig.recordingAnimationStyle();
             if (style == GlyphConfig.RECORDING_ANIM_ACCENT_RING) {
-                if (isCenterIcon) return 0.85f;
+                float effectVal = 0f;
                 if (normDist > 0.68f) {
                     float sweep = ((p * 2.0f) % 1.0f) * 360f;
                     float cwAngle = (angleDeg + 90f) % 360f;
-                    return cwAngle <= sweep ? 1.0f : 0.1f;
+                    effectVal = cwAngle <= sweep ? 1.0f : 0.1f;
                 }
-                return 0f;
+                return blendPreviewIconAndEffect(isCenterIcon ? 0.85f : 0f, effectVal);
             } else if (style == GlyphConfig.RECORDING_ANIM_HEARTBEAT) {
                 float cycle = (p * 2.5f) % 1.0f;
                 float beat = 0.1f;
                 if (cycle < 0.22f) beat = (float) Math.sin((cycle / 0.22f) * Math.PI);
                 else if (cycle >= 0.28f && cycle < 0.52f) beat = 0.9f * (float) Math.sin(((cycle - 0.28f) / 0.24f) * Math.PI);
-                return isCenterIcon ? beat : (normDist > 0.75f ? beat * 0.75f : 0f);
+                return isCenterIcon ? beat : (normDist > 0.75f ? beat * (showIcon ? 0.75f : 1.0f) : 0f);
             } else {
                 float breath = 0.15f + 0.85f * (float) Math.sin(p * Math.PI);
+                if (!showIcon) {
+                    float ringTarget = 0.42f + 0.50f * breath;
+                    float diff = Math.abs(normDist - ringTarget);
+                    return diff < 0.22f ? breath * (1.0f - diff / 0.22f) : 0f;
+                }
                 return isCenterIcon ? breath : (normDist < 0.65f ? breath * 0.35f : 0f);
             }
         }

@@ -2832,6 +2832,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                         checkAppUpdate(true, null, updateAlways);
                                     } else if (url.startsWith("tg:neko") || url.startsWith("tg://neko")
                                             || url.startsWith("tg:nasettings") || url.startsWith("tg://nasettings")
+                                            || url.startsWith("tg:mgsettings") || url.startsWith("tg://mgsettings")
                                             || url.startsWith("tg:moltengram") || url.startsWith("tg://moltengram")
                                             || url.startsWith("tg:exteraless") || url.startsWith("tg://exteraless")
                                             || url.startsWith("tg:exterams") || url.startsWith("tg://exterams")
@@ -2843,15 +2844,19 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             prefix = url.substring(3);
                                         }
                                         if (prefix.startsWith("neko")) {
-                                            prefix = "nasettings" + prefix.substring(4);
+                                            prefix = "moltengram" + prefix.substring(4);
                                         } else if (prefix.startsWith("ms")) {
-                                            prefix = "nasettings" + prefix.substring(2);
+                                            prefix = "moltengram" + prefix.substring(2);
+                                        } else if (prefix.startsWith("mgsettings")) {
+                                            prefix = "moltengram" + prefix.substring(10);
+                                        } else if (prefix.startsWith("nasettings")) {
+                                            prefix = "moltengram" + prefix.substring(10);
                                         } else if (prefix.startsWith("moltengram")) {
-                                            prefix = "nasettings" + prefix.substring(10);
+                                            prefix = "moltengram" + prefix.substring(10);
                                         } else if (prefix.startsWith("exteraless")) {
-                                            prefix = "nasettings" + prefix.substring(10);
+                                            prefix = "moltengram" + prefix.substring(10);
                                         } else if (prefix.startsWith("exterams")) {
-                                            prefix = "nasettings" + prefix.substring(8);
+                                            prefix = "moltengram" + prefix.substring(8);
                                         }
                                         data = Uri.parse("https://t.me/" + prefix);
                                         SettingsHelper.processDeepLink(this, data, fragment -> {

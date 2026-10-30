@@ -10,6 +10,7 @@
     <string name="OEGlyphRecording">Glow while recording</string>
     <string name="OEGlyphRecordingAnim">Recording animation</string>
     <string name="OEGlyphScreenOff">Messages only when screen is off</string>
+    <string name="OEGlyphMatrixShowIcon">Show icon on Glyph Matrix</string>
     <string name="OEGlyphPreview">Preview</string>
     <string name="OEGlyphUnsupported">Glyph Interface is only available on Nothing phones</string>
     <string name="OEGlyphInfo">Lights up the Glyph Interface on the back of your Nothing phone: customizable animations for messages, calls, and voice notes, with dedicated icons on the Glyph Matrix.</string>

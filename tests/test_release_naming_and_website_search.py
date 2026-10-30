@@ -127,9 +127,9 @@ def test_website_exists_and_indexes_unique_settings():
     assert "mediaGroupCarousel" in html
     assert "OEChatsMd3ChatInput" in html
 
-    # Must have deep links
-    assert "tg://neko/glyph" in html
-    assert "tg://neko/avatar_shapes" in html
+    # Must have deep links using MoltenGram branding
+    assert "tg://moltengram/glyph" in html
+    assert "tg://moltengram/avatar_shapes" in html
 
 
 def test_settings_helper_handles_avatar_shapes_deeplink():

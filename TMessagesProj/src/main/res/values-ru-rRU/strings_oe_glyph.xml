@@ -9,6 +9,7 @@
     <string name="OEGlyphRecording">Свечение при записи голосовых</string>
     <string name="OEGlyphRecordingAnim">Анимация записи</string>
     <string name="OEGlyphScreenOff">Сообщения только при выключенном экране</string>
+    <string name="OEGlyphMatrixShowIcon">Иконка на матрице Glyph Matrix</string>
     <string name="OEGlyphPreview">Предпросмотр</string>
     <string name="OEGlyphUnsupported">Glyph Interface доступен только на Nothing Phone</string>
     <string name="OEGlyphInfo">Подсветка задней панели Nothing Phone: настраиваемые анимации для сообщений, звонков и записи голосовых, а также отдельные иконки на Glyph Matrix.</string>

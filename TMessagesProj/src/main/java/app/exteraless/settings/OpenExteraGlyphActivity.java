@@ -45,6 +45,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
     private int glyphRecordingRow;
     private int glyphRecordingAnimRow;
     private int glyphScreenOffRow;
+    private int glyphMatrixShowIconRow;
     private int glyphDividerRow;
     private int glyphPreviewRow;
     private int glyphDevicePreviewRow;
@@ -87,6 +88,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                 glyphRecordingAnimRow = -1;
             }
             glyphScreenOffRow = addRow(GlyphConfig.screenOffOnly.getKey());
+            glyphMatrixShowIconRow = addRow(GlyphConfig.matrixShowIcon.getKey());
             glyphDividerRow = addRow();
             glyphPreviewRow = addRow("glyphPreview");
         } else {
@@ -97,6 +99,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             glyphRecordingRow = -1;
             glyphRecordingAnimRow = -1;
             glyphScreenOffRow = -1;
+            glyphMatrixShowIconRow = -1;
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
         }
@@ -238,6 +241,13 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+        } else if (position == glyphMatrixShowIconRow) {
+            boolean enabled = GlyphConfig.matrixShowIcon.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            GlyphController.getInstance().previewMessage();
+            notifyPreviewCell(0);
         } else if (position == glyphPreviewRow) {
             if (!GlyphController.getInstance().isSupported()) {
                 BulletinFactory.of(this)
@@ -359,7 +369,10 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                                 GlyphConfig.onRecording(), true);
                     } else if (position == glyphScreenOffRow) {
                         cell.setTextAndCheck(getString(R.string.OEGlyphScreenOff),
-                                GlyphConfig.screenOffOnly(), false);
+                                GlyphConfig.screenOffOnly(), true);
+                    } else if (position == glyphMatrixShowIconRow) {
+                        cell.setTextAndCheck(getString(R.string.OEGlyphMatrixShowIcon),
+                                GlyphConfig.matrixShowIcon(), false);
                     }
                     break;
                 }
