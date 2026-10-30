@@ -48,7 +48,7 @@ public class GlyphDevicePreviewCell extends View {
     private float pulseScale = 1.0f;
     private float animProgress = 0.0f;
     private boolean animRunning = false;
-    /** 0 = Новое сообщение, 1 = Звонок, 2 = Запись голосового */
+    /** 0 = Новое сообщение, 1 = Звонок, 2 = Запись голосового/видео, 3 = Только красный индикатор записи (Rec. Light) */
     private int activePreviewType = 0;
 
     public GlyphDevicePreviewCell(Context context) {
@@ -244,6 +244,9 @@ public class GlyphDevicePreviewCell extends View {
     private float computeZoneIntensity(int zoneIndex, int totalZones) {
         if (!animRunning) {
             return 0.25f;
+        }
+        if (activePreviewType == 3) {
+            return 0.0f;
         }
         float p = animProgress;
         if (activePreviewType == 0) {
@@ -447,15 +450,16 @@ public class GlyphDevicePreviewCell extends View {
     }
 
     /**
-     * Отрисовывает физический красный индикатор записи (Rec. Light) на поддерживаемых моделях
-     * при предпросмотре режима записи (`activePreviewType == 2`) и включённом тумблере `OEGlyphRedIndicator`.
+     * Отрисовывает физический красный индикатор записи (Rec. Light) ТОЛЬКО на 6 моделях,
+     * где он реально установлен аппаратно (Phone 1, Phone 2, Phone 3, Phone 4a Pro, Phone 4a, Phone 4b),
+     * и строго по точным координатам их рендера корпуса.
      */
     private void drawRedRecordingIndicator(Canvas canvas, String model, float left, float top, float w, float h) {
         if (!GlyphConfig.redRecordingIndicator() || !GlyphController.isRedIndicatorSupportedForModel(model)) {
             return;
         }
         float intensity;
-        if (animRunning && activePreviewType == 2) {
+        if (animRunning && (activePreviewType == 2 || activePreviewType == 3)) {
             float blink = (animProgress * 3.0f) % 1.0f;
             intensity = 0.55f + 0.45f * (float) Math.sin(blink * Math.PI);
         } else if (!animRunning) {
@@ -466,20 +470,27 @@ public class GlyphDevicePreviewCell extends View {
         float rx;
         float ry;
         if ("Nothing Phone (4a) Pro".equals(model)) {
-            rx = left + w * 0.340f;
-            ry = top + h * 0.312f;
+            // Красный квадратный светодиод под круглым окном Glyph Matrix справа (cx=0.851, cy=0.234)
+            rx = left + w * 0.851f;
+            ry = top + h * 0.234f;
         } else if ("Nothing Phone (3)".equals(model)) {
-            rx = left + w * 0.655f;
-            ry = top + h * 0.195f;
-        } else if ("Nothing Phone (4a)".equals(model) || "Nothing Phone (4b)".equals(model)) {
-            rx = left + w * 0.720f;
-            ry = top + h * 0.165f;
+            // Красный квадратный светодиод под двумя нижними камерами (cx=0.378, cy=0.298)
+            rx = left + w * 0.378f;
+            ry = top + h * 0.298f;
+        } else if ("Nothing Phone (4a)".equals(model)) {
+            // Красный квадратный светодиод внизу вертикального Glyph Bar (cx=0.907, cy=0.259)
+            rx = left + w * 0.907f;
+            ry = top + h * 0.259f;
+        } else if ("Nothing Phone (4b)".equals(model)) {
+            // Красный квадратный светодиод внизу вертикального Glyph Bar (cx=0.817, cy=0.233)
+            rx = left + w * 0.817f;
+            ry = top + h * 0.233f;
         } else if ("Nothing Phone (2)".equals(model) || "Nothing Phone (1)".equals(model)) {
-            rx = left + w * 0.805f;
-            ry = top + h * 0.185f;
+            // Круглый красный светодиод справа от верхнего блока камер (cx=0.875, cy=0.178)
+            rx = left + w * 0.875f;
+            ry = top + h * 0.178f;
         } else {
-            rx = left + w * 0.760f;
-            ry = top + h * 0.215f;
+            return;
         }
         float r = AndroidUtilities.dp(2.3f);
         redIndicatorGlowPaint.setAlpha(Math.min(230, Math.round(intensity * 220f)));
@@ -493,7 +504,7 @@ public class GlyphDevicePreviewCell extends View {
      * с пиксельной сеткой и живой анимацией выбранного стиля.
      */
     private void drawMatrixOverlay(Canvas canvas, float cx, float cy, float radius, int gridN) {
-        if (!animRunning) {
+        if (!animRunning || activePreviewType == 3) {
             return;
         }
         canvas.drawCircle(cx, cy, radius * 0.94f, matrixBgPaint);

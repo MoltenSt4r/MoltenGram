@@ -249,8 +249,8 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
-            GlyphController.getInstance().previewRecording();
-            notifyPreviewCell(2);
+            GlyphController.getInstance().previewRedIndicatorOnly();
+            notifyPreviewCell(3);
         } else if (position == glyphRecordingAnimRow) {
             CharSequence[] options = recordingAnimationOptions();
             showChoice(getString(R.string.OEGlyphRecordingAnim), options, which -> {
@@ -284,7 +284,8 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             CharSequence[] previewItems = new CharSequence[]{
                     getString(R.string.OEGlyphNewMessage),
                     getString(R.string.OEGlyphCalls),
-                    getString(R.string.OEGlyphRecording)
+                    getString(R.string.OEGlyphRecording),
+                    getString(R.string.OEGlyphRedIndicator)
             };
             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
             builder.setTitle(getString(R.string.OEGlyphPreview));
@@ -295,6 +296,8 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                     GlyphController.getInstance().previewCall();
                 } else if (which == 2) {
                     GlyphController.getInstance().previewRecording();
+                } else if (which == 3) {
+                    GlyphController.getInstance().previewRedIndicatorOnly();
                 }
                 notifyPreviewCell(which);
             });

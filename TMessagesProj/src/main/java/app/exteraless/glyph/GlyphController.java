@@ -548,9 +548,10 @@ public final class GlyphController {
     }
 
     /**
-     * Проверяет, поддерживает ли устройство Nothing Phone задний красный индикатор записи (Rec. Light).
-     * Физический красный светодиод Rec. Light установлен на Nothing Phone (1), Phone (2), Phone (3),
-     * Phone (4a) Pro, Phone (4a), Phone (4b).
+     * Проверяет, поддерживает ли устройство Nothing Phone задний физический красный индикатор записи (Rec. Light).
+     * Физический красный светодиод Rec. Light существует ТОЛЬКО на 6 моделях:
+     * Nothing Phone (1), Phone (2), Phone (3), Phone (4a) Pro, Phone (4a) и Phone (4b).
+     * На моделях Phone (2a), Phone (2a) Plus, Phone (3a), Phone (3a) Pro, Phone (3a) Lite и CMF его физически нет!
      */
     public static boolean isRedIndicatorSupported() {
         String name = NothingPhoneEasterEgg.getDeviceDisplayName();
@@ -558,32 +559,31 @@ public final class GlyphController {
     }
 
     public static boolean isRedIndicatorSupportedForModel(String modelName) {
-        if (modelName == null || modelName.startsWith("CMF")) {
+        if (modelName == null) {
             return false;
         }
-        if ("Nothing Phone (1)".equals(modelName)
+        return "Nothing Phone (1)".equals(modelName)
                 || "Nothing Phone (2)".equals(modelName)
                 || "Nothing Phone (3)".equals(modelName)
                 || "Nothing Phone (4a) Pro".equals(modelName)
                 || "Nothing Phone (4a)".equals(modelName)
-                || "Nothing Phone (4b)".equals(modelName)) {
-            return true;
-        }
-        return isNothingGlyphDevice();
+                || "Nothing Phone (4b)".equals(modelName);
     }
 
     private static final String[] RED_LED_SYSFS_PATHS = new String[]{
             "/sys/class/leds/red/brightness",
             "/sys/class/leds/led:red/brightness",
             "/sys/class/leds/aw20036:led_red/brightness",
+            "/sys/class/leds/aw210xx_led/red_led_br",
             "/sys/class/leds/vibrator_red/brightness",
-            "/sys/class/leds/rec_led/brightness"
+            "/sys/class/leds/rec_led/brightness",
+            "/sys/class/leds/front_cam_led_br/brightness"
     };
 
     /**
-     * Управляет аппаратным красным светодиодом записи (Rec. Light) на задней панели Nothing Phone
-     * через системные настройки Nothing OS (`led_effect_video_record_enable` / `nothing_cam_rec_light`)
-     * и sysfs-узлы красного индикатора (если доступны).
+     * Управляет ТОЛЬКО физическим красным светодиодом записи (Rec. Light) на задней панели Nothing Phone
+     * (без включения белых глифов!) через системные настройки Nothing OS, прямую запись в sysfs
+     * или привилегированную команду Shizuku / su (если доступно).
      */
     public static void setRedRecordingIndicatorHardware(boolean active) {
         Context context = ApplicationLoader.applicationContext;
@@ -597,9 +597,13 @@ public final class GlyphController {
                 try {
                     android.provider.Settings.Global.putInt(cr, "nothing_camera_red_light_active", val);
                 } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.Global.putInt(cr, "nt_camera_rec_light", val);
+                } catch (Throwable ignored) {}
             } catch (Throwable ignored) {}
         }
-        String payload = active ? "255" : "0";
+        final String payload = active ? "255" : "0";
+        boolean writtenDirectly = false;
         for (String path : RED_LED_SYSFS_PATHS) {
             try {
                 java.io.File f = new java.io.File(path);
@@ -607,10 +611,28 @@ public final class GlyphController {
                     try (java.io.FileOutputStream fos = new java.io.FileOutputStream(f)) {
                         fos.write(payload.getBytes());
                         fos.flush();
+                        writtenDirectly = true;
                         break;
                     }
                 }
             } catch (Throwable ignored) {}
+        }
+        if (!writtenDirectly) {
+            new Thread(() -> {
+                String shellCmd = "for p in /sys/class/leds/red/brightness /sys/class/leds/led:red/brightness /sys/class/leds/aw20036:led_red/brightness /sys/class/leds/rec_led/brightness; do "
+                        + "if [ -e \"$p\" ]; then echo " + payload + " > \"$p\" 2>/dev/null; fi; done";
+                try {
+                    app.exteraless.shizuku.ShizukuController shizuku = app.exteraless.shizuku.ShizukuController.getInstance();
+                    if (shizuku != null && shizuku.hasPermission()) {
+                        shizuku.runCommand(shellCmd);
+                        return;
+                    }
+                } catch (Throwable ignored) {}
+                try {
+                    Process su = Runtime.getRuntime().exec(new String[]{"su", "-c", shellCmd});
+                    su.waitFor();
+                } catch (Throwable ignored) {}
+            }).start();
         }
     }
 
@@ -797,6 +819,32 @@ public final class GlyphController {
                 }
                 updateGlyphActivity();
             }, 2600L);
+        });
+    }
+
+    /**
+     * Изолированный предпросмотр ТОЛЬКО физического красного светодиода записи (Rec. Light)
+     * без запуска белых глифов или матричной анимации.
+     */
+    public void previewRedIndicatorOnly() {
+        handler.post(() -> {
+            callActive = false;
+            recordingActive = false;
+            videoRecordingActive = false;
+            updateGlyphActivity();
+            if (GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported()) {
+                redIndicatorActive = true;
+                setRedRecordingIndicatorHardware(true);
+                handler.postDelayed(() -> {
+                    if (redIndicatorActive && !videoRecordingActive) {
+                        redIndicatorActive = false;
+                        setRedRecordingIndicatorHardware(false);
+                    }
+                }, 2200L);
+            } else if (redIndicatorActive) {
+                redIndicatorActive = false;
+                setRedRecordingIndicatorHardware(false);
+            }
         });
     }
 

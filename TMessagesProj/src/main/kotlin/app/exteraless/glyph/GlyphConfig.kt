@@ -50,11 +50,11 @@ object GlyphConfig {
     @JvmField
     val matrixShowIcon = addConfig("OEGlyphMatrixShowIcon", ConfigItem.configTypeBool, true)
 
-    /** Свечение глифов при записи кружков (видеосообщений) и видео. */
+    /** Свечение глифов при записи кружков (видеосообщений) и видео. По умолчанию выключено, чтобы не перебивать красный индикатор записи (Rec. Light). */
     @JvmField
-    val onVideoRecording = addConfig("OEGlyphVideoRecording", ConfigItem.configTypeBool, true)
+    val onVideoRecording = addConfig("OEGlyphVideoRecording", ConfigItem.configTypeBool, false)
 
-    /** Включать красный индикатор записи (Rec. Light) на поддерживаемых моделях Nothing Phone при записи кружка или видео. */
+    /** Включать физический красный индикатор записи (Rec. Light) на поддерживаемых моделях Nothing Phone при записи кружка или видео. */
     @JvmField
     val redRecordingIndicator = addConfig("OEGlyphRedIndicator", ConfigItem.configTypeBool, true)
 
