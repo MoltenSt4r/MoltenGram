@@ -38,6 +38,8 @@ public class GlyphDevicePreviewCell extends View {
     private final Paint glyphGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint matrixBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint matrixPixelPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint redIndicatorCorePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint redIndicatorGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
     private final RectF cardRect = new RectF();
     private final RectF tempRect = new RectF();
@@ -80,6 +82,15 @@ public class GlyphDevicePreviewCell extends View {
 
         matrixPixelPaint.setStyle(Paint.Style.FILL);
         matrixPixelPaint.setColor(Color.WHITE);
+
+        redIndicatorCorePaint.setStyle(Paint.Style.FILL);
+        redIndicatorCorePaint.setColor(0xFFFF1E1E);
+
+        redIndicatorGlowPaint.setStyle(Paint.Style.FILL);
+        redIndicatorGlowPaint.setColor(0xFFFF2424);
+        try {
+            redIndicatorGlowPaint.setMaskFilter(new BlurMaskFilter(AndroidUtilities.dp(4.5f), BlurMaskFilter.Blur.NORMAL));
+        } catch (Throwable ignored) {}
 
         ensureDrawableLoaded();
     }
@@ -432,6 +443,49 @@ public class GlyphDevicePreviewCell extends View {
             // Зона 4 (E1): нижняя точка
             drawGlowingDot(canvas, left + w * 0.503f, top + h * 0.950f, 2.0f, computeZoneIntensity(4, 5));
         }
+        drawRedRecordingIndicator(canvas, model, left, top, w, h);
+    }
+
+    /**
+     * Отрисовывает физический красный индикатор записи (Rec. Light) на поддерживаемых моделях
+     * при предпросмотре режима записи (`activePreviewType == 2`) и включённом тумблере `OEGlyphRedIndicator`.
+     */
+    private void drawRedRecordingIndicator(Canvas canvas, String model, float left, float top, float w, float h) {
+        if (!GlyphConfig.redRecordingIndicator() || !GlyphController.isRedIndicatorSupportedForModel(model)) {
+            return;
+        }
+        float intensity;
+        if (animRunning && activePreviewType == 2) {
+            float blink = (animProgress * 3.0f) % 1.0f;
+            intensity = 0.55f + 0.45f * (float) Math.sin(blink * Math.PI);
+        } else if (!animRunning) {
+            intensity = 0.35f;
+        } else {
+            return;
+        }
+        float rx;
+        float ry;
+        if ("Nothing Phone (4a) Pro".equals(model)) {
+            rx = left + w * 0.340f;
+            ry = top + h * 0.312f;
+        } else if ("Nothing Phone (3)".equals(model)) {
+            rx = left + w * 0.655f;
+            ry = top + h * 0.195f;
+        } else if ("Nothing Phone (4a)".equals(model) || "Nothing Phone (4b)".equals(model)) {
+            rx = left + w * 0.720f;
+            ry = top + h * 0.165f;
+        } else if ("Nothing Phone (2)".equals(model) || "Nothing Phone (1)".equals(model)) {
+            rx = left + w * 0.805f;
+            ry = top + h * 0.185f;
+        } else {
+            rx = left + w * 0.760f;
+            ry = top + h * 0.215f;
+        }
+        float r = AndroidUtilities.dp(2.3f);
+        redIndicatorGlowPaint.setAlpha(Math.min(230, Math.round(intensity * 220f)));
+        redIndicatorCorePaint.setAlpha(Math.min(255, Math.round(intensity * 255f)));
+        canvas.drawCircle(rx, ry, r * 2.1f, redIndicatorGlowPaint);
+        canvas.drawCircle(rx, ry, r, redIndicatorCorePaint);
     }
 
     /**

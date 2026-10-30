@@ -524,6 +524,7 @@ public class Camera2Session {
                 }
                 chooseFocusMode(captureRequestBuilder);   // без настройки, как в exteraGram
             }
+            app.exteraless.glyph.GlyphController.applyNothingCameraRedIndicator(cameraCharacteristics, captureRequestBuilder, recordingVideo);
 
             if (zoomRatioRange != null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                 captureRequestBuilder.set(CaptureRequest.CONTROL_ZOOM_RATIO, currentZoom);

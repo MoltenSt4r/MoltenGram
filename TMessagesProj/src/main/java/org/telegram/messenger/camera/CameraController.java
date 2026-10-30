@@ -674,6 +674,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                         session.setRecordingVideo(true);
                     }
                     AndroidUtilities.runOnUIThread(() -> {
+                        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStarted();
                         cameraView.startRecording(path, () -> finishRecordingVideo(createThumbnail));
                         if (onVideoStartRecord != null) {
                             onVideoStartRecord.run();
@@ -728,6 +729,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
                             recorder.setOnInfoListener(CameraController.this);
                             recorder.prepare();
                             recorder.start();
+                            app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStarted();
 
                             onVideoTakeCallback = callback;
                             recordedFile = path.getAbsolutePath();
@@ -750,6 +752,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
     }
 
     private void finishRecordingVideo(boolean createThumbnail) {
+        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStopped();
         MediaMetadataRetriever mediaMetadataRetriever = null;
         long duration = 0;
         try {
@@ -838,6 +841,7 @@ public class CameraController implements MediaRecorder.OnInfoListener {
     }
 
     public void stopVideoRecording(final Object sessionObject, final boolean abandon, final boolean createThumbnail) {
+        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStopped();
         if (recordingCurrentCameraView != null) {
             recordingCurrentCameraView.stopRecording();
             recordingCurrentCameraView = null;

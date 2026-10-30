@@ -50,6 +50,14 @@ object GlyphConfig {
     @JvmField
     val matrixShowIcon = addConfig("OEGlyphMatrixShowIcon", ConfigItem.configTypeBool, true)
 
+    /** Свечение глифов при записи кружков (видеосообщений) и видео. */
+    @JvmField
+    val onVideoRecording = addConfig("OEGlyphVideoRecording", ConfigItem.configTypeBool, true)
+
+    /** Включать красный индикатор записи (Rec. Light) на поддерживаемых моделях Nothing Phone при записи кружка или видео. */
+    @JvmField
+    val redRecordingIndicator = addConfig("OEGlyphRedIndicator", ConfigItem.configTypeBool, true)
+
     const val CALL_ANIM_PULSE = 0
     const val CALL_ANIM_WAVE = 1
     const val CALL_ANIM_BREATHING = 2
@@ -92,6 +100,12 @@ object GlyphConfig {
 
     @JvmStatic
     fun matrixShowIcon(): Boolean = matrixShowIcon.Bool()
+
+    @JvmStatic
+    fun onVideoRecording(): Boolean = onVideoRecording.Bool()
+
+    @JvmStatic
+    fun redRecordingIndicator(): Boolean = redRecordingIndicator.Bool()
 
     @JvmStatic
     fun callAnimationStyle(): Int = callAnimationStyle.Int()

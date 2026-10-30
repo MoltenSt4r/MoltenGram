@@ -8,6 +8,8 @@
     <string name="OEGlyphCallsAnim">Анимация звонка</string>
     <string name="OEGlyphRecording">Свечение при записи голосовых</string>
     <string name="OEGlyphRecordingAnim">Анимация записи</string>
+    <string name="OEGlyphVideoRecording">Свечение при записи кружков и видео</string>
+    <string name="OEGlyphRedIndicator">Красный индикатор записи (Rec. Light)</string>
     <string name="OEGlyphScreenOff">Сообщения только при выключенном экране</string>
     <string name="OEGlyphMatrixShowIcon">Иконка на матрице Glyph Matrix</string>
     <string name="OEGlyphPreview">Предпросмотр</string>

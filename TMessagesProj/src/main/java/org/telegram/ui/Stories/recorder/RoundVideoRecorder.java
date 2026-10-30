@@ -285,6 +285,7 @@ public class RoundVideoRecorder extends FrameLayout {
     private ValueAnimator destroyAnimator;
     private float destroyT;
     public void destroy(boolean instant) {
+        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStopped();
         if (onDestroyCallback != null) {
             onDestroyCallback.run();
             onDestroyCallback = null;

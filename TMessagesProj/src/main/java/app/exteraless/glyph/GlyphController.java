@@ -101,6 +101,8 @@ public final class GlyphController {
     private Bitmap matrixMicBitmap;
 
     private boolean recordingActive;
+    private boolean videoRecordingActive;
+    private boolean redIndicatorActive;
     private boolean callActive;
     /** Глифы заняты длительной анимацией (запись или звонок) — вспышки сообщений пропускаем. */
     private boolean glyphBusy;
@@ -267,7 +269,7 @@ public final class GlyphController {
             boolean showIcon = GlyphConfig.matrixShowIcon();
             int iconRes = callActive
                     ? R.drawable.baseline_call_24
-                    : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
+                    : ((recordingActive || videoRecordingActive) ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
             Bitmap iconBitmap = showIcon ? getMatrixIconBitmap(context, iconRes) : null;
 
             if (callActive) {
@@ -290,7 +292,7 @@ public final class GlyphController {
                     handler.postDelayed(this, 75L);
                     return;
                 }
-            } else if (recordingActive) {
+            } else if (recordingActive || videoRecordingActive) {
                 int recStyle = GlyphConfig.recordingAnimationStyle();
                 if (recStyle == GlyphConfig.RECORDING_ANIM_ACCENT_RING) {
                     // Заполняющееся кольцо прогресса вокруг микрофона
@@ -394,6 +396,11 @@ public final class GlyphController {
         pendingMessageFlash = false;
         pendingBurstEffect = false;
         recordingActive = false;
+        videoRecordingActive = false;
+        if (redIndicatorActive) {
+            redIndicatorActive = false;
+            setRedRecordingIndicatorHardware(false);
+        }
         callActive = false;
         glyphBusy = false;
         lastFlashAt = 0;
@@ -500,6 +507,165 @@ public final class GlyphController {
         });
     }
 
+    /**
+     * Запущена запись кружка (видеосообщения) или видео (`CameraView` / `RoundVideoRecorder` / `CameraController`).
+     * Зажигает красный индикатор записи (Rec. Light) на поддерживаемых моделях Nothing Phone
+     * и/или запускает свечение глифов при записи видео.
+     */
+    public void onVideoRecordingStarted() {
+        if (!GlyphConfig.enabled()) {
+            return;
+        }
+        final boolean wantGlyph = GlyphConfig.onVideoRecording();
+        final boolean wantRedLed = GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported();
+        if (!wantGlyph && !wantRedLed) {
+            return;
+        }
+        handler.post(() -> {
+            if (wantRedLed) {
+                redIndicatorActive = true;
+                setRedRecordingIndicatorHardware(true);
+            }
+            if (wantGlyph) {
+                videoRecordingActive = true;
+                updateGlyphActivity();
+            }
+        });
+    }
+
+    /**
+     * Остановлена запись кружка или видео — безусловно гасит красный индикатор записи и глифы.
+     */
+    public void onVideoRecordingStopped() {
+        handler.post(() -> {
+            videoRecordingActive = false;
+            if (redIndicatorActive) {
+                redIndicatorActive = false;
+                setRedRecordingIndicatorHardware(false);
+            }
+            updateGlyphActivity();
+        });
+    }
+
+    /**
+     * Проверяет, поддерживает ли устройство Nothing Phone задний красный индикатор записи (Rec. Light).
+     * Физический красный светодиод Rec. Light установлен на Nothing Phone (1), Phone (2), Phone (3),
+     * Phone (4a) Pro, Phone (4a), Phone (4b).
+     */
+    public static boolean isRedIndicatorSupported() {
+        String name = NothingPhoneEasterEgg.getDeviceDisplayName();
+        return isRedIndicatorSupportedForModel(name);
+    }
+
+    public static boolean isRedIndicatorSupportedForModel(String modelName) {
+        if (modelName == null || modelName.startsWith("CMF")) {
+            return false;
+        }
+        if ("Nothing Phone (1)".equals(modelName)
+                || "Nothing Phone (2)".equals(modelName)
+                || "Nothing Phone (3)".equals(modelName)
+                || "Nothing Phone (4a) Pro".equals(modelName)
+                || "Nothing Phone (4a)".equals(modelName)
+                || "Nothing Phone (4b)".equals(modelName)) {
+            return true;
+        }
+        return isNothingGlyphDevice();
+    }
+
+    private static final String[] RED_LED_SYSFS_PATHS = new String[]{
+            "/sys/class/leds/red/brightness",
+            "/sys/class/leds/led:red/brightness",
+            "/sys/class/leds/aw20036:led_red/brightness",
+            "/sys/class/leds/vibrator_red/brightness",
+            "/sys/class/leds/rec_led/brightness"
+    };
+
+    /**
+     * Управляет аппаратным красным светодиодом записи (Rec. Light) на задней панели Nothing Phone
+     * через системные настройки Nothing OS (`led_effect_video_record_enable` / `nothing_cam_rec_light`)
+     * и sysfs-узлы красного индикатора (если доступны).
+     */
+    public static void setRedRecordingIndicatorHardware(boolean active) {
+        Context context = ApplicationLoader.applicationContext;
+        if (context != null) {
+            try {
+                android.content.ContentResolver cr = context.getContentResolver();
+                int val = active ? 1 : 0;
+                try {
+                    android.provider.Settings.System.putInt(cr, "led_effect_video_record_enable", val);
+                } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.Global.putInt(cr, "nothing_camera_red_light_active", val);
+                } catch (Throwable ignored) {}
+            } catch (Throwable ignored) {}
+        }
+        String payload = active ? "255" : "0";
+        for (String path : RED_LED_SYSFS_PATHS) {
+            try {
+                java.io.File f = new java.io.File(path);
+                if (f.exists() && f.canWrite()) {
+                    try (java.io.FileOutputStream fos = new java.io.FileOutputStream(f)) {
+                        fos.write(payload.getBytes());
+                        fos.flush();
+                        break;
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+    }
+
+    /**
+     * Применяет vendor-теги Nothing OS Camera2 (`CaptureRequest`) для включения/выключения
+     * красного светодиода записи (`Rec. Light`) во время видеозаписи кружка или видео.
+     */
+    @SuppressWarnings("unchecked")
+    public static void applyNothingCameraRedIndicator(
+            android.hardware.camera2.CameraCharacteristics characteristics,
+            android.hardware.camera2.CaptureRequest.Builder builder,
+            boolean recordingVideo) {
+        if (characteristics == null || builder == null) {
+            return;
+        }
+        boolean enableRedLight = recordingVideo
+                && GlyphConfig.enabled()
+                && GlyphConfig.redRecordingIndicator()
+                && isRedIndicatorSupported();
+        try {
+            List<android.hardware.camera2.CaptureRequest.Key<?>> keys = characteristics.getAvailableCaptureRequestKeys();
+            if (keys == null) {
+                return;
+            }
+            for (android.hardware.camera2.CaptureRequest.Key<?> key : keys) {
+                if (key == null) continue;
+                String name = key.getName();
+                if (name == null) continue;
+                String lower = name.toLowerCase();
+                if (lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
+                        || lower.contains("recording_led") || lower.contains("record_led")
+                        || (lower.contains("nothing") && lower.contains("led"))) {
+                    byte bVal = (byte) (enableRedLight ? 1 : 0);
+                    int iVal = enableRedLight ? 1 : 0;
+                    try {
+                        ((android.hardware.camera2.CaptureRequest.Key<Byte>) key).getName();
+                        builder.set((android.hardware.camera2.CaptureRequest.Key<Byte>) key, bVal);
+                    } catch (Throwable ignored) {
+                        try {
+                            builder.set((android.hardware.camera2.CaptureRequest.Key<Integer>) key, iVal);
+                        } catch (Throwable ignored2) {
+                            try {
+                                builder.set((android.hardware.camera2.CaptureRequest.Key<byte[]>) key, new byte[]{bVal});
+                            } catch (Throwable ignored3) {
+                                try {
+                                    builder.set((android.hardware.camera2.CaptureRequest.Key<int[]>) key, new int[]{iVal});
+                                } catch (Throwable ignored4) {}
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
     /** Входящий VoIP-звонок зазвонил — дышим, пока не ответят или не сбросят. */
     public void onIncomingCallStarted() {
         if (!GlyphConfig.enabled() || !GlyphConfig.onCall()) {
@@ -524,7 +690,7 @@ public final class GlyphController {
      * хотя бы одна причина (запись голосового или входящий звонок).
      */
     private void updateGlyphActivity() {
-        boolean active = recordingActive || callActive;
+        boolean active = recordingActive || videoRecordingActive || callActive;
         if (!active) {
             glyphBusy = false;
             stopMatrixBreathing();
@@ -547,7 +713,7 @@ public final class GlyphController {
         } else if (stripSessionOpen) {
             if (callActive) {
                 startCallStrip();
-            } else if (recordingActive) {
+            } else if (recordingActive || videoRecordingActive) {
                 startRecordingStrip();
             }
         }
@@ -578,9 +744,10 @@ public final class GlyphController {
                 return;
             }
             // Если шло предыдущее превью звонка/записи, останавливаем его перед превью сообщения
-            if (callActive || recordingActive) {
+            if (callActive || recordingActive || videoRecordingActive) {
                 callActive = false;
                 recordingActive = false;
+                videoRecordingActive = false;
                 updateGlyphActivity();
             }
             if (matrixRegistered) {
@@ -617,9 +784,17 @@ public final class GlyphController {
             }
             callActive = false;
             recordingActive = true;
+            if (GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported()) {
+                redIndicatorActive = true;
+                setRedRecordingIndicatorHardware(true);
+            }
             updateGlyphActivity();
             handler.postDelayed(() -> {
                 recordingActive = false;
+                if (redIndicatorActive) {
+                    redIndicatorActive = false;
+                    setRedRecordingIndicatorHardware(false);
+                }
                 updateGlyphActivity();
             }, 2600L);
         });

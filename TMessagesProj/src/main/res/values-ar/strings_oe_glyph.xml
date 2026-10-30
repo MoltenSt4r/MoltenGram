@@ -5,6 +5,8 @@
     <string name="OEGlyphNewMessage">وميض عند الرسائل الجديدة</string>
     <string name="OEGlyphCalls">توهج عند المكالمات الواردة</string>
     <string name="OEGlyphRecording">توهج أثناء التسجيل</string>
+    <string name="OEGlyphVideoRecording">توهج أثناء تسجيل الفيديو والرسائل المرئية</string>
+    <string name="OEGlyphRedIndicator">مؤشر التسجيل الأحمر (Rec. Light)</string>
     <string name="OEGlyphScreenOff">الرسائل فقط عندما تكون الشاشة مطفأة</string>
     <string name="OEGlyphMatrixShowIcon">إظهار الأيقونة على مصفوفة Glyph</string>
     <string name="OEGlyphPreview">معاينة</string>

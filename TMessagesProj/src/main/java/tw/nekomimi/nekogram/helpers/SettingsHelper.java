@@ -152,6 +152,8 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("OEGlyphCalls", "glyph");
         NAGRAM_ROWS.put("OEGlyphCallAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphRecording", "glyph");
+        NAGRAM_ROWS.put("OEGlyphVideoRecording", "glyph");
+        NAGRAM_ROWS.put("OEGlyphRedIndicator", "glyph");
         NAGRAM_ROWS.put("OEGlyphRecordAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphScreenOff", "glyph");
         NAGRAM_ROWS.put("OEGlyphMatrixShowIcon", "glyph");

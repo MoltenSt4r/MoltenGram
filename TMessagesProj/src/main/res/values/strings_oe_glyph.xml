@@ -9,6 +9,8 @@
     <string name="OEGlyphCallsAnim">Call animation</string>
     <string name="OEGlyphRecording">Glow while recording</string>
     <string name="OEGlyphRecordingAnim">Recording animation</string>
+    <string name="OEGlyphVideoRecording">Glow while recording video &amp; video notes</string>
+    <string name="OEGlyphRedIndicator">Red recording indicator (Rec. Light)</string>
     <string name="OEGlyphScreenOff">Messages only when screen is off</string>
     <string name="OEGlyphMatrixShowIcon">Show icon on Glyph Matrix</string>
     <string name="OEGlyphPreview">Preview</string>

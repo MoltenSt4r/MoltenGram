@@ -170,6 +170,7 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     Runnable onRecordingFinishRunnable;
 
     public boolean startRecording(File path, Runnable onFinished) {
+        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStarted();
         cameraSessionRecording = cameraSession[0];
         cameraThread.startRecording(path);
         onRecordingFinishRunnable = onFinished;
@@ -177,6 +178,7 @@ public class CameraView extends FrameLayout implements TextureView.SurfaceTextur
     }
 
     public void stopRecording() {
+        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStopped();
         cameraThread.stopRecording();
     }
 

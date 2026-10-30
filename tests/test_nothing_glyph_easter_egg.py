@@ -625,6 +625,18 @@ def test_per_model_sdk_contract_and_visual_preview_animations():
         cfg_content = f.read()
     assert 'val matrixShowIcon = addConfig("OEGlyphMatrixShowIcon", ConfigItem.configTypeBool, true)' in cfg_content
     assert "fun matrixShowIcon(): Boolean" in cfg_content
+    assert 'val onVideoRecording = addConfig("OEGlyphVideoRecording", ConfigItem.configTypeBool, true)' in cfg_content
+    assert 'val redRecordingIndicator = addConfig("OEGlyphRedIndicator", ConfigItem.configTypeBool, true)' in cfg_content
+    assert "fun onVideoRecording(): Boolean" in cfg_content
+    assert "fun redRecordingIndicator(): Boolean" in cfg_content
+
+    # 6. Video recording and Red Recording Indicator (Rec. Light) wiring
+    assert "public void onVideoRecordingStarted()" in controller
+    assert "public void onVideoRecordingStopped()" in controller
+    assert "public static boolean isRedIndicatorSupported()" in controller
+    assert "public static void applyNothingCameraRedIndicator(" in controller
+    assert "drawRedRecordingIndicator(canvas" in preview_cell
+
 
 
 

@@ -92,6 +92,8 @@ public class NothingPhoneBurstOverlay extends View {
 
         float x;
         float y;
+        float prevX;
+        float prevY;
         float vx;
         float vy;
         float rotation;
@@ -99,6 +101,7 @@ public class NothingPhoneBurstOverlay extends View {
         float scale;
         boolean settled;
         int restFrames;
+        int ageFrames;
     }
 
     private final List<PhysicsItem> items = new ArrayList<>();
@@ -135,7 +138,8 @@ public class NothingPhoneBurstOverlay extends View {
 
     private long lastHapticTime = 0;
     private int spawnedCount = 0;
-    private static final int TARGET_SPAWN_ITEMS = 480;
+    private int postSpawnFrames = 0;
+    private static final int TARGET_SPAWN_ITEMS = 250;
 
     private android.window.OnBackInvokedCallback backCallback;
 
@@ -244,12 +248,12 @@ public class NothingPhoneBurstOverlay extends View {
         if (opaqueCount > 4 && maxX > minX && maxY > minY) {
             s.halfWidth = Math.max(AndroidUtilities.dp(14), (maxX - minX) / 2f);
             s.halfHeight = Math.max(AndroidUtilities.dp(24), (maxY - minY) / 2f);
-            // Tight inscribed collision radius so phone silhouettes nestle densely without empty gaps
-            s.effectiveRadius = (s.halfWidth * 0.56f + s.halfHeight * 0.44f) * 0.84f;
+            // Natural collision radius so phone silhouettes rest against shapes without tangling
+            s.effectiveRadius = (s.halfWidth * 0.58f + s.halfHeight * 0.44f) * 0.90f;
         } else {
             s.halfWidth = w / 2f;
             s.halfHeight = h / 2f;
-            s.effectiveRadius = Math.min(w, h) * 0.42f;
+            s.effectiveRadius = Math.min(w, h) * 0.45f;
         }
         return s;
     }
@@ -274,7 +278,7 @@ public class NothingPhoneBurstOverlay extends View {
                 }
                 for (int i = 0, n = items.size(); i < n; i++) {
                     PhysicsItem it = items.get(i);
-                    if (it.settled) {
+                    if (it.settled || it.restFrames >= 2 || it.ageFrames >= 22) {
                         float r = getItemRadius(it);
                         float topY = it.y - r;
                         int minCol = Math.max(0, Math.min(COLUMNS_COUNT - 1, (int) ((it.x - r * 0.6f) / colWidth)));
@@ -299,7 +303,7 @@ public class NothingPhoneBurstOverlay extends View {
                 }
             }
             if (!isDismissing && !isScreenFilled && !allColsAtTop && spawnedCount < TARGET_SPAWN_ITEMS) {
-                int spawnBatch = (spawnedCount < 140) ? 4 : 3;
+                int spawnBatch = (spawnedCount < 110) ? 3 : 2;
                 for (int b = 0; b < spawnBatch && spawnedCount < TARGET_SPAWN_ITEMS; b++) {
                     PhysicsItem item = new PhysicsItem();
                     item.isDevice = !deviceBitmaps.isEmpty() && (rand.nextInt(4) == 0 || spawnedCount % 4 == 0);
@@ -307,12 +311,12 @@ public class NothingPhoneBurstOverlay extends View {
                         int idx = rand.nextInt(deviceBitmaps.size());
                         item.bitmap = deviceBitmaps.get(idx);
                         item.silhouette = deviceSilhouettes.get(idx);
-                        item.scale = 0.34f + rand.nextFloat() * 0.14f;
+                        item.scale = 0.30f + rand.nextFloat() * 0.11f;
                     } else {
                         item.shapeId = MD3_FALLING_SHAPES[rand.nextInt(MD3_FALLING_SHAPES.length)];
                         item.color = themeColors[rand.nextInt(themeColors.length)];
-                        item.baseWidth = AndroidUtilities.dp(44 + rand.nextInt(34));
-                        item.baseHeight = item.shapeId == Md3AvatarShapes.SHAPE_PILL ? item.baseWidth * 1.65f : item.baseWidth;
+                        item.baseWidth = AndroidUtilities.dp(42 + rand.nextInt(28));
+                        item.baseHeight = item.shapeId == Md3AvatarShapes.SHAPE_PILL ? item.baseWidth * 1.60f : item.baseWidth;
                         item.scale = 1.0f;
                     }
 
@@ -338,16 +342,21 @@ public class NothingPhoneBurstOverlay extends View {
                         item.x = (targetCol + 0.5f) * colWidth;
                     }
 
-                    item.y = -AndroidUtilities.dp(28) - (b * AndroidUtilities.dp(32)) - rand.nextFloat() * AndroidUtilities.dp(36);
-                    item.vx = (rand.nextFloat() - 0.5f) * AndroidUtilities.dp(2.0f);
-                    item.vy = AndroidUtilities.dp(7.5f + rand.nextFloat() * 5.5f);
+                    item.y = -AndroidUtilities.dp(28) - (b * AndroidUtilities.dp(34)) - rand.nextFloat() * AndroidUtilities.dp(28);
+                    item.prevX = item.x;
+                    item.prevY = item.y;
+                    item.vx = (rand.nextFloat() - 0.5f) * AndroidUtilities.dp(1.8f);
+                    item.vy = AndroidUtilities.dp(7.5f + rand.nextFloat() * 5.0f);
                     item.rotation = rand.nextFloat() * 360f;
-                    item.vRot = (rand.nextFloat() - 0.5f) * 3f; // gentle initial rotation
+                    item.vRot = (rand.nextFloat() - 0.5f) * 2.5f; // gentle initial rotation
                     item.settled = false;
                     item.restFrames = 0;
+                    item.ageFrames = 0;
                     items.add(item);
                     spawnedCount++;
                 }
+            } else if (!isDismissing && !isScreenFilled && spawnedCount >= TARGET_SPAWN_ITEMS) {
+                postSpawnFrames++;
             }
 
             // 2. Physics simulation step
@@ -357,14 +366,17 @@ public class NothingPhoneBurstOverlay extends View {
 
                 for (PhysicsItem item : items) {
                     if (!item.settled) {
+                        item.prevX = item.x;
+                        item.prevY = item.y;
+                        item.ageFrames++;
                         item.x += item.vx;
                         item.y += item.vy;
                         item.vy += gravity;
                         item.rotation += item.vRot;
 
                         // Strong rotational and horizontal damping to avoid spinning wildly
-                        item.vRot *= 0.92f;
-                        item.vx *= 0.95f;
+                        item.vRot *= 0.90f;
+                        item.vx *= 0.94f;
 
                         float r = getItemRadius(item);
 
@@ -413,7 +425,7 @@ public class NothingPhoneBurstOverlay extends View {
                         }
                     }
                     float topCollideCutoff = -AndroidUtilities.dp(24);
-                    for (int iter = 0; iter < 3; iter++) {
+                    for (int iter = 0; iter < 2; iter++) {
                         for (int i = 0; i < count; i++) {
                             PhysicsItem a = items.get(i);
                             if (a.y < topCollideCutoff) {
@@ -439,23 +451,23 @@ public class NothingPhoneBurstOverlay extends View {
 
                                 if (distSq < minDist * minDist && distSq > 0.0001f) {
                                     float dist = (float) Math.sqrt(distSq);
-                                    float overlap = minDist - dist;
+                                    float overlap = (minDist - dist) * 0.72f;
                                     float nx = dx / dist;
                                     float ny = dy / dist;
 
-                                    if (b.settled && ny > 0.12f) {
+                                    if (b.settled && ny > 0.05f) {
                                         supported[i] = true;
-                                    } else if (a.settled && ny < -0.12f) {
+                                    } else if (a.settled && ny < -0.05f) {
                                         supported[j] = true;
-                                    } else if (supported[j] && ny > 0.20f) {
+                                    } else if (supported[j] && ny > 0.10f) {
                                         supported[i] = true;
-                                    } else if (supported[i] && ny < -0.20f) {
+                                    } else if (supported[i] && ny < -0.10f) {
                                         supported[j] = true;
                                     }
 
-                                    // Positional separation so items nestle into pockets without floating
-                                    float pushA = a.settled ? 0.0f : (b.settled ? 1.0f : 0.5f);
-                                    float pushB = b.settled ? 0.0f : (a.settled ? 1.0f : 0.5f);
+                                    // Softened positional separation so items settle smoothly without fighting gravity
+                                    float pushA = a.settled ? 0.0f : (b.settled ? 0.85f : 0.45f);
+                                    float pushB = b.settled ? 0.0f : (a.settled ? 0.85f : 0.45f);
 
                                     a.x -= nx * overlap * pushA;
                                     a.y -= ny * overlap * pushA;
@@ -467,26 +479,24 @@ public class NothingPhoneBurstOverlay extends View {
                                     float rvy = b.vy - a.vy;
                                     float velAlongNormal = rvx * nx + rvy * ny;
                                     if (velAlongNormal < 0) {
-                                        float restitution = 0.12f;
-                                        float impulse = -(1f + restitution) * velAlongNormal / 2f;
-                                        if (!a.settled) {
-                                            a.vx -= impulse * nx;
-                                            a.vy -= impulse * ny;
-                                        }
-                                        if (!b.settled) {
-                                            b.vx += impulse * nx;
-                                            b.vy += impulse * ny;
-                                        }
                                         if (a.settled) {
-                                            b.vx *= 0.82f;
-                                            b.vRot *= 0.78f;
+                                            b.vx *= 0.65f;
+                                            b.vy *= 0.45f;
+                                            b.vRot *= 0.60f;
                                         } else if (b.settled) {
-                                            a.vx *= 0.82f;
-                                            a.vRot *= 0.78f;
+                                            a.vx *= 0.65f;
+                                            a.vy *= 0.45f;
+                                            a.vRot *= 0.60f;
+                                        } else {
+                                            float impulse = -1.05f * velAlongNormal / 2f;
+                                            a.vx -= impulse * nx * 0.6f;
+                                            a.vy -= impulse * ny * 0.6f;
+                                            b.vx += impulse * nx * 0.6f;
+                                            b.vy += impulse * ny * 0.6f;
                                         }
                                         // Only tactile feedback for noticeable impacts inside visible screen
-                                        if (!isDismissing && Math.abs(velAlongNormal) >= AndroidUtilities.dp(1.2f)) {
-                                            if (a.y + rA >= 0 || b.y + rB >= 0) {
+                                        if (!isDismissing && Math.abs(velAlongNormal) >= AndroidUtilities.dp(1.6f)) {
+                                            if ((a.y + rA >= 0 && a.ageFrames < 30) || (b.y + rB >= 0 && b.ageFrames < 30)) {
                                                 anyImpact = true;
                                             }
                                         }
@@ -496,15 +506,27 @@ public class NothingPhoneBurstOverlay extends View {
                         }
                     }
 
-                    // Settle items ONLY when physically supported from below and inside the visible screen
+                    // Position-Based Dynamics (PBD) velocity reconciliation & fast settling (eliminates all jitter!)
                     for (int i = 0; i < count; i++) {
                         PhysicsItem item = items.get(i);
                         if (!item.settled) {
-                            if (supported[i] && item.y > -AndroidUtilities.dp(16)
-                                    && Math.abs(item.vx) < AndroidUtilities.dp(0.85f)
-                                    && Math.abs(item.vy) < AndroidUtilities.dp(1.1f)) {
+                            float netDx = item.x - item.prevX;
+                            float netDy = item.y - item.prevY;
+                            float netMove = (float) Math.hypot(netDx, netDy);
+
+                            // Reconcile velocity with actual net frame displacement so blocked items don't accumulate gravity and vibrate
+                            if (supported[i]) {
+                                item.vx = netDx * 0.60f;
+                                item.vy = Math.max(-AndroidUtilities.dp(1.2f), netDy * 0.60f);
+                                item.vRot *= 0.65f;
+                            }
+
+                            if (item.y > -AndroidUtilities.dp(20) && (
+                                    (supported[i] && netMove < AndroidUtilities.dp(1.8f))
+                                    || (item.ageFrames > 32 && netMove < AndroidUtilities.dp(2.2f))
+                                    || item.ageFrames > 58)) {
                                 item.restFrames++;
-                                if (item.restFrames >= 9) {
+                                if (item.restFrames >= 5 || item.ageFrames > 58) {
                                     item.settled = true;
                                     item.vx = 0f;
                                     item.vy = 0f;
@@ -536,10 +558,10 @@ public class NothingPhoneBurstOverlay extends View {
                     }
                 }
 
-                // 4. Reliable 100% screen fill condition: trigger liquid fill ONLY when all columns are filled to the top!
+                // 4. Reliable 100% screen fill condition: trigger liquid fill smoothly as soon as pile reaches top or spawn finishes!
                 if (!isScreenFilled && !isDismissing) {
                     boolean filledToTop = false;
-                    if (columnFloors != null && spawnedCount >= 160) {
+                    if (columnFloors != null && spawnedCount >= 120) {
                         float maxFloor = Float.NEGATIVE_INFINITY;
                         float sumFloor = 0f;
                         for (float f : columnFloors) {
@@ -549,9 +571,9 @@ public class NothingPhoneBurstOverlay extends View {
                             sumFloor += f;
                         }
                         float avgFloor = sumFloor / (float) COLUMNS_COUNT;
-                        filledToTop = (avgFloor <= AndroidUtilities.dp(18) && maxFloor <= AndroidUtilities.dp(42))
-                                || (spawnedCount >= 340 && avgFloor <= AndroidUtilities.dp(32))
-                                || (spawnedCount >= TARGET_SPAWN_ITEMS && allItemsSettled());
+                        filledToTop = (avgFloor <= AndroidUtilities.dp(18) && maxFloor <= AndroidUtilities.dp(48))
+                                || (spawnedCount >= 180 && avgFloor <= AndroidUtilities.dp(32))
+                                || (spawnedCount >= TARGET_SPAWN_ITEMS && (allItemsSettled() || postSpawnFrames >= 20));
                     }
                     if (filledToTop) {
                         triggerScreenFilled();
@@ -575,8 +597,8 @@ public class NothingPhoneBurstOverlay extends View {
         if (item.isDevice && item.silhouette != null) {
             return item.silhouette.effectiveRadius * item.scale;
         }
-        // Tighter packing factor (0.41 instead of 0.50) so adjacent MD3 shapes touch visually without air gaps
-        return item.baseWidth * 0.41f * item.scale;
+        // Clean packing factor (0.45) so adjacent MD3 shapes touch naturally without tangling into each other
+        return item.baseWidth * 0.45f * item.scale;
     }
 
     private void triggerScreenFilled() {
