@@ -34,12 +34,18 @@ import java.lang.reflect.Field;
 import java.util.List;
 
 /**
- * Управление Nothing Glyph: светодиодные зоны (Glyph Interface) и матрица Phone (3)
- * (Glyph Matrix) через единый AAR Nothing.
+ * Управление Nothing Glyph: светодиодные зоны (Glyph Interface) и матрица Phone (3) / Phone (4a) Pro
+ * (Glyph Matrix) через официальный Nothing Glyph Developer Kit (`com.nothing.ketchum`).
  *
- * SDK работает через системный прокси-сервис Nothing, поэтому весь жизненный цикл
- * сводится к init -> register -> openSession; на устройствах других вендоров
- * контроллер просто не инициализируется.
+ * Архитектура поддерживает все модели Nothing Phone с индивидуальной геометрией светодиодов:
+ * - Nothing Phone (1) (20111, A063): 15 зон (A1, B1, C1..C4, E1, D1_1..D1_8)
+ * - Nothing Phone (2) (22111, A065/AIN065): 33 зоны (A1, A2, B1, C1_1..C1_16, C2..C6, E1, D1_1..D1_8)
+ * - Nothing Phone (2a) (23111, A142) / Phone (2a) Plus (23113, A142P): 26 зон (C_1..C_24, B, A)
+ * - Nothing Phone (3a) / Phone (3a) Pro (24111, A059): 36 зон (C_1..C_20, A_1..A_11, B_1..B_5)
+ * - Nothing Phone (3a) Lite (24111, A001T): одиночный глиф-индикатор (канал A)
+ * - Nothing Phone (4a) / Phone (4b) (25111, A069/A009P): 6 сегментов Glyph Bar (A_1..A_6)
+ * - Nothing Phone (3) (23112, A024): Glyph Matrix 25x25
+ * - Nothing Phone (4a) Pro (25111p, A069P): Glyph Matrix 13x13
  */
 public final class GlyphController {
 
@@ -58,20 +64,20 @@ public final class GlyphController {
         return local;
     }
 
-    /** Сколько логотип держится на Glyph Matrix. */
+    /** Сколько логотип держится на Glyph Matrix при одиночном показе. */
     private static final long LOGO_SHOW_MS = 3000L;
 
     /** Верхняя граница циклов «дыхания» на записи — страховка, если стоп-ивент потеряется. */
     private static final int RECORDING_MAX_CYCLES = 600;
 
     /** Шаг и диапазон яркости «дыхания» матрицы (0-255, как в SDK). */
-    private static final long BREATH_STEP_MS = 120L;
-    private static final int BREATH_STEP = 10;
-    private static final int BREATH_MIN = 12;
+    private static final long BREATH_STEP_MS = 85L;
+    private static final int BREATH_STEP = 14;
+    private static final int BREATH_MIN = 15;
     private static final int BREATH_MAX = 255;
 
-    /** Страховка от потерянного стоп-ивента записи: ~10 минут дыхания матрицы. */
-    private static final int RECORDING_MAX_BREATH_STEPS = 5000;
+    /** Страховка от потерянного стоп-ивента записи: ~10 минут анимации матрицы. */
+    private static final int RECORDING_MAX_BREATH_STEPS = 7000;
 
     /** Минимальный интервал между вспышками на сообщения — защита от стробоскопа в активном чате. */
     private static final long FLASH_COOLDOWN_MS = 2500L;
@@ -102,11 +108,21 @@ public final class GlyphController {
     private boolean pendingBurstEffect;
     private int pendingPreviewType = -1;
     private long lastFlashAt;
+
     private int breathBrightness = BREATH_MAX;
     private int breathDirection = -1;
     private int breathSteps;
 
     private int callWaveStep = 0;
+    private int matrixMessageStep = 0;
+    private int matrixMessageStyle = GlyphConfig.MESSAGE_ANIM_DOUBLE_FLASH;
+
+    /**
+     * Пошаговая аппаратная анимация волны при звонке для всех полосочных моделей Nothing Phone.
+     * Использует детерминированный `stripManager.toggle(frame)` на каждом шаге (90 мс),
+     * чтобы сегменты дуг C1_1..C1_16, C_1..C_24, C_1..C_20, D1_1..D1_8 и квадраты A_1..A_6
+     * плавно перетекающим бегущим огнём зажигались без обрыва потока `GlyphManager.animate()`.
+     */
     private final Runnable callWaveRunnable = new Runnable() {
         @Override
         public void run() {
@@ -114,127 +130,100 @@ public final class GlyphController {
                 return;
             }
             try {
-                GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                GlyphFrame.Builder b = createStripFrameBuilder();
                 if (b == null) {
                     return;
                 }
-                b.buildPeriod(200)
-                        .buildCycles(1)
-                        .buildInterval(0);
                 String targetDev = resolveStripDevice();
-                if (Glyph.DEVICE_25111.equals(targetDev)) {
-                    int sq = callWaveStep % 6;
-                    b.buildChannel(sq);
-                } else if (Glyph.DEVICE_24111.equals(targetDev)) {
-                    if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
-                        for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
-                            try { b.buildChannel(i); } catch (Throwable ignored) {}
-                        }
-                        b.buildChannelA();
-                    } else {
-                        switch (callWaveStep % 3) {
-                            case 0:
-                                for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
-                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
-                                }
-                                b.buildChannelA();
-                                break;
-                            case 1:
-                                for (int i = Glyph.Code_24111.B_1; i <= Glyph.Code_24111.B_5; i++) {
-                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
-                                }
-                                b.buildChannelB();
-                                break;
-                            case 2:
-                                for (int i = Glyph.Code_24111.C_1; i <= Glyph.Code_24111.C_20; i++) {
-                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
-                                }
-                                b.buildChannelC();
-                                break;
-                        }
-                    }
-                } else if (Glyph.DEVICE_23111.equals(targetDev) || Glyph.DEVICE_23113.equals(targetDev)) {
-                    switch (callWaveStep % 3) {
-                        case 0:
-                            try { b.buildChannel(Glyph.Code_23111.A); } catch (Throwable ignored) {}
-                            b.buildChannelA();
-                            break;
-                        case 1:
-                            try { b.buildChannel(Glyph.Code_23111.B); } catch (Throwable ignored) {}
-                            b.buildChannelB();
-                            break;
-                        case 2:
-                            for (int i = Glyph.Code_23111.C_1; i <= Glyph.Code_23111.C_24; i++) {
-                                try { b.buildChannel(i); } catch (Throwable ignored) {}
-                            }
-                            b.buildChannelC();
-                            break;
-                    }
-                } else if (Glyph.DEVICE_20111.equals(targetDev) || isPhone1()) {
-                    switch (callWaveStep % 4) {
-                        case 0:
-                            try { b.buildChannel(Glyph.Code_20111.A1); } catch (Throwable ignored) {}
-                            b.buildChannelA();
-                            break;
-                        case 1:
-                            try { b.buildChannel(Glyph.Code_20111.B1); } catch (Throwable ignored) {}
-                            b.buildChannelB();
-                            break;
-                        case 2:
-                            for (int i = Glyph.Code_20111.D1_1; i <= Glyph.Code_20111.D1_8; i++) {
-                                try { b.buildChannel(i); } catch (Throwable ignored) {}
-                            }
-                            b.buildChannelD();
-                            break;
-                        case 3:
-                            try {
-                                b.buildChannel(Glyph.Code_20111.C1)
-                                        .buildChannel(Glyph.Code_20111.C2)
-                                        .buildChannel(Glyph.Code_20111.C3)
-                                        .buildChannel(Glyph.Code_20111.C4)
-                                        .buildChannel(Glyph.Code_20111.E1);
-                            } catch (Throwable ignored) {}
-                            b.buildChannelC().buildChannelE();
-                            break;
-                    }
-                } else {
-                    switch (callWaveStep % 4) {
-                        case 0:
-                            try {
-                                b.buildChannel(Glyph.Code_22111.A1)
-                                        .buildChannel(Glyph.Code_22111.A2);
-                            } catch (Throwable ignored) {}
-                            b.buildChannelA();
-                            break;
-                        case 1:
-                            try { b.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
-                            b.buildChannelB();
-                            break;
-                        case 2:
-                            for (int i = Glyph.Code_22111.D1_1; i <= Glyph.Code_22111.D1_8; i++) {
-                                try { b.buildChannel(i); } catch (Throwable ignored) {}
-                            }
-                            b.buildChannelD();
-                            break;
-                        case 3:
-                            for (int i = Glyph.Code_22111.C1_1; i <= Glyph.Code_22111.C6; i++) {
-                                try { b.buildChannel(i); } catch (Throwable ignored) {}
-                            }
-                            try { b.buildChannel(Glyph.Code_22111.E1); } catch (Throwable ignored) {}
-                            b.buildChannelC().buildChannelE();
-                            break;
-                    }
-                }
-                stripManager.animate(b.build());
+                buildWaveStepChannels(b, targetDev, callWaveStep);
+                stripManager.toggle(b.build());
             } catch (Throwable t) {
                 FileLog.e(t);
-                flashDirectFallback();
             }
             callWaveStep++;
-            handler.postDelayed(this, 180L);
+            handler.postDelayed(this, 95L);
         }
     };
 
+    /**
+     * Пошаговая анимация входящего сообщения на Glyph Matrix (Phone 3 25x25 и Phone 4a Pro 13x13)
+     * в соответствии с выбранным стилем: Double Flash, Strobe, Soft Pulse или Accent Ring.
+     */
+    private final Runnable matrixMessageAnimRunnable = new Runnable() {
+        @Override
+        public void run() {
+            if (glyphBusy || matrixManager == null || !matrixRegistered) {
+                return;
+            }
+            Context context = ApplicationLoader.applicationContext;
+            if (context == null) {
+                return;
+            }
+            int len = getMatrixGridLength();
+            Bitmap logo = getMatrixIconBitmap(context, R.drawable.moltengram_icon_monochrome);
+            int step = matrixMessageStep++;
+
+            try {
+                if (matrixMessageStyle == GlyphConfig.MESSAGE_ANIM_STROBE) {
+                    // 3 резких стробоскопических импульса логотипа + угловых маркеров
+                    if (step >= 6) {
+                        hideMatrixLogo();
+                        return;
+                    }
+                    if (step % 2 == 0) {
+                        int[] frame = renderMatrixBitmap(logo, 255, len);
+                        addMatrixPerimeterRing(frame, len, 1.0f, 3200);
+                        pushMatrixFrame(frame);
+                    } else {
+                        pushMatrixFrame(new int[len * len]);
+                    }
+                    handler.postDelayed(this, 85L);
+                } else if (matrixMessageStyle == GlyphConfig.MESSAGE_ANIM_SOFT_PULSE) {
+                    // Плавное синусоидальное разгорание и затухание логотипа (14 кадров)
+                    int totalSteps = 14;
+                    if (step >= totalSteps) {
+                        hideMatrixLogo();
+                        return;
+                    }
+                    double phase = Math.sin(Math.PI * (step + 1) / (double) totalSteps);
+                    int brightness = Math.max(18, Math.min(255, (int) Math.round(255.0 * phase)));
+                    showMatrixIcon(R.drawable.moltengram_icon_monochrome, brightness, false);
+                    handler.postDelayed(this, 70L);
+                } else if (matrixMessageStyle == GlyphConfig.MESSAGE_ANIM_ACCENT_RING) {
+                    // Расходящееся световое кольцо вокруг логотипа MoltenGram (12 кадров)
+                    int totalSteps = 12;
+                    if (step >= totalSteps) {
+                        hideMatrixLogo();
+                        return;
+                    }
+                    float progress = (step + 1) / (float) totalSteps;
+                    int logoBright = step < 9 ? 235 : Math.max(0, 235 - (step - 8) * 65);
+                    int[] frame = renderMatrixBitmap(logo, logoBright, len);
+                    addMatrixExpandingRing(frame, len, progress, 4095);
+                    pushMatrixFrame(frame);
+                    handler.postDelayed(this, 75L);
+                } else {
+                    // MESSAGE_ANIM_DOUBLE_FLASH: фирменная двойная вспышка + удержание логотипа
+                    if (step == 0 || step == 2) {
+                        showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, false);
+                        handler.postDelayed(this, 130L);
+                    } else if (step == 1) {
+                        pushMatrixFrame(new int[len * len]);
+                        handler.postDelayed(this, 90L);
+                    } else if (step == 3) {
+                        showMatrixIcon(R.drawable.moltengram_icon_monochrome, 255, true);
+                    }
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
+            }
+        }
+    };
+
+    /**
+     * Длительная анимация Glyph Matrix (Phone 3 / Phone 4a Pro) для звонков и записи голосовых
+     * с поддержкой выбранных стилей (Pulse, Wave, Breathing, Accent Ring, Heartbeat).
+     */
     private final Runnable breathRunnable = new Runnable() {
         @Override
         public void run() {
@@ -245,7 +234,71 @@ public final class GlyphController {
                 stopMatrixBreathing();
                 return;
             }
-            int step = callActive ? 22 : BREATH_STEP;
+            Context context = ApplicationLoader.applicationContext;
+            if (context == null) {
+                return;
+            }
+            int len = getMatrixGridLength();
+            int iconRes = callActive
+                    ? R.drawable.baseline_call_24
+                    : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
+            Bitmap iconBitmap = getMatrixIconBitmap(context, iconRes);
+
+            if (callActive) {
+                int callStyle = GlyphConfig.callAnimationStyle();
+                if (callStyle == GlyphConfig.CALL_ANIM_WAVE) {
+                    // Вращающаяся радарная волна по периметру матрицы + иконка трубки в центре
+                    int[] frame = renderMatrixBitmap(iconBitmap, 225, len);
+                    float angle = (breathSteps * 24f) % 360f;
+                    addMatrixRadarWave(frame, len, angle, 4095);
+                    pushMatrixFrame(frame);
+                    handler.postDelayed(this, 65L);
+                    return;
+                } else if (callStyle == GlyphConfig.CALL_ANIM_PULSE) {
+                    // Пульсирующая трубка + расходящиеся звуковые кольца
+                    float ringPhase = (breathSteps % 10) / 9.0f;
+                    int iconBright = (breathSteps % 10 < 5) ? 255 : 130;
+                    int[] frame = renderMatrixBitmap(iconBitmap, iconBright, len);
+                    addMatrixExpandingRing(frame, len, ringPhase, 3800);
+                    pushMatrixFrame(frame);
+                    handler.postDelayed(this, 75L);
+                    return;
+                }
+            } else if (recordingActive) {
+                int recStyle = GlyphConfig.recordingAnimationStyle();
+                if (recStyle == GlyphConfig.RECORDING_ANIM_ACCENT_RING) {
+                    // Заполняющееся кольцо прогресса вокруг микрофона
+                    int[] frame = renderMatrixBitmap(iconBitmap, 210, len);
+                    float progress = ((breathSteps % 20) + 1) / 20.0f;
+                    addMatrixPerimeterProgress(frame, len, progress, 4095);
+                    pushMatrixFrame(frame);
+                    handler.postDelayed(this, 80L);
+                    return;
+                } else if (recStyle == GlyphConfig.RECORDING_ANIM_HEARTBEAT) {
+                    // Двойной удар сердца (lub-dub)
+                    int phase = breathSteps % 12;
+                    int hbBright;
+                    if (phase == 0 || phase == 1) {
+                        hbBright = 255;
+                    } else if (phase == 2) {
+                        hbBright = 60;
+                    } else if (phase == 3 || phase == 4) {
+                        hbBright = 220;
+                    } else {
+                        hbBright = Math.max(20, 90 - (phase - 5) * 12);
+                    }
+                    int[] frame = renderMatrixBitmap(iconBitmap, hbBright, len);
+                    if (phase == 0 || phase == 3) {
+                        addMatrixPerimeterRing(frame, len, 0.88f, hbBright * 14);
+                    }
+                    pushMatrixFrame(frame);
+                    handler.postDelayed(this, 80L);
+                    return;
+                }
+            }
+
+            // Плавное классическое дыхание (CALL_ANIM_BREATHING / RECORDING_ANIM_BREATHING)
+            int step = callActive ? 20 : BREATH_STEP;
             breathBrightness += breathDirection * step;
             if (breathBrightness <= BREATH_MIN) {
                 breathBrightness = BREATH_MIN;
@@ -254,9 +307,8 @@ public final class GlyphController {
                 breathBrightness = BREATH_MAX;
                 breathDirection = -1;
             }
-            int iconRes = callActive ? R.drawable.baseline_call_24 : (recordingActive ? R.drawable.baseline_mic_24 : R.drawable.moltengram_icon_monochrome);
             showMatrixIcon(iconRes, breathBrightness, false);
-            long delay = callActive ? 70L : BREATH_STEP_MS;
+            long delay = callActive ? 65L : BREATH_STEP_MS;
             handler.postDelayed(this, delay);
         }
     };
@@ -314,9 +366,16 @@ public final class GlyphController {
         lastFlashAt = 0;
         handler.removeCallbacks(hideLogoRunnable);
         handler.removeCallbacks(breathRunnable);
+        handler.removeCallbacks(matrixMessageAnimRunnable);
         handler.removeCallbacks(callWaveRunnable);
         try {
             if (stripManager != null) {
+                try {
+                    stripManager.turnOff();
+                } catch (Throwable ignored) {}
+                try {
+                    stripManager.closeSession();
+                } catch (Throwable ignored) {}
                 stripManager.unInit();
             }
         } catch (Throwable t) {
@@ -325,6 +384,9 @@ public final class GlyphController {
         stripManager = null;
         try {
             if (matrixManager != null) {
+                try {
+                    matrixManager.closeAppMatrix();
+                } catch (Throwable ignored) {}
                 matrixManager.unInit();
             }
         } catch (Throwable t) {
@@ -380,9 +442,9 @@ public final class GlyphController {
         }
         lastFlashAt = now;
         if (matrixRegistered) {
-            showMatrixLogo();
+            pulseMatrix(GlyphConfig.messageAnimationStyle());
         } else {
-            pulseStrip();
+            pulseStrip(GlyphConfig.messageAnimationStyle());
         }
     }
 
@@ -425,7 +487,7 @@ public final class GlyphController {
     }
 
     /**
-     * Единая точка входа для длительных анимаций: дыхание живёт, пока активна
+     * Единая точка входа для длительных анимаций: анимация живёт, пока активна
      * хотя бы одна причина (запись голосового или входящий звонок).
      */
     private void updateGlyphActivity() {
@@ -482,10 +544,16 @@ public final class GlyphController {
                 pendingPreviewType = 0;
                 return;
             }
+            // Если шло предыдущее превью звонка/записи, останавливаем его перед превью сообщения
+            if (callActive || recordingActive) {
+                callActive = false;
+                recordingActive = false;
+                updateGlyphActivity();
+            }
             if (matrixRegistered) {
-                showMatrixLogo();
+                pulseMatrix(GlyphConfig.messageAnimationStyle());
             } else {
-                pulseStrip();
+                pulseStrip(GlyphConfig.messageAnimationStyle());
             }
         });
     }
@@ -497,12 +565,13 @@ public final class GlyphController {
                 pendingPreviewType = 1;
                 return;
             }
+            recordingActive = false;
             callActive = true;
             updateGlyphActivity();
             handler.postDelayed(() -> {
                 callActive = false;
                 updateGlyphActivity();
-            }, 2500L);
+            }, 2600L);
         });
     }
 
@@ -513,12 +582,13 @@ public final class GlyphController {
                 pendingPreviewType = 2;
                 return;
             }
+            callActive = false;
             recordingActive = true;
             updateGlyphActivity();
             handler.postDelayed(() -> {
                 recordingActive = false;
                 updateGlyphActivity();
-            }, 2500L);
+            }, 2600L);
         });
     }
 
@@ -555,6 +625,18 @@ public final class GlyphController {
         return NothingPhoneEasterEgg.isNothingOrCmfDevice();
     }
 
+    /**
+     * Возвращает канонический код устройства Nothing Glyph SDK (`Glyph.DEVICE_*`)
+     * для полосочных (Strip) моделей.
+     *
+     * ВАЖНО: `GlyphFrame.Builder(device)` внутри `glyph-matrix-sdk-2.0.aar` проверяет
+     * `Common.isTargetDevice*(device)` и принимает ТОЛЬКО константы `Glyph.DEVICE_*`:
+     * - `"20111"` (Phone 1, 15 каналов)
+     * - `"22111"` (Phone 2, 33 канала)
+     * - `"23111"` / `"23113"` (Phone 2a / 2a Plus, 26 каналов)
+     * - `"24111"` (Phone 3a / 3a Pro / 3a Lite, 36 каналов)
+     * - `"25111"` (Phone 4a / 4b, 6 каналов)
+     */
     public static String resolveStripDevice() {
         if (isPhone1()) {
             return Glyph.DEVICE_20111;
@@ -574,17 +656,19 @@ public final class GlyphController {
         if ("Nothing Phone (2a) Plus".equals(name)) return Glyph.DEVICE_23113;
         if ("Nothing Phone (2a)".equals(name)) return Glyph.DEVICE_23111;
         if ("Nothing Phone (4a)".equals(name) || "Nothing Phone (4b)".equals(name)) return Glyph.DEVICE_25111;
-        if ("Nothing Phone (3a) Pro".equals(name) || "Nothing Phone (3a)".equals(name) || "Nothing Phone (3a) Lite".equals(name)) return Glyph.DEVICE_24111;
+        if ("Nothing Phone (3a) Pro".equals(name) || "Nothing Phone (3a)".equals(name) || "Nothing Phone (3a) Lite".equals(name)) {
+            return Glyph.DEVICE_24111;
+        }
 
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
 
-        // Phone (4a) / Phone (4b) -> A069 (квадраты)
+        // Phone (4a) / Phone (4b) -> A069 / A009P (6 квадратных сегментов Glyph Bar)
         if (model.contains("A069") || model.contains("A009") || model.contains("4A") || model.contains("4B")
                 || device.contains("FROGGER") || device.contains("BLASTOISE") || device.contains("SUPERCONTRA")) {
             return Glyph.DEVICE_25111;
         }
-        // Phone (3a) Pro / Phone (3a) / Phone (3a) Lite -> A059 (полоски 3a/3a Pro или индикатор 3a Lite)
+        // Phone (3a) Pro / Phone (3a) / Phone (3a) Lite -> A059 / A001T
         if (model.contains("A059") || model.contains("A001T") || model.contains("3A")
                 || device.contains("GALAXIAN") || device.contains("ASTEROIDS")) {
             return Glyph.DEVICE_24111;
@@ -597,7 +681,7 @@ public final class GlyphController {
         if (model.contains("A142") || model.contains("2A") || device.contains("PACMAN") || device.contains("AERODACTYL")) {
             return Glyph.DEVICE_23111;
         }
-        // Phone (2) -> A065
+        // Phone (2) -> A065 / AIN065
         if (model.contains("A065") || model.contains("AIN065") || model.contains("PHONE (2)") || model.contains("PHONE 2") || device.contains("PONG")) {
             return Glyph.DEVICE_22111;
         }
@@ -655,16 +739,16 @@ public final class GlyphController {
 
     private void runBurstHardwareLight() {
         if (matrixManager != null && matrixRegistered) {
-            showMatrixLogo();
+            pulseMatrix(GlyphConfig.MESSAGE_ANIM_ACCENT_RING);
         }
         if (stripManager != null && stripSessionOpen) {
             try {
-                GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+                GlyphFrame.Builder builder = createStripFrameBuilder();
                 if (builder != null) {
                     applyFullChannels(builder);
-                    builder.buildPeriod(80)
-                            .buildCycles(4)
-                            .buildInterval(30);
+                    builder.buildPeriod(120)
+                            .buildCycles(3)
+                            .buildInterval(40);
                     stripManager.animate(builder.build());
                 }
             } catch (Throwable t) {
@@ -745,7 +829,7 @@ public final class GlyphController {
         }
         String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
         String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
-        if (model.contains("A069P") || device.contains("FROGGERPRO")) {
+        if (model.contains("A069P") || (model.contains("4A") && model.contains("PRO")) || device.contains("FROGGERPRO")) {
             return Glyph.DEVICE_25111p;
         }
         return Glyph.DEVICE_23112;
@@ -760,13 +844,194 @@ public final class GlyphController {
         return isPhone1() ? 15 : 33;
     }
 
+    /**
+     * Создаёт `GlyphFrame.Builder` с гарантированно валидным кодом устройства `Glyph.DEVICE_*`.
+     * Если `stripManager.register()` перезаписал `mDevice = Build.MODEL` (например `"A063"`),
+     * восстанавливает `mDevice = resolveStripDevice()`, чтобы `Common.getTargetDeviceGlyphChannelSize()`
+     * вернул точное число каналов модели (15, 33, 26, 36 или 6).
+     */
+    private GlyphFrame.Builder createStripFrameBuilder() {
+        String targetDevice = resolveStripDevice();
+        if (stripManager != null) {
+            try {
+                Field devField = GlyphManager.class.getDeclaredField("mDevice");
+                devField.setAccessible(true);
+                Object cur = devField.get(stripManager);
+                if (cur == null || !targetDevice.equals(cur)) {
+                    devField.set(stripManager, targetDevice);
+                }
+                GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                if (b != null) {
+                    return b;
+                }
+            } catch (Throwable ignored) {}
+        }
+        try {
+            return new GlyphFrame.Builder(targetDevice);
+        } catch (Throwable t) {
+            FileLog.e(t);
+            return null;
+        }
+    }
+
+    /**
+     * Формирует один кадр бегущей волны (`CALL_ANIM_WAVE`) с учётом точной топологии зон каждой модели:
+     * - Phone (1) (`20111`, 15 LED): волна снизу вверх `E1 -> D1_8..D1_1 -> C1..C4 -> A1 -> B1`
+     * - Phone (2) (`22111`, 33 LED): волна по сегментам `E1 -> D1_8..D1_1 -> C2..C6 -> C1_1..C1_16 -> A2 -> A1 -> B1`
+     * - Phone (2a / 2a Plus) (`23111`/`23113`, 26 LED): бегущая дуга по 24 сегментам `C_1..C_24 -> B -> A`
+     * - Phone (3a / 3a Pro) (`24111`, 36 LED): бегущая волна по 3 полоскам `A_1..A_11 -> B_1..B_5 -> C_1..C_20`
+     * - Phone (3a) Lite (`24111` Lite): пульсирующий одиночный глиф A
+     * - Phone (4a / 4b) (`25111`, 6 LED): ping-pong бегущий огонь по 6 квадратам `A_1..A_6`
+     */
+    public static void buildWaveStepChannels(GlyphFrame.Builder b, String targetDev, int step) {
+        if (b == null) {
+            return;
+        }
+        if (Glyph.DEVICE_25111.equals(targetDev)) {
+            // Nothing Phone (4a / 4b): ping-pong по 6 квадратам Glyph Bar (0..5..0)
+            int cycle = step % 10;
+            int head = cycle < 6 ? cycle : (10 - cycle);
+            int tail = Math.max(0, Math.min(5, cycle < 6 ? head - 1 : head + 1));
+            try {
+                b.buildChannel(head, 4095);
+                if (tail != head) {
+                    b.buildChannel(tail, 1600);
+                }
+            } catch (Throwable ignored) {
+                b.buildChannel(head);
+            }
+        } else if (Glyph.DEVICE_24111.equals(targetDev)) {
+            if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                int bright = (step % 2 == 0) ? 4095 : 900;
+                for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                    try { b.buildChannel(i, bright); } catch (Throwable ignored) {}
+                }
+            } else {
+                // Nothing Phone (3a / 3a Pro): 9 фаз плавного перетекания по 36 светодиодам (A_1..A_11, B_1..B_5, C_1..C_20)
+                int phase = step % 9;
+                if (phase < 3) {
+                    // Секция A (20..30)
+                    int start = Glyph.Code_24111.A_1 + phase * 3;
+                    int end = Math.min(Glyph.Code_24111.A_11, start + 4);
+                    for (int i = start; i <= end; i++) {
+                        try { b.buildChannel(i, 4095); } catch (Throwable ignored) {}
+                    }
+                } else if (phase < 5) {
+                    // Секция B (31..35)
+                    int start = Glyph.Code_24111.B_1 + (phase - 3) * 2;
+                    int end = Math.min(Glyph.Code_24111.B_5, start + 2);
+                    for (int i = start; i <= end; i++) {
+                        try { b.buildChannel(i, 4095); } catch (Throwable ignored) {}
+                    }
+                } else {
+                    // Секция C (0..19) — 20 сегментов разбиты на 4 окна по 5 LED
+                    int start = Glyph.Code_24111.C_1 + (phase - 5) * 5;
+                    int end = Math.min(Glyph.Code_24111.C_20, start + 5);
+                    for (int i = start; i <= end; i++) {
+                        try { b.buildChannel(i, 4095); } catch (Throwable ignored) {}
+                    }
+                }
+            }
+        } else if (Glyph.DEVICE_23111.equals(targetDev) || Glyph.DEVICE_23113.equals(targetDev)) {
+            // Nothing Phone (2a / 2a Plus): 8 фаз по 24-сегментной дуге C_1..C_24 (0..23), затем B (24) и A (25)
+            int phase = step % 8;
+            if (phase < 6) {
+                int start = Glyph.Code_23111.C_1 + phase * 4;
+                int end = Math.min(Glyph.Code_23111.C_24, start + 4);
+                for (int i = start; i <= end; i++) {
+                    try { b.buildChannel(i, 4095); } catch (Throwable ignored) {}
+                }
+            } else if (phase == 6) {
+                try { b.buildChannel(Glyph.Code_23111.B, 4095); } catch (Throwable ignored) {}
+            } else {
+                try { b.buildChannel(Glyph.Code_23111.A, 4095); } catch (Throwable ignored) {}
+            }
+        } else if (Glyph.DEVICE_20111.equals(targetDev) || isPhone1()) {
+            // Nothing Phone (1): 7 фаз снизу вверх (E1 -> D1 нижняя половина -> D1 верхняя половина -> C2/C3 -> C1/C4 -> A1 -> B1)
+            switch (step % 7) {
+                case 0:
+                    b.buildChannel(Glyph.Code_20111.E1, 4095);
+                    b.buildChannel(Glyph.Code_20111.D1_8, 2200);
+                    break;
+                case 1:
+                    for (int i = Glyph.Code_20111.D1_5; i <= Glyph.Code_20111.D1_8; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 2:
+                    for (int i = Glyph.Code_20111.D1_1; i <= Glyph.Code_20111.D1_4; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 3:
+                    b.buildChannel(Glyph.Code_20111.C2, 4095);
+                    b.buildChannel(Glyph.Code_20111.C3, 4095);
+                    break;
+                case 4:
+                    b.buildChannel(Glyph.Code_20111.C1, 4095);
+                    b.buildChannel(Glyph.Code_20111.C4, 4095);
+                    break;
+                case 5:
+                    b.buildChannel(Glyph.Code_20111.A1, 4095);
+                    break;
+                case 6:
+                default:
+                    b.buildChannel(Glyph.Code_20111.B1, 4095);
+                    break;
+            }
+        } else {
+            // Nothing Phone (2) (22111, 33 LED): 8 фаз снизу вверх через 16-сегментную дугу C1_1..C1_16
+            switch (step % 8) {
+                case 0:
+                    b.buildChannel(Glyph.Code_22111.E1, 4095);
+                    for (int i = Glyph.Code_22111.D1_5; i <= Glyph.Code_22111.D1_8; i++) {
+                        b.buildChannel(i, 3600);
+                    }
+                    break;
+                case 1:
+                    for (int i = Glyph.Code_22111.D1_1; i <= Glyph.Code_22111.D1_4; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 2:
+                    for (int i = Glyph.Code_22111.C2; i <= Glyph.Code_22111.C6; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 3:
+                    for (int i = Glyph.Code_22111.C1_1; i <= Glyph.Code_22111.C1_6; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 4:
+                    for (int i = Glyph.Code_22111.C1_6; i <= Glyph.Code_22111.C1_11; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 5:
+                    for (int i = Glyph.Code_22111.C1_11; i <= Glyph.Code_22111.C1_16; i++) {
+                        b.buildChannel(i, 4095);
+                    }
+                    break;
+                case 6:
+                    b.buildChannel(Glyph.Code_22111.A2, 4095);
+                    b.buildChannel(Glyph.Code_22111.A1, 4095);
+                    break;
+                case 7:
+                default:
+                    b.buildChannel(Glyph.Code_22111.B1, 4095);
+                    break;
+            }
+        }
+    }
+
     public static void applyFullChannels(GlyphFrame.Builder builder) {
         if (builder == null) {
             return;
         }
         String device = resolveStripDevice();
         if (Glyph.DEVICE_25111.equals(device)) {
-            // Nothing Phone (4a / 4b) - 6 квадратных зон:
+            // Nothing Phone (4a / 4b) - 6 квадратных зон A_1..A_6:
             for (int i = 0; i < 6; i++) {
                 try { builder.buildChannel(i); } catch (Throwable ignored) {}
             }
@@ -796,9 +1061,7 @@ public final class GlyphController {
         } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
             // Phone (1) - 15 адресных зон A1, B1, C1..C4, E1, D1_1..D1_8:
             for (int i = 0; i < 15; i++) {
-                try {
-                    builder.buildChannel(i);
-                } catch (Throwable ignored) {}
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
             }
             builder.buildChannelA()
                     .buildChannelB()
@@ -818,29 +1081,55 @@ public final class GlyphController {
         }
     }
 
+    /**
+     * Акцентное кольцо / зона (`MESSAGE_ANIM_ACCENT_RING` и `RECORDING_ANIM_ACCENT_RING`):
+     * - Phone (1): центральное кольцо катушки `C1..C4` + кольцо камеры `A1`
+     * - Phone (2): центральное кольцо `C1_1..C6` + камера `A1, A2`
+     * - Phone (2a / 2a Plus): главная верхняя дуга `C_1..C_24`
+     * - Phone (3a / 3a Pro): верхняя и правая дуги `A_1..A_11` + `C_1..C_20`
+     * - Phone (4a / 4b): центральные квадраты `A_3, A_4` (индексы 2, 3) и крайние `A_1, A_6` (0, 5)
+     */
     public static void applyAccentChannels(GlyphFrame.Builder builder) {
         if (builder == null) {
             return;
         }
         String device = resolveStripDevice();
         if (Glyph.DEVICE_25111.equals(device)) {
-            try { builder.buildChannel(0); } catch (Throwable ignored) {}
+            try {
+                builder.buildChannel(Glyph.Code_25111.A_1)
+                        .buildChannel(Glyph.Code_25111.A_3)
+                        .buildChannel(Glyph.Code_25111.A_4)
+                        .buildChannel(Glyph.Code_25111.A_6);
+            } catch (Throwable ignored) {}
         } else if (Glyph.DEVICE_24111.equals(device)) {
             for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
                 try { builder.buildChannel(i); } catch (Throwable ignored) {}
             }
             builder.buildChannelA();
         } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
-            try { builder.buildChannel(Glyph.Code_23111.B); } catch (Throwable ignored) {}
-            builder.buildChannelB();
+            for (int i = Glyph.Code_23111.C_1; i <= Glyph.Code_23111.C_24; i++) {
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+            }
+            builder.buildChannelC().buildChannelB();
         } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
             try {
                 builder.buildChannel(Glyph.Code_20111.B1);
+                builder.buildChannel(Glyph.Code_20111.A1)
+                        .buildChannel(Glyph.Code_20111.C1)
+                        .buildChannel(Glyph.Code_20111.C2)
+                        .buildChannel(Glyph.Code_20111.C3)
+                        .buildChannel(Glyph.Code_20111.C4);
             } catch (Throwable ignored) {}
-            builder.buildChannelB();
+            builder.buildChannelA().buildChannelB().buildChannelC();
         } else {
-            try { builder.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
-            builder.buildChannelB();
+            try {
+                builder.buildChannel(Glyph.Code_22111.A1)
+                        .buildChannel(Glyph.Code_22111.A2);
+                for (int i = Glyph.Code_22111.C1_1; i <= Glyph.Code_22111.C6; i++) {
+                    builder.buildChannel(i);
+                }
+            } catch (Throwable ignored) {}
+            builder.buildChannelA().buildChannelC();
         }
     }
 
@@ -905,32 +1194,24 @@ public final class GlyphController {
                             try { registered = glyphService.register(targetDevice); } catch (Throwable ignored) {}
                         }
                         if (!registered) {
+                            String appKey = getAppKey(context);
+                            if (appKey != null) {
+                                try { registered = glyphService.registerSDK(appKey, targetDevice); } catch (Throwable ignored) {}
+                            }
+                        }
+                        if (!registered) {
                             try { registered = glyphService.register("20111"); } catch (Throwable ignored) {}
                         }
                         if (!registered) {
                             try { registered = glyphService.register("A063"); } catch (Throwable ignored) {}
-                        }
-                        if (!registered && context != null) {
-                            try { registered = glyphService.register(context.getPackageName()); } catch (Throwable ignored) {}
-                        }
-                        if (!registered) {
-                            try { registered = glyphService.register(""); } catch (Throwable ignored) {}
-                        }
-                        String appKey = getAppKey(context);
-                        if (!registered && appKey != null) {
-                            try { registered = glyphService.registerSDK(appKey, targetDevice); } catch (Throwable ignored) {}
-                            if (!registered) {
-                                try { registered = glyphService.registerSDK(appKey, "20111"); } catch (Throwable ignored) {}
-                            }
-                        }
-                        if (!registered) {
-                            try { registered = glyphService.registerSDK("test", targetDevice); } catch (Throwable ignored) {}
                         }
                     }
                 } catch (Throwable t) {
                     FileLog.e(t);
                 }
 
+                // Всегда синхронизируем mHasAuthorized=true и канонический mDevice=targetDevice ("20111".."25111"),
+                // чтобы stripManager.getGlyphFrameBuilder() создавал буфер правильной длины каналов!
                 try {
                     Field authField = GlyphManager.class.getDeclaredField("mHasAuthorized");
                     authField.setAccessible(true);
@@ -1055,38 +1336,51 @@ public final class GlyphController {
             return;
         }
         try {
-            GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+            GlyphFrame.Builder builder = createStripFrameBuilder();
             if (builder == null) {
                 return;
             }
+            int totalDurationMs;
             switch (style) {
                 case GlyphConfig.MESSAGE_ANIM_STROBE:
                     applyFullChannels(builder);
-                    builder.buildPeriod(140)
+                    builder.buildPeriod(130)
                             .buildCycles(3)
-                            .buildInterval(60);
+                            .buildInterval(55);
+                    totalDurationMs = 130 * 3 + 55 * 3 + 80;
                     break;
                 case GlyphConfig.MESSAGE_ANIM_SOFT_PULSE:
                     applyFullChannels(builder);
-                    builder.buildPeriod(550)
+                    builder.buildPeriod(600)
                             .buildCycles(1)
-                            .buildInterval(0);
+                            .buildInterval(50);
+                    totalDurationMs = 700;
                     break;
                 case GlyphConfig.MESSAGE_ANIM_ACCENT_RING:
                     applyAccentChannels(builder);
-                    builder.buildPeriod(300)
+                    builder.buildPeriod(280)
                             .buildCycles(2)
-                            .buildInterval(100);
+                            .buildInterval(90);
+                    totalDurationMs = 280 * 2 + 90 * 2 + 80;
                     break;
                 case GlyphConfig.MESSAGE_ANIM_DOUBLE_FLASH:
                 default:
                     applyFullChannels(builder);
-                    builder.buildPeriod(250)
+                    builder.buildPeriod(240)
                             .buildCycles(2)
                             .buildInterval(80);
+                    totalDurationMs = 240 * 2 + 80 * 2 + 80;
                     break;
             }
             stripManager.animate(builder.build());
+            // Страховочное гашение по завершении циклов, чтобы ни один светодиод не остался полузажжённым
+            handler.postDelayed(() -> {
+                if (!glyphBusy && stripManager != null && stripSessionOpen) {
+                    try {
+                        stripManager.turnOff();
+                    } catch (Throwable ignored) {}
+                }
+            }, totalDurationMs);
         } catch (Throwable t) {
             FileLog.e(t);
             flashDirectFallback();
@@ -1109,13 +1403,13 @@ public final class GlyphController {
                     handler.post(callWaveRunnable);
                     break;
                 case GlyphConfig.CALL_ANIM_BREATHING: {
-                    GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                    GlyphFrame.Builder b = createStripFrameBuilder();
                     if (b != null) {
                         applyFullChannels(b);
                         GlyphFrame breathingFrame = b
                                 .buildPeriod(1200)
                                 .buildCycles(RECORDING_MAX_CYCLES)
-                                .buildInterval(0)
+                                .buildInterval(40)
                                 .build();
                         stripManager.animate(breathingFrame);
                     }
@@ -1123,13 +1417,13 @@ public final class GlyphController {
                 }
                 case GlyphConfig.CALL_ANIM_PULSE:
                 default: {
-                    GlyphFrame.Builder b = stripManager.getGlyphFrameBuilder();
+                    GlyphFrame.Builder b = createStripFrameBuilder();
                     if (b != null) {
                         applyFullChannels(b);
                         GlyphFrame pulseFrame = b
-                                .buildPeriod(600)
+                                .buildPeriod(560)
                                 .buildCycles(RECORDING_MAX_CYCLES)
-                                .buildInterval(150)
+                                .buildInterval(140)
                                 .build();
                         stripManager.animate(pulseFrame);
                     }
@@ -1150,21 +1444,24 @@ public final class GlyphController {
             return;
         }
         try {
-            GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+            GlyphFrame.Builder builder = createStripFrameBuilder();
             if (builder == null) {
                 return;
             }
             switch (style) {
                 case GlyphConfig.RECORDING_ANIM_ACCENT_RING:
                     applyAccentChannels(builder);
-                    builder.buildPeriod(1600)
+                    builder.buildPeriod(1500)
                             .buildCycles(RECORDING_MAX_CYCLES)
-                            .buildInterval(0);
+                            .buildInterval(40);
                     break;
                 case GlyphConfig.RECORDING_ANIM_HEARTBEAT: {
                     String device = resolveStripDevice();
                     if (Glyph.DEVICE_25111.equals(device)) {
-                        try { builder.buildChannel(0).buildChannel(2); } catch (Throwable ignored) {}
+                        try {
+                            builder.buildChannel(Glyph.Code_25111.A_2)
+                                    .buildChannel(Glyph.Code_25111.A_5);
+                        } catch (Throwable ignored) {}
                     } else if (Glyph.DEVICE_24111.equals(device)) {
                         if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
                             for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
@@ -1187,21 +1484,27 @@ public final class GlyphController {
                         } catch (Throwable ignored) {}
                         builder.buildChannelA().buildChannelB();
                     } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
-                        try { builder.buildChannel(Glyph.Code_20111.B1); } catch (Throwable ignored) {}
+                        try {
+                            builder.buildChannel(Glyph.Code_20111.B1)
+                                    .buildChannel(Glyph.Code_20111.E1);
+                        } catch (Throwable ignored) {}
                         for (int i = Glyph.Code_20111.D1_1; i <= Glyph.Code_20111.D1_8; i++) {
                             try { builder.buildChannel(i); } catch (Throwable ignored) {}
                         }
-                        builder.buildChannelB().buildChannelD();
+                        builder.buildChannelB().buildChannelD().buildChannelE();
                     } else {
-                        try { builder.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
+                        try {
+                            builder.buildChannel(Glyph.Code_22111.B1)
+                                    .buildChannel(Glyph.Code_22111.E1);
+                        } catch (Throwable ignored) {}
                         for (int i = Glyph.Code_22111.D1_1; i <= Glyph.Code_22111.D1_8; i++) {
                             try { builder.buildChannel(i); } catch (Throwable ignored) {}
                         }
-                        builder.buildChannelB().buildChannelD();
+                        builder.buildChannelB().buildChannelD().buildChannelE();
                     }
-                    builder.buildPeriod(800)
+                    builder.buildPeriod(720)
                             .buildCycles(RECORDING_MAX_CYCLES)
-                            .buildInterval(200);
+                            .buildInterval(180);
                     break;
                 }
                 case GlyphConfig.RECORDING_ANIM_BREATHING:
@@ -1209,7 +1512,7 @@ public final class GlyphController {
                     applyFullChannels(builder);
                     builder.buildPeriod(1800)
                             .buildCycles(RECORDING_MAX_CYCLES)
-                            .buildInterval(0);
+                            .buildInterval(40);
                     break;
             }
             stripManager.animate(builder.build());
@@ -1217,6 +1520,17 @@ public final class GlyphController {
             FileLog.e(t);
             flashDirectFallback();
         }
+    }
+
+    private void pulseMatrix(int style) {
+        if (matrixManager == null || !matrixRegistered) {
+            return;
+        }
+        handler.removeCallbacks(hideLogoRunnable);
+        handler.removeCallbacks(matrixMessageAnimRunnable);
+        matrixMessageStyle = style;
+        matrixMessageStep = 0;
+        handler.post(matrixMessageAnimRunnable);
     }
 
     private void showMatrixLogo() {
@@ -1235,13 +1549,16 @@ public final class GlyphController {
     }
 
     public static int[] renderMatrixBitmap(Bitmap bitmap, int brightness, int matrixLength) {
-        if (bitmap == null || matrixLength <= 0) {
+        if (matrixLength <= 0) {
             return new int[0];
+        }
+        int[] out = new int[matrixLength * matrixLength];
+        if (bitmap == null) {
+            return out;
         }
         int clampedBrightness = Math.max(0, Math.min(255, brightness));
         int origW = bitmap.getWidth();
         int origH = bitmap.getHeight();
-        int[] out = new int[matrixLength * matrixLength];
         if (origW <= 0 || origH <= 0) {
             return out;
         }
@@ -1261,12 +1578,104 @@ public final class GlyphController {
             for (int col = 0; col < matrixLength; col++) {
                 int srcX = Math.min(scaledW - 1, Math.max(0, Math.round(col * (origW - 1) / (float) denom) + offsetX));
                 int pixel = scaled.getPixel(srcX, srcY);
-                int avgRgb = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3;
+                int alpha = Color.alpha(pixel);
+                int avgRgb = ((Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3) * alpha / 255;
                 int ledVal = (avgRgb * 4095 / 255) * clampedBrightness / 255;
                 out[row * matrixLength + col] = Math.max(0, Math.min(4095, ledVal));
             }
         }
         return out;
+    }
+
+    /** Добавляет расходящееся круговое кольцо (радиус от 0 до R) поверх кадра матрицы. */
+    public static void addMatrixExpandingRing(int[] frame, int len, float progress, int maxLed) {
+        if (frame == null || len <= 0 || frame.length < len * len) return;
+        float center = (len - 1) / 2.0f;
+        float maxR = center;
+        float targetR = Math.max(1.2f, progress * maxR);
+        float thickness = len <= 13 ? 1.15f : 1.55f;
+        for (int r = 0; r < len; r++) {
+            for (int c = 0; c < len; c++) {
+                float dist = (float) Math.hypot(r - center, c - center);
+                float diff = Math.abs(dist - targetR);
+                if (diff <= thickness) {
+                    int val = Math.round(maxLed * (1.0f - diff / (thickness + 0.25f)));
+                    int idx = r * len + c;
+                    if (val > frame[idx]) {
+                        frame[idx] = Math.min(4095, val);
+                    }
+                }
+            }
+        }
+    }
+
+    /** Добавляет статическое кольцо заданного относительного радиуса `radiusFraction` (0..1). */
+    public static void addMatrixPerimeterRing(int[] frame, int len, float radiusFraction, int maxLed) {
+        addMatrixExpandingRing(frame, len, radiusFraction, maxLed);
+    }
+
+    /** Добавляет вращающуюся радарную дугу по периметру круглой матрицы (`CALL_ANIM_WAVE`). */
+    public static void addMatrixRadarWave(int[] frame, int len, float headAngleDeg, int maxLed) {
+        if (frame == null || len <= 0 || frame.length < len * len) return;
+        float center = (len - 1) / 2.0f;
+        float ringR = center - 0.6f;
+        float thickness = len <= 13 ? 1.25f : 1.75f;
+        for (int r = 0; r < len; r++) {
+            for (int c = 0; c < len; c++) {
+                float dist = (float) Math.hypot(r - center, c - center);
+                if (Math.abs(dist - ringR) <= thickness) {
+                    float deg = (float) Math.toDegrees(Math.atan2(r - center, c - center));
+                    if (deg < 0) deg += 360f;
+                    float delta = (headAngleDeg - deg + 360f) % 360f;
+                    if (delta <= 135f) {
+                        int val = Math.round(maxLed * (1.0f - delta / 145f));
+                        int idx = r * len + c;
+                        if (val > frame[idx]) {
+                            frame[idx] = Math.min(4095, val);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    /** Добавляет заполняющуюся дугу прогресса по периметру матрицы (`RECORDING_ANIM_ACCENT_RING`). */
+    public static void addMatrixPerimeterProgress(int[] frame, int len, float progress, int maxLed) {
+        if (frame == null || len <= 0 || frame.length < len * len) return;
+        float center = (len - 1) / 2.0f;
+        float ringR = center - 0.6f;
+        float thickness = len <= 13 ? 1.2f : 1.6f;
+        float maxDeg = Math.max(15f, Math.min(360f, progress * 360f));
+        for (int r = 0; r < len; r++) {
+            for (int c = 0; c < len; c++) {
+                float dist = (float) Math.hypot(r - center, c - center);
+                if (Math.abs(dist - ringR) <= thickness) {
+                    // Отсчёт от верхней точки (-90 градусов) по часовой стрелке
+                    float deg = (float) Math.toDegrees(Math.atan2(r - center, c - center)) + 90f;
+                    if (deg < 0) deg += 360f;
+                    if (deg <= maxDeg) {
+                        int idx = r * len + c;
+                        if (maxLed > frame[idx]) {
+                            frame[idx] = Math.min(4095, maxLed);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    private void pushMatrixFrame(int[] rendered) {
+        if (matrixManager == null || !matrixRegistered || rendered == null || rendered.length == 0) {
+            return;
+        }
+        try {
+            matrixManager.setAppMatrixFrame(rendered);
+        } catch (Throwable t) {
+            FileLog.e(t);
+        }
+        try {
+            matrixManager.setMatrixFrame(rendered);
+        } catch (Throwable ignored) {}
     }
 
     private void showMatrixIcon(int resId, int brightness, boolean autoHide) {
@@ -1299,7 +1708,7 @@ public final class GlyphController {
             if (rendered == null || rendered.length == 0) {
                 rendered = renderMatrixBitmap(bitmap, brightness, getMatrixGridLength());
             }
-            matrixManager.setAppMatrixFrame(rendered);
+            pushMatrixFrame(rendered);
             handler.removeCallbacks(hideLogoRunnable);
             if (autoHide) {
                 handler.postDelayed(hideLogoRunnable, LOGO_SHOW_MS);
@@ -1385,11 +1794,14 @@ public final class GlyphController {
         breathDirection = -1;
         // Таймер автогашения от превью/уведомления не должен рвать дыхание.
         handler.removeCallbacks(hideLogoRunnable);
+        handler.removeCallbacks(matrixMessageAnimRunnable);
+        handler.removeCallbacks(breathRunnable);
         handler.post(breathRunnable);
     }
 
     private void stopMatrixBreathing() {
         handler.removeCallbacks(breathRunnable);
+        handler.removeCallbacks(matrixMessageAnimRunnable);
         hideMatrixLogo();
     }
 
@@ -1398,7 +1810,14 @@ public final class GlyphController {
             return;
         }
         try {
+            int len = getMatrixGridLength();
+            if (len > 0) {
+                int[] empty = new int[len * len];
+                try { matrixManager.setAppMatrixFrame(empty); } catch (Throwable ignored) {}
+                try { matrixManager.setMatrixFrame(empty); } catch (Throwable ignored) {}
+            }
             matrixManager.closeAppMatrix();
+            try { matrixManager.turnOff(); } catch (Throwable ignored) {}
         } catch (Throwable t) {
             FileLog.e(t);
         }

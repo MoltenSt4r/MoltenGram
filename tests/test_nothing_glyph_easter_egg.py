@@ -571,4 +571,47 @@ def test_nothing_phone_burst_overlay_dismiss_cleanup_and_safety():
     assert "if (isDismissing) {\n                    return;\n                }\n                liquidProgress = 1f;\n                triggerCookieReveal();" in overlay_content
 
 
+def test_per_model_sdk_contract_and_visual_preview_animations():
+    """Verify official Nothing Glyph SDK contract across all models and on-screen visual Glyph animations."""
+    glyph_controller_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphController.java"
+    )
+    with open(glyph_controller_java, "r", encoding="utf-8") as f:
+        controller = f.read()
+
+    # 1. Canonical GlyphFrame.Builder device enforcement & multi-step wave animation
+    assert "private GlyphFrame.Builder createStripFrameBuilder()" in controller
+    assert "public static void buildWaveStepChannels(GlyphFrame.Builder b, String targetDev, int step)" in controller
+    assert "stripManager.toggle(b.build());" in controller
+
+    # 2. Matrix animations for Phone (3) (25x25) and Phone (4a) Pro (13x13)
+    assert "private void pulseMatrix(int style)" in controller
+    assert "addMatrixExpandingRing" in controller
+    assert "addMatrixRadarWave" in controller
+    assert "addMatrixPerimeterProgress" in controller
+    assert "matrixManager.setAppMatrixFrame(rendered);" in controller
+    assert "matrixManager.setMatrixFrame(rendered);" in controller
+
+    # 3. Clean monochrome vector icon for matrix rendering
+    mono_xml = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/res/drawable/moltengram_icon_monochrome.xml"
+    )
+    with open(mono_xml, "r", encoding="utf-8") as f:
+        mono_content = f.read()
+    assert 'android:scaleX="2.4"' in mono_content
+    assert "M 6.67,3.40" in mono_content
+
+    # 4. Visual on-screen Glyph overlay in GlyphDevicePreviewCell
+    preview_cell_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphDevicePreviewCell.java"
+    )
+    with open(preview_cell_java, "r", encoding="utf-8") as f:
+        preview_cell = f.read()
+    assert "drawModelGlyphOverlay(canvas" in preview_cell
+    assert "drawMatrixOverlay(canvas" in preview_cell
+    assert "computeZoneIntensity(" in preview_cell
+    assert "computeMatrixPixelAlpha(" in preview_cell
+
+
+
 
