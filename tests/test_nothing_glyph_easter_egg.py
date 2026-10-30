@@ -319,6 +319,57 @@ def test_glyph_controller_hardware_support_for_all_devices():
         other_content = f.read()
     assert 'if (app.exteraless.glyph.GlyphController.isNothingGlyphDevice())' in other_content
 
+    # 7. Exact channel counts and direct matrix rendering for all models
+    assert "public static int getStripChannelCount(String device)" in content
+    assert "public static int getMatrixGridLength()" in content
+    assert "public static int[] renderMatrixBitmap(Bitmap bitmap, int brightness, int matrixLength)" in content
+
+    # 8. ProGuard rules keep com.nothing.** so R8 does not break reflection on mService / mHasAuthorized / mDevice
+    proguard_file = os.path.join(REPO_ROOT, "TMessagesProj/proguard-rules.pro")
+    with open(proguard_file, "r", encoding="utf-8") as f:
+        proguard_content = f.read()
+    assert "-keep class com.nothing.** { *; }" in proguard_content
+    assert "-keep interface com.nothing.** { *; }" in proguard_content
+
+
+def test_deep_links_restored_to_nasettings_and_neko():
+    """Verify deep links use nasettings / tg://neko as before so they never redirect to the @moltengram Telegram channel."""
+    settings_helper_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/tw/nekomimi/nekogram/helpers/SettingsHelper.java"
+    )
+    launch_activity_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/org/telegram/ui/LaunchActivity.java"
+    )
+    ota_manager_java = os.path.join(
+        REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/ota/MoltenGramOtaManager.java"
+    )
+    website_html = os.path.join(REPO_ROOT, "website/index.html")
+
+    with open(settings_helper_java, "r", encoding="utf-8") as f:
+        sh_content = f.read()
+    assert 'return HOST_NAGRAM + "/settings";' in sh_content
+    assert 'return HOST_NAGRAM + "/glyph";' in sh_content
+    assert 'return HOST_NAGRAM + "/avatar_shapes";' in sh_content
+    assert 'return HOST_MOLTENGRAM + "/"' not in sh_content
+    assert 'NAGRAM_ROWS.put("OEGlyphMessageAnim", "glyph");' in sh_content
+    assert 'NAGRAM_ROWS.put("OEGlyphCallAnim", "glyph");' in sh_content
+    assert 'NAGRAM_ROWS.put("OEGlyphRecordAnim", "glyph");' in sh_content
+
+    with open(launch_activity_java, "r", encoding="utf-8") as f:
+        la_content = f.read()
+    assert 'prefix = "nasettings" + prefix.substring(4);' in la_content
+    assert 'prefix = "moltengram" + prefix.substring(' not in la_content
+
+    with open(ota_manager_java, "r", encoding="utf-8") as f:
+        ota_content = f.read()
+    assert "https://t.me/nasettings/settings?r=updates" in ota_content
+    assert "https://t.me/moltengram/settings?r=updates" not in ota_content
+
+    with open(website_html, "r", encoding="utf-8") as f:
+        web_content = f.read()
+    assert "tg://neko/" in web_content
+    assert "tg://moltengram/" not in web_content
+
 
 def test_nothing_phone_burst_overlay_physics_and_cookie_shapes():
     """Verify NothingPhoneBurstOverlay has falling MD3 physics, authentic shapes, pairwise collisions, bouncy 2/3 cookie, and back gesture dismissal."""

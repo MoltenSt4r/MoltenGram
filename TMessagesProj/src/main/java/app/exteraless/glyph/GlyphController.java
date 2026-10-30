@@ -79,6 +79,7 @@ public final class GlyphController {
     private final boolean supported;
 
     private boolean initialized;
+    private long lastInitAttemptAt;
 
     private GlyphManager stripManager;
     private volatile boolean stripSessionOpen;
@@ -96,6 +97,9 @@ public final class GlyphController {
     private boolean callActive;
     /** Глифы заняты длительной анимацией (запись или звонок) — вспышки сообщений пропускаем. */
     private boolean glyphBusy;
+    private boolean pendingMessageFlash;
+    private boolean pendingBurstEffect;
+    private int pendingPreviewType = -1;
     private long lastFlashAt;
     private int breathBrightness = BREATH_MAX;
     private int breathDirection = -1;
@@ -122,19 +126,48 @@ public final class GlyphController {
                     b.buildChannel(sq);
                 } else if (Glyph.DEVICE_24111.equals(targetDev)) {
                     if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                        for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                            try { b.buildChannel(i); } catch (Throwable ignored) {}
+                        }
                         b.buildChannelA();
                     } else {
                         switch (callWaveStep % 3) {
-                            case 0: b.buildChannelA(); break;
-                            case 1: b.buildChannelB(); break;
-                            case 2: b.buildChannelC(); break;
+                            case 0:
+                                for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
+                                }
+                                b.buildChannelA();
+                                break;
+                            case 1:
+                                for (int i = Glyph.Code_24111.B_1; i <= Glyph.Code_24111.B_5; i++) {
+                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
+                                }
+                                b.buildChannelB();
+                                break;
+                            case 2:
+                                for (int i = Glyph.Code_24111.C_1; i <= Glyph.Code_24111.C_20; i++) {
+                                    try { b.buildChannel(i); } catch (Throwable ignored) {}
+                                }
+                                b.buildChannelC();
+                                break;
                         }
                     }
                 } else if (Glyph.DEVICE_23111.equals(targetDev) || Glyph.DEVICE_23113.equals(targetDev)) {
                     switch (callWaveStep % 3) {
-                        case 0: b.buildChannelA(); break;
-                        case 1: b.buildChannelB(); break;
-                        case 2: b.buildChannelC(); break;
+                        case 0:
+                            try { b.buildChannel(Glyph.Code_23111.A); } catch (Throwable ignored) {}
+                            b.buildChannelA();
+                            break;
+                        case 1:
+                            try { b.buildChannel(Glyph.Code_23111.B); } catch (Throwable ignored) {}
+                            b.buildChannelB();
+                            break;
+                        case 2:
+                            for (int i = Glyph.Code_23111.C_1; i <= Glyph.Code_23111.C_24; i++) {
+                                try { b.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            b.buildChannelC();
+                            break;
                     }
                 } else if (Glyph.DEVICE_20111.equals(targetDev) || isPhone1()) {
                     switch (callWaveStep % 4) {
@@ -166,15 +199,27 @@ public final class GlyphController {
                 } else {
                     switch (callWaveStep % 4) {
                         case 0:
+                            try {
+                                b.buildChannel(Glyph.Code_22111.A1)
+                                        .buildChannel(Glyph.Code_22111.A2);
+                            } catch (Throwable ignored) {}
                             b.buildChannelA();
                             break;
                         case 1:
+                            try { b.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
                             b.buildChannelB();
                             break;
                         case 2:
+                            for (int i = Glyph.Code_22111.D1_1; i <= Glyph.Code_22111.D1_8; i++) {
+                                try { b.buildChannel(i); } catch (Throwable ignored) {}
+                            }
                             b.buildChannelD();
                             break;
                         case 3:
+                            for (int i = Glyph.Code_22111.C1_1; i <= Glyph.Code_22111.C6; i++) {
+                                try { b.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            try { b.buildChannel(Glyph.Code_22111.E1); } catch (Throwable ignored) {}
                             b.buildChannelC().buildChannelE();
                             break;
                     }
@@ -225,13 +270,21 @@ public final class GlyphController {
 
     /** Идемпотентный биндинг к системному сервису глифов. */
     public synchronized void init() {
-        if (initialized || !supported) {
+        if (!supported) {
+            return;
+        }
+        if (initialized && (stripSessionOpen || matrixRegistered)) {
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        if (initialized && now - lastInitAttemptAt < 2500L) {
             return;
         }
         Context context = ApplicationLoader.applicationContext;
         if (context == null) {
             return;
         }
+        lastInitAttemptAt = now;
         try {
             if (isMatrixDevice()) {
                 initMatrix(context);
@@ -247,9 +300,13 @@ public final class GlyphController {
     /** Отбиндить сервис — вызывается при выключении фичи в настройках. */
     public synchronized void shutdown() {
         initialized = false;
+        lastInitAttemptAt = 0;
         stripSessionOpen = false;
         matrixRegistered = false;
         previewPending = false;
+        pendingPreviewType = -1;
+        pendingMessageFlash = false;
+        pendingBurstEffect = false;
         recordingActive = false;
         callActive = false;
         glyphBusy = false;
@@ -295,23 +352,37 @@ public final class GlyphController {
             return;
         }
         handler.post(() -> {
-            if (!ensureReady() || glyphBusy) {
-                return;
-            }
             if (GlyphConfig.screenOffOnly() && isScreenOn()) {
                 return;
             }
-            long now = SystemClock.uptimeMillis();
-            if (now - lastFlashAt < FLASH_COOLDOWN_MS) {
+            if (glyphBusy) {
                 return;
             }
-            lastFlashAt = now;
-            if (matrixRegistered) {
-                showMatrixLogo();
-            } else {
-                pulseStrip();
+            if (!ensureReady()) {
+                pendingMessageFlash = true;
+                return;
             }
+            triggerMessageFlashNow();
         });
+    }
+
+    private void triggerMessageFlashNow() {
+        if (glyphBusy) {
+            return;
+        }
+        if (GlyphConfig.screenOffOnly() && isScreenOn()) {
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        if (now - lastFlashAt < FLASH_COOLDOWN_MS) {
+            return;
+        }
+        lastFlashAt = now;
+        if (matrixRegistered) {
+            showMatrixLogo();
+        } else {
+            pulseStrip();
+        }
     }
 
     public void onRecordingStarted() {
@@ -406,7 +477,8 @@ public final class GlyphController {
     public void previewMessage() {
         handler.post(() -> {
             if (!ensureReady()) {
-                previewPending = supported && GlyphConfig.enabled();
+                previewPending = supported;
+                pendingPreviewType = 0;
                 return;
             }
             if (matrixRegistered) {
@@ -419,6 +491,8 @@ public final class GlyphController {
     public void previewCall() {
         handler.post(() -> {
             if (!ensureReady()) {
+                previewPending = supported;
+                pendingPreviewType = 1;
                 return;
             }
             callActive = true;
@@ -433,6 +507,8 @@ public final class GlyphController {
     public void previewRecording() {
         handler.post(() -> {
             if (!ensureReady()) {
+                previewPending = supported;
+                pendingPreviewType = 2;
                 return;
             }
             recordingActive = true;
@@ -552,29 +628,10 @@ public final class GlyphController {
     public void playPhone1BurstEffect(Context context) {
         handler.post(() -> {
             if (!ensureReady()) {
-                previewPending = true;
+                pendingBurstEffect = true;
                 return;
             }
-            if (matrixManager != null && matrixRegistered) {
-                showMatrixLogo();
-            }
-            if (stripManager != null && stripSessionOpen) {
-                try {
-                    GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
-                    if (builder != null) {
-                        applyFullChannels(builder);
-                        builder.buildPeriod(80)
-                                .buildCycles(4)
-                                .buildInterval(30);
-                        stripManager.animate(builder.build());
-                    }
-                } catch (Throwable t) {
-                    FileLog.e(t);
-                    flashDirectFallback();
-                }
-            } else {
-                flashDirectFallback();
-            }
+            runBurstHardwareLight();
             if (context != null) {
                 try {
                     android.os.Vibrator vibrator = (android.os.Vibrator) context.getSystemService(Context.VIBRATOR_SERVICE);
@@ -594,19 +651,62 @@ public final class GlyphController {
         });
     }
 
-    private void runPendingPreview() {
-        if (!previewPending) {
-            return;
+    private void runBurstHardwareLight() {
+        if (matrixManager != null && matrixRegistered) {
+            showMatrixLogo();
         }
-        previewPending = false;
-        handler.post(this::preview);
+        if (stripManager != null && stripSessionOpen) {
+            try {
+                GlyphFrame.Builder builder = stripManager.getGlyphFrameBuilder();
+                if (builder != null) {
+                    applyFullChannels(builder);
+                    builder.buildPeriod(80)
+                            .buildCycles(4)
+                            .buildInterval(30);
+                    stripManager.animate(builder.build());
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
+                flashDirectFallback();
+            }
+        } else if (!matrixRegistered) {
+            flashDirectFallback();
+        }
+    }
+
+    private void runPendingPreview() {
+        handler.post(() -> {
+            if (recordingActive || callActive) {
+                updateGlyphActivity();
+            }
+            if (pendingBurstEffect) {
+                pendingBurstEffect = false;
+                runBurstHardwareLight();
+            }
+            if (pendingMessageFlash) {
+                pendingMessageFlash = false;
+                triggerMessageFlashNow();
+            }
+            if (previewPending) {
+                previewPending = false;
+                int type = pendingPreviewType;
+                pendingPreviewType = -1;
+                if (type == 1) {
+                    previewCall();
+                } else if (type == 2) {
+                    previewRecording();
+                } else {
+                    previewMessage();
+                }
+            }
+        });
     }
 
     private boolean ensureReady() {
         if (!supported) {
             return false;
         }
-        if (!initialized) {
+        if (!initialized || (!stripSessionOpen && !matrixRegistered)) {
             init();
         }
         return initialized && (stripSessionOpen || matrixRegistered);
@@ -649,6 +749,15 @@ public final class GlyphController {
         return Glyph.DEVICE_23112;
     }
 
+    public static int getStripChannelCount(String device) {
+        if (Glyph.DEVICE_20111.equals(device)) return 15;
+        if (Glyph.DEVICE_22111.equals(device) || Glyph.DEVICE_22111I.equals(device)) return 33;
+        if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) return 26;
+        if (Glyph.DEVICE_24111.equals(device)) return 36;
+        if (Glyph.DEVICE_25111.equals(device)) return 6;
+        return isPhone1() ? 15 : 33;
+    }
+
     public static void applyFullChannels(GlyphFrame.Builder builder) {
         if (builder == null) {
             return;
@@ -657,18 +766,28 @@ public final class GlyphController {
         if (Glyph.DEVICE_25111.equals(device)) {
             // Nothing Phone (4a / 4b) - 6 квадратных зон:
             for (int i = 0; i < 6; i++) {
-                builder.buildChannel(i);
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
             }
+            builder.buildChannelA();
         } else if (Glyph.DEVICE_24111.equals(device)) {
             if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                    try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                }
                 builder.buildChannelA();
             } else {
+                for (int i = 0; i < 36; i++) {
+                    try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                }
                 builder.buildChannelA()
                         .buildChannelB()
                         .buildChannelC();
             }
         } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
-            // Phone (2a / 2a Plus) - A, B, C активны:
+            // Phone (2a / 2a Plus) - 26 зон (C_1..C_24, B, A):
+            for (int i = 0; i < 26; i++) {
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+            }
             builder.buildChannelA()
                     .buildChannelB()
                     .buildChannelC();
@@ -685,7 +804,10 @@ public final class GlyphController {
                     .buildChannelD()
                     .buildChannelE();
         } else {
-            // Phone (2) - классические 5 зон A, B, C, D, E:
+            // Phone (2) - 33 адресных зоны в 5 группах A, B, C, D, E:
+            for (int i = 0; i < 33; i++) {
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+            }
             builder.buildChannelA()
                     .buildChannelB()
                     .buildChannelC()
@@ -700,15 +822,22 @@ public final class GlyphController {
         }
         String device = resolveStripDevice();
         if (Glyph.DEVICE_25111.equals(device)) {
-            builder.buildChannel(0);
+            try { builder.buildChannel(0); } catch (Throwable ignored) {}
         } else if (Glyph.DEVICE_24111.equals(device)) {
+            for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+            }
             builder.buildChannelA();
+        } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
+            try { builder.buildChannel(Glyph.Code_23111.B); } catch (Throwable ignored) {}
+            builder.buildChannelB();
         } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
             try {
                 builder.buildChannel(Glyph.Code_20111.B1);
             } catch (Throwable ignored) {}
             builder.buildChannelB();
         } else {
+            try { builder.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
             builder.buildChannelB();
         }
     }
@@ -724,10 +853,16 @@ public final class GlyphController {
                     gs.openSession();
                 } catch (Throwable ignored) {}
                 String device = resolveStripDevice();
-                int size = (Glyph.DEVICE_20111.equals(device) || isPhone1()) ? 15 : 33;
+                int size = getStripChannelCount(device);
                 int[] frame = new int[size];
-                for (int i = 0; i < size; i++) {
-                    frame[i] = 4096;
+                if (Glyph.DEVICE_24111.equals(device) && "Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                    for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11 && i < size; i++) {
+                        frame[i] = 4000;
+                    }
+                } else {
+                    for (int i = 0; i < size; i++) {
+                        frame[i] = 4000;
+                    }
                 }
                 gs.setFrameColors(frame);
                 handler.postDelayed(() -> {
@@ -837,11 +972,45 @@ public final class GlyphController {
             @Override
             public void onServiceConnected(ComponentName componentName) {
                 String targetMatrix = resolveMatrixDevice();
-                matrixRegistered = matrixManager.register(targetMatrix);
-                if (!matrixRegistered) {
-                    String fallback = Glyph.DEVICE_23112.equals(targetMatrix) ? Glyph.DEVICE_25111p : Glyph.DEVICE_23112;
-                    matrixRegistered = matrixManager.register(fallback);
+                boolean registered = false;
+                try {
+                    registered = matrixManager.register(targetMatrix);
+                } catch (Throwable t) {
+                    FileLog.e(t);
                 }
+                if (!registered) {
+                    String fallback = Glyph.DEVICE_23112.equals(targetMatrix) ? Glyph.DEVICE_25111p : Glyph.DEVICE_23112;
+                    try {
+                        registered = matrixManager.register(fallback);
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
+                }
+                try {
+                    Field serviceField = GlyphMatrixManager.class.getDeclaredField("mService");
+                    serviceField.setAccessible(true);
+                    Object serviceObj = serviceField.get(matrixManager);
+                    if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
+                        com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
+                        if (!registered) {
+                            try { registered = glyphService.registerMatrixSDK(targetMatrix); } catch (Throwable ignored) {}
+                        }
+                        if (!registered) {
+                            try { registered = glyphService.register(targetMatrix); } catch (Throwable ignored) {}
+                        }
+                    }
+                    Field authField = GlyphMatrixManager.class.getDeclaredField("mHasAuthorized");
+                    authField.setAccessible(true);
+                    authField.setBoolean(matrixManager, true);
+
+                    Field devField = GlyphMatrixManager.class.getDeclaredField("mDevice");
+                    devField.setAccessible(true);
+                    devField.set(matrixManager, targetMatrix);
+                    registered = true;
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
+                matrixRegistered = registered;
                 if (matrixRegistered) {
                     runPendingPreview();
                 }
@@ -973,10 +1142,39 @@ public final class GlyphController {
                 case GlyphConfig.RECORDING_ANIM_HEARTBEAT: {
                     String device = resolveStripDevice();
                     if (Glyph.DEVICE_25111.equals(device)) {
-                        builder.buildChannel(0).buildChannel(2);
+                        try { builder.buildChannel(0).buildChannel(2); } catch (Throwable ignored) {}
                     } else if (Glyph.DEVICE_24111.equals(device)) {
+                        if ("Nothing Phone (3a) Lite".equals(NothingPhoneEasterEgg.getDeviceDisplayName())) {
+                            for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            builder.buildChannelA();
+                        } else {
+                            for (int i = Glyph.Code_24111.A_1; i <= Glyph.Code_24111.A_11; i++) {
+                                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            for (int i = Glyph.Code_24111.B_1; i <= Glyph.Code_24111.B_5; i++) {
+                                try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                            }
+                            builder.buildChannelA().buildChannelB();
+                        }
+                    } else if (Glyph.DEVICE_23111.equals(device) || Glyph.DEVICE_23113.equals(device)) {
+                        try {
+                            builder.buildChannel(Glyph.Code_23111.A)
+                                    .buildChannel(Glyph.Code_23111.B);
+                        } catch (Throwable ignored) {}
                         builder.buildChannelA().buildChannelB();
+                    } else if (Glyph.DEVICE_20111.equals(device) || isPhone1()) {
+                        try { builder.buildChannel(Glyph.Code_20111.B1); } catch (Throwable ignored) {}
+                        for (int i = Glyph.Code_20111.D1_1; i <= Glyph.Code_20111.D1_8; i++) {
+                            try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                        }
+                        builder.buildChannelB().buildChannelD();
                     } else {
+                        try { builder.buildChannel(Glyph.Code_22111.B1); } catch (Throwable ignored) {}
+                        for (int i = Glyph.Code_22111.D1_1; i <= Glyph.Code_22111.D1_8; i++) {
+                            try { builder.buildChannel(i); } catch (Throwable ignored) {}
+                        }
                         builder.buildChannelB().buildChannelD();
                     }
                     builder.buildPeriod(800)
@@ -1003,6 +1201,48 @@ public final class GlyphController {
         showMatrixIcon(R.drawable.moltengram_icon_monochrome, BREATH_MAX, true);
     }
 
+    public static int getMatrixGridLength() {
+        try {
+            int sdkLen = Common.getDeviceMatrixLength();
+            if (sdkLen > 0) {
+                return sdkLen;
+            }
+        } catch (Throwable ignored) {}
+        String target = resolveMatrixDevice();
+        return Glyph.DEVICE_25111p.equals(target) ? 13 : 25;
+    }
+
+    public static int[] renderMatrixBitmap(Bitmap bitmap, int brightness, int matrixLength) {
+        if (bitmap == null || matrixLength <= 0) {
+            return new int[0];
+        }
+        int clampedBrightness = Math.max(0, Math.min(255, brightness));
+        int w = bitmap.getWidth();
+        int h = bitmap.getHeight();
+        int[] out = new int[matrixLength * matrixLength];
+        if (w <= 0 || h <= 0) {
+            return out;
+        }
+        int denom = Math.max(1, matrixLength - 1);
+        for (int row = 0; row < matrixLength; row++) {
+            int srcY = Math.min(h - 1, Math.max(0, Math.round(row * (h - 1) / (float) denom)));
+            for (int col = 0; col < matrixLength; col++) {
+                int srcX = Math.min(w - 1, Math.max(0, Math.round(col * (w - 1) / (float) denom)));
+                int pixel = bitmap.getPixel(srcX, srcY);
+                int alpha = Color.alpha(pixel);
+                if (alpha <= 10) {
+                    out[row * matrixLength + col] = 0;
+                    continue;
+                }
+                int avgRgb = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3;
+                int effectiveVal = (avgRgb * alpha) / 255;
+                int ledVal = (effectiveVal * 4095 / 255) * clampedBrightness / 255;
+                out[row * matrixLength + col] = Math.max(0, Math.min(4095, ledVal));
+            }
+        }
+        return out;
+    }
+
     private void showMatrixIcon(int resId, int brightness, boolean autoHide) {
         if (matrixManager == null || !matrixRegistered) {
             return;
@@ -1016,15 +1256,24 @@ public final class GlyphController {
             return;
         }
         try {
-            GlyphMatrixObject object = new GlyphMatrixObject.Builder()
-                    .setImageSource(bitmap)
-                    .setScale(105)
-                    .setBrightness(brightness)
-                    .build();
-            GlyphMatrixFrame frame = new GlyphMatrixFrame.Builder()
-                    .addTop(object)
-                    .build(context);
-            matrixManager.setAppMatrixFrame(frame.render());
+            int[] rendered = null;
+            try {
+                if (Common.getDeviceMatrixLength() > 0) {
+                    GlyphMatrixObject object = new GlyphMatrixObject.Builder()
+                            .setImageSource(bitmap)
+                            .setScale(105)
+                            .setBrightness(brightness)
+                            .build();
+                    GlyphMatrixFrame frame = new GlyphMatrixFrame.Builder()
+                            .addTop(object)
+                            .build(context);
+                    rendered = frame.render();
+                }
+            } catch (Throwable ignored) {}
+            if (rendered == null || rendered.length == 0) {
+                rendered = renderMatrixBitmap(bitmap, brightness, getMatrixGridLength());
+            }
+            matrixManager.setAppMatrixFrame(rendered);
             handler.removeCallbacks(hideLogoRunnable);
             if (autoHide) {
                 handler.postDelayed(hideLogoRunnable, LOGO_SHOW_MS);

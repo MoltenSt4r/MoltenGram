@@ -147,8 +147,11 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("wideFeedPosts", "chats");
         NAGRAM_ROWS.put("OEGlyphEnabled", "glyph");
         NAGRAM_ROWS.put("OEGlyphNewMessage", "glyph");
+        NAGRAM_ROWS.put("OEGlyphMessageAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphCalls", "glyph");
+        NAGRAM_ROWS.put("OEGlyphCallAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphRecording", "glyph");
+        NAGRAM_ROWS.put("OEGlyphRecordAnim", "glyph");
         NAGRAM_ROWS.put("OEGlyphScreenOff", "glyph");
         NAGRAM_ROWS.put("glyphPreview", "glyph");
         NAGRAM_ROWS.put("glyphDevicePreview", "glyph");
@@ -226,45 +229,45 @@ public class SettingsHelper {
             case "moltengram":
             case "exteraless":
             case "exterams":
-                return HOST_MOLTENGRAM + "/settings";
+                return HOST_NAGRAM + "/settings";
             case "moltengram_general":
             case "exteraless_general":
             case "exterams_general":
-                return HOST_MOLTENGRAM + "/general";
+                return HOST_NAGRAM + "/general";
             case "moltengram_appearance":
             case "exteraless_appearance":
             case "exterams_appearance":
-                return HOST_MOLTENGRAM + "/appearance";
+                return HOST_NAGRAM + "/appearance";
             case "moltengram_chats":
             case "exteraless_chats":
             case "exterams_chats":
-                return HOST_MOLTENGRAM + "/chats";
+                return HOST_NAGRAM + "/chats";
             case "moltengram_other":
             case "exteraless_other":
             case "exterams_other":
-                return HOST_MOLTENGRAM + "/other";
+                return HOST_NAGRAM + "/other";
             case "moltengram_ayumoments":
             case "exteraless_ayumoments":
             case "exterams_ayumoments":
-                return HOST_MOLTENGRAM + "/ayumoments";
+                return HOST_NAGRAM + "/ayumoments";
             case "pillstack":
-                return HOST_MOLTENGRAM + "/pillstack";
+                return HOST_NAGRAM + "/pillstack";
             case "moltengram_navigation":
             case "exteraless_navigation":
             case "exterams_navigation":
-                return HOST_MOLTENGRAM + "/navigation";
+                return HOST_NAGRAM + "/navigation";
             case "ota_updates":
             case "updates":
             case "update":
-                return HOST_MOLTENGRAM + "/updates";
+                return HOST_NAGRAM + "/updates";
             case "glyph":
             case "exteraless_glyph":
-                return HOST_MOLTENGRAM + "/glyph";
+                return HOST_NAGRAM + "/glyph";
             case "avatar_shapes":
             case "md3_avatar_shapes":
-                return HOST_MOLTENGRAM + "/avatar_shapes";
+                return HOST_NAGRAM + "/avatar_shapes";
             default:
-                return HOST_MOLTENGRAM + "/" + key;
+                return HOST_NAGRAM + "/" + key;
         }
     }
 
@@ -715,6 +718,8 @@ public class SettingsHelper {
         exteralessFragments.add(new PlayerSettingsActivity());
         exteralessFragments.add(new ChipFoldersSettingsActivity());
         exteralessFragments.add(new TextAnimationSettingsActivity());
+        exteralessFragments.add(new OpenExteraGlyphActivity());
+        exteralessFragments.add(new app.exteraless.appearance.Md3AvatarShapesActivity());
 
         String e_title = getString(R.string.OpenExtera);
         for (BaseNekoSettingsActivity fragment : exteralessFragments) {

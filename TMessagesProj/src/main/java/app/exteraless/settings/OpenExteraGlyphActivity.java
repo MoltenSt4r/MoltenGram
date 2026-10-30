@@ -39,8 +39,11 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
     private int glyphHeaderRow;
     private int glyphEnableRow;
     private int glyphNewMessageRow;
+    private int glyphNewMessageAnimRow;
     private int glyphCallsRow;
+    private int glyphCallsAnimRow;
     private int glyphRecordingRow;
+    private int glyphRecordingAnimRow;
     private int glyphScreenOffRow;
     private int glyphDividerRow;
     private int glyphPreviewRow;
@@ -66,22 +69,40 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         glyphEnableRow = addRow(GlyphConfig.enabled.getKey());
         if (GlyphConfig.enabled()) {
             glyphNewMessageRow = addRow(GlyphConfig.onNewMessage.getKey());
+            if (GlyphConfig.onNewMessage()) {
+                glyphNewMessageAnimRow = addRow(GlyphConfig.messageAnimationStyle.getKey(), "glyphNewMessageAnim");
+            } else {
+                glyphNewMessageAnimRow = -1;
+            }
             glyphCallsRow = addRow(GlyphConfig.onCall.getKey());
+            if (GlyphConfig.onCall()) {
+                glyphCallsAnimRow = addRow(GlyphConfig.callAnimationStyle.getKey(), "glyphCallsAnim");
+            } else {
+                glyphCallsAnimRow = -1;
+            }
             glyphRecordingRow = addRow(GlyphConfig.onRecording.getKey());
+            if (GlyphConfig.onRecording()) {
+                glyphRecordingAnimRow = addRow(GlyphConfig.recordingAnimationStyle.getKey(), "glyphRecordingAnim");
+            } else {
+                glyphRecordingAnimRow = -1;
+            }
             glyphScreenOffRow = addRow(GlyphConfig.screenOffOnly.getKey());
             glyphDividerRow = addRow();
             glyphPreviewRow = addRow("glyphPreview");
         } else {
             glyphNewMessageRow = -1;
+            glyphNewMessageAnimRow = -1;
             glyphCallsRow = -1;
+            glyphCallsAnimRow = -1;
             glyphRecordingRow = -1;
+            glyphRecordingAnimRow = -1;
             glyphScreenOffRow = -1;
             glyphDividerRow = addRow();
             glyphPreviewRow = -1;
         }
 
         // Dedicated bottom preview showing current phone and its glyphs (or centered for CMF)
-        glyphDevicePreviewRow = addRow("glyphDevicePreview");
+        glyphDevicePreviewRow = addRow("glyphDevicePreview", "NothingPhoneEasterEgg");
     }
 
     private void update() {
@@ -89,6 +110,42 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         if (listAdapter != null) {
             listAdapter.notifyDataSetChanged();
         }
+    }
+
+    private CharSequence[] messageAnimationOptions() {
+        return new CharSequence[]{
+                getString(R.string.OEGlyphAnimDoubleFlash),
+                getString(R.string.OEGlyphAnimStrobe),
+                getString(R.string.OEGlyphAnimSoftPulse),
+                getString(R.string.OEGlyphAnimAccentRing)
+        };
+    }
+
+    private CharSequence[] callAnimationOptions() {
+        return new CharSequence[]{
+                getString(R.string.OEGlyphAnimPulse),
+                getString(R.string.OEGlyphAnimWave),
+                getString(R.string.OEGlyphAnimBreathing)
+        };
+    }
+
+    private CharSequence[] recordingAnimationOptions() {
+        return new CharSequence[]{
+                getString(R.string.OEGlyphAnimBreathing),
+                getString(R.string.OEGlyphAnimAccentRing),
+                getString(R.string.OEGlyphAnimHeartbeat)
+        };
+    }
+
+    private void showChoice(String title, CharSequence[] options, org.telegram.messenger.Utilities.Callback<Integer> onSelected) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(title);
+        builder.setItems(options, (dialog, which) -> onSelected.run(which));
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
     }
 
     @Override
@@ -139,16 +196,43 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+            update();
+        } else if (position == glyphNewMessageAnimRow) {
+            CharSequence[] options = messageAnimationOptions();
+            showChoice(getString(R.string.OEGlyphNewMessageAnim), options, which -> {
+                GlyphConfig.messageAnimationStyle.setConfigInt(which);
+                update();
+                GlyphController.getInstance().previewMessage();
+                notifyPreviewCell(0);
+            });
         } else if (position == glyphCallsRow) {
             boolean enabled = GlyphConfig.onCall.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+            update();
+        } else if (position == glyphCallsAnimRow) {
+            CharSequence[] options = callAnimationOptions();
+            showChoice(getString(R.string.OEGlyphCallsAnim), options, which -> {
+                GlyphConfig.callAnimationStyle.setConfigInt(which);
+                update();
+                GlyphController.getInstance().previewCall();
+                notifyPreviewCell(1);
+            });
         } else if (position == glyphRecordingRow) {
             boolean enabled = GlyphConfig.onRecording.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+            update();
+        } else if (position == glyphRecordingAnimRow) {
+            CharSequence[] options = recordingAnimationOptions();
+            showChoice(getString(R.string.OEGlyphRecordingAnim), options, which -> {
+                GlyphConfig.recordingAnimationStyle.setConfigInt(which);
+                update();
+                GlyphController.getInstance().previewRecording();
+                notifyPreviewCell(2);
+            });
         } else if (position == glyphScreenOffRow) {
             boolean enabled = GlyphConfig.screenOffOnly.toggleConfigBool();
             if (view instanceof TextCheckCell) {
@@ -286,6 +370,21 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndIcon(getString(R.string.OEGlyphPreview),
                                 R.drawable.deproko_baseline_lamp_filled_24, true);
+                    } else if (position == glyphNewMessageAnimRow) {
+                        CharSequence[] options = messageAnimationOptions();
+                        int idx = GlyphConfig.messageAnimationStyle();
+                        cell.setTextAndValue(getString(R.string.OEGlyphNewMessageAnim),
+                                idx >= 0 && idx < options.length ? options[idx].toString() : "", true);
+                    } else if (position == glyphCallsAnimRow) {
+                        CharSequence[] options = callAnimationOptions();
+                        int idx = GlyphConfig.callAnimationStyle();
+                        cell.setTextAndValue(getString(R.string.OEGlyphCallsAnim),
+                                idx >= 0 && idx < options.length ? options[idx].toString() : "", true);
+                    } else if (position == glyphRecordingAnimRow) {
+                        CharSequence[] options = recordingAnimationOptions();
+                        int idx = GlyphConfig.recordingAnimationStyle();
+                        cell.setTextAndValue(getString(R.string.OEGlyphRecordingAnim),
+                                idx >= 0 && idx < options.length ? options[idx].toString() : "", true);
                     }
                     break;
                 }
@@ -310,7 +409,8 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == glyphHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == glyphPreviewRow) {
+            } else if (position == glyphPreviewRow || position == glyphNewMessageAnimRow
+                    || position == glyphCallsAnimRow || position == glyphRecordingAnimRow) {
                 return TYPE_TEXT;
             } else if (position == glyphDividerRow) {
                 return TYPE_INFO_PRIVACY;

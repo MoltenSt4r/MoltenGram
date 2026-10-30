@@ -241,5 +241,12 @@
 -keep interface app.exteraless.** { *; }
 -keep enum app.exteraless.** { *; }
 -dontwarn app.exteraless.**
+
+# Nothing Ketchum Glyph SDK & AIDL Service (accessed via reflection in GlyphController)
+-keep class com.nothing.** { *; }
+-keep interface com.nothing.** { *; }
+-keep enum com.nothing.** { *; }
+-dontwarn com.nothing.**
+
 -keep class * extends org.telegram.ui.Components.UItem$UItemFactory { *; }
 -keep class ** extends org.telegram.ui.Components.UItem$UItemFactory { *; }

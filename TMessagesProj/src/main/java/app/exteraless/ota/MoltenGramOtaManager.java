@@ -1337,7 +1337,7 @@ public class MoltenGramOtaManager {
         Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
         intent.putExtra("open_updates", true);
-        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.setData(Uri.parse("https://t.me/nasettings/settings?r=updates"));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -1391,7 +1391,7 @@ public class MoltenGramOtaManager {
         Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
         intent.putExtra("open_updates", true);
-        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.setData(Uri.parse("https://t.me/nasettings/settings?r=updates"));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;
@@ -1440,7 +1440,7 @@ public class MoltenGramOtaManager {
         Intent intent = new Intent(context, org.telegram.ui.LaunchActivity.class);
         intent.setAction(Intent.ACTION_VIEW);
         intent.putExtra("open_updates", true);
-        intent.setData(Uri.parse("https://t.me/moltengram/settings?r=updates"));
+        intent.setData(Uri.parse("https://t.me/nasettings/settings?r=updates"));
         intent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TOP);
 
         int flags = PendingIntent.FLAG_UPDATE_CURRENT;

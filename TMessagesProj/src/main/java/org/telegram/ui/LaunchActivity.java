@@ -2843,15 +2843,15 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             prefix = url.substring(3);
                                         }
                                         if (prefix.startsWith("neko")) {
-                                            prefix = "moltengram" + prefix.substring(4);
+                                            prefix = "nasettings" + prefix.substring(4);
                                         } else if (prefix.startsWith("ms")) {
-                                            prefix = "moltengram" + prefix.substring(2);
-                                        } else if (prefix.startsWith("nasettings")) {
-                                            prefix = "moltengram" + prefix.substring(10);
+                                            prefix = "nasettings" + prefix.substring(2);
+                                        } else if (prefix.startsWith("moltengram")) {
+                                            prefix = "nasettings" + prefix.substring(10);
                                         } else if (prefix.startsWith("exteraless")) {
-                                            prefix = "moltengram" + prefix.substring(10);
+                                            prefix = "nasettings" + prefix.substring(10);
                                         } else if (prefix.startsWith("exterams")) {
-                                            prefix = "moltengram" + prefix.substring(8);
+                                            prefix = "nasettings" + prefix.substring(8);
                                         }
                                         data = Uri.parse("https://t.me/" + prefix);
                                         SettingsHelper.processDeepLink(this, data, fragment -> {
