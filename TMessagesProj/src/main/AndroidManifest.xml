@@ -1256,7 +1256,6 @@
 
         <meta-data android:name="com.google.android.geo.API_KEY" android:value="${MAPS_API_KEY}" />
         <meta-data android:name="NothingKey" android:value="${GLYPH_API_KEY}" />
-        <meta-data android:name="targetNothingSDKVersion" android:value="1" />
         <uses-library android:name="com.google.android.maps" android:required="false"/>
         <uses-library android:name="org.apache.http.legacy" android:required="false" />
 

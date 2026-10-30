@@ -5,6 +5,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Build;
@@ -483,8 +484,9 @@ public final class GlyphController {
             }
             if (matrixRegistered) {
                 showMatrixLogo();
+            } else {
+                pulseStrip();
             }
-            pulseStrip();
         });
     }
 
@@ -971,7 +973,8 @@ public final class GlyphController {
         matrixManager.init(new GlyphMatrixManager.Callback() {
             @Override
             public void onServiceConnected(ComponentName componentName) {
-                String targetMatrix = resolveMatrixDevice();
+                String targetMatrix = Common.is23112() ? Glyph.DEVICE_23112
+                        : (Common.is25111p() ? Glyph.DEVICE_25111p : resolveMatrixDevice());
                 boolean registered = false;
                 try {
                     registered = matrixManager.register(targetMatrix);
@@ -982,33 +985,52 @@ public final class GlyphController {
                     String fallback = Glyph.DEVICE_23112.equals(targetMatrix) ? Glyph.DEVICE_25111p : Glyph.DEVICE_23112;
                     try {
                         registered = matrixManager.register(fallback);
+                        if (registered) {
+                            targetMatrix = fallback;
+                        }
                     } catch (Throwable t) {
                         FileLog.e(t);
                     }
                 }
-                try {
-                    Field serviceField = GlyphMatrixManager.class.getDeclaredField("mService");
-                    serviceField.setAccessible(true);
-                    Object serviceObj = serviceField.get(matrixManager);
-                    if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
-                        com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
-                        if (!registered) {
-                            try { registered = glyphService.registerMatrixSDK(targetMatrix); } catch (Throwable ignored) {}
-                        }
-                        if (!registered) {
-                            try { registered = glyphService.register(targetMatrix); } catch (Throwable ignored) {}
-                        }
+                if (!registered && Build.MODEL != null && !Build.MODEL.isEmpty()) {
+                    try {
+                        registered = matrixManager.register(Build.MODEL);
+                    } catch (Throwable t) {
+                        FileLog.e(t);
                     }
-                    Field authField = GlyphMatrixManager.class.getDeclaredField("mHasAuthorized");
-                    authField.setAccessible(true);
-                    authField.setBoolean(matrixManager, true);
+                }
+                if (!registered) {
+                    try {
+                        Field serviceField = GlyphMatrixManager.class.getDeclaredField("mService");
+                        serviceField.setAccessible(true);
+                        Object serviceObj = serviceField.get(matrixManager);
+                        if (serviceObj instanceof com.nothing.thirdparty.IGlyphService) {
+                            com.nothing.thirdparty.IGlyphService glyphService = (com.nothing.thirdparty.IGlyphService) serviceObj;
+                            try { registered = glyphService.registerMatrixSDK(targetMatrix); } catch (Throwable ignored) {}
+                            if (!registered && Build.MODEL != null) {
+                                try { registered = glyphService.registerMatrixSDK(Build.MODEL); } catch (Throwable ignored) {}
+                            }
+                            if (!registered) {
+                                String appKey = getAppKey(context);
+                                if (appKey != null) {
+                                    try { registered = glyphService.registerSDK(appKey, targetMatrix); } catch (Throwable ignored) {}
+                                }
+                            }
+                            if (!registered) {
+                                try { registered = glyphService.register(targetMatrix); } catch (Throwable ignored) {}
+                            }
+                        }
+                        Field authField = GlyphMatrixManager.class.getDeclaredField("mHasAuthorized");
+                        authField.setAccessible(true);
+                        authField.setBoolean(matrixManager, true);
 
-                    Field devField = GlyphMatrixManager.class.getDeclaredField("mDevice");
-                    devField.setAccessible(true);
-                    devField.set(matrixManager, targetMatrix);
-                    registered = true;
-                } catch (Throwable t) {
-                    FileLog.e(t);
+                        Field devField = GlyphMatrixManager.class.getDeclaredField("mDevice");
+                        devField.setAccessible(true);
+                        devField.set(matrixManager, targetMatrix);
+                        registered = true;
+                    } catch (Throwable t) {
+                        FileLog.e(t);
+                    }
                 }
                 matrixRegistered = registered;
                 if (matrixRegistered) {
@@ -1217,26 +1239,30 @@ public final class GlyphController {
             return new int[0];
         }
         int clampedBrightness = Math.max(0, Math.min(255, brightness));
-        int w = bitmap.getWidth();
-        int h = bitmap.getHeight();
+        int origW = bitmap.getWidth();
+        int origH = bitmap.getHeight();
         int[] out = new int[matrixLength * matrixLength];
-        if (w <= 0 || h <= 0) {
+        if (origW <= 0 || origH <= 0) {
             return out;
         }
+        Bitmap scaled = bitmap;
+        try {
+            Matrix m = new Matrix();
+            m.postScale(1.05f, 1.05f);
+            scaled = Bitmap.createBitmap(bitmap, 0, 0, origW, origH, m, true);
+        } catch (Throwable ignored) {}
+        int scaledW = scaled.getWidth();
+        int scaledH = scaled.getHeight();
+        int offsetX = scaledW >= origW ? (scaledW - origW) / 2 : 0;
+        int offsetY = scaledH >= origH ? (scaledH - origH) / 2 : 0;
         int denom = Math.max(1, matrixLength - 1);
         for (int row = 0; row < matrixLength; row++) {
-            int srcY = Math.min(h - 1, Math.max(0, Math.round(row * (h - 1) / (float) denom)));
+            int srcY = Math.min(scaledH - 1, Math.max(0, Math.round(row * (origH - 1) / (float) denom) + offsetY));
             for (int col = 0; col < matrixLength; col++) {
-                int srcX = Math.min(w - 1, Math.max(0, Math.round(col * (w - 1) / (float) denom)));
-                int pixel = bitmap.getPixel(srcX, srcY);
-                int alpha = Color.alpha(pixel);
-                if (alpha <= 10) {
-                    out[row * matrixLength + col] = 0;
-                    continue;
-                }
+                int srcX = Math.min(scaledW - 1, Math.max(0, Math.round(col * (origW - 1) / (float) denom) + offsetX));
+                int pixel = scaled.getPixel(srcX, srcY);
                 int avgRgb = (Color.red(pixel) + Color.green(pixel) + Color.blue(pixel)) / 3;
-                int effectiveVal = (avgRgb * alpha) / 255;
-                int ledVal = (effectiveVal * 4095 / 255) * clampedBrightness / 255;
+                int ledVal = (avgRgb * 4095 / 255) * clampedBrightness / 255;
                 out[row * matrixLength + col] = Math.max(0, Math.min(4095, ledVal));
             }
         }

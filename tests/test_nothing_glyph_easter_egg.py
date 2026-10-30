@@ -331,6 +331,13 @@ def test_glyph_controller_hardware_support_for_all_devices():
     assert "-keep class com.nothing.** { *; }" in proguard_content
     assert "-keep interface com.nothing.** { *; }" in proguard_content
 
+    # 9. AndroidManifest must NOT override targetNothingSDKVersion="1" (which degrades SDK 2.0 to v1 on Phone 3 / 4a Pro)
+    manifest_file = os.path.join(REPO_ROOT, "TMessagesProj/src/main/AndroidManifest.xml")
+    with open(manifest_file, "r", encoding="utf-8") as f:
+        manifest_content = f.read()
+    assert 'android:name="NothingKey"' in manifest_content
+    assert 'android:name="targetNothingSDKVersion"' not in manifest_content
+
 
 def test_deep_links_restored_to_nasettings_and_neko():
     """Verify deep links use nasettings / tg://neko as before so they never redirect to the @moltengram Telegram channel."""
