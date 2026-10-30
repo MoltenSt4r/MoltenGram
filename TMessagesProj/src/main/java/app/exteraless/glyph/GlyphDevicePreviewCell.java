@@ -344,10 +344,10 @@ public class GlyphDevicePreviewCell extends View {
         }
         if ("Nothing Phone (3)".equals(model)) {
             // Матрица 25x25 строго внутри чёрного круглого окна в правом верхнем углу корпуса Phone (3)
-            drawMatrixOverlay(canvas, left + w * 0.791f, top + h * 0.0938f, w * 0.132f, 11);
+            drawMatrixOverlay(canvas, left + w * 0.791f, top + h * 0.095f, w * 0.131f, 11);
         } else if ("Nothing Phone (4a) Pro".equals(model)) {
             // Матрица 13x13 строго внутри круглого окна справа от блока камер Phone (4a) Pro
-            drawMatrixOverlay(canvas, left + w * 0.706f, top + h * 0.1406f, w * 0.155f, 9);
+            drawMatrixOverlay(canvas, left + w * 0.703f, top + h * 0.145f, w * 0.163f, 9);
         } else if ("Nothing Phone (4a)".equals(model) || "Nothing Phone (4b)".equals(model)) {
             // Glyph Bar из 6 квадратных светодиодов справа от камеры
             boolean is4b = "Nothing Phone (4b)".equals(model);

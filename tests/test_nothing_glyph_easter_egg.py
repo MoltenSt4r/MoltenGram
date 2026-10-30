@@ -612,8 +612,8 @@ def test_per_model_sdk_contract_and_visual_preview_animations():
     assert "computeZoneIntensity(" in preview_cell
     assert "computeMatrixPixelAlpha(" in preview_cell
     assert "blendPreviewIconAndEffect(" in preview_cell
-    assert "left + w * 0.791f, top + h * 0.0938f, w * 0.132f" in preview_cell
-    assert "left + w * 0.706f, top + h * 0.1406f, w * 0.155f" in preview_cell
+    assert "left + w * 0.791f, top + h * 0.095f, w * 0.131f" in preview_cell
+    assert "left + w * 0.703f, top + h * 0.145f, w * 0.163f" in preview_cell
 
     # 5. Matrix icon contrast inversion and toggle
     assert "public static int blendMatrixEffectWithIconInversion(" in controller
