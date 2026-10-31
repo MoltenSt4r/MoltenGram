@@ -442,10 +442,9 @@ public class ReactionsEffectOverlay {
                         emojiStaticImageView.setAlpha(1f);
                     }
                 }
-                if (animationType == LONG_ANIMATION && isStories) {
+                if (animationType == LONG_ANIMATION && (isStories || (app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null))) {
                     emojiImageView.setAlpha(1f - animateOutProgress);
                 }
-                //emojiImageView.setAlpha(animateOutProgress < 0.5f ? 1f - (animateOutProgress / 0.5f) : 0f);
                 container.setTranslationX(x);
                 container.setTranslationY(y);
 

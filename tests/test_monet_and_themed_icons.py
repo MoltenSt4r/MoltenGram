@@ -513,6 +513,8 @@ def test_noto_big_reactions_and_bubble_alignment():
     with open(cell_path, 'r', encoding='utf-8') as f:
         cell_content = f.read()
     assert 'photoImage.getImageX()' in cell_content
+    assert 'OpenExteraConfig.useNotoForBigReactions()' in overlay_content
+    assert 'emojiImageView.setAlpha(1f - animateOutProgress)' in overlay_content
 
 
 
