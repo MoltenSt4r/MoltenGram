@@ -15920,7 +15920,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (currentMessageObject.isOutOwner()) {
                     reactionsLayoutInBubble.x = getMeasuredWidth() - reactionsLayoutInBubble.width - dp(16);//AndroidUtilities.displaySize.x - maxWidth - dp(17);
                 } else {
-                    reactionsLayoutInBubble.x = getCurrentBackgroundLeft();
+                    if (photoImage != null && photoImage.getImageWidth() > 0) {
+                        reactionsLayoutInBubble.x = (int) photoImage.getImageX();
+                    } else if (textX != 0) {
+                        reactionsLayoutInBubble.x = textX;
+                    } else {
+                        reactionsLayoutInBubble.x = getCurrentBackgroundLeft();
+                    }
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {

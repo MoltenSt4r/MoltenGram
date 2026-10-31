@@ -71,6 +71,7 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
     private int useSystemEmojiRow;
     private int useCurrentEmojiForReactionsRow;
     private int useNotoAnimatedEmojiRow;
+    private int useNotoForBigReactionsRow;
     private int general2Row;
 
     private int useCustomEmojiRow;
@@ -176,6 +177,12 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
                 ((TextCheckCell) view).setChecked(OpenExteraConfig.useNotoAnimatedEmoji());
             }
             EmojiHelper.reloadEmoji();
+        } else if (position == useNotoForBigReactionsRow) {
+            OpenExteraConfig.useNotoForBigReactions.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(OpenExteraConfig.useNotoForBigReactions());
+            }
+            EmojiHelper.reloadEmoji();
         } else if (position == customEmojiAddRow) {
             chatAttachAlert = new ChatAttachAlert(getParentActivity(), NekoEmojiSettingsActivity.this, false, false);
             chatAttachAlert.setEmojiPicker();
@@ -229,6 +236,7 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
         useSystemEmojiRow = addRow("useSystemEmoji");
         useCurrentEmojiForReactionsRow = addRow("useCurrentEmojiForReactions");
         useNotoAnimatedEmojiRow = addRow("useNotoAnimatedEmoji");
+        useNotoForBigReactionsRow = addRow("useNotoForBigReactions");
         general2Row = addRow();
 
         useCustomEmojiRow = addRow();
@@ -472,6 +480,12 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
                             textCheckCell.setChecked(OpenExteraConfig.useNotoAnimatedEmoji());
                         } else {
                             textCheckCell.setTextAndValueAndCheck(getString(R.string.OEUseNotoAnimatedEmoji), getString(R.string.OEUseNotoAnimatedEmojiInfo), OpenExteraConfig.useNotoAnimatedEmoji(), true, false);
+                        }
+                    } else if (position == useNotoForBigReactionsRow) {
+                        if (partial) {
+                            textCheckCell.setChecked(OpenExteraConfig.useNotoForBigReactions());
+                        } else {
+                            textCheckCell.setTextAndValueAndCheck(getString(R.string.OEUseNotoForBigReactions), getString(R.string.OEUseNotoForBigReactionsInfo), OpenExteraConfig.useNotoForBigReactions(), true, false);
                         }
                     } else if (position == downloadEmojiPacksRow) {
                         if (partial) {

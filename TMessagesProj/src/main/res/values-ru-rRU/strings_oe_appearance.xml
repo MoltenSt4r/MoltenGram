@@ -188,6 +188,8 @@
 
     <string name="OEUseNotoAnimatedEmoji">Noto Color Animated Emoji</string>
     <string name="OEUseNotoAnimatedEmojiInfo">Заменять большие анимированные эмодзи на Noto Color Animated Emoji</string>
+    <string name="OEUseNotoForBigReactions">Noto Animated Emoji для больших реакций</string>
+    <string name="OEUseNotoForBigReactionsInfo">Воспроизводить Noto Color Animated Emoji для больших реакций вместо анимации Telegram</string>
     <string name="OEUseCurrentEmojiForReactions">Текущий набор эмодзи для реакций</string>
     <string name="OEUseCurrentEmojiForReactionsInfo">Использовать текущий набор эмодзи в меню, анимации и под сообщениями</string>
     <string name="OEAppearanceMd3ChatInput">Поле ввода MD3</string>

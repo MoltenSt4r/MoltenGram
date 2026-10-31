@@ -57,6 +57,10 @@ object OpenExteraConfig {
     @JvmField
     val useNotoAnimatedEmoji = addConfig("OEUseNotoAnimatedEmoji", ConfigItem.configTypeBool, false)
 
+    /** Воспроизводить Noto Color Animated Emoji для больших реакций вместо анимации Telegram */
+    @JvmField
+    val useNotoForBigReactions = addConfig("OEUseNotoForBigReactions", ConfigItem.configTypeBool, false)
+
     /** Использовать текущий набор эмодзи для реакций (в меню, анимации и под сообщением) */
     @JvmField
     val useCurrentEmojiForReactions = addConfig("OEUseCurrentEmojiForReactions", ConfigItem.configTypeBool, false)
@@ -82,6 +86,9 @@ object OpenExteraConfig {
 
     @JvmStatic
     fun useNotoAnimatedEmoji(): Boolean = useNotoAnimatedEmoji.Bool()
+
+    @JvmStatic
+    fun useNotoForBigReactions(): Boolean = useNotoForBigReactions.Bool()
 
     @JvmStatic
     fun useCurrentEmojiForReactions(): Boolean = useCurrentEmojiForReactions.Bool()

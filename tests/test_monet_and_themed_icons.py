@@ -480,6 +480,42 @@ def test_openclip_auto_indexer_and_chat_photo_search_enhancements():
     assert 'startIndexing(currentAccount, allDialogIds)' in clip_settings_content
 
 
+def test_noto_big_reactions_and_bubble_alignment():
+    cfg_path = os.path.join(REPO_ROOT, 'TMessagesProj/src/main/kotlin/app/exteraless/OpenExteraConfig.kt')
+    with open(cfg_path, 'r', encoding='utf-8') as f:
+        cfg_content = f.read()
+    assert 'val useNotoForBigReactions' in cfg_content
+    assert 'fun useNotoForBigReactions(): Boolean' in cfg_content
+
+    settings_path = os.path.join(JAVA_DIR, 'tw/nekomimi/nekogram/settings/NekoEmojiSettingsActivity.java')
+    with open(settings_path, 'r', encoding='utf-8') as f:
+        settings_content = f.read()
+    assert 'useNotoForBigReactionsRow' in settings_content
+    assert 'OpenExteraConfig.useNotoForBigReactions' in settings_content
+
+    strings_en_path = os.path.join(RES_DIR, 'values/strings_oe_appearance.xml')
+    with open(strings_en_path, 'r', encoding='utf-8') as f:
+        strings_en = f.read()
+    assert 'OEUseNotoForBigReactions' in strings_en
+
+    strings_ru_path = os.path.join(RES_DIR, 'values-ru-rRU/strings_oe_appearance.xml')
+    with open(strings_ru_path, 'r', encoding='utf-8') as f:
+        strings_ru = f.read()
+    assert 'OEUseNotoForBigReactions' in strings_ru
+
+    overlay_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Components/Reactions/ReactionsEffectOverlay.java')
+    with open(overlay_path, 'r', encoding='utf-8') as f:
+        overlay_content = f.read()
+    assert 'OpenExteraConfig.useNotoForBigReactions()' in overlay_content
+    assert 'NotoEmojiHelper.getWebpUrl' in overlay_content
+
+    cell_path = os.path.join(JAVA_DIR, 'org/telegram/ui/Cells/ChatMessageCell.java')
+    with open(cell_path, 'r', encoding='utf-8') as f:
+        cell_content = f.read()
+    assert 'photoImage.getImageX()' in cell_content
+
+
+
 
 
 

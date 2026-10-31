@@ -660,9 +660,22 @@ public class ReactionsEffectOverlay {
                     emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                     emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
                 } else if (animationType == LONG_ANIMATION) {
-                    TLRPC.Document document = availableReaction.activate_animation;
-                    emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
-                    emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
+                    if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null) {
+                        String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
+                        if (notoUrl != null) {
+                            emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                            emojiImageView.getImageReceiver().setAllowStartAnimation(true);
+                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, "webp");
+                        } else {
+                            TLRPC.Document document = availableReaction.activate_animation;
+                            emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                            emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
+                        }
+                    } else {
+                        TLRPC.Document document = availableReaction.activate_animation;
+                        emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                        emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
+                    }
                 }
             } else {
                 if (animationType == LONG_ANIMATION) {
@@ -920,6 +933,10 @@ public class ReactionsEffectOverlay {
             }
             if (getImageReceiver().getLottieAnimation() != null && getImageReceiver().getLottieAnimation().isRunning()) {
                 wasPlaying = true;
+            }
+            if (getImageReceiver().hasBitmapImage() || getImageReceiver().hasImageLoaded()) {
+                wasPlaying = true;
+                getImageReceiver().startAnimation();
             }
             if (!wasPlaying && getImageReceiver().getLottieAnimation() != null && !getImageReceiver().getLottieAnimation().isRunning()) {
                 if (animationType == ONLY_MOVE_ANIMATION && !isStories) {
