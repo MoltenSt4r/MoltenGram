@@ -610,15 +610,50 @@ public final class GlyphController {
                     android.provider.Settings.System.putInt(cr, "led_effect_video_record_enable", val);
                 } catch (Throwable ignored) {}
                 try {
+                    android.provider.Settings.System.putInt(cr, "nt_camera_rec_light", val);
+                } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.System.putInt(cr, "camera_rec_light", val);
+                } catch (Throwable ignored) {}
+                try {
                     android.provider.Settings.Global.putInt(cr, "nothing_camera_red_light_active", val);
                 } catch (Throwable ignored) {}
                 try {
                     android.provider.Settings.Global.putInt(cr, "nt_camera_rec_light", val);
                 } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.Global.putInt(cr, "led_effect_video_record_enable", val);
+                } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.Secure.putInt(cr, "nt_camera_rec_light", val);
+                } catch (Throwable ignored) {}
+                try {
+                    android.provider.Settings.Secure.putInt(cr, "led_effect_video_record_enable", val);
+                } catch (Throwable ignored) {}
             } catch (Throwable ignored) {}
         }
         final String payload = active ? "255" : "0";
+        final String stripPayload = active ? "13 255" : "13 0";
         boolean writtenDirectly = false;
+        // Phone (1) и Phone (2): Awinic контроллер через led_strips
+        try {
+            java.io.File opMode = new java.io.File("/sys/class/leds/led_strips/operating_mode");
+            if (opMode.exists() && opMode.canWrite()) {
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(opMode)) {
+                    fos.write("1".getBytes());
+                    fos.flush();
+                }
+            }
+            java.io.File singleB = new java.io.File("/sys/class/leds/led_strips/single_brightness");
+            if (singleB.exists() && singleB.canWrite()) {
+                try (java.io.FileOutputStream fos = new java.io.FileOutputStream(singleB)) {
+                    fos.write(stripPayload.getBytes());
+                    fos.flush();
+                    writtenDirectly = true;
+                }
+            }
+        } catch (Throwable ignored) {}
+
         for (String path : RED_LED_SYSFS_PATHS) {
             try {
                 java.io.File f = new java.io.File(path);
@@ -634,7 +669,9 @@ public final class GlyphController {
         }
         if (!writtenDirectly) {
             new Thread(() -> {
-                String shellCmd = "for p in /sys/class/leds/red/brightness /sys/class/leds/led:red/brightness /sys/class/leds/aw20036:led_red/brightness /sys/class/leds/rec_led/brightness; do "
+                String shellCmd = "if [ -e /sys/class/leds/led_strips/operating_mode ]; then echo 1 > /sys/class/leds/led_strips/operating_mode 2>/dev/null; fi; "
+                        + "if [ -e /sys/class/leds/led_strips/single_brightness ]; then echo \"" + stripPayload + "\" > /sys/class/leds/led_strips/single_brightness 2>/dev/null; fi; "
+                        + "for p in /sys/class/leds/red/brightness /sys/class/leds/led:red/brightness /sys/class/leds/aw20036:led_red/brightness /sys/class/leds/rec_led/brightness; do "
                         + "if [ -e \"$p\" ]; then echo " + payload + " > \"$p\" 2>/dev/null; fi; done";
                 try {
                     app.exteraless.shizuku.ShizukuController shizuku = app.exteraless.shizuku.ShizukuController.getInstance();
@@ -678,7 +715,9 @@ public final class GlyphController {
                 if (name == null) continue;
                 String lower = name.toLowerCase();
                 if (lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
-                        || lower.contains("recording_led") || lower.contains("record_led")
+                        || lower.contains("recording_led") || lower.contains("record_led") || lower.contains("record_light")
+                        || lower.contains("red_dot") || lower.contains("tally") || lower.contains("rec_indicator")
+                        || lower.contains("recording_indicator")
                         || (lower.contains("nothing") && lower.contains("led"))) {
                     byte bVal = (byte) (enableRedLight ? 1 : 0);
                     int iVal = enableRedLight ? 1 : 0;
@@ -731,7 +770,9 @@ public final class GlyphController {
                 if (name == null) continue;
                 String lower = name.toLowerCase();
                 if (lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
-                        || lower.contains("recording_led") || lower.contains("record_led")
+                        || lower.contains("recording_led") || lower.contains("record_led") || lower.contains("record_light")
+                        || lower.contains("red_dot") || lower.contains("tally") || lower.contains("rec_indicator")
+                        || lower.contains("recording_indicator")
                         || (lower.contains("nothing") && lower.contains("led"))) {
                     byte bVal = (byte) (enableRedLight ? 1 : 0);
                     int iVal = enableRedLight ? 1 : 0;
