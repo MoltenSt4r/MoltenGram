@@ -14,9 +14,12 @@ import android.util.Range;
 import android.util.Size;
 import android.view.Display;
 import android.view.Surface;
+import android.hardware.camera2.CameraDevice;
+import android.hardware.camera2.CaptureRequest;
 
 import androidx.annotation.OptIn;
 import androidx.camera.camera2.interop.Camera2CameraInfo;
+import androidx.camera.camera2.interop.Camera2Interop;
 import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 import androidx.camera.core.Camera;
 import androidx.camera.core.CameraControl;
@@ -49,6 +52,8 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.Stories.recorder.DualCameraView;
+
+import app.exteraless.glyph.GlyphController;
 
 import java.util.ArrayList;
 import java.util.Collection;
@@ -428,10 +433,32 @@ public class CameraXSession {
         }
     }
 
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    private CameraCharacteristics getCameraCharacteristics(CameraSelector selector) {
+        try {
+            if (provider != null && selector != null && provider.hasCamera(selector)) {
+                String cameraId = Camera2CameraInfo.from(provider.getCameraInfo(selector)).getCameraId();
+                if (cameraId != null) {
+                    Context context = ApplicationLoader.applicationContext;
+                    if (context != null) {
+                        CameraManager cameraManager = context.getSystemService(CameraManager.class);
+                        if (cameraManager != null) {
+                            return cameraManager.getCameraCharacteristics(cameraId);
+                        }
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        return null;
+    }
+
     /**
      * Превью под круглое видео: 4:3, свой порядок разрешений и, если попросили,
      * стабилизация и незеркальная фронталка.
      */
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
     private Preview buildPreview(CameraSelector selector, boolean stabilization,
                                  Range<Integer> range, boolean prefer60) {
         final Size sensorAspect = getSensorAspect(selector);
@@ -452,6 +479,19 @@ public class CameraXSession {
         if (!ChatsConfig.cameraMirrorMode.Bool()) {
             builder.setMirrorMode(MirrorMode.MIRROR_MODE_OFF);
         }
+
+        // Apply video recording template, intent, and Nothing Rec. Light vendor tags
+        Camera2Interop.Extender<Preview> extender = new Camera2Interop.Extender<>(builder);
+        extender.setCaptureRequestTemplate(CameraDevice.TEMPLATE_RECORD);
+        extender.setCaptureRequestOption(
+                CaptureRequest.CONTROL_CAPTURE_INTENT,
+                CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD);
+
+        CameraCharacteristics characteristics = getCameraCharacteristics(selector);
+        if (characteristics != null) {
+            GlyphController.applyNothingCameraRedIndicator(characteristics, extender, true);
+        }
+
         return builder.build();
     }
 

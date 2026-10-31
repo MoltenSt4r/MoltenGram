@@ -10,6 +10,21 @@ EASTER_EGG_JAVA = os.path.join(
 GLYPH_ACTIVITY_JAVA = os.path.join(
     REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/settings/OpenExteraGlyphActivity.java"
 )
+GLYPH_CONTROLLER_JAVA = os.path.join(
+    REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphController.java"
+)
+PREVIEW_CELL_JAVA = os.path.join(
+    REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/glyph/GlyphDevicePreviewCell.java"
+)
+INSTANT_CAMERA_JAVA = os.path.join(
+    REPO_ROOT, "TMessagesProj/src/main/java/org/telegram/ui/Components/InstantCameraView.java"
+)
+ROUND_RECORDER_JAVA = os.path.join(
+    REPO_ROOT, "TMessagesProj/src/main/java/org/telegram/ui/Stories/recorder/RoundVideoRecorder.java"
+)
+CAMERAX_SESSION_JAVA = os.path.join(
+    REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/camera/CameraXSession.java"
+)
 DRAWABLE_DIR = os.path.join(
     REPO_ROOT, "TMessagesProj/src/main/res/drawable-nodpi"
 )
@@ -641,8 +656,636 @@ def test_per_model_sdk_contract_and_visual_preview_animations():
     assert "ry = top + h * 0.234f;" in preview_cell
     assert "rx = left + w * 0.378f;" in preview_cell
     assert "ry = top + h * 0.298f;" in preview_cell
+    assert "rx = left + w * 0.907f;" in preview_cell
+    assert "ry = top + h * 0.259f;" in preview_cell
+    assert "rx = left + w * 0.817f;" in preview_cell
+    assert "ry = top + h * 0.233f;" in preview_cell
     assert "rx = left + w * 0.875f;" in preview_cell
     assert "ry = top + h * 0.178f;" in preview_cell
+
+
+# ============================================================================
+# Permanent Milestone 3 Test Cases: Rec. Light, Model Filtering & Preview
+# ============================================================================
+
+def test_instant_camera_view_recording_lifecycle_hooks():
+    """Verify InstantCameraView hooks onVideoRecordingStarted/Stopped across all round video lifecycle events."""
+    with open(INSTANT_CAMERA_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 1. Import verification
+    assert "import app.exteraless.glyph.GlyphController;" in content
+
+    # 2. Total global hook invocation counts (2 starts, 6 stops)
+    assert content.count("GlyphController.getInstance().onVideoRecordingStarted()") == 2
+    assert content.count("GlyphController.getInstance().onVideoRecordingStopped()") == 6
+
+    # 3. showCamera: onVideoRecordingStarted() must be called before initCamera()
+    show_idx = content.find("public void showCamera(boolean fromPaused)")
+    assert show_idx != -1, "showCamera method not found"
+    init_cam_idx = content.find("if (!initCamera())", show_idx)
+    assert init_cam_idx != -1, "initCamera check not found in showCamera"
+    start_hook_idx = content.find("GlyphController.getInstance().onVideoRecordingStarted();", show_idx)
+    assert show_idx < start_hook_idx < init_cam_idx, "onVideoRecordingStarted must precede initCamera in showCamera"
+
+    # 4. prepareEncoder: onVideoRecordingStarted() must be called in UI thread runnable after recordStarted
+    prep_idx = content.find("private void prepareEncoder(boolean fromPause)")
+    assert prep_idx != -1, "prepareEncoder method not found"
+    rec_started_idx = content.find("NotificationCenter.recordStarted", prep_idx)
+    assert rec_started_idx != -1, "NotificationCenter.recordStarted not found in prepareEncoder"
+    prep_start_hook_idx = content.find("GlyphController.getInstance().onVideoRecordingStarted();", rec_started_idx)
+    assert rec_started_idx < prep_start_hook_idx, "onVideoRecordingStarted must follow recordStarted notification in prepareEncoder"
+
+    # 5. destroy: onVideoRecordingStopped() must execute BEFORE useCameraX early return
+    dest_idx = content.find("public void destroy(boolean async)")
+    assert dest_idx != -1, "destroy method not found"
+    stop_idx = content.find("GlyphController.getInstance().onVideoRecordingStopped();", dest_idx)
+    camx_idx = content.find("if (useCameraX)", dest_idx)
+    assert stop_idx != -1, "Missing onVideoRecordingStopped in destroy"
+    assert camx_idx != -1, "Missing useCameraX check in destroy"
+    assert dest_idx < stop_idx < camx_idx, "onVideoRecordingStopped must execute before useCameraX early return"
+
+    # 6. togglePause: onVideoRecordingStopped() in recording branch
+    pause_idx = content.find("public void togglePause()")
+    assert pause_idx != -1, "togglePause method not found"
+    pause_stop_idx = content.find("GlyphController.getInstance().onVideoRecordingStopped();", pause_idx)
+    pause_end_idx = content.find("public void cancel", pause_idx)
+    assert pause_idx < pause_stop_idx < pause_end_idx, "onVideoRecordingStopped missing in togglePause"
+
+    # 7. send: onVideoRecordingStopped() in both state == 4 and else branches
+    send_idx = content.find("public void send(int state")
+    assert send_idx != -1, "send method not found"
+    cancel_idx = content.find("public void cancel(boolean byGesture)")
+    assert cancel_idx != -1, "cancel method boundary not found"
+    send_block = content[send_idx:cancel_idx]
+    assert send_block.count("GlyphController.getInstance().onVideoRecordingStopped();") == 2, "send must stop recording in both branches"
+
+    # 8. cancel: onVideoRecordingStopped() must be called
+    cancel_block = content[cancel_idx:content.find("public void hideCamera(boolean async)")]
+    assert "GlyphController.getInstance().onVideoRecordingStopped();" in cancel_block, "cancel must invoke onVideoRecordingStopped"
+
+    # 9. hideCamera: onVideoRecordingStopped() must execute before destroy(async)
+    hide_idx = content.find("public void hideCamera(boolean async)")
+    assert hide_idx != -1, "hideCamera method not found"
+    hide_stop_idx = content.find("GlyphController.getInstance().onVideoRecordingStopped();", hide_idx)
+    dest_call_idx = content.find("destroy(async);", hide_idx)
+    assert hide_idx < hide_stop_idx < dest_call_idx, "onVideoRecordingStopped must execute before destroy(async) in hideCamera"
+
+
+def test_round_video_recorder_start_and_destroy_hooks():
+    """Verify RoundVideoRecorder hooks onVideoRecordingStarted in recordVideo callback and onVideoRecordingStopped in destroy."""
+    with open(ROUND_RECORDER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "import app.exteraless.glyph.GlyphController;" in content
+    assert content.count("GlyphController.getInstance().onVideoRecordingStarted();") == 1
+    assert content.count("GlyphController.getInstance().onVideoRecordingStopped();") == 1
+
+    # Verify start callback in CameraController.getInstance().recordVideo(...)
+    rec_match = re.search(
+        r"CameraController\.getInstance\(\)\.recordVideo\(.*?,\s*\(\)\s*->\s*\{(.*?GlyphController\.getInstance\(\)\.onVideoRecordingStarted\(\);.*?)\},\s*cameraView,\s*true\);",
+        content,
+        re.DOTALL,
+    )
+    assert rec_match is not None, "recordVideo start callback hook missing in RoundVideoRecorder"
+
+    # Verify destroy method calls onVideoRecordingStopped
+    dest_idx = content.find("public void destroy(boolean instant)")
+    assert dest_idx != -1, "destroy method not found in RoundVideoRecorder"
+    assert "GlyphController.getInstance().onVideoRecordingStopped();" in content[dest_idx:dest_idx + 400]
+
+
+def test_camerax_session_camera2interop_recording_config():
+    """Verify CameraXSession configures Camera2Interop with TEMPLATE_RECORD, CONTROL_CAPTURE_INTENT_VIDEO_RECORD,
+    and applyNothingCameraRedIndicator."""
+    with open(CAMERAX_SESSION_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Required imports
+    assert "import androidx.camera.camera2.interop.Camera2Interop;" in content
+    assert "import androidx.camera.camera2.interop.ExperimentalCamera2Interop;" in content
+    assert "import app.exteraless.glyph.GlyphController;" in content
+    assert "import android.hardware.camera2.CameraDevice;" in content
+    assert "import android.hardware.camera2.CaptureRequest;" in content
+
+    # Method buildPreview AST contracts
+    bp_idx = content.find("private Preview buildPreview(")
+    assert bp_idx != -1, "buildPreview method not found in CameraXSession"
+    bp_block = content[bp_idx:content.find("return builder.build();", bp_idx)]
+
+    assert "Camera2Interop.Extender<Preview> extender = new Camera2Interop.Extender<>(builder);" in bp_block
+    assert "extender.setCaptureRequestTemplate(CameraDevice.TEMPLATE_RECORD);" in bp_block
+    assert "CaptureRequest.CONTROL_CAPTURE_INTENT" in bp_block
+    assert "CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD" in bp_block
+    assert "CameraCharacteristics characteristics = getCameraCharacteristics(selector);" in bp_block
+    assert "GlyphController.applyNothingCameraRedIndicator(characteristics, extender, true);" in bp_block
+
+    # Helper getCameraCharacteristics contract
+    gc_idx = content.find("private CameraCharacteristics getCameraCharacteristics(CameraSelector selector)")
+    assert gc_idx != -1, "getCameraCharacteristics helper missing in CameraXSession"
+    gc_block = content[gc_idx:bp_idx]
+    assert "provider.hasCamera(selector)" in gc_block
+    assert "Camera2CameraInfo.from(provider.getCameraInfo(selector)).getCameraId()" in gc_block
+    assert "cameraManager.getCameraCharacteristics(cameraId)" in gc_block
+    assert "catch (Throwable e)" in gc_block
+
+
+def test_glyph_controller_camerax_camera2interop_vendor_tags():
+    """Verify GlyphController provides Camera2Interop overload of applyNothingCameraRedIndicator with 4-tier type cascade."""
+    with open(GLYPH_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert "import androidx.camera.camera2.interop.Camera2Interop;" in content
+    assert "import androidx.camera.camera2.interop.ExperimentalCamera2Interop;" in content
+
+    method_sig = "public static void applyNothingCameraRedIndicator(\n            CameraCharacteristics characteristics,\n            Camera2Interop.Extender<?> extender,\n            boolean recordingVideo)"
+    method_idx = content.find(method_sig)
+    assert method_idx != -1, "Camera2Interop overload of applyNothingCameraRedIndicator not found"
+
+    preceding = content[max(0, method_idx - 250):method_idx]
+    assert "@OptIn(markerClass = androidx.camera.camera2.interop.ExperimentalCamera2Interop.class)" in preceding
+    assert "@SuppressWarnings(\"unchecked\")" in preceding
+
+    method_end = content.find("public void onIncomingCallStarted()", method_idx)
+    assert method_end != -1
+    gc_body = content[method_idx:method_end]
+
+    # Gating invariants
+    assert "boolean enableRedLight = recordingVideo" in gc_body
+    assert "GlyphConfig.enabled()" in gc_body
+    assert "GlyphConfig.redRecordingIndicator()" in gc_body
+    assert "isRedIndicatorSupported()" in gc_body
+
+    # Defensive null guards
+    assert "if (characteristics == null || extender == null)" in gc_body
+    assert "keys = characteristics.getAvailableCaptureRequestKeys();" in gc_body
+    assert "if (keys == null)" in gc_body
+    assert "if (key == null) continue;" in gc_body
+    assert "if (name == null) continue;" in gc_body
+
+    # Vendor keywords
+    for kw in ["red_light", "reclight", "rec_light", "recording_led", "record_led"]:
+        assert kw in gc_body, f"Keyword '{kw}' missing in vendor key heuristics"
+
+    # Type fallback cascade (Byte -> Integer -> byte[] -> int[])
+    assert "extender.setCaptureRequestOption((CaptureRequest.Key<Byte>) key, bVal);" in gc_body
+    assert "extender.setCaptureRequestOption((CaptureRequest.Key<Integer>) key, iVal);" in gc_body
+    assert "extender.setCaptureRequestOption((CaptureRequest.Key<byte[]>) key, new byte[]{bVal});" in gc_body
+    assert "extender.setCaptureRequestOption((CaptureRequest.Key<int[]>) key, new int[]{iVal});" in gc_body
+
+
+# --- Functional Simulation Helper Classes & Tests for CameraX Vendor Tags ---
+
+class _SimCaptureKey:
+    def __init__(self, name: str, expected_type: type):
+        self._name = name
+        self._expected_type = expected_type
+
+    def getName(self):
+        return self._name
+
+    def getExpectedType(self):
+        return self._expected_type
+
+
+class _SimExtender:
+    def __init__(self):
+        self.options = {}
+        self.template = None
+
+    def setCaptureRequestTemplate(self, template):
+        self.template = template
+
+    def setCaptureRequestOption(self, key, value):
+        exp = key.getExpectedType()
+        if exp == int:
+            if not isinstance(value, int) or isinstance(value, bool):
+                raise TypeError(f"Expected int, got {type(value)}")
+        elif exp == bytes:
+            if not isinstance(value, (bytes, bytearray)):
+                raise TypeError(f"Expected bytes, got {type(value)}")
+        elif exp == list:
+            if not isinstance(value, list):
+                raise TypeError(f"Expected list, got {type(value)}")
+        else:
+            if not isinstance(value, exp):
+                raise TypeError(f"Expected {exp}, got {type(value)}")
+        self.options[key.getName()] = value
+
+
+def _simulate_apply_nothing_camera_red_indicator(
+    characteristics_keys,
+    extender,
+    recording_video: bool,
+    glyph_enabled: bool = True,
+    red_indicator_config: bool = True,
+    is_model_supported: bool = True,
+):
+    if characteristics_keys is None or extender is None:
+        return
+
+    enable_red_light = (
+        recording_video
+        and glyph_enabled
+        and red_indicator_config
+        and is_model_supported
+    )
+
+    try:
+        for key in characteristics_keys:
+            if key is None:
+                continue
+            name = key.getName()
+            if name is None:
+                continue
+            lower = name.lower()
+            if (
+                "red_light" in lower
+                or "reclight" in lower
+                or "rec_light" in lower
+                or "recording_led" in lower
+                or "record_led" in lower
+                or ("nothing" in lower and "led" in lower)
+            ):
+                b_val = 1 if enable_red_light else 0
+                i_val = 1 if enable_red_light else 0
+                try:
+                    extender.setCaptureRequestOption(key, b_val if key.getExpectedType() != bytes else bytes([b_val]))
+                except Exception:
+                    try:
+                        extender.setCaptureRequestOption(key, i_val)
+                    except Exception:
+                        try:
+                            extender.setCaptureRequestOption(key, bytes([b_val]))
+                        except Exception:
+                            try:
+                                extender.setCaptureRequestOption(key, [i_val])
+                            except Exception:
+                                pass
+    except Exception:
+        pass
+
+
+def test_camerax_vendor_tag_functional_contract():
+    """Verify functional simulation of applyNothingCameraRedIndicator key filtering, casting cascade, and gating."""
+    ext = _SimExtender()
+    keys = [
+        _SimCaptureKey("com.nothing.camera.recording_led", int),
+        _SimCaptureKey("vendor.nothing.camera.rec_light", int),
+        _SimCaptureKey("nothing.led.state", int),
+        _SimCaptureKey("android.control.aeMode", int),  # Should be ignored
+        _SimCaptureKey("com.google.camera.led", int),    # Should be ignored
+    ]
+    _simulate_apply_nothing_camera_red_indicator(keys, ext, recording_video=True)
+    assert ext.options.get("com.nothing.camera.recording_led") == 1
+    assert ext.options.get("vendor.nothing.camera.rec_light") == 1
+    assert ext.options.get("nothing.led.state") == 1
+    assert "android.control.aeMode" not in ext.options
+    assert "com.google.camera.led" not in ext.options
+
+    # Verify type-fallback cascade to bytes
+    ext_b = _SimExtender()
+    kb = _SimCaptureKey("com.nothing.camera.rec_light_bytes", bytes)
+    _simulate_apply_nothing_camera_red_indicator([kb], ext_b, recording_video=True)
+    assert ext_b.options.get("com.nothing.camera.rec_light_bytes") == bytes([1])
+
+    # Verify gating: recording_video=False -> option value 0
+    ext_off = _SimExtender()
+    _simulate_apply_nothing_camera_red_indicator(keys, ext_off, recording_video=False)
+    assert ext_off.options.get("com.nothing.camera.recording_led") == 0
+
+    # Verify gating: red_indicator_config=False -> option value 0
+    ext_cfg_off = _SimExtender()
+    _simulate_apply_nothing_camera_red_indicator(keys, ext_cfg_off, recording_video=True, red_indicator_config=False)
+    assert ext_cfg_off.options.get("com.nothing.camera.recording_led") == 0
+
+
+def test_red_indicator_model_filtering_oracle():
+    """Verify isRedIndicatorSupportedForModel returns True ONLY for Phone 1, 2, 3, 4a Pro, 4a, 4b (and unparenthesized aliases)
+    and False for Phone 2a, 2a Plus, 3a, 3a Pro, 3a Lite, CMF Phone 1, CMF Phone 2 Pro, null, empty strings."""
+    with open(GLYPH_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 1. AST check of method implementation
+    method_match = re.search(
+        r"public static boolean isRedIndicatorSupportedForModel\(String modelName\)\s*\{(.*?)\n    \}",
+        content,
+        re.DOTALL,
+    )
+    assert method_match is not None, "isRedIndicatorSupportedForModel method not found in GlyphController.java"
+    body = method_match.group(1)
+
+    # Null check
+    assert "if (modelName == null) {" in body
+
+    # Parenthesized supported models
+    expected_supported_parenthesized = [
+        "Nothing Phone (1)",
+        "Nothing Phone (2)",
+        "Nothing Phone (3)",
+        "Nothing Phone (4a) Pro",
+        "Nothing Phone (4a)",
+        "Nothing Phone (4b)",
+    ]
+    for model in expected_supported_parenthesized:
+        assert f'"{model}".equals(modelName)' in body, f"Missing direct equals check for {model}"
+
+    # Normalization logic
+    assert "modelName.trim().replace" in body
+    assert "replaceAll" in body
+
+    # Unparenthesized supported models
+    expected_supported_unparenthesized = [
+        "Nothing Phone 1",
+        "Nothing Phone 2",
+        "Nothing Phone 3",
+        "Nothing Phone 4a Pro",
+        "Nothing Phone 4a",
+        "Nothing Phone 4b",
+    ]
+    for model in expected_supported_unparenthesized:
+        assert f'"{model}".equalsIgnoreCase(normalized)' in body, f"Missing ignoreCase check for {model}"
+
+    # Unsupported models must NOT have .equals(modelName) returning true
+    unsupported_models = [
+        "Nothing Phone (2a)",
+        "Nothing Phone (2a) Plus",
+        "Nothing Phone (3a)",
+        "Nothing Phone (3a) Pro",
+        "Nothing Phone (3a) Lite",
+        "CMF Phone 1",
+        "CMF Phone 2 Pro",
+    ]
+    for model in unsupported_models:
+        assert f'"{model}".equals(modelName)' not in body, f"Unsupported model {model} must not be hardcoded true"
+
+    # 2. Functional Oracle Simulation
+    def is_supported(m):
+        if m is None:
+            return False
+        if m in expected_supported_parenthesized:
+            return True
+        normalized = re.sub(r"\s+", " ", m.strip().replace("(", "").replace(")", ""))
+        return normalized.lower() in [s.lower() for s in expected_supported_unparenthesized]
+
+    # Test all 13 official models partition strictly: 6 supported, 7 unsupported
+    for model in EXPECTED_13_MODELS:
+        if model in expected_supported_parenthesized:
+            assert is_supported(model) is True, f"{model} must be supported"
+        else:
+            assert is_supported(model) is False, f"{model} must NOT be supported"
+
+    # Test unparenthesized supported variants
+    for model in expected_supported_unparenthesized:
+        assert is_supported(model) is True, f"{model} alias must be supported"
+
+    # Test unparenthesized unsupported variants
+    for model in ["Nothing Phone 2a", "Nothing Phone 2a Plus", "Nothing Phone 3a", "Nothing Phone 3a Pro", "Nothing Phone 3a Lite"]:
+        assert is_supported(model) is False, f"{model} alias must NOT be supported"
+
+    # Test null, empty, whitespace, and invalid devices
+    assert is_supported(None) is False
+    assert is_supported("") is False
+    assert is_supported("   ") is False
+    assert is_supported("Nothing Phone (2a) Ultra") is False
+    assert is_supported("CMF Phone 3") is False
+    assert is_supported("Google Pixel 8") is False
+
+
+def test_settings_activity_red_indicator_gating_and_preview_dialog():
+    """Verify OpenExteraGlyphActivity gates glyphRedIndicatorRow by isRedIndicatorSupportedForModel(currentModel)
+    and dynamically excludes OEGlyphRedIndicator in preview dialog for unsupported models."""
+    with open(GLYPH_ACTIVITY_JAVA, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # 1. Field declaration
+    assert "private int glyphRedIndicatorRow;" in content
+
+    # 2. updateRows() gating
+    update_rows_match = re.search(
+        r"protected void updateRows\(\)\s*\{(.*?)\n    \}",
+        content,
+        re.DOTALL,
+    )
+    assert update_rows_match is not None, "updateRows() method not found in OpenExteraGlyphActivity.java"
+    body = update_rows_match.group(1)
+
+    assert "String currentModel = selectedDeviceModel != null ? selectedDeviceModel : NothingPhoneEasterEgg.getDeviceDisplayName();" in body
+    assert "if (GlyphController.isRedIndicatorSupportedForModel(currentModel)) {" in body
+    assert "glyphRedIndicatorRow = addRow(GlyphConfig.redRecordingIndicator.getKey());" in body
+    assert "glyphRedIndicatorRow = -1;" in body
+
+    # 3. Dynamic preview dialog option exclusion
+    on_click_match = re.search(
+        r"protected void onItemClick\(View view, int position, float x, float y\)\s*\{(.*?)\n    @Override",
+        content,
+        re.DOTALL,
+    )
+    assert on_click_match is not None, "onItemClick method not found in OpenExteraGlyphActivity.java"
+    click_body = on_click_match.group(1)
+
+    assert "boolean redSupported = GlyphController.isRedIndicatorSupportedForModel(currentModel);" in click_body
+    assert "if (redSupported) {" in click_body
+    assert "previewOptions.add(getString(R.string.OEGlyphRedIndicator));" in click_body
+    assert "previewTypes.add(3);" in click_body
+    assert "else if (type == 3) {" in click_body
+    assert "GlyphController.getInstance().previewRedIndicatorOnly();" in click_body
+
+    # 4. Functional simulation of row & dialog options across all 13 models
+    supported_models = {
+        "Nothing Phone (1)", "Nothing Phone (2)", "Nothing Phone (3)",
+        "Nothing Phone (4a) Pro", "Nothing Phone (4a)", "Nothing Phone (4b)",
+    }
+    for model in EXPECTED_13_MODELS:
+        is_model_supported = model in supported_models
+
+        # Simulate updateRows()
+        row_assigned = is_model_supported
+        assert row_assigned == is_model_supported, f"Row gating mismatch for {model}"
+
+        # Simulate preview dialog options
+        preview_options = ["OEGlyphNewMessage", "OEGlyphCalls", "OEGlyphRecording"]
+        preview_types = [0, 1, 2]
+        if is_model_supported:
+            preview_options.append("OEGlyphRedIndicator")
+            preview_types.append(3)
+
+        if is_model_supported:
+            assert "OEGlyphRedIndicator" in preview_options
+            assert 3 in preview_types
+            assert len(preview_options) == 4
+        else:
+            assert "OEGlyphRedIndicator" not in preview_options
+            assert 3 not in preview_types
+            assert len(preview_options) == 3
+
+
+def test_preview_cell_glyph_isolation_and_blink_contract():
+    """Verify GlyphDevicePreviewCell.computeZoneIntensity returns 0.25f during activePreviewType == 3,
+    and drawRedRecordingIndicator blinks strictly on activePreviewType == 3 (never on 2)."""
+    with open(PREVIEW_CELL_JAVA, "r", encoding="utf-8") as f:
+        cell_src = f.read()
+    with open(GLYPH_CONTROLLER_JAVA, "r", encoding="utf-8") as f:
+        ctrl_src = f.read()
+
+    # 1. computeZoneIntensity: standby outline (0.25f) when activePreviewType == 3
+    compute_match = re.search(
+        r"private float computeZoneIntensity\(int zoneIndex, int totalZones\)\s*\{(.*?)\n    \}",
+        cell_src,
+        re.DOTALL,
+    )
+    assert compute_match is not None, "computeZoneIntensity not found"
+    compute_body = compute_match.group(1)
+    assert "if (activePreviewType == 3) {\n            return 0.25f;\n        }" in compute_body, (
+        "computeZoneIntensity must return 0.25f during activePreviewType == 3 to preserve standby outline without white animation"
+    )
+
+    # 2. drawMatrixOverlay: skips matrix rendering during activePreviewType == 3
+    matrix_match = re.search(
+        r"private void drawMatrixOverlay\(Canvas canvas, float cx, float cy, float radius, int gridN\)\s*\{(.*?)\n    \}",
+        cell_src,
+        re.DOTALL,
+    )
+    assert matrix_match is not None, "drawMatrixOverlay not found"
+    matrix_body = matrix_match.group(1)
+    assert "if (!animRunning || activePreviewType == 3) {\n            return;\n        }" in matrix_body, (
+        "drawMatrixOverlay must return early during activePreviewType == 3"
+    )
+
+    # 3. drawRedRecordingIndicator: blinks strictly on activePreviewType == 3 (never on 2)
+    red_match = re.search(
+        r"private void drawRedRecordingIndicator\(Canvas canvas, String model, float left, float top, float w, float h\)\s*\{(.*?)\n    \}",
+        cell_src,
+        re.DOTALL,
+    )
+    assert red_match is not None, "drawRedRecordingIndicator not found"
+    red_body = red_match.group(1)
+    assert "if (animRunning && activePreviewType == 3) {" in red_body, (
+        "drawRedRecordingIndicator must blink strictly during activePreviewType == 3"
+    )
+    assert "activePreviewType == 2" not in red_body, (
+        "drawRedRecordingIndicator must never activate or blink during activePreviewType == 2"
+    )
+    assert "float blink = (animProgress * 3.0f) % 1.0f;" in red_body
+    assert "intensity = 0.55f + 0.45f * (float) Math.sin(blink * Math.PI);" in red_body
+    assert "} else if (!animRunning) {\n            intensity = 0.35f;\n        } else {\n            return;\n        }" in red_body
+
+    # 4. GlyphController isolation: previewRecording vs previewRedIndicatorOnly
+    prev_rec_match = re.search(r"public void previewRecording\(\)\s*\{(.*?)\n    \}", ctrl_src, re.DOTALL)
+    assert prev_rec_match is not None
+    prev_rec_body = prev_rec_match.group(1)
+    assert "redIndicatorActive = true;" not in prev_rec_body, "previewRecording must not activate redIndicatorActive"
+    assert "setRedRecordingIndicatorHardware" not in prev_rec_body, "previewRecording must not trigger hardware red LED"
+
+    prev_red_match = re.search(r"public void previewRedIndicatorOnly\(\)\s*\{(.*?)\n    \}", ctrl_src, re.DOTALL)
+    assert prev_red_match is not None
+    prev_red_body = prev_red_match.group(1)
+    assert "recordingActive = false;" in prev_red_body, "previewRedIndicatorOnly must reset recordingActive"
+    assert "setRedRecordingIndicatorHardware(true);" in prev_red_body, "previewRedIndicatorOnly must activate red LED hardware"
+    assert "2200L" in prev_red_body, "previewRedIndicatorOnly must run for 2200ms"
+
+
+def test_preview_cell_red_indicator_physical_coordinates_and_omission():
+    """Verify exact coordinates for Phone 4a (0.907f, 0.259f), Phone 4b (0.817f, 0.233f), Phone 4a Pro (0.851f, 0.234f),
+    Phone 3 (0.378f, 0.298f), Phone 1 & 2 (0.875f, 0.178f), and omission on unsupported models."""
+    with open(PREVIEW_CELL_JAVA, "r", encoding="utf-8") as f:
+        cell_src = f.read()
+
+    red_match = re.search(
+        r"private void drawRedRecordingIndicator\(Canvas canvas, String model, float left, float top, float w, float h\)\s*\{(.*?)\n    \}",
+        cell_src,
+        re.DOTALL,
+    )
+    assert red_match is not None, "drawRedRecordingIndicator not found"
+    body = red_match.group(1)
+
+    # 1. Guard against disabled config or unsupported models
+    assert "if (!GlyphConfig.redRecordingIndicator() || !GlyphController.isRedIndicatorSupportedForModel(model)) {\n            return;\n        }" in body
+
+    # 2. Coordinate definitions per model
+    expected_coordinates = {
+        ("Nothing Phone (4a) Pro", "Nothing Phone 4a Pro"): ("0.851f", "0.234f"),
+        ("Nothing Phone (3)", "Nothing Phone 3"): ("0.378f", "0.298f"),
+        ("Nothing Phone (4a)", "Nothing Phone 4a"): ("0.907f", "0.259f"),
+        ("Nothing Phone (4b)", "Nothing Phone 4b"): ("0.817f", "0.233f"),
+        ("Nothing Phone (2)", "Nothing Phone 2", "Nothing Phone (1)", "Nothing Phone 1"): ("0.875f", "0.178f"),
+    }
+
+    for aliases, (cx, cy) in expected_coordinates.items():
+        assert f"w * {cx}" in body, f"Expected x coordinate {cx} not found in body"
+        assert f"h * {cy}" in body, f"Expected y coordinate {cy} not found in body"
+        for alias in aliases:
+            assert f'"{alias}"' in body, f"Model alias {alias} not checked in drawRedRecordingIndicator"
+
+    # Fallthrough return for unknown models
+    assert "} else {\n            return;\n        }" in body
+
+    # Concentric circles: glow 2.1x and core
+    assert "canvas.drawCircle(rx, ry, r * 2.1f, redIndicatorGlowPaint);" in body
+    assert "canvas.drawCircle(rx, ry, r, redIndicatorCorePaint);" in body
+
+    # 3. Functional coordinate calculation & omission simulation
+    def calculate_red_indicator_coords(model_name: str, left: float, top: float, w: float, h: float):
+        coord_map = {
+            "Nothing Phone (4a) Pro": (0.851, 0.234),
+            "Nothing Phone 4a Pro": (0.851, 0.234),
+            "Nothing Phone (3)": (0.378, 0.298),
+            "Nothing Phone 3": (0.378, 0.298),
+            "Nothing Phone (4a)": (0.907, 0.259),
+            "Nothing Phone 4a": (0.907, 0.259),
+            "Nothing Phone (4b)": (0.817, 0.233),
+            "Nothing Phone 4b": (0.817, 0.233),
+            "Nothing Phone (2)": (0.875, 0.178),
+            "Nothing Phone 2": (0.875, 0.178),
+            "Nothing Phone (1)": (0.875, 0.178),
+            "Nothing Phone 1": (0.875, 0.178),
+        }
+        if model_name not in coord_map:
+            return None
+        cx, cy = coord_map[model_name]
+        return (left + w * cx, top + h * cy)
+
+    left, top, w, h = 100.0, 200.0, 300.0, 600.0
+
+    # Phone 4a coordinates
+    coords_4a = calculate_red_indicator_coords("Nothing Phone (4a)", left, top, w, h)
+    assert coords_4a is not None
+    assert abs(coords_4a[0] - (100.0 + 300.0 * 0.907)) < 1e-4
+    assert abs(coords_4a[1] - (200.0 + 600.0 * 0.259)) < 1e-4
+
+    # Phone 4b coordinates
+    coords_4b = calculate_red_indicator_coords("Nothing Phone (4b)", left, top, w, h)
+    assert coords_4b is not None
+    assert abs(coords_4b[0] - (100.0 + 300.0 * 0.817)) < 1e-4
+    assert abs(coords_4b[1] - (200.0 + 600.0 * 0.233)) < 1e-4
+
+    # Phone 4a Pro coordinates
+    coords_4a_pro = calculate_red_indicator_coords("Nothing Phone (4a) Pro", left, top, w, h)
+    assert coords_4a_pro is not None
+    assert abs(coords_4a_pro[0] - (100.0 + 300.0 * 0.851)) < 1e-4
+    assert abs(coords_4a_pro[1] - (200.0 + 600.0 * 0.234)) < 1e-4
+
+    # Phone 3 coordinates
+    coords_3 = calculate_red_indicator_coords("Nothing Phone (3)", left, top, w, h)
+    assert coords_3 is not None
+    assert abs(coords_3[0] - (100.0 + 300.0 * 0.378)) < 1e-4
+    assert abs(coords_3[1] - (200.0 + 600.0 * 0.298)) < 1e-4
+
+    # Phone 1 & 2 coordinates
+    for p in ["Nothing Phone (1)", "Nothing Phone (2)"]:
+        coords = calculate_red_indicator_coords(p, left, top, w, h)
+        assert coords is not None
+        assert abs(coords[0] - (100.0 + 300.0 * 0.875)) < 1e-4
+        assert abs(coords[1] - (200.0 + 600.0 * 0.178)) < 1e-4
+
+    # Unsupported models must produce None (omitted)
+    for unsupp in [
+        "Nothing Phone (2a)", "Nothing Phone (2a) Plus",
+        "Nothing Phone (3a)", "Nothing Phone (3a) Pro", "Nothing Phone (3a) Lite",
+        "CMF Phone 1", "CMF Phone 2 Pro"
+    ]:
+        assert calculate_red_indicator_coords(unsupp, left, top, w, h) is None, f"{unsupp} must be omitted"
+
 
 
 

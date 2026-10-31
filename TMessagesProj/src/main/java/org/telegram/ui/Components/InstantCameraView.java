@@ -70,6 +70,7 @@ import androidx.core.graphics.ColorUtils;
 
 import androidx.media3.exoplayer.ExoPlayer;
 
+import app.exteraless.glyph.GlyphController;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.AutoDeleteMediaTask;
@@ -692,6 +693,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
     }
 
     public void destroy(boolean async) {
+        GlyphController.getInstance().onVideoRecordingStopped();
         AndroidUtilities.runOnUIThread(zoomSlider::unbindSession);
         if (useCameraX) {
             releaseCameraXSession();
@@ -773,6 +775,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
 
     public void togglePause() {
         if (recording) {
+            GlyphController.getInstance().onVideoRecordingStopped();
             cancelled = recordedTime < 800;
             recording = false;
             updateFlash();
@@ -862,6 +865,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         key = null;
         iv = null;
         needDrawFlickerStub = true;
+        GlyphController.getInstance().onVideoRecordingStarted();
 
         if (!initCamera()) {
             return;
@@ -1113,6 +1117,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         }
         if (state == 4) {
             if (videoEncoder != null && recordedTime > 800) {
+                GlyphController.getInstance().onVideoRecordingStopped();
                 videoEncoder.stopRecording(VideoRecorder.ENCODER_SEND_SEND, new SendOptions(notify, scheduleDate, scheduleRepeatPeriod, ttl, effectId, stars));
                 return;
             }
@@ -1158,6 +1163,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
             }
             MediaController.getInstance().requestRecordAudioFocus(false);
         } else {
+            GlyphController.getInstance().onVideoRecordingStopped();
             cancelled = recordedTime < 800;
             recording = false;
             flashing = false;
@@ -1217,6 +1223,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         if (textureView == null) {
             return;
         }
+        GlyphController.getInstance().onVideoRecordingStopped();
         cancelled = true;
         recording = false;
         flashing = false;
@@ -1261,6 +1268,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
             flashOptions.dismiss();
             flashOptions = null;
         }
+        GlyphController.getInstance().onVideoRecordingStopped();
         destroy(async);
         cameraContainer.setTranslationX(0);
         textureOverlayView.setTranslationX(0);
@@ -3595,6 +3603,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                     updateFlash();
                     invalidate();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.recordStarted, recordingGuid, false);
+                    GlyphController.getInstance().onVideoRecordingStarted();
                 });
             } catch (Exception ioe) {
                 throw new RuntimeException(ioe);

@@ -246,7 +246,7 @@ public class GlyphDevicePreviewCell extends View {
             return 0.25f;
         }
         if (activePreviewType == 3) {
-            return 0.0f;
+            return 0.25f;
         }
         float p = animProgress;
         if (activePreviewType == 0) {
@@ -459,7 +459,7 @@ public class GlyphDevicePreviewCell extends View {
             return;
         }
         float intensity;
-        if (animRunning && (activePreviewType == 2 || activePreviewType == 3)) {
+        if (animRunning && activePreviewType == 3) {
             float blink = (animProgress * 3.0f) % 1.0f;
             intensity = 0.55f + 0.45f * (float) Math.sin(blink * Math.PI);
         } else if (!animRunning) {
@@ -469,23 +469,24 @@ public class GlyphDevicePreviewCell extends View {
         }
         float rx;
         float ry;
-        if ("Nothing Phone (4a) Pro".equals(model)) {
+        if ("Nothing Phone (4a) Pro".equals(model) || "Nothing Phone 4a Pro".equals(model)) {
             // Красный квадратный светодиод под круглым окном Glyph Matrix справа (cx=0.851, cy=0.234)
             rx = left + w * 0.851f;
             ry = top + h * 0.234f;
-        } else if ("Nothing Phone (3)".equals(model)) {
+        } else if ("Nothing Phone (3)".equals(model) || "Nothing Phone 3".equals(model)) {
             // Красный квадратный светодиод под двумя нижними камерами (cx=0.378, cy=0.298)
             rx = left + w * 0.378f;
             ry = top + h * 0.298f;
-        } else if ("Nothing Phone (4a)".equals(model)) {
+        } else if ("Nothing Phone (4a)".equals(model) || "Nothing Phone 4a".equals(model)) {
             // Красный квадратный светодиод внизу вертикального Glyph Bar (cx=0.907, cy=0.259)
             rx = left + w * 0.907f;
             ry = top + h * 0.259f;
-        } else if ("Nothing Phone (4b)".equals(model)) {
+        } else if ("Nothing Phone (4b)".equals(model) || "Nothing Phone 4b".equals(model)) {
             // Красный квадратный светодиод внизу вертикального Glyph Bar (cx=0.817, cy=0.233)
             rx = left + w * 0.817f;
             ry = top + h * 0.233f;
-        } else if ("Nothing Phone (2)".equals(model) || "Nothing Phone (1)".equals(model)) {
+        } else if ("Nothing Phone (2)".equals(model) || "Nothing Phone 2".equals(model)
+                || "Nothing Phone (1)".equals(model) || "Nothing Phone 1".equals(model)) {
             // Круглый красный светодиод справа от верхнего блока камер (cx=0.875, cy=0.178)
             rx = left + w * 0.875f;
             ry = top + h * 0.178f;

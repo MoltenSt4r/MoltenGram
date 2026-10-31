@@ -13,6 +13,12 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.SystemClock;
+import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CaptureRequest;
+
+import androidx.annotation.OptIn;
+import androidx.camera.camera2.interop.Camera2Interop;
+import androidx.camera.camera2.interop.ExperimentalCamera2Interop;
 
 import com.nothing.ketchum.Common;
 import com.nothing.ketchum.Glyph;
@@ -562,12 +568,21 @@ public final class GlyphController {
         if (modelName == null) {
             return false;
         }
-        return "Nothing Phone (1)".equals(modelName)
+        if ("Nothing Phone (1)".equals(modelName)
                 || "Nothing Phone (2)".equals(modelName)
                 || "Nothing Phone (3)".equals(modelName)
                 || "Nothing Phone (4a) Pro".equals(modelName)
                 || "Nothing Phone (4a)".equals(modelName)
-                || "Nothing Phone (4b)".equals(modelName);
+                || "Nothing Phone (4b)".equals(modelName)) {
+            return true;
+        }
+        String normalized = modelName.trim().replace("(", "").replace(")", "").replaceAll("\\s+", " ");
+        return "Nothing Phone 1".equalsIgnoreCase(normalized)
+                || "Nothing Phone 2".equalsIgnoreCase(normalized)
+                || "Nothing Phone 3".equalsIgnoreCase(normalized)
+                || "Nothing Phone 4a Pro".equalsIgnoreCase(normalized)
+                || "Nothing Phone 4a".equalsIgnoreCase(normalized)
+                || "Nothing Phone 4b".equalsIgnoreCase(normalized);
     }
 
     private static final String[] RED_LED_SYSFS_PATHS = new String[]{
@@ -679,6 +694,58 @@ public final class GlyphController {
                             } catch (Throwable ignored3) {
                                 try {
                                     builder.set((android.hardware.camera2.CaptureRequest.Key<int[]>) key, new int[]{iVal});
+                                } catch (Throwable ignored4) {}
+                            }
+                        }
+                    }
+                }
+            }
+        } catch (Throwable ignored) {}
+    }
+
+    /**
+     * Применяет vendor-теги Nothing OS Camera2 через CameraX Camera2Interop.Extender
+     * для включения/выключения красного светодиода записи (Rec. Light) во время видеозаписи кружка.
+     */
+    @OptIn(markerClass = androidx.camera.camera2.interop.ExperimentalCamera2Interop.class)
+    @SuppressWarnings("unchecked")
+    public static void applyNothingCameraRedIndicator(
+            CameraCharacteristics characteristics,
+            Camera2Interop.Extender<?> extender,
+            boolean recordingVideo) {
+        if (characteristics == null || extender == null) {
+            return;
+        }
+        boolean enableRedLight = recordingVideo
+                && GlyphConfig.enabled()
+                && GlyphConfig.redRecordingIndicator()
+                && isRedIndicatorSupported();
+        try {
+            List<CaptureRequest.Key<?>> keys = characteristics.getAvailableCaptureRequestKeys();
+            if (keys == null) {
+                return;
+            }
+            for (CaptureRequest.Key<?> key : keys) {
+                if (key == null) continue;
+                String name = key.getName();
+                if (name == null) continue;
+                String lower = name.toLowerCase();
+                if (lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
+                        || lower.contains("recording_led") || lower.contains("record_led")
+                        || (lower.contains("nothing") && lower.contains("led"))) {
+                    byte bVal = (byte) (enableRedLight ? 1 : 0);
+                    int iVal = enableRedLight ? 1 : 0;
+                    try {
+                        extender.setCaptureRequestOption((CaptureRequest.Key<Byte>) key, bVal);
+                    } catch (Throwable ignored) {
+                        try {
+                            extender.setCaptureRequestOption((CaptureRequest.Key<Integer>) key, iVal);
+                        } catch (Throwable ignored2) {
+                            try {
+                                extender.setCaptureRequestOption((CaptureRequest.Key<byte[]>) key, new byte[]{bVal});
+                            } catch (Throwable ignored3) {
+                                try {
+                                    extender.setCaptureRequestOption((CaptureRequest.Key<int[]>) key, new int[]{iVal});
                                 } catch (Throwable ignored4) {}
                             }
                         }
@@ -806,17 +873,9 @@ public final class GlyphController {
             }
             callActive = false;
             recordingActive = true;
-            if (GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported()) {
-                redIndicatorActive = true;
-                setRedRecordingIndicatorHardware(true);
-            }
             updateGlyphActivity();
             handler.postDelayed(() -> {
                 recordingActive = false;
-                if (redIndicatorActive) {
-                    redIndicatorActive = false;
-                    setRedRecordingIndicatorHardware(false);
-                }
                 updateGlyphActivity();
             }, 2600L);
         });
@@ -831,6 +890,8 @@ public final class GlyphController {
             callActive = false;
             recordingActive = false;
             videoRecordingActive = false;
+            previewPending = false;
+            pendingPreviewType = -1;
             updateGlyphActivity();
             if (GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported()) {
                 redIndicatorActive = true;

@@ -7,6 +7,9 @@ import android.content.Context;
 import android.view.View;
 import android.view.ViewGroup;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -85,7 +88,12 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             }
             glyphRecordingRow = addRow(GlyphConfig.onRecording.getKey());
             glyphVideoRecordingRow = addRow(GlyphConfig.onVideoRecording.getKey());
-            glyphRedIndicatorRow = addRow(GlyphConfig.redRecordingIndicator.getKey());
+            String currentModel = selectedDeviceModel != null ? selectedDeviceModel : NothingPhoneEasterEgg.getDeviceDisplayName();
+            if (GlyphController.isRedIndicatorSupportedForModel(currentModel)) {
+                glyphRedIndicatorRow = addRow(GlyphConfig.redRecordingIndicator.getKey());
+            } else {
+                glyphRedIndicatorRow = -1;
+            }
             if (GlyphConfig.onRecording() || GlyphConfig.onVideoRecording()) {
                 glyphRecordingAnimRow = addRow(GlyphConfig.recordingAnimationStyle.getKey(), "glyphRecordingAnim");
             } else {
@@ -244,13 +252,18 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
                 GlyphController.getInstance().previewRecording();
                 notifyPreviewCell(2);
             }
-        } else if (position == glyphRedIndicatorRow) {
+        } else if (position == glyphRedIndicatorRow && glyphRedIndicatorRow != -1) {
             boolean enabled = GlyphConfig.redRecordingIndicator.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
-            GlyphController.getInstance().previewRedIndicatorOnly();
-            notifyPreviewCell(3);
+            update();
+            if (enabled) {
+                GlyphController.getInstance().previewRedIndicatorOnly();
+                notifyPreviewCell(3);
+            } else {
+                GlyphController.getInstance().previewRedIndicatorOnly();
+            }
         } else if (position == glyphRecordingAnimRow) {
             CharSequence[] options = recordingAnimationOptions();
             showChoice(getString(R.string.OEGlyphRecordingAnim), options, which -> {
@@ -281,25 +294,41 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
             if (getParentActivity() == null) {
                 return;
             }
-            CharSequence[] previewItems = new CharSequence[]{
-                    getString(R.string.OEGlyphNewMessage),
-                    getString(R.string.OEGlyphCalls),
-                    getString(R.string.OEGlyphRecording),
-                    getString(R.string.OEGlyphRedIndicator)
-            };
+            String currentModel = selectedDeviceModel != null ? selectedDeviceModel : NothingPhoneEasterEgg.getDeviceDisplayName();
+            boolean redSupported = GlyphController.isRedIndicatorSupportedForModel(currentModel);
+
+            List<CharSequence> previewOptions = new ArrayList<>();
+            List<Integer> previewTypes = new ArrayList<>();
+
+            previewOptions.add(getString(R.string.OEGlyphNewMessage));
+            previewTypes.add(0);
+
+            previewOptions.add(getString(R.string.OEGlyphCalls));
+            previewTypes.add(1);
+
+            previewOptions.add(getString(R.string.OEGlyphRecording));
+            previewTypes.add(2);
+
+            if (redSupported) {
+                previewOptions.add(getString(R.string.OEGlyphRedIndicator));
+                previewTypes.add(3);
+            }
+
+            CharSequence[] previewItems = previewOptions.toArray(new CharSequence[0]);
             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
             builder.setTitle(getString(R.string.OEGlyphPreview));
             builder.setItems(previewItems, (dialog, which) -> {
-                if (which == 0) {
+                int type = previewTypes.get(which);
+                if (type == 0) {
                     GlyphController.getInstance().previewMessage();
-                } else if (which == 1) {
+                } else if (type == 1) {
                     GlyphController.getInstance().previewCall();
-                } else if (which == 2) {
+                } else if (type == 2) {
                     GlyphController.getInstance().previewRecording();
-                } else if (which == 3) {
+                } else if (type == 3) {
                     GlyphController.getInstance().previewRedIndicatorOnly();
                 }
-                notifyPreviewCell(which);
+                notifyPreviewCell(type);
             });
             builder.setNegativeButton(getString(R.string.Cancel), null);
             showDialog(builder.create());
@@ -343,9 +372,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
         builder.setTitle(getString(R.string.OEGlyphBurst));
         builder.setItems(NothingPhoneEasterEgg.ALL_MODELS, (dialog, which) -> {
             selectedDeviceModel = NothingPhoneEasterEgg.ALL_MODELS[which];
-            if (listAdapter != null) {
-                listAdapter.notifyDataSetChanged();
-            }
+            update();
             NothingPhoneEasterEgg.playBurstForModel(getParentActivity(), this, selectedDeviceModel);
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);

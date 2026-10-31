@@ -27,6 +27,7 @@ import org.telegram.ui.Components.Paint.Views.RoundView;
 
 import java.io.File;
 
+import app.exteraless.glyph.GlyphController;
 import tw.nekomimi.nekogram.NekoConfig;
 
 public class RoundVideoRecorder extends FrameLayout {
@@ -94,6 +95,7 @@ public class RoundVideoRecorder extends FrameLayout {
                     destroy(false);
                 }
             }, () -> {
+                GlyphController.getInstance().onVideoRecordingStarted();
                 cameraView.animate().scaleX(1f).scaleY(1f).setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT).setDuration(280).start();
                 recordingStarted = System.currentTimeMillis();
                 invalidate();
@@ -285,7 +287,7 @@ public class RoundVideoRecorder extends FrameLayout {
     private ValueAnimator destroyAnimator;
     private float destroyT;
     public void destroy(boolean instant) {
-        app.exteraless.glyph.GlyphController.getInstance().onVideoRecordingStopped();
+        GlyphController.getInstance().onVideoRecordingStopped();
         if (onDestroyCallback != null) {
             onDestroyCallback.run();
             onDestroyCallback = null;
