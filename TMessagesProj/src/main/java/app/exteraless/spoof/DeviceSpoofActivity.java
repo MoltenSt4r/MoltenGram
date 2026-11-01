@@ -22,7 +22,6 @@ import org.telegram.ui.ActionBar.ActionBarMenu;
 import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.HeaderCell;
 import org.telegram.ui.Cells.ShadowSectionCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
@@ -38,6 +37,7 @@ import java.util.Locale;
 
 import tw.nekomimi.nekogram.helpers.SettingsHelper;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
+import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
@@ -172,22 +172,24 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         infoRow = addRow("info");
     }
 
-    private void safeNotifyDataSetChanged() {
-        if (listView != null) {
-            listView.post(() -> {
-                updateRows();
-                if (listAdapter != null) {
-                    listAdapter.notifyDataSetChanged();
-                }
-            });
-        } else {
-            AndroidUtilities.runOnUIThread(() -> {
-                updateRows();
-                if (listAdapter != null) {
-                    listAdapter.notifyDataSetChanged();
-                }
-            });
+    @Override
+    public void onResume() {
+        super.onResume();
+        if (currentStatusRow != -1 && listAdapter != null && listView != null && !listView.isComputingLayout()) {
+            listAdapter.notifyItemChanged(currentStatusRow);
         }
+    }
+
+    private void safeNotifyDataSetChanged() {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (listView == null || listAdapter == null) return;
+            if (listView.isComputingLayout() || listView.isScrollInProgress()) {
+                listView.post(this::safeNotifyDataSetChanged);
+                return;
+            }
+            updateRows();
+            listAdapter.notifyDataSetChanged();
+        });
     }
 
     @Override
@@ -197,6 +199,9 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
             manager.setSpoofingEnabled(next);
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(next);
+            }
+            if (currentStatusRow != -1 && listAdapter != null && listView != null && !listView.isComputingLayout()) {
+                listAdapter.notifyItemChanged(currentStatusRow);
             }
             safeNotifyDataSetChanged();
             BulletinFactory.of(this).createSimpleBulletin(
@@ -278,6 +283,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         DeviceSpoofPreset current = manager.getActivePreset();
 
         CharSequence[] items = new CharSequence[]{
+                LocaleController.getString(R.string.Select),
                 LocaleController.getString(R.string.DeviceSpoofingAddCustom),
                 spoofing ? LocaleController.getString(R.string.Disable) : LocaleController.getString(R.string.DeviceSpoofingEnabled),
                 LocaleController.getString(R.string.Copy),
@@ -288,8 +294,10 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         builder.setTitle(LocaleController.getString(R.string.DeviceSpoofingCurrent));
         builder.setItems(items, (dialog, which) -> {
             if (which == 0) {
-                showEditPresetDialog(current != null && current.isCustom ? current : null);
+                showPresetChooserDialog();
             } else if (which == 1) {
+                showEditPresetDialog(current != null && current.isCustom ? current : null);
+            } else if (which == 2) {
                 boolean next = !manager.isSpoofingEnabled();
                 manager.setSpoofingEnabled(next);
                 safeNotifyDataSetChanged();
@@ -297,14 +305,37 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                         R.drawable.msg_devices_solar,
                         next ? LocaleController.getString(R.string.DeviceSpoofingEnabled) : LocaleController.getString(R.string.DeviceSpoofing)
                 ).show();
-            } else if (which == 2) {
+            } else if (which == 3) {
                 String text = manager.getDeviceModel() + " (" + manager.getSystemVersion() + ")";
                 AndroidUtilities.addToClipboard(text);
                 BulletinFactory.of(this).createCopyBulletin(LocaleController.getString(R.string.TextCopied)).show();
-            } else if (which == 3) {
+            } else if (which == 4) {
                 copySettingsDeepLink();
             }
         });
+        showDialog(builder.create());
+    }
+
+    private void showPresetChooserDialog() {
+        if (getParentActivity() == null) return;
+        List<DeviceSpoofPreset> all = manager.getAllPresets();
+        CharSequence[] names = new CharSequence[all.size()];
+        String currentId = manager.getSelectedPresetId();
+        int selectedIndex = 0;
+        for (int i = 0; i < all.size(); i++) {
+            DeviceSpoofPreset p = all.get(i);
+            names[i] = p.title + " (" + p.systemVersion + ")";
+            if (p.id.equals(currentId)) {
+                selectedIndex = i;
+            }
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(LocaleController.getString(R.string.DeviceSpoofing));
+        builder.setSingleChoiceItems(names, selectedIndex, (dialog, which) -> {
+            dialog.dismiss();
+            selectPreset(all.get(which));
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(builder.create());
     }
 

@@ -6608,12 +6608,8 @@ public class AndroidUtilities {
     public static void notifyDataSetChanged(RecyclerView listView) {
         if (listView == null) return;
         if (listView.getAdapter() == null) return;
-        if (listView.isComputingLayout()) {
-            listView.post(() -> {
-                if (listView.getAdapter() != null) {
-                    listView.getAdapter().notifyDataSetChanged();
-                }
-            });
+        if (listView.isComputingLayout() || listView.isScrollInProgress()) {
+            listView.post(() -> notifyDataSetChanged(listView));
         } else {
             listView.getAdapter().notifyDataSetChanged();
         }

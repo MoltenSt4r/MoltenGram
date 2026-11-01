@@ -32,7 +32,7 @@ public class DeviceSpoofManager {
 
     private static volatile DeviceSpoofManager instance;
 
-    private final SharedPreferences preferences;
+    private SharedPreferences preferences;
     private final List<DeviceSpoofPreset> builtInPresets = new ArrayList<>();
     private final List<DeviceSpoofPreset> customPresets = new ArrayList<>();
 
@@ -49,13 +49,20 @@ public class DeviceSpoofManager {
         return localInstance;
     }
 
-    private DeviceSpoofManager() {
+    private SharedPreferences getPreferences() {
+        if (preferences != null) {
+            return preferences;
+        }
         Context context = ApplicationLoader.applicationContext;
         if (context != null) {
             preferences = context.getSharedPreferences(PREFS_NAME, Context.MODE_PRIVATE);
-        } else {
-            preferences = null;
+            return preferences;
         }
+        return null;
+    }
+
+    private DeviceSpoofManager() {
+        getPreferences();
         initBuiltInPresets();
         loadCustomPresets();
     }
@@ -114,10 +121,11 @@ public class DeviceSpoofManager {
 
     private void loadCustomPresets() {
         customPresets.clear();
-        if (preferences == null) {
+        SharedPreferences prefs = getPreferences();
+        if (prefs == null) {
             return;
         }
-        String jsonStr = preferences.getString(KEY_CUSTOM_PRESETS, null);
+        String jsonStr = prefs.getString(KEY_CUSTOM_PRESETS, null);
         if (TextUtils.isEmpty(jsonStr)) {
             return;
         }
@@ -134,40 +142,45 @@ public class DeviceSpoofManager {
     }
 
     private void saveCustomPresets() {
-        if (preferences == null) {
+        SharedPreferences prefs = getPreferences();
+        if (prefs == null) {
             return;
         }
         JSONArray array = new JSONArray();
         for (DeviceSpoofPreset preset : customPresets) {
             array.put(preset.toJson());
         }
-        preferences.edit().putString(KEY_CUSTOM_PRESETS, array.toString()).apply();
+        prefs.edit().putString(KEY_CUSTOM_PRESETS, array.toString()).apply();
     }
 
     public boolean isSpoofingEnabled() {
-        if (preferences == null) {
+        SharedPreferences prefs = getPreferences();
+        if (prefs == null) {
             return false;
         }
-        return preferences.getBoolean(KEY_ENABLED, false);
+        return prefs.getBoolean(KEY_ENABLED, false);
     }
 
     public void setSpoofingEnabled(boolean enabled) {
-        if (preferences != null) {
-            preferences.edit().putBoolean(KEY_ENABLED, enabled).apply();
+        SharedPreferences prefs = getPreferences();
+        if (prefs != null) {
+            prefs.edit().putBoolean(KEY_ENABLED, enabled).apply();
         }
         applyToAllConnections();
     }
 
     public String getSelectedPresetId() {
-        if (preferences == null) {
+        SharedPreferences prefs = getPreferences();
+        if (prefs == null) {
             return PRESET_MOLTENSTAR;
         }
-        return preferences.getString(KEY_SELECTED_ID, PRESET_MOLTENSTAR);
+        return prefs.getString(KEY_SELECTED_ID, PRESET_MOLTENSTAR);
     }
 
     public void setSelectedPresetId(String id) {
-        if (preferences != null) {
-            preferences.edit().putString(KEY_SELECTED_ID, id).apply();
+        SharedPreferences prefs = getPreferences();
+        if (prefs != null) {
+            prefs.edit().putString(KEY_SELECTED_ID, id).apply();
         }
         applyToAllConnections();
     }
@@ -192,10 +205,16 @@ public class DeviceSpoofManager {
     }
 
     public List<DeviceSpoofPreset> getBuiltInPresets() {
+        if (builtInPresets.isEmpty()) {
+            initBuiltInPresets();
+        }
         return Collections.unmodifiableList(builtInPresets);
     }
 
     public List<DeviceSpoofPreset> getCustomPresets() {
+        if (customPresets.isEmpty()) {
+            loadCustomPresets();
+        }
         return Collections.unmodifiableList(customPresets);
     }
 

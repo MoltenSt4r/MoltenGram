@@ -746,6 +746,7 @@ public class SettingsHelper {
         exteralessFragments.add(new TextAnimationSettingsActivity());
         exteralessFragments.add(new OpenExteraGlyphActivity());
         exteralessFragments.add(new app.exteraless.appearance.Md3AvatarShapesActivity());
+        exteralessFragments.add(new app.exteraless.spoof.DeviceSpoofActivity());
 
         String e_title = getString(R.string.OpenExtera);
         for (BaseNekoSettingsActivity fragment : exteralessFragments) {
