@@ -187,6 +187,10 @@ public class DeviceSpoofManager {
         return !builtInPresets.isEmpty() ? builtInPresets.get(0) : null;
     }
 
+    public DeviceSpoofPreset getCurrentPreset() {
+        return getActivePreset();
+    }
+
     public List<DeviceSpoofPreset> getBuiltInPresets() {
         return Collections.unmodifiableList(builtInPresets);
     }

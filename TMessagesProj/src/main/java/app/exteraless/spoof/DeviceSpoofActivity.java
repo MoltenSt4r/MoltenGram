@@ -275,7 +275,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         Context context = getParentActivity();
 
         boolean spoofing = manager.isSpoofingEnabled();
-        DeviceSpoofPreset current = manager.getCurrentPreset();
+        DeviceSpoofPreset current = manager.getActivePreset();
 
         CharSequence[] items = new CharSequence[]{
                 LocaleController.getString(R.string.DeviceSpoofingAddCustom),
