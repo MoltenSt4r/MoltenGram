@@ -288,3 +288,31 @@ def test_voip_typography_and_top_icons_themed():
         "VoIPTimerView must use Theme.key_windowBackgroundWhiteBlackText"
     )
 
+
+def test_voip_dock_capsule_and_labels_removed():
+    """Verify VoIP dock capsule frame is disabled by default and button labels are hidden."""
+    buttons_path = os.path.join(VOIP_DIR, "VoIPButtonsLayout.java")
+    switch_path = os.path.join(VOIP_DIR, "VoIpSwitchLayout.java")
+    toggle_path = os.path.join(VOIP_DIR, "VoIPToggleButton.java")
+
+    with open(buttons_path, "r", encoding="utf-8") as f:
+        buttons_content = f.read()
+    with open(switch_path, "r", encoding="utf-8") as f:
+        switch_content = f.read()
+    with open(toggle_path, "r", encoding="utf-8") as f:
+        toggle_content = f.read()
+
+    # Capsule frame must be disabled by default
+    assert "drawPillDock = false;" in buttons_content, (
+        "VoIPButtonsLayout must have drawPillDock = false by default"
+    )
+
+    # Button labels must be hidden by default
+    assert "showText = false;" in switch_content, (
+        "VoIpSwitchLayout must hide labels by default"
+    )
+    assert "showText = false;" in toggle_content, (
+        "VoIPToggleButton must hide labels by default"
+    )
+
+

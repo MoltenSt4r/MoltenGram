@@ -45,7 +45,16 @@ public class VoIpSwitchLayout extends FrameLayout {
     private Type type;
     private final TextView currentTextView;
     private final TextView newTextView;
+    private boolean showText = false;
     public int animationDelay;
+
+    public void setShowText(boolean showText) {
+        this.showText = showText;
+        if (!showText) {
+            if (currentTextView != null) currentTextView.setVisibility(GONE);
+            if (newTextView != null) newTextView.setVisibility(GONE);
+        }
+    }
 
     public void setOnBtnClickedListener(VoIpButtonView.OnBtnClickedListener onBtnClickedListener) {
         voIpButtonView.setOnBtnClickedListener(onBtnClickedListener);
@@ -113,6 +122,12 @@ public class VoIpSwitchLayout extends FrameLayout {
                 newText = "";
         }
         setContentDescription(newText);
+
+        if (!showText) {
+            currentTextView.setVisibility(GONE);
+            newTextView.setVisibility(GONE);
+            return;
+        }
 
         if (currentTextView.getVisibility() == GONE && newTextView.getVisibility() == GONE) {
             currentTextView.setVisibility(VISIBLE);

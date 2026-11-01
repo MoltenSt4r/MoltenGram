@@ -501,7 +501,7 @@ public class VoIPFragment implements
 
     private void setInsets(WindowInsets windowInsets) {
         lastInsets = windowInsets;
-        ((FrameLayout.LayoutParams) buttonsLayout.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom();
+        ((FrameLayout.LayoutParams) buttonsLayout.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom() + AndroidUtilities.dp(20);
         ((FrameLayout.LayoutParams) acceptDeclineView.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom();
         ((FrameLayout.LayoutParams) backIcon.getLayoutParams()).topMargin = lastInsets.getSystemWindowInsetTop();
         ((FrameLayout.LayoutParams) addIcon.getLayoutParams()).topMargin = lastInsets.getSystemWindowInsetTop();
@@ -1159,7 +1159,7 @@ public class VoIPFragment implements
         acceptDeclineView.setScaleX(1.15f);
         acceptDeclineView.setScaleY(1.15f);
 
-        frameLayout.addView(buttonsLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
+        frameLayout.addView(buttonsLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, 0, 20));
         int horizontalMargin = isTablet() ? 100 : 27;
         frameLayout.addView(acceptDeclineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 186, Gravity.BOTTOM, horizontalMargin, 0, horizontalMargin, 0));
 

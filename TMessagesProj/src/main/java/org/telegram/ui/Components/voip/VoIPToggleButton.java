@@ -94,6 +94,7 @@ public class VoIPToggleButton extends FrameLayout {
         setWillNotDraw(false);
 
         textLayoutContainer = new FrameLayout(context);
+        textLayoutContainer.setVisibility(View.GONE);
         addView(textLayoutContainer);
 
         for (int i = 0; i < 2; i++) {
@@ -103,6 +104,7 @@ public class VoIPToggleButton extends FrameLayout {
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             textView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             textView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
+            textView.setVisibility(View.GONE);
             textLayoutContainer.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, diameter + 6, 0, 0));
             this.textView[i] = textView;
         }
@@ -344,7 +346,11 @@ public class VoIPToggleButton extends FrameLayout {
                 textView[0].setText(text);
             } else {
                 textView[1].setText(text);
-                textView[1].setVisibility(View.VISIBLE);
+                if (showText) {
+                    textView[1].setVisibility(View.VISIBLE);
+                } else {
+                    textView[1].setVisibility(View.GONE);
+                }
                 textView[1].setAlpha(0);
                 textView[1].setScaleX(0);
                 textView[1].setScaleY(0);
@@ -514,7 +520,17 @@ public class VoIPToggleButton extends FrameLayout {
         AndroidUtilities.shakeView(textView[1]);
     }
 
+    private boolean showText = false;
+
     public void showText(boolean show, boolean animated) {
+        this.showText = show;
+        if (!show) {
+            textLayoutContainer.animate().cancel();
+            textLayoutContainer.setVisibility(View.GONE);
+            textLayoutContainer.setAlpha(0f);
+            return;
+        }
+        textLayoutContainer.setVisibility(View.VISIBLE);
         if (animated) {
             float a = show ? 1f : 0;
             if (textLayoutContainer.getAlpha() != a) {

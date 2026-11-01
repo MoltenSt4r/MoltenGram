@@ -20,7 +20,7 @@ public class VoIPButtonsLayout extends FrameLayout {
     private final Paint containerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint containerStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float containerRadius;
-    private boolean drawPillDock = true;
+    private boolean drawPillDock = false;
 
     public VoIPButtonsLayout(@NonNull Context context) {
         super(context);
@@ -84,7 +84,7 @@ public class VoIPButtonsLayout extends FrameLayout {
             }
         }
 
-        int h = Math.max(maxChildHeigth, AndroidUtilities.dp(84));
+        int h = Math.max(maxChildHeigth, AndroidUtilities.dp(58));
         setMeasuredDimension(width, h);
     }
 
