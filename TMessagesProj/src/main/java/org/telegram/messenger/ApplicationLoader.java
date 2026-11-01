@@ -64,7 +64,6 @@ import java.util.concurrent.CountDownLatch;
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import androidx.camera.camera2.Camera2Config;
 import androidx.camera.core.CameraXConfig;
@@ -309,7 +308,6 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
         app.exteraless.appearance.ChipFoldersController.getInstance().init();
         app.exteraless.chats.TextAnimationController.getInstance().init();
         SharedPrefsHelper.init(applicationContext);
-        FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(AndroidUtil.shouldEnableCrashlytics());
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) { //TODO improve account
             UserConfig.getInstance(a).loadConfig();
             MessagesController.getInstance(a);

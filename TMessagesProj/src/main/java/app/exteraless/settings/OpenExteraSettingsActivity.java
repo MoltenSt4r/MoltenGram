@@ -258,9 +258,9 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         boolean spoofing = app.exteraless.spoof.DeviceSpoofManager.getInstance().isSpoofingEnabled();
                         String val = spoofing ? app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel() : null;
                         if (val != null) {
-                            cell.setTextAndValueAndIcon(getString(R.string.DeviceSpoofing), val, R.drawable.msg_devices, true);
+                            cell.setTextAndValueAndIcon(getString(R.string.DeviceSpoofing), val, R.drawable.msg_devices_solar, true);
                         } else {
-                            cell.setTextAndIcon(getString(R.string.DeviceSpoofing), R.drawable.msg_devices, true);
+                            cell.setTextAndIcon(getString(R.string.DeviceSpoofing), R.drawable.msg_devices_solar, true);
                         }
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);

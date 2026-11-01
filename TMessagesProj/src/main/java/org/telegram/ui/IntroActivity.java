@@ -177,7 +177,7 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
         themeFrameLayout.addView(themeIconView, LayoutHelper.createFrame(28, 28, Gravity.CENTER));
 
         deviceIconView = new ImageView(context);
-        deviceIconView.setImageResource(R.drawable.msg_devices);
+        deviceIconView.setImageResource(R.drawable.msg_devices_solar);
         FrameLayout deviceFrameLayout = new FrameLayout(context);
         deviceFrameLayout.addView(deviceIconView, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
         deviceFrameLayout.setContentDescription(LocaleController.getString(R.string.DeviceSpoofing));

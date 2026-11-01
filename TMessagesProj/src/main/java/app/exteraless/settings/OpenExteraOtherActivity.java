@@ -43,7 +43,6 @@ import java.util.UUID;
 import app.exteraless.backup.EtgBackup;
 import app.exteraless.backup.EtgBackupUi;
 import app.exteraless.general.GeneralConfig;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
 
 import app.exteraless.general.GeneralHelper;
 import tw.nekomimi.nekogram.NekoConfig;

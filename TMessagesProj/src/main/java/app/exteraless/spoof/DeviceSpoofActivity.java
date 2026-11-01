@@ -153,7 +153,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                 listAdapter.notifyDataSetChanged();
             }
             BulletinFactory.of(this).createSimpleBulletin(
-                    R.drawable.msg_devices,
+                    R.drawable.msg_devices_solar,
                     next ? LocaleController.getString(R.string.DeviceSpoofingEnabled) : LocaleController.getString(R.string.DeviceSpoofing)
             ).show();
             return;
@@ -203,7 +203,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
             listAdapter.notifyDataSetChanged();
         }
         BulletinFactory.of(this).createSimpleBulletin(
-                R.drawable.msg_devices,
+                R.drawable.msg_devices_solar,
                 preset.getFormattedDeviceModel()
         ).show();
     }
@@ -212,7 +212,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         if (preset == null || getParentActivity() == null) return;
 
         CharSequence[] items = new CharSequence[]{
-                LocaleController.getString(R.string.ApplyLocalization),
+                LocaleController.getString(R.string.Select),
                 LocaleController.getString(R.string.Edit),
                 LocaleController.getString(R.string.DeviceSpoofingDelete)
         };
