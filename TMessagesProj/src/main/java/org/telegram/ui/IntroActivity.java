@@ -47,6 +47,7 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.view.WindowManager;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -114,6 +115,7 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
     private FrameLayout frameContainerView;
 
     private RLottieDrawable darkThemeDrawable;
+    private ImageView deviceIconView;
 
     private int lastPage = 0;
     private boolean justCreated = false;
@@ -174,6 +176,13 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
         FrameLayout themeFrameLayout = new FrameLayout(context);
         themeFrameLayout.addView(themeIconView, LayoutHelper.createFrame(28, 28, Gravity.CENTER));
 
+        deviceIconView = new ImageView(context);
+        deviceIconView.setImageResource(R.drawable.msg_devices);
+        FrameLayout deviceFrameLayout = new FrameLayout(context);
+        deviceFrameLayout.addView(deviceIconView, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
+        deviceFrameLayout.setContentDescription(LocaleController.getString(R.string.DeviceSpoofing));
+        deviceFrameLayout.setOnClickListener(v -> presentFragment(new app.exteraless.spoof.DeviceSpoofActivity()));
+
         int themeMargin = 4;
         frameContainerView = new FrameLayout(context) {
 
@@ -203,6 +212,12 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
                 if (marginLayoutParams.topMargin != newTopMargin) {
                     marginLayoutParams.topMargin = newTopMargin;
                     themeFrameLayout.requestLayout();
+                }
+
+                MarginLayoutParams deviceMarginLayoutParams = (MarginLayoutParams) deviceFrameLayout.getLayoutParams();
+                if (deviceMarginLayoutParams.topMargin != newTopMargin) {
+                    deviceMarginLayoutParams.topMargin = newTopMargin;
+                    deviceFrameLayout.requestLayout();
                 }
             }
         };
@@ -418,6 +433,7 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
         });
 
         frameContainerView.addView(themeFrameLayout, LayoutHelper.createFrame(64, 64, Gravity.TOP | Gravity.RIGHT, 0, themeMargin, themeMargin, 0));
+        frameContainerView.addView(deviceFrameLayout, LayoutHelper.createFrame(64, 64, Gravity.TOP | Gravity.RIGHT, 0, themeMargin, 60 + themeMargin, 0));
 
         fragmentView = scrollView;
 
@@ -1012,6 +1028,9 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
         startMessagingButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_buttonText));
         startMessagingButton.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(24), Color.TRANSPARENT, Theme.getColor(Theme.key_featuredStickers_addButtonPressed)));
         darkThemeDrawable.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+        if (deviceIconView != null) {
+            deviceIconView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN));
+        }
         bottomPages.invalidate();
         if (fromTheme) {
             if (eglThread != null) {

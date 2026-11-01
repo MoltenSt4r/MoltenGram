@@ -164,5 +164,23 @@
     <string name="FoundMessages_few">Найдено %1$d сообщения</string>
     <string name="FoundMessages_many">Найдено %1$d сообщений</string>
     <string name="FoundMessages_other">Найдено %1$d сообщений</string>
+
+    <!-- Спуфинг устройства -->
+    <string name="DeviceSpoofing">Спуфинг устройства</string>
+    <string name="DeviceSpoofingDescription">Подмена модели устройства и версии ОС, отправляемых на серверы Telegram, без Root или Shizuku.</string>
+    <string name="DeviceSpoofingEnabled">Включить спуфинг устройства</string>
+    <string name="DeviceSpoofingCurrent">Текущие параметры</string>
+    <string name="DeviceSpoofingMoltenStarGroup">Флагман MoltenStar</string>
+    <string name="DeviceSpoofingNothingGroup">Линейка Nothing</string>
+    <string name="DeviceSpoofingPixelGroup">Линейка Google Pixel</string>
+    <string name="DeviceSpoofingCustomGroup">Пользовательские пресеты</string>
+    <string name="DeviceSpoofingAddCustom">Добавить свой пресет</string>
+    <string name="DeviceSpoofingCustomTitle">Название пресета</string>
+    <string name="DeviceSpoofingCustomManufacturer">Производитель</string>
+    <string name="DeviceSpoofingCustomModel">Модель</string>
+    <string name="DeviceSpoofingCustomSdk">Версия ОС / SDK (например, SDK 35)</string>
+    <string name="DeviceSpoofingNothingNotice">Локальные функции устройства (включая интерфейс Nothing Glyph и системные проверки) определяют реальное железо и продолжают работать штатно. На серверы Telegram отправляются выбранные параметры.</string>
+    <string name="DeviceSpoofingDelete">Удалить пресет</string>
+    <string name="DeviceSpoofingDeleteConfirm">Вы уверены, что хотите удалить этот пресет?</string>
 </resources>
 

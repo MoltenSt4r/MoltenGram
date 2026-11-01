@@ -246,7 +246,7 @@ public class ConnectionsManager extends BaseController {
         try {
             systemLangCode = LocaleController.getSystemLocaleStringIso639().toLowerCase();
             langCode = LocaleController.getLocaleStringIso639().toLowerCase();
-            deviceModel = Build.MANUFACTURER + " " + Build.MODEL;
+            deviceModel = app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel();
             //PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
             appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "12.10.6");
             /*if (BuildVars.DEBUG_PRIVATE_VERSION) {
@@ -254,7 +254,7 @@ public class ConnectionsManager extends BaseController {
             } else if (BuildVars.DEBUG_VERSION) {
                 appVersion += " beta";
             }*/
-            systemVersion = "SDK " + Build.VERSION.SDK_INT;
+            systemVersion = app.exteraless.spoof.DeviceSpoofManager.getInstance().getSystemVersion();
         } catch (Exception e) {
             systemLangCode = "en";
             langCode = "";
@@ -778,6 +778,40 @@ public class ConnectionsManager extends BaseController {
         pushConnectionEnabled = enablePushConnection;
         native_init(currentAccount, version, layer, apiId, deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, logPath, regId, cFingerprint, installer, packageId, timezoneOffset, userId, userPremium, enablePushConnection, ApplicationLoader.isNetworkOnline(), ApplicationLoader.getCurrentNetworkType(), SharedConfig.measureDevicePerformanceClass());
         checkConnection();
+    }
+
+    public void updateDeviceModel() {
+        String deviceModel = app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel();
+        String systemVersion = app.exteraless.spoof.DeviceSpoofManager.getInstance().getSystemVersion();
+        String appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "12.10.6");
+        String systemLangCode;
+        String langCode;
+        try {
+            systemLangCode = LocaleController.getSystemLocaleStringIso639().toLowerCase();
+            langCode = LocaleController.getLocaleStringIso639().toLowerCase();
+        } catch (Exception e) {
+            systemLangCode = "en";
+            langCode = "";
+        }
+        File config = ApplicationLoader.getFilesDirFixed();
+        if (currentAccount != 0) {
+            config = new File(config, "account" + currentAccount);
+            config.mkdirs();
+        }
+        String configPath = config.toString();
+        boolean enablePushConnection = isPushConnectionEnabled();
+        String pushString = getRegId();
+        String fingerprint = AndroidUtilities.getCertificateSHA256Fingerprint();
+        int timezoneOffset = (TimeZone.getDefault().getRawOffset() + TimeZone.getDefault().getDSTSavings()) / 1000;
+        boolean userPremium = false;
+        if (getUserConfig().getCurrentUser() != null) {
+            userPremium = getUserConfig().getCurrentUser().premium;
+        }
+        init(SharedConfig.buildVersion(), TLRPC.LAYER, NekoXConfig.currentAppId(), deviceModel, systemVersion, appVersion, langCode, systemLangCode, configPath, FileLog.getNetworkLogPath(), pushString, fingerprint, timezoneOffset, getUserConfig().getClientUserId(), userPremium, enablePushConnection);
+        try {
+            native_resumeNetwork(currentAccount, true);
+        } catch (Throwable ignore) {
+        }
     }
 
     public static void setLangCode(String langCode) {

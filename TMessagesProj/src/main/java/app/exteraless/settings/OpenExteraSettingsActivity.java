@@ -35,6 +35,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int generalRow;
     private int appearanceRow;
     private int chatsRow;
+    private int deviceSpoofRow;
     private int pluginsRow;
     private int updatesRow;
     private int shizukuRow;
@@ -62,6 +63,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         generalRow = addRow("general");
         appearanceRow = addRow("appearance");
         chatsRow = addRow("chats");
+        deviceSpoofRow = addRow("deviceSpoof");
         pluginsRow = addRow("plugins");
         updatesRow = addRow("updates");
         shizukuRow = addRow("shizuku");
@@ -187,6 +189,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new OpenExteraAppearanceActivity());
         } else if (position == chatsRow) {
             presentFragment(new OpenExteraChatsActivity());
+        } else if (position == deviceSpoofRow) {
+            presentFragment(new app.exteraless.spoof.DeviceSpoofActivity());
         } else if (position == pluginsRow) {
             presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
         } else if (position == updatesRow) {
@@ -250,6 +254,14 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndIcon(getString(R.string.OpenExteraAppearance), R.drawable.msg_theme, true);
                     } else if (position == chatsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraChats), R.drawable.msg_discussion, true);
+                    } else if (position == deviceSpoofRow) {
+                        boolean spoofing = app.exteraless.spoof.DeviceSpoofManager.getInstance().isSpoofingEnabled();
+                        String val = spoofing ? app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel() : null;
+                        if (val != null) {
+                            cell.setTextAndValueAndIcon(getString(R.string.DeviceSpoofing), val, R.drawable.msg_devices, true);
+                        } else {
+                            cell.setTextAndIcon(getString(R.string.DeviceSpoofing), R.drawable.msg_devices, true);
+                        }
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);
                     } else if (position == updatesRow) {

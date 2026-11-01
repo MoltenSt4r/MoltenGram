@@ -169,5 +169,23 @@
     <string name="FoundMessages_few">%1$d messages found</string>
     <string name="FoundMessages_many">%1$d messages found</string>
     <string name="FoundMessages_other">%1$d messages found</string>
+
+    <!-- Device Spoofing -->
+    <string name="DeviceSpoofing">Device Spoofing</string>
+    <string name="DeviceSpoofingDescription">Spoof device model and OS version sent to Telegram MTProto servers without Root or Shizuku.</string>
+    <string name="DeviceSpoofingEnabled">Enable Device Spoofing</string>
+    <string name="DeviceSpoofingCurrent">Current Parameters</string>
+    <string name="DeviceSpoofingMoltenStarGroup">MoltenStar Flagship</string>
+    <string name="DeviceSpoofingNothingGroup">Nothing Lineup</string>
+    <string name="DeviceSpoofingPixelGroup">Google Pixel Lineup</string>
+    <string name="DeviceSpoofingCustomGroup">Custom Presets</string>
+    <string name="DeviceSpoofingAddCustom">Add Custom Preset</string>
+    <string name="DeviceSpoofingCustomTitle">Preset Title</string>
+    <string name="DeviceSpoofingCustomManufacturer">Manufacturer</string>
+    <string name="DeviceSpoofingCustomModel">Model</string>
+    <string name="DeviceSpoofingCustomSdk">System / SDK Version (e.g. SDK 35)</string>
+    <string name="DeviceSpoofingNothingNotice">Local device features (including Nothing Glyph interface and hardware checks) evaluate the actual hardware and remain fully operational. Telegram servers receive the selected spoofed parameters.</string>
+    <string name="DeviceSpoofingDelete">Delete Preset</string>
+    <string name="DeviceSpoofingDeleteConfirm">Are you sure you want to delete this preset?</string>
 </resources>
 

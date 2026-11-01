@@ -67,9 +67,6 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
     private static final int ETG_IMPORT_REQUEST_CODE = 22;
 
-    private int googleHeaderRow;
-    private int crashReportsRow;
-    private int googleDividerRow;
     private int nagramHeaderRow;
     private int nagramSettingsRow;
     private int ayuMomentsRow;
@@ -121,15 +118,6 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     @Override
     protected void updateRows() {
         super.updateRows();
-
-        // Секции Google (Analytics + Crashlytics) здесь больше нет. Отправлять
-        // было нечего: shouldEnableCrashlytics требует applicationId
-        // «nu.gpu.nagram», а у нас com.exteraless.app — переключатель стоял
-        // мёртвым. На его месте вход в настройки NagramX, выключенный по
-        // умолчанию.
-        googleHeaderRow = addRow("googleHeader");
-        crashReportsRow = addRow("crashReports");
-        googleDividerRow = addRow();
 
         nagramHeaderRow = addRow("nagramHeader");
         nagramSettingsRow = -1;
@@ -193,14 +181,7 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == crashReportsRow) {
-            boolean enabled = GeneralConfig.crashReports.toggleConfigBool();
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(enabled);
-            }
-            FirebaseCrashlytics.getInstance().setCrashlyticsCollectionEnabled(
-                    AndroidUtil.shouldEnableCrashlytics());
-        } else if (position == nagramSettingsRow) {
+        if (position == nagramSettingsRow) {
             boolean enabled = GeneralConfig.showNagramSettings.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
@@ -504,19 +485,13 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                         cell.setText(getString(R.string.OEGeneralNagramHeader));
                     } else if (position == experimentalHeaderRow) {
                         cell.setText(getString(R.string.Experimental));
-                    } else if (position == googleHeaderRow) {
-                        cell.setText(getString(R.string.OEGeneralGoogleHeader));
                     }
                     break;
                 }
                 case TYPE_CHECK: {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setEnabled(true, null);
-                    if (position == crashReportsRow) {
-                        cell.setTextAndCheck(getString(R.string.OEGeneralCrashReports),
-                                GeneralConfig.crashReports(), false);
-                        cell.setIcon(R.drawable.msg_report);
-                    } else if (position == nagramSettingsRow) {
+                    if (position == nagramSettingsRow) {
                         cell.setTextAndCheck(getString(R.string.OEGeneralNagramSettings),
                                 GeneralConfig.showNagramSettings(), true);
                         // setIcon после setTextAndCheck — тот сбрасывает отступы текста.
@@ -570,9 +545,7 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                 case TYPE_INFO_PRIVACY: {
                     TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
                     boolean bottom = position == bottomDividerRow;
-                    if (position == googleDividerRow) {
-                        cell.setText(getString(R.string.OEGeneralCrashReportsInfo));
-                    } else if (position == glyphDividerRow) {
+                    if (position == glyphDividerRow) {
                         cell.setText(getString(R.string.OEGlyphInfo));
                     } else {
                         cell.setText(null);
@@ -587,13 +560,13 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == nagramHeaderRow || position == googleHeaderRow
+            if (position == nagramHeaderRow
                     || position == experimentalHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == nagramDividerRow || position == experimentalDividerRow
                     || position == etgDividerRow) {
                 return TYPE_SHADOW;
-            } else if (position == googleDividerRow || position == glyphDividerRow
+            } else if (position == glyphDividerRow
                     || position == bottomDividerRow) {
                 return TYPE_INFO_PRIVACY;
             } else if (position == exportEtgRow || position == importEtgRow
