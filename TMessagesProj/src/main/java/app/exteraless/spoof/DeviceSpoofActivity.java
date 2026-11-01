@@ -17,6 +17,9 @@ import androidx.recyclerview.widget.RecyclerView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.HeaderCell;
@@ -31,7 +34,9 @@ import org.telegram.ui.Components.LayoutHelper;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Locale;
 
+import tw.nekomimi.nekogram.helpers.SettingsHelper;
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 
 public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
@@ -74,6 +79,33 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
     @Override
     protected String getActionBarTitle() {
         return getString(R.string.DeviceSpoofing);
+    }
+
+    @Override
+    public ActionBar createActionBar(Context context) {
+        ActionBar actionBar = super.createActionBar(context);
+        ActionBarMenu menu = actionBar.createMenu();
+        ActionBarMenuItem linkItem = menu.addItem(1, R.drawable.msg_link);
+        linkItem.setContentDescription(LocaleController.getString(R.string.CopyLink));
+        actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
+            @Override
+            public void onItemClick(int id) {
+                if (id == -1) {
+                    finishFragment();
+                } else if (id == 1) {
+                    copySettingsDeepLink();
+                }
+            }
+        });
+        return actionBar;
+    }
+
+    private void copySettingsDeepLink() {
+        String link = String.format(Locale.US, "https://%s/%s",
+                getMessagesController().linkPrefix,
+                SettingsHelper.linkPathFor(getKey()));
+        AndroidUtilities.addToClipboard(link);
+        BulletinFactory.of(this).createCopyLinkBulletin().show();
     }
 
     @Override
@@ -140,6 +172,24 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         infoRow = addRow("info");
     }
 
+    private void safeNotifyDataSetChanged() {
+        if (listView != null) {
+            listView.post(() -> {
+                updateRows();
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
+                }
+            });
+        } else {
+            AndroidUtilities.runOnUIThread(() -> {
+                updateRows();
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
+                }
+            });
+        }
+    }
+
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == enableRow) {
@@ -148,14 +198,16 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(next);
             }
-            updateRows();
-            if (listAdapter != null) {
-                listAdapter.notifyDataSetChanged();
-            }
+            safeNotifyDataSetChanged();
             BulletinFactory.of(this).createSimpleBulletin(
                     R.drawable.msg_devices_solar,
                     next ? LocaleController.getString(R.string.DeviceSpoofingEnabled) : LocaleController.getString(R.string.DeviceSpoofing)
             ).show();
+            return;
+        }
+
+        if (position == currentStatusRow) {
+            showCurrentDeviceOptionsDialog();
             return;
         }
 
@@ -185,11 +237,89 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
         for (int i = 0; i < customRows.size(); i++) {
             if (position == customRows.get(i)) {
-                DeviceSpoofPreset p = currentCustomPresets.get(i);
-                showCustomPresetOptionsDialog(p);
+                selectPreset(currentCustomPresets.get(i));
                 return;
             }
         }
+    }
+
+    @Override
+    protected boolean onItemLongClick(View view, int position, float x, float y) {
+        for (int i = 0; i < customRows.size(); i++) {
+            if (position == customRows.get(i)) {
+                showCustomPresetOptionsDialog(currentCustomPresets.get(i));
+                return true;
+            }
+        }
+        for (int i = 0; i < nothingRows.size(); i++) {
+            if (position == nothingRows.get(i)) {
+                showClonePresetDialog(nothingPresets.get(i));
+                return true;
+            }
+        }
+        for (int i = 0; i < pixelRows.size(); i++) {
+            if (position == pixelRows.get(i)) {
+                showClonePresetDialog(pixelPresets.get(i));
+                return true;
+            }
+        }
+        if (position == moltenStarRow && moltenStarPreset != null) {
+            showClonePresetDialog(moltenStarPreset);
+            return true;
+        }
+        return super.onItemLongClick(view, position, x, y);
+    }
+
+    private void showCurrentDeviceOptionsDialog() {
+        if (getParentActivity() == null) return;
+        Context context = getParentActivity();
+
+        boolean spoofing = manager.isSpoofingEnabled();
+        DeviceSpoofPreset current = manager.getCurrentPreset();
+
+        CharSequence[] items = new CharSequence[]{
+                LocaleController.getString(R.string.DeviceSpoofingAddCustom),
+                spoofing ? LocaleController.getString(R.string.Disable) : LocaleController.getString(R.string.DeviceSpoofingEnabled),
+                LocaleController.getString(R.string.Copy),
+                LocaleController.getString(R.string.CopyLink)
+        };
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(LocaleController.getString(R.string.DeviceSpoofingCurrent));
+        builder.setItems(items, (dialog, which) -> {
+            if (which == 0) {
+                showEditPresetDialog(current != null && current.isCustom ? current : null);
+            } else if (which == 1) {
+                boolean next = !manager.isSpoofingEnabled();
+                manager.setSpoofingEnabled(next);
+                safeNotifyDataSetChanged();
+                BulletinFactory.of(this).createSimpleBulletin(
+                        R.drawable.msg_devices_solar,
+                        next ? LocaleController.getString(R.string.DeviceSpoofingEnabled) : LocaleController.getString(R.string.DeviceSpoofing)
+                ).show();
+            } else if (which == 2) {
+                String text = manager.getDeviceModel() + " (" + manager.getSystemVersion() + ")";
+                AndroidUtilities.addToClipboard(text);
+                BulletinFactory.of(this).createCopyBulletin(LocaleController.getString(R.string.TextCopied)).show();
+            } else if (which == 3) {
+                copySettingsDeepLink();
+            }
+        });
+        showDialog(builder.create());
+    }
+
+    private void showClonePresetDialog(DeviceSpoofPreset preset) {
+        if (preset == null) return;
+        DeviceSpoofPreset clone = new DeviceSpoofPreset(
+                null,
+                preset.title + " (Custom)",
+                preset.manufacturer,
+                preset.model,
+                preset.systemVersion,
+                "Custom",
+                true
+        );
+        showEditPresetDialog(clone);
     }
 
     private void selectPreset(DeviceSpoofPreset preset) {
@@ -198,10 +328,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         if (!manager.isSpoofingEnabled()) {
             manager.setSpoofingEnabled(true);
         }
-        updateRows();
-        if (listAdapter != null) {
-            listAdapter.notifyDataSetChanged();
-        }
+        safeNotifyDataSetChanged();
         BulletinFactory.of(this).createSimpleBulletin(
                 R.drawable.msg_devices_solar,
                 preset.getFormattedDeviceModel()
@@ -214,7 +341,8 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         CharSequence[] items = new CharSequence[]{
                 LocaleController.getString(R.string.Select),
                 LocaleController.getString(R.string.Edit),
-                LocaleController.getString(R.string.DeviceSpoofingDelete)
+                LocaleController.getString(R.string.DeviceSpoofingDelete),
+                LocaleController.getString(R.string.CopyLink)
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -226,6 +354,8 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                 showEditPresetDialog(preset);
             } else if (which == 2) {
                 showDeleteConfirmDialog(preset);
+            } else if (which == 3) {
+                copySettingsDeepLink();
             }
         });
         showDialog(builder.create());
@@ -239,10 +369,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         builder.setMessage(LocaleController.getString(R.string.DeviceSpoofingDeleteConfirm));
         builder.setPositiveButton(LocaleController.getString(R.string.Delete), (dialog, which) -> {
             manager.deleteCustomPreset(preset.id);
-            updateRows();
-            if (listAdapter != null) {
-                listAdapter.notifyDataSetChanged();
-            }
+            safeNotifyDataSetChanged();
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(builder.create());
@@ -295,16 +422,13 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                 sdk = "SDK 35";
             }
 
-            if (existing != null) {
+            if (existing != null && !TextUtils.isEmpty(existing.id)) {
                 manager.updateCustomPreset(existing.id, title, mfr, model, sdk);
             } else {
                 DeviceSpoofPreset created = manager.addCustomPreset(title, mfr, model, sdk);
                 selectPreset(created);
             }
-            updateRows();
-            if (listAdapter != null) {
-                listAdapter.notifyDataSetChanged();
-            }
+            safeNotifyDataSetChanged();
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         showDialog(builder.create());

@@ -197,6 +197,7 @@ public class SettingsHelper {
             "exteraless_glyph", "glyph",
             "md3_avatar_shapes", "avatar_shapes",
             "ghost_mode", "ghost",
+            "device_spoof", "devicespoof", "spoof",
             "translator", "translate", "t", "emoji", "about", "passcode", "send_logs",
             "iconpacks", "pillstackweather"));
 
@@ -276,6 +277,10 @@ public class SettingsHelper {
             case "avatar_shapes":
             case "md3_avatar_shapes":
                 return HOST_MOLTENGRAM + "/avatar_shapes";
+            case "device_spoof":
+            case "devicespoof":
+            case "spoof":
+                return HOST_MOLTENGRAM + "/device_spoof";
             default:
                 return HOST_MOLTENGRAM + "/" + key;
         }
@@ -408,6 +413,11 @@ public class SettingsHelper {
                 case "ghost_mode":
                     fragment = neko_fragment = new GhostModeActivity();
                     break;
+                case "device_spoof":
+                case "devicespoof":
+                case "spoof":
+                    fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
+                    break;
                 default:
                     unknown.run();
                     return;
@@ -502,6 +512,11 @@ public class SettingsHelper {
                 case "ghost_mode":
                 case "ghost":
                     fragment = neko_fragment = new GhostModeActivity();
+                    break;
+                case "device_spoof":
+                case "devicespoof":
+                case "spoof":
+                    fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
                     break;
                 case "send_logs":
                     sendLogs(activity, false);

@@ -146,3 +146,22 @@ class TestCanaryWorkflow:
     def test_canary_workflow_exists(self):
         canary_yml = os.path.join(REPO_ROOT, ".github/workflows/canary.yml")
         assert os.path.exists(canary_yml)
+
+
+class TestDeviceSpoofDeepLinkAndInteraction:
+    def test_settings_helper_has_device_spoof_deep_link(self):
+        settings_helper = os.path.join(
+            REPO_ROOT, "TMessagesProj", "src", "main", "java", "tw", "nekomimi", "nekogram", "helpers", "SettingsHelper.java"
+        )
+        with open(settings_helper, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert '"device_spoof"' in content
+        assert "DeviceSpoofActivity" in content
+
+    def test_device_spoof_activity_has_copy_link_and_safe_notify(self):
+        activity_file = os.path.join(JAVA_SPOOF_DIR, "DeviceSpoofActivity.java")
+        with open(activity_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "copySettingsDeepLink" in content
+        assert "safeNotifyDataSetChanged" in content
+        assert "showCurrentDeviceOptionsDialog" in content
