@@ -316,3 +316,44 @@ def test_voip_dock_capsule_and_labels_removed():
     )
 
 
+def test_voip_end_call_button_touch_and_measure_safety():
+    """Verify VoIPToggleButton overrides onMeasure, onTouchEvent and VoIPButtonsLayout ensures non-zero height."""
+    buttons_path = os.path.join(VOIP_DIR, "VoIPButtonsLayout.java")
+    toggle_path = os.path.join(VOIP_DIR, "VoIPToggleButton.java")
+    fragment_path = os.path.join(UI_DIR, "VoIPFragment.java")
+
+    with open(buttons_path, "r", encoding="utf-8") as f:
+        buttons_content = f.read()
+    with open(toggle_path, "r", encoding="utf-8") as f:
+        toggle_content = f.read()
+    with open(fragment_path, "r", encoding="utf-8") as f:
+        fragment_content = f.read()
+
+    # VoIPToggleButton must have onMeasure setting at least diameter height
+    assert "protected void onMeasure" in toggle_content, (
+        "VoIPToggleButton must override onMeasure"
+    )
+    assert "setMeasuredDimension" in toggle_content, (
+        "VoIPToggleButton must set measured dimension with non-zero button height"
+    )
+
+    # VoIPToggleButton must have onTouchEvent handling clicks
+    assert "public boolean onTouchEvent(MotionEvent" in toggle_content, (
+        "VoIPToggleButton must handle onTouchEvent"
+    )
+    assert "performClick();" in toggle_content, (
+        "VoIPToggleButton must call performClick on click"
+    )
+
+    # VoIPButtonsLayout must layout children with at least getMeasuredHeight()
+    assert "Math.max(child.getMeasuredHeight(), getMeasuredHeight())" in buttons_content, (
+        "VoIPButtonsLayout must layout children with at least getMeasuredHeight()"
+    )
+
+    # VoIPFragment must set bottomEndCallBtn click listener upon creation
+    assert "bottomEndCallBtn.setOnClickListener" in fragment_content, (
+        "VoIPFragment must wire click listener to bottomEndCallBtn"
+    )
+
+
+

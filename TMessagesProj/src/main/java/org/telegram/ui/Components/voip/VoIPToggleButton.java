@@ -17,6 +17,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
 import android.view.Gravity;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.accessibility.AccessibilityNodeInfo;
 import android.widget.Button;
@@ -117,6 +118,53 @@ public class VoIPToggleButton extends FrameLayout {
 
         crossPaint.setStrokeWidth(dp(2));
         crossPaint.setStrokeCap(Paint.Cap.ROUND);
+    }
+
+    @Override
+    protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        super.onMeasure(widthMeasureSpec, heightMeasureSpec);
+        int w = getMeasuredWidth();
+        int h = (int) Math.ceil(dp(diameter + 1.5f));
+        if (showText && textLayoutContainer != null && textLayoutContainer.getVisibility() != View.GONE) {
+            h = Math.max(h, getMeasuredHeight());
+        }
+        setMeasuredDimension(w, h);
+    }
+
+    private float startX;
+    private float startY;
+
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (!isEnabled()) {
+            return false;
+        }
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN:
+                setPressedBtn(true);
+                startX = event.getX();
+                startY = event.getY();
+                break;
+            case MotionEvent.ACTION_UP:
+                setPressedBtn(false);
+                float endX = event.getX();
+                float endY = event.getY();
+                if (Math.abs(startX - endX) <= dp(48) && Math.abs(startY - endY) <= dp(48)) {
+                    performClick();
+                }
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                setPressedBtn(false);
+                break;
+        }
+        return true;
+    }
+
+    @Override
+    public boolean performClick() {
+        super.performClick();
+        return true;
     }
 
     public void setTextSize(int size) {

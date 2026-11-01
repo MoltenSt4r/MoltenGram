@@ -1084,6 +1084,16 @@ public class VoIPFragment implements
             }
         };
         bottomEndCallBtn.setPill(true, 62f);
+        bottomEndCallBtn.setData(R.drawable.calls_decline, Color.WHITE, 0xFFF01D2C, LocaleController.getString(R.string.VoipEndCall2), false, false);
+        bottomEndCallBtn.setOnClickListener(view -> {
+            if (VoIPService.getSharedInstance() != null) {
+                AndroidUtilities.cancelRunOnUIThread(hideUIRunnable);
+                hideUiRunnableWaiting = false;
+                VoIPService.getSharedInstance().hangUp();
+            } else if (activity != null) {
+                finish();
+            }
+        });
         int startDelay = 150;
         bottomSpeakerBtn.setTranslationY(AndroidUtilities.dp(100));
         bottomSpeakerBtn.setScaleX(0f);
@@ -1108,6 +1118,7 @@ public class VoIPFragment implements
         buttonsLayout.addView(bottomEndCallBtn);
 
         acceptDeclineView = new AcceptDeclineView(context);
+        acceptDeclineView.setVisibility(View.GONE);
         acceptDeclineView.setListener(new AcceptDeclineView.Listener() {
 
             @Override

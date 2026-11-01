@@ -102,7 +102,7 @@ public class VoIPButtonsLayout extends FrameLayout {
                     int cLeft = startFrom + childPadding;
                     int cRight = cLeft + child.getMeasuredWidth();
                     int cTop = 0;
-                    int cBottom = child.getMeasuredHeight();
+                    int cBottom = Math.max(child.getMeasuredHeight(), getMeasuredHeight());
                     child.layout(cLeft, cTop, cRight, cBottom);
                     minLeft = Math.min(minLeft, cLeft);
                     maxRight = Math.max(maxRight, cRight);
@@ -120,7 +120,7 @@ public class VoIPButtonsLayout extends FrameLayout {
                     int cLeft = k * padding;
                     int cRight = cLeft + child.getMeasuredWidth();
                     int cTop = 0;
-                    int cBottom = child.getMeasuredHeight();
+                    int cBottom = Math.max(child.getMeasuredHeight(), getMeasuredHeight());
                     child.layout(cLeft, cTop, cRight, cBottom);
                     minLeft = Math.min(minLeft, cLeft);
                     maxRight = Math.max(maxRight, cRight);
