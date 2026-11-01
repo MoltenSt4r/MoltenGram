@@ -48,7 +48,7 @@ def extract_build_code(text):
 
 def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_canary,
                      current_ver, current_commit, current_timestamp, current_is_canary,
-                     current_build_code=0):
+                     current_build_code=0, include_canary=True, apk_name=None):
     if not remote_ver:
         return False
     cmp = compare_semver(remote_ver, current_ver)
@@ -56,12 +56,24 @@ def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_cana
         return False
     effective_remote_is_canary = remote_is_canary or ('canary' in (remote_ver or '').lower())
     if cmp == 0:
-        if current_is_canary != effective_remote_is_canary:
+        if current_is_canary and not effective_remote_is_canary:
+            return False
+        if not current_is_canary and effective_remote_is_canary and not include_canary:
             return False
     if cmp > 0:
         return True
 
-    # At this point, cmp == 0 and current_is_canary == effective_remote_is_canary
+    # At this point, cmp == 0
+    remote_build = extract_build_code(apk_name) if apk_name else 0
+    if remote_build == 0:
+        remote_build = extract_build_code(remote_ver)
+    cur_build = current_build_code if current_build_code > 0 else extract_build_code(current_ver)
+    if remote_build > 0 and cur_build > 0:
+        if remote_build > cur_build:
+            return True
+        if remote_build < cur_build:
+            return False
+
     if remote_commit and current_commit:
         if remote_commit.lower() == current_commit.lower():
             return False
@@ -74,12 +86,7 @@ def is_newer_version(remote_ver, remote_timestamp, remote_commit, remote_is_cana
             return remote_sec > current_sec
         return True
 
-    remote_build = extract_build_code(remote_ver)
-    cur_build = current_build_code if current_build_code > 0 else extract_build_code(current_ver)
-    if remote_build > 0 and remote_build > cur_build:
-        return True
-
-    if current_is_canary:
+    if current_is_canary or effective_remote_is_canary:
         remote_sec = remote_timestamp // 1000 if remote_timestamp > 100000000000 else remote_timestamp
         current_sec = current_timestamp // 1000 if current_timestamp > 100000000000 else current_timestamp
         if remote_sec > 0 and current_sec > 0:
@@ -94,10 +101,29 @@ def test_canary_vs_beta_same_semver_loop_prevented():
         remote_ver='12.10.6', remote_timestamp=1700000000, remote_commit='b1ae6d2', remote_is_canary=False,
         current_ver='12.10.6', current_commit='0240f22', current_timestamp=1699999999, current_is_canary=True
     )
-    # Beta user must not be prompted to update to Canary when semver matches
+    # Beta user without canary enabled must not be prompted to update to Canary when semver matches
     assert not is_newer_version(
         remote_ver='12.10.6 (Canary)', remote_timestamp=1700000000, remote_commit='0240f22', remote_is_canary=True,
-        current_ver='12.10.6', current_commit='b1ae6d2', current_timestamp=1699999999, current_is_canary=False
+        current_ver='12.10.6', current_commit='b1ae6d2', current_timestamp=1699999999, current_is_canary=False,
+        include_canary=False
+    )
+
+
+def test_canary_update_with_higher_build_code():
+    # User on release (build 1514) with include_canary=True gets Canary build 3062
+    assert is_newer_version(
+        remote_ver='12.10.6', remote_timestamp=1700000000, remote_commit='abc1234', remote_is_canary=True,
+        current_ver='12.10.6', current_commit='0240f22', current_timestamp=1699999999, current_is_canary=False,
+        current_build_code=1514, include_canary=True, apk_name='MoltenGram-v12.10.6-abc1234.3062.apk'
+    )
+
+
+def test_canary_downgrade_rejected():
+    # Lower build code (1322) is rejected when current build is 1514
+    assert not is_newer_version(
+        remote_ver='12.10.6', remote_timestamp=1700000000, remote_commit='abc1234', remote_is_canary=True,
+        current_ver='12.10.6', current_commit='0240f22', current_timestamp=1699999999, current_is_canary=False,
+        current_build_code=1514, include_canary=True, apk_name='MoltenGram-v12.10.6-abc1234.1322.apk'
     )
 
 

@@ -180,7 +180,7 @@ public class MoltenGramOtaManager {
 
     private void cleanupOldIfUpdated() {
         if (pendingUpdate != null) {
-            if (!isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary)) {
+            if (!isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary, pendingUpdate.fileName)) {
                 clearPendingUpdate();
             }
         }
@@ -244,7 +244,7 @@ public class MoltenGramOtaManager {
     // --- State Accessors ---
 
     public boolean isUpdateAvailable() {
-        return pendingUpdate != null && isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary);
+        return pendingUpdate != null && isNewerVersion(pendingUpdate.version, pendingUpdate.publishedAt, pendingUpdate.commitId, pendingUpdate.isCanary, pendingUpdate.fileName);
     }
 
     public OtaUpdate getPendingUpdate() {
@@ -363,7 +363,7 @@ public class MoltenGramOtaManager {
                         remoteCommit = m.group(1);
                     }
 
-                    boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit, prerelease);
+                    boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit, prerelease, apkName);
 
                     if (isNewer) {
                         OtaUpdate candidate = new OtaUpdate();
@@ -509,6 +509,13 @@ public class MoltenGramOtaManager {
             return false;
         }
 
+        int candBuild = extractBuildCode(cand.fileName);
+        int curBuild = extractBuildCode(current.fileName);
+        if (candBuild > 0 && curBuild > 0) {
+            if (candBuild > curBuild) return true;
+            if (candBuild < curBuild) return false;
+        }
+
         boolean currentCanary = isCurrentCanary();
         if (currentCanary) {
             if (cand.isCanary && !current.isCanary) {
@@ -517,9 +524,7 @@ public class MoltenGramOtaManager {
                 return false;
             }
         } else {
-            if (!cand.isCanary && current.isCanary) {
-                return true;
-            } else if (cand.isCanary && !current.isCanary) {
+            if (!includeCanary && cand.isCanary && !current.isCanary) {
                 return false;
             }
         }
@@ -566,10 +571,14 @@ public class MoltenGramOtaManager {
 
     public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit) {
         boolean remoteIsCanary = remoteVer != null && remoteVer.toLowerCase().contains("canary");
-        return isNewerVersion(remoteVer, remoteTimestamp, remoteCommit, remoteIsCanary);
+        return isNewerVersion(remoteVer, remoteTimestamp, remoteCommit, remoteIsCanary, null);
     }
 
     public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit, boolean remoteIsCanary) {
+        return isNewerVersion(remoteVer, remoteTimestamp, remoteCommit, remoteIsCanary, null);
+    }
+
+    public static boolean isNewerVersion(String remoteVer, long remoteTimestamp, String remoteCommit, boolean remoteIsCanary, String apkName) {
         if (TextUtils.isEmpty(remoteVer)) {
             return false;
         }
@@ -582,9 +591,13 @@ public class MoltenGramOtaManager {
 
         boolean currentIsCanary = isCurrentCanary();
         boolean effectiveRemoteIsCanary = remoteIsCanary || (remoteVer != null && remoteVer.toLowerCase().contains("canary"));
-        // Prevent cross-channel oscillations on the same semver
+        boolean includeCanary = (instance != null) ? instance.isIncludeCanary() : true;
+
         if (cmp == 0) {
-            if (currentIsCanary != effectiveRemoteIsCanary) {
+            if (currentIsCanary && !effectiveRemoteIsCanary) {
+                return false;
+            }
+            if (!currentIsCanary && effectiveRemoteIsCanary && !includeCanary) {
                 return false;
             }
         }
@@ -593,7 +606,21 @@ public class MoltenGramOtaManager {
             return true;
         }
 
-        // At this point, cmp == 0 and currentIsCanary == effectiveRemoteIsCanary
+        // At this point, cmp == 0
+        int remoteBuild = extractBuildCode(apkName);
+        if (remoteBuild == 0) {
+            remoteBuild = extractBuildCode(remoteVer);
+        }
+        int curBuild = BuildConfig.VERSION_CODE;
+        if (remoteBuild > 0 && curBuild > 0) {
+            if (remoteBuild > curBuild) {
+                return true;
+            }
+            if (remoteBuild < curBuild) {
+                return false;
+            }
+        }
+
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";
         if (!TextUtils.isEmpty(remoteCommit) && !TextUtils.isEmpty(currentCommit)) {
             if (remoteCommit.equalsIgnoreCase(currentCommit)) {
@@ -617,12 +644,7 @@ public class MoltenGramOtaManager {
             return true;
         }
 
-        int remoteBuild = extractBuildCode(remoteVer);
-        if (remoteBuild > 0 && remoteBuild > BuildConfig.VERSION_CODE) {
-            return true;
-        }
-
-        if (currentIsCanary) {
+        if (currentIsCanary || effectiveRemoteIsCanary) {
             long currentSec = BuildConfig.BUILD_TIMESTAMP;
             if (currentSec > 100000000000L) {
                 currentSec /= 1000L;
