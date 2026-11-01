@@ -231,3 +231,60 @@ def test_voip_fragment_transitions_and_animation_harmony():
     assert "buttonsLayout.animate().alpha(" in content, (
         "VoIPFragment must animate buttonsLayout alpha and translation on UI visibility toggle"
     )
+
+
+def test_voip_gradient_layout_md3_theme_colors():
+    """Feature 7: Verify VoIpGradientLayout renders MD3 Expressive themed background."""
+    gradient_path = os.path.join(VOIP_DIR, "VoIpGradientLayout.java")
+    assert os.path.isfile(gradient_path), f"VoIpGradientLayout.java must exist at {gradient_path}"
+    with open(gradient_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Must use Theme colors instead of hardcoded 2018 blue/violet mesh
+    assert "Theme.key_windowBackgroundWhite" in content, (
+        "VoIpGradientLayout must use Theme.key_windowBackgroundWhite for base surface"
+    )
+    assert "Theme.key_chats_actionBackground" in content, (
+        "VoIpGradientLayout must use Theme.key_chats_actionBackground for atmospheric primary bloom"
+    )
+    assert "LinearGradient" in content, (
+        "VoIpGradientLayout must render smooth MD3 atmospheric LinearGradient"
+    )
+    assert "backgroundProvider.getLightCanvas()" in content, (
+        "VoIpGradientLayout must supply theme-colored surface to VoIPBackgroundProvider"
+    )
+    assert "buttonTonalColor" in content, (
+        "VoIpGradientLayout must compute theme-aware buttonTonalColor"
+    )
+
+
+def test_voip_typography_and_top_icons_themed():
+    """Feature 8: Verify VoIP title, status, timer, and top icons use theme colors."""
+    fragment_path = os.path.join(UI_DIR, "VoIPFragment.java")
+    status_path = os.path.join(VOIP_DIR, "VoIPStatusTextView.java")
+    timer_path = os.path.join(VOIP_DIR, "VoIPTimerView.java")
+
+    with open(fragment_path, "r", encoding="utf-8") as f:
+        frag_content = f.read()
+    with open(status_path, "r", encoding="utf-8") as f:
+        status_content = f.read()
+    with open(timer_path, "r", encoding="utf-8") as f:
+        timer_content = f.read()
+
+    # Title must use Theme.key_windowBackgroundWhiteBlackText
+    assert "callingUserTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));" in frag_content, (
+        "VoIPFragment callingUserTitle must use Theme text color"
+    )
+    # Top icons must have theme tint
+    assert "backIcon.setColorFilter(" in frag_content, "VoIPFragment backIcon must be theme tinted"
+    assert "addIcon.setColorFilter(" in frag_content, "VoIPFragment addIcon must be theme tinted"
+
+    # Status must use Theme secondary text
+    assert "Theme.key_windowBackgroundWhiteGrayText" in status_content, (
+        "VoIPStatusTextView must use Theme.key_windowBackgroundWhiteGrayText"
+    )
+    # Timer must use Theme text
+    assert "Theme.key_windowBackgroundWhiteBlackText" in timer_content, (
+        "VoIPTimerView must use Theme.key_windowBackgroundWhiteBlackText"
+    )
+

@@ -9,8 +9,10 @@ import android.view.View;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
+import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.ui.ActionBar.Theme;
 
 public class VoIPButtonsLayout extends FrameLayout {
 
@@ -24,10 +26,25 @@ public class VoIPButtonsLayout extends FrameLayout {
         super(context);
         setWillNotDraw(false);
         setClipChildren(false);
-        containerPaint.setColor(0x40000000); // MD3 translucent container fill
         containerStrokePaint.setStyle(Paint.Style.STROKE);
         containerStrokePaint.setStrokeWidth(AndroidUtilities.dp(1));
-        containerStrokePaint.setColor(0x1AFFFFFF); // Subtle 10% white elevation border
+        updateContainerColors();
+    }
+
+    public void updateContainerColors() {
+        int surface = Theme.getColor(Theme.key_windowBackgroundWhite);
+        int primary = Theme.getColor(Theme.key_chats_actionBackground);
+        boolean isDark = Theme.isCurrentThemeDark();
+        int fillColor = isDark
+            ? ColorUtils.blendARGB(surface, primary, 0.14f)
+            : ColorUtils.blendARGB(surface, primary, 0.08f);
+        int strokeColor = ColorUtils.setAlphaComponent(
+            Theme.getColor(Theme.key_windowBackgroundWhiteBlackText),
+            isDark ? (int) (255 * 0.08f) : (int) (255 * 0.06f)
+        );
+        containerPaint.setColor(fillColor);
+        containerStrokePaint.setColor(strokeColor);
+        invalidate();
     }
 
     int visibleChildCount;

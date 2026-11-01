@@ -17,6 +17,7 @@ import androidx.core.graphics.ColorUtils;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.R;
 import org.telegram.messenger.voip.VoIPService;
+import org.telegram.ui.ActionBar.Theme;
 
 public class VoIPTimerView extends View {
 
@@ -39,9 +40,10 @@ public class VoIPTimerView extends View {
     public VoIPTimerView(Context context) {
         super(context);
         textPaint.setTextSize(AndroidUtilities.dp(15));
-        textPaint.setColor(Color.WHITE);
-        activePaint.setColor(ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.9f)));
-        inactivePaint.setColor(ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.4f)));
+        textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        activePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        inactivePaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         callsDeclineDrawable = ContextCompat.getDrawable(context, R.drawable.calls_decline);
         callsDeclineDrawable.setBounds(0, 0, AndroidUtilities.dp(24), AndroidUtilities.dp(24));
     }

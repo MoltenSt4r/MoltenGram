@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RLottieDrawable;
 
@@ -66,14 +67,16 @@ public class VoIpSwitchLayout extends FrameLayout {
         currentTextView = new TextView(context);
         currentTextView.setGravity(Gravity.CENTER_HORIZONTAL);
         currentTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        currentTextView.setTextColor(Color.WHITE);
+        currentTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        currentTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         currentTextView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         addView(currentTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, VoIpButtonView.ITEM_SIZE + 6, 0, 2));
 
         newTextView = new TextView(context);
         newTextView.setGravity(Gravity.CENTER_HORIZONTAL);
         newTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        newTextView.setTextColor(Color.WHITE);
+        newTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        newTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         newTextView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
         addView(newTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, VoIpButtonView.ITEM_SIZE + 6, 0, 2));
         currentTextView.setVisibility(GONE);
@@ -407,7 +410,7 @@ public class VoIpSwitchLayout extends FrameLayout {
             this.backgroundProvider = backgroundProvider;
             backgroundProvider.attach(this);
             setLayerType(View.LAYER_TYPE_SOFTWARE, null);
-            whiteCirclePaint.setColor(Color.WHITE);
+            whiteCirclePaint.setColor(Theme.isCurrentThemeDark() ? Color.WHITE : Theme.getColor(Theme.key_chats_actionBackground));
 
             maskPaint.setColor(Color.BLACK);
             maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));

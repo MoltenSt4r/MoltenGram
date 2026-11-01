@@ -19,6 +19,7 @@ import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLRPC;
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.Md3AvatarShapes;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
@@ -229,10 +230,11 @@ public class ImageWithWavesView extends FrameLayout {
             blobDrawable2.maxRadius = maxRadius - diff;
             blobDrawable.generateBlob();
             blobDrawable2.generateBlob();
-            blobDrawable.paint.setColor(Color.WHITE);
-            blobDrawable.paint.setAlpha(20);
-            blobDrawable2.paint.setColor(Color.WHITE);
-            blobDrawable2.paint.setAlpha(36);
+            int waveColor = Theme.getColor(Theme.key_chats_actionBackground);
+            blobDrawable.paint.setColor(waveColor);
+            blobDrawable.paint.setAlpha(30);
+            blobDrawable2.paint.setColor(waveColor);
+            blobDrawable2.paint.setAlpha(55);
         }
 
         public void update() {

@@ -1,31 +1,24 @@
 package org.telegram.ui.Components.voip;
 
-import static org.telegram.ui.Components.voip.VoIPBackgroundProvider.REVEAL_SCALE_FACTOR;
-
 import android.animation.Animator;
 import android.animation.AnimatorListenerAdapter;
-import android.animation.AnimatorSet;
 import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
-import android.graphics.Color;
-import android.graphics.ColorFilter;
+import android.graphics.LinearGradient;
+import android.graphics.Paint;
 import android.graphics.Path;
-import android.graphics.PixelFormat;
-import android.graphics.PorterDuff;
-import android.graphics.drawable.ColorDrawable;
-import android.graphics.drawable.Drawable;
-import android.view.View;
+import android.graphics.Shader;
 import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
-import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LiteMode;
-import org.telegram.ui.Components.MotionBackgroundDrawable;
+import org.telegram.ui.ActionBar.Theme;
 
 @SuppressLint("ViewConstructor")
 public class VoIpGradientLayout extends FrameLayout {
@@ -36,26 +29,6 @@ public class VoIpGradientLayout extends FrameLayout {
         BAD_CONNECTION
     }
 
-    private final Drawable bgBlueViolet;
-    private final Drawable bgBlueGreen;
-    private final MotionBackgroundDrawable bgGreen;
-    private final MotionBackgroundDrawable bgOrangeRed;
-
-    private final Drawable bgBlueVioletDark;
-    private final Drawable bgBlueGreenDark;
-    private final MotionBackgroundDrawable bgGreenDark;
-    private final MotionBackgroundDrawable bgOrangeRedDark;
-
-    private final Drawable bgBlueVioletLight;
-    private final Drawable bgBlueGreenLight;
-    private final MotionBackgroundDrawable bgGreenLight;
-    private final MotionBackgroundDrawable bgOrangeRedLight;
-    private final MotionBackgroundDrawable bgGreenLightReveal;
-    private final MotionBackgroundDrawable bgGreenDarkReveal;
-
-    private int alphaBlueViolet = 0;
-    private int alphaBlueGreen = 0;
-    private int alphaGreen = 0;
     private int alphaOrangeRed = 0;
     private float clipRadius = 0f;
     private boolean showClip = false;
@@ -64,103 +37,39 @@ public class VoIpGradientLayout extends FrameLayout {
     private int clipCy = 0;
     private ValueAnimator callingAnimator;
     private ValueAnimator badConnectionAnimator;
-    private AnimatorSet connectedAnimatorSet;
-    private final AnimatorSet defaultAnimatorSet;
     private GradientState state;
     private boolean isPaused = false;
     public volatile boolean lockDrawing = false;
     private final VoIPBackgroundProvider backgroundProvider;
     private boolean allowAnimations;
 
-    private class PureColorDrawable extends Drawable {
-        private final int color;
-        public PureColorDrawable(int color) {
-            this.color = color;
-        }
-        @Override
-        public void draw(@NonNull Canvas canvas) {
-            canvas.drawColor(color);
-        }
-        @Override
-        public void setAlpha(int alpha) {}
-        @Override
-        public void setColorFilter(@Nullable ColorFilter colorFilter) {}
-        @Override
-        public int getOpacity() {
-            return PixelFormat.TRANSPARENT;
-        }
-    }
+    private float callingPulseProgress = 0f;
+    private final Paint gradientPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private LinearGradient gradientShader;
+    private int lastW = -1;
+    private int lastH = -1;
+    private int lastTopColor = 0;
+    private int lastBottomColor = 0;
 
     public VoIpGradientLayout(@NonNull Context context, boolean black, VoIPBackgroundProvider backgroundProvider) {
         super(context);
         this.backgroundProvider = backgroundProvider;
         allowAnimations = LiteMode.isEnabled(LiteMode.FLAG_CALLS_ANIMATIONS);
-        bgBlueViolet = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFFB456D8, 0xFF8148EC, 0xFF20A4D7, 0xFF3F8BEA, 0, false, true);
-        bgBlueGreen = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFF4576E9, 0xFF3B7AF1, 0xFF08B0A3, 0xFF17AAE4, 0, false, true);
-        bgGreen = new MotionBackgroundDrawable(0xFF07A9AC, 0xFF07BA63, 0xFFA9CC66, 0xFF5AB147, 0, false, true);
-        bgOrangeRed = new MotionBackgroundDrawable(0xFFE86958, 0xFFE7618F, 0xFFDB904C, 0xFFDE7238, 0, false, true);
-
-        bgBlueVioletDark = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFFA736D0, 0xFF6A2BDD, 0xFF0F95C9, 0xFF287AE1, 0, false, true);
-        bgBlueGreenDark = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFF2D60D6, 0xFF2C6ADF, 0xFF009595, 0xFF0291C9, 0, false, true);
-        bgGreenDark = new MotionBackgroundDrawable(0xFF008B8E, 0xFF01934C, 0xFF8FBD37, 0xFF319D27, 0, false, true);
-        bgOrangeRedDark = new MotionBackgroundDrawable(0xFFE23F29, 0xFFE6306F, 0xFFC77616, 0xFFD75A16, 0, false, true);
-
-        bgBlueVioletLight = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFFD664FF, 0xFF9258FD, 0xFF2DC0F9, 0xFF57A1FF, 0, false, true);
-        bgBlueGreenLight = black ? new PureColorDrawable(0xFF191F26) : new MotionBackgroundDrawable(0xFF558BFF, 0xFF5FABFF, 0xFF04DCCC, 0xFF28C2FF, 0, false, true);
-        bgGreenLight = new MotionBackgroundDrawable(0xFF00D2D5, 0xFF09E279, 0xFFC7EF60, 0xFF6DD957, 0, false, true);
-        bgOrangeRedLight = new MotionBackgroundDrawable(0xFFFF7866, 0xFFFF82A5, 0xFFFEB055, 0xFFFF8E51, 0, false, true);
-        bgGreenLightReveal = new MotionBackgroundDrawable(0xFF00D2D5, 0xFF09E279, 0xFFC7EF60, 0xFF6DD957, 0, false, true);
-        bgGreenDarkReveal = new MotionBackgroundDrawable(0xFF008B8E, 0xFF01934C, 0xFF8FBD37, 0xFF319D27, 0, false, true);
-
-        bgBlueVioletDark.setBounds(0, 0, 80, 80);
-        bgBlueGreenDark.setBounds(0, 0, 80, 80);
-        bgGreenDark.setBounds(0, 0, 80, 80);
-        bgOrangeRedDark.setBounds(0, 0, 80, 80);
-
-        bgBlueVioletLight.setBounds(0, 0, 80, 80);
-        bgBlueGreenLight.setBounds(0, 0, 80, 80);
-        bgGreenLight.setBounds(0, 0, 80, 80);
-        bgOrangeRedLight.setBounds(0, 0, 80, 80);
 
         setWillNotDraw(false);
-        setLayerType(View.LAYER_TYPE_HARDWARE, null);
+        setLayerType(LAYER_TYPE_HARDWARE, null);
 
-        defaultAnimatorSet = new AnimatorSet();
-        ValueAnimator rotationAnimator = ValueAnimator.ofInt(0, 360);
-        rotationAnimator.addUpdateListener(animation -> {
-            backgroundProvider.setDegree((int) animation.getAnimatedValue());
-            int degree = backgroundProvider.getDegree();
-            if ((degree >= 0 && degree <= 2) || (degree >= 180 && degree <= 182)) {
-                if (isPaused) {
-                    defaultAnimatorSet.pause();
-                    if (connectedAnimatorSet != null) {
-                        connectedAnimatorSet.pause();
-                    }
-                }
-            }
-        });
-        rotationAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        rotationAnimator.setRepeatMode(ValueAnimator.RESTART);
-        defaultAnimatorSet.setInterpolator(new LinearInterpolator());
-        defaultAnimatorSet.playTogether(rotationAnimator);
-        defaultAnimatorSet.setDuration(12000);
-        if (allowAnimations) {
-            defaultAnimatorSet.start();
-        }
         switchToCalling();
     }
 
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
-        if (defaultAnimatorSet != null) {
-            defaultAnimatorSet.cancel();
-        }
-        if (connectedAnimatorSet != null) {
-            connectedAnimatorSet.cancel();
-        }
         if (callingAnimator != null) {
             callingAnimator.cancel();
+        }
+        if (badConnectionAnimator != null) {
+            badConnectionAnimator.cancel();
         }
     }
 
@@ -169,16 +78,18 @@ public class VoIpGradientLayout extends FrameLayout {
             return;
         }
         state = GradientState.CALLING;
-        alphaBlueGreen = 255;
-        callingAnimator = ValueAnimator.ofInt(255, 0, 255);
+        if (callingAnimator != null) {
+            callingAnimator.cancel();
+        }
+        callingAnimator = ValueAnimator.ofFloat(0f, 1f);
         callingAnimator.addUpdateListener(animation -> {
-            alphaBlueViolet = (int) animation.getAnimatedValue();
+            callingPulseProgress = (float) animation.getAnimatedValue();
             invalidate();
         });
         callingAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        callingAnimator.setRepeatMode(ValueAnimator.RESTART);
+        callingAnimator.setRepeatMode(ValueAnimator.REVERSE);
         callingAnimator.setInterpolator(new LinearInterpolator());
-        callingAnimator.setDuration(12000);
+        callingAnimator.setDuration(2200);
         if (allowAnimations) {
             callingAnimator.start();
         }
@@ -202,6 +113,7 @@ public class VoIpGradientLayout extends FrameLayout {
             callingAnimator.cancel();
             callingAnimator = null;
         }
+        callingPulseProgress = 0f;
         clipCx = x;
         clipCy = y;
         int w = AndroidUtilities.displaySize.x;
@@ -225,56 +137,10 @@ public class VoIpGradientLayout extends FrameLayout {
             public void onAnimationEnd(Animator animation) {
                 showClip = false;
                 backgroundProvider.setReveal(false);
-                if (allowAnimations) {
-                    if (defaultAnimatorSet != null) {
-                        defaultAnimatorSet.cancel();
-                        defaultAnimatorSet.start();
-                    }
-                }
-                switchToConnectedAnimator();
             }
         });
         revealAnimator.setDuration(animated ? 400 : 0);
         revealAnimator.start();
-    }
-
-    private void switchToConnectedAnimator() {
-        if (connectedAnimatorSet != null) {
-            return;
-        }
-        if (callingAnimator != null) {
-            callingAnimator.removeAllUpdateListeners();
-            callingAnimator.cancel();
-            callingAnimator = null;
-        }
-        alphaGreen = 255;
-        connectedAnimatorSet = new AnimatorSet();
-        ValueAnimator blueGreenAnimator = ValueAnimator.ofInt(0, 255, 255, 255, 0);
-        blueGreenAnimator.addUpdateListener(animation2 -> {
-            alphaBlueGreen = (int) animation2.getAnimatedValue();
-            invalidate();
-        });
-        blueGreenAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        blueGreenAnimator.setRepeatMode(ValueAnimator.RESTART);
-
-        ValueAnimator blueVioletAnimator = ValueAnimator.ofInt(0, 0, 255, 0, 0);
-        blueVioletAnimator.addUpdateListener(animation2 -> {
-            alphaBlueViolet = (int) animation2.getAnimatedValue();
-            invalidate();
-        });
-        blueVioletAnimator.setRepeatCount(ValueAnimator.INFINITE);
-        blueVioletAnimator.setRepeatMode(ValueAnimator.RESTART);
-
-        connectedAnimatorSet.playTogether(blueVioletAnimator, blueGreenAnimator);
-        connectedAnimatorSet.setInterpolator(new LinearInterpolator());
-        connectedAnimatorSet.setDuration(24000);
-        if (allowAnimations) {
-            connectedAnimatorSet.start();
-        } else {
-            alphaBlueGreen = 0;
-            alphaBlueViolet = 0;
-        }
-        invalidate();
     }
 
     public void showToBadConnection() {
@@ -282,6 +148,9 @@ public class VoIpGradientLayout extends FrameLayout {
             return;
         }
         state = GradientState.BAD_CONNECTION;
+        if (badConnectionAnimator != null) {
+            badConnectionAnimator.cancel();
+        }
         badConnectionAnimator = ValueAnimator.ofInt(alphaOrangeRed, 255);
         badConnectionAnimator.addUpdateListener(animation -> {
             alphaOrangeRed = (int) animation.getAnimatedValue();
@@ -297,7 +166,6 @@ public class VoIpGradientLayout extends FrameLayout {
             return;
         }
         state = GradientState.CONNECTED;
-        switchToConnectedAnimator();
         if (badConnectionAnimator != null) {
             badConnectionAnimator.removeAllUpdateListeners();
             badConnectionAnimator.cancel();
@@ -317,6 +185,9 @@ public class VoIpGradientLayout extends FrameLayout {
             return;
         }
         isPaused = true;
+        if (callingAnimator != null && callingAnimator.isRunning()) {
+            callingAnimator.pause();
+        }
     }
 
     public void resume() {
@@ -324,23 +195,14 @@ public class VoIpGradientLayout extends FrameLayout {
             return;
         }
         isPaused = false;
-        if (defaultAnimatorSet.isPaused()) {
-            defaultAnimatorSet.resume();
-        }
-        if (connectedAnimatorSet != null && connectedAnimatorSet.isPaused()) {
-            connectedAnimatorSet.resume();
+        if (callingAnimator != null && callingAnimator.isPaused()) {
+            callingAnimator.resume();
         }
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
         super.onLayout(changed, left, top, right, bottom);
-        bgGreen.setBounds(0, 0, getWidth(), getHeight());
-        bgOrangeRed.setBounds(0, 0, getWidth(), getHeight());
-        bgBlueGreen.setBounds(0, 0, getWidth(), getHeight());
-        bgBlueViolet.setBounds(0, 0, getWidth(), getHeight());
-        bgGreenLightReveal.setBounds(0, 0, getWidth() / REVEAL_SCALE_FACTOR, getHeight() / REVEAL_SCALE_FACTOR);
-        bgGreenDarkReveal.setBounds(0, 0, getWidth() / REVEAL_SCALE_FACTOR, getHeight() / REVEAL_SCALE_FACTOR);
         backgroundProvider.setTotalSize(getWidth(), getHeight());
     }
 
@@ -349,79 +211,85 @@ public class VoIpGradientLayout extends FrameLayout {
         if (lockDrawing) {
             return;
         }
-        float halfWidth = getWidth() / 2f;
-        float halfHeight = getHeight() / 2f;
-        canvas.save();
-        final float scale = (float) Math.sqrt(halfWidth * halfWidth + halfHeight * halfWidth) / Math.min(halfHeight, halfWidth);
-        canvas.scale(scale, scale, halfWidth, halfHeight);
-        canvas.rotate(backgroundProvider.getDegree(), halfWidth, halfHeight);
-
-        backgroundProvider.getLightCanvas().drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-        backgroundProvider.getDarkCanvas().drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-
-        if (alphaGreen != 0 && alphaOrangeRed != 255) {
-            bgGreen.setAlpha(alphaGreen);
-            bgGreenLight.setAlpha(alphaGreen);
-            bgGreenDark.setAlpha(alphaGreen);
-
-            bgGreen.draw(canvas);
-            bgGreenLight.draw(backgroundProvider.getLightCanvas());
-            bgGreenDark.draw(backgroundProvider.getDarkCanvas());
-        }
-        if (alphaBlueGreen != 0 && alphaOrangeRed != 255) {
-            bgBlueGreen.setAlpha(alphaBlueGreen);
-            bgBlueGreenDark.setAlpha(alphaBlueGreen);
-            bgBlueGreenLight.setAlpha(alphaBlueGreen);
-
-            bgBlueGreen.draw(canvas);
-            bgBlueGreenDark.draw(backgroundProvider.getDarkCanvas());
-            bgBlueGreenLight.draw(backgroundProvider.getLightCanvas());
-        }
-        if (alphaBlueViolet != 0 && alphaOrangeRed != 255) {
-            bgBlueViolet.setAlpha(alphaBlueViolet);
-            bgBlueVioletDark.setAlpha(alphaBlueViolet);
-            bgBlueVioletLight.setAlpha(alphaBlueViolet);
-
-            bgBlueViolet.draw(canvas);
-            bgBlueVioletDark.draw(backgroundProvider.getDarkCanvas());
-            bgBlueVioletLight.draw(backgroundProvider.getLightCanvas());
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            return;
         }
 
-        if (alphaOrangeRed != 0) {
-            bgOrangeRed.setAlpha(alphaOrangeRed);
-            bgOrangeRedDark.setAlpha(alphaOrangeRed);
-            bgOrangeRedLight.setAlpha(alphaOrangeRed);
+        int surface = Theme.getColor(Theme.key_windowBackgroundWhite);
+        int primary = Theme.getColor(Theme.key_chats_actionBackground);
+        boolean isDark = Theme.isCurrentThemeDark();
 
-            bgOrangeRed.draw(canvas);
-            bgOrangeRedDark.draw(backgroundProvider.getDarkCanvas());
-            bgOrangeRedLight.draw(backgroundProvider.getLightCanvas());
+        // 1. Base surface fill
+        canvas.drawColor(surface);
+
+        // 2. MD3 Expressive Atmospheric Bloom
+        float atmosphericAlpha = isDark ? 0.16f : 0.10f;
+        if (state == GradientState.CALLING && allowAnimations) {
+            atmosphericAlpha += (isDark ? 0.08f : 0.05f) * callingPulseProgress;
         }
-        canvas.restore();
+        int topTonal = ColorUtils.blendARGB(surface, primary, Math.min(1.0f, atmosphericAlpha));
+        if (alphaOrangeRed > 0) {
+            int warmAlert = ColorUtils.blendARGB(surface, 0xFFE28B29, isDark ? 0.22f : 0.14f);
+            topTonal = ColorUtils.blendARGB(topTonal, warmAlert, alphaOrangeRed / 255f);
+        }
 
-        if (showClip) {
+        if (gradientShader == null || lastW != w || lastH != h || lastTopColor != topTonal || lastBottomColor != surface) {
+            lastW = w;
+            lastH = h;
+            lastTopColor = topTonal;
+            lastBottomColor = surface;
+            gradientShader = new LinearGradient(
+                0, 0,
+                0, h * 0.75f,
+                new int[]{topTonal, ColorUtils.blendARGB(surface, primary, atmosphericAlpha * 0.35f), surface},
+                new float[]{0f, 0.45f, 1f},
+                Shader.TileMode.CLAMP
+            );
+            gradientPaint.setShader(gradientShader);
+        }
+        canvas.drawRect(0, 0, w, h, gradientPaint);
+
+        // 3. Circular reveal on call connected transition
+        if (showClip && clipRadius > 0) {
             clipPath.rewind();
             clipPath.addCircle(clipCx, clipCy, clipRadius, Path.Direction.CW);
+            canvas.save();
             canvas.clipPath(clipPath);
-            canvas.scale(backgroundProvider.scale, backgroundProvider.scale, halfWidth, halfHeight);
-            bgGreen.setAlpha(255);
-            bgGreen.draw(canvas);
-
-            clipPath.rewind();
-            clipPath.addCircle(clipCx / (float) REVEAL_SCALE_FACTOR, clipCy / (float) REVEAL_SCALE_FACTOR, clipRadius / REVEAL_SCALE_FACTOR, Path.Direction.CW);
-            backgroundProvider.getRevealCanvas().drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-            backgroundProvider.getRevealCanvas().save();
-            backgroundProvider.getRevealCanvas().clipPath(clipPath);
-            bgGreenLightReveal.setAlpha(255);
-            bgGreenLightReveal.draw(backgroundProvider.getRevealCanvas());
-            backgroundProvider.getRevealCanvas().restore();
-
-            backgroundProvider.getRevealDrakCanvas().drawColor(Color.TRANSPARENT, PorterDuff.Mode.CLEAR);
-            backgroundProvider.getRevealDrakCanvas().save();
-            backgroundProvider.getRevealDrakCanvas().clipPath(clipPath);
-            bgGreenDarkReveal.setAlpha(255);
-            bgGreenDarkReveal.draw(backgroundProvider.getRevealDrakCanvas());
-            backgroundProvider.getRevealDrakCanvas().restore();
+            int connectedTonal = ColorUtils.blendARGB(surface, primary, isDark ? 0.12f : 0.08f);
+            canvas.drawColor(connectedTonal);
+            canvas.restore();
         }
+
+        // 4. Update VoIPBackgroundProvider canvases for dock buttons and chips
+        int buttonTonalColor = isDark
+            ? ColorUtils.blendARGB(surface, primary, 0.22f)
+            : ColorUtils.blendARGB(surface, primary, 0.12f);
+        int darkContainerColor = ColorUtils.setAlphaComponent(
+            isDark ? Color.BLACK : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText),
+            (int) (255 * (isDark ? 0.35f : 0.10f))
+        );
+
+        Canvas lightCanvas = backgroundProvider.getLightCanvas();
+        if (lightCanvas != null) {
+            lightCanvas.drawColor(buttonTonalColor);
+        }
+        Canvas darkCanvas = backgroundProvider.getDarkCanvas();
+        if (darkCanvas != null) {
+            darkCanvas.drawColor(darkContainerColor);
+        }
+        if (backgroundProvider.isReveal()) {
+            Canvas revealCanvas = backgroundProvider.getRevealCanvas();
+            if (revealCanvas != null) {
+                revealCanvas.drawColor(buttonTonalColor);
+            }
+            Canvas revealDarkCanvas = backgroundProvider.getRevealDrakCanvas();
+            if (revealDarkCanvas != null) {
+                revealDarkCanvas.drawColor(darkContainerColor);
+            }
+        }
+
         super.onDraw(canvas);
     }
 }

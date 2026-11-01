@@ -835,7 +835,7 @@ public class VoIPFragment implements
         };
         frameLayout.setClipToPadding(false);
         frameLayout.setClipChildren(false);
-        frameLayout.setBackgroundColor(0xff000000);
+        frameLayout.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         updateSystemBarColors();
         fragmentView = frameLayout;
 
@@ -965,7 +965,7 @@ public class VoIPFragment implements
         emojiRationalTopTextView.setText(LocaleController.getString(R.string.VoipCallEncryptionEndToEnd));
         emojiRationalTopTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         emojiRationalTopTextView.setTypeface(AndroidUtilities.bold());
-        emojiRationalTopTextView.setTextColor(Color.WHITE);
+        emojiRationalTopTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
         emojiRationalTopTextView.setGravity(Gravity.CENTER);
 
         emojiRationalTextView = new TextView(context) {
@@ -978,7 +978,7 @@ public class VoIPFragment implements
             }
         };
         emojiRationalTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        emojiRationalTextView.setTextColor(Color.WHITE);
+        emojiRationalTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         emojiRationalTextView.setGravity(Gravity.CENTER);
         CharSequence ellipsizeName = TextUtils.ellipsize(UserObject.getFirstName(callingUser), emojiRationalTextView.getPaint(), dp(300), TextUtils.TruncateAt.END);
         emojiRationalTextView.setText(LocaleController.formatString("CallEmojiKeyTooltip", R.string.CallEmojiKeyTooltip, ellipsizeName));
@@ -1037,7 +1037,8 @@ public class VoIPFragment implements
         callingUserTitle.setText(name);
         callingUserTitle.setMaxLines(2);
         callingUserTitle.setEllipsize(TextUtils.TruncateAt.END);
-        callingUserTitle.setTextColor(Color.WHITE);
+        callingUserTitle.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        callingUserTitle.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         callingUserTitle.setGravity(Gravity.CENTER_HORIZONTAL);
         callingUserTitle.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
         statusLayout.addView(callingUserTitle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 8, 0, 8, 6));
@@ -1160,16 +1161,19 @@ public class VoIPFragment implements
         int horizontalMargin = isTablet() ? 100 : 27;
         frameLayout.addView(acceptDeclineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 186, Gravity.BOTTOM, horizontalMargin, 0, horizontalMargin, 0));
 
+        int topIconColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         addIcon = new ImageView(context);
-        addIcon.setBackground(Theme.createSelectorDrawable(ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f))));
+        addIcon.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(40), Color.TRANSPARENT, Theme.multAlpha(topIconColor, 0.12f)));
         addIcon.setImageResource(R.drawable.msg_addcontact);
+        addIcon.setColorFilter(new PorterDuffColorFilter(topIconColor, PorterDuff.Mode.SRC_IN));
         addIcon.setPadding(dp(16), dp(16), dp(16), dp(16));
         frameLayout.addView(addIcon, LayoutHelper.createFrame(56, 56, Gravity.TOP | Gravity.RIGHT));
         ScaleStateListAnimator.apply(addIcon);
 
         backIcon = new ImageView(context);
-        backIcon.setBackground(Theme.createSelectorDrawable(ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f))));
+        backIcon.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(40), Color.TRANSPARENT, Theme.multAlpha(topIconColor, 0.12f)));
         backIcon.setImageResource(R.drawable.msg_call_minimize_shadow);
+        backIcon.setColorFilter(new PorterDuffColorFilter(topIconColor, PorterDuff.Mode.SRC_IN));
         backIcon.setPadding(dp(16), dp(16), dp(16), dp(16));
         backIcon.setContentDescription(LocaleController.getString(R.string.Back));
         frameLayout.addView(backIcon, LayoutHelper.createFrame(56, 56, Gravity.TOP | Gravity.LEFT));
@@ -1188,7 +1192,8 @@ public class VoIPFragment implements
             }
         };
         speakerPhoneIcon.setContentDescription(LocaleController.getString(R.string.VoipSpeaker));
-        speakerPhoneIcon.setBackground(Theme.createSelectorDrawable(ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f))));
+        speakerPhoneIcon.setBackground(Theme.createSimpleSelectorCircleDrawable(AndroidUtilities.dp(40), Color.TRANSPARENT, Theme.multAlpha(topIconColor, 0.12f)));
+        speakerPhoneIcon.setColorFilter(new PorterDuffColorFilter(topIconColor, PorterDuff.Mode.SRC_IN));
         speakerPhoneIcon.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12), AndroidUtilities.dp(12));
         frameLayout.addView(speakerPhoneIcon, LayoutHelper.createFrame(56, 56, Gravity.TOP | Gravity.RIGHT, 0, 56, 0, 0));
         speakerPhoneIcon.setAlpha(0f);

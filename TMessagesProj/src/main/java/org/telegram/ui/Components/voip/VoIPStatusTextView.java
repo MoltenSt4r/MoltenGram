@@ -25,6 +25,7 @@ import androidx.annotation.NonNull;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -52,7 +53,8 @@ public class VoIPStatusTextView extends FrameLayout {
         for (int i = 0; i < 2; i++) {
             textView[i] = new TextView(context);
             textView[i].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            textView[i].setTextColor(Color.WHITE);
+            textView[i].setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            textView[i].setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             textView[i].setGravity(Gravity.CENTER_HORIZONTAL);
             addView(textView[i]);
         }
@@ -77,7 +79,8 @@ public class VoIPStatusTextView extends FrameLayout {
             }
         };
         badConnectionTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        badConnectionTextView.setTextColor(Color.WHITE);
+        badConnectionTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        badConnectionTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         badConnectionTextView.setGravity(Gravity.CENTER_HORIZONTAL);
         badConnectionTextView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(2), AndroidUtilities.dp(12), AndroidUtilities.dp(2));
         badConnectionTextView.setText(LocaleController.getString(R.string.VoipWeakNetwork));
@@ -87,7 +90,8 @@ public class VoIPStatusTextView extends FrameLayout {
 
         reconnectTextView = new TextView(context);
         reconnectTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        reconnectTextView.setTextColor(Color.WHITE);
+        reconnectTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+        reconnectTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
         reconnectTextView.setGravity(Gravity.CENTER_HORIZONTAL);
         addView(reconnectTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 22, 0, 0));
 

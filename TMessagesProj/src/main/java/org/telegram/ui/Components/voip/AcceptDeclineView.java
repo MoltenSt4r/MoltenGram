@@ -118,7 +118,8 @@ public class AcceptDeclineView extends View {
 
         TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
         textPaint.setTextSize(dp(11));
-        textPaint.setColor(Color.WHITE);
+        textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
 
         String acceptStr = LocaleController.getString(R.string.AcceptCall);
         String declineStr = LocaleController.getString(R.string.DeclineCall);

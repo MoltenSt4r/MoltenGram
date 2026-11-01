@@ -100,7 +100,8 @@ public class VoIPToggleButton extends FrameLayout {
             TextView textView = new TextView(context);
             textView.setGravity(Gravity.CENTER_HORIZONTAL);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-            textView.setTextColor(Color.WHITE);
+            textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            textView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
             textView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
             textLayoutContainer.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, diameter + 6, 0, 0));
             this.textView[i] = textView;
