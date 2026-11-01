@@ -183,7 +183,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
     private void safeNotifyDataSetChanged() {
         AndroidUtilities.runOnUIThread(() -> {
             if (listView == null || listAdapter == null) return;
-            if (listView.isComputingLayout() || listView.isScrollInProgress()) {
+            if (listView.isComputingLayout() || listView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
                 listView.post(this::safeNotifyDataSetChanged);
                 return;
             }
@@ -321,18 +321,14 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         List<DeviceSpoofPreset> all = manager.getAllPresets();
         CharSequence[] names = new CharSequence[all.size()];
         String currentId = manager.getSelectedPresetId();
-        int selectedIndex = 0;
         for (int i = 0; i < all.size(); i++) {
             DeviceSpoofPreset p = all.get(i);
-            names[i] = p.title + " (" + p.systemVersion + ")";
-            if (p.id.equals(currentId)) {
-                selectedIndex = i;
-            }
+            boolean isCurrent = p.id.equals(currentId);
+            names[i] = (isCurrent ? "✓ " : "   ") + p.title + " (" + p.systemVersion + ")";
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
         builder.setTitle(LocaleController.getString(R.string.DeviceSpoofing));
-        builder.setSingleChoiceItems(names, selectedIndex, (dialog, which) -> {
-            dialog.dismiss();
+        builder.setItems(names, (dialog, which) -> {
             selectPreset(all.get(which));
         });
         builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);

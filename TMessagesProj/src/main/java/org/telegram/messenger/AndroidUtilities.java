@@ -6608,7 +6608,7 @@ public class AndroidUtilities {
     public static void notifyDataSetChanged(RecyclerView listView) {
         if (listView == null) return;
         if (listView.getAdapter() == null) return;
-        if (listView.isComputingLayout() || listView.isScrollInProgress()) {
+        if (listView.isComputingLayout() || listView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
             listView.post(() -> notifyDataSetChanged(listView));
         } else {
             listView.getAdapter().notifyDataSetChanged();
