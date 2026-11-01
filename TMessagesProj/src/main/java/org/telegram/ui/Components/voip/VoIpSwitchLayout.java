@@ -12,6 +12,7 @@ import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -47,6 +48,12 @@ public class VoIpSwitchLayout extends FrameLayout {
 
     public void setOnBtnClickedListener(VoIpButtonView.OnBtnClickedListener onBtnClickedListener) {
         voIpButtonView.setOnBtnClickedListener(onBtnClickedListener);
+    }
+
+    public void setShapeType(int shapeType) {
+        if (voIpButtonView != null) {
+            voIpButtonView.setShapeType(shapeType);
+        }
     }
 
     public VoIpSwitchLayout(@NonNull Context context, VoIPBackgroundProvider backgroundProvider) {
@@ -148,6 +155,9 @@ public class VoIpSwitchLayout extends FrameLayout {
         newVoIpButtonView.setSelectedState(isSelected, false, type);
         newVoIpButtonView.setAlpha(0f);
         newVoIpButtonView.setOnBtnClickedListener(voIpButtonView.onBtnClickedListener);
+        if (voIpButtonView != null) {
+            newVoIpButtonView.setShapeType(voIpButtonView.getShapeType());
+        }
         addView(newVoIpButtonView, LayoutHelper.createFrame(VoIpButtonView.ITEM_SIZE + 1.5f, VoIpButtonView.ITEM_SIZE + 1.5f, Gravity.CENTER_HORIZONTAL));
         final VoIpButtonView oldVoIpButton = voIpButtonView;
         voIpButtonView = newVoIpButtonView;
@@ -255,6 +265,11 @@ public class VoIpSwitchLayout extends FrameLayout {
     public static class VoIpButtonView extends View {
         private static final int ITEM_SIZE = 52;
 
+        public static final int SHAPE_SQUIRCLE = 0;
+        public static final int SHAPE_PILL = 1;
+        private int shapeType = SHAPE_SQUIRCLE;
+        private final RectF shapeRect = new RectF();
+
         private RLottieDrawable unSelectedIcon;
         private RLottieDrawable selectedIcon;
         private RLottieDrawable singleIcon;
@@ -270,6 +285,33 @@ public class VoIpSwitchLayout extends FrameLayout {
         private OnBtnClickedListener onBtnClickedListener;
         private ValueAnimator animator;
         private final VoIPBackgroundProvider backgroundProvider;
+
+        public void setShapeType(int shapeType) {
+            this.shapeType = shapeType;
+            invalidate();
+        }
+
+        public int getShapeType() {
+            return shapeType;
+        }
+
+        private float getShapeCornerRadius(float r) {
+            return shapeType == SHAPE_PILL ? r : (r * 0.58f);
+        }
+
+        private void drawButtonShape(Canvas canvas, float cx, float cy, float r, Paint paint) {
+            if (r <= 0) return;
+            shapeRect.set(cx - r, cy - r, cx + r, cy + r);
+            float corner = getShapeCornerRadius(r);
+            canvas.drawRoundRect(shapeRect, corner, corner, paint);
+        }
+
+        private void addShapeToPath(Path path, float cx, float cy, float r) {
+            if (r <= 0) return;
+            shapeRect.set(cx - r, cy - r, cx + r, cy + r);
+            float corner = getShapeCornerRadius(r);
+            path.addRoundRect(shapeRect, corner, corner, Path.Direction.CW);
+        }
 
         public void setSelectedState(boolean selectedState, boolean animate, Type type) {
             if (animator != null && animator.isRunning()) {
@@ -406,13 +448,13 @@ public class VoIpSwitchLayout extends FrameLayout {
                 if (singleIconBackgroundAlphaPercent > 20) {
                     darkPaint.setAlpha((int) (VoIPBackgroundProvider.DARK_LIGHT_DEFAULT_ALPHA * singleIconBackgroundAlphaPercent / 100f));
                     whiteCirclePaint.setAlpha((int) (255 * singleIconBackgroundAlphaPercent / 100f));
-                    canvas.drawCircle(cx, cy, maxRadius, whiteCirclePaint);
+                    drawButtonShape(canvas, cx, cy, maxRadius, whiteCirclePaint);
                     singleIcon.draw(canvas, maskPaint);
                     singleIcon.draw(canvas, darkPaint); //dimming icons
                 } else {
-                    canvas.drawCircle(cx, cy, maxRadius, backgroundProvider.getLightPaint()); //add a light background
+                    drawButtonShape(canvas, cx, cy, maxRadius, backgroundProvider.getLightPaint()); //add a light background
                     if(backgroundProvider.isReveal()) {
-                        canvas.drawCircle(cx, cy, maxRadius, backgroundProvider.getRevealPaint());
+                        drawButtonShape(canvas, cx, cy, maxRadius, backgroundProvider.getRevealPaint());
                     }
                     singleIcon.draw(canvas);
                 }
@@ -425,8 +467,8 @@ public class VoIpSwitchLayout extends FrameLayout {
 
             if (selectedRadius == maxRadius && unselectedRadius > 0 && unselectedRadius != maxRadius) {
                 //in the process of changing from selected to NOT selected.
-                canvas.drawCircle(cx, cy, selectedRadius, whiteCirclePaint);
-                canvas.drawCircle(cx, cy, unselectedRadius, maskPaint);
+                drawButtonShape(canvas, cx, cy, selectedRadius, whiteCirclePaint);
+                drawButtonShape(canvas, cx, cy, unselectedRadius, maskPaint);
 
                 selectedIcon.setAlpha(255);
                 selectedIcon.draw(canvas, maskPaint);
@@ -434,16 +476,16 @@ public class VoIpSwitchLayout extends FrameLayout {
                 selectedIcon.draw(canvas); //dimming icons
 
                 clipPath.reset();
-                clipPath.addCircle(cx, cy, unselectedRadius, Path.Direction.CW);
+                addShapeToPath(clipPath, cx, cy, unselectedRadius);
                 canvas.clipPath(clipPath);
-                canvas.drawCircle(cx, cy, unselectedRadius, maskPaint); //remove all background
+                drawButtonShape(canvas, cx, cy, unselectedRadius, maskPaint); //remove all background
             }
 
             if (isUnSelected || unselectedRadius > 0) {
                 //not selected or in the process of changing from selected to NOT selected
-                canvas.drawCircle(cx, cy, unselectedRadius, backgroundProvider.getLightPaint()); //add a light background
+                drawButtonShape(canvas, cx, cy, unselectedRadius, backgroundProvider.getLightPaint()); //add a light background
                 if (backgroundProvider.isReveal()) {
-                    canvas.drawCircle(cx, cy, unselectedRadius, backgroundProvider.getRevealPaint());
+                    drawButtonShape(canvas, cx, cy, unselectedRadius, backgroundProvider.getRevealPaint());
                 }
                 unSelectedIcon.draw(canvas);
             }
@@ -451,9 +493,9 @@ public class VoIpSwitchLayout extends FrameLayout {
             if (isSelected || (selectedRadius > 0 && unselectedRadius == maxRadius)) {
                 //selected and not in the process of changing or in the process of changing from NOT selected to selected.
                 clipPath.reset();
-                clipPath.addCircle(cx, cy, selectedRadius, Path.Direction.CW);
+                addShapeToPath(clipPath, cx, cy, selectedRadius);
                 canvas.clipPath(clipPath);
-                canvas.drawCircle(cx, cy, selectedRadius, whiteCirclePaint); //circular background
+                drawButtonShape(canvas, cx, cy, selectedRadius, whiteCirclePaint); //circular background
                 selectedIcon.setAlpha(255);
                 selectedIcon.draw(canvas, maskPaint);
                 selectedIcon.setAlpha((int) (255 * VoIPBackgroundProvider.DARK_LIGHT_PERCENT));

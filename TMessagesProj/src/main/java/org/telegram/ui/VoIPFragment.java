@@ -1026,6 +1026,7 @@ public class VoIPFragment implements
         callingUserPhotoViewMini = new ImageWithWavesView(context);
         AvatarDrawable avatarDrawable = new AvatarDrawable();
         avatarDrawable.setInfo(callingUser);
+        callingUserPhotoViewMini.setPeer(callingUser);
         callingUserPhotoViewMini.setImage(ImageLocation.getForUserOrChat(currentAccount, callingUser, ImageLocation.TYPE_BIG), null, avatarDrawable, callingUser);
         callingUserPhotoViewMini.setRoundRadius(AndroidUtilities.dp(135) / 2);
 
@@ -1079,6 +1080,7 @@ public class VoIPFragment implements
                 setPressedBtn(pressed);
             }
         };
+        bottomEndCallBtn.setPill(true, 62f);
         int startDelay = 150;
         bottomSpeakerBtn.setTranslationY(AndroidUtilities.dp(100));
         bottomSpeakerBtn.setScaleX(0f);
@@ -1623,8 +1625,8 @@ public class VoIPFragment implements
             cameraToY = toY - (currentUserCameraFloatingLayout.getMeasuredHeight() - currentUserCameraFloatingLayout.getMeasuredHeight() * cameraToScale) / 2f;
         }
 
-        float cameraCornerRadiusFrom = callingUserIsVideo ? AndroidUtilities.dp(4) : 0;
-        float cameraCornerRadiusTo = AndroidUtilities.dp(4) * 1f / cameraToScale;
+        float cameraCornerRadiusFrom = callingUserIsVideo ? AndroidUtilities.dp(24) : 0;
+        float cameraCornerRadiusTo = AndroidUtilities.dp(24) * 1f / cameraToScale;
 
         float fromCameraAlpha = 1f;
         float toCameraAlpha = 1f;

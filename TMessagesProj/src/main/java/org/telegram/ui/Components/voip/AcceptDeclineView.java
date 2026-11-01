@@ -35,6 +35,7 @@ import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
+import app.exteraless.appearance.Md3AvatarShapes;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.ButtonBounce;
 import org.telegram.ui.Components.RLottieDrawable;
@@ -106,9 +107,11 @@ public class AcceptDeclineView extends View {
         buttonWidth = dp(60);
         acceptDrawable = new FabBackgroundDrawable();
         acceptDrawable.setColor(0xFF40C749);
+        acceptDrawable.setShapeId(Md3AvatarShapes.SHAPE_SCALLOP);
 
         declineDrawable = new FabBackgroundDrawable();
         declineDrawable.setColor(0xFFF01D2C);
+        declineDrawable.setShapeId(Md3AvatarShapes.SHAPE_SCALLOP);
 
         declineDrawable.setBounds(0, 0, buttonWidth, buttonWidth);
         acceptDrawable.setBounds(0, 0, buttonWidth, buttonWidth);
@@ -362,6 +365,34 @@ public class AcceptDeclineView extends View {
         void onAccept();
 
         void onDecline();
+    }
+
+    public void setShapeId(int shapeId) {
+        acceptDrawable.setShapeId(shapeId);
+        declineDrawable.setShapeId(shapeId);
+        invalidate();
+    }
+
+    public void setShapes(int acceptShapeId, int declineShapeId) {
+        acceptDrawable.setShapeId(acceptShapeId);
+        declineDrawable.setShapeId(declineShapeId);
+        invalidate();
+    }
+
+    public int getAcceptShapeId() {
+        return acceptDrawable.getShapeId();
+    }
+
+    public int getDeclineShapeId() {
+        return declineDrawable.getShapeId();
+    }
+
+    public FabBackgroundDrawable getAcceptDrawable() {
+        return acceptDrawable;
+    }
+
+    public FabBackgroundDrawable getDeclineDrawable() {
+        return declineDrawable;
     }
 
     private ValueAnimator callAnimator;

@@ -125,7 +125,7 @@ public class VoIPFloatingLayout extends FrameLayout {
                         if (!floatingMode) {
                             outline.setRect(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
                         } else {
-                            outline.setRoundRect(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight(), floatingMode ? AndroidUtilities.dp(4) : 0);
+                            outline.setRoundRect(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight(), floatingMode ? AndroidUtilities.dp(24) : 0);
                         }
                     }
                 }
@@ -160,7 +160,7 @@ public class VoIPFloatingLayout extends FrameLayout {
         if (getMeasuredHeight() != lastH && getMeasuredWidth() != lastW) {
             path.reset();
             rectF.set(0, 0, getMeasuredWidth(), getMeasuredHeight());
-            path.addRoundRect(rectF, AndroidUtilities.dp(4), AndroidUtilities.dp(4), Path.Direction.CW);
+            path.addRoundRect(rectF, AndroidUtilities.dp(24), AndroidUtilities.dp(24), Path.Direction.CW);
             path.toggleInverseFillType();
         }
         lastH = getMeasuredHeight();

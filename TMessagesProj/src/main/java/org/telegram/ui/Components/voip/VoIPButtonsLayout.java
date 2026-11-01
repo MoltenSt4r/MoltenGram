@@ -1,6 +1,9 @@
 package org.telegram.ui.Components.voip;
 
 import android.content.Context;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.view.MotionEvent;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -11,8 +14,20 @@ import org.telegram.messenger.AndroidUtilities;
 
 public class VoIPButtonsLayout extends FrameLayout {
 
+    private final RectF containerRect = new RectF();
+    private final Paint containerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint containerStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float containerRadius;
+    private boolean drawPillDock = true;
+
     public VoIPButtonsLayout(@NonNull Context context) {
         super(context);
+        setWillNotDraw(false);
+        setClipChildren(false);
+        containerPaint.setColor(0x40000000); // MD3 translucent container fill
+        containerStrokePaint.setStyle(Paint.Style.STROKE);
+        containerStrokePaint.setStrokeWidth(AndroidUtilities.dp(1));
+        containerStrokePaint.setColor(0x1AFFFFFF); // Subtle 10% white elevation border
     }
 
     int visibleChildCount;
@@ -52,18 +67,30 @@ public class VoIPButtonsLayout extends FrameLayout {
             }
         }
 
-        int h = Math.max(maxChildHeigth, AndroidUtilities.dp(80));
+        int h = Math.max(maxChildHeigth, AndroidUtilities.dp(84));
         setMeasuredDimension(width, h);
     }
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        int minLeft = Integer.MAX_VALUE;
+        int maxRight = Integer.MIN_VALUE;
+        int minTop = Integer.MAX_VALUE;
+        int maxBottom = Integer.MIN_VALUE;
         if (startPadding) {
             int startFrom = (int) ((getChildCount() - visibleChildCount) / 2f * (childWidth + childPadding * 2));
             for (int i = 0; i < getChildCount(); i++) {
                 View child = getChildAt(i);
                 if (child.getVisibility() != View.GONE) {
-                    child.layout(startFrom + childPadding, 0, startFrom + childPadding + child.getMeasuredWidth(), child.getMeasuredHeight());
+                    int cLeft = startFrom + childPadding;
+                    int cRight = cLeft + child.getMeasuredWidth();
+                    int cTop = 0;
+                    int cBottom = child.getMeasuredHeight();
+                    child.layout(cLeft, cTop, cRight, cBottom);
+                    minLeft = Math.min(minLeft, cLeft);
+                    maxRight = Math.max(maxRight, cRight);
+                    minTop = Math.min(minTop, cTop);
+                    maxBottom = Math.max(maxBottom, cBottom);
                     startFrom += childPadding * 2 + child.getMeasuredWidth();
                 }
             }
@@ -73,9 +100,40 @@ public class VoIPButtonsLayout extends FrameLayout {
             for (int i = 0; i < getChildCount(); i++) {
                 View child = getChildAt(i);
                 if (child.getVisibility() != View.GONE) {
-                    child.layout(k * padding, 0, k * padding + child.getMeasuredWidth(), child.getMeasuredHeight());
+                    int cLeft = k * padding;
+                    int cRight = cLeft + child.getMeasuredWidth();
+                    int cTop = 0;
+                    int cBottom = child.getMeasuredHeight();
+                    child.layout(cLeft, cTop, cRight, cBottom);
+                    minLeft = Math.min(minLeft, cLeft);
+                    maxRight = Math.max(maxRight, cRight);
+                    minTop = Math.min(minTop, cTop);
+                    maxBottom = Math.max(maxBottom, cBottom);
                     k++;
                 }
+            }
+        }
+        if (visibleChildCount > 0 && minLeft < maxRight) {
+            float padH = AndroidUtilities.dp(12);
+            float padV = AndroidUtilities.dp(6);
+            float dockLeft = Math.max(AndroidUtilities.dp(12), minLeft - padH);
+            float dockRight = Math.min(getMeasuredWidth() - AndroidUtilities.dp(12), maxRight + padH);
+            float dockTop = Math.max(0, minTop - padV);
+            float dockBottom = Math.min(getMeasuredHeight(), maxBottom + padV);
+            containerRect.set(dockLeft, dockTop, dockRight, dockBottom);
+            containerRadius = containerRect.height() / 2f;
+        } else {
+            containerRect.setEmpty();
+        }
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+        if (visibleChildCount > 0 && !containerRect.isEmpty() && drawPillDock) {
+            canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerPaint);
+            if (containerStrokePaint != null) {
+                canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerStrokePaint);
             }
         }
     }
@@ -86,5 +144,24 @@ public class VoIPButtonsLayout extends FrameLayout {
 
     public void setUseStartPadding(boolean startPadding) {
         this.startPadding = startPadding;
+    }
+
+    public void setDrawPillDock(boolean draw) {
+        this.drawPillDock = draw;
+        invalidate();
+    }
+
+    public boolean isDrawPillDock() {
+        return drawPillDock;
+    }
+
+    public void setPillDockColor(int fillColor, int strokeColor) {
+        containerPaint.setColor(fillColor);
+        containerStrokePaint.setColor(strokeColor);
+        invalidate();
+    }
+
+    public RectF getContainerRect() {
+        return containerRect;
     }
 }

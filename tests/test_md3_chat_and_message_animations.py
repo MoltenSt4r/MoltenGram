@@ -434,3 +434,31 @@ def test_media_carousel_cell_recycling_state_transition():
     assert buggy_cell.onMeasure() == (1080, 800)
 
 
+
+def test_carousel_individual_loading_indicators():
+    """Verify that ChatMessageCell delegates download progress to Md3MediaCarouselView and suppresses background loader."""
+    with open('/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java', 'r') as f:
+        cell_code = f.read()
+    assert '!isMediaCarouselMessage()' in cell_code
+    assert 'md3MediaCarouselView.onProgressDownload' in cell_code
+    assert 'md3MediaCarouselView.onSuccessDownload' in cell_code
+    assert 'md3MediaCarouselView.onFailedDownload' in cell_code
+
+    with open('/root/ExteraMS/TMessagesProj/src/main/java/app/exteraless/appearance/Md3MediaCarouselView.java', 'r') as f:
+        carousel_code = f.read()
+    assert 'RadialProgressView' in carousel_code
+    assert 'onProgressDownload' in carousel_code
+    assert 'updateLoadingState' in carousel_code
+
+def test_noto_emoji_reactions_centering_and_anchor():
+    """Verify that Noto Color Animated Emoji centers reaction bubble and popup anchor without shifting."""
+    with open('/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/Cells/ChatMessageCell.java', 'r') as f:
+        cell_code = f.read()
+    assert 'currentMessageObject.notoAnimatedEmojiUrl != null' in cell_code
+    assert 'Gravity.CENTER_HORIZONTAL' in cell_code
+    assert '_nr_messageId=%d' in cell_code
+
+    with open('/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/ChatActivity.java', 'r') as f:
+        chat_code = f.read()
+    assert 'primaryMessage.notoAnimatedEmojiUrl != null' in chat_code
+    assert 'emojiCenterX' in chat_code

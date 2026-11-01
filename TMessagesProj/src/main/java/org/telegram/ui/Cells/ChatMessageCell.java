@@ -10043,7 +10043,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         }
                     } else if (messageObject.isAnimatedEmoji()) {
                         if (messageObject.notoAnimatedEmojiUrl != null) {
-                            filter = String.format(Locale.US, "%d_%d", w, h);
+                            filter = String.format(Locale.US, "%d_%d_nr_messageId=%d", w, h, messageObject.stableId);
                             photoImage.setAutoRepeat(1);
                         } else if (!LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_CHAT)) {
                             filter = String.format(Locale.US, "%d_%d_nr_messageId=%d" + messageObject.emojiAnimatedStickerColor, w, h, messageObject.stableId);
@@ -10127,7 +10127,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         photoImage.setImageBitmap(getResources().getDrawable(resId));
                     }
                     if (!reactionsLayoutInBubble.isSmall) {
-                        reactionsLayoutInBubble.measure(maxWidth + dp(36), currentMessageObject.isOutOwner() && (currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) ? Gravity.RIGHT : Gravity.LEFT);
+                        int gravity;
+                        int measureWidth;
+                        if (currentMessageObject != null && currentMessageObject.notoAnimatedEmojiUrl != null) {
+                            gravity = Gravity.CENTER_HORIZONTAL;
+                            measureWidth = photoWidth;
+                        } else {
+                            gravity = currentMessageObject.isOutOwner() && (currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) ? Gravity.RIGHT : Gravity.LEFT;
+                            measureWidth = maxWidth + dp(36);
+                        }
+                        reactionsLayoutInBubble.measure(measureWidth, gravity);
                         reactionsLayoutInBubble.drawServiceShaderBackground = 1f;
                         reactionsLayoutInBubble.totalHeight = reactionsLayoutInBubble.height + dp(8);
                         additionHeight += reactionsLayoutInBubble.totalHeight;
@@ -15917,7 +15926,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         if (!reactionsLayoutInBubble.isEmpty && (currentPosition == null || isMediaCarouselMessage() || ((currentPosition.flags & MessageObject.POSITION_FLAG_BOTTOM) != 0 && (currentPosition.flags & MessageObject.POSITION_FLAG_LEFT) != 0)) && !reactionsLayoutInBubble.isSmall) {
             if (currentMessageObject.type == MessageObject.TYPE_EMOJIS || currentMessageObject.isAnimatedEmoji() || currentMessageObject.isAnyKindOfSticker()) {
-                if (currentMessageObject.isOutOwner()) {
+                if (currentMessageObject.notoAnimatedEmojiUrl != null && photoImage != null && photoImage.getImageWidth() > 0) {
+                    reactionsLayoutInBubble.x = (int) (photoImage.getImageX() + (photoImage.getImageWidth() - reactionsLayoutInBubble.width) / 2f);
+                } else if (currentMessageObject.isOutOwner()) {
                     reactionsLayoutInBubble.x = getMeasuredWidth() - reactionsLayoutInBubble.width - dp(16);//AndroidUtilities.displaySize.x - maxWidth - dp(17);
                 } else {
                     if (photoImage != null && photoImage.getImageWidth() > 0) {
@@ -18725,11 +18736,17 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     @Override
     public void onFailedDownload(String fileName, boolean canceled) {
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            md3MediaCarouselView.onFailedDownload(fileName, canceled);
+        }
         updateButtonState(true, documentAttachType == DOCUMENT_ATTACH_TYPE_AUDIO || documentAttachType == DOCUMENT_ATTACH_TYPE_MUSIC, false);
     }
 
     @Override
     public void onSuccessDownload(String fileName) {
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            md3MediaCarouselView.onSuccessDownload(fileName);
+        }
         if (documentAttachType == DOCUMENT_ATTACH_TYPE_STICKER && currentMessageObject.isDice()) {
             DownloadController.getInstance(currentAccount).removeLoadingFileObserver(this);
             setCurrentDiceValue(true);
@@ -18905,6 +18922,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         float progress = totalSize == 0 ? 0 : Math.min(1f, downloadedSize / (float) totalSize);
         currentMessageObject.loadedFileSize = downloadedSize;
         createLoadingProgressLayout(downloadedSize, totalSize);
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            md3MediaCarouselView.onProgressDownload(fileName, downloadedSize, totalSize);
+        }
         if (drawVideoImageButton) {
             videoRadialProgress.setProgress(progress, true);
         } else {
@@ -27012,7 +27032,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             drawContact(canvas);
         }
 
-        if (drawImageButton && photoImage.getVisible() && !isSmallImage && !currentMessageObject.isRepostVideoPreview) {
+        if (drawImageButton && photoImage.getVisible() && !isSmallImage && !currentMessageObject.isRepostVideoPreview && !isMediaCarouselMessage()) {
             if (controlsAlpha != 1.0f) {
                 radialProgress.setOverrideAlpha(controlsAlpha);
             }
@@ -27087,7 +27107,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             invalidate();
             updateSecretTimeText(currentMessageObject);
         }
-        if ((drawVideoImageButton || animatingDrawVideoImageButton != 0) && !currentMessageObject.isRepostPreview && !currentMessageObject.sendPreview && photoImage.getVisible() && !isSmallImage && !currentMessageObject.isHiddenSensitive()) {
+        if ((drawVideoImageButton || animatingDrawVideoImageButton != 0) && !isMediaCarouselMessage() && !currentMessageObject.isRepostPreview && !currentMessageObject.sendPreview && photoImage.getVisible() && !isSmallImage && !currentMessageObject.isHiddenSensitive()) {
             float alpha = controlsAlpha;
             if (drawPhotoImage && currentMessageObject != null && currentMessageObject.hasMediaSpoilers() && currentMessageObject.isSensitive() && (!currentMessageObject.isMediaSpoilersRevealed || mediaSpoilerRevealProgress != 0 && mediaSpoilerRevealProgress < 1)) {
                 alpha *= mediaSpoilerRevealProgress;
@@ -27359,6 +27379,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private Paint clipPaint;
     protected float radialProgressAlpha = 1f;
     protected void drawRadialProgress(Canvas canvas) {
+        if (isMediaCarouselMessage()) {
+            return;
+        }
         final boolean withPeriod = currentMessageObject.isRoundOnce();
         if (withPeriod) {
             AndroidUtilities.rectTmp.set(radialProgress.getProgressRect());

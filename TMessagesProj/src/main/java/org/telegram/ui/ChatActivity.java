@@ -34620,7 +34620,14 @@ public class ChatActivity extends BaseFragment implements
 
             ItemOptions.setGapBackgroundColor(popupLayout, Theme.multAlpha(getThemedColor(Theme.key_actionBarDefaultSubmenuItem), 0.06f));
 
-            int popupX = v.getLeft() + (int) x - scrimPopupContainerLayout.getMeasuredWidth() + backgroundPaddings.left - AndroidUtilities.dp(28);
+            int popupX;
+            if (primaryMessage != null && primaryMessage.notoAnimatedEmojiUrl != null && v instanceof ChatMessageCell) {
+                ChatMessageCell chatCell = (ChatMessageCell) v;
+                int emojiCenterX = (int) (chatCell.getPhotoImage().getImageX() + chatCell.getPhotoImage().getImageWidth() / 2f);
+                popupX = v.getLeft() + emojiCenterX - scrimPopupContainerLayout.getMeasuredWidth() / 2;
+            } else {
+                popupX = v.getLeft() + (int) x - scrimPopupContainerLayout.getMeasuredWidth() + backgroundPaddings.left - AndroidUtilities.dp(28);
+            }
             if (popupX < AndroidUtilities.dp(6)) {
                 popupX = AndroidUtilities.dp(6);
             } else if (popupX > chatListView.getMeasuredWidth() - AndroidUtilities.dp(6) - scrimPopupContainerLayout.getMeasuredWidth()) {

@@ -6,6 +6,7 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Path;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
@@ -14,6 +15,10 @@ import android.widget.FrameLayout;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.LiteMode;
+import org.telegram.messenger.UserObject;
+import org.telegram.tgnet.TLRPC;
+import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
@@ -25,13 +30,24 @@ public class ImageWithWavesView extends FrameLayout {
     private boolean isConnectedCalled;
     private boolean isMuted;
     private final boolean allowAnimations;
+    private int shapeId = Md3AvatarShapes.SHAPE_SCALLOP;
+    private Path shapePath;
+    private float lastShapeW = -1;
+    private float lastShapeH = -1;
+    private float lastLeft = -1;
+    private float lastTop = -1;
 
     public ImageWithWavesView(Context context) {
         super(context);
+        int userShape = AppearanceConfig.getAvatarShape(Md3AvatarShapes.PEER_TYPE_USER);
+        shapeId = userShape > 0 ? userShape : Md3AvatarShapes.SHAPE_SCALLOP;
         avatarWavesDrawable = new AvatarWavesDrawable(AndroidUtilities.dp(104), AndroidUtilities.dp(111), AndroidUtilities.dp(12), 8);
         avatarWavesDrawable.setAmplitude(3f);
         avatarWavesDrawable.setShowWaves(true, this);
         backupImageView = new BackupImageView(context);
+        if (shapeId >= 0) {
+            backupImageView.setRoundRadius(0);
+        }
         addView(backupImageView, LayoutHelper.createFrame(135, 135, Gravity.CENTER));
         setWillNotDraw(false);
         animatorSet = new AnimatorSet();
@@ -57,7 +73,39 @@ public class ImageWithWavesView extends FrameLayout {
     }
 
     public void setRoundRadius(int value) {
-        backupImageView.setRoundRadius(value);
+        if (shapeId >= 0) {
+            backupImageView.setRoundRadius(0);
+        } else {
+            backupImageView.setRoundRadius(value);
+        }
+    }
+
+    public void setShapeId(int shapeId) {
+        if (this.shapeId != shapeId) {
+            this.shapeId = shapeId;
+            this.shapePath = null;
+            if (shapeId >= 0 && backupImageView != null) {
+                backupImageView.setRoundRadius(0);
+            }
+            invalidate();
+        }
+    }
+
+    public int getShapeId() {
+        return shapeId;
+    }
+
+    public void setPeer(TLRPC.User user) {
+        if (user != null) {
+            int peerType = UserObject.isUserSelf(user) ? Md3AvatarShapes.PEER_TYPE_SELF :
+                    user.bot ? Md3AvatarShapes.PEER_TYPE_BOT : Md3AvatarShapes.PEER_TYPE_USER;
+            int peerShape = AppearanceConfig.getAvatarShape(peerType);
+            setShapeId(peerShape > 0 ? peerShape : Md3AvatarShapes.SHAPE_SCALLOP);
+        }
+    }
+
+    public BackupImageView getBackupImageView() {
+        return backupImageView;
     }
 
     public void setShowWaves(boolean showWaves) {
@@ -128,6 +176,31 @@ public class ImageWithWavesView extends FrameLayout {
             avatarWavesDrawable.draw(canvas, cx, cy, this);
         }
         super.onDraw(canvas);
+    }
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (shapeId >= 0 && backupImageView != null && backupImageView.getMeasuredWidth() > 0 && backupImageView.getMeasuredHeight() > 0) {
+            float left = backupImageView.getLeft();
+            float top = backupImageView.getTop();
+            float w = backupImageView.getMeasuredWidth();
+            float h = backupImageView.getMeasuredHeight();
+            if (shapePath == null || lastShapeW != w || lastShapeH != h || lastLeft != left || lastTop != top) {
+                lastShapeW = w;
+                lastShapeH = h;
+                lastLeft = left;
+                lastTop = top;
+                shapePath = Md3AvatarShapes.getShapePath(shapeId, left, top, w, h);
+            }
+            if (shapePath != null) {
+                canvas.save();
+                canvas.clipPath(shapePath);
+                super.dispatchDraw(canvas);
+                canvas.restore();
+                return;
+            }
+        }
+        super.dispatchDraw(canvas);
     }
 
     public static class AvatarWavesDrawable {

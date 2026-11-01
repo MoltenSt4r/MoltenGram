@@ -13,6 +13,7 @@ import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.PorterDuffXfermode;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -40,6 +41,13 @@ public class VoIPToggleButton extends FrameLayout {
     private boolean drawRipple = true;
     private boolean animateBackground;
     Drawable[] icon = new Drawable[2];
+
+    private final RectF shapeRect = new RectF();
+    private boolean isPill = false;
+    private float pillWidth = 0f;
+    public static final int SHAPE_SQUIRCLE = 0;
+    public static final int SHAPE_PILL = 1;
+    private int shapeType = SHAPE_SQUIRCLE;
 
     FrameLayout textLayoutContainer;
     TextView[] textView = new TextView[2];
@@ -149,15 +157,23 @@ public class VoIPToggleButton extends FrameLayout {
         float cx = getWidth() / 2f;
         float cy = dp(diameter) / 2f;
         float radius = dp(diameter) / 2f;
+
+        boolean pill = isPill();
+        float btnHeight = dp(diameter);
+        float btnWidth = pill ? (pillWidth > 0 ? dp(pillWidth) : Math.min(getWidth() - dp(4), dp(diameter + 10))) : dp(diameter);
+        float cornerRadius = pill ? (btnHeight / 2f) : (radius * 0.58f);
+
+        shapeRect.set(cx - btnWidth / 2f, cy - btnHeight / 2f, cx + btnWidth / 2f, cy + btnHeight / 2f);
+
         if (drawBackground) {
-            canvas.drawCircle(cx, cy, radius, circlePaint);
+            canvas.drawRoundRect(shapeRect, cornerRadius, cornerRadius, circlePaint);
         }
         if (rippleDrawable == null) {
-            rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(diameter), 0, Color.BLACK);
+            rippleDrawable = Theme.createSimpleSelectorRoundRectDrawable((int) cornerRadius, 0, Color.BLACK);
             rippleDrawable.setCallback(this);
         }
         if (drawRipple) {
-            rippleDrawable.setBounds((int) (cx - radius), (int) (cy - radius), (int) (cx + radius), (int) (cy + radius));
+            rippleDrawable.setBounds((int) shapeRect.left, (int) shapeRect.top, (int) shapeRect.right, (int) shapeRect.bottom);
             rippleDrawable.draw(canvas);
         }
 
@@ -271,11 +287,13 @@ public class VoIPToggleButton extends FrameLayout {
         }
 
         if (rippleDrawable == null || recreateRipple) {
+            boolean pill = isPill || currentIconRes == iconRes || currentBackgroundColor == backgroundColor || iconRes == R.drawable.calls_decline || backgroundColor == 0xFFF01D2C;
+            int cornerRad = (int) (pill ? (dp(diameter) / 2f) : (dp(diameter) / 2f * 0.58f));
             if (Color.alpha(backgroundColor) == 255 && AndroidUtilities.computePerceivedBrightness(backgroundColor) > 0.5) {
-                rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(diameter), 0, ColorUtils.setAlphaComponent(Color.BLACK, (int) (255 * 0.1f * selectorAlpha)));
+                rippleDrawable = Theme.createSimpleSelectorRoundRectDrawable(cornerRad, 0, ColorUtils.setAlphaComponent(Color.BLACK, (int) (255 * 0.1f * selectorAlpha)));
                 rippleDrawable.setCallback(this);
             } else {
-                rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(diameter), 0, ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f * selectorAlpha)));
+                rippleDrawable = Theme.createSimpleSelectorRoundRectDrawable(cornerRad, 0, ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f * selectorAlpha)));
                 rippleDrawable.setCallback(this);
             }
         }
@@ -370,6 +388,40 @@ public class VoIPToggleButton extends FrameLayout {
             replaceAnimator.setDuration(150).start();
             invalidate();
         }
+    }
+
+    public void setPill(boolean pill) {
+        this.isPill = pill;
+        this.shapeType = pill ? SHAPE_PILL : SHAPE_SQUIRCLE;
+        this.rippleDrawable = null;
+        invalidate();
+    }
+
+    public void setPill(boolean pill, float customWidth) {
+        this.isPill = pill;
+        this.pillWidth = customWidth;
+        this.shapeType = pill ? SHAPE_PILL : SHAPE_SQUIRCLE;
+        this.rippleDrawable = null;
+        invalidate();
+    }
+
+    public boolean isPill() {
+        return isPill || shapeType == SHAPE_PILL || currentIconRes == org.telegram.messenger.R.drawable.calls_decline || currentBackgroundColor == 0xFFF01D2C;
+    }
+
+    public void setShapeType(int shapeType) {
+        this.shapeType = shapeType;
+        this.isPill = (shapeType == SHAPE_PILL);
+        this.rippleDrawable = null;
+        invalidate();
+    }
+
+    public int getShapeType() {
+        return shapeType;
+    }
+
+    public RectF getShapeRect() {
+        return shapeRect;
     }
 
     public void setCrossOffset(float crossOffset) {

@@ -36,6 +36,7 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RadialProgressView;
 
 import java.util.ArrayList;
 import java.util.Locale;
@@ -290,6 +291,55 @@ public class Md3MediaCarouselView extends FrameLayout {
         return indexOf(message) >= 0;
     }
 
+    public void onProgressDownload(String fileName, long downloadedSize, long totalSize) {
+        if (fileName == null || recyclerView == null) {
+            return;
+        }
+        float progress = totalSize == 0 ? 0 : Math.min(1f, downloadedSize / (float) totalSize);
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            View child = recyclerView.getChildAt(i);
+            RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(child);
+            if (vh instanceof CarouselViewHolder) {
+                CarouselViewHolder holder = (CarouselViewHolder) vh;
+                if (holder.matchesFileName(fileName)) {
+                    holder.setProgress(progress);
+                }
+            }
+        }
+    }
+
+    public void onSuccessDownload(String fileName) {
+        if (fileName == null || recyclerView == null) {
+            return;
+        }
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            View child = recyclerView.getChildAt(i);
+            RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(child);
+            if (vh instanceof CarouselViewHolder) {
+                CarouselViewHolder holder = (CarouselViewHolder) vh;
+                if (holder.matchesFileName(fileName)) {
+                    holder.onDownloadFinished();
+                }
+            }
+        }
+    }
+
+    public void onFailedDownload(String fileName, boolean canceled) {
+        if (fileName == null || recyclerView == null) {
+            return;
+        }
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            View child = recyclerView.getChildAt(i);
+            RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(child);
+            if (vh instanceof CarouselViewHolder) {
+                CarouselViewHolder holder = (CarouselViewHolder) vh;
+                if (holder.matchesFileName(fileName)) {
+                    holder.onDownloadFinished();
+                }
+            }
+        }
+    }
+
     private void updateCarouselStrategy() {
         CarouselStrategy targetStrategy = messages.size() == 2 ? twoPhotoStrategy : multiBrowseStrategy;
         if (currentStrategy != targetStrategy) {
@@ -375,7 +425,13 @@ public class Md3MediaCarouselView extends FrameLayout {
 
             frameLayout.addView(videoBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START, 8, 0, 0, 8));
 
-            return new CarouselViewHolder(frameLayout, imageView, videoBadge, durationText);
+            RadialProgressView progressView = new RadialProgressView(parent.getContext());
+            progressView.setSize(AndroidUtilities.dp(36));
+            progressView.setProgressColor(Color.WHITE);
+            progressView.setBackgroundResource(R.drawable.circle_big);
+            frameLayout.addView(progressView, LayoutHelper.createFrame(48, 48, Gravity.CENTER));
+
+            return new CarouselViewHolder(frameLayout, imageView, videoBadge, durationText, progressView);
         }
 
         @Override
@@ -396,12 +452,16 @@ public class Md3MediaCarouselView extends FrameLayout {
         private final BackupImageView imageView;
         private final View videoBadge;
         private final TextView durationText;
+        private final RadialProgressView progressView;
+        private MessageObject currentMessage;
+        private String currentFileName;
 
-        public CarouselViewHolder(@NonNull View itemView, BackupImageView imageView, View videoBadge, TextView durationText) {
+        public CarouselViewHolder(@NonNull View itemView, BackupImageView imageView, View videoBadge, TextView durationText, RadialProgressView progressView) {
             super(itemView);
             this.imageView = imageView;
             this.videoBadge = videoBadge;
             this.durationText = durationText;
+            this.progressView = progressView;
 
             itemView.setOnClickListener(v -> {
                 int pos = getAdapterPosition();
@@ -416,11 +476,52 @@ public class Md3MediaCarouselView extends FrameLayout {
                 }
                 return false;
             });
+
+            imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
+                if (set && !thumb) {
+                    updateLoadingState();
+                }
+            });
+        }
+
+        public boolean matchesFileName(String fileName) {
+            return fileName != null && currentFileName != null && (fileName.equals(currentFileName) || fileName.contains(currentFileName) || currentFileName.contains(fileName));
+        }
+
+        public void setProgress(float progress) {
+            if (progressView != null) {
+                if (progressView.getVisibility() != View.VISIBLE) {
+                    progressView.setVisibility(View.VISIBLE);
+                }
+                progressView.setProgress(progress);
+            }
+        }
+
+        public void onDownloadFinished() {
+            updateLoadingState();
+        }
+
+        private void updateLoadingState() {
+            if (currentMessage == null) {
+                if (progressView != null) progressView.setVisibility(View.GONE);
+                return;
+            }
+            boolean loaded = imageView.getImageReceiver().hasNotThumb() || currentMessage.mediaExists();
+            if (progressView != null) {
+                progressView.setVisibility(loaded ? View.GONE : View.VISIBLE);
+            }
         }
 
         public void bind(MessageObject message) {
+            this.currentMessage = message;
+            this.currentFileName = message != null ? message.getFileName() : null;
+
             TLRPC.PhotoSize photoSize = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, AndroidUtilities.getPhotoSize());
             TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, 100);
+
+            if (currentFileName == null && photoSize != null && photoSize.location != null) {
+                currentFileName = FileLoader.getAttachFileName(photoSize.location);
+            }
 
             if (photoSize != null) {
                 imageView.setImage(
@@ -434,6 +535,8 @@ public class Md3MediaCarouselView extends FrameLayout {
             } else {
                 imageView.setImageBitmap(null);
             }
+
+            updateLoadingState();
 
             if (message.isVideo()) {
                 videoBadge.setVisibility(View.VISIBLE);
