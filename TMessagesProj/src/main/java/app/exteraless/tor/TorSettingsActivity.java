@@ -16,9 +16,11 @@ import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.animation.LinearInterpolator;
+import android.view.animation.OvershootInterpolator;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -49,6 +51,7 @@ import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextRadioCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.Switch;
@@ -744,64 +747,170 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
     }
 
     /**
-     * Кнопка подключения Tor в стиле ShrimpNG / VPN (по видео):
-     * - Отключено: оранжевый круг с треугольником Play ▶
-     * - Подключение: оранжевый круг с вращающимся кольцом
-     * - Подключено: оранжевая 12-лепестковая фигура (цветок/волна) со значком Stop ⏹
-     * - Ошибка: красный круг со значком повтора
+     * Кнопка подключения Tor в стиле ShrimpNG:
+     * - Отключено: кораллово-оранжевый круг с тёмным треугольником Play ▶
+     * - Подключение: кораллово-оранжевый круг с вращающейся дугой вокруг
+     * - Подключено: плавно вращающаяся 9-сторонняя «печенька» с неподвижным тёмным значком Stop ⏹ в центре
+     * - Плавный морфинг формы между кругом и 9-лепестковой печенькой при подключении/отключении
+     * - Тактильная анимация масштабирования при нажатии (press-bounce)
      */
     public static class TorConnectionButton extends View {
         private int state = TorController.STATUS_STOPPED;
         private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-        private final Path flowerPath = new Path();
+        private final Path cookiePath = new Path();
         private final Path trianglePath = new Path();
         private final RectF squareRect = new RectF();
         private final RectF ringRect = new RectF();
-        private float rotationAngle = 0f;
-        private ValueAnimator spinAnimator;
+        private final Theme.ResourcesProvider resourcesProvider;
 
-        public TorConnectionButton(Context context) {
+        private float cookieRotation = 0f;
+        private ValueAnimator cookieRotationAnimator;
+
+        private float connectingRotation = 0f;
+        private ValueAnimator connectingSpinAnimator;
+
+        private float morphProgress = 0f; // 0 = круг, 1 = 9-сторонняя печенька
+        private ValueAnimator morphAnimator;
+
+        private float pressScale = 1f;
+        private ValueAnimator pressAnimator;
+
+        public TorConnectionButton(Context context, Theme.ResourcesProvider resourcesProvider) {
             super(context);
+            this.resourcesProvider = resourcesProvider;
             fillPaint.setStyle(Paint.Style.FILL);
-            iconPaint.setColor(0xFFFFFFFF);
             iconPaint.setStyle(Paint.Style.FILL);
             ringPaint.setStyle(Paint.Style.STROKE);
             ringPaint.setStrokeCap(Paint.Cap.ROUND);
         }
 
-        public void setState(int state) {
-            if (this.state != state) {
-                this.state = state;
-                if (state == TorController.STATUS_CONNECTING || state == TorController.STATUS_STARTING) {
-                    startSpin();
+        public void setState(int newState) {
+            if (this.state != newState) {
+                this.state = newState;
+                if (newState == TorController.STATUS_CONNECTED) {
+                    startCookieRotation();
+                    animateMorph(1f);
+                    stopConnectingSpin();
+                } else if (newState == TorController.STATUS_CONNECTING || newState == TorController.STATUS_STARTING) {
+                    stopCookieRotation();
+                    animateMorph(0f);
+                    startConnectingSpin();
                 } else {
-                    stopSpin();
+                    stopCookieRotation();
+                    animateMorph(0f);
+                    stopConnectingSpin();
                 }
                 invalidate();
             }
         }
 
-        public void startSpin() {
-            if (spinAnimator != null) return;
-            spinAnimator = ValueAnimator.ofFloat(0f, 360f);
-            spinAnimator.setDuration(1200);
-            spinAnimator.setRepeatCount(ValueAnimator.INFINITE);
-            spinAnimator.setInterpolator(new LinearInterpolator());
-            spinAnimator.addUpdateListener(anim -> {
-                rotationAngle = (float) anim.getAnimatedValue();
+        public void setInitialState(int initialState) {
+            this.state = initialState;
+            if (initialState == TorController.STATUS_CONNECTED) {
+                morphProgress = 1f;
+                startCookieRotation();
+            } else {
+                morphProgress = 0f;
+            }
+            invalidate();
+        }
+
+        private void animateMorph(float target) {
+            if (morphAnimator != null) {
+                morphAnimator.cancel();
+            }
+            morphAnimator = ValueAnimator.ofFloat(morphProgress, target);
+            morphAnimator.setDuration(380);
+            morphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            morphAnimator.addUpdateListener(anim -> {
+                morphProgress = (float) anim.getAnimatedValue();
                 invalidate();
             });
-            spinAnimator.start();
+            morphAnimator.start();
+        }
+
+        private void startCookieRotation() {
+            if (cookieRotationAnimator != null) return;
+            cookieRotationAnimator = ValueAnimator.ofFloat(0f, 360f);
+            cookieRotationAnimator.setDuration(12000); // 12 секунд на оборот, грациозное плавное вращение
+            cookieRotationAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            cookieRotationAnimator.setInterpolator(new LinearInterpolator());
+            cookieRotationAnimator.addUpdateListener(anim -> {
+                cookieRotation = (float) anim.getAnimatedValue();
+                invalidate();
+            });
+            cookieRotationAnimator.start();
+        }
+
+        private void stopCookieRotation() {
+            if (cookieRotationAnimator != null) {
+                cookieRotationAnimator.cancel();
+                cookieRotationAnimator = null;
+            }
+        }
+
+        private void startConnectingSpin() {
+            if (connectingSpinAnimator != null) return;
+            connectingSpinAnimator = ValueAnimator.ofFloat(0f, 360f);
+            connectingSpinAnimator.setDuration(1200);
+            connectingSpinAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            connectingSpinAnimator.setInterpolator(new LinearInterpolator());
+            connectingSpinAnimator.addUpdateListener(anim -> {
+                connectingRotation = (float) anim.getAnimatedValue();
+                invalidate();
+            });
+            connectingSpinAnimator.start();
+        }
+
+        private void stopConnectingSpin() {
+            if (connectingSpinAnimator != null) {
+                connectingSpinAnimator.cancel();
+                connectingSpinAnimator = null;
+            }
+            connectingRotation = 0f;
         }
 
         public void stopSpin() {
-            if (spinAnimator != null) {
-                spinAnimator.cancel();
-                spinAnimator = null;
+            stopCookieRotation();
+            stopConnectingSpin();
+            if (morphAnimator != null) {
+                morphAnimator.cancel();
+                morphAnimator = null;
             }
-            rotationAngle = 0f;
+            if (pressAnimator != null) {
+                pressAnimator.cancel();
+                pressAnimator = null;
+            }
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    animatePress(0.92f);
+                    break;
+                case MotionEvent.ACTION_UP:
+                case MotionEvent.ACTION_CANCEL:
+                    animatePress(1.0f);
+                    break;
+            }
+            return super.onTouchEvent(event);
+        }
+
+        private void animatePress(float target) {
+            if (pressAnimator != null) {
+                pressAnimator.cancel();
+            }
+            pressAnimator = ValueAnimator.ofFloat(pressScale, target);
+            pressAnimator.setDuration(target < 1f ? 110 : 250);
+            pressAnimator.setInterpolator(target < 1f ? CubicBezierInterpolator.DEFAULT : new OvershootInterpolator(1.4f));
+            pressAnimator.addUpdateListener(anim -> {
+                pressScale = (float) anim.getAnimatedValue();
+                invalidate();
+            });
+            pressAnimator.start();
         }
 
         @Override
@@ -821,56 +930,82 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
             float cy = h / 2f;
             float radius = Math.min(w, h) / 2f - AndroidUtilities.dp(6);
 
-            int accentColor = 0xFFFF5C38; // Оранжево-коралловый цвет из видеопримера
+            // Тактильный масштаб при нажатии (press-bounce)
+            if (pressScale != 1f) {
+                canvas.scale(pressScale, pressScale, cx, cy);
+            }
 
-            if (state == TorController.STATUS_CONNECTED) {
-                // 12-лепестковая фигура волны/цветка из видео
+            int accentColor = 0xFFFF7043; // Кораллово-оранжевый как в ShrimpNG (#FF7043)
+            int bgCutoutColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider) | 0xFF000000;
+
+            if (state == TorController.STATUS_ERROR) {
+                fillPaint.setColor(0xFFEF4444);
+            } else {
                 fillPaint.setColor(accentColor);
-                flowerPath.reset();
-                int lobes = 12;
-                float baseR = radius * 0.90f;
-                float amp = radius * 0.10f;
-                for (int i = 0; i <= 360; i += 3) {
-                    double rad = Math.toRadians(i);
-                    float r = baseR + amp * (float) Math.cos(lobes * rad);
-                    float x = cx + r * (float) Math.cos(rad);
-                    float y = cy + r * (float) Math.sin(rad);
-                    if (i == 0) {
-                        flowerPath.moveTo(x, y);
-                    } else {
-                        flowerPath.lineTo(x, y);
-                    }
-                }
-                flowerPath.close();
-                canvas.drawPath(flowerPath, fillPaint);
+            }
 
+            // 1. Рисуем внешнюю фигуру (плавный морфинг от круга до 9-сторонней печеньки)
+            cookiePath.reset();
+            int lobes = 9; // Ровно 9 сторон («9-сторонная печенька»)
+            float baseR = radius * 0.92f;
+            float maxAmp = radius * 0.08f;
+            float amp = maxAmp * morphProgress;
+
+            for (int i = 0; i <= 360; i += 2) {
+                double rad = Math.toRadians(i);
+                float r = baseR + amp * (float) Math.cos(lobes * rad);
+                float x = cx + r * (float) Math.cos(rad);
+                float y = cy + r * (float) Math.sin(rad);
+                if (i == 0) {
+                    cookiePath.moveTo(x, y);
+                } else {
+                    cookiePath.lineTo(x, y);
+                }
+            }
+            cookiePath.close();
+
+            // Вращение только внешней печеньки при активном соединении
+            canvas.save();
+            if (cookieRotation != 0f) {
+                canvas.rotate(cookieRotation, cx, cy);
+            }
+            canvas.drawPath(cookiePath, fillPaint);
+            canvas.restore();
+
+            // 2. Индикатор подключения (вращающаяся дуга вокруг)
+            if (state == TorController.STATUS_CONNECTING || state == TorController.STATUS_STARTING) {
+                ringPaint.setColor(accentColor);
+                ringPaint.setStrokeWidth(AndroidUtilities.dp(3.5f));
+                ringRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
+                canvas.drawArc(ringRect, connectingRotation, 110, false, ringPaint);
+            }
+
+            // 3. Центральные значки (тёмный цвет фона карточки — аутентичный эффект прорези, как в ShrimpNG)
+            // Плавный кроссфейд между треугольником Play и квадратом Stop
+            float playAlpha = Math.max(0f, 1f - morphProgress * 1.5f);
+            float stopAlpha = Math.max(0f, (morphProgress - 0.2f) / 0.8f);
+
+            if (playAlpha > 0f) {
+                int a = (int) (255 * playAlpha);
+                iconPaint.setColor((bgCutoutColor & 0x00FFFFFF) | (a << 24));
+                float playScale = 1f - 0.2f * morphProgress;
+                canvas.save();
+                canvas.scale(playScale, playScale, cx, cy);
+                drawPlayTriangle(canvas, cx, cy);
+                canvas.restore();
+            }
+
+            if (stopAlpha > 0f) {
+                int a = (int) (255 * stopAlpha);
+                iconPaint.setColor((bgCutoutColor & 0x00FFFFFF) | (a << 24));
+                float stopScale = 0.8f + 0.2f * morphProgress;
+                canvas.save();
+                canvas.scale(stopScale, stopScale, cx, cy);
                 // Значок Stop (скругленный квадрат в центре)
                 float sqSize = AndroidUtilities.dp(22);
                 squareRect.set(cx - sqSize / 2f, cy - sqSize / 2f, cx + sqSize / 2f, cy + sqSize / 2f);
                 canvas.drawRoundRect(squareRect, AndroidUtilities.dp(5), AndroidUtilities.dp(5), iconPaint);
-
-            } else if (state == TorController.STATUS_CONNECTING || state == TorController.STATUS_STARTING) {
-                fillPaint.setColor(accentColor);
-                canvas.drawCircle(cx, cy, radius * 0.86f, fillPaint);
-
-                // Вращающаяся дуга вокруг кнопки
-                ringPaint.setColor(accentColor);
-                ringPaint.setStrokeWidth(AndroidUtilities.dp(3.5f));
-                ringRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
-                canvas.drawArc(ringRect, rotationAngle, 100, false, ringPaint);
-
-                drawPlayTriangle(canvas, cx, cy);
-
-            } else if (state == TorController.STATUS_ERROR) {
-                fillPaint.setColor(0xFFEF4444);
-                canvas.drawCircle(cx, cy, radius, fillPaint);
-                drawPlayTriangle(canvas, cx, cy);
-
-            } else {
-                // Отключено (круглая кнопка с Play)
-                fillPaint.setColor(accentColor);
-                canvas.drawCircle(cx, cy, radius, fillPaint);
-                drawPlayTriangle(canvas, cx, cy);
+                canvas.restore();
             }
         }
 
@@ -940,8 +1075,9 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
             mainLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(20), AndroidUtilities.dp(16), AndroidUtilities.dp(18));
             addView(mainLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            // Центральная кнопка подключения
-            connectionButton = new TorConnectionButton(context);
+            // Центральная кнопка подключения в стиле ShrimpNG
+            connectionButton = new TorConnectionButton(context, resourcesProvider);
+            connectionButton.setInitialState(TorController.getInstance().getStatus());
             connectionButton.setOnClickListener(v -> toggleTorState());
             mainLayout.addView(connectionButton, LayoutHelper.createLinear(96, 96, Gravity.CENTER_HORIZONTAL, 0, 4, 0, 16));
 

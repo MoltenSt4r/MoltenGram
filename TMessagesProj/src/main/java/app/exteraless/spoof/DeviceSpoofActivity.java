@@ -54,7 +54,6 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
     public static class CollapsibleHeaderCell extends FrameLayout {
         private final TextView textView;
-        private final TextView countView;
         private final ImageView arrowView;
 
         public CollapsibleHeaderCell(Context context) {
@@ -70,20 +69,12 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             container.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
-            countView = new TextView(context);
-            countView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            countView.setTypeface(AndroidUtilities.bold());
-            countView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
-            LinearLayout.LayoutParams countLp = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL);
-            countLp.leftMargin = AndroidUtilities.dp(6);
-            container.addView(countView, countLp);
-
             arrowView = new ImageView(context);
             Drawable d = getResources().getDrawable(R.drawable.arrow_more).mutate();
             d.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), PorterDuff.Mode.MULTIPLY));
             arrowView.setImageDrawable(d);
             LinearLayout.LayoutParams arrowLp = LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL);
-            arrowLp.leftMargin = AndroidUtilities.dp(4);
+            arrowLp.leftMargin = AndroidUtilities.dp(6);
             container.addView(arrowView, arrowLp);
 
             addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 21, 0, 21, 0));
@@ -94,9 +85,8 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
             setMinimumHeight(AndroidUtilities.dp(48));
         }
 
-        public void set(CharSequence title, int selectedCount, int totalCount, boolean expanded) {
+        public void set(CharSequence title, boolean expanded) {
             textView.setText(title);
-            countView.setText(selectedCount + "/" + totalCount);
             arrowView.animate().cancel();
             arrowView.setRotation(expanded ? 180 : 0);
         }
@@ -674,32 +664,11 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                 case TYPE_COLLAPSIBLE_HEADER: {
                     CollapsibleHeaderCell cell = (CollapsibleHeaderCell) holder.itemView;
                     if (position == nothingHeaderRow) {
-                        int selected = 0;
-                        for (DeviceSpoofPreset p : nothingPresets) {
-                            if (p.id.equals(selectedId)) {
-                                selected = 1;
-                                break;
-                            }
-                        }
-                        cell.set(LocaleController.getString(R.string.DeviceSpoofingNothingGroup), selected, nothingPresets.size(), nothingExpanded);
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingNothingGroup), nothingExpanded);
                     } else if (position == pixelHeaderRow) {
-                        int selected = 0;
-                        for (DeviceSpoofPreset p : pixelPresets) {
-                            if (p.id.equals(selectedId)) {
-                                selected = 1;
-                                break;
-                            }
-                        }
-                        cell.set(LocaleController.getString(R.string.DeviceSpoofingPixelGroup), selected, pixelPresets.size(), pixelExpanded);
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingPixelGroup), pixelExpanded);
                     } else if (position == customHeaderRow) {
-                        int selected = 0;
-                        for (DeviceSpoofPreset p : currentCustomPresets) {
-                            if (p.id.equals(selectedId)) {
-                                selected = 1;
-                                break;
-                            }
-                        }
-                        cell.set(LocaleController.getString(R.string.DeviceSpoofingCustomGroup), selected, currentCustomPresets.size(), customExpanded);
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingCustomGroup), customExpanded);
                     }
                     break;
                 }

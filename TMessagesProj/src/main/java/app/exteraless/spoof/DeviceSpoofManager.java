@@ -120,7 +120,19 @@ public class DeviceSpoofManager {
         builtInPresets.add(new DeviceSpoofPreset("pixel_xl", "Google Pixel XL", "Google", "Pixel XL", "SDK 29", "Google Pixel", false));
         builtInPresets.add(new DeviceSpoofPreset("pixel_1", "Google Pixel", "Google", "Pixel", "SDK 29", "Google Pixel", false));
 
-        // 3. Nothing Lineup
+        // 3. Nothing Lineup (Флагманы и новинки до Nothing Phone 4b / 4a Pro)
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4b", "Nothing Phone (4b)", "Nothing", "Phone (4b)", "SDK 36", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4a_pro", "Nothing Phone (4a Pro)", "Nothing", "Phone (4a Pro)", "SDK 36", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4a", "Nothing Phone (4a)", "Nothing", "Phone (4a)", "SDK 36", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4_pro", "Nothing Phone (4 Pro)", "Nothing", "Phone (4 Pro)", "SDK 36", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4", "Nothing Phone (4)", "Nothing", "Phone (4)", "SDK 36", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a_pro", "Nothing Phone (3a Pro)", "Nothing", "Phone (3a Pro)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a_plus", "Nothing Phone (3a) Plus", "Nothing", "Phone (3a) Plus", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a", "Nothing Phone (3a)", "Nothing", "Phone (3a)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3_pro", "Nothing Phone (3 Pro)", "Nothing", "Phone (3 Pro)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3", "Nothing Phone (3)", "Nothing", "Phone (3)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_cmf_phone_2_pro", "Nothing CMF Phone 2 Pro", "Nothing", "CMF Phone 2 Pro", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_cmf_phone_2", "Nothing CMF Phone 2", "Nothing", "CMF Phone 2", "SDK 35", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2a_plus", "Nothing Phone (2a) Plus", "Nothing", "Phone (2a) Plus", "SDK 34", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2a", "Nothing Phone (2a)", "Nothing", "Phone (2a)", "SDK 34", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2", "Nothing Phone (2)", "Nothing", "Phone (2)", "SDK 34", "Nothing", false));
