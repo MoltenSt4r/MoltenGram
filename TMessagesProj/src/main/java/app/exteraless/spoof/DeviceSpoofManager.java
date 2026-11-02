@@ -120,11 +120,15 @@ public class DeviceSpoofManager {
         builtInPresets.add(new DeviceSpoofPreset("pixel_xl", "Google Pixel XL", "Google", "Pixel XL", "SDK 29", "Google Pixel", false));
         builtInPresets.add(new DeviceSpoofPreset("pixel_1", "Google Pixel", "Google", "Pixel", "SDK 29", "Google Pixel", false));
 
-        // 3. Nothing Lineup (Реальные вышедшие модели: 4b, 4a Pro, 4a, 3, 2a Plus, 2a, 2, 1, CMF)
+        // 3. Nothing Lineup (Реальные модели: 4b, 4a Pro, 4a, 3, 3a Pro, 3a Plus, 3a, 3a Lite, 2a Plus, 2a, 2, 1, CMF)
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4b", "Nothing Phone (4b)", "Nothing", "Phone (4b)", "SDK 36", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4a_pro", "Nothing Phone (4a Pro)", "Nothing", "Phone (4a Pro)", "SDK 36", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_4a", "Nothing Phone (4a)", "Nothing", "Phone (4a)", "SDK 36", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3", "Nothing Phone (3)", "Nothing", "Phone (3)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a_pro", "Nothing Phone (3a Pro)", "Nothing", "Phone (3a Pro)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a_plus", "Nothing Phone (3a) Plus", "Nothing", "Phone (3a) Plus", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a", "Nothing Phone (3a)", "Nothing", "Phone (3a)", "SDK 35", "Nothing", false));
+        builtInPresets.add(new DeviceSpoofPreset("nothing_phone_3a_lite", "Nothing Phone (3a) Lite", "Nothing", "Phone (3a) Lite", "SDK 35", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2a_plus", "Nothing Phone (2a) Plus", "Nothing", "Phone (2a) Plus", "SDK 34", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2a", "Nothing Phone (2a)", "Nothing", "Phone (2a)", "SDK 34", "Nothing", false));
         builtInPresets.add(new DeviceSpoofPreset("nothing_phone_2", "Nothing Phone (2)", "Nothing", "Phone (2)", "SDK 34", "Nothing", false));

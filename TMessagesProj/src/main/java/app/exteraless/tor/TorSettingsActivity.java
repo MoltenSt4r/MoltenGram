@@ -935,7 +935,8 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
                 canvas.scale(pressScale, pressScale, cx, cy);
             }
 
-            int accentColor = 0xFFFF7043; // Кораллово-оранжевый как в ShrimpNG (#FF7043)
+            // Цвет заливки кнопки берется из динамической палитры Monet / акцентного цвета активной темы
+            int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
             int bgCutoutColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider) | 0xFF000000;
 
             if (state == TorController.STATUS_ERROR) {
