@@ -42,7 +42,7 @@ import org.telegram.ui.CameraScanActivity;
 import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.ChannelCreateActivity;
 import org.telegram.ui.ChatActivity;
-import org.telegram.ui.Components.AccountFrozenAlert;
+import org.telegram.ui.AccountFrozenAlert;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.FragmentFloatingButton;
 import org.telegram.ui.Components.LayoutHelper;
