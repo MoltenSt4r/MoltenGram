@@ -930,14 +930,6 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
             update();
         }
 
-        @Override
-        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-            super.onMeasure(
-                    MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                    MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED)
-            );
-        }
-
         private void toggleTorState() {
             if (isToggling) return;
             isToggling = true;

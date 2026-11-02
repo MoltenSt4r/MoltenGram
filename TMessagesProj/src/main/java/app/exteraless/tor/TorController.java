@@ -545,6 +545,9 @@ public class TorController {
                     ptStateDir.mkdirs();
                 }
 
+                // Очистка поврежденного кэша консенсуса Tor (защита от вылетов на 30-35% из-за битых файлов)
+                purgeTorCache(context);
+
                 int bridgeType = getBridgeType();
 
                 // 1. Запуск Pluggable Transports через IPtProxy (если требуется)
@@ -575,6 +578,7 @@ public class TorController {
 
             } catch (Exception e) {
                 FileLog.e(e);
+                TorDiagnostics.getInstance().logThrowable("START_ERR", e);
                 postLog("Ошибка старта Tor: " + e.getMessage());
                 updateStatus(STATUS_ERROR, 0, e.getMessage());
                 stopPluggableTransports();
@@ -703,18 +707,20 @@ public class TorController {
     private void setupControlConnectionFromService() {
         new Thread(() -> {
             try {
-                for (int i = 0; i < 20; i++) {
+                for (int i = 0; i < 30; i++) {
                     if (boundTorService != null) {
                         controlConnection = boundTorService.getTorControlConnection();
                         if (controlConnection != null) {
+                            TorDiagnostics.getInstance().logEvent("CONTROL", "TorControlConnection obtained from TorService");
                             attachControlListener(controlConnection);
                             break;
                         }
                     }
                     Thread.sleep(500);
                 }
-            } catch (Exception e) {
+            } catch (Throwable e) {
                 FileLog.e(e);
+                TorDiagnostics.getInstance().logThrowable("CONTROL_ERR", e);
             }
         }, "TorControlAttacher").start();
     }
@@ -731,23 +737,28 @@ public class TorController {
             conn.addRawEventListener(new RawEventListener() {
                 @Override
                 public void onEvent(String keyword, String data) {
-                    postLog(keyword + ": " + data);
-                    if (TorControlCommands.EVENT_STATUS_CLIENT.equals(keyword) && data != null) {
-                        Matcher matcher = BOOTSTRAP_PATTERN.matcher(data);
-                        if (matcher.find()) {
-                            int progress = Integer.parseInt(matcher.group(1));
-                            String summary = matcher.group(2);
-                            updateStatus(STATUS_CONNECTING, progress, summary != null ? summary : "Подключение: " + progress + "%");
-                            if (progress == 100) {
-                                onTorConnected();
+                    try {
+                        postLog(keyword + ": " + data);
+                        if (TorControlCommands.EVENT_STATUS_CLIENT.equals(keyword) && data != null) {
+                            Matcher matcher = BOOTSTRAP_PATTERN.matcher(data);
+                            if (matcher.find()) {
+                                int progress = Integer.parseInt(matcher.group(1));
+                                String summary = matcher.group(2);
+                                updateStatus(STATUS_CONNECTING, progress, summary != null ? summary : "Подключение: " + progress + "%");
+                                if (progress == 100) {
+                                    onTorConnected();
+                                }
                             }
                         }
+                    } catch (Throwable t) {
+                        TorDiagnostics.getInstance().logThrowable("EVENT_ERR", t);
                     }
                 }
             });
             postLog("Tor Control connection успешно подключен");
-        } catch (Exception e) {
+        } catch (Throwable e) {
             FileLog.e(e);
+            TorDiagnostics.getInstance().logThrowable("ATTACH_ERR", e);
         }
     }
 
@@ -844,6 +855,51 @@ public class TorController {
         }
     }
 
+    public static void purgeTorCache(Context context) {
+        if (context == null) return;
+        try {
+            File torDir = context.getDir("TorService", Context.MODE_PRIVATE);
+            if (torDir != null && torDir.exists()) {
+                File dataDir = new File(torDir, "data");
+                if (dataDir.exists()) {
+                    File[] files = dataDir.listFiles();
+                    if (files != null) {
+                        for (File f : files) {
+                            String name = f.getName();
+                            if (name.startsWith("cached-") || name.startsWith("unverified-") || name.startsWith("diff-cache") || name.equals("control.socket")) {
+                                f.delete();
+                            }
+                        }
+                    }
+                }
+            }
+            File cacheDir = new File(context.getCacheDir(), "TorService");
+            if (cacheDir != null && cacheDir.exists()) {
+                File[] files = cacheDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        f.delete();
+                    }
+                }
+            }
+            File standaloneDir = new File(context.getFilesDir(), "tor");
+            if (standaloneDir != null && standaloneDir.exists()) {
+                File[] files = standaloneDir.listFiles();
+                if (files != null) {
+                    for (File f : files) {
+                        String name = f.getName();
+                        if (name.startsWith("cached-") || name.startsWith("unverified-") || name.startsWith("diff-cache")) {
+                            f.delete();
+                        }
+                    }
+                }
+            }
+            TorDiagnostics.getInstance().logEvent("CLEANUP", "Tor cache files purged");
+        } catch (Throwable t) {
+            TorDiagnostics.getInstance().logThrowable("CLEANUP_ERR", t);
+        }
+    }
+
     private File generateTorrc(Context context, int bridgeType) throws Exception {
         File torrcFile = TorService.getTorrc(context);
         File parent = torrcFile.getParentFile();
@@ -853,17 +909,11 @@ public class TorController {
 
         try (PrintWriter writer = new PrintWriter(new FileOutputStream(torrcFile))) {
             writer.println("SocksPort 127.0.0.1:" + DEFAULT_SOCKS_PORT);
-            writer.println("ControlPort 127.0.0.1:" + DEFAULT_CONTROL_PORT);
-            writer.println("CookieAuthentication 0");
             writer.println("KeepalivePeriod 60");
             writer.println("Log notice stdout");
 
-            // Оптимизация скорости и надежности подключения Tor
+            // Оптимизация подключения Tor
             writer.println("ClientOnly 1");
-            writer.println("AvoidDiskWrites 1");
-            writer.println("FastFirstHopPK 1");
-            writer.println("CircuitBuildTimeout 15");
-            writer.println("LearnCircuitBuildTimeout 1");
             writer.println("NumEntryGuards 3");
             writer.println("ConnectionPadding 1");
 

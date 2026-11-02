@@ -535,6 +535,15 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         }
 
         @Override
+        public boolean isEnabled(RecyclerView.ViewHolder holder) {
+            int position = holder.getAdapterPosition();
+            if (position == nothingHeaderRow || position == pixelHeaderRow || position == customHeaderRow) {
+                return true;
+            }
+            return super.isEnabled(holder);
+        }
+
+        @Override
         public int getItemViewType(int position) {
             if (position == enableRow) {
                 return TYPE_CHECK;
@@ -589,30 +598,58 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                     if (position == moltenStarHeaderRow) {
                         cell.setText(LocaleController.getString(R.string.DeviceSpoofingMoltenStarGroup));
                         cell.setOnClickListener(null);
+                        cell.setBackground(null);
+                        if (cell.getTextView() != null) {
+                            cell.getTextView().setOnClickListener(null);
+                        }
                     } else if (position == nothingHeaderRow) {
                         String title = LocaleController.getString(R.string.DeviceSpoofingNothingGroup);
                         cell.setText(title + " (" + nothingPresets.size() + ") " + (nothingExpanded ? "▾" : "▸"));
-                        cell.setOnClickListener(v -> {
+                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
+                        ));
+                        cell.setMinimumHeight(dp(44));
+                        View.OnClickListener l = v -> {
                             nothingExpanded = !nothingExpanded;
                             updateRows();
                             safeNotifyDataSetChanged();
-                        });
+                        };
+                        cell.setOnClickListener(l);
+                        if (cell.getTextView() != null) {
+                            cell.getTextView().setOnClickListener(l);
+                        }
                     } else if (position == pixelHeaderRow) {
                         String title = LocaleController.getString(R.string.DeviceSpoofingPixelGroup);
                         cell.setText(title + " (" + pixelPresets.size() + ") " + (pixelExpanded ? "▾" : "▸"));
-                        cell.setOnClickListener(v -> {
+                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
+                        ));
+                        cell.setMinimumHeight(dp(44));
+                        View.OnClickListener l = v -> {
                             pixelExpanded = !pixelExpanded;
                             updateRows();
                             safeNotifyDataSetChanged();
-                        });
+                        };
+                        cell.setOnClickListener(l);
+                        if (cell.getTextView() != null) {
+                            cell.getTextView().setOnClickListener(l);
+                        }
                     } else if (position == customHeaderRow) {
                         String title = LocaleController.getString(R.string.DeviceSpoofingCustomGroup);
                         cell.setText(title + (currentCustomPresets.isEmpty() ? "" : " (" + currentCustomPresets.size() + ")") + " " + (customExpanded ? "▾" : "▸"));
-                        cell.setOnClickListener(v -> {
+                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
+                        ));
+                        cell.setMinimumHeight(dp(44));
+                        View.OnClickListener l = v -> {
                             customExpanded = !customExpanded;
                             updateRows();
                             safeNotifyDataSetChanged();
-                        });
+                        };
+                        cell.setOnClickListener(l);
+                        if (cell.getTextView() != null) {
+                            cell.getTextView().setOnClickListener(l);
+                        }
                     }
                     break;
                 }

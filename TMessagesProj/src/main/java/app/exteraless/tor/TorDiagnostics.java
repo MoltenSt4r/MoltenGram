@@ -1,7 +1,20 @@
 package app.exteraless.tor;
 
+import android.content.Context;
 import android.text.TextUtils;
 
+import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
+import java.io.InputStreamReader;
+import java.io.OutputStreamWriter;
+import java.io.PrintWriter;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.text.SimpleDateFormat;
 import java.util.Date;
 import java.util.LinkedList;
@@ -10,7 +23,8 @@ import java.util.regex.Pattern;
 
 /**
  * Диагностический модуль Tor для ExteraMS.
- * Собирает лог событий подключения (статусы, этапы bootstrap, транзиты, ошибки)
+ * Сохраняет лог событий подключения (статусы, этапы bootstrap, транзиты, ошибки)
+ * на диск в файл tor_diagnostics.txt (сохраняется даже при сбоях/перезапусках приложения)
  * со СТРОГОЙ фильтрацией и маскированием любых IP-адресов.
  * Никакие реальные IP (клиента, мостов или узлов) не сохраняются.
  */
@@ -29,7 +43,9 @@ public class TorDiagnostics {
         return instance;
     }
 
-    private static final int MAX_ENTRIES = 250;
+    private static final String LOG_FILE = "tor_diagnostics.txt";
+    private static final int MAX_FILE_SIZE = 256 * 1024; // 256 KB
+    private static final int MAX_IN_MEMORY = 200;
 
     // Регулярные выражения для деперсонализации
     private static final Pattern IPV4_PATTERN = Pattern.compile(
@@ -58,18 +74,64 @@ public class TorDiagnostics {
         }
     }
 
-    private final LinkedList<DiagnosticEntry> entries = new LinkedList<>();
+    private final LinkedList<DiagnosticEntry> inMemoryEntries = new LinkedList<>();
 
     private TorDiagnostics() {
-        logEvent("INIT", "Tor diagnostic logger initialized (IP masking active)");
+        logEvent("INIT", "Tor diagnostic logger ready (disk persistence & IP masking active)");
+    }
+
+    private File getLogFile() {
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) return null;
+        return new File(context.getFilesDir(), LOG_FILE);
     }
 
     public synchronized void logEvent(String category, String rawMessage) {
         if (rawMessage == null) return;
         String sanitized = sanitize(rawMessage);
-        entries.addLast(new DiagnosticEntry(category, sanitized));
-        while (entries.size() > MAX_ENTRIES) {
-            entries.removeFirst();
+        DiagnosticEntry entry = new DiagnosticEntry(category, sanitized);
+
+        inMemoryEntries.addLast(entry);
+        while (inMemoryEntries.size() > MAX_IN_MEMORY) {
+            inMemoryEntries.removeFirst();
+        }
+
+        writeToFile(entry);
+    }
+
+    public synchronized void logThrowable(String category, Throwable t) {
+        if (t == null) return;
+        try {
+            StringWriter sw = new StringWriter();
+            PrintWriter pw = new PrintWriter(sw);
+            t.printStackTrace(pw);
+            pw.flush();
+            logEvent(category, t.getClass().getSimpleName() + ": " + t.getMessage() + "\n" + sw.toString());
+        } catch (Throwable ignored) {
+            logEvent(category, t.getClass().getSimpleName() + ": " + t.getMessage());
+        }
+    }
+
+    private void writeToFile(DiagnosticEntry entry) {
+        File file = getLogFile();
+        if (file == null) return;
+
+        try {
+            if (file.exists() && file.length() > MAX_FILE_SIZE) {
+                // Truncate older entries if log gets too large
+                file.delete();
+            }
+
+            SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+            String line = entry.format(sdf) + "\n";
+
+            try (FileOutputStream fos = new FileOutputStream(file, true);
+                 OutputStreamWriter osw = new OutputStreamWriter(fos, StandardCharsets.UTF_8)) {
+                osw.write(line);
+                osw.flush();
+            }
+        } catch (Throwable t) {
+            FileLog.e(t);
         }
     }
 
@@ -82,26 +144,49 @@ public class TorDiagnostics {
     }
 
     public synchronized String getSanitizedLogReport() {
-        SimpleDateFormat sdf = new SimpleDateFormat("HH:mm:ss.SSS", Locale.US);
         StringBuilder sb = new StringBuilder();
         sb.append("=== MoltenGram Tor Diagnostic Report ===\n");
         sb.append("Generated at: ").append(new SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.US).format(new Date())).append("\n");
         sb.append("Privacy constraint: NO IP addresses collected or retained.\n");
         sb.append("----------------------------------------\n\n");
 
-        if (entries.isEmpty()) {
-            sb.append("No diagnostic events recorded yet.\n");
-        } else {
-            for (DiagnosticEntry entry : entries) {
-                sb.append(entry.format(sdf)).append("\n");
+        File file = getLogFile();
+        boolean hasDiskContent = false;
+        if (file != null && file.exists() && file.length() > 0) {
+            try (FileInputStream fis = new FileInputStream(file);
+                 InputStreamReader isr = new InputStreamReader(fis, StandardCharsets.UTF_8);
+                 BufferedReader br = new BufferedReader(isr)) {
+                String line;
+                while ((line = br.readLine()) != null) {
+                    sb.append(line).append("\n");
+                    hasDiskContent = true;
+                }
+            } catch (Throwable t) {
+                FileLog.e(t);
             }
         }
+
+        if (!hasDiskContent) {
+            if (inMemoryEntries.isEmpty()) {
+                sb.append("No diagnostic events recorded yet.\n");
+            } else {
+                SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss.SSS", Locale.US);
+                for (DiagnosticEntry entry : inMemoryEntries) {
+                    sb.append(entry.format(sdf)).append("\n");
+                }
+            }
+        }
+
         sb.append("\n=== End of Diagnostic Report ===");
         return sb.toString();
     }
 
     public synchronized void clear() {
-        entries.clear();
+        inMemoryEntries.clear();
+        File file = getLogFile();
+        if (file != null && file.exists()) {
+            file.delete();
+        }
         logEvent("INIT", "Diagnostic log cleared (IP masking active)");
     }
 }
