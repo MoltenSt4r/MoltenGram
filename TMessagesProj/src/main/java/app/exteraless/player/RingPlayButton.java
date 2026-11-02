@@ -10,6 +10,7 @@ import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
+import android.graphics.RectF;
 import android.os.SystemClock;
 import android.view.View;
 
@@ -27,6 +28,7 @@ public class RingPlayButton extends View {
     private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Path path = new Path();
+    private final RectF trackRect = new RectF();
     private final Runnable waveFrame = this::invalidate;
     private final PlayerIcon playIcon;
     private final PlayerIcon pauseIcon;
@@ -85,6 +87,8 @@ public class RingPlayButton extends View {
         pauseIcon = PlayerIcon.fill(PlayerIcon.PAUSE, iconDp);
         trackPaint.setStyle(Paint.Style.STROKE);
         trackPaint.setStrokeWidth(dpf2(strokeDp));
+        trackPaint.setStrokeCap(Paint.Cap.ROUND);
+        trackPaint.setStrokeJoin(Paint.Join.ROUND);
         ringPaint.setStyle(Paint.Style.STROKE);
         ringPaint.setStrokeWidth(dpf2(strokeDp));
         ringPaint.setStrokeCap(Paint.Cap.ROUND);
@@ -179,13 +183,29 @@ public class RingPlayButton extends View {
         }
         float cx = getWidth() / 2f;
         float cy = getHeight() / 2f;
-        canvas.drawCircle(cx, cy, radius, trackPaint);
         MessageObject mo = message;
         float currentProgress = mo != null ? Math.max(0f, Math.min(1f, mo.audioProgress)) : 0f;
         float progress = animatingReset ? resetProgress : currentProgress;
         drawnProgress = progress;
         float sweep = 360f * progress;
-        if (sweep > 0.5f) {
+
+        float strokeWidth = trackPaint.getStrokeWidth();
+        float visibleGap = dpf2(4.5f);
+        float gapDistance = visibleGap + strokeWidth;
+        float gapDeg = (float) Math.toDegrees(gapDistance / radius);
+
+        trackRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
+        if (sweep <= 1.5f) {
+            canvas.drawCircle(cx, cy, radius, trackPaint);
+        } else {
+            float inactiveStart = sweep + gapDeg;
+            float inactiveEnd = 360f - gapDeg;
+            float inactiveSweep = inactiveEnd - inactiveStart;
+            if (inactiveSweep > 2f) {
+                canvas.drawArc(trackRect, -90f + inactiveStart, inactiveSweep, false, trackPaint);
+            }
+        }
+        if (sweep > 1.5f) {
             path.rewind();
             boolean first = true;
             for (float deg = 0; ; deg += 3f) {
