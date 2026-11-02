@@ -162,7 +162,7 @@ public class StoryLinkPreviewDialog extends Dialog {
         titleTextView.setText(LocaleController.getString(R.string.StoryLinkPreviewTitle));
         titleTextView.setTextColor(0xFFFFFFFF);
         titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        titleTextView.setTypeface(AndroidUtilities.bold());
+        titleTextView.setTypeface(AndroidUtilities.headerTypeface());
         actionBarContainer.addView(titleTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.FILL_HORIZONTAL | Gravity.TOP, 18, 8.33f, 18, 0));
 
         subtitleTextView = new TextView(context);

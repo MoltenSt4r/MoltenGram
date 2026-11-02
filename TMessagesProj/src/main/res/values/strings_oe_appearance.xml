@@ -50,6 +50,8 @@
     <!-- General Appearance -->
     <string name="OEAppearanceGeneral">Appearance</string>
     <string name="OEAppearanceUseSystemFonts">Use System Fonts</string>
+    <string name="OEAppearanceNdotFontHeaders">Ndot Font for Headers</string>
+    <string name="OEAppearanceNdotFontHeadersInfo">Use Nothing Ndot dot-matrix font for header titles, windows, player, and in settings</string>
     <string name="OEAppearanceUseSystemEmoji">Use System Emoji</string>
     <string name="OEAppearanceSwitchStyle">Switches</string>
     <string name="OEAppearanceSliderStyle">Sliders</string>

@@ -1280,7 +1280,7 @@ public class TranslateAlert2 extends BottomSheet implements NotificationCenter.N
             };
             titleTextView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
             titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-            titleTextView.setTypeface(AndroidUtilities.bold());
+            titleTextView.setTypeface(AndroidUtilities.headerTypeface());
             titleTextView.setText(LocaleController.getString(R.string.AutomaticTranslation));
             titleTextView.setPivotX(0);
             titleTextView.setPivotY(0);

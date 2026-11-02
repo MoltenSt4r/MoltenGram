@@ -99,7 +99,7 @@ public class GroupCallRecordAlert extends BottomSheet {
         }
         titleTextView.setTextColor(0xffffffff);
         titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-        titleTextView.setTypeface(AndroidUtilities.bold());
+        titleTextView.setTypeface(AndroidUtilities.headerTypeface());
         titleTextView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP);
         containerView.addView(titleTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 24, 29, 24, 0));
 

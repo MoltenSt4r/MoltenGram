@@ -153,7 +153,7 @@ public class ProfileMusicCard extends FrameLayout {
 
         nameView = new TextView(context);
         nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        nameView.setTypeface(AndroidUtilities.bold());
+        nameView.setTypeface(AndroidUtilities.headerTypeface());
         nameView.setSingleLine(true);
         nameView.setEllipsize(TextUtils.TruncateAt.END);
         NotificationCenter.listenEmojiLoading(nameView);

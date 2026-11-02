@@ -342,7 +342,7 @@ public class TypefaceHelper {
         }
         var builder = new SpannableStringBuilder(title);
         builder.setSpan(new LeadingMarginSpan.Standard(dp(2), 0), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        Typeface titleTypeface = NekoConfig.typeface.Bool() && NekoConfig.forceFontWeightFallback.Bool() ? createTypeface(700, false) : createTypeface(600, false);
+        Typeface titleTypeface = app.exteraless.appearance.AppearanceConfig.ndotFontHeaders() ? ndotTypeface() : (NekoConfig.typeface.Bool() && NekoConfig.forceFontWeightFallback.Bool() ? createTypeface(700, false) : createTypeface(600, false));
         builder.setSpan(new TypefaceSpan(titleTypeface, 0, Theme.key_telegram_color_dialogsLogo, null), 0, builder.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
         return builder;
     }
@@ -379,6 +379,24 @@ public class TypefaceHelper {
             lyricsTypeface = Typeface.create(base, Typeface.BOLD);
         }
         return lyricsTypeface;
+    }
+
+    private static Typeface ndotTypeface;
+
+    public static Typeface ndotTypeface() {
+        if (ndotTypeface == null) {
+            try {
+                ndotTypeface = Typeface.createFromAsset(ApplicationLoader.applicationContext.getAssets(), "fonts/ndot57caps.otf");
+            } catch (Exception e) {
+                FileLog.e("Could not load ndot font", e);
+                ndotTypeface = AndroidUtilities.bold();
+            }
+        }
+        return ndotTypeface;
+    }
+
+    public static void clearNdotTypeface() {
+        ndotTypeface = null;
     }
 
 }

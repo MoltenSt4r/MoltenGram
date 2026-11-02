@@ -75,7 +75,7 @@ public class AboutHeaderCell extends LinearLayout {
 
         TextView title = new TextView(context);
         title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        title.setTypeface(AndroidUtilities.bold());
+        title.setTypeface(AndroidUtilities.headerTypeface());
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
         title.setGravity(Gravity.CENTER);
         title.setSingleLine(true);

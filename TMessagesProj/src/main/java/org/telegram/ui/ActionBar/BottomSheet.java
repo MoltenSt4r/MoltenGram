@@ -1465,7 +1465,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
             if (bigTitle) {
                 titleView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
                 titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-                titleView.setTypeface(AndroidUtilities.bold());
+                titleView.setTypeface(AndroidUtilities.headerTypeface());
                 titleView.setPadding(dp(21), dp(multipleLinesTitle ? 14 : 6), dp(21), dp(8));
             } else {
                 titleView.setTextColor(getThemedColor(Theme.key_dialogTextGray2));

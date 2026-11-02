@@ -398,7 +398,7 @@ public class InviteLinkBottomSheet extends BottomSheet {
         titleTextView.setEllipsize(TextUtils.TruncateAt.END);
         titleTextView.setPadding(dp(23), 0, dp(23), 0);
         titleTextView.setGravity(Gravity.CENTER_VERTICAL);
-        titleTextView.setTypeface(AndroidUtilities.bold());
+        titleTextView.setTypeface(AndroidUtilities.headerTypeface());
         if (!permanent) {
             if (invite.expired) {
                 titleTextView.setText(LocaleController.getString(R.string.ExpiredLink));

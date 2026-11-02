@@ -956,7 +956,7 @@ public class PollVotesAlert extends BottomSheet {
 
         titleTextView = new AnimatedEmojiSpan.TextViewEmojis(context);
         titleTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        titleTextView.setTypeface(AndroidUtilities.bold());
+        titleTextView.setTypeface(AndroidUtilities.headerTypeface());
         titleTextView.setPadding(dp(21), dp(5), dp(14), dp(21));
         titleTextView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         titleTextView.setTag(RecyclerListView.TAG_NOT_SECTION);

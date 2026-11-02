@@ -336,6 +336,7 @@ public final class EtgBackup {
         bool(list, "iosNavigationBarStyle", AppearanceConfig.iosNavigationBarStyle);
         bool(list, "iosFirstFolderOnTabTap", AppearanceConfig.iosFirstFolderOnTabTap);
         bool(list, "useSystemFonts", NekoConfig.typeface);
+        bool(list, "ndotFontHeaders", AppearanceConfig.ndotFontHeaders);
         bool(list, "gooeyAvatarAnimation", AppearanceConfig.gooeyAvatarAnimation);
         bool(list, "customThemes", AppearanceConfig.customThemes);
         bool(list, "glassMessageMenu", AppearanceConfig.glassMessageMenu);

@@ -286,11 +286,19 @@ public class AndroidUtilities {
         return mediumTypeface;
     }
 
+    public static Typeface headerTypeface() {
+        if (app.exteraless.appearance.AppearanceConfig.ndotFontHeaders()) {
+            return TypefaceHelper.ndotTypeface();
+        }
+        return bold();
+    }
+
     private static final Hashtable<String, Typeface> typefaceCache = new Hashtable<>();
 
     public static void clearTypefaceCache() {
         typefaceCache.clear();
         mediumTypeface = null;
+        TypefaceHelper.clearNdotTypeface();
     }
 
     public static float touchSlop;

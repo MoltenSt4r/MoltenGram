@@ -65,7 +65,7 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
             textView = new TextView(context);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            textView.setTypeface(AndroidUtilities.bold());
+            textView.setTypeface(AndroidUtilities.headerTypeface());
             textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
             container.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 

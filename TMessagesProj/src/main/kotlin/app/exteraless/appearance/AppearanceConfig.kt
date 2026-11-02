@@ -206,6 +206,17 @@ object AppearanceConfig {
         return customThemes.Bool()
     }
 
+    /** Шрифт Ndot для названий заголовков, окон, плеера и настроек. */
+    @JvmField
+    val ndotFontHeaders =
+        addConfig("OEAppearanceNdotFontHeaders", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun ndotFontHeaders(): Boolean {
+        ensureLoaded()
+        return ndotFontHeaders.Bool()
+    }
+
     /** Радиус карточек-секций, dp. Применяется ко всем спискам через RecyclerListView.setSections(). */
     @JvmField
     val sectionRadius =

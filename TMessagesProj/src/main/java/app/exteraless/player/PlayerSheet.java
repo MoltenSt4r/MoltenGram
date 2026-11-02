@@ -320,7 +320,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         headerCenter.addView(headerLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL));
         headerTitle = new TextView(context);
         headerTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        headerTitle.setTypeface(AndroidUtilities.bold());
+        headerTitle.setTypeface(AndroidUtilities.headerTypeface());
         headerTitle.setSingleLine(true);
         headerTitle.setEllipsize(TextUtils.TruncateAt.END);
         headerCenter.addView(headerTitle, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL, 0, 2, 0, 0));
@@ -352,7 +352,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         titles.setOrientation(LinearLayout.VERTICAL);
         titleView = new TextView(context);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 26);
-        titleView.setTypeface(AndroidUtilities.bold());
+        titleView.setTypeface(AndroidUtilities.headerTypeface());
         titleView.setSingleLine(true);
         titleView.setEllipsize(TextUtils.TruncateAt.END);
         titles.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -386,7 +386,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         smallTitles.setOrientation(LinearLayout.VERTICAL);
         smallTitle = new TextView(context);
         smallTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        smallTitle.setTypeface(AndroidUtilities.bold());
+        smallTitle.setTypeface(AndroidUtilities.headerTypeface());
         smallTitle.setSingleLine(true);
         smallTitle.setEllipsize(TextUtils.TruncateAt.END);
         smallTitles.addView(smallTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -1352,7 +1352,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         title.setText(getString(R.string.OEAppearancePlayerSpeedDialogTitle));
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        title.setTypeface(AndroidUtilities.bold());
+        title.setTypeface(AndroidUtilities.headerTypeface());
         header.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView speedBadge = new TextView(ctx);

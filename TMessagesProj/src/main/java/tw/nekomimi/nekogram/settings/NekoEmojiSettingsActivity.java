@@ -558,7 +558,7 @@ public class NekoEmojiSettingsActivity extends BaseNekoSettingsActivity implemen
         public int getItemViewType(int position) {
             if (position == general2Row) {
                 return TYPE_SHADOW;
-            } else if (position == useSystemEmojiRow || position == useCurrentEmojiForReactionsRow || position == useNotoAnimatedEmojiRow || position == downloadEmojiPacksRow) {
+            } else if (position == useSystemEmojiRow || position == useCurrentEmojiForReactionsRow || position == useNotoAnimatedEmojiRow || position == useNotoForBigReactionsRow || position == downloadEmojiPacksRow) {
                 return TYPE_CHECK;
             } else if (position == emojiPackRow || position == generalRow || position == useCustomEmojiRow) {
                 return TYPE_HEADER;

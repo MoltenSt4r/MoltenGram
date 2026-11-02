@@ -81,6 +81,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int appearanceHeaderRow;
     private int fabShapeRow;
     private int useSystemFontsRow;
+    private int ndotFontHeadersRow;
     private int useSystemEmojiRow;
     private int gooeyAvatarRow;
     private int customThemesRow;
@@ -247,6 +248,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         appearanceHeaderRow = addRow("appearanceHeader");
         fabShapeRow = addRow("fabShape");
         useSystemFontsRow = addRow("useSystemFonts");
+        ndotFontHeadersRow = addRow("ndotFontHeaders");
         // Material Design 3 — сворачиваемая группа, как у exteraGram
         md3GroupRow = addRow("md3Styles");
         if (md3Expanded) {
@@ -879,6 +881,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             item = NekoConfig.typeface;
             restart = true;
             clearTypefaces = true;
+        } else if (position == ndotFontHeadersRow) {
+            item = AppearanceConfig.ndotFontHeaders;
+            restart = true;
+            clearTypefaces = true;
         } else if (position == useSystemEmojiRow) {
             item = NekoConfig.useSystemEmoji;
             rebuild = true;
@@ -1043,6 +1049,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                 AppearanceConfig.INSTANCE.centerTitle(), true);
                     } else if (position == useSystemFontsRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceUseSystemFonts), NekoConfig.typeface.Bool(), true);
+                    } else if (position == ndotFontHeadersRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceNdotFontHeaders), getString(R.string.OEAppearanceNdotFontHeadersInfo), AppearanceConfig.ndotFontHeaders(), true, true);
                     } else if (position == useSystemEmojiRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceUseSystemEmoji), NekoConfig.useSystemEmoji.Bool(), true);
                     } else if (position == gooeyAvatarRow) {

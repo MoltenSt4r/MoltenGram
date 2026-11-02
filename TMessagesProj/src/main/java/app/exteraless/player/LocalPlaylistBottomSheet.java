@@ -127,7 +127,7 @@ public class LocalPlaylistBottomSheet extends BottomSheet {
 
         titleView = new TextView(context);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-        titleView.setTypeface(AndroidUtilities.bold());
+        titleView.setTypeface(AndroidUtilities.headerTypeface());
         titleView.setTextColor(textColor);
         titleView.setGravity(Gravity.CENTER);
         titleView.setSingleLine(true);

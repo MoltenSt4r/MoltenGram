@@ -76,7 +76,7 @@ public class HeaderCell extends LinearLayout {
         if (animated) {
             animatedTextView = new AnimatedTextView(getContext());
             animatedTextView.setTextSize(AndroidUtilities.dp(15));
-            animatedTextView.setTypeface(AndroidUtilities.bold());
+            animatedTextView.setTypeface(AndroidUtilities.headerTypeface());
             animatedTextView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
             animatedTextView.setTextColor(getThemedColor(textColorKey));
             animatedTextView.setTag(textColorKey);
@@ -85,7 +85,7 @@ public class HeaderCell extends LinearLayout {
         } else {
             textView = new TextView(getContext());
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            textView.setTypeface(AndroidUtilities.bold());
+            textView.setTypeface(AndroidUtilities.headerTypeface());
             textView.setEllipsize(TextUtils.TruncateAt.END);
             textView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
             textView.setMinHeight(AndroidUtilities.dp(height - topMargin));
@@ -107,7 +107,9 @@ public class HeaderCell extends LinearLayout {
 
     // NekoX: BottomSheet BigTitle, move big title from constructor to here
     public HeaderCell setBigTitle(boolean enabled) {
-        if (enabled) {
+        if (app.exteraless.appearance.AppearanceConfig.ndotFontHeaders()) {
+            textView.setTypeface(AndroidUtilities.headerTypeface());
+        } else if (enabled) {
             textView.setTypeface(AndroidUtilities.getTypeface("fonts/mw_bold.ttf"));
         } else {
             textView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));

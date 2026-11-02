@@ -106,7 +106,7 @@ public class PlayerQueueSheet extends BottomSheet implements NotificationCenter.
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView title = new TextView(context);
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
-        title.setTypeface(AndroidUtilities.bold());
+        title.setTypeface(AndroidUtilities.headerTypeface());
         title.setTextColor(colors.onSurface);
         title.setText(getString(R.string.OEPlayerQueue));
         titles.addView(title, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
@@ -350,7 +350,7 @@ public class PlayerQueueSheet extends BottomSheet implements NotificationCenter.
             texts.setOrientation(LinearLayout.VERTICAL);
             title = new TextView(context);
             title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-            title.setTypeface(AndroidUtilities.bold());
+            title.setTypeface(AndroidUtilities.headerTypeface());
             title.setSingleLine(true);
             title.setEllipsize(TextUtils.TruncateAt.END);
             texts.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
