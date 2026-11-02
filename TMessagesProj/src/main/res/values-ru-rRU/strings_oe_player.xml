@@ -133,6 +133,9 @@
     <string name="OEAppearancePlayerLyricsTranslateDesc">Переводить текст с помощью переводчика чатов</string>
     <string name="OEAppearancePlayerSpeedDialogTitle">Скорость воспроизведения</string>
     <string name="OEAppearancePlayerSpeedReset">Сбросить (1.0×)</string>
+    <string name="OEPlayerSpeedAndPitch">Скорость и тональность</string>
+    <string name="OEPlayerPitch">Тональность</string>
+    <string name="OEPlayerPitchResetAll">Сбросить всё</string>
     <string name="OEAppearancePlayerLyricsTranslating">Перевод текста...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Текст переведён</string>
 

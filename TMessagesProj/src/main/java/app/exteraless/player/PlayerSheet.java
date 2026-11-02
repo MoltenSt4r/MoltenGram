@@ -119,7 +119,32 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final LinearLayout group;
     private final MorphButton speedButton;
     private final MorphButton lyricsButton;
+    private final MorphButton playlistButton;
+    private final MorphButton sleepButton;
     private final MorphButton queueButton;
+
+    private final SleepTimer.Listener sleepListener = new SleepTimer.Listener() {
+        @Override
+        public void onTimerTick(long remainingMs) {
+            updateSleepButton();
+        }
+
+        @Override
+        public void onTimerStop() {
+            updateSleepButton();
+        }
+    };
+
+    private void updateSleepButton() {
+        if (sleepButton == null) return;
+        boolean running = SleepTimer.getInstance().isRunning();
+        sleepButton.setActive(running, true);
+        if (running) {
+            sleepButton.setBadge("•", true);
+        } else {
+            sleepButton.setBadge(null, true);
+        }
+    }
     private final Bulletin.Delegate bulletinDelegate = new Bulletin.Delegate() {
         @Override
         public int getBottomOffset(int tag) {
@@ -499,17 +524,44 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         speedButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SPEED, 20));
         speedButton.setRadius(dp(26), dp(8), false);
         speedButton.setOnClickListener(v -> showSpeedSliderDialog());
-        group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1f));
+        group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1.15f));
+
         lyricsButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.LYRICS, 20));
         lyricsButton.setText(getString(R.string.OEPlayerLyrics));
         lyricsButton.setRadius(dp(8), false);
         lyricsButton.setOnClickListener(v -> setLyricsMode(!lyricsMode, true));
-        group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1f, 4, 0, 4, 0));
+        group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1.15f, 4, 0, 4, 0));
+
+        playlistButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.PLAYLIST_ADD, 20));
+        playlistButton.setRadius(dp(8), false);
+        playlistButton.setContentDescription(getString(R.string.AudioAddToPlaylist));
+        playlistButton.setOnClickListener(v -> {
+            MessageObject mo = current;
+            if (mo != null && activity != null) {
+                LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, colors.provider(resourcesProvider));
+            }
+        });
+        playlistButton.setOnLongClickListener(v -> {
+            if (activity != null) {
+                AndroidUtilities.vibrateCursor(v);
+                LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, colors.provider(resourcesProvider));
+                return true;
+            }
+            return false;
+        });
+        group.addView(playlistButton, LayoutHelper.createLinear(0, 52, 0.85f, 0, 0, 4, 0));
+
+        sleepButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SLEEP, 20));
+        sleepButton.setRadius(dp(8), false);
+        sleepButton.setContentDescription(getString(R.string.OEAppearancePlayerSleepTimer));
+        sleepButton.setOnClickListener(v -> SleepTimer.showDialog(getContext(), colors.provider(resourcesProvider)));
+        group.addView(sleepButton, LayoutHelper.createLinear(0, 52, 0.85f, 0, 0, 4, 0));
+
         queueButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.QUEUE, 20));
         queueButton.setText(getString(R.string.OEPlayerQueue));
         queueButton.setRadius(dp(8), dp(26), false);
         queueButton.setOnClickListener(v -> openQueue());
-        group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1f));
+        group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1.15f));
         layout.addView(group);
 
         bubble = new TextView(context);
@@ -563,6 +615,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         nc.addObserver(this, NotificationCenter.audioInfoLoaded);
         nc.addObserver(this, NotificationCenter.musicIdsLoaded);
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.messagePlayingSpeedChanged);
+        SleepTimer.getInstance().addListener(sleepListener);
+        updateSleepButton();
         applySystemBars(true);
     }
 
@@ -1079,6 +1133,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         nc.removeObserver(this, NotificationCenter.audioInfoLoaded);
         nc.removeObserver(this, NotificationCenter.musicIdsLoaded);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.messagePlayingSpeedChanged);
+        SleepTimer.getInstance().removeListener(sleepListener);
         if (colorAnimator != null) {
             colorAnimator.cancel();
         }
@@ -1303,10 +1358,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     private void updateSpeed() {
         float speed = MediaController.getInstance().getPlaybackSpeed(true);
+        float pitch = MediaController.getInstance().getPlaybackPitch();
         DecimalFormat format = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(currentLocale()));
         String label = format.format(speed) + "×";
         speedButton.setText(label);
         speedButton.setContentDescription(getString(R.string.OEPlayerSpeed) + " " + label);
+        boolean altered = Math.abs(speed - 1.0f) > 0.02f || Math.abs(pitch - 1.0f) > 0.02f;
+        speedButton.setActive(altered, true);
     }
 
     private static Locale currentLocale() {
@@ -1328,6 +1386,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         updateSpeed();
     }
 
+    private interface FloatConsumer {
+        void accept(float value);
+    }
+
     private void showSpeedSliderDialog() {
         Context ctx = getContext();
         if (ctx == null) return;
@@ -1338,120 +1400,243 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(22), dp(20), dp(22), dp(18));
 
+        int dialogBgColor = Theme.getColor(Theme.key_dialogBackground);
+        int textColor = Theme.getColor(Theme.key_dialogTextBlack);
+        int subtextColor = Theme.getColor(Theme.key_dialogTextGray2);
+        final int accent = Theme.getColor(Theme.key_featuredStickers_addButton) != 0 ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0xff00d2b4;
+        final int contrastOnAccent = AndroidUtilities.computePerceivedBrightness(accent) > 0.7f ? 0xff101010 : 0xffffffff;
+        final int chipBgUnselected = Theme.multAlpha(textColor, 0.08f);
+
         GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(24));
-        bg.setColor(Theme.getColor(Theme.key_dialogBackground));
+        bg.setCornerRadius(dp(28));
+        bg.setColor(dialogBgColor);
+        bg.setStroke(dp(1), Theme.multAlpha(textColor, 0.08f));
         root.setBackground(bg);
 
-        // Header Row: Title on left, current speed badge on right
-        LinearLayout header = new LinearLayout(ctx);
-        header.setOrientation(LinearLayout.HORIZONTAL);
-        header.setGravity(Gravity.CENTER_VERTICAL);
-
+        // Header: Title with Ndot/header typeface
         TextView title = new TextView(ctx);
-        title.setText(getString(R.string.OEAppearancePlayerSpeedDialogTitle));
+        title.setText(getString(R.string.OEPlayerSpeedAndPitch));
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
-        title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        title.setTextColor(textColor);
         title.setTypeface(AndroidUtilities.headerTypeface());
-        header.addView(title, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+        title.setPadding(0, 0, 0, dp(14));
+        root.addView(title);
+
+        // --- SPEED SECTION ---
+        LinearLayout speedHeader = new LinearLayout(ctx);
+        speedHeader.setOrientation(LinearLayout.HORIZONTAL);
+        speedHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView speedLabel = new TextView(ctx);
+        speedLabel.setText(getString(R.string.OEPlayerSpeed));
+        speedLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        speedLabel.setTypeface(AndroidUtilities.bold());
+        speedLabel.setTextColor(textColor);
+        speedHeader.addView(speedLabel, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
         TextView speedBadge = new TextView(ctx);
-        speedBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+        speedBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         speedBadge.setTypeface(AndroidUtilities.bold());
-        final int accent = Theme.getColor(Theme.key_featuredStickers_addButton) != 0 ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0xff00d2b4;
         speedBadge.setTextColor(accent);
-        header.addView(speedBadge, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
-        root.addView(header);
+        speedHeader.addView(speedBadge, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        root.addView(speedHeader);
 
-        // Slider limits: 0.25f to 3.0f
         final float minSpeed = 0.25f;
         final float maxSpeed = 3.0f;
-        final int steps = 55; // (3.00 - 0.25) / 0.05 = 55 steps
-
         float currentSpeed = MediaController.getInstance().getPlaybackSpeed(true);
         if (currentSpeed < minSpeed) currentSpeed = minSpeed;
         if (currentSpeed > maxSpeed) currentSpeed = maxSpeed;
 
-        DecimalFormat format = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(currentLocale()));
-        speedBadge.setText(format.format(currentSpeed) + "×");
+        DecimalFormat speedFormat = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(currentLocale()));
+        speedBadge.setText(speedFormat.format(currentSpeed) + "×");
 
-        Material3Slider bar = new Material3Slider(ctx, accent);
-        bar.setValue(currentSpeed);
-        root.addView(bar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48, 0, 10, 0, 10));
+        Material3Slider speedBar = new Material3Slider(ctx, accent, minSpeed, maxSpeed, 0.05f, 1.0f);
+        speedBar.setValue(currentSpeed);
+        root.addView(speedBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 0, 4, 0, 6));
 
-        // Quick Preset Chips: 0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x
-        LinearLayout presets = new LinearLayout(ctx);
-        presets.setOrientation(LinearLayout.HORIZONTAL);
-        presets.setGravity(Gravity.CENTER);
-        presets.setPadding(0, dp(4), 0, dp(14));
+        // Speed preset chips: 0.5x, 0.75x, 1.0x, 1.25x, 1.5x, 2.0x
+        LinearLayout speedPresets = new LinearLayout(ctx);
+        speedPresets.setOrientation(LinearLayout.HORIZONTAL);
+        speedPresets.setGravity(Gravity.CENTER);
+        speedPresets.setPadding(0, 0, 0, dp(14));
 
-        final float[] presetValues = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
-        final TextView[] chipViews = new TextView[presetValues.length];
+        final float[] speedPresetValues = {0.5f, 0.75f, 1.0f, 1.25f, 1.5f, 2.0f};
+        final TextView[] speedChipViews = new TextView[speedPresetValues.length];
 
-        Runnable updateChips = () -> {
-            float cur = bar.getValue();
-            for (int i = 0; i < presetValues.length; i++) {
-                boolean selected = Math.abs(cur - presetValues[i]) < 0.02f;
+        Runnable updateSpeedChips = () -> {
+            float cur = speedBar.getValue();
+            for (int i = 0; i < speedPresetValues.length; i++) {
+                boolean selected = Math.abs(cur - speedPresetValues[i]) < 0.02f;
                 GradientDrawable chipBg = new GradientDrawable();
                 chipBg.setCornerRadius(dp(14));
                 if (selected) {
                     chipBg.setColor(accent);
-                    chipViews[i].setTextColor(0xffffffff);
+                    speedChipViews[i].setTextColor(contrastOnAccent);
                 } else {
-                    chipBg.setColor(Theme.getColor(Theme.key_dialogBackgroundGray));
-                    chipViews[i].setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+                    chipBg.setColor(chipBgUnselected);
+                    speedChipViews[i].setTextColor(textColor);
                 }
-                chipViews[i].setBackground(chipBg);
+                speedChipViews[i].setBackground(chipBg);
             }
         };
 
-        bar.setCallback((val, fromUser) -> {
-            speedBadge.setText(format.format(val) + "×");
+        speedBar.setCallback((val, fromUser) -> {
+            speedBadge.setText(speedFormat.format(val) + "×");
             MediaController.getInstance().setPlaybackSpeed(true, val);
             updateSpeed();
-            updateChips.run();
+            updateSpeedChips.run();
         });
 
-        for (int i = 0; i < presetValues.length; i++) {
-            final float pv = presetValues[i];
+        for (int i = 0; i < speedPresetValues.length; i++) {
+            final float pv = speedPresetValues[i];
             TextView chip = new TextView(ctx);
-            chip.setText(format.format(pv) + "×");
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            chip.setText(speedFormat.format(pv) + "×");
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             chip.setTypeface(AndroidUtilities.bold());
             chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(8), dp(7), dp(8), dp(7));
+            chip.setPadding(dp(6), dp(6), dp(6), dp(6));
 
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
             lp.leftMargin = dp(2);
             lp.rightMargin = dp(2);
             chip.setOnClickListener(v -> {
-                bar.setValue(pv);
-                speedBadge.setText(format.format(pv) + "×");
+                speedBar.setValue(pv);
+                speedBadge.setText(speedFormat.format(pv) + "×");
                 MediaController.getInstance().setPlaybackSpeed(true, pv);
                 updateSpeed();
-                updateChips.run();
+                updateSpeedChips.run();
             });
-            chipViews[i] = chip;
-            presets.addView(chip, lp);
+            speedChipViews[i] = chip;
+            speedPresets.addView(chip, lp);
         }
-        updateChips.run();
-        root.addView(presets);
+        updateSpeedChips.run();
+        root.addView(speedPresets);
 
-        // Bottom action buttons: Reset (1.0x) on left, Done on right
+        // Divider between Speed and Pitch
+        View divider = new View(ctx);
+        divider.setBackgroundColor(Theme.multAlpha(textColor, 0.08f));
+        root.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0, 0, 0, dp(14)));
+
+        // --- PITCH SECTION ---
+        LinearLayout pitchHeader = new LinearLayout(ctx);
+        pitchHeader.setOrientation(LinearLayout.HORIZONTAL);
+        pitchHeader.setGravity(Gravity.CENTER_VERTICAL);
+
+        TextView pitchLabel = new TextView(ctx);
+        pitchLabel.setText(getString(R.string.OEPlayerPitch));
+        pitchLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        pitchLabel.setTypeface(AndroidUtilities.bold());
+        pitchLabel.setTextColor(textColor);
+        pitchHeader.addView(pitchLabel, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+        TextView pitchBadge = new TextView(ctx);
+        pitchBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        pitchBadge.setTypeface(AndroidUtilities.bold());
+        pitchBadge.setTextColor(accent);
+        pitchHeader.addView(pitchBadge, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+        root.addView(pitchHeader);
+
+        final float minSemitones = -6f;
+        final float maxSemitones = 6f;
+        float currentPitch = MediaController.getInstance().getPlaybackPitch();
+        float currentSemitones = 0f;
+        if (currentPitch > 0.001f && Math.abs(currentPitch - 1.0f) > 0.001f) {
+            currentSemitones = (float) (12.0 * Math.log(currentPitch) / Math.log(2.0));
+            currentSemitones = Math.max(minSemitones, Math.min(maxSemitones, Math.round(currentSemitones)));
+        }
+
+        Material3Slider pitchBar = new Material3Slider(ctx, accent, minSemitones, maxSemitones, 1.0f, 0.0f);
+        pitchBar.setValue(currentSemitones);
+        root.addView(pitchBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 0, 4, 0, 6));
+
+        // Pitch preset chips: -4, -2, -1, 0, +1, +2, +4
+        LinearLayout pitchPresets = new LinearLayout(ctx);
+        pitchPresets.setOrientation(LinearLayout.HORIZONTAL);
+        pitchPresets.setGravity(Gravity.CENTER);
+        pitchPresets.setPadding(0, 0, 0, dp(14));
+
+        final float[] pitchPresetValues = {-4f, -2f, -1f, 0f, 1f, 2f, 4f};
+        final TextView[] pitchChipViews = new TextView[pitchPresetValues.length];
+
+        FloatConsumer updatePitchDisplay = (val) -> {
+            int st = Math.round(val);
+            if (st == 0) {
+                pitchBadge.setText("0 (1.0×)");
+            } else if (st > 0) {
+                pitchBadge.setText("+" + st + " st");
+            } else {
+                pitchBadge.setText(st + " st");
+            }
+            for (int i = 0; i < pitchPresetValues.length; i++) {
+                boolean selected = Math.abs(val - pitchPresetValues[i]) < 0.2f;
+                GradientDrawable chipBg = new GradientDrawable();
+                chipBg.setCornerRadius(dp(14));
+                if (selected) {
+                    chipBg.setColor(accent);
+                    pitchChipViews[i].setTextColor(contrastOnAccent);
+                } else {
+                    chipBg.setColor(chipBgUnselected);
+                    pitchChipViews[i].setTextColor(textColor);
+                }
+                pitchChipViews[i].setBackground(chipBg);
+            }
+        };
+
+        pitchBar.setCallback((val, fromUser) -> {
+            int st = Math.round(val);
+            float pitch = st == 0 ? 1.0f : (float) Math.pow(2.0, st / 12.0);
+            MediaController.getInstance().setPlaybackPitch(pitch);
+            updateSpeed();
+            updatePitchDisplay.accept((float) st);
+        });
+
+        for (int i = 0; i < pitchPresetValues.length; i++) {
+            final float pv = pitchPresetValues[i];
+            int st = Math.round(pv);
+            TextView chip = new TextView(ctx);
+            chip.setText(st == 0 ? "0" : (st > 0 ? "+" + st : String.valueOf(st)));
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            chip.setTypeface(AndroidUtilities.bold());
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(6), dp(6), dp(6), dp(6));
+
+            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f);
+            lp.leftMargin = dp(2);
+            lp.rightMargin = dp(2);
+            chip.setOnClickListener(v -> {
+                pitchBar.setValue(pv);
+                float pitch = st == 0 ? 1.0f : (float) Math.pow(2.0, st / 12.0);
+                MediaController.getInstance().setPlaybackPitch(pitch);
+                updateSpeed();
+                updatePitchDisplay.accept(pv);
+            });
+            pitchChipViews[i] = chip;
+            pitchPresets.addView(chip, lp);
+        }
+        updatePitchDisplay.accept(currentSemitones);
+        root.addView(pitchPresets);
+
+        // Bottom row: Reset All and Done
         LinearLayout buttons = new LinearLayout(ctx);
         buttons.setOrientation(LinearLayout.HORIZONTAL);
+        buttons.setGravity(Gravity.CENTER_VERTICAL);
 
         TextView resetBtn = new TextView(ctx);
-        resetBtn.setText(getString(R.string.OEAppearancePlayerSpeedReset));
+        resetBtn.setText(getString(R.string.OEPlayerPitchResetAll));
         resetBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        resetBtn.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        resetBtn.setTextColor(subtextColor);
         resetBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
         resetBtn.setOnClickListener(v -> {
-            bar.setValue(1.0f);
+            speedBar.setValue(1.0f);
             speedBadge.setText("1×");
             MediaController.getInstance().setPlaybackSpeed(true, 1.0f);
             updateSpeed();
-            updateChips.run();
+            updateSpeedChips.run();
+
+            pitchBar.setValue(0f);
+            MediaController.getInstance().setPlaybackPitch(1.0f);
+            updateSpeed();
+            updatePitchDisplay.accept(0f);
         });
         buttons.addView(resetBtn, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
 
@@ -1469,7 +1654,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         dialog.setContentView(root);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(40), dp(360));
+            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(36), dp(380));
             dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
         dialog.show();
@@ -1481,9 +1666,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         private final Paint thumbPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final RectF rectF = new RectF();
 
-        private final float min = 0.25f;
-        private final float max = 3.0f;
-        private final float step = 0.05f;
+        private float min = 0.25f;
+        private float max = 3.0f;
+        private float step = 0.05f;
+        private float snapCenter = 1.0f;
         private float value = 1.0f;
         private boolean isDragging = false;
         private ValueCallback callback;
@@ -1492,11 +1678,16 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             void onValueChanged(float value, boolean fromUser);
         }
 
-        public Material3Slider(Context context, int accentColor) {
+        public Material3Slider(Context context, int accentColor, float min, float max, float step, float snapCenter) {
             super(context);
+            this.min = min;
+            this.max = max;
+            this.step = step;
+            this.snapCenter = snapCenter;
+            this.value = snapCenter;
             activePaint.setColor(accentColor);
             thumbPaint.setColor(accentColor);
-            inactivePaint.setColor(Theme.getColor(Theme.key_dialogBackgroundGray));
+            inactivePaint.setColor(Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack), 0.14f));
         }
 
         public void setValue(float v) {
@@ -1517,7 +1708,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         @Override
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             int w = MeasureSpec.getSize(widthMeasureSpec);
-            int h = AndroidUtilities.dp(48);
+            int h = AndroidUtilities.dp(44);
             setMeasuredDimension(w, h);
         }
 
@@ -1529,7 +1720,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             float trackHeight = AndroidUtilities.dp(16);
             float trackRadius = trackHeight / 2f;
             float thumbWidth = AndroidUtilities.dp(4);
-            float thumbHeight = AndroidUtilities.dp(28);
+            float thumbHeight = AndroidUtilities.dp(26);
             float thumbRadius = thumbWidth / 2f;
             float gap = AndroidUtilities.dp(6);
 
@@ -1557,6 +1748,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 rectF.set(left, cy - trackRadius, right, cy + trackRadius);
                 canvas.drawRoundRect(rectF, trackRadius, trackRadius, activePaint);
                 canvas.restore();
+            }
+
+            // Zero center marker for bipolar sliders (e.g. pitch)
+            if (min < 0 && max > 0) {
+                float zeroProgress = (0 - min) / (max - min);
+                float zeroX = left + zeroProgress * availableW;
+                canvas.drawCircle(zeroX, cy, AndroidUtilities.dp(2f), activePaint);
             }
 
             // MD3 thumb pill
@@ -1601,7 +1799,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             steppedValue = Math.max(min, Math.min(max, Math.round(steppedValue * 100f) / 100f));
             if (Math.abs(steppedValue - value) > 0.001f) {
                 value = steppedValue;
-                if (Math.abs(value - 1.0f) < 0.01f || Math.abs(value - 2.0f) < 0.01f) {
+                if (Math.abs(value - snapCenter) < 0.01f) {
                     AndroidUtilities.vibrateCursor(this);
                 }
                 invalidate();
@@ -2047,19 +2245,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             dismissImmediately();
             PlayerActions.showInChat(activity, mo);
         });
-        o.add(R.drawable.baseline_playlist_add_24, getString(R.string.AudioAddToPlaylist), () -> {
-            o.dismiss();
-            LocalPlaylistsController.getInstance().showAddToPlaylistDialog(activity, mo, rp);
-        });
         o.add(R.drawable.msg_list, getString(R.string.AudioMyPlaylists), () -> {
             o.dismiss();
             LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
         });
         o.addGap();
-        o.add(R.drawable.menu_night_mode_24, getString(R.string.OEAppearancePlayerSleepTimer), () -> {
-            o.dismiss();
-            SleepTimer.showDialog(getContext(), rp);
-        });
         o.add(R.drawable.baseline_volume_up_24, getString(R.string.OEAppearancePlayerEqualizer), () -> {
             o.dismiss();
             try {
@@ -2227,8 +2417,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         controls.prev.setColors(c.primaryContainer, c.onPrimaryContainer, c.primaryContainer, c.onPrimaryContainer);
         controls.next.setColors(c.primaryContainer, c.onPrimaryContainer, c.primaryContainer, c.onPrimaryContainer);
         controls.play.setColors(c.primary, c.onPrimary, c.primary, c.onPrimary);
-        speedButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        speedButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         lyricsButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
+        playlistButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        sleepButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         queueButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
         applySystemBars(false);
     }

@@ -133,6 +133,9 @@
     <string name="OEAppearancePlayerLyricsTranslateDesc">Translate lyrics using the chat translator</string>
     <string name="OEAppearancePlayerSpeedDialogTitle">Playback speed</string>
     <string name="OEAppearancePlayerSpeedReset">Reset (1.0×)</string>
+    <string name="OEPlayerSpeedAndPitch">Speed &amp; Pitch</string>
+    <string name="OEPlayerPitch">Pitch</string>
+    <string name="OEPlayerPitchResetAll">Reset all</string>
     <string name="OEAppearancePlayerLyricsTranslating">Translating lyrics...</string>
     <string name="OEAppearancePlayerLyricsTranslated">Lyrics translated</string>
 

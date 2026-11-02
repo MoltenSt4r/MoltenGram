@@ -468,8 +468,21 @@ public class ReactionsEffectOverlay {
                     peakStartTime = System.currentTimeMillis();
                 }
 
+                boolean isNoto = app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null;
                 boolean peakHoldDone = peakStartTime != 0 && System.currentTimeMillis() - peakStartTime > 380;
-                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && ((emojiImageView.wasPlaying && emojiImageView.getImageReceiver().getLottieAnimation() != null && !emojiImageView.getImageReceiver().getLottieAnimation().isRunning()) || ((visibleReaction.documentId != 0 || emojiImageView.getImageReceiver().getLottieAnimation() == null) && peakHoldDone) || System.currentTimeMillis() - startTime > 2000)) ||
+                boolean longAnimFinished;
+                RLottieDrawable lottie = emojiImageView.getImageReceiver().getLottieAnimation();
+                if (lottie != null) {
+                    longAnimFinished = (emojiImageView.wasPlaying && !lottie.isRunning()) || System.currentTimeMillis() - startTime > 4500;
+                } else if (isNoto) {
+                    longAnimFinished = (peakStartTime != 0 && System.currentTimeMillis() - peakStartTime > 2400) || System.currentTimeMillis() - startTime > 4500;
+                } else if (visibleReaction.documentId != 0 || emojiImageView.animatedEmojiDrawable != null) {
+                    longAnimFinished = peakHoldDone || System.currentTimeMillis() - startTime > 2000;
+                } else {
+                    longAnimFinished = peakHoldDone || System.currentTimeMillis() - startTime > 2000;
+                }
+
+                if (animationType == ONLY_MOVE_ANIMATION || (wasScrolled && animationType == LONG_ANIMATION) || (animationType != SHORT_ANIMATION && longAnimFinished) ||
                         (animationType == SHORT_ANIMATION && ((effectImageView.wasPlaying && (effectImageView.getImageReceiver().getLottieAnimation() != null && !effectImageView.getImageReceiver().getLottieAnimation().isRunning())) || (visibleReaction.documentId != 0 && peakHoldDone) || System.currentTimeMillis() - startTime > 2000))) {
                     if (ReactionsEffectOverlay.this.animateOutProgress != 1f) {
                         if (animationType == SHORT_ANIMATION) {
@@ -705,7 +718,10 @@ public class ReactionsEffectOverlay {
             }
 
             emojiImageView.getImageReceiver().setAutoRepeat(0);
-            emojiImageView.getImageReceiver().setAllowStartAnimation(false);
+            boolean isNotoAnim = app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null;
+            if (!isNotoAnim) {
+                emojiImageView.getImageReceiver().setAllowStartAnimation(false);
+            }
 
             if (emojiImageView.getImageReceiver().getLottieAnimation() != null) {
                 if (animationType == ONLY_MOVE_ANIMATION) {
@@ -930,19 +946,37 @@ public class ReactionsEffectOverlay {
                 wasPlaying = true;
                 return;
             }
-            if (getImageReceiver().getLottieAnimation() != null && getImageReceiver().getLottieAnimation().isRunning()) {
-                wasPlaying = true;
-            }
-            if (getImageReceiver().hasBitmapImage() || getImageReceiver().hasImageLoaded()) {
-                wasPlaying = true;
-                getImageReceiver().startAnimation();
-            }
-            if (!wasPlaying && getImageReceiver().getLottieAnimation() != null && !getImageReceiver().getLottieAnimation().isRunning()) {
-                if (animationType == ONLY_MOVE_ANIMATION && !isStories) {
-                    getImageReceiver().getLottieAnimation().setCurrentFrame(getImageReceiver().getLottieAnimation().getFramesCount() - 1, false);
-                } else {
-                    getImageReceiver().getLottieAnimation().setCurrentFrame(0, false);
-                    getImageReceiver().getLottieAnimation().start();
+            RLottieDrawable lottie = getImageReceiver().getLottieAnimation();
+            if (lottie != null) {
+                if (!wasPlaying) {
+                    if (animationType == ONLY_MOVE_ANIMATION && !isStories) {
+                        lottie.setCurrentFrame(lottie.getFramesCount() - 1, false);
+                    } else {
+                        lottie.setCurrentFrame(0, false);
+                        lottie.start();
+                    }
+                }
+                if (lottie.isRunning()) {
+                    wasPlaying = true;
+                }
+            } else {
+                AnimatedFileDrawable webpAnimation = getImageReceiver().getAnimation();
+                if (webpAnimation != null) {
+                    if (!wasPlaying) {
+                        webpAnimation.repeatCount = 0;
+                        webpAnimation.seekTo(0, true, true);
+                        webpAnimation.start();
+                    }
+                    if (webpAnimation.isRunning()) {
+                        wasPlaying = true;
+                    }
+                } else if (getImageReceiver().isAnimationRunning()) {
+                    wasPlaying = true;
+                } else if (getImageReceiver().hasBitmapImage() || getImageReceiver().hasImageLoaded()) {
+                    getImageReceiver().startAnimation(true);
+                    if (getImageReceiver().isAnimationRunning()) {
+                        wasPlaying = true;
+                    }
                 }
             }
             super.onDraw(canvas);

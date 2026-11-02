@@ -1051,6 +1051,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     private long lastSaveTime;
     private float currentPlaybackSpeed = 1.0f;
     private float currentMusicPlaybackSpeed = 1.0f;
+    private float currentMusicPlaybackPitch = 1.0f;
     private float fastPlaybackSpeed = 1.0f;
     private float fastMusicPlaybackSpeed = 1.0f;
     private float seekToProgressPending;
@@ -1498,6 +1499,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             try {
                 currentPlaybackSpeed = MessagesController.getGlobalMainSettings().getFloat("playbackSpeed", 1.0f);
                 currentMusicPlaybackSpeed = MessagesController.getGlobalMainSettings().getFloat("musicPlaybackSpeed", 1.0f);
+                currentMusicPlaybackPitch = MessagesController.getGlobalMainSettings().getFloat("musicPlaybackPitch", 1.0f);
                 fastPlaybackSpeed = MessagesController.getGlobalMainSettings().getFloat("fastPlaybackSpeed", 1.8f);
                 fastMusicPlaybackSpeed = MessagesController.getGlobalMainSettings().getFloat("fastMusicPlaybackSpeed", 1.8f);
                 sensorManager = (SensorManager) ApplicationLoader.applicationContext.getSystemService(Context.SENSOR_SERVICE);
@@ -3445,7 +3447,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
             }
         }
         if (audioPlayer != null) {
-            audioPlayer.setPlaybackSpeed(Math.round(speed * 10f) / 10f);
+            audioPlayer.setPlaybackParameters(Math.round(speed * 10f) / 10f, currentMusicPlaybackPitch);
         } else if (videoPlayer != null) {
             videoPlayer.setPlaybackSpeed(Math.round(speed * 10f) / 10f);
         }
@@ -3465,6 +3467,19 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
 
     public float getFastPlaybackSpeed(boolean music) {
         return music ? fastMusicPlaybackSpeed : fastPlaybackSpeed;
+    }
+
+    public float getPlaybackPitch() {
+        return currentMusicPlaybackPitch;
+    }
+
+    public void setPlaybackPitch(float pitch) {
+        currentMusicPlaybackPitch = pitch;
+        if (audioPlayer != null) {
+            audioPlayer.setPlaybackParameters(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, currentMusicPlaybackPitch);
+        }
+        MessagesController.getGlobalMainSettings().edit().putFloat("musicPlaybackPitch", pitch).commit();
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.messagePlayingSpeedChanged);
     }
 
     private void updateVideoState(MessageObject messageObject, int[] playCount, boolean destroyAtEnd, boolean playWhenReady, int playbackState) {
@@ -4133,8 +4148,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                             messageObject.audioProgress = seekToProgressPending = pos;
                         }
                         shouldSavePositionForCurrentAudio = name;
-                        if ((messageObject.getDuration() >= 10 * 60 || app.exteraless.player.Md3Player.enabled()) && Math.abs(currentMusicPlaybackSpeed - 1.0f) > 0.001f) {
-                            audioPlayer.setPlaybackSpeed(Math.round(currentMusicPlaybackSpeed * 10f) / 10f);
+                        if ((messageObject.getDuration() >= 10 * 60 || app.exteraless.player.Md3Player.enabled()) && (Math.abs(currentMusicPlaybackSpeed - 1.0f) > 0.001f || Math.abs(currentMusicPlaybackPitch - 1.0f) > 0.001f)) {
+                            audioPlayer.setPlaybackParameters(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, currentMusicPlaybackPitch);
                         }
                     }
                 }
