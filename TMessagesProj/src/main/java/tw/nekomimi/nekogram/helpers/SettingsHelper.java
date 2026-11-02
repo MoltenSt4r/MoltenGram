@@ -173,6 +173,26 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("OEChatsIncomingMessageAnimation", "chats");
         NAGRAM_ROWS.put("OEShizukuInstall", "other");
         NAGRAM_ROWS.put("OEBioCustomEmojiStatus", "other");
+        NAGRAM_ROWS.put("torSettings", "tor_settings");
+        NAGRAM_ROWS.put("tor", "tor_settings");
+        NAGRAM_ROWS.put("heroCard", "tor_settings");
+        NAGRAM_ROWS.put("torHeroButton", "tor_settings");
+        NAGRAM_ROWS.put("exitCountry", "tor_settings");
+        NAGRAM_ROWS.put("bridgeType", "tor_settings");
+        NAGRAM_ROWS.put("autoGetBridges", "tor_settings");
+        NAGRAM_ROWS.put("customBridges", "tor_settings");
+        NAGRAM_ROWS.put("diagnostics", "tor_settings");
+        NAGRAM_ROWS.put("newIdentity", "tor_settings");
+        NAGRAM_ROWS.put("device_spoof", "device_spoof");
+        NAGRAM_ROWS.put("device_spoofing", "device_spoof");
+        NAGRAM_ROWS.put("devicespoof", "device_spoof");
+        NAGRAM_ROWS.put("spoof", "device_spoof");
+        NAGRAM_ROWS.put("enable_spoof", "device_spoof");
+        NAGRAM_ROWS.put("current_status", "device_spoof");
+        NAGRAM_ROWS.put("nothing_header", "device_spoof");
+        NAGRAM_ROWS.put("pixel_header", "device_spoof");
+        NAGRAM_ROWS.put("custom_header", "device_spoof");
+        NAGRAM_ROWS.put("add_custom", "device_spoof");
     }
 
     private static void moveRows(String from, String to, String... rows) {
@@ -331,6 +351,9 @@ public class SettingsHelper {
         if ("playerSettings".equals(row)) {
             row = "md3Player";
         }
+        if ("newIdentity".equals(row) || "torHeroButton".equals(row)) {
+            row = "heroCard";
+        }
         BaseFragment fragment;
         BaseNekoSettingsActivity neko_fragment = null;
         BaseNekoXSettingsActivity nekox_fragment = null;
@@ -415,6 +438,8 @@ public class SettingsHelper {
                     break;
                 case "device_spoof":
                 case "devicespoof":
+                case "device_spoofing":
+                case "devicespoofing":
                 case "spoof":
                     fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
                     break;
@@ -515,6 +540,8 @@ public class SettingsHelper {
                     break;
                 case "device_spoof":
                 case "devicespoof":
+                case "device_spoofing":
+                case "devicespoofing":
                 case "spoof":
                     fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
                     break;
@@ -669,6 +696,13 @@ public class SettingsHelper {
             case "ghost_mode":
             case "ghost":
                 fallback = "ghost_mode";
+                break;
+            case "device_spoof":
+            case "devicespoof":
+            case "device_spoofing":
+            case "devicespoofing":
+            case "spoof":
+                fallback = "device_spoof";
                 break;
             default:
                 return null;
