@@ -36,6 +36,8 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
+
+import java.util.Locale;
 import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.AlertDialog;
@@ -749,7 +751,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
      * - Ошибка: красный круг со значком повтора
      */
     public static class TorConnectionButton extends View {
-        private int state = TorController.STATUS_DISCONNECTED;
+        private int state = TorController.STATUS_STOPPED;
         private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -1174,7 +1176,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
 
             } else {
                 // Отключено (STATUS_STOPPED или STATUS_STOPPING)
-                connectionButton.setState(TorController.STATUS_DISCONNECTED);
+                connectionButton.setState(TorController.STATUS_STOPPED);
                 stopTimer();
                 titleView.setText("Не подключено");
                 subtitleView.setText("Нажмите для подключения");
