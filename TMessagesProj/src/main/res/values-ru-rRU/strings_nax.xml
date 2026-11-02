@@ -414,6 +414,10 @@
     <string name="TorExitIpPing">%1$d мс</string>
     <string name="TorExitIpCheckTap">Нажмите для проверки IP</string>
     <string name="TorInfoPrivacy">Встроенный Tor обеспечивает анонимность и стабильный обход блокировок. При активном подключении весь сетевой трафик приложения шифруется и маршрутизируется через распределённую сеть Tor.</string>
+    <string name="TorDiagnosticsTitle">Диагностика Tor</string>
+    <string name="TorDiagnosticsSubtitle">Журнал событий без IP-адресов</string>
+    <string name="TorDiagnosticsClear">Очистить журнал</string>
+    <string name="TorDiagnosticsCopied">Отчет диагностики скопирован (IP-адреса не собираются)</string>
     <string name="md3_avatar_shapes">Формы аватарок Material 3</string>
     <string name="md3_avatar_shape_users">Пользователи</string>
     <string name="md3_avatar_shape_bots">Боты</string>

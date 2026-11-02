@@ -429,6 +429,10 @@
     <string name="TorExitIpPing">%1$d ms</string>
     <string name="TorExitIpCheckTap">Tap to check IP</string>
     <string name="TorInfoPrivacy">Embedded Tor provides anonymity and robust censorship circumvention. When active, all network traffic is encrypted and routed through the decentralized Tor network.</string>
+    <string name="TorDiagnosticsTitle">Tor Diagnostics</string>
+    <string name="TorDiagnosticsSubtitle">IP-safe connection events</string>
+    <string name="TorDiagnosticsClear">Clear Log</string>
+    <string name="TorDiagnosticsCopied">Diagnostic report copied (no IP addresses collected)</string>
     <string name="md3_avatar_shapes">Material 3 Avatar Shapes</string>
     <string name="md3_avatar_shape_users">Users</string>
     <string name="md3_avatar_shape_bots">Bots</string>

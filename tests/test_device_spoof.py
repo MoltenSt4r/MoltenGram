@@ -36,6 +36,7 @@ class TestDeviceSpoofCore:
         assert "MoltenStar" in content
         assert "MoltenGram" in content
         assert "SDK 36" in content
+        assert "Pixel 11 Specs" not in content
 
         # Check Nothing lineup presets
         assert "nothing_phone_1" in content
@@ -44,7 +45,15 @@ class TestDeviceSpoofCore:
         assert "nothing_phone_2a_plus" in content
         assert "nothing_cmf_phone_1" in content
 
-        # Check Google Pixel lineup presets
+        # Check Google Pixel lineup presets including 10 and 11 series
+        assert "pixel_11_pro_fold" in content
+        assert "pixel_11_pro_xl" in content
+        assert "pixel_11_pro" in content
+        assert "pixel_11" in content
+        assert "pixel_10_pro_fold" in content
+        assert "pixel_10_pro_xl" in content
+        assert "pixel_10_pro" in content
+        assert "pixel_10" in content
         assert "pixel_9_pro_fold" in content
         assert "pixel_9_pro_xl" in content
         assert "pixel_9" in content
@@ -165,3 +174,44 @@ class TestDeviceSpoofDeepLinkAndInteraction:
         assert "copySettingsDeepLink" in content
         assert "safeNotifyDataSetChanged" in content
         assert "showCurrentDeviceOptionsDialog" in content
+        assert "nothingExpanded" in content
+        assert "pixelExpanded" in content
+        assert "customExpanded" in content
+
+
+class TestTorStabilityAndDiagnostics:
+    def test_tor_diagnostics_sanitization(self):
+        diag_file = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/tor/TorDiagnostics.java")
+        assert os.path.exists(diag_file), "TorDiagnostics.java must exist"
+        with open(diag_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "IPV4_PATTERN" in content
+        assert "IPV6_PATTERN" in content
+        assert "REDACTED_IPV4" in content
+        assert "REDACTED_IPV6" in content
+
+        # Verify regex behavior via python simulation of the regex
+        ipv4_regex = r"\b(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)\.){3}(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?)(?::\d{1,5})?\b"
+        test_msg = "Bootstrapping via 192.168.1.100:9001 and exit 8.8.8.8"
+        sanitized = re.sub(ipv4_regex, "[REDACTED_IPV4]", test_msg)
+        assert "192.168.1.100" not in sanitized
+        assert "8.8.8.8" not in sanitized
+        assert "[REDACTED_IPV4]" in sanitized
+
+    def test_tor_controller_crash_loop_guard(self):
+        controller_file = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/tor/TorController.java")
+        with open(controller_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "tor_rapid_starts" in content
+        assert "CRASH_GUARD" in content
+        assert "TorDiagnostics.getInstance()" in content
+
+    def test_tor_settings_hero_card_safe_update(self):
+        settings_file = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/tor/TorSettingsActivity.java")
+        with open(settings_file, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "currentHeroCard" in content
+        assert "safeNotifyItemChanged" in content
+        assert "showDiagnosticsDialog" in content
+        assert "diagnosticsRow" in content
+

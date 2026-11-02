@@ -70,10 +70,10 @@ public class DeviceSpoofManager {
     private void initBuiltInPresets() {
         builtInPresets.clear();
 
-        // 1. Futuristic Flagship: Pixel 11 hardware with MoltenStar / MoltenGram branding
+        // 1. Futuristic Flagship: MoltenStar / MoltenGram branding
         builtInPresets.add(new DeviceSpoofPreset(
                 PRESET_MOLTENSTAR,
-                "MoltenStar MoltenGram (Pixel 11 Specs)",
+                "MoltenStar",
                 "MoltenStar",
                 "MoltenGram",
                 "SDK 36",
@@ -81,7 +81,16 @@ public class DeviceSpoofManager {
                 false
         ));
 
-        // 2. Google Pixel Lineup (from latest flagship down to original Pixel)
+        // 2. Google Pixel Lineup (from Pixel 11 down to original Pixel)
+        builtInPresets.add(new DeviceSpoofPreset("pixel_11_pro_fold", "Google Pixel 11 Pro Fold", "Google", "Pixel 11 Pro Fold", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_11_pro_xl", "Google Pixel 11 Pro XL", "Google", "Pixel 11 Pro XL", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_11_pro", "Google Pixel 11 Pro", "Google", "Pixel 11 Pro", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_11", "Google Pixel 11", "Google", "Pixel 11", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_10_pro_fold", "Google Pixel 10 Pro Fold", "Google", "Pixel 10 Pro Fold", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_10_pro_xl", "Google Pixel 10 Pro XL", "Google", "Pixel 10 Pro XL", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_10_pro", "Google Pixel 10 Pro", "Google", "Pixel 10 Pro", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_10", "Google Pixel 10", "Google", "Pixel 10", "SDK 36", "Google Pixel", false));
+        builtInPresets.add(new DeviceSpoofPreset("pixel_9a", "Google Pixel 9a", "Google", "Pixel 9a", "SDK 35", "Google Pixel", false));
         builtInPresets.add(new DeviceSpoofPreset("pixel_9_pro_fold", "Google Pixel 9 Pro Fold", "Google", "Pixel 9 Pro Fold", "SDK 35", "Google Pixel", false));
         builtInPresets.add(new DeviceSpoofPreset("pixel_9_pro_xl", "Google Pixel 9 Pro XL", "Google", "Pixel 9 Pro XL", "SDK 35", "Google Pixel", false));
         builtInPresets.add(new DeviceSpoofPreset("pixel_9_pro", "Google Pixel 9 Pro", "Google", "Pixel 9 Pro", "SDK 35", "Google Pixel", false));

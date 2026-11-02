@@ -175,7 +175,7 @@
     <string name="DeviceSpoofingDescription">Spoof device model and OS version sent to Telegram MTProto servers without Root or Shizuku.</string>
     <string name="DeviceSpoofingEnabled">Enable Device Spoofing</string>
     <string name="DeviceSpoofingCurrent">Current Parameters</string>
-    <string name="DeviceSpoofingMoltenStarGroup">MoltenStar Flagship</string>
+    <string name="DeviceSpoofingMoltenStarGroup">MoltenStar</string>
     <string name="DeviceSpoofingNothingGroup">Nothing Lineup</string>
     <string name="DeviceSpoofingPixelGroup">Google Pixel Lineup</string>
     <string name="DeviceSpoofingCustomGroup">Custom Presets</string>

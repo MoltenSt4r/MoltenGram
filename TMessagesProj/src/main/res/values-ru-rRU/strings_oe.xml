@@ -170,7 +170,7 @@
     <string name="DeviceSpoofingDescription">Подмена модели устройства и версии ОС, отправляемых на серверы Telegram, без Root или Shizuku.</string>
     <string name="DeviceSpoofingEnabled">Включить спуфинг устройства</string>
     <string name="DeviceSpoofingCurrent">Текущие параметры</string>
-    <string name="DeviceSpoofingMoltenStarGroup">Флагман MoltenStar</string>
+    <string name="DeviceSpoofingMoltenStarGroup">MoltenStar</string>
     <string name="DeviceSpoofingNothingGroup">Линейка Nothing</string>
     <string name="DeviceSpoofingPixelGroup">Линейка Google Pixel</string>
     <string name="DeviceSpoofingCustomGroup">Пользовательские пресеты</string>

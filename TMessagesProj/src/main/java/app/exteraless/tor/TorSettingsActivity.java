@@ -73,9 +73,13 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
     private int bridgeTypeRow;
     private int autoGetBridgesRow;
     private int customBridgesRow;
+    private int diagnosticsRow;
     private int routingShadowRow;
 
     private int infoPrivacyRow;
+
+    private TorHeroCard currentHeroCard;
+    private int lastReportedStatus = -1;
 
     private NotificationCenter.NotificationCenterDelegate bridgeBotDelegate;
     private Runnable bridgeBotTimeoutRunnable;
@@ -113,6 +117,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
     @Override
     public void onFragmentDestroy() {
         super.onFragmentDestroy();
+        currentHeroCard = null;
         cleanupBridgeBotRequest();
         TorController.getInstance().removeListener(this);
         TorController.getInstance().removeExitNodeListener(this);
@@ -135,6 +140,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         bridgeTypeRow = addRow("bridgeType");
         autoGetBridgesRow = addRow("autoGetBridges");
         customBridgesRow = addRow("customBridges");
+        diagnosticsRow = addRow("diagnostics");
         routingShadowRow = addRow();
 
         infoPrivacyRow = addRow("info");
@@ -150,14 +156,46 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         return new ListAdapter(context);
     }
 
+    private void safeNotifyItemChanged(int position) {
+        if (position < 0 || listAdapter == null) return;
+        if (listView == null) {
+            try {
+                listAdapter.notifyItemChanged(position);
+            } catch (Throwable ignored) {}
+            return;
+        }
+        if (listView.isComputingLayout() || listView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
+            listView.post(() -> safeNotifyItemChanged(position));
+            return;
+        }
+        try {
+            listAdapter.notifyItemChanged(position);
+        } catch (Throwable t) {
+            FileLog.e(t);
+            listView.post(() -> {
+                try {
+                    listAdapter.notifyItemChanged(position);
+                } catch (Throwable ignored) {}
+            });
+        }
+    }
+
     @Override
     public void onStatusChanged(int status, int progress, String message) {
         AndroidUtilities.runOnUIThread(() -> {
-            if (listAdapter != null) {
-                listAdapter.notifyItemChanged(heroCardRow);
-                listAdapter.notifyItemChanged(exitCountryRow);
-                listAdapter.notifyItemChanged(bridgeTypeRow);
-                listAdapter.notifyItemChanged(customBridgesRow);
+            if (currentHeroCard != null) {
+                currentHeroCard.update();
+            } else if (listView != null) {
+                RecyclerView.ViewHolder vh = listView.findViewHolderForAdapterPosition(heroCardRow);
+                if (vh != null && vh.itemView instanceof TorHeroCard) {
+                    ((TorHeroCard) vh.itemView).update();
+                }
+            }
+            if (lastReportedStatus != status) {
+                lastReportedStatus = status;
+                safeNotifyItemChanged(exitCountryRow);
+                safeNotifyItemChanged(bridgeTypeRow);
+                safeNotifyItemChanged(customBridgesRow);
             }
         });
     }
@@ -165,8 +203,13 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
     @Override
     public void onExitNodeInfoUpdated(String ip, String country, String flag, long ping) {
         AndroidUtilities.runOnUIThread(() -> {
-            if (listAdapter != null) {
-                listAdapter.notifyItemChanged(heroCardRow);
+            if (currentHeroCard != null) {
+                currentHeroCard.update();
+            } else if (listView != null) {
+                RecyclerView.ViewHolder vh = listView.findViewHolderForAdapterPosition(heroCardRow);
+                if (vh != null && vh.itemView instanceof TorHeroCard) {
+                    ((TorHeroCard) vh.itemView).update();
+                }
             }
         });
     }
@@ -185,7 +228,56 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
             requestBridgesFromBot();
         } else if (position == customBridgesRow) {
             showCustomBridgesDialog();
+        } else if (position == diagnosticsRow) {
+            showDiagnosticsDialog();
         }
+    }
+
+    private void showDiagnosticsDialog() {
+        Context context = getParentActivity();
+        if (context == null) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context, resourcesProvider);
+        builder.setTitle(LocaleController.getString(R.string.TorDiagnosticsTitle));
+
+        String report = TorDiagnostics.getInstance().getSanitizedLogReport();
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(8), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
+
+        TextView noticeView = new TextView(context);
+        noticeView.setText(LocaleController.getString(R.string.TorDiagnosticsSubtitle));
+        noticeView.setTextSize(13);
+        noticeView.setTextColor(getThemedColor(Theme.key_dialogTextGray));
+        noticeView.setPadding(0, 0, 0, AndroidUtilities.dp(10));
+        container.addView(noticeView);
+
+        EditText logView = new EditText(context);
+        logView.setText(report);
+        logView.setTextSize(12);
+        logView.setTypeface(AndroidUtilities.getTypeface("fonts/rmono.ttf"));
+        logView.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
+        logView.setKeyListener(null);
+        logView.setTextIsSelectable(true);
+        logView.setBackground(null);
+        logView.setPadding(0, 0, 0, 0);
+
+        android.widget.ScrollView scrollView = new android.widget.ScrollView(context);
+        scrollView.addView(logView);
+        container.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 260));
+
+        builder.setView(container);
+        builder.setPositiveButton(LocaleController.getString(R.string.Copy), (dialog, which) -> {
+            AndroidUtilities.addToClipboard(report);
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.done, LocaleController.getString(R.string.TorDiagnosticsCopied)).show();
+        });
+        builder.setNeutralButton(LocaleController.getString(R.string.TorDiagnosticsClear), (dialog, which) -> {
+            TorDiagnostics.getInstance().clear();
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.done, LocaleController.getString(R.string.TorDiagnosticsClear)).show();
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Close), null);
+        showDialog(builder.create());
     }
 
     private void openBridgesBot() {
@@ -947,7 +1039,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int position = holder.getAdapterPosition();
-            return position == exitCountryRow || position == bridgeTypeRow || position == autoGetBridgesRow || position == customBridgesRow;
+            return position == exitCountryRow || position == bridgeTypeRow || position == autoGetBridgesRow || position == customBridgesRow || position == diagnosticsRow;
         }
 
         @Override
@@ -958,7 +1050,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
                 return TYPE_SHADOW;
             } else if (position == headerRoutingRow) {
                 return TYPE_HEADER;
-            } else if (position == exitCountryRow || position == bridgeTypeRow || position == customBridgesRow) {
+            } else if (position == exitCountryRow || position == bridgeTypeRow || position == customBridgesRow || position == diagnosticsRow) {
                 return TYPE_SETTINGS;
             } else if (position == autoGetBridgesRow) {
                 return TYPE_TEXT;
@@ -973,6 +1065,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
             if (viewType == TYPE_HERO_CARD) {
                 TorHeroCard heroCard = new TorHeroCard(mContext, resourcesProvider);
+                currentHeroCard = heroCard;
                 RecyclerView.LayoutParams lp = new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
                 lp.setMargins(AndroidUtilities.dp(12), AndroidUtilities.dp(8), AndroidUtilities.dp(12), AndroidUtilities.dp(8));
                 heroCard.setLayoutParams(lp);
@@ -987,7 +1080,8 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
 
             if (position == heroCardRow) {
                 if (holder.itemView instanceof TorHeroCard) {
-                    ((TorHeroCard) holder.itemView).update();
+                    currentHeroCard = (TorHeroCard) holder.itemView;
+                    currentHeroCard.update();
                 }
             } else if (position == headerRoutingRow) {
                 HeaderCell cell = (HeaderCell) holder.itemView;
@@ -1013,7 +1107,11 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
                         if (!l.trim().isEmpty()) count++;
                     }
                 }
-                cell.setTextAndValue(LocaleController.getString(R.string.TorCustomBridgesTitle), count > 0 ? "Мостов: " + count : "По умолчанию (obfs4)", false);
+                cell.setTextAndValue(LocaleController.getString(R.string.TorCustomBridgesTitle), count > 0 ? "Мостов: " + count : "По умолчанию (obfs4)", true);
+            } else if (position == diagnosticsRow) {
+                TextSettingsCell cell = (TextSettingsCell) holder.itemView;
+                cell.setIcon(0);
+                cell.setTextAndValue(LocaleController.getString(R.string.TorDiagnosticsTitle), LocaleController.getString(R.string.TorDiagnosticsSubtitle), false);
             } else if (position == infoPrivacyRow) {
                 TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
                 cell.setText(LocaleController.getString(R.string.TorInfoPrivacy));

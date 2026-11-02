@@ -200,7 +200,10 @@ public class TorController {
     }
 
     public void setEnabled(boolean enabled) {
-        getPrefs().edit().putBoolean("tor_enabled", enabled).apply();
+        getPrefs().edit()
+                .putBoolean("tor_enabled", enabled)
+                .putInt("tor_rapid_starts", 0)
+                .apply();
         if (enabled) {
             start();
         } else {
@@ -468,20 +471,30 @@ public class TorController {
         currentStatus = status;
         currentProgress = progress;
         currentStatusMessage = message != null ? message : "";
+        TorDiagnostics.getInstance().logEvent("STATUS", "State " + status + " (" + progress + "%): " + currentStatusMessage);
         if (progress > 15 || status == STATUS_CONNECTED || status == STATUS_STOPPED || status == STATUS_ERROR) {
             stopStallWatchdog();
         }
         mainHandler.post(() -> {
             for (Listener l : new ArrayList<>(listeners)) {
-                l.onStatusChanged(status, progress, currentStatusMessage);
+                try {
+                    l.onStatusChanged(status, progress, currentStatusMessage);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
             }
         });
     }
 
     private void postLog(String log) {
+        TorDiagnostics.getInstance().logEvent("TOR_LOG", log);
         mainHandler.post(() -> {
             for (Listener l : new ArrayList<>(listeners)) {
-                l.onLog(log);
+                try {
+                    l.onLog(log);
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                }
             }
         });
     }
@@ -491,6 +504,33 @@ public class TorController {
      */
     public synchronized void start() {
         if (currentStatus == STATUS_CONNECTING || currentStatus == STATUS_CONNECTED) {
+            return;
+        }
+
+        SharedPreferences prefs = getPrefs();
+        long now = System.currentTimeMillis();
+        long lastStart = prefs.getLong("tor_last_start_ts", 0);
+        int rapidStarts = prefs.getInt("tor_rapid_starts", 0);
+
+        if (now - lastStart < 12000) {
+            rapidStarts++;
+        } else {
+            rapidStarts = 1;
+        }
+        prefs.edit()
+                .putLong("tor_last_start_ts", now)
+                .putInt("tor_rapid_starts", rapidStarts)
+                .apply();
+
+        TorDiagnostics.getInstance().logEvent("START", "Tor start initiated (rapid attempt=" + rapidStarts + ")");
+
+        if (rapidStarts >= 3) {
+            TorDiagnostics.getInstance().logEvent("CRASH_GUARD", "Rapid crash loop detected (" + rapidStarts + " attempts). Auto-disabling Tor.");
+            prefs.edit()
+                    .putBoolean("tor_enabled", false)
+                    .putInt("tor_rapid_starts", 0)
+                    .apply();
+            updateStatus(STATUS_ERROR, 0, "Tor автоматически отключен из-за повторных сбоев при запуске");
             return;
         }
 
@@ -712,6 +752,9 @@ public class TorController {
     }
 
     private void onTorConnected() {
+        getPrefs().edit().putInt("tor_rapid_starts", 0).apply();
+        TorDiagnostics.getInstance().logEvent("HEALTH", "Tor connected successfully (100%)");
+
         int port = DEFAULT_SOCKS_PORT;
         if (boundTorService != null) {
             int servicePort = boundTorService.getSocksPort();

@@ -71,6 +71,11 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
     private final List<DeviceSpoofPreset> currentCustomPresets = new ArrayList<>();
     private DeviceSpoofPreset moltenStarPreset;
 
+    private boolean nothingExpanded = false;
+    private boolean pixelExpanded = false;
+    private boolean customExpanded = true;
+    private boolean initializedExpandedState = false;
+
     @Override
     protected String getKey() {
         return "device_spoof";
@@ -136,6 +141,22 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         }
         currentCustomPresets.addAll(manager.getCustomPresets());
 
+        if (!initializedExpandedState) {
+            initializedExpandedState = true;
+            String sel = manager.getSelectedPresetId();
+            if (sel != null) {
+                for (DeviceSpoofPreset p : nothingPresets) {
+                    if (p.id.equals(sel)) { nothingExpanded = true; break; }
+                }
+                for (DeviceSpoofPreset p : pixelPresets) {
+                    if (p.id.equals(sel)) { pixelExpanded = true; break; }
+                }
+                for (DeviceSpoofPreset p : currentCustomPresets) {
+                    if (p.id.equals(sel)) { customExpanded = true; break; }
+                }
+            }
+        }
+
         enableRow = addRow("enable_spoof");
         currentStatusRow = addRow("current_status");
         headerDividerRow = addRow();
@@ -148,24 +169,30 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
         if (!nothingPresets.isEmpty()) {
             nothingHeaderRow = addRow("nothing_header");
-            for (int i = 0; i < nothingPresets.size(); i++) {
-                nothingRows.add(addRow("nothing_" + i));
+            if (nothingExpanded) {
+                for (int i = 0; i < nothingPresets.size(); i++) {
+                    nothingRows.add(addRow("nothing_" + i));
+                }
             }
             nothingDividerRow = addRow();
         }
 
         if (!pixelPresets.isEmpty()) {
             pixelHeaderRow = addRow("pixel_header");
-            for (int i = 0; i < pixelPresets.size(); i++) {
-                pixelRows.add(addRow("pixel_" + i));
+            if (pixelExpanded) {
+                for (int i = 0; i < pixelPresets.size(); i++) {
+                    pixelRows.add(addRow("pixel_" + i));
+                }
             }
             pixelDividerRow = addRow();
         }
 
         customHeaderRow = addRow("custom_header");
         addCustomRow = addRow("add_custom");
-        for (int i = 0; i < currentCustomPresets.size(); i++) {
-            customRows.add(addRow("custom_" + i));
+        if (customExpanded) {
+            for (int i = 0; i < currentCustomPresets.size(); i++) {
+                customRows.add(addRow("custom_" + i));
+            }
         }
         customDividerRow = addRow();
 
@@ -213,6 +240,27 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
         if (position == currentStatusRow) {
             showCurrentDeviceOptionsDialog();
+            return;
+        }
+
+        if (position == nothingHeaderRow) {
+            nothingExpanded = !nothingExpanded;
+            updateRows();
+            safeNotifyDataSetChanged();
+            return;
+        }
+
+        if (position == pixelHeaderRow) {
+            pixelExpanded = !pixelExpanded;
+            updateRows();
+            safeNotifyDataSetChanged();
+            return;
+        }
+
+        if (position == customHeaderRow) {
+            customExpanded = !customExpanded;
+            updateRows();
+            safeNotifyDataSetChanged();
             return;
         }
 
@@ -351,10 +399,18 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
     private void selectPreset(DeviceSpoofPreset preset) {
         if (preset == null) return;
+        if ("Nothing".equalsIgnoreCase(preset.group)) {
+            nothingExpanded = true;
+        } else if ("Google Pixel".equalsIgnoreCase(preset.group)) {
+            pixelExpanded = true;
+        } else if (preset.isCustom) {
+            customExpanded = true;
+        }
         manager.setSelectedPresetId(preset.id);
         if (!manager.isSpoofingEnabled()) {
             manager.setSpoofingEnabled(true);
         }
+        updateRows();
         safeNotifyDataSetChanged();
         BulletinFactory.of(this).createSimpleBulletin(
                 R.drawable.msg_devices_solar,
@@ -532,12 +588,31 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == moltenStarHeaderRow) {
                         cell.setText(LocaleController.getString(R.string.DeviceSpoofingMoltenStarGroup));
+                        cell.setOnClickListener(null);
                     } else if (position == nothingHeaderRow) {
-                        cell.setText(LocaleController.getString(R.string.DeviceSpoofingNothingGroup));
+                        String title = LocaleController.getString(R.string.DeviceSpoofingNothingGroup);
+                        cell.setText(title + " (" + nothingPresets.size() + ") " + (nothingExpanded ? "▾" : "▸"));
+                        cell.setOnClickListener(v -> {
+                            nothingExpanded = !nothingExpanded;
+                            updateRows();
+                            safeNotifyDataSetChanged();
+                        });
                     } else if (position == pixelHeaderRow) {
-                        cell.setText(LocaleController.getString(R.string.DeviceSpoofingPixelGroup));
+                        String title = LocaleController.getString(R.string.DeviceSpoofingPixelGroup);
+                        cell.setText(title + " (" + pixelPresets.size() + ") " + (pixelExpanded ? "▾" : "▸"));
+                        cell.setOnClickListener(v -> {
+                            pixelExpanded = !pixelExpanded;
+                            updateRows();
+                            safeNotifyDataSetChanged();
+                        });
                     } else if (position == customHeaderRow) {
-                        cell.setText(LocaleController.getString(R.string.DeviceSpoofingCustomGroup));
+                        String title = LocaleController.getString(R.string.DeviceSpoofingCustomGroup);
+                        cell.setText(title + (currentCustomPresets.isEmpty() ? "" : " (" + currentCustomPresets.size() + ")") + " " + (customExpanded ? "▾" : "▸"));
+                        cell.setOnClickListener(v -> {
+                            customExpanded = !customExpanded;
+                            updateRows();
+                            safeNotifyDataSetChanged();
+                        });
                     }
                     break;
                 }
