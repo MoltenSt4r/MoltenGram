@@ -1171,9 +1171,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
-                int shapeId = PlayerArt.getOrCycleShape(mo);
-                cover.setShapeId(shapeId);
-                smallCover.setShapeId(shapeId);
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
                 if (lyricsMode && lyricsView.getState() != LyricsView.STATE_LYRICS) {
@@ -1184,9 +1181,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
-                int shapeId = PlayerArt.getOrCycleShape(mo);
-                cover.setShapeId(shapeId);
-                smallCover.setShapeId(shapeId);
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
                 if (lyricsMode && (lyricsView.getState() != LyricsView.STATE_LYRICS)) {
@@ -1214,8 +1208,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         smallTitle.setText(mo.getMusicTitle());
         smallArtist.setText(mo.getMusicAuthor());
         int shapeId = PlayerArt.getOrCycleShape(mo);
-        cover.setShapeId(shapeId, animated);
-        smallCover.setShapeId(shapeId, animated);
+        cover.setShapeId(shapeId, animated && changed);
+        smallCover.setShapeId(shapeId, animated && changed);
         cover.setMessage(mo);
         smallCover.setMessage(mo);
         if (changed) {

@@ -53,6 +53,8 @@ public final class PlayerArt {
 
     private static int shapeCycleIndex = 0;
     private static int miniShapeCycleIndex = 0;
+    private static int lastAssignedShape = -1;
+    private static int lastAssignedMiniShape = -1;
     private static final LruCache<String, Integer> trackShapes = new LruCache<>(64);
     private static final LruCache<String, Integer> miniTrackShapes = new LruCache<>(64);
     private static final LruCache<String, Integer> seeds = new LruCache<>(64);
@@ -75,15 +77,23 @@ public final class PlayerArt {
         }
         Integer cached = trackShapes.get(key);
         if (cached != null) {
+            lastAssignedShape = cached;
             return cached;
         }
         int shape;
         if (mode == AppearanceConfig.COVER_SHAPE_RANDOM) {
             int randIdx = (int) (Math.random() * MD3_EXPRESSIVE_SHAPES.length);
             shape = MD3_EXPRESSIVE_SHAPES[randIdx];
+            if (shape == lastAssignedShape && MD3_EXPRESSIVE_SHAPES.length > 1) {
+                shape = MD3_EXPRESSIVE_SHAPES[(randIdx + 1) % MD3_EXPRESSIVE_SHAPES.length];
+            }
         } else {
             shape = MD3_EXPRESSIVE_SHAPES[(shapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+            if (shape == lastAssignedShape && MD3_EXPRESSIVE_SHAPES.length > 1) {
+                shape = MD3_EXPRESSIVE_SHAPES[(shapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+            }
         }
+        lastAssignedShape = shape;
         trackShapes.put(key, shape);
         return shape;
     }
@@ -108,15 +118,23 @@ public final class PlayerArt {
         }
         Integer cached = miniTrackShapes.get(key);
         if (cached != null) {
+            lastAssignedMiniShape = cached;
             return cached;
         }
         int shape;
         if (mode == AppearanceConfig.COVER_SHAPE_RANDOM) {
             int randIdx = (int) (Math.random() * MD3_EXPRESSIVE_SHAPES.length);
             shape = MD3_EXPRESSIVE_SHAPES[randIdx];
+            if (shape == lastAssignedMiniShape && MD3_EXPRESSIVE_SHAPES.length > 1) {
+                shape = MD3_EXPRESSIVE_SHAPES[(randIdx + 1) % MD3_EXPRESSIVE_SHAPES.length];
+            }
         } else {
             shape = MD3_EXPRESSIVE_SHAPES[(miniShapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+            if (shape == lastAssignedMiniShape && MD3_EXPRESSIVE_SHAPES.length > 1) {
+                shape = MD3_EXPRESSIVE_SHAPES[(miniShapeCycleIndex++ & 0x7fffffff) % MD3_EXPRESSIVE_SHAPES.length];
+            }
         }
+        lastAssignedMiniShape = shape;
         miniTrackShapes.put(key, shape);
         return shape;
     }
@@ -124,6 +142,8 @@ public final class PlayerArt {
     public static synchronized void clearTrackShapesCache() {
         trackShapes.evictAll();
         miniTrackShapes.evictAll();
+        lastAssignedShape = -1;
+        lastAssignedMiniShape = -1;
     }
 
     private static final class Pending {

@@ -81,7 +81,7 @@ public class CoverImage extends FrameLayout {
     }
 
     public void setShapeId(int shapeId, boolean animated) {
-        if (this.shapeId == shapeId && morphProgress >= 1f) {
+        if (this.shapeId == shapeId) {
             return;
         }
         if (shapeMorphAnimator != null) {
@@ -111,21 +111,30 @@ public class CoverImage extends FrameLayout {
             toShapeId = shapeId;
             morphProgress = 0f;
             shapeMorphAnimator = ValueAnimator.ofFloat(0f, 1f);
-            shapeMorphAnimator.setDuration(350);
-            shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+            shapeMorphAnimator.setDuration(380);
+            shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.DEFAULT);
             shapeMorphAnimator.addUpdateListener(animation -> {
                 morphProgress = (float) animation.getAnimatedValue();
                 shapePath = null;
                 invalidate();
             });
             shapeMorphAnimator.addListener(new AnimatorListenerAdapter() {
+                private boolean canceled;
+
+                @Override
+                public void onAnimationCancel(Animator animation) {
+                    canceled = true;
+                }
+
                 @Override
                 public void onAnimationEnd(Animator animation) {
-                    morphProgress = 1f;
-                    shapeMorphAnimator = null;
-                    shapePath = null;
-                    invalidateOutline();
-                    invalidate();
+                    if (!canceled) {
+                        morphProgress = 1f;
+                        shapeMorphAnimator = null;
+                        shapePath = null;
+                        invalidateOutline();
+                        invalidate();
+                    }
                 }
             });
             shapeMorphAnimator.start();
@@ -273,6 +282,15 @@ public class CoverImage extends FrameLayout {
                 listener.onSeed(target, seed);
             }
         });
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (shapeMorphAnimator != null) {
+            shapeMorphAnimator.cancel();
+            shapeMorphAnimator = null;
+        }
     }
 
     @Override

@@ -37,6 +37,7 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
     private final PlayerIcon nextIcon = PlayerIcon.fill(PlayerIcon.NEXT, 22);
     private final PlayerIcon closeIcon = PlayerIcon.stroke(PlayerIcon.CLOSE, 20);
     private MessageObject current;
+    private String currentKey;
 
     public PlayerBarView(Context context, Theme.ResourcesProvider resourcesProvider, Runnable onOpen, Runnable onClose) {
         super(context);
@@ -117,6 +118,7 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.addObserver(this, NotificationCenter.messagePlayingDidStart);
+            nc.addObserver(this, NotificationCenter.messagePlayingDidReset);
             nc.addObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
             nc.addObserver(this, NotificationCenter.messagePlayingProgressDidChanged);
             nc.addObserver(this, NotificationCenter.fileLoaded);
@@ -131,6 +133,7 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.removeObserver(this, NotificationCenter.messagePlayingDidStart);
+            nc.removeObserver(this, NotificationCenter.messagePlayingDidReset);
             nc.removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
             nc.removeObserver(this, NotificationCenter.messagePlayingProgressDidChanged);
             nc.removeObserver(this, NotificationCenter.fileLoaded);
@@ -151,29 +154,34 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
-                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
-                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else {
-            update();
+            update(true);
         }
     }
 
     public void update() {
+        update(false);
+    }
+
+    public void update(boolean animated) {
         MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
         if (mo == null || !mo.isMusic()) {
             return;
         }
+        String key = PlayerArt.key(mo);
+        boolean changed = !TextUtils.equals(key, currentKey);
         current = mo;
+        currentKey = key;
         titleView.setText(mo.getMusicTitle());
         artistView.setText(mo.getMusicAuthor());
-        cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
+        cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo), animated && changed);
         cover.setMessage(mo);
         playButton.setMessage(mo);
         boolean paused = MediaController.getInstance().isMessagePaused();

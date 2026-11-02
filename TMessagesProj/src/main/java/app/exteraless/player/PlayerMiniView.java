@@ -56,6 +56,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private PlayerColors colors;
     private ValueAnimator showAnimator;
     private MessageObject current;
+    private String currentKey;
     private boolean shown;
     private float showProgress;
     private float hostFactor = 1f;
@@ -278,13 +279,11 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
-                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
-                cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
                 cover.setMessage(mo);
             }
         } else {
@@ -307,17 +306,20 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
         boolean want = Md3Player.miniEnabled() && mo != null && mo.isMusic() && mo.getId() != 0;
         if (want) {
-            bind(mo);
+            bind(mo, animated && shown);
         }
         playButton.setPlaying(want && !MediaController.getInstance().isMessagePaused(), animated);
         setShown(want, animated);
     }
 
-    private void bind(MessageObject mo) {
+    private void bind(MessageObject mo, boolean animated) {
+        String key = PlayerArt.key(mo);
+        boolean changed = !TextUtils.equals(key, currentKey);
         current = mo;
+        currentKey = key;
         titleView.setText(mo.getMusicTitle());
         artistView.setText(mo.getMusicAuthor());
-        cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo));
+        cover.setShapeId(PlayerArt.getOrCycleMiniShape(mo), animated && changed);
         cover.setMessage(mo);
         playButton.setMessage(mo);
         playButton.setContentDescription(getString(MediaController.getInstance().isMessagePaused() ? R.string.AccActionPlay : R.string.AccActionPause));
