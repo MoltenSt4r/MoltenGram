@@ -196,4 +196,9 @@
     <string name="OEUseCurrentEmojiForReactionsInfo">Использовать текущий набор эмодзи в меню, анимации и под сообщениями</string>
     <string name="OEAppearanceMd3ChatInput">Поле ввода MD3</string>
     <string name="OEAppearanceMd3ChatInputInfo">Плавающее поле ввода чата в форме пилюли</string>
+    <string name="OEAppearanceMd3SpeedDial">MD3 Speed-Dial FAB</string>
+    <string name="OEAppearanceMd3SpeedDialInfo">Раскрывающееся меню действий в стиле Material Design 3</string>
+    <string name="OEAppearanceMd3FabItems">Пункты меню FAB</string>
+    <string name="OEAppearanceMd3FabItemsInfo">Настроить действия в раскрывающемся меню плавающей кнопки</string>
+    <string name="OEAppearanceMd3FabCustomize">Настройка меню FAB</string>
 </resources>

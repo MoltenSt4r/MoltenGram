@@ -154,6 +154,26 @@ object AppearanceConfig {
         return squareFab.Bool()
     }
 
+    /** MD3 Speed-Dial FAB: раскрывающееся меню плавающей кнопки. */
+    @JvmField
+    val md3FabSpeedDial = addConfig("OEAppearanceMd3FabSpeedDial", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun md3FabSpeedDial(): Boolean {
+        ensureLoaded()
+        return md3FabSpeedDial.Bool()
+    }
+
+    /** Пункты меню MD3 Speed-Dial FAB (через запятую). */
+    @JvmField
+    val md3FabItems = addConfig("OEAppearanceMd3FabItems", ConfigItem.configTypeString, "chat,channel,group,secret,story,qr,saved")
+
+    @JvmStatic
+    fun md3FabItems(): String {
+        ensureLoaded()
+        return md3FabItems.String()
+    }
+
     /** Радиус скругления кнопки со стороной [size] dp. */
     @JvmStatic
     fun fabCornerRadius(size: Int): Int =

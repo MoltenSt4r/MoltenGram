@@ -560,6 +560,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private boolean storyHintShown;
     private FragmentFloatingButton floatingButton3;
     private FragmentFloatingButton floatingButtonStories;
+    private app.exteraless.components.Md3SpeedDialView speedDialView;
     private ButtonWithCounterView addChatsToCommunityButton;
     private ChatActivityFadeView communityBottomFadeView;
     private ChatAvatarContainer avatarContainer;
@@ -4965,6 +4966,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         contentView.addView(floatingButtonStories, FragmentFloatingButton.createSubButtonLayoutParams());
 
         floatingButton3 = new FragmentFloatingButton(context, resourceProvider);
+
+        speedDialView = new app.exteraless.components.Md3SpeedDialView(context, this, floatingButton3, floatingButtonStories, resourceProvider);
+        contentView.addView(speedDialView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
         contentView.addView(floatingButton3, FragmentFloatingButton.createDefaultLayoutParams());
         floatingButton3.setOnClickListener(v -> {
             if (parentLayout != null && parentLayout.isInPreviewMode()) {
@@ -4981,12 +4986,37 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
                 delegate.didSelectDialogs(DialogsActivity.this, topicKeys, null, false, notify, scheduleDate, scheduleRepeatPeriod, null);
             } else {
+                if (speedDialView != null && speedDialView.isOpen()) {
+                    speedDialView.close(true);
+                    return;
+                }
+                if (app.exteraless.appearance.AppearanceConfig.md3FabSpeedDial()) {
+                    if (speedDialView != null) {
+                        speedDialView.open();
+                    }
+                    return;
+                }
                 if (MessagesController.getInstance(currentAccount).isFrozen()) {
                     AccountFrozenAlert.show(currentAccount);
                     return;
                 }
                 openWriteContacts();
             }
+        });
+        floatingButton3.setOnLongClickListener(v -> {
+            if (initialDialogsType != DIALOGS_TYPE_WIDGET && app.exteraless.appearance.AppearanceConfig.md3FabSpeedDial()) {
+                floatingButton3.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                if (speedDialView != null && speedDialView.isOpen()) {
+                    speedDialView.close(false);
+                }
+                app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getContext(), () -> {
+                    if (speedDialView != null) {
+                        speedDialView.rebuildItems();
+                    }
+                });
+                return true;
+            }
+            return false;
         });
 
         if (!isArchive() && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
@@ -7545,6 +7575,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @Override
     public boolean onBackPressed(boolean invoked) {
+        if (speedDialView != null && speedDialView.isOpen()) {
+            if (invoked) {
+                speedDialView.close(true);
+            }
+            return false;
+        }
         // Сначала закрывается шторка.
         if (drawerContainer() != null && drawerContainer().isDrawerOpen()) {
             if (invoked) {
@@ -9154,6 +9190,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private void updateFloatingButtonVisibility(boolean animated) {
         final boolean isVisible = !(onlySelect && initialDialogsType != 10 || folderId != 0 || communityId != 0 || inPreviewMode || (searching && !onlySelect) || floatingButtonHidden);
 
+        if (speedDialView != null && !isVisible && speedDialView.isOpen()) {
+            speedDialView.close(false);
+        }
         if (floatingButton3 != null) {
             floatingButton3.setButtonVisible(isVisible, animated);
         }
@@ -9209,7 +9248,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             floatingButton3.setImageResource(R.drawable.floating_check);
             floatingButton3.setContentDescription(LocaleController.getString(R.string.Done));
         } else {
-            floatingButton3.setImageResource(R.drawable.filled_fab_compose_32);
+            floatingButton3.setImageResource(app.exteraless.appearance.AppearanceConfig.md3FabSpeedDial()
+                    ? R.drawable.baseline_add_24
+                    : R.drawable.filled_fab_compose_32);
             floatingButton3.setContentDescription(LocaleController.getString(R.string.NewMessageTitle));
         }
     }
@@ -12514,6 +12555,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             if (floatingButtonStories != null) {
                 floatingButtonStories.updateColors();
             }
+            if (speedDialView != null) {
+                speedDialView.updateColors();
+            }
 
             iBlur3SourceColor.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
             if (topPanelLayout != null) {
@@ -13926,13 +13970,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }, 0);
     }
 
-    private void openWriteContacts() {
+    public void openWriteContacts() {
         Bundle args = new Bundle();
         args.putBoolean("destroyAfterSelect", true);
         presentFragment(new ContactsActivity(args));
     }
 
-    private void openStoriesRecorder() {
+    public void openStoriesRecorder() {
         if (!storiesEnabled) {
             if (storyPremiumHint != null) {
                 if (storyPremiumHint.shown()) {

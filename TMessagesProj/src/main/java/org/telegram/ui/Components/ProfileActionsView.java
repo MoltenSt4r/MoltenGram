@@ -512,7 +512,14 @@ public class ProfileActionsView extends View {
     }
 
     public float getRoundRadius() {
-        return dp(16);
+        float height = Math.max(0f, currentHeight - ypadding - top);
+        float width = activeCount > 0 ? getItemWidth() : 0;
+        if (height > 0 && width > 0) {
+            return Math.min(width, height) / 2f;
+        } else if (height > 0) {
+            return height / 2f;
+        }
+        return targetHeight > 0 ? targetHeight / 2f : dp(28);
     }
 
     private Action hit = null;

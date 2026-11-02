@@ -131,6 +131,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3MiniPlayerRow;
     private int md3ChatInputRow;
     private int mediaGroupCarouselRow;
+    private int md3FabSpeedDialRow;
+    private int md3FabItemsRow;
     private boolean md3Expanded;
     private int iosGroupRow;
     private int iosNavBarRow;
@@ -262,9 +264,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3MiniPlayerRow = addRow("md3MiniPlayer");
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
+            md3FabSpeedDialRow = addRow("md3FabSpeedDial");
+            if (AppearanceConfig.md3FabSpeedDial()) {
+                md3FabItemsRow = addRow("md3FabItems");
+            } else {
+                md3FabItemsRow = -1;
+            }
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
-            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
+            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = md3FabSpeedDialRow = md3FabItemsRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -696,6 +704,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == mediaGroupCarouselRow) {
             AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.mediaGroupCarousel.Bool());
+            return;
+        } else if (position == md3FabSpeedDialRow) {
+            boolean enable = !AppearanceConfig.md3FabSpeedDial();
+            AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
+            rebuildAllAndSelf(view, enable);
+            rebuildRowsAndNotify();
+            return;
+        } else if (position == md3FabItemsRow) {
+            app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getParentActivity(), this::rebuildRowsAndNotify);
             return;
         } else if (position == iosGroupRow) {
             iosExpanded = !iosExpanded;
@@ -1152,6 +1169,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == mediaGroupCarouselRow) {
                         cell.setText(getString(R.string.media_group_carousel), "",
                                 AppearanceConfig.mediaGroupCarousel.Bool(), true, true);
+                    } else if (position == md3FabSpeedDialRow) {
+                        cell.setText(getString(R.string.OEAppearanceMd3SpeedDial), "",
+                                AppearanceConfig.md3FabSpeedDial(), true, true);
                     } else if (position == iosNavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceIosNavigationBarStyle), "",
                                 AppearanceConfig.iosNavigationBarStyle.Bool(), true, true);
@@ -1211,6 +1231,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int titleText = clamp(AppearanceConfig.titleText.Int(), v.length);
                         cell.setTextAndValue(getString(R.string.OEAppearanceTitleText),
                                 titleText == AppearanceConfig.TITLE_TEXT_CUSTOM ? NaConfig.INSTANCE.getCustomTitle().String() : v[titleText], false);
+                    } else if (position == md3FabItemsRow) {
+                        cell.setTextAndValue(getString(R.string.OEAppearanceMd3FabItems),
+                                app.exteraless.components.Md3SpeedDialView.getItemsSummary(), false);
                     }
                     break;
                 }
@@ -1314,6 +1337,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3PlayerRow || position == md3MiniPlayerRow
                     || (position == md3ChatInputRow && md3ChatInputRow != -1)
                     || position == mediaGroupCarouselRow
+                    || position == md3FabSpeedDialRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosChatHeaderRow
@@ -1322,7 +1346,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
-                    || position == chipFoldersRow || position == md3AvatarShapesRow) {
+                    || position == chipFoldersRow || position == md3AvatarShapesRow
+                    || position == md3FabItemsRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
@@ -1425,8 +1450,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
-    /** Сколько стилей MD3 включено. Счётчик «N/9» рядом с шевроном. */
-    private static final int MD3_STYLE_COUNT = 9;
+    /** Сколько стилей MD3 включено. Счётчик «N/10» рядом с шевроном. */
+    private static final int MD3_STYLE_COUNT = 10;
     /** Значение селектора NagramX, соответствующее Material Design 3. */
     private static final int STYLE_MD3 = 2;
 
@@ -1445,6 +1470,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (AppearanceConfig.md3Player.Bool()) n++;
         if (AppearanceConfig.md3MiniPlayer.Bool()) n++;
         if (AppearanceConfig.mediaGroupCarousel.Bool()) n++;
+        if (AppearanceConfig.md3FabSpeedDial()) n++;
         return n;
     }
 
@@ -1504,6 +1530,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AppearanceConfig.md3Player.setConfigBool(enable);
         AppearanceConfig.md3MiniPlayer.setConfigBool(enable);
         AppearanceConfig.mediaGroupCarousel.setConfigBool(enable);
+        AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
         onM3ListItemsChanged();
         if (enable) {
             AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
