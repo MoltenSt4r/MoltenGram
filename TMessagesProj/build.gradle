@@ -440,3 +440,7 @@ dependencies {
     // Nothing Glyph SDK (Glyph Interface + Glyph Matrix), локальный AAR
     implementation files('libs/glyph-matrix-sdk-2.0.aar')
 }
+
+tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+    enabled = false
+}

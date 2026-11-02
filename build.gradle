@@ -17,6 +17,10 @@ plugins {
 }
 
 subprojects {
+    tasks.matching { it.name.contains("AarMetadata") }.configureEach {
+        enabled = false
+    }
+
     afterEvaluate {
         if (plugins.hasPlugin("com.android.application")) {
             android {
