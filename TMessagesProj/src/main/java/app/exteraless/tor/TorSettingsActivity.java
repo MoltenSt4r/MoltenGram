@@ -1,10 +1,12 @@
 package app.exteraless.tor;
 
+import android.animation.ValueAnimator;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.RectF;
@@ -16,6 +18,7 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewGroup;
+import android.view.animation.LinearInterpolator;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -739,14 +742,155 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
     }
 
     /**
-     * Главная Hero-карточка управления Tor с тумблером, иконкой Orbot, MD3-прогрессом и Exit IP
+     * Кнопка подключения Tor в стиле ShrimpNG / VPN (по видео):
+     * - Отключено: оранжевый круг с треугольником Play ▶
+     * - Подключение: оранжевый круг с вращающимся кольцом
+     * - Подключено: оранжевая 12-лепестковая фигура (цветок/волна) со значком Stop ⏹
+     * - Ошибка: красный круг со значком повтора
+     */
+    public static class TorConnectionButton extends View {
+        private int state = TorController.STATUS_DISCONNECTED;
+        private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint iconPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint ringPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Path flowerPath = new Path();
+        private final Path trianglePath = new Path();
+        private final RectF squareRect = new RectF();
+        private final RectF ringRect = new RectF();
+        private float rotationAngle = 0f;
+        private ValueAnimator spinAnimator;
+
+        public TorConnectionButton(Context context) {
+            super(context);
+            fillPaint.setStyle(Paint.Style.FILL);
+            iconPaint.setColor(0xFFFFFFFF);
+            iconPaint.setStyle(Paint.Style.FILL);
+            ringPaint.setStyle(Paint.Style.STROKE);
+            ringPaint.setStrokeCap(Paint.Cap.ROUND);
+        }
+
+        public void setState(int state) {
+            if (this.state != state) {
+                this.state = state;
+                if (state == TorController.STATUS_CONNECTING || state == TorController.STATUS_STARTING) {
+                    startSpin();
+                } else {
+                    stopSpin();
+                }
+                invalidate();
+            }
+        }
+
+        public void startSpin() {
+            if (spinAnimator != null) return;
+            spinAnimator = ValueAnimator.ofFloat(0f, 360f);
+            spinAnimator.setDuration(1200);
+            spinAnimator.setRepeatCount(ValueAnimator.INFINITE);
+            spinAnimator.setInterpolator(new LinearInterpolator());
+            spinAnimator.addUpdateListener(anim -> {
+                rotationAngle = (float) anim.getAnimatedValue();
+                invalidate();
+            });
+            spinAnimator.start();
+        }
+
+        public void stopSpin() {
+            if (spinAnimator != null) {
+                spinAnimator.cancel();
+                spinAnimator = null;
+            }
+            rotationAngle = 0f;
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            int size = AndroidUtilities.dp(96);
+            setMeasuredDimension(size, size);
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            super.onDraw(canvas);
+            int w = getWidth();
+            int h = getHeight();
+            if (w <= 0 || h <= 0) return;
+
+            float cx = w / 2f;
+            float cy = h / 2f;
+            float radius = Math.min(w, h) / 2f - AndroidUtilities.dp(6);
+
+            int accentColor = 0xFFFF5C38; // Оранжево-коралловый цвет из видеопримера
+
+            if (state == TorController.STATUS_CONNECTED) {
+                // 12-лепестковая фигура волны/цветка из видео
+                fillPaint.setColor(accentColor);
+                flowerPath.reset();
+                int lobes = 12;
+                float baseR = radius * 0.90f;
+                float amp = radius * 0.10f;
+                for (int i = 0; i <= 360; i += 3) {
+                    double rad = Math.toRadians(i);
+                    float r = baseR + amp * (float) Math.cos(lobes * rad);
+                    float x = cx + r * (float) Math.cos(rad);
+                    float y = cy + r * (float) Math.sin(rad);
+                    if (i == 0) {
+                        flowerPath.moveTo(x, y);
+                    } else {
+                        flowerPath.lineTo(x, y);
+                    }
+                }
+                flowerPath.close();
+                canvas.drawPath(flowerPath, fillPaint);
+
+                // Значок Stop (скругленный квадрат в центре)
+                float sqSize = AndroidUtilities.dp(22);
+                squareRect.set(cx - sqSize / 2f, cy - sqSize / 2f, cx + sqSize / 2f, cy + sqSize / 2f);
+                canvas.drawRoundRect(squareRect, AndroidUtilities.dp(5), AndroidUtilities.dp(5), iconPaint);
+
+            } else if (state == TorController.STATUS_CONNECTING || state == TorController.STATUS_STARTING) {
+                fillPaint.setColor(accentColor);
+                canvas.drawCircle(cx, cy, radius * 0.86f, fillPaint);
+
+                // Вращающаяся дуга вокруг кнопки
+                ringPaint.setColor(accentColor);
+                ringPaint.setStrokeWidth(AndroidUtilities.dp(3.5f));
+                ringRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
+                canvas.drawArc(ringRect, rotationAngle, 100, false, ringPaint);
+
+                drawPlayTriangle(canvas, cx, cy);
+
+            } else if (state == TorController.STATUS_ERROR) {
+                fillPaint.setColor(0xFFEF4444);
+                canvas.drawCircle(cx, cy, radius, fillPaint);
+                drawPlayTriangle(canvas, cx, cy);
+
+            } else {
+                // Отключено (круглая кнопка с Play)
+                fillPaint.setColor(accentColor);
+                canvas.drawCircle(cx, cy, radius, fillPaint);
+                drawPlayTriangle(canvas, cx, cy);
+            }
+        }
+
+        private void drawPlayTriangle(Canvas canvas, float cx, float cy) {
+            float size = AndroidUtilities.dp(24);
+            trianglePath.reset();
+            float shiftX = AndroidUtilities.dp(2.5f); // Оптический баланс треугольника
+            trianglePath.moveTo(cx - size * 0.35f + shiftX, cy - size * 0.5f);
+            trianglePath.lineTo(cx + size * 0.5f + shiftX, cy);
+            trianglePath.lineTo(cx - size * 0.35f + shiftX, cy + size * 0.5f);
+            trianglePath.close();
+            canvas.drawPath(trianglePath, iconPaint);
+        }
+    }
+
+    /**
+     * Главная Hero-карточка управления Tor с центрированной кнопкой в стиле видео
      */
     public class TorHeroCard extends FrameLayout {
-        private final FrameLayout iconContainer;
-        private final ImageView iconView;
+        private final TorConnectionButton connectionButton;
         private final TextView titleView;
         private final TextView subtitleView;
-        private final Switch switchView;
         private final LinearLayout progressContainer;
         private final TextView progressTextView;
         private final TorProgressBar progressBar;
@@ -757,6 +901,17 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         private final TextView pingTextView;
         private final TextView newIdentityButton;
         private boolean isToggling = false;
+        private long connectedTimeMillis = 0;
+
+        private final Runnable timerRunnable = new Runnable() {
+            @Override
+            public void run() {
+                if (TorController.getInstance().getStatus() == TorController.STATUS_CONNECTED) {
+                    updateTimerText();
+                    postDelayed(this, 1000);
+                }
+            }
+        };
 
         public TorHeroCard(Context context, Theme.ResourcesProvider resourcesProvider) {
             super(context);
@@ -777,62 +932,40 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
 
             LinearLayout mainLayout = new LinearLayout(context);
             mainLayout.setOrientation(LinearLayout.VERTICAL);
+            mainLayout.setGravity(Gravity.CENTER_HORIZONTAL);
             mainLayout.setClipChildren(false);
             mainLayout.setClipToPadding(false);
-            mainLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16), AndroidUtilities.dp(16));
+            mainLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(20), AndroidUtilities.dp(16), AndroidUtilities.dp(18));
             addView(mainLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            // Верхняя плашка: Иконка + Заголовок/Статус + Переключатель
-            LinearLayout headerRow = new LinearLayout(context);
-            headerRow.setOrientation(LinearLayout.HORIZONTAL);
-            headerRow.setGravity(Gravity.CENTER_VERTICAL);
-            headerRow.setClipChildren(false);
-            headerRow.setClipToPadding(false);
-            headerRow.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
-                    AndroidUtilities.dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.5f)
-            ));
-            headerRow.setOnClickListener(v -> toggleTorState());
-
-            iconContainer = new FrameLayout(context);
-            iconView = new ImageView(context);
-            iconView.setImageResource(R.drawable.ic_orbot);
-            iconView.setScaleType(ImageView.ScaleType.FIT_CENTER);
-            iconContainer.addView(iconView, LayoutHelper.createFrame(26, 26, Gravity.CENTER));
-            headerRow.addView(iconContainer, LayoutHelper.createLinear(48, 48, Gravity.CENTER_VERTICAL));
-
-            LinearLayout textCol = new LinearLayout(context);
-            textCol.setOrientation(LinearLayout.VERTICAL);
+            // Центральная кнопка подключения
+            connectionButton = new TorConnectionButton(context);
+            connectionButton.setOnClickListener(v -> toggleTorState());
+            mainLayout.addView(connectionButton, LayoutHelper.createLinear(96, 96, Gravity.CENTER_HORIZONTAL, 0, 4, 0, 16));
 
             titleView = new TextView(context);
-            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
             titleView.setTypeface(AndroidUtilities.bold());
             titleView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteBlackText));
-            textCol.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            titleView.setGravity(Gravity.CENTER_HORIZONTAL);
+            mainLayout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
             subtitleView = new TextView(context);
-            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            subtitleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             subtitleView.setTextColor(getThemedColor(Theme.key_windowBackgroundWhiteGrayText));
-            textCol.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 3, 0, 0));
+            subtitleView.setGravity(Gravity.CENTER_HORIZONTAL);
+            mainLayout.addView(subtitleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
 
-            headerRow.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1.0f, Gravity.CENTER_VERTICAL, 14, 0, 10, 0));
-
-            switchView = new Switch(context, resourcesProvider);
-            switchView.setColors(Theme.key_switch2Track, Theme.key_switch2TrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
-            switchView.setFocusable(false);
-            switchView.setClickable(false);
-            headerRow.addView(switchView, LayoutHelper.createLinear(40, 24, Gravity.CENTER_VERTICAL, 0, 0, 6, 0));
-
-            mainLayout.addView(headerRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-            // MD3 Прогресс подключения
+            // Прогресс подключения (линия прогресса + проценты)
             progressContainer = new LinearLayout(context);
             progressContainer.setOrientation(LinearLayout.VERTICAL);
-            progressContainer.setPadding(0, AndroidUtilities.dp(12), 0, 0);
+            progressContainer.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(10), AndroidUtilities.dp(16), 0);
 
             progressTextView = new TextView(context);
             progressTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             progressTextView.setTypeface(AndroidUtilities.bold());
             progressTextView.setTextColor(getThemedColor(Theme.key_featuredStickers_addButton));
+            progressTextView.setGravity(Gravity.CENTER_HORIZONTAL);
             progressContainer.addView(progressTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             progressBar = new TorProgressBar(context, resourcesProvider);
@@ -894,7 +1027,7 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
 
             ipBadgeCard.addView(pingContainer, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
-            mainLayout.addView(ipBadgeCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 12, 0, 0));
+            mainLayout.addView(ipBadgeCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 14, 0, 0));
 
             // Кнопка «Сменить цепь (Новая личность)» при подключенном состоянии
             newIdentityButton = new TextView(context);
@@ -925,9 +1058,45 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
                         .show();
             });
 
-            mainLayout.addView(newIdentityButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 12, 0, 0));
+            mainLayout.addView(newIdentityButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 10, 0, 0));
 
             update();
+        }
+
+        private void startTimer() {
+            if (connectedTimeMillis == 0) {
+                connectedTimeMillis = System.currentTimeMillis();
+            }
+            removeCallbacks(timerRunnable);
+            updateTimerText();
+            postDelayed(timerRunnable, 1000);
+        }
+
+        private void stopTimer() {
+            connectedTimeMillis = 0;
+            removeCallbacks(timerRunnable);
+        }
+
+        private void updateTimerText() {
+            if (connectedTimeMillis <= 0) return;
+            long elapsedSeconds = Math.max(0, (System.currentTimeMillis() - connectedTimeMillis) / 1000);
+            long hours = elapsedSeconds / 3600;
+            long minutes = (elapsedSeconds % 3600) / 60;
+            long seconds = elapsedSeconds % 60;
+            String timeStr = hours > 0
+                    ? String.format(Locale.US, "%d:%02d:%02d", hours, minutes, seconds)
+                    : String.format(Locale.US, "%d:%02d:%02d", 0, minutes, seconds);
+            titleView.setText("Подключено · " + timeStr);
+            subtitleView.setText("Нажмите для отключения");
+        }
+
+        @Override
+        protected void onDetachedFromWindow() {
+            super.onDetachedFromWindow();
+            stopTimer();
+            if (connectionButton != null) {
+                connectionButton.stopSpin();
+            }
         }
 
         private void toggleTorState() {
@@ -944,15 +1113,10 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
         public void update() {
             TorController controller = TorController.getInstance();
             int status = controller.getStatus();
-            boolean enabled = controller.isEnabled();
-
-            switchView.setChecked(enabled, true);
 
             if (status == TorController.STATUS_CONNECTED) {
-                iconContainer.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(48), 0x2210B981));
-                iconView.setColorFilter(new PorterDuffColorFilter(0xFF10B981, PorterDuff.Mode.SRC_IN));
-                titleView.setText(LocaleController.getString(R.string.TorConnected));
-                subtitleView.setText("127.0.0.1:9050 • " + LocaleController.getString(R.string.TorProtectedDetail));
+                connectionButton.setState(TorController.STATUS_CONNECTED);
+                startTimer();
                 progressContainer.setVisibility(View.GONE);
 
                 // Exit IP & Ping
@@ -987,34 +1151,33 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
                 }
 
                 newIdentityButton.setVisibility(View.VISIBLE);
+
             } else if (status == TorController.STATUS_CONNECTING || status == TorController.STATUS_STARTING) {
-                iconContainer.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(48), 0x26F59E0B));
-                iconView.setColorFilter(new PorterDuffColorFilter(0xFFF59E0B, PorterDuff.Mode.SRC_IN));
-                titleView.setText(status == TorController.STATUS_STARTING
-                        ? LocaleController.getString(R.string.TorStarting)
-                        : LocaleController.formatString(R.string.TorConnecting, controller.getProgress()));
-                subtitleView.setText(TextUtils.isEmpty(controller.getStatusMessage())
-                        ? "Установление соединения и обход блокировок..."
-                        : controller.getStatusMessage());
+                connectionButton.setState(TorController.STATUS_CONNECTING);
+                stopTimer();
+                titleView.setText("Подключение...");
+                subtitleView.setText("Нажмите для отмены");
                 progressContainer.setVisibility(View.VISIBLE);
                 progressBar.setProgress(controller.getProgress() / 100.0f);
                 progressTextView.setText(controller.getProgress() + "% • " + (TextUtils.isEmpty(controller.getStatusMessage()) ? "Подключение к сети Tor..." : controller.getStatusMessage()));
                 ipBadgeCard.setVisibility(View.GONE);
                 newIdentityButton.setVisibility(View.GONE);
+
             } else if (status == TorController.STATUS_ERROR) {
-                iconContainer.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(48), 0x26EF4444));
-                iconView.setColorFilter(new PorterDuffColorFilter(0xFFEF4444, PorterDuff.Mode.SRC_IN));
+                connectionButton.setState(TorController.STATUS_ERROR);
+                stopTimer();
                 titleView.setText(LocaleController.getString(R.string.TorError));
-                subtitleView.setText(TextUtils.isEmpty(controller.getStatusMessage()) ? "Не удалось подключиться к Tor" : controller.getStatusMessage());
+                subtitleView.setText(TextUtils.isEmpty(controller.getStatusMessage()) ? "Нажмите для повтора" : controller.getStatusMessage());
                 progressContainer.setVisibility(View.GONE);
                 ipBadgeCard.setVisibility(View.GONE);
                 newIdentityButton.setVisibility(View.GONE);
+
             } else {
-                // STATUS_STOPPED или STATUS_STOPPING
-                iconContainer.setBackground(Theme.createCircleDrawable(AndroidUtilities.dp(48), 0x147F7F7F));
-                iconView.setColorFilter(new PorterDuffColorFilter(getThemedColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.SRC_IN));
-                titleView.setText(LocaleController.getString(R.string.TorSettingsTitle));
-                subtitleView.setText(LocaleController.getString(R.string.TorDisabledDetail));
+                // Отключено (STATUS_STOPPED или STATUS_STOPPING)
+                connectionButton.setState(TorController.STATUS_DISCONNECTED);
+                stopTimer();
+                titleView.setText("Не подключено");
+                subtitleView.setText("Нажмите для подключения");
                 progressContainer.setVisibility(View.GONE);
                 ipBadgeCard.setVisibility(View.GONE);
                 newIdentityButton.setVisibility(View.GONE);

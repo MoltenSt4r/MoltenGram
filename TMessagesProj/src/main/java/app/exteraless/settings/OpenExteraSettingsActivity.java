@@ -36,6 +36,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int appearanceRow;
     private int chatsRow;
     private int deviceSpoofRow;
+    private int torRow;
     private int pluginsRow;
     private int updatesRow;
     private int shizukuRow;
@@ -64,6 +65,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         appearanceRow = addRow("appearance");
         chatsRow = addRow("chats");
         deviceSpoofRow = addRow("deviceSpoof");
+        torRow = addRow("tor");
         pluginsRow = addRow("plugins");
         updatesRow = addRow("updates");
         shizukuRow = addRow("shizuku");
@@ -152,6 +154,19 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    public void onResume() {
+        super.onResume();
+        if (listAdapter != null && listView != null && !listView.isComputingLayout()) {
+            if (deviceSpoofRow != -1) {
+                listAdapter.notifyItemChanged(deviceSpoofRow);
+            }
+            if (torRow != -1) {
+                listAdapter.notifyItemChanged(torRow);
+            }
+        }
+    }
+
+    @Override
     protected String getActionBarTitle() {
         return getString(R.string.OpenExtera);
     }
@@ -191,6 +206,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new OpenExteraChatsActivity());
         } else if (position == deviceSpoofRow) {
             presentFragment(new app.exteraless.spoof.DeviceSpoofActivity());
+        } else if (position == torRow) {
+            presentFragment(new app.exteraless.tor.TorSettingsActivity());
         } else if (position == pluginsRow) {
             presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
         } else if (position == updatesRow) {
@@ -262,6 +279,19 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         } else {
                             cell.setTextAndIcon(getString(R.string.DeviceSpoofing), R.drawable.msg_devices_solar, true);
                         }
+                    } else if (position == torRow) {
+                        int torStatus = app.exteraless.tor.TorController.getInstance().getStatus();
+                        String statusStr;
+                        if (torStatus == app.exteraless.tor.TorController.STATUS_CONNECTED) {
+                            statusStr = getString(R.string.TorConnected);
+                        } else if (torStatus == app.exteraless.tor.TorController.STATUS_CONNECTING) {
+                            statusStr = getString(R.string.TorStarting);
+                        } else if (torStatus == app.exteraless.tor.TorController.STATUS_STOPPING) {
+                            statusStr = getString(R.string.TorStopping);
+                        } else {
+                            statusStr = getString(R.string.TorDisabled);
+                        }
+                        cell.setTextAndValueAndIcon(getString(R.string.TorSettingsTitle), statusStr, R.drawable.ic_orbot, true);
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);
                     } else if (position == updatesRow) {

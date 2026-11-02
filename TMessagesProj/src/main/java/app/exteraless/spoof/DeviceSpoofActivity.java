@@ -4,14 +4,22 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.text.InputType;
 import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.EditText;
+import android.widget.FrameLayout;
+import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -30,6 +38,7 @@ import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextRadioCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -40,6 +49,58 @@ import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
 import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
+
+    private static final int TYPE_COLLAPSIBLE_HEADER = 88;
+
+    public static class CollapsibleHeaderCell extends FrameLayout {
+        private final TextView textView;
+        private final TextView countView;
+        private final ImageView arrowView;
+
+        public CollapsibleHeaderCell(Context context) {
+            super(context);
+
+            LinearLayout container = new LinearLayout(context);
+            container.setOrientation(LinearLayout.HORIZONTAL);
+            container.setGravity(Gravity.CENTER_VERTICAL);
+
+            textView = new TextView(context);
+            textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            textView.setTypeface(AndroidUtilities.bold());
+            textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            container.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+            countView = new TextView(context);
+            countView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            countView.setTypeface(AndroidUtilities.bold());
+            countView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+            LinearLayout.LayoutParams countLp = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL);
+            countLp.leftMargin = AndroidUtilities.dp(6);
+            container.addView(countView, countLp);
+
+            arrowView = new ImageView(context);
+            Drawable d = getResources().getDrawable(R.drawable.arrow_more).mutate();
+            d.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), PorterDuff.Mode.MULTIPLY));
+            arrowView.setImageDrawable(d);
+            LinearLayout.LayoutParams arrowLp = LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL);
+            arrowLp.leftMargin = AndroidUtilities.dp(4);
+            container.addView(arrowView, arrowLp);
+
+            addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 21, 0, 21, 0));
+
+            setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                    AndroidUtilities.dp(8), 0, Theme.multAlpha(Theme.getColor(Theme.key_listSelector), 0.35f)
+            ));
+            setMinimumHeight(AndroidUtilities.dp(48));
+        }
+
+        public void set(CharSequence title, int selectedCount, int totalCount, boolean expanded) {
+            textView.setText(title);
+            countView.setText(selectedCount + "/" + totalCount);
+            arrowView.animate().cancel();
+            arrowView.setRotation(expanded ? 180 : 0);
+        }
+    }
 
     private final DeviceSpoofManager manager = DeviceSpoofManager.getInstance();
 
@@ -210,12 +271,16 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
     private void safeNotifyDataSetChanged() {
         AndroidUtilities.runOnUIThread(() -> {
             if (listView == null || listAdapter == null) return;
-            if (listView.isComputingLayout() || listView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
+            if (listView.isComputingLayout() || listView.isAnimating() || listView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE) {
                 listView.post(this::safeNotifyDataSetChanged);
                 return;
             }
-            updateRows();
-            listAdapter.notifyDataSetChanged();
+            try {
+                updateRows();
+                listAdapter.notifyDataSetChanged();
+            } catch (Throwable t) {
+                listView.post(this::safeNotifyDataSetChanged);
+            }
         });
     }
 
@@ -544,6 +609,17 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
         }
 
         @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_COLLAPSIBLE_HEADER) {
+                View view = new CollapsibleHeaderCell(mContext);
+                view.setLayoutParams(new RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(view);
+            }
+            return super.onCreateViewHolder(parent, viewType);
+        }
+
+        @Override
         public int getItemViewType(int position) {
             if (position == enableRow) {
                 return TYPE_CHECK;
@@ -551,7 +627,9 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                 return TYPE_DETAIL_SETTINGS;
             } else if (position == headerDividerRow || position == moltenStarDividerRow || position == nothingDividerRow || position == pixelDividerRow || position == customDividerRow) {
                 return TYPE_SHADOW;
-            } else if (position == moltenStarHeaderRow || position == nothingHeaderRow || position == pixelHeaderRow || position == customHeaderRow) {
+            } else if (position == nothingHeaderRow || position == pixelHeaderRow || position == customHeaderRow) {
+                return TYPE_COLLAPSIBLE_HEADER;
+            } else if (position == moltenStarHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == addCustomRow) {
                 return TYPE_TEXT;
@@ -593,63 +671,44 @@ public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
                     }
                     break;
                 }
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    CollapsibleHeaderCell cell = (CollapsibleHeaderCell) holder.itemView;
+                    if (position == nothingHeaderRow) {
+                        int selected = 0;
+                        for (DeviceSpoofPreset p : nothingPresets) {
+                            if (p.id.equals(selectedId)) {
+                                selected = 1;
+                                break;
+                            }
+                        }
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingNothingGroup), selected, nothingPresets.size(), nothingExpanded);
+                    } else if (position == pixelHeaderRow) {
+                        int selected = 0;
+                        for (DeviceSpoofPreset p : pixelPresets) {
+                            if (p.id.equals(selectedId)) {
+                                selected = 1;
+                                break;
+                            }
+                        }
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingPixelGroup), selected, pixelPresets.size(), pixelExpanded);
+                    } else if (position == customHeaderRow) {
+                        int selected = 0;
+                        for (DeviceSpoofPreset p : currentCustomPresets) {
+                            if (p.id.equals(selectedId)) {
+                                selected = 1;
+                                break;
+                            }
+                        }
+                        cell.set(LocaleController.getString(R.string.DeviceSpoofingCustomGroup), selected, currentCustomPresets.size(), customExpanded);
+                    }
+                    break;
+                }
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == moltenStarHeaderRow) {
                         cell.setText(LocaleController.getString(R.string.DeviceSpoofingMoltenStarGroup));
                         cell.setOnClickListener(null);
                         cell.setBackground(null);
-                        if (cell.getTextView() != null) {
-                            cell.getTextView().setOnClickListener(null);
-                        }
-                    } else if (position == nothingHeaderRow) {
-                        String title = LocaleController.getString(R.string.DeviceSpoofingNothingGroup);
-                        cell.setText(title + " (" + nothingPresets.size() + ") " + (nothingExpanded ? "▾" : "▸"));
-                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
-                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
-                        ));
-                        cell.setMinimumHeight(dp(44));
-                        View.OnClickListener l = v -> {
-                            nothingExpanded = !nothingExpanded;
-                            updateRows();
-                            safeNotifyDataSetChanged();
-                        };
-                        cell.setOnClickListener(l);
-                        if (cell.getTextView() != null) {
-                            cell.getTextView().setOnClickListener(l);
-                        }
-                    } else if (position == pixelHeaderRow) {
-                        String title = LocaleController.getString(R.string.DeviceSpoofingPixelGroup);
-                        cell.setText(title + " (" + pixelPresets.size() + ") " + (pixelExpanded ? "▾" : "▸"));
-                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
-                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
-                        ));
-                        cell.setMinimumHeight(dp(44));
-                        View.OnClickListener l = v -> {
-                            pixelExpanded = !pixelExpanded;
-                            updateRows();
-                            safeNotifyDataSetChanged();
-                        };
-                        cell.setOnClickListener(l);
-                        if (cell.getTextView() != null) {
-                            cell.getTextView().setOnClickListener(l);
-                        }
-                    } else if (position == customHeaderRow) {
-                        String title = LocaleController.getString(R.string.DeviceSpoofingCustomGroup);
-                        cell.setText(title + (currentCustomPresets.isEmpty() ? "" : " (" + currentCustomPresets.size() + ")") + " " + (customExpanded ? "▾" : "▸"));
-                        cell.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
-                                dp(8), 0, Theme.multAlpha(getThemedColor(Theme.key_listSelector), 0.35f)
-                        ));
-                        cell.setMinimumHeight(dp(44));
-                        View.OnClickListener l = v -> {
-                            customExpanded = !customExpanded;
-                            updateRows();
-                            safeNotifyDataSetChanged();
-                        };
-                        cell.setOnClickListener(l);
-                        if (cell.getTextView() != null) {
-                            cell.getTextView().setOnClickListener(l);
-                        }
                     }
                     break;
                 }
