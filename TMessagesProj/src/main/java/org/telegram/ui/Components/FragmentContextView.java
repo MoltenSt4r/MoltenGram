@@ -1661,7 +1661,7 @@ public class FragmentContextView extends FrameLayout implements NotificationCent
             requestLayout();
         }
         if (value) {
-            md3Bar.update();
+            md3Bar.update(!changed && md3Bar.isAttachedToWindow());
         }
     }
 
