@@ -133,6 +133,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int mediaGroupCarouselRow;
     private int md3FabSpeedDialRow;
     private int md3FabItemsRow;
+    private int fabSizeRow;
+    private int fabColorRow;
+    private int subFabSizeRow;
+    private int subFabColorRow;
     private boolean md3Expanded;
     private int iosGroupRow;
     private int iosNavBarRow;
@@ -270,9 +274,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else {
                 md3FabItemsRow = -1;
             }
+            fabSizeRow = addRow("fabSize");
+            fabColorRow = addRow("fabColor");
+            subFabSizeRow = addRow("subFabSize");
+            subFabColorRow = addRow("subFabColor");
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = md3FabSpeedDialRow = md3FabItemsRow = -1;
+            fabSizeRow = fabColorRow = subFabSizeRow = subFabColorRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -713,6 +722,34 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == md3FabItemsRow) {
             app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getParentActivity(), this::rebuildRowsAndNotify);
+            return;
+        } else if (position == fabSizeRow) {
+            final int[] sizes = new int[]{48, 56, 64, 72};
+            final CharSequence[] sizeLabels = new CharSequence[]{"Компактный (48 dp)", "Стандартный (56 dp)", "Большой (64 dp)", "Очень большой (72 dp)"};
+            AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+            b.setTitle("Размер основной кнопки FAB");
+            b.setItems(sizeLabels, (d, which) -> {
+                AppearanceConfig.fabSize.setConfigInt(sizes[which]);
+                rebuildRowsAndNotify();
+            });
+            b.show();
+            return;
+        } else if (position == subFabSizeRow) {
+            final int[] sizes = new int[]{40, 48, 56};
+            final CharSequence[] sizeLabels = new CharSequence[]{"Маленький (40 dp)", "Стандартный (48 dp)", "Большой (56 dp)"};
+            AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+            b.setTitle("Размер кнопки камеры FAB");
+            b.setItems(sizeLabels, (d, which) -> {
+                AppearanceConfig.subFabSize.setConfigInt(sizes[which]);
+                rebuildRowsAndNotify();
+            });
+            b.show();
+            return;
+        } else if (position == fabColorRow) {
+            showFabColorPicker("Цвет основной кнопки FAB", AppearanceConfig.fabColor);
+            return;
+        } else if (position == subFabColorRow) {
+            showFabColorPicker("Цвет кнопки камеры FAB", AppearanceConfig.subFabColor);
             return;
         } else if (position == iosGroupRow) {
             iosExpanded = !iosExpanded;
@@ -1234,6 +1271,16 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3FabItemsRow) {
                         cell.setTextAndValue(getString(R.string.OEAppearanceMd3FabItems),
                                 app.exteraless.components.Md3SpeedDialView.getItemsSummary(), false);
+                    } else if (position == fabSizeRow) {
+                        cell.setTextAndValue("Размер основной кнопки FAB", AppearanceConfig.fabSize() + " dp", false);
+                    } else if (position == fabColorRow) {
+                        int col = AppearanceConfig.fabColor();
+                        cell.setTextAndValue("Цвет основной кнопки FAB", col == 0 ? "По умолчанию" : String.format("#%06X", (0xFFFFFF & col)), false);
+                    } else if (position == subFabSizeRow) {
+                        cell.setTextAndValue("Размер кнопки камеры FAB", AppearanceConfig.subFabSize() + " dp", false);
+                    } else if (position == subFabColorRow) {
+                        int col = AppearanceConfig.subFabColor();
+                        cell.setTextAndValue("Цвет кнопки камеры FAB", col == 0 ? "По умолчанию" : String.format("#%06X", (0xFFFFFF & col)), false);
                     }
                     break;
                 }
@@ -1347,7 +1394,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow
-                    || position == md3FabItemsRow) {
+                    || position == md3FabItemsRow
+                    || position == fabSizeRow || position == fabColorRow
+                    || position == subFabSizeRow || position == subFabColorRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
@@ -1566,6 +1615,34 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             listAdapter.notifyItemChanged(emojiSetsRow);
         }
         AndroidUtilities.runOnUIThread(this::invalidatePreviews);
+    }
+
+    private void showFabColorPicker(String title, tw.nekomimi.nekogram.config.ConfigItem item) {
+        final CharSequence[] options = new CharSequence[]{
+            "По умолчанию (акцент темы)",
+            "Выбрать свой цвет..."
+        };
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle(title);
+        b.setItems(options, (d, which) -> {
+            if (which == 0) {
+                item.setConfigInt(0);
+                rebuildRowsAndNotify();
+            } else {
+                int color = item.Int();
+                if (color == 0) {
+                    color = Theme.getColor(Theme.key_featuredStickers_addButton);
+                }
+                org.telegram.ui.Components.Paint.ColorPickerBottomSheet sheet = new org.telegram.ui.Components.Paint.ColorPickerBottomSheet(getContext(), getResourceProvider());
+                sheet.setColor(color);
+                sheet.setColorListener(newColor -> {
+                    item.setConfigInt(newColor);
+                    rebuildRowsAndNotify();
+                });
+                sheet.show();
+            }
+        });
+        b.show();
     }
 
     @Override

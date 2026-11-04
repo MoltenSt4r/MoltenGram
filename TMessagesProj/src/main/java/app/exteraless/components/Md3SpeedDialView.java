@@ -2,8 +2,6 @@ package app.exteraless.components;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 
-import android.animation.Animator;
-import android.animation.AnimatorListenerAdapter;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
@@ -19,15 +17,20 @@ import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
 import android.view.ViewOutlineProvider;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
+import android.widget.Toast;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 
+import org.json.JSONArray;
+import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.LocaleController;
@@ -64,15 +67,34 @@ public class Md3SpeedDialView extends FrameLayout {
         public final String key;
         public final int iconRes;
         public final int titleRes;
+        public final String customTitle;
+        public final String actionType; // null for built-in, "deeplink", "chat", "plugin", "setting"
+        public final String target;
+        public final String iconName;
 
         public SpeedDialAction(String key, int iconRes, int titleRes) {
+            this(key, iconRes, titleRes, null, null, null, null);
+        }
+
+        public SpeedDialAction(String key, int iconRes, int titleRes, String customTitle, String actionType, String target, String iconName) {
             this.key = key;
             this.iconRes = iconRes;
             this.titleRes = titleRes;
+            this.customTitle = customTitle;
+            this.actionType = actionType;
+            this.target = target;
+            this.iconName = iconName;
         }
 
         public String getTitle() {
-            return LocaleController.getString(titleRes);
+            if (!TextUtils.isEmpty(customTitle)) {
+                return customTitle;
+            }
+            return titleRes != 0 ? LocaleController.getString(titleRes) : key;
+        }
+
+        public boolean isCustom() {
+            return !TextUtils.isEmpty(actionType);
         }
     }
 
@@ -93,6 +115,80 @@ public class Md3SpeedDialView extends FrameLayout {
         ACTION_QR,
         ACTION_SAVED
     };
+
+    public static final String[] ICON_CHOICES = new String[]{
+        "lightning", "link", "settings", "code", "bot", "message", "channel", "group", "saved", "search", "theme", "download", "camera", "secret", "share"
+    };
+
+    public static final String[] ICON_LABELS = new String[]{
+        "Молния / Действие", "Ссылка", "Настройки", "Код / Скрипт", "Бот", "Сообщение", "Канал", "Группа", "Избранное", "Поиск", "Тема / Оформление", "Загрузка", "Камера", "Секретный", "Поделиться"
+    };
+
+    public static int getIconResByName(String iconName) {
+        if ("settings".equals(iconName)) return R.drawable.msg_settings;
+        if ("customize".equals(iconName)) return R.drawable.msg_customize;
+        if ("link".equals(iconName)) return R.drawable.msg_link;
+        if ("code".equals(iconName) || "script".equals(iconName)) return R.drawable.msg_permissions;
+        if ("bot".equals(iconName)) return R.drawable.msg_bot;
+        if ("message".equals(iconName)) return R.drawable.msg_message;
+        if ("channel".equals(iconName)) return R.drawable.msg_channel;
+        if ("group".equals(iconName)) return R.drawable.msg_groups;
+        if ("saved".equals(iconName)) return R.drawable.msg_saved;
+        if ("search".equals(iconName)) return R.drawable.msg_search;
+        if ("theme".equals(iconName) || "brush".equals(iconName)) return R.drawable.msg_theme;
+        if ("download".equals(iconName)) return R.drawable.msg_download;
+        if ("camera".equals(iconName)) return R.drawable.outline_fab_story_24;
+        if ("secret".equals(iconName)) return R.drawable.msg_secret;
+        if ("share".equals(iconName)) return R.drawable.msg_share;
+        return R.drawable.msg_instant;
+    }
+
+    public static List<SpeedDialAction> getCustomActions() {
+        List<SpeedDialAction> list = new ArrayList<>();
+        String json = AppearanceConfig.md3FabCustomItems();
+        if (!TextUtils.isEmpty(json)) {
+            try {
+                JSONArray array = new JSONArray(json);
+                for (int i = 0; i < array.length(); i++) {
+                    JSONObject obj = array.getJSONObject(i);
+                    String id = obj.optString("id");
+                    String title = obj.optString("title");
+                    String type = obj.optString("type");
+                    String target = obj.optString("target");
+                    String icon = obj.optString("icon");
+                    int iconRes = getIconResByName(icon);
+                    list.add(new SpeedDialAction(id, iconRes, 0, title, type, target, icon));
+                }
+            } catch (Throwable ignored) {
+            }
+        }
+        return list;
+    }
+
+    public static void saveCustomActions(List<SpeedDialAction> customList) {
+        try {
+            JSONArray array = new JSONArray();
+            for (SpeedDialAction a : customList) {
+                if (a.isCustom()) {
+                    JSONObject obj = new JSONObject();
+                    obj.put("id", a.key);
+                    obj.put("title", a.customTitle);
+                    obj.put("type", a.actionType);
+                    obj.put("target", a.target);
+                    obj.put("icon", a.iconName);
+                    array.put(obj);
+                }
+            }
+            AppearanceConfig.md3FabCustomItems.setConfigString(array.toString());
+        } catch (Throwable ignored) {
+        }
+    }
+
+    public static List<SpeedDialAction> getAllActions() {
+        List<SpeedDialAction> list = new ArrayList<>(Arrays.asList(ALL_ACTIONS));
+        list.addAll(getCustomActions());
+        return list;
+    }
 
     private final FrameLayout scrimView;
     private final LinearLayout itemsContainer;
@@ -144,8 +240,9 @@ public class Md3SpeedDialView extends FrameLayout {
             saved = "chat,channel,group,secret,story,qr,saved";
         }
         List<String> keys = Arrays.asList(saved.split(","));
+        List<SpeedDialAction> all = getAllActions();
         List<SpeedDialAction> active = new ArrayList<>();
-        for (SpeedDialAction a : ALL_ACTIONS) {
+        for (SpeedDialAction a : all) {
             if (keys.contains(a.key)) {
                 active.add(a);
             }
@@ -276,6 +373,10 @@ public class Md3SpeedDialView extends FrameLayout {
 
     private void performAction(SpeedDialAction action) {
         if (activity == null) return;
+        if (action.isCustom()) {
+            performCustomAction(action);
+            return;
+        }
         switch (action.key) {
             case "chat":
                 activity.openWriteContacts();
@@ -345,6 +446,63 @@ public class Md3SpeedDialView extends FrameLayout {
         }
     }
 
+    private void performCustomAction(SpeedDialAction action) {
+        if (activity == null || action == null) return;
+        String type = action.actionType != null ? action.actionType : "deeplink";
+        String target = action.target != null ? action.target.trim() : "";
+
+        if ("chat".equals(type)) {
+            if (target.startsWith("@")) {
+                target = target.substring(1);
+            }
+            if (TextUtils.isDigitsOnly(target)) {
+                try {
+                    long dialogId = Long.parseLong(target);
+                    Bundle args = new Bundle();
+                    if (dialogId > 0) {
+                        args.putLong("user_id", dialogId);
+                    } else {
+                        args.putLong("chat_id", -dialogId);
+                    }
+                    activity.presentFragment(new ChatActivity(args));
+                    return;
+                } catch (Exception ignored) {}
+            }
+            activity.getMessagesController().openByUserName(target, activity, 1);
+        } else if ("setting".equals(type)) {
+            if ("appearance".equalsIgnoreCase(target)) {
+                activity.presentFragment(new app.exteraless.settings.OpenExteraAppearanceActivity());
+            } else if ("chats".equalsIgnoreCase(target)) {
+                activity.presentFragment(new app.exteraless.settings.OpenExteraChatsActivity());
+            } else if ("updates".equalsIgnoreCase(target)) {
+                activity.presentFragment(new app.exteraless.settings.OpenExteraUpdatesActivity());
+            } else if ("plugins".equalsIgnoreCase(target)) {
+                activity.presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
+            } else {
+                activity.presentFragment(new app.exteraless.settings.OpenExteraActivity());
+            }
+        } else if ("plugin".equals(type)) {
+            if (!TextUtils.isEmpty(target)) {
+                try {
+                    app.exteraless.plugins.PluginsController.getInstance().executeOnAppEvent("fab_action_" + target);
+                    Toast.makeText(activity.getParentActivity(), "Команда: " + target, Toast.LENGTH_SHORT).show();
+                } catch (Throwable t) {
+                    Toast.makeText(activity.getParentActivity(), "Ошибка: " + t.getMessage(), Toast.LENGTH_SHORT).show();
+                }
+            }
+        } else { // "deeplink" or URL
+            if (!TextUtils.isEmpty(target)) {
+                if (target.startsWith("http://") || target.startsWith("https://")) {
+                    org.telegram.messenger.browser.Browser.openUrl(activity.getParentActivity(), target);
+                } else if (target.startsWith("tg://")) {
+                    activity.getMessagesController().openByUserName(target.replace("tg://resolve?domain=", "").replace("tg://", ""), activity, 1);
+                } else {
+                    org.telegram.messenger.browser.Browser.openUrl(activity.getParentActivity(), target);
+                }
+            }
+        }
+    }
+
     public static void showCustomizeDialog(Context context, @Nullable Runnable onSaved) {
         if (context == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -354,31 +512,76 @@ public class Md3SpeedDialView extends FrameLayout {
         if (TextUtils.isEmpty(saved)) {
             saved = "chat,channel,group,secret,story,qr,saved";
         }
-        List<String> activeKeys = new ArrayList<>(Arrays.asList(saved.split(",")));
+        final List<String> activeKeys = new ArrayList<>(Arrays.asList(saved.split(",")));
+        final List<SpeedDialAction> allActions = getAllActions();
 
+        ScrollView scrollView = new ScrollView(context);
         LinearLayout container = new LinearLayout(context);
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(10), 0, dp(10));
+        scrollView.addView(container);
 
-        final CheckBoxCell[] cells = new CheckBoxCell[ALL_ACTIONS.length];
-        for (int i = 0; i < ALL_ACTIONS.length; i++) {
-            SpeedDialAction action = ALL_ACTIONS[i];
+        final CheckBoxCell[] cells = new CheckBoxCell[allActions.size()];
+        for (int i = 0; i < allActions.size(); i++) {
+            final SpeedDialAction action = allActions.get(i);
             boolean checked = activeKeys.contains(action.key);
+
+            LinearLayout rowLayout = new LinearLayout(context);
+            rowLayout.setOrientation(LinearLayout.HORIZONTAL);
+            rowLayout.setGravity(Gravity.CENTER_VERTICAL);
+
             cells[i] = new CheckBoxCell(context, 1);
             cells[i].setBackground(Theme.getSelectorDrawable(false));
-            cells[i].setText(action.getTitle(), "", checked, true);
+            cells[i].setText(action.getTitle(), action.isCustom() ? "(" + action.actionType + ")" : "", checked, true);
             final int index = i;
             cells[i].setOnClickListener(v -> cells[index].setChecked(!cells[index].isChecked(), true));
-            container.addView(cells[i], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+
+            rowLayout.addView(cells[i], LayoutHelper.createLinear(0, 48, 1f, Gravity.CENTER_VERTICAL, 0, 0, 0, 0));
+
+            if (action.isCustom()) {
+                ImageView deleteBtn = new ImageView(context);
+                deleteBtn.setImageResource(R.drawable.msg_delete);
+                deleteBtn.setColorFilter(Theme.getColor(Theme.key_dialogTextRed));
+                deleteBtn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+                deleteBtn.setBackground(Theme.createSelectorDrawable(Theme.getColor(Theme.key_listSelector)));
+                deleteBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
+                deleteBtn.setOnClickListener(v -> {
+                    List<SpeedDialAction> customList = getCustomActions();
+                    for (int c = 0; c < customList.size(); c++) {
+                        if (customList.get(c).key.equals(action.key)) {
+                            customList.remove(c);
+                            break;
+                        }
+                    }
+                    saveCustomActions(customList);
+                    activeKeys.remove(action.key);
+                    showCustomizeDialog(context, onSaved);
+                });
+                rowLayout.addView(deleteBtn, LayoutHelper.createLinear(40, 40, Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
+            }
+
+            container.addView(rowLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         }
 
-        builder.setView(container);
+        // Add Custom Action button
+        TextView addCustomBtn = new TextView(context);
+        addCustomBtn.setText("+ Добавить свой пункт...");
+        addCustomBtn.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
+        addCustomBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        addCustomBtn.setPadding(dp(16), dp(12), dp(16), dp(12));
+        addCustomBtn.setBackground(Theme.getSelectorDrawable(false));
+        addCustomBtn.setOnClickListener(v -> {
+            showAddCustomActionDialog(context, () -> showCustomizeDialog(context, onSaved));
+        });
+        container.addView(addCustomBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        builder.setView(scrollView);
         builder.setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> {
             StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < ALL_ACTIONS.length; i++) {
-                if (cells[i].isChecked()) {
+            for (int i = 0; i < allActions.size(); i++) {
+                if (cells[i] != null && cells[i].isChecked()) {
                     if (sb.length() > 0) sb.append(",");
-                    sb.append(ALL_ACTIONS[i].key);
+                    sb.append(allActions.get(i).key);
                 }
             }
             String result = sb.length() > 0 ? sb.toString() : "chat";
@@ -391,12 +594,114 @@ public class Md3SpeedDialView extends FrameLayout {
         builder.show();
     }
 
+    public static void showAddCustomActionDialog(Context context, @Nullable Runnable onDone) {
+        if (context == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Новый пункт FAB");
+
+        LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(10), dp(20), dp(10));
+
+        final EditText titleEdit = new EditText(context);
+        titleEdit.setHint("Название (например: Настройки, Поддержка)");
+        titleEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        titleEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        titleEdit.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        container.addView(titleEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+        final TextView typeTitle = new TextView(context);
+        typeTitle.setText("Тип действия:");
+        typeTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        typeTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        container.addView(typeTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 4));
+
+        final String[] types = new String[]{"deeplink", "chat", "setting", "plugin"};
+        final String[] typeLabels = new String[]{"Ссылка / URL (tg://, https://)", "Чат / Канал (@username или ID)", "Настройки MoltenGram", "Функция / Команда плагина"};
+        final int[] selectedType = new int[]{0};
+
+        final TextView typeSelector = new TextView(context);
+        typeSelector.setText(typeLabels[0]);
+        typeSelector.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        typeSelector.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
+        typeSelector.setPadding(0, dp(4), 0, dp(8));
+        typeSelector.setOnClickListener(v -> {
+            AlertDialog.Builder typeBuilder = new AlertDialog.Builder(context);
+            typeBuilder.setTitle("Выберите тип действия");
+            typeBuilder.setItems(typeLabels, (d, which) -> {
+                selectedType[0] = which;
+                typeSelector.setText(typeLabels[which]);
+            });
+            typeBuilder.show();
+        });
+        container.addView(typeSelector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        final EditText targetEdit = new EditText(context);
+        targetEdit.setHint("Значение (URL, @username, команда, раздел)");
+        targetEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        targetEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        targetEdit.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        container.addView(targetEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+        final TextView iconTitle = new TextView(context);
+        iconTitle.setText("Иконка пункта:");
+        iconTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        iconTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        container.addView(iconTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 4));
+
+        final int[] selectedIcon = new int[]{0};
+        final TextView iconSelector = new TextView(context);
+        iconSelector.setText(ICON_LABELS[0]);
+        iconSelector.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        iconSelector.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
+        iconSelector.setPadding(0, dp(4), 0, dp(8));
+        iconSelector.setOnClickListener(v -> {
+            AlertDialog.Builder iconBuilder = new AlertDialog.Builder(context);
+            iconBuilder.setTitle("Выберите иконку");
+            iconBuilder.setItems(ICON_LABELS, (d, which) -> {
+                selectedIcon[0] = which;
+                iconSelector.setText(ICON_LABELS[which]);
+            });
+            iconBuilder.show();
+        });
+        container.addView(iconSelector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+        builder.setView(container);
+        builder.setPositiveButton("Добавить", (dialog, which) -> {
+            String title = titleEdit.getText().toString().trim();
+            String target = targetEdit.getText().toString().trim();
+            if (TextUtils.isEmpty(title)) {
+                title = "Действие";
+            }
+            String type = types[selectedType[0]];
+            String icon = ICON_CHOICES[selectedIcon[0]];
+            String id = "custom_" + System.currentTimeMillis();
+
+            List<SpeedDialAction> customList = getCustomActions();
+            customList.add(new SpeedDialAction(id, getIconResByName(icon), 0, title, type, target, icon));
+            saveCustomActions(customList);
+
+            String saved = AppearanceConfig.md3FabItems();
+            if (TextUtils.isEmpty(saved)) {
+                saved = "chat,channel,group,secret,story,qr,saved";
+            }
+            AppearanceConfig.md3FabItems.setConfigString(saved + "," + id);
+
+            if (onDone != null) {
+                onDone.run();
+            }
+        });
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        builder.show();
+    }
+
     public static String getItemsSummary() {
         String saved = AppearanceConfig.md3FabItems();
         if (TextUtils.isEmpty(saved)) return "";
         List<String> keys = Arrays.asList(saved.split(","));
+        List<SpeedDialAction> all = getAllActions();
         StringBuilder sb = new StringBuilder();
-        for (SpeedDialAction action : ALL_ACTIONS) {
+        for (SpeedDialAction action : all) {
             if (keys.contains(action.key)) {
                 if (sb.length() > 0) sb.append(", ");
                 sb.append(action.getTitle());
@@ -451,13 +756,6 @@ public class Md3SpeedDialView extends FrameLayout {
                 performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 close(true);
                 postDelayed(() -> performAction(action), 150);
-            });
-
-            setOnLongClickListener(v -> {
-                performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                close(true);
-                showCustomizeDialog(getContext(), Md3SpeedDialView.this::rebuildItems);
-                return true;
             });
         }
 

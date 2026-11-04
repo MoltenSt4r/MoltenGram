@@ -174,6 +174,78 @@ object AppearanceConfig {
         return md3FabItems.String()
     }
 
+    /** Размер основной кнопки FAB в dp (48, 56, 64, 72). По умолчанию 56. */
+    @JvmField
+    val fabSize = addConfig("OEAppearanceFabSize", ConfigItem.configTypeInt, 56)
+
+    @JvmStatic
+    fun fabSize(): Int {
+        ensureLoaded()
+        val s = fabSize.Int()
+        return if (s in 40..80) s else 56
+    }
+
+    /** Цвет фона основной кнопки FAB (0 = системный акцент). */
+    @JvmField
+    val fabColor = addConfig("OEAppearanceFabColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabColor(): Int {
+        ensureLoaded()
+        return fabColor.Int()
+    }
+
+    /** Цвет иконки основной кнопки FAB (0 = по умолчанию). */
+    @JvmField
+    val fabIconColor = addConfig("OEAppearanceFabIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabIconColor(): Int {
+        ensureLoaded()
+        return fabIconColor.Int()
+    }
+
+    /** Размер вторичной кнопки (истории / камера) FAB в dp (40, 48, 56). По умолчанию 48. */
+    @JvmField
+    val subFabSize = addConfig("OEAppearanceSubFabSize", ConfigItem.configTypeInt, 48)
+
+    @JvmStatic
+    fun subFabSize(): Int {
+        ensureLoaded()
+        val s = subFabSize.Int()
+        return if (s in 36..64) s else 48
+    }
+
+    /** Цвет фона вторичной кнопки (истории / камера) FAB (0 = системный). */
+    @JvmField
+    val subFabColor = addConfig("OEAppearanceSubFabColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabColor(): Int {
+        ensureLoaded()
+        return subFabColor.Int()
+    }
+
+    /** Цвет иконки вторичной кнопки FAB (0 = по умолчанию). */
+    @JvmField
+    val subFabIconColor = addConfig("OEAppearanceSubFabIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabIconColor(): Int {
+        ensureLoaded()
+        return subFabIconColor.Int()
+    }
+
+    /** Кастомные пункты меню FAB в формате JSON. */
+    @JvmField
+    val md3FabCustomItems = addConfig("OEAppearanceMd3FabCustomItems", ConfigItem.configTypeString, "")
+
+    @JvmStatic
+    fun md3FabCustomItems(): String {
+        ensureLoaded()
+        return md3FabCustomItems.String()
+    }
+
     /** Радиус скругления кнопки со стороной [size] dp. */
     @JvmStatic
     fun fabCornerRadius(size: Int): Int =

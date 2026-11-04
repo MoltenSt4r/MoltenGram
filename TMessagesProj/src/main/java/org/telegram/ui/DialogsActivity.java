@@ -5003,21 +5003,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 openWriteContacts();
             }
         });
-        floatingButton3.setOnLongClickListener(v -> {
-            if (initialDialogsType != DIALOGS_TYPE_WIDGET && app.exteraless.appearance.AppearanceConfig.md3FabSpeedDial()) {
-                floatingButton3.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                if (speedDialView != null && speedDialView.isOpen()) {
-                    speedDialView.close(false);
-                }
-                app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getContext(), () -> {
-                    if (speedDialView != null) {
-                        speedDialView.rebuildItems();
-                    }
-                });
-                return true;
-            }
-            return false;
-        });
 
         if (!isArchive() && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
             if (MessagesController.getInstance(currentAccount).getMainSettings().getBoolean("storyhint", true)) {
