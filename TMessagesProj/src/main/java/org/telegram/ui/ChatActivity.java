@@ -5308,12 +5308,70 @@ public class ChatActivity extends BaseFragment implements
             int lastH = 0;
 
             {
+                setClipChildren(false);
                 outlineActionBackgroundPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundPaint.setStrokeWidth(AndroidUtilities.dp(2));
                 outlineActionBackgroundDarkenPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundDarkenPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundDarkenPaint.setStrokeWidth(AndroidUtilities.dp(2));
+            }
+
+            private void update3dScroll() {
+                boolean enabled = app.exteraless.appearance.AppearanceConfig.chat3dScroll();
+                int count = getChildCount();
+                if (!enabled) {
+                    for (int i = 0; i < count; i++) {
+                        View child = getChildAt(i);
+                        if (child != null && child.getRotationX() != 0f) {
+                            child.setRotationX(0f);
+                        }
+                    }
+                    return;
+                }
+                int height = getMeasuredHeight();
+                if (height <= 0) {
+                    return;
+                }
+                float centerY = height / 2f;
+                float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
+                float cameraDistance = Math.max(1000f, getMeasuredWidth() * 10f);
+
+                for (int i = 0; i < count; i++) {
+                    View child = getChildAt(i);
+                    if (child == null) {
+                        continue;
+                    }
+                    float childCenterY = child.getY() + child.getMeasuredHeight() / 2f;
+                    float factor = (childCenterY - centerY) / centerY;
+                    factor = Math.max(-1.15f, Math.min(1.15f, factor));
+
+                    float curved = Math.signum(factor) * (float) Math.pow(Math.abs(factor), 1.15);
+                    float angle = -curved * maxAngle;
+
+                    if (child.getCameraDistance() != cameraDistance) {
+                        child.setCameraDistance(cameraDistance);
+                    }
+                    float pivotX = child.getMeasuredWidth() / 2f;
+                    float pivotY = child.getMeasuredHeight() / 2f;
+                    if (child.getPivotX() != pivotX) {
+                        child.setPivotX(pivotX);
+                    }
+                    if (child.getPivotY() != pivotY) {
+                        child.setPivotY(pivotY);
+                    }
+                    if (Math.abs(child.getRotationX() - angle) > 0.05f) {
+                        child.setRotationX(angle);
+                    }
+                }
+            }
+
+            @Override
+            public void onChildDetachedFromWindow(View child) {
+                super.onChildDetachedFromWindow(child);
+                if (child != null && child.getRotationX() != 0f) {
+                    child.setRotationX(0f);
+                }
             }
 
             @Override
@@ -5349,6 +5407,7 @@ public class ChatActivity extends BaseFragment implements
             @Override
             protected void onLayout(boolean changed, int l, int t, int r, int b) {
                 super.onLayout(changed, l, t, r, b);
+                update3dScroll();
 
                 if (lastWidth != r - l) {
                     if (lastWidth != 0) {
@@ -6169,6 +6228,7 @@ public class ChatActivity extends BaseFragment implements
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
+                update3dScroll();
                 drawLaterRoundProgressCell = null;
                 invalidated = false;
 

@@ -403,6 +403,9 @@ public final class EtgBackup {
         integer(list, "downloadSpeedBoost", GeneralConfig.downloadSpeedBoost, 0, 2);
         integer(list, "tabletMode", NekoConfig.tabletMode, 0, 2);
         integer(list, "glassOutlineStyle", AppearanceConfig.glassOutlineStyle, 0, 2);
+        integer(list, "messageBubbleTransparency", AppearanceConfig.messageBubbleTransparency, 0, 4);
+        bool(list, "chat3dScroll", AppearanceConfig.chat3dScroll);
+        integer(list, "chat3dScrollIntensity", AppearanceConfig.chat3dScrollIntensity, 0, 2);
         integer(list, "stickerShape", ChatsConfig.stickerShape, 0, 2);
         integer(list, "doubleTapSeekDuration", ChatsConfig.doubleTapSeekDuration, 0, 3);
         integer(list, "cameraType", ChatsConfig.cameraType, 0, 2);

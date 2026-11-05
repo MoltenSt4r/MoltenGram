@@ -462,3 +462,49 @@ def test_noto_emoji_reactions_centering_and_anchor():
         chat_code = f.read()
     assert 'primaryMessage.notoAnimatedEmojiUrl != null' in chat_code
     assert 'emojiCenterX' in chat_code
+
+
+def test_translucent_messages_and_3d_scroll_configs():
+    """Verify AppearanceConfig defines message bubble transparency and 3D scroll configs."""
+    ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(ac_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "val messageBubbleTransparency" in content
+    assert "fun messageBubbleAlpha(): Float" in content
+    assert "val chat3dScroll" in content
+    assert "val chat3dScrollIntensity" in content
+    assert "fun chat3dScrollMaxAngle(): Float" in content
+
+
+def test_open_extera_appearance_translucent_and_3d_scroll_rows():
+    """Verify OpenExteraAppearanceActivity binds and handles translucent messages and 3D scroll."""
+    oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(oea_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "translucentMessagesRow" in content
+    assert "chat3dScrollRow" in content
+    assert "chat3dScrollIntensityRow" in content
+    assert "AppearanceConfig.messageBubbleTransparency" in content
+    assert "AppearanceConfig.chat3dScroll" in content
+
+
+def test_chat_message_cell_bubble_alpha_and_stroke():
+    """Verify ChatMessageCell applies bubbleAlpha and subtle glass rim stroke when translucent."""
+    cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
+    with open(cmc_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "getBubbleAlpha()" in content
+    assert "drawBubbleGlassStroke(canvas, bubbleAlpha)" in content
+    assert "bubbleGlassStrokePaint" in content
+
+
+def test_chat_activity_3d_scroll_implementation():
+    """Verify ChatActivity implements 3D cylindrical scroll in ChatListRecyclerView."""
+    ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
+    with open(ca_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "update3dScroll()" in content
+    assert "child.setRotationX(angle)" in content
+    assert "child.setCameraDistance(cameraDistance)" in content
+    assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
+

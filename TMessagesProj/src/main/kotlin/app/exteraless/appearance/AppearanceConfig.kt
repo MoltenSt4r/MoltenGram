@@ -422,6 +422,75 @@ object AppearanceConfig {
         return glassOutlineStyle.Int()
     }
 
+    // ---- Полупрозрачность сообщений (Translucent Message Bubbles) ----
+
+    const val BUBBLE_TRANSPARENCY_DISABLED = 0
+    const val BUBBLE_TRANSPARENCY_LIGHT = 1
+    const val BUBBLE_TRANSPARENCY_MEDIUM = 2
+    const val BUBBLE_TRANSPARENCY_HEAVY = 3
+    const val BUBBLE_TRANSPARENCY_GLASS = 4
+
+    /** Прозрачность фона сообщений: 0 - выкл (100%), 1 - 85%, 2 - 70%, 3 - 55%, 4 - 40% */
+    @JvmField
+    val messageBubbleTransparency =
+        addConfig("OEAppearanceMessageBubbleTransparency", ConfigItem.configTypeInt, BUBBLE_TRANSPARENCY_DISABLED)
+
+    @JvmStatic
+    fun messageBubbleTransparency(): Int {
+        ensureLoaded()
+        return messageBubbleTransparency.Int()
+    }
+
+    @JvmStatic
+    fun messageBubbleAlpha(): Float {
+        ensureLoaded()
+        return when (messageBubbleTransparency.Int()) {
+            BUBBLE_TRANSPARENCY_LIGHT -> 0.85f
+            BUBBLE_TRANSPARENCY_MEDIUM -> 0.70f
+            BUBBLE_TRANSPARENCY_HEAVY -> 0.55f
+            BUBBLE_TRANSPARENCY_GLASS -> 0.40f
+            else -> 1.0f
+        }
+    }
+
+    // ---- 3D-эффект скролла сообщений (Cylinder 3D Scroll) ----
+
+    const val CHAT_3D_SCROLL_SUBTLE = 0 // 18°
+    const val CHAT_3D_SCROLL_MEDIUM = 1 // 26°
+    const val CHAT_3D_SCROLL_STRONG = 2 // 36°
+
+    /** 3D-эффект цилиндрического скролла сообщений в чате */
+    @JvmField
+    val chat3dScroll =
+        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
+
+    /** Сила 3D-эффекта наклона */
+    @JvmField
+    val chat3dScrollIntensity =
+        addConfig("OEAppearanceChat3dScrollIntensity", ConfigItem.configTypeInt, CHAT_3D_SCROLL_MEDIUM)
+
+    @JvmStatic
+    fun chat3dScroll(): Boolean {
+        ensureLoaded()
+        return chat3dScroll.Bool()
+    }
+
+    @JvmStatic
+    fun chat3dScrollIntensity(): Int {
+        ensureLoaded()
+        return chat3dScrollIntensity.Int()
+    }
+
+    @JvmStatic
+    fun chat3dScrollMaxAngle(): Float {
+        ensureLoaded()
+        return when (chat3dScrollIntensity.Int()) {
+            CHAT_3D_SCROLL_SUBTLE -> 18f
+            CHAT_3D_SCROLL_STRONG -> 36f
+            else -> 26f
+        }
+    }
+
     // ---- Папки-чипсы Material 3 ----
 
     @JvmField
