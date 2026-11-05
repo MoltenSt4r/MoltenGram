@@ -395,8 +395,9 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
 
                 if (i == index) {
                     chipBg.setColor(accentColor);
-                    icon.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
-                    text.setTextColor(0xFFFFFFFF);
+                    int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(accentColor);
+                    icon.setColorFilter(new PorterDuffColorFilter(onAccent, PorterDuff.Mode.SRC_IN));
+                    text.setTextColor(onAccent);
                     text.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
                 } else {
                     chipBg.setColor(Theme.multAlpha(textColor, 0.06f));
@@ -562,7 +563,8 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
                 int cx = w / 2;
                 int cy = h / 2;
                 peerDrawable.setBounds(cx - iconSize / 2, cy - iconSize / 2, cx + iconSize / 2, cy + iconSize / 2);
-                peerDrawable.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
+                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(accentColor);
+                peerDrawable.setColorFilter(new PorterDuffColorFilter(onAccent, PorterDuff.Mode.SRC_IN));
                 peerDrawable.setAlpha(240);
                 peerDrawable.draw(canvas);
             }

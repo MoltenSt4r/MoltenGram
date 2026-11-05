@@ -154,6 +154,65 @@ object AppearanceConfig {
         return squareFab.Bool()
     }
 
+    /** Форма основной кнопки FAB (0..43 из Md3AvatarShapes, по умолчанию 1 = квадрат). */
+    @JvmField
+    val fabShape = addConfig("OEAppearanceFabShape", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun fabShape(): Int {
+        ensureLoaded()
+        val s = fabShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else 1
+    }
+
+    /** Форма основной кнопки FAB в активном режиме (раскрытый Speed-Dial). */
+    @JvmField
+    val fabActiveShape = addConfig("OEAppearanceFabActiveShape", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun fabActiveShape(): Int {
+        ensureLoaded()
+        val s = fabActiveShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else fabShape()
+    }
+
+    /** Размер основной кнопки FAB в активном режиме в dp (36..96). */
+    @JvmField
+    val fabActiveSize = addConfig("OEAppearanceFabActiveSize", ConfigItem.configTypeInt, 56)
+
+    @JvmStatic
+    fun fabActiveSize(): Int {
+        ensureLoaded()
+        val s = fabActiveSize.Int()
+        return if (s in 36..96) s else fabSize()
+    }
+
+    const val FAB_ALIGN_RIGHT = 0
+    const val FAB_ALIGN_LEFT = 1
+
+    /** Расположение FAB на экране (0 = справа, 1 = слева). */
+    @JvmField
+    val fabAlignment = addConfig("OEAppearanceFabAlignment", ConfigItem.configTypeInt, FAB_ALIGN_RIGHT)
+
+    @JvmStatic
+    fun fabAlignment(): Int {
+        ensureLoaded()
+        return if (fabAlignment.Int() == FAB_ALIGN_LEFT) FAB_ALIGN_LEFT else FAB_ALIGN_RIGHT
+    }
+
+    const val SUB_FAB_ALIGN_CENTER = 0
+    const val SUB_FAB_ALIGN_EDGE = 1
+
+    /** Выравнивание кнопки камеры FAB (0 = по центру, 1 = ближе к краю). */
+    @JvmField
+    val subFabAlignment = addConfig("OEAppearanceSubFabAlignment", ConfigItem.configTypeInt, SUB_FAB_ALIGN_CENTER)
+
+    @JvmStatic
+    fun subFabAlignment(): Int {
+        ensureLoaded()
+        return if (subFabAlignment.Int() == SUB_FAB_ALIGN_EDGE) SUB_FAB_ALIGN_EDGE else SUB_FAB_ALIGN_CENTER
+    }
+
     /** MD3 Speed-Dial FAB: раскрывающееся меню плавающей кнопки. */
     @JvmField
     val md3FabSpeedDial = addConfig("OEAppearanceMd3FabSpeedDial", ConfigItem.configTypeBool, true)

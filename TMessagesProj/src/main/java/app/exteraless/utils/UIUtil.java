@@ -149,11 +149,22 @@ public final class UIUtil {
             }
             default: {
                 if (bgColCode < 0) {
-                    double lum = androidx.core.graphics.ColorUtils.calculateLuminance(bgColCode);
-                    return lum > 0.5 ? 0xFF000000 : 0xFFFFFFFF;
+                    return getOnAccentColor(bgColCode);
+                }
+                int defaultBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+                if (androidx.core.graphics.ColorUtils.calculateLuminance(defaultBg) > 0.52) {
+                    return getOnAccentColor(defaultBg);
                 }
                 return defaultIconColor;
             }
+        }
+    }
+
+    public static int getOnAccentColor(int color) {
+        if (androidx.core.graphics.ColorUtils.calculateLuminance(color) > 0.52) {
+            return androidx.core.graphics.ColorUtils.blendARGB(color, 0xFF000000, 0.85f);
+        } else {
+            return 0xFFFFFFFF;
         }
     }
 

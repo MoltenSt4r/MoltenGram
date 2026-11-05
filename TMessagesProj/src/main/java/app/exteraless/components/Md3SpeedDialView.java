@@ -305,13 +305,14 @@ public class Md3SpeedDialView extends FrameLayout {
         scrimView.setOnClickListener(v -> close(true));
         addView(scrimView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
+        boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         itemsContainer = new LinearLayout(context);
         itemsContainer.setOrientation(LinearLayout.VERTICAL);
-        itemsContainer.setGravity(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT);
+        itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
         itemsContainer.setClipChildren(false);
         itemsContainer.setClipToPadding(false);
         addView(itemsContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, 16, 0, 16, 70));
+                (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 16 : 0, 0, isLeft ? 0 : 16, 70));
 
         setVisibility(GONE);
         rebuildItems();
@@ -324,6 +325,16 @@ public class Md3SpeedDialView extends FrameLayout {
     public void rebuildItems() {
         itemsContainer.removeAllViews();
         itemViews.clear();
+
+        boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
+        itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
+        FrameLayout.LayoutParams containerLp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
+        if (containerLp != null) {
+            containerLp.gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+            containerLp.leftMargin = isLeft ? dp(16) : 0;
+            containerLp.rightMargin = isLeft ? 0 : dp(16);
+            itemsContainer.setLayoutParams(containerLp);
+        }
 
         String saved = AppearanceConfig.md3FabItems();
         if (TextUtils.isEmpty(saved)) {
@@ -348,7 +359,7 @@ public class Md3SpeedDialView extends FrameLayout {
             boolean isLast = i == active.size() - 1;
             itemsContainer.addView(itemView, LayoutHelper.createLinear(
                     LayoutHelper.WRAP_CONTENT, 48,
-                    LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT,
+                    isLeft ? Gravity.LEFT : Gravity.RIGHT,
                     0, 0, 0, isLast ? 0 : 10
             ));
         }
@@ -366,6 +377,7 @@ public class Md3SpeedDialView extends FrameLayout {
 
         if (mainFab != null) {
             mainFab.bringToFront();
+            mainFab.morphTo(AppearanceConfig.fabActiveShape(), AppearanceConfig.fabActiveSize(), true);
         }
 
         rebuildItems();
@@ -396,6 +408,7 @@ public class Md3SpeedDialView extends FrameLayout {
             storiesFab.animate().alpha(0f).scaleX(0.4f).scaleY(0.4f).setDuration(180).start();
         }
 
+        final boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         final int count = itemViews.size();
         for (int i = 0; i < count; i++) {
             final CapsuleItemView item = itemViews.get(i);
@@ -403,7 +416,7 @@ public class Md3SpeedDialView extends FrameLayout {
             item.setScaleX(0.45f);
             item.setScaleY(0.45f);
             item.setTranslationY(dp(16));
-            item.setPivotX(LocaleController.isRTL ? 0 : item.getWidth());
+            item.setPivotX(isLeft ? 0 : item.getWidth());
             item.setPivotY(item.getHeight());
 
             long delay = (count - 1 - i) * 32L;
@@ -422,6 +435,10 @@ public class Md3SpeedDialView extends FrameLayout {
     public void close(boolean animated) {
         if (!isOpen) return;
         isOpen = false;
+
+        if (mainFab != null) {
+            mainFab.morphTo(AppearanceConfig.fabShape(), AppearanceConfig.fabSize(), animated);
+        }
 
         if (animated) {
             scrimView.animate().alpha(0f).setDuration(180).start();
@@ -789,7 +806,8 @@ public class Md3SpeedDialView extends FrameLayout {
                         ImageView iv = new ImageView(context);
                         iv.setImageResource(choice.resId);
                         iv.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-                        iv.setColorFilter(isSelected ? 0xFFFFFFFF : Theme.getColor(Theme.key_dialogTextBlack), PorterDuff.Mode.SRC_IN);
+                        int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+                        iv.setColorFilter(isSelected ? onAccent : Theme.getColor(Theme.key_dialogTextBlack), PorterDuff.Mode.SRC_IN);
                         cell.addView(iv, LayoutHelper.createFrame(26, 26, Gravity.CENTER));
 
                         cell.setOnClickListener(v -> {

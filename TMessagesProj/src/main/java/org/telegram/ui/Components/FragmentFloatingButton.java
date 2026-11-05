@@ -4,9 +4,14 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.view.Gravity;
 import android.view.View;
@@ -48,6 +53,16 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private ArrayList<View> additionalContentViews;
     private final boolean isSubButton;
 
+    private int currentShapeId = -1;
+    private int fromShapeId = 0;
+    private int targetShapeId = 0;
+    private float shapeMorphProgress = 1f;
+    private ValueAnimator shapeMorphAnimator;
+    private final Path shapePath = new Path();
+    private final Paint fabBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint fabPressedPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean isFabPressed;
+
     public FragmentFloatingButton(@NonNull Context context, Theme.ResourcesProvider resourcesProvider) {
         this(context, resourcesProvider, false);
     }
@@ -70,11 +85,20 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
         ScaleStateListAnimator.apply(this);
         if (!isSubButton) {
-            // exteraGram 12.9.0, FragmentFloatingButton.java:67 — squircle вместо круга.
-            setOutlineProvider(app.exteraless.appearance.AppearanceConfig.squareFab()
-                    ? ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, dp(14))
-                    : ViewOutlineProviderImpl.BOUNDS_OVAL);
+            setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, android.graphics.Outline outline) {
+                    int shape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+                    if (shape == 0) {
+                        outline.setOval(0, 0, view.getWidth(), view.getHeight());
+                    } else {
+                        int rad = dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(Math.min(view.getWidth(), view.getHeight())));
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), rad);
+                    }
+                }
+            });
             setTranslationZ(dpf2(0.5f));
+            setClipToOutline(false);
         }
 
         if (isSubButton) {
@@ -196,20 +220,145 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             } else {
                 pressedColor = Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider);
             }
-            int size = app.exteraless.appearance.AppearanceConfig.fabSize();
-            setBackground(app.exteraless.utils.UIUtil.createFabSelectorDrawable(size, mainColor, pressedColor));
+
+            fabBgPaint.setColor(mainColor);
+            fabPressedPaint.setColor(pressedColor);
+            setBackground(null);
+
+            if (currentShapeId < 0) {
+                currentShapeId = app.exteraless.appearance.AppearanceConfig.fabShape();
+                fromShapeId = currentShapeId;
+                targetShapeId = currentShapeId;
+            }
+            invalidate();
         }
 
-        // Synchronize layout params with updated size settings
-        int size = isSubButton ? app.exteraless.appearance.AppearanceConfig.subFabSize() : app.exteraless.appearance.AppearanceConfig.fabSize();
+        // Synchronize layout params with updated size and alignment settings
         android.view.ViewGroup.LayoutParams lp = getLayoutParams();
         if (lp instanceof FrameLayout.LayoutParams) {
             FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
-            int curSize = dp(size);
-            if (flp.width != curSize || flp.height != curSize) {
-                FrameLayout.LayoutParams newLp = isSubButton ? createSubButtonLayoutParams() : createDefaultLayoutParams();
-                setLayoutParams(newLp);
+            FrameLayout.LayoutParams targetLp = isSubButton ? createSubButtonLayoutParams() : createDefaultLayoutParams();
+            if (flp.width != targetLp.width || flp.height != targetLp.height || flp.gravity != targetLp.gravity
+                    || flp.leftMargin != targetLp.leftMargin || flp.rightMargin != targetLp.rightMargin) {
+                setLayoutParams(targetLp);
             }
+        }
+    }
+
+    @Override
+    public void setPressed(boolean pressed) {
+        super.setPressed(pressed);
+        if (!isSubButton && isFabPressed != pressed) {
+            isFabPressed = pressed;
+            invalidate();
+        }
+    }
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (isSubButton) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+
+        updateShapePath(w, h);
+        canvas.drawPath(shapePath, isFabPressed ? fabPressedPaint : fabBgPaint);
+
+        canvas.save();
+        canvas.clipPath(shapePath);
+        super.dispatchDraw(canvas);
+        canvas.restore();
+    }
+
+    private void updateShapePath(float w, float h) {
+        shapePath.reset();
+        int shape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        if (shapeMorphProgress >= 1f || fromShapeId == targetShapeId) {
+            shapePath.set(app.exteraless.appearance.Md3AvatarShapes.getShapePath(shape, 0, 0, w, h));
+        } else {
+            shapePath.set(app.exteraless.appearance.Md3AvatarShapes.getMorphPath(fromShapeId, targetShapeId, shapeMorphProgress, 0, 0, w, h));
+        }
+    }
+
+    public void morphTo(int targetShape, int targetSizeDp, boolean animated) {
+        if (isSubButton) return;
+        if (targetShape < 0 || targetShape >= app.exteraless.appearance.Md3AvatarShapes.SHAPES_COUNT) {
+            targetShape = app.exteraless.appearance.AppearanceConfig.fabShape();
+        }
+
+        int curShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        if (!animated) {
+            if (shapeMorphAnimator != null) {
+                shapeMorphAnimator.cancel();
+                shapeMorphAnimator = null;
+            }
+            fromShapeId = targetShape;
+            targetShapeId = targetShape;
+            currentShapeId = targetShape;
+            shapeMorphProgress = 1f;
+            applyFabSize(targetSizeDp);
+            invalidate();
+            return;
+        }
+
+        if (curShape == targetShape && shapeMorphProgress >= 1f) {
+            applyFabSize(targetSizeDp);
+            return;
+        }
+
+        if (shapeMorphAnimator != null) {
+            shapeMorphAnimator.cancel();
+        }
+
+        fromShapeId = (shapeMorphProgress < 1f) ? fromShapeId : curShape;
+        targetShapeId = targetShape;
+        currentShapeId = targetShape;
+        shapeMorphProgress = 0f;
+
+        final int startSize = getLayoutParams() != null && getLayoutParams().width > 0 ? getLayoutParams().width : dp(app.exteraless.appearance.AppearanceConfig.fabSize());
+        final int endSize = dp(targetSizeDp);
+
+        shapeMorphAnimator = ValueAnimator.ofFloat(0f, 1f);
+        shapeMorphAnimator.setDuration(260);
+        shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        shapeMorphAnimator.addUpdateListener(anim -> {
+            shapeMorphProgress = (Float) anim.getAnimatedValue();
+            if (startSize != endSize) {
+                int curSize = (int) (startSize + (endSize - startSize) * shapeMorphProgress);
+                applyFabDimension(curSize);
+            }
+            invalidate();
+        });
+        shapeMorphAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                fromShapeId = targetShapeId;
+                currentShapeId = targetShapeId;
+                shapeMorphProgress = 1f;
+                applyFabSize(targetSizeDp);
+                invalidate();
+            }
+        });
+        shapeMorphAnimator.start();
+    }
+
+    private void applyFabSize(int sizeDp) {
+        applyFabDimension(dp(sizeDp));
+    }
+
+    private void applyFabDimension(int sizePx) {
+        android.view.ViewGroup.LayoutParams lp = getLayoutParams();
+        if (lp != null && (lp.width != sizePx || lp.height != sizePx)) {
+            lp.width = sizePx;
+            lp.height = sizePx;
+            setLayoutParams(lp);
         }
     }
 
@@ -218,24 +367,28 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     public static FrameLayout.LayoutParams createSubButtonLayoutParams() {
         int mainSize = app.exteraless.appearance.AppearanceConfig.fabSize();
         int subSize = app.exteraless.appearance.AppearanceConfig.subFabSize();
-        int horizontalOffset = 20 + Math.max(0, (mainSize - subSize) / 2);
-        return LayoutHelper.createFrame(subSize, subSize,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                horizontalOffset, 0, horizontalOffset, 14);
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        boolean isEdge = app.exteraless.appearance.AppearanceConfig.subFabAlignment() == app.exteraless.appearance.AppearanceConfig.SUB_FAB_ALIGN_EDGE;
+
+        int horizontalOffset = isEdge ? 20 : (20 + Math.max(0, (mainSize - subSize) / 2));
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(subSize, subSize, gravity,
+                isLeft ? horizontalOffset : 0, 0, isLeft ? 0 : horizontalOffset, 14);
     }
 
     public static FrameLayout.LayoutParams createDefaultLayoutParams() {
         int size = app.exteraless.appearance.AppearanceConfig.fabSize();
-        return LayoutHelper.createFrame(size, size,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20, 0, 20, 14);
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(size, size, gravity,
+                isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
 
-
     public static FrameLayout.LayoutParams createDefaultLayoutParamsBig() {
-        return LayoutHelper.createFrame(56, 56,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20 /*24*/, 0, 20 /*24*/, 14 /*16*/);
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(56, 56, gravity,
+                isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
 
     private float additionalTranslationY;
