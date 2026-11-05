@@ -604,7 +604,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             if (accent == 0) accent = 0xff00d2b4;
             cycleBg.setColor(currentShape == AppearanceConfig.COVER_SHAPE_CYCLE ? accent : Theme.multAlpha(accent, 0.15f));
             cycleBtn.setBackground(cycleBg);
-            cycleBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_CYCLE ? 0xffffffff : accent);
+            cycleBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_CYCLE ? app.exteraless.utils.UIUtil.getOnAccentColor(accent) : accent);
             cycleBtn.setOnClickListener(v -> {
                 if (onSelected != null) onSelected.run(AppearanceConfig.COVER_SHAPE_CYCLE);
                 if (sheetRef[0] != null) sheetRef[0].dismiss();
@@ -620,7 +620,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
             randBg.setCornerRadius(AndroidUtilities.dp(16));
             randBg.setColor(currentShape == AppearanceConfig.COVER_SHAPE_RANDOM ? accent : Theme.multAlpha(accent, 0.15f));
             randomBtn.setBackground(randBg);
-            randomBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_RANDOM ? 0xffffffff : accent);
+            randomBtn.setTextColor(currentShape == AppearanceConfig.COVER_SHAPE_RANDOM ? app.exteraless.utils.UIUtil.getOnAccentColor(accent) : accent);
             randomBtn.setOnClickListener(v -> {
                 if (onSelected != null) onSelected.run(AppearanceConfig.COVER_SHAPE_RANDOM);
                 if (sheetRef[0] != null) sheetRef[0].dismiss();
@@ -684,7 +684,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
      * Item cell for the shape picker grid or horizontal carousel displaying shape preview and label.
      * Clean, borderless Material 3 design without harsh strokes.
      */
-    private static class ShapeItemCell extends LinearLayout {
+    static class ShapeItemCell extends LinearLayout {
 
         private final ShapePreviewView previewView;
         private final TextView textView;
@@ -756,7 +756,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
     /**
      * View rendering the shape outline/fill for previews.
      */
-    private static class ShapePreviewView extends View {
+    static class ShapePreviewView extends View {
 
         private int shapeId;
         private boolean isSelected;

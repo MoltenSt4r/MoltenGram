@@ -377,17 +377,18 @@ public class Md3SpeedDialView extends FrameLayout {
 
         if (mainFab != null) {
             mainFab.bringToFront();
-            mainFab.morphTo(AppearanceConfig.fabActiveShape(), AppearanceConfig.fabActiveSize(), true);
+            mainFab.morphTo(AppearanceConfig.fabActiveShape(), AppearanceConfig.fabActiveSize(), AppearanceConfig.fabActiveColor(), true);
         }
 
         rebuildItems();
 
-        int bottomMargin = dp(70);
+        int activeSize = AppearanceConfig.fabActiveSize();
+        int bottomMargin = dp(14 + activeSize + 12);
         if (mainFab != null) {
             float fabY = mainFab.getY();
             float containerH = getHeight() > 0 ? getHeight() : (activity != null && activity.getFragmentView() != null ? activity.getFragmentView().getHeight() : 0);
             if (containerH > fabY && fabY > 0) {
-                bottomMargin = (int) (containerH - fabY + dp(12));
+                bottomMargin = Math.max(bottomMargin, (int) (containerH - fabY + dp(12)));
             }
         }
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
@@ -437,7 +438,7 @@ public class Md3SpeedDialView extends FrameLayout {
         isOpen = false;
 
         if (mainFab != null) {
-            mainFab.morphTo(AppearanceConfig.fabShape(), AppearanceConfig.fabSize(), animated);
+            mainFab.morphTo(AppearanceConfig.fabShape(), AppearanceConfig.fabSize(), AppearanceConfig.fabColor(), animated);
         }
 
         if (animated) {
@@ -665,6 +666,15 @@ public class Md3SpeedDialView extends FrameLayout {
                     }
                     saveCustomActions(customList);
                     activeKeys.remove(action.key);
+                    String savedItems = AppearanceConfig.md3FabItems();
+                    if (!TextUtils.isEmpty(savedItems)) {
+                        List<String> list = new ArrayList<>(Arrays.asList(savedItems.split(",")));
+                        list.remove(action.key);
+                        AppearanceConfig.md3FabItems.setConfigString(TextUtils.join(",", list));
+                    }
+                    if (onSaved != null) {
+                        onSaved.run();
+                    }
                     if (dialogRef[0] != null) {
                         dialogRef[0].dismiss();
                     }

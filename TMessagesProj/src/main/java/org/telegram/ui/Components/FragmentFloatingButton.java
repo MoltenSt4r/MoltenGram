@@ -288,10 +288,18 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     }
 
     public void morphTo(int targetShape, int targetSizeDp, boolean animated) {
+        morphTo(targetShape, targetSizeDp, app.exteraless.appearance.AppearanceConfig.fabColor(), animated);
+    }
+
+    public void morphTo(int targetShape, int targetSizeDp, int targetColorCode, boolean animated) {
         if (isSubButton) return;
         if (targetShape < 0 || targetShape >= app.exteraless.appearance.Md3AvatarShapes.SHAPES_COUNT) {
             targetShape = app.exteraless.appearance.AppearanceConfig.fabShape();
         }
+
+        int defBg = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        final int targetColor = app.exteraless.utils.UIUtil.resolveFabColor(targetColorCode, defBg);
+        final int startColor = fabBgPaint.getColor() != 0 ? fabBgPaint.getColor() : targetColor;
 
         int curShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
         if (!animated) {
@@ -303,12 +311,15 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             targetShapeId = targetShape;
             currentShapeId = targetShape;
             shapeMorphProgress = 1f;
+            fabBgPaint.setColor(targetColor);
+            int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
+            imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
             applyFabSize(targetSizeDp);
             invalidate();
             return;
         }
 
-        if (curShape == targetShape && shapeMorphProgress >= 1f) {
+        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor) {
             applyFabSize(targetSizeDp);
             return;
         }
@@ -334,6 +345,12 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 int curSize = (int) (startSize + (endSize - startSize) * shapeMorphProgress);
                 applyFabDimension(curSize);
             }
+            if (startColor != targetColor) {
+                int blended = androidx.core.graphics.ColorUtils.blendARGB(startColor, targetColor, shapeMorphProgress);
+                fabBgPaint.setColor(blended);
+                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(blended);
+                imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
+            }
             invalidate();
         });
         shapeMorphAnimator.addListener(new AnimatorListenerAdapter() {
@@ -342,6 +359,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 fromShapeId = targetShapeId;
                 currentShapeId = targetShapeId;
                 shapeMorphProgress = 1f;
+                fabBgPaint.setColor(targetColor);
+                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
+                imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
                 applyFabSize(targetSizeDp);
                 invalidate();
             }

@@ -79,6 +79,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int ID_HIDE_CALLS_TAB = -109;
     private static final int ID_HIDE_PROFILE_TAB = -110;
 
+    private static final int ID_FAB_APPEARANCE = -135;
     private static final int ID_FAB_SHAPE = -120;
     private static final int ID_FAB_ACTIVE_SHAPE = -127;
     private static final int ID_FAB_SPEED_DIAL = -121;
@@ -197,28 +198,15 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("Плавающая кнопка (FAB)"));
-        items.add(UItem.asButton(ID_FAB_SHAPE, "Форма кнопки FAB",
-                app.exteraless.appearance.Md3AvatarShapesActivity.getShapeName(AppearanceConfig.fabShape())));
-        items.add(UItem.asButton(ID_FAB_ACTIVE_SHAPE, "Форма FAB при раскрытии",
-                app.exteraless.appearance.Md3AvatarShapesActivity.getShapeName(AppearanceConfig.fabActiveShape())));
-        items.add(UItem.asCustom(ID_FAB_SIZE_SLIDER, createFabSizeSlider()));
-        items.add(UItem.asCustom(ID_FAB_ACTIVE_SIZE_SLIDER, createFabActiveSizeSlider()));
-        items.add(UItem.asButton(ID_FAB_COLOR, "Цвет основной кнопки FAB",
-                app.exteraless.utils.UIUtil.getFabColorTitle(AppearanceConfig.fabColor())));
-        items.add(UItem.asButton(ID_FAB_ALIGNMENT, "Расположение FAB",
-                AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT ? "Слева" : "Справа"));
-        items.add(UItem.asButton(ID_SUB_FAB_ALIGNMENT, "Выравнивание кнопки камеры",
-                AppearanceConfig.subFabAlignment() == AppearanceConfig.SUB_FAB_ALIGN_EDGE ? "Ближе к краю экрана" : "По центру основной кнопки"));
-        items.add(UItem.asCustom(ID_SUB_FAB_SIZE_SLIDER, createSubFabSizeSlider()));
-        items.add(UItem.asButton(ID_SUB_FAB_COLOR, "Цвет кнопки камеры FAB",
-                app.exteraless.utils.UIUtil.getFabColorTitle(AppearanceConfig.subFabColor())));
+        items.add(UItem.asButton(ID_FAB_APPEARANCE, R.drawable.msg_theme, "Внешний вид и анимации FAB",
+                "Формы, размеры, цвета, выравнивание и интерактивный предпросмотр"));
         items.add(UItem.asCheck(ID_FAB_SPEED_DIAL, getString(R.string.OEAppearanceMd3SpeedDial))
                 .setChecked(AppearanceConfig.md3FabSpeedDial()));
         if (AppearanceConfig.md3FabSpeedDial()) {
             items.add(UItem.asButton(ID_FAB_CUSTOMIZE, getString(R.string.OEAppearanceMd3FabItems),
                     app.exteraless.components.Md3SpeedDialView.getItemsSummary()));
         }
-        items.add(UItem.asShadow("Формы (44 фигуры Material 3), раздельные размеры в покое и при раскрытии, расположение слева/справа, выравнивание камеры и цвета палитры Monet."));
+        items.add(UItem.asShadow("Настройка экспрессивных форм Material Design 3, интерактивного предпросмотра, цветов палитры Monet, расположения кнопки и пунктов меню Speed Dial."));
 
         items.add(UItem.asHeader(getString(R.string.OEAppNavigation)));
         items.add(UItem.asCheck(ID_DRAWER, getString(R.string.OENavigationDrawer))
@@ -609,7 +597,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int[] LINK_IDS = {
             ID_TABLET_MODE, ID_BACK_ANIMATION, ID_PREDICTIVE_INTENSITY, ID_BOTTOM_NAVIGATION_BAR,
             ID_HIDE_TAB_TITLES, ID_HIDE_CONTACTS_TAB, ID_HIDE_CALLS_TAB, ID_HIDE_PROFILE_TAB,
-            ID_FAB_SHAPE, ID_FAB_ACTIVE_SHAPE, ID_FAB_SPEED_DIAL, ID_FAB_CUSTOMIZE, ID_FAB_SIZE_SLIDER,
+            ID_FAB_APPEARANCE, ID_FAB_SHAPE, ID_FAB_ACTIVE_SHAPE, ID_FAB_SPEED_DIAL, ID_FAB_CUSTOMIZE, ID_FAB_SIZE_SLIDER,
             ID_FAB_ACTIVE_SIZE_SLIDER, ID_FAB_COLOR, ID_FAB_ALIGNMENT, ID_SUB_FAB_ALIGNMENT,
             ID_SUB_FAB_SIZE_SLIDER, ID_SUB_FAB_COLOR,
             ID_DRAWER, ID_IMMERSIVE
@@ -617,7 +605,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final String[] LINK_KEYS = {
             "tabletMode", "backAnimation", "predictiveBackIntensity", "bottomNavigationBar",
             "MainTabsHideTitles", "MainTabsHideContacts", "MainTabsHideCallsSettings", "MainTabsHideProfile",
-            "fabShape", "fabActiveShape", "md3FabSpeedDial", "md3FabItems", "fabSize",
+            "fabAppearance", "fabShape", "fabActiveShape", "md3FabSpeedDial", "md3FabItems", "fabSize",
             "fabActiveSize", "fabColor", "fabAlignment", "subFabAlignment",
             "subFabSize", "subFabColor",
             "navigationDrawer", "immersiveDrawerAnimation"
@@ -731,6 +719,10 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         if (id == ID_IMMERSIVE) {
             AppearanceConfig.immersiveDrawerAnimation.setConfigBool(!AppearanceConfig.immersiveDrawerAnimation());
             update();
+            return;
+        }
+        if (id == ID_FAB_APPEARANCE) {
+            presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity());
             return;
         }
         if (id == ID_FAB_SPEED_DIAL) {

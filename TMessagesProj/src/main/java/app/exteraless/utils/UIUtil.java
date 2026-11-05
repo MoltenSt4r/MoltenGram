@@ -152,16 +152,15 @@ public final class UIUtil {
                     return getOnAccentColor(bgColCode);
                 }
                 int defaultBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
-                if (androidx.core.graphics.ColorUtils.calculateLuminance(defaultBg) > 0.52) {
-                    return getOnAccentColor(defaultBg);
-                }
-                return defaultIconColor;
+                return getOnAccentColor(defaultBg);
             }
         }
     }
 
     public static int getOnAccentColor(int color) {
-        if (androidx.core.graphics.ColorUtils.calculateLuminance(color) > 0.52) {
+        double contrastWhite = androidx.core.graphics.ColorUtils.calculateContrast(0xFFFFFFFF, color);
+        double contrastBlack = androidx.core.graphics.ColorUtils.calculateContrast(0xFF000000, color);
+        if (contrastBlack > contrastWhite) {
             return androidx.core.graphics.ColorUtils.blendARGB(color, 0xFF000000, 0.85f);
         } else {
             return 0xFFFFFFFF;

@@ -254,6 +254,17 @@ object AppearanceConfig {
         return fabColor.Int()
     }
 
+    /** Цвет фона основной кнопки FAB в активном режиме (0 = как в покое). */
+    @JvmField
+    val fabActiveColor = addConfig("OEAppearanceFabActiveColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabActiveColor(): Int {
+        ensureLoaded()
+        val c = fabActiveColor.Int()
+        return if (c != 0) c else fabColor()
+    }
+
     /** Цвет иконки основной кнопки FAB (0 = по умолчанию). */
     @JvmField
     val fabIconColor = addConfig("OEAppearanceFabIconColor", ConfigItem.configTypeInt, 0)
