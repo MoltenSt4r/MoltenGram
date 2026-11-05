@@ -518,3 +518,42 @@ def test_chat_activity_3d_scroll_implementation():
     assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
     assert "setBlurredWallpaperSource" in content
 
+
+def test_md3_player_bottom_buttons_and_dialog_styling():
+    """Verify player bottom buttons are clean icon-only with tactile feedback and MD3 popup styling."""
+    ps_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "PlayerSheet.java")
+    with open(ps_path, "r", encoding="utf-8") as f:
+        ps_content = f.read()
+
+    # Bottom buttons must NOT have text labels
+    assert "lyricsButton.setText(" not in ps_content
+    assert "queueButton.setText(" not in ps_content
+    assert "speedButton.setText(" not in ps_content
+
+    # Bottom buttons must use equal 1f weights and have accessibility descriptions
+    assert "group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(playlistButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(sleepButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "speedButton.setContentDescription(" in ps_content
+    assert "lyricsButton.setContentDescription(" in ps_content
+    assert "queueButton.setContentDescription(" in ps_content
+
+    # Detach must safely check isShowing() and catch IllegalArgumentException / unattached window
+    assert "if (getWindow() != null && isShowing())" in ps_content
+
+    # Speed & Pitch dialog must use Monet tokens and preserve Dotted header font
+    assert "colors.surfaceContainer" in ps_content
+    assert "colors.onSurface" in ps_content
+    assert "AndroidUtilities.headerTypeface()" in ps_content
+
+    mb_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "MorphButton.java")
+    with open(mb_path, "r", encoding="utf-8") as f:
+        mb_content = f.read()
+
+    # MorphButton must provide spring tactile feedback and ripple/highlight
+    assert "pressScale.target = pressed ? 0.93f : 1.0f;" in mb_content
+    assert "performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)" in mb_content
+
+

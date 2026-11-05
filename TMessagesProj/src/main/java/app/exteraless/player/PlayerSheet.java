@@ -523,14 +523,15 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         group.setOrientation(LinearLayout.HORIZONTAL);
         speedButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SPEED, 20));
         speedButton.setRadius(dp(26), dp(8), false);
+        speedButton.setContentDescription(getString(R.string.OEPlayerSpeed));
         speedButton.setOnClickListener(v -> showSpeedSliderDialog());
-        group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1.15f));
+        group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1f, 0, 0, 2, 0));
 
         lyricsButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.LYRICS, 20));
-        lyricsButton.setText(getString(R.string.OEPlayerLyrics));
         lyricsButton.setRadius(dp(8), false);
+        lyricsButton.setContentDescription(getString(R.string.OEPlayerLyrics));
         lyricsButton.setOnClickListener(v -> setLyricsMode(!lyricsMode, true));
-        group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1.15f, 4, 0, 4, 0));
+        group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 2, 0));
 
         playlistButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.PLAYLIST_ADD, 20));
         playlistButton.setRadius(dp(8), false);
@@ -549,19 +550,19 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             }
             return false;
         });
-        group.addView(playlistButton, LayoutHelper.createLinear(0, 52, 0.85f, 0, 0, 4, 0));
+        group.addView(playlistButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 2, 0));
 
         sleepButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SLEEP, 20));
         sleepButton.setRadius(dp(8), false);
         sleepButton.setContentDescription(getString(R.string.OEAppearancePlayerSleepTimer));
         sleepButton.setOnClickListener(v -> SleepTimer.showDialog(getContext(), colors.provider(resourcesProvider)));
-        group.addView(sleepButton, LayoutHelper.createLinear(0, 52, 0.85f, 0, 0, 4, 0));
+        group.addView(sleepButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 2, 0));
 
         queueButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.QUEUE, 20));
-        queueButton.setText(getString(R.string.OEPlayerQueue));
         queueButton.setRadius(dp(8), dp(26), false);
+        queueButton.setContentDescription(getString(R.string.OEPlayerQueue));
         queueButton.setOnClickListener(v -> openQueue());
-        group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1.15f));
+        group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 0, 0));
         layout.addView(group);
 
         bubble = new TextView(context);
@@ -1359,7 +1360,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         float pitch = MediaController.getInstance().getPlaybackPitch();
         DecimalFormat format = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(currentLocale()));
         String label = format.format(speed) + "×";
-        speedButton.setText(label);
         speedButton.setContentDescription(getString(R.string.OEPlayerSpeed) + " " + label);
         boolean altered = Math.abs(speed - 1.0f) > 0.02f || Math.abs(pitch - 1.0f) > 0.02f;
         speedButton.setActive(altered, true);
