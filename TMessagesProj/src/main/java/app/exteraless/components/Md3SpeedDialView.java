@@ -505,6 +505,8 @@ public class Md3SpeedDialView extends FrameLayout {
                 activity.presentFragment(new app.exteraless.settings.OpenExteraUpdatesActivity());
             } else if ("plugins".equalsIgnoreCase(target)) {
                 activity.presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
+            } else if ("navigation".equalsIgnoreCase(target) || "fab".equalsIgnoreCase(target)) {
+                activity.presentFragment(new app.exteraless.settings.OpenExteraAppNavigationActivity());
             } else {
                 activity.presentFragment(new app.exteraless.settings.OpenExteraSettingsActivity());
             }
@@ -629,12 +631,9 @@ public class Md3SpeedDialView extends FrameLayout {
         ScrollView scrollView = new ScrollView(context);
         LinearLayout gridLayout = new LinearLayout(context);
         gridLayout.setOrientation(LinearLayout.VERTICAL);
-        gridLayout.setPadding(dp(16), dp(12), dp(16), dp(12));
+        gridLayout.setPadding(dp(12), dp(10), dp(12), dp(10));
 
         final int columns = 5;
-        final int cellPad = dp(5);
-        final int iconSize = dp(46);
-
         LinearLayout currentRow = null;
         final AlertDialog[] dialogRef = new AlertDialog[1];
 
@@ -642,8 +641,8 @@ public class Md3SpeedDialView extends FrameLayout {
             if (i % columns == 0) {
                 currentRow = new LinearLayout(context);
                 currentRow.setOrientation(LinearLayout.HORIZONTAL);
-                currentRow.setGravity(Gravity.CENTER_HORIZONTAL);
-                gridLayout.addView(currentRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+                currentRow.setWeightSum(columns);
+                gridLayout.addView(currentRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
             }
 
             final String iconName = ICON_CHOICES[i];
@@ -656,15 +655,17 @@ public class Md3SpeedDialView extends FrameLayout {
             if (isSelected) {
                 cellBg.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
             } else {
-                cellBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+                int textColor = Theme.getColor(Theme.key_dialogTextBlack);
+                cellBg.setColor(Theme.multAlpha(textColor, 0.08f));
+                cellBg.setStroke(dp(1), Theme.multAlpha(textColor, 0.16f));
             }
             cell.setBackground(cellBg);
 
             ImageView iv = new ImageView(context);
             iv.setImageResource(resId);
             iv.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-            iv.setColorFilter(isSelected ? 0xFFFFFFFF : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), PorterDuff.Mode.SRC_IN);
-            cell.addView(iv, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER, 8, 8, 8, 8));
+            iv.setColorFilter(isSelected ? 0xFFFFFFFF : Theme.getColor(Theme.key_dialogTextBlack), PorterDuff.Mode.SRC_IN);
+            cell.addView(iv, LayoutHelper.createFrame(26, 26, Gravity.CENTER));
 
             cell.setOnClickListener(v -> {
                 if (onSelected != null) {
@@ -675,7 +676,17 @@ public class Md3SpeedDialView extends FrameLayout {
                 }
             });
 
-            currentRow.addView(cell, LayoutHelper.createLinear(iconSize, iconSize, 0, cellPad, 0, cellPad, 0));
+            currentRow.addView(cell, LayoutHelper.createLinear(0, dp(48), 1f, dp(3), 0, dp(3), 0));
+        }
+
+        if (currentRow != null) {
+            int remaining = columns - (ICON_CHOICES.length % columns);
+            if (remaining < columns) {
+                for (int k = 0; k < remaining; k++) {
+                    View empty = new View(context);
+                    currentRow.addView(empty, LayoutHelper.createLinear(0, dp(48), 1f, dp(3), 0, dp(3), 0));
+                }
+            }
         }
 
         scrollView.addView(gridLayout);

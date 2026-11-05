@@ -182,7 +182,7 @@ object AppearanceConfig {
     fun fabSize(): Int {
         ensureLoaded()
         val s = fabSize.Int()
-        return if (s in 40..80) s else 56
+        return if (s in 36..96) s else 56
     }
 
     /** Цвет фона основной кнопки FAB (0 = системный акцент). */
@@ -213,7 +213,7 @@ object AppearanceConfig {
     fun subFabSize(): Int {
         ensureLoaded()
         val s = subFabSize.Int()
-        return if (s in 36..64) s else 48
+        return if (s in 28..72) s else 48
     }
 
     /** Цвет фона вторичной кнопки (истории / камера) FAB (0 = системный). */

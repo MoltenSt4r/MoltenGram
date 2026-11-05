@@ -5,12 +5,6 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
-import android.text.InputType;
-import android.text.TextUtils;
-import android.util.TypedValue;
-import android.view.View;
-import android.view.ViewGroup;
-import android.widget.EditText;
 import android.widget.LinearLayout;
 
 import androidx.annotation.NonNull;
@@ -41,7 +35,6 @@ import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.AvatarCornersPreviewCell;
 import app.exteraless.appearance.AvatarCornersSeekBar;
 import app.exteraless.appearance.ChatListPreviewCell;
-import app.exteraless.appearance.FabShapeCell;
 import app.exteraless.appearance.FoldersPreviewCell;
 import app.exteraless.icons.IconPacksActivity;
 import app.exteraless.pillstack.PillStackSettingsActivity;
@@ -75,12 +68,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_EXPANDABLE_SWITCH = 104;
     /** Круглая галочка внутри группы. */
     private static final int TYPE_ROUND_CHECK = 105;
-    /** Две карточки-превью формы плавающей кнопки. */
-    private static final int TYPE_FAB_SHAPE = 106;
 
     // Appearance
     private int appearanceHeaderRow;
-    private int fabShapeRow;
     private int useSystemFontsRow;
     private int ndotFontHeadersRow;
     private int useSystemEmojiRow;
@@ -132,12 +122,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3MiniPlayerRow;
     private int md3ChatInputRow;
     private int mediaGroupCarouselRow;
-    private int md3FabSpeedDialRow;
-    private int md3FabItemsRow;
-    private int fabSizeRow;
-    private int fabColorRow;
-    private int subFabSizeRow;
-    private int subFabColorRow;
     private boolean md3Expanded;
     private int iosGroupRow;
     private int iosNavBarRow;
@@ -184,7 +168,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private AvatarCornersPreviewCell avatarCornersPreviewCell;
     private ChatListPreviewCell chatListPreviewCell;
     private FoldersPreviewCell foldersPreviewCell;
-    private FabShapeCell fabShapeCell;
 
     /**
      * Отложенный rebuild после слайдера радиуса секций. exteraGram
@@ -253,7 +236,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         linksDividerRow = addRow();
 
         appearanceHeaderRow = addRow("appearanceHeader");
-        fabShapeRow = addRow("fabShape");
         useSystemFontsRow = addRow("useSystemFonts");
         ndotFontHeadersRow = addRow("ndotFontHeaders");
         // Material Design 3 — сворачиваемая группа, как у exteraGram
@@ -269,20 +251,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3MiniPlayerRow = addRow("md3MiniPlayer");
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
-            md3FabSpeedDialRow = addRow("md3FabSpeedDial");
-            if (AppearanceConfig.md3FabSpeedDial()) {
-                md3FabItemsRow = addRow("md3FabItems");
-            } else {
-                md3FabItemsRow = -1;
-            }
-            fabSizeRow = addRow("fabSize");
-            fabColorRow = addRow("fabColor");
-            subFabSizeRow = addRow("subFabSize");
-            subFabColorRow = addRow("subFabColor");
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
-            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = md3FabSpeedDialRow = md3FabItemsRow = -1;
-            fabSizeRow = fabColorRow = subFabSizeRow = subFabColorRow = -1;
+            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -606,7 +577,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 app.exteraless.appearance.ChipFoldersController.getInstance().refreshPreview(foldersPreviewCell);
             }
         }
-        if (fabShapeCell != null) fabShapeCell.invalidate();
     }
 
     @Override
@@ -714,43 +684,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == mediaGroupCarouselRow) {
             AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.mediaGroupCarousel.Bool());
-            return;
-        } else if (position == md3FabSpeedDialRow) {
-            boolean enable = !AppearanceConfig.md3FabSpeedDial();
-            AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
-            rebuildAllAndSelf(view, enable);
-            rebuildRowsAndNotify();
-            return;
-        } else if (position == md3FabItemsRow) {
-            app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getParentActivity(), this::rebuildRowsAndNotify);
-            return;
-        } else if (position == fabSizeRow) {
-            final int[] sizes = new int[]{48, 56, 64, 72};
-            final CharSequence[] sizeLabels = new CharSequence[]{"Компактный (48 dp)", "Стандартный (56 dp)", "Большой (64 dp)", "Очень большой (72 dp)"};
-            AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-            b.setTitle("Размер основной кнопки FAB");
-            b.setItems(sizeLabels, (d, which) -> {
-                AppearanceConfig.fabSize.setConfigInt(sizes[which]);
-                rebuildRowsAndNotify();
-            });
-            b.show();
-            return;
-        } else if (position == subFabSizeRow) {
-            final int[] sizes = new int[]{40, 48, 56};
-            final CharSequence[] sizeLabels = new CharSequence[]{"Маленький (40 dp)", "Стандартный (48 dp)", "Большой (56 dp)"};
-            AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-            b.setTitle("Размер кнопки камеры FAB");
-            b.setItems(sizeLabels, (d, which) -> {
-                AppearanceConfig.subFabSize.setConfigInt(sizes[which]);
-                rebuildRowsAndNotify();
-            });
-            b.show();
-            return;
-        } else if (position == fabColorRow) {
-            showFabColorPicker("Цвет основной кнопки FAB", AppearanceConfig.fabColor);
-            return;
-        } else if (position == subFabColorRow) {
-            showFabColorPicker("Цвет кнопки камеры FAB", AppearanceConfig.subFabColor);
             return;
         } else if (position == iosGroupRow) {
             iosExpanded = !iosExpanded;
@@ -1036,12 +969,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     foldersPreviewCell = new FoldersPreviewCell(mContext, resourcesProvider);
                     view = foldersPreviewCell;
                     break;
-                case TYPE_FAB_SHAPE:
-                    fabShapeCell = new FabShapeCell(mContext,
-                            OpenExteraAppearanceActivity.this::rebuildAll);
-                    fabShapeCell.setNeedDivider(true);
-                    view = fabShapeCell;
-                    break;
                 case TYPE_DETAIL_SETTINGS: {
                     // Базовый класс делает такую же ячейку, но многострочной; exteraGram
                     // (asButtonWithSubtext(..., 64, 60) :456-458) держит ровно 64 dp.
@@ -1269,20 +1196,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int titleText = clamp(AppearanceConfig.titleText.Int(), v.length);
                         cell.setTextAndValue(getString(R.string.OEAppearanceTitleText),
                                 titleText == AppearanceConfig.TITLE_TEXT_CUSTOM ? NaConfig.INSTANCE.getCustomTitle().String() : v[titleText], false);
-                    } else if (position == md3FabItemsRow) {
-                        cell.setTextAndValue(getString(R.string.OEAppearanceMd3FabItems),
-                                app.exteraless.components.Md3SpeedDialView.getItemsSummary(), false);
-                    } else if (position == fabSizeRow) {
-                        cell.setTextAndValue("Размер основной кнопки FAB", AppearanceConfig.fabSize() + " dp", false);
-                    } else if (position == fabColorRow) {
-                        int col = AppearanceConfig.fabColor();
-                        cell.setTextAndValue("Цвет основной кнопки FAB", app.exteraless.utils.UIUtil.getFabColorTitle(col), false);
-                    } else if (position == subFabSizeRow) {
-                        cell.setTextAndValue("Размер кнопки камеры FAB", AppearanceConfig.subFabSize() + " dp", false);
-                    } else if (position == subFabColorRow) {
-                        int col = AppearanceConfig.subFabColor();
-                        cell.setTextAndValue("Цвет кнопки камеры FAB", app.exteraless.utils.UIUtil.getFabColorTitle(col), false);
                     }
+                    break;
+                }
+                case TYPE_SECTION_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.sectionRadius.Int());
                     break;
                 }
                 case TYPE_DETAIL_SETTINGS: {
@@ -1370,8 +1289,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == chatListDividerRow || position == foldersDividerRow
                     || position == linksDividerRow || position == hidingDividerRow) {
                 return TYPE_INFO_PRIVACY;
-            } else if (position == fabShapeRow) {
-                return TYPE_FAB_SHAPE;
             } else if (position == appNavigationRow || position == appIconRow
                     || position == iconPacksRow || position == emojiSetsRow || position == pillStackRow
                     || position == playerSettingsRow) {
@@ -1385,7 +1302,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3PlayerRow || position == md3MiniPlayerRow
                     || (position == md3ChatInputRow && md3ChatInputRow != -1)
                     || position == mediaGroupCarouselRow
-                    || position == md3FabSpeedDialRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosChatHeaderRow
@@ -1394,10 +1310,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
-                    || position == chipFoldersRow || position == md3AvatarShapesRow
-                    || position == md3FabItemsRow
-                    || position == fabSizeRow || position == fabColorRow
-                    || position == subFabSizeRow || position == subFabColorRow) {
+                    || position == chipFoldersRow || position == md3AvatarShapesRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
@@ -1616,86 +1529,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             listAdapter.notifyItemChanged(emojiSetsRow);
         }
         AndroidUtilities.runOnUIThread(this::invalidatePreviews);
-    }
-
-    private void showFabColorPicker(String title, tw.nekomimi.nekogram.config.ConfigItem item) {
-        if (getParentActivity() == null) return;
-        final CharSequence[] options = new CharSequence[]{
-            "По умолчанию (акцент темы)",
-            "Основной Monet (Primary)",
-            "Контейнер основного Monet (Primary Container)",
-            "Вторичный Monet (Secondary)",
-            "Контейнер вторичного Monet (Secondary Container)",
-            "Третичный Monet (Tertiary)",
-            "Контейнер третичного Monet (Tertiary Container)",
-            "Поверхность Monet (Surface)",
-            "Свой цвет (HEX)..."
-        };
-        final int[] values = new int[]{
-            app.exteraless.utils.UIUtil.FAB_COLOR_DEFAULT,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY_CONTAINER,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY_CONTAINER,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY_CONTAINER,
-            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SURFACE
-        };
-        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-        b.setTitle(title);
-        b.setItems(options, (d, which) -> {
-            if (which < values.length) {
-                item.setConfigInt(values[which]);
-                rebuildRowsAndNotify();
-            } else {
-                showHexColorDialog(title, item);
-            }
-        });
-        b.setNegativeButton(getString(R.string.Cancel), null);
-        b.show();
-    }
-
-    private void showHexColorDialog(String title, tw.nekomimi.nekogram.config.ConfigItem item) {
-        if (getParentActivity() == null) return;
-        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
-        b.setTitle(title);
-
-        LinearLayout layout = new LinearLayout(getParentActivity());
-        layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
-
-        int curCol = item.Int();
-        String initialHex = curCol != 0 && curCol < 0 ? String.format("%06X", (0xFFFFFF & curCol)) : "6750A4";
-
-        final EditText input = new EditText(getParentActivity());
-        input.setText(initialHex);
-        input.setHint("RRGGBB (например: 6750A4)");
-        input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        input.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        input.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
-        bg.setCornerRadius(AndroidUtilities.dp(8));
-        input.setBackground(bg);
-        input.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
-        layout.addView(input, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-        b.setView(layout);
-        b.setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> {
-            String text = input.getText().toString().trim();
-            if (text.startsWith("#")) text = text.substring(1);
-            try {
-                long val = Long.parseLong(text, 16);
-                int parsed = (int) val;
-                if (text.length() <= 6) {
-                    parsed |= 0xFF000000;
-                }
-                item.setConfigInt(parsed);
-                rebuildRowsAndNotify();
-            } catch (Exception ignored) {}
-        });
-        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
-        b.show();
     }
 
     @Override
