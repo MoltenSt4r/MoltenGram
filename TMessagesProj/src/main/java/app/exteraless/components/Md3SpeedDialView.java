@@ -387,6 +387,16 @@ public class Md3SpeedDialView extends FrameLayout {
         int restingSize = AppearanceConfig.fabSize();
         int topSize = Math.max(activeSize, restingSize);
         int bottomMargin = dp(14 + topSize + 10);
+        if (mainFab != null) {
+            // Нижний край FAB в покое (над нижней панелью и т.п.) + максимальная высота кнопки
+            float restBottom = mainFab.getY() + mainFab.getHeight();
+            float containerH = getHeight() > 0 ? getHeight()
+                    : (activity != null && activity.getFragmentView() != null ? activity.getFragmentView().getHeight() : 0);
+            if (containerH > 0 && restBottom > 0 && restBottom <= containerH) {
+                float topEdge = restBottom - dp(topSize);
+                bottomMargin = (int) (containerH - topEdge + dp(10));
+            }
+        }
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
         if (lp != null) {
             lp.bottomMargin = bottomMargin;
