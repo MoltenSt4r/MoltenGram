@@ -76,6 +76,7 @@
     <string name="OEAppearanceTranslucentMessagesGlass">Стекло (40%)</string>
     <string name="OEAppearanceChat3dScroll">3D-эффект скролла чата</string>
     <string name="OEAppearanceChat3dScrollInfo">Цилиндрический наклон сообщений в 3D-перспективе при прокрутке</string>
+    <string name="OEAppearanceChat3dScrollAngle">Угол 3D-наклона</string>
     <string name="OEAppearanceChat3dScrollIntensity">Сила 3D-наклона</string>
     <string name="OEAppearanceChat3dScrollSubtle">Мягкий (18°)</string>
     <string name="OEAppearanceChat3dScrollMedium">Умеренный (26°)</string>

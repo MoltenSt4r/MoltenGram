@@ -5309,6 +5309,7 @@ public class ChatActivity extends BaseFragment implements
 
             {
                 setClipChildren(false);
+                setBlurredWallpaperSource(navbarContentSourceWallpaper);
                 outlineActionBackgroundPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundPaint.setStrokeWidth(AndroidUtilities.dp(2));
@@ -5323,8 +5324,12 @@ public class ChatActivity extends BaseFragment implements
                 if (!enabled) {
                     for (int i = 0; i < count; i++) {
                         View child = getChildAt(i);
-                        if (child != null && child.getRotationX() != 0f) {
-                            child.setRotationX(0f);
+                        if (child != null) {
+                            if (child.getRotationX() != 0f) child.setRotationX(0f);
+                            if (child.getScaleY() != 1f) child.setScaleY(1f);
+                            if (child.getTranslationY() != 0f) child.setTranslationY(0f);
+                            child.setPivotX(child.getMeasuredWidth() / 2f);
+                            child.setPivotY(child.getMeasuredHeight() / 2f);
                         }
                     }
                     return;
@@ -5335,7 +5340,9 @@ public class ChatActivity extends BaseFragment implements
                 }
                 float centerY = height / 2f;
                 float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
-                float cameraDistance = Math.max(1000f, getMeasuredWidth() * 10f);
+                float maxAngleRad = (float) Math.toRadians(maxAngle);
+                float sinMax = (float) Math.sin(maxAngleRad);
+                float cameraDistance = Math.max(2500f, getMeasuredWidth() * 4f);
 
                 for (int i = 0; i < count; i++) {
                     View child = getChildAt(i);
@@ -5344,24 +5351,44 @@ public class ChatActivity extends BaseFragment implements
                     }
                     float childCenterY = child.getY() + child.getMeasuredHeight() / 2f;
                     float factor = (childCenterY - centerY) / centerY;
-                    factor = Math.max(-1.15f, Math.min(1.15f, factor));
+                    factor = Math.max(-1.0f, Math.min(1.0f, factor));
 
-                    float curved = Math.signum(factor) * (float) Math.pow(Math.abs(factor), 1.15);
-                    float angle = -curved * maxAngle;
+                    // Цилиндрическая проекция колеса: наклон плавно скругляется к краям
+                    float angleRad = (float) Math.asin(factor * sinMax);
+                    float angle = -(float) Math.toDegrees(angleRad);
 
                     if (child.getCameraDistance() != cameraDistance) {
                         child.setCameraDistance(cameraDistance);
                     }
                     float pivotX = child.getMeasuredWidth() / 2f;
-                    float pivotY = child.getMeasuredHeight() / 2f;
+                    // Динамический пивот: загиб колеса от касательной в центре
+                    float absFactor = Math.abs(factor);
+                    float pivotY = factor < 0
+                            ? child.getMeasuredHeight() * (0.5f + 0.5f * absFactor)
+                            : child.getMeasuredHeight() * (0.5f - 0.5f * absFactor);
+
                     if (child.getPivotX() != pivotX) {
                         child.setPivotX(pivotX);
                     }
-                    if (child.getPivotY() != pivotY) {
+                    if (Math.abs(child.getPivotY() - pivotY) > 0.5f) {
                         child.setPivotY(pivotY);
                     }
                     if (Math.abs(child.getRotationX() - angle) > 0.05f) {
                         child.setRotationX(angle);
+                    }
+
+                    // Оптическое сжатие высоты (ракурс по цилиндру):
+                    float scaleY = (float) Math.cos(angleRad);
+                    scaleY = Math.max(0.6f, Math.min(1.0f, scaleY));
+                    if (Math.abs(child.getScaleY() - scaleY) > 0.01f) {
+                        child.setScaleY(scaleY);
+                    }
+
+                    // Поджатие сегментов цилиндра к центру дуги:
+                    float pull = (float) (centerY * (Math.abs(angleRad) - Math.abs(Math.sin(angleRad))));
+                    float transY = factor < 0 ? pull : -pull;
+                    if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
+                        child.setTranslationY(transY);
                     }
                 }
             }
@@ -5369,8 +5396,12 @@ public class ChatActivity extends BaseFragment implements
             @Override
             public void onChildDetachedFromWindow(View child) {
                 super.onChildDetachedFromWindow(child);
-                if (child != null && child.getRotationX() != 0f) {
-                    child.setRotationX(0f);
+                if (child != null) {
+                    if (child.getRotationX() != 0f) child.setRotationX(0f);
+                    if (child.getScaleY() != 1f) child.setScaleY(1f);
+                    if (child.getTranslationY() != 0f) child.setTranslationY(0f);
+                    child.setPivotX(child.getMeasuredWidth() / 2f);
+                    child.setPivotY(child.getMeasuredHeight() / 2f);
                 }
             }
 
@@ -42484,6 +42515,11 @@ public class ChatActivity extends BaseFragment implements
 
     private class ChatMessageCellDelegate implements ChatMessageCell.ChatMessageCellDelegate {
         @Override
+        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getBlurredWallpaperSource() {
+            return navbarContentSourceWallpaper;
+        }
+
+        @Override
         public boolean isReplyOrSelf() {
             return UserObject.isReplyUser(currentUser) || UserObject.isUserSelf(currentUser);
         }
@@ -52498,7 +52534,17 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
-    private abstract class ChatListRecyclerView extends RecyclerListViewInternal {
+    public abstract class ChatListRecyclerView extends RecyclerListViewInternal {
+
+        private org.telegram.ui.Components.blur3.source.BlurredBackgroundSource blurredWallpaperSource;
+
+        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getBlurredWallpaperSource() {
+            return blurredWallpaperSource;
+        }
+
+        public void setBlurredWallpaperSource(org.telegram.ui.Components.blur3.source.BlurredBackgroundSource blurredWallpaperSource) {
+            this.blurredWallpaperSource = blurredWallpaperSource;
+        }
 
         public ChatListRecyclerView(Context context, ThemeDelegate themeDelegate) {
             super(context, themeDelegate);

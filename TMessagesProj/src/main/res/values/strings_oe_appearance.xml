@@ -94,6 +94,7 @@
     <string name="OEAppearanceTranslucentMessagesGlass">Glass (40%)</string>
     <string name="OEAppearanceChat3dScroll">3D Chat Scroll</string>
     <string name="OEAppearanceChat3dScrollInfo">Cylindrical roller 3D tilt effect for messages during scrolling</string>
+    <string name="OEAppearanceChat3dScrollAngle">3D Tilt Angle</string>
     <string name="OEAppearanceChat3dScrollIntensity">3D Scroll Intensity</string>
     <string name="OEAppearanceChat3dScrollSubtle">Subtle (18°)</string>
     <string name="OEAppearanceChat3dScrollMedium">Moderate (26°)</string>

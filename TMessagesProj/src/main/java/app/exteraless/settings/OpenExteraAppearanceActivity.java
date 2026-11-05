@@ -73,6 +73,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_EXPANDABLE_SWITCH = 104;
     /** Круглая галочка внутри группы. */
     private static final int TYPE_ROUND_CHECK = 105;
+    /** Слайдер угла 3D-скролла */
+    private static final int TYPE_3D_SCROLL_SLIDER = 106;
 
     // Appearance
     private int appearanceHeaderRow;
@@ -582,6 +584,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AndroidUtilities.runOnUIThread(sectionRadiusRebuild, 350);
     }
 
+    private void onChat3dAngleChanged(int value) {
+        AppearanceConfig.chat3dScrollAngle.setConfigInt(value);
+    }
+
     /** Все живые превью экрана — их надо дёргать на смене темы и стиля разделителя. */
     private void invalidatePreviews() {
         if (avatarCornersPreviewCell != null) avatarCornersPreviewCell.invalidate();
@@ -787,11 +793,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             }
             return;
         } else if (position == chat3dScrollIntensityRow) {
-            showSelector(position, getString(R.string.OEAppearanceChat3dScrollIntensity), new CharSequence[]{
-                    getString(R.string.OEAppearanceChat3dScrollSubtle),
-                    getString(R.string.OEAppearanceChat3dScrollMedium),
-                    getString(R.string.OEAppearanceChat3dScrollStrong)
-            }, AppearanceConfig.chat3dScrollIntensity, null);
             return;
         } else if (position == tabTitleStyleRow) {
             if (getParentActivity() == null) {
@@ -1036,6 +1037,19 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider;
                     break;
+                case TYPE_3D_SCROLL_SLIDER:
+                    AvatarCornersSeekBar slider3d = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onChat3dAngleChanged,
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MIN,
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MAX,
+                            getString(R.string.OEAppearanceChat3dScrollAngle),
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MIN + "°",
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MAX + "°");
+                    slider3d.setValueSuffix("°");
+                    slider3d.setValue(AppearanceConfig.chat3dScrollAngle.Int());
+                    slider3d.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider3d;
+                    break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1232,13 +1246,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                 getString(R.string.OEAppearanceTranslucentMessagesGlass)
                         };
                         cell.setTextAndValue(getString(R.string.OEAppearanceTranslucentMessages), v[clamp(AppearanceConfig.messageBubbleTransparency.Int(), v.length)], true);
-                    } else if (position == chat3dScrollIntensityRow) {
-                        String[] v = {
-                                getString(R.string.OEAppearanceChat3dScrollSubtle),
-                                getString(R.string.OEAppearanceChat3dScrollMedium),
-                                getString(R.string.OEAppearanceChat3dScrollStrong)
-                        };
-                        cell.setTextAndValue(getString(R.string.OEAppearanceChat3dScrollIntensity), v[clamp(AppearanceConfig.chat3dScrollIntensity.Int(), v.length)], true);
                     } else if (position == tabTitleStyleRow) {
                         CharSequence[] v = tabTitleOptions();
                         cell.setTextAndValue(getString(R.string.OEAppearanceTabTitleStyle), v[tabTitleIndex(NekoConfig.tabsTitleType.Int())], true);
@@ -1263,6 +1270,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 case TYPE_SECTION_SLIDER: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
                     slider.setValue(AppearanceConfig.sectionRadius.Int());
+                    break;
+                }
+                case TYPE_3D_SCROLL_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.chat3dScrollAngle.Int());
                     break;
                 }
                 case TYPE_DETAIL_SETTINGS: {
@@ -1339,6 +1351,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_FOLDERS;
             } else if (position == sectionRadiusRow) {
                 return TYPE_SECTION_SLIDER;
+            } else if (position == chat3dScrollIntensityRow) {
+                return TYPE_3D_SCROLL_SLIDER;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow
@@ -1369,7 +1383,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == hidePremiumSectionRow || position == hideHelpSectionRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
-                    || position == translucentMessagesRow || position == chat3dScrollIntensityRow
+                    || position == translucentMessagesRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow) {

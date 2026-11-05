@@ -455,24 +455,43 @@ object AppearanceConfig {
 
     // ---- 3D-эффект скролла сообщений (Cylinder 3D Scroll) ----
 
-    const val CHAT_3D_SCROLL_SUBTLE = 0 // 18°
-    const val CHAT_3D_SCROLL_MEDIUM = 1 // 26°
-    const val CHAT_3D_SCROLL_STRONG = 2 // 36°
+    const val CHAT_3D_SCROLL_ANGLE_MIN = 5
+    const val CHAT_3D_SCROLL_ANGLE_MAX = 60
+    const val CHAT_3D_SCROLL_ANGLE_DEFAULT = 25
+
+    const val CHAT_3D_SCROLL_SUBTLE = 0
+    const val CHAT_3D_SCROLL_MEDIUM = 1
+    const val CHAT_3D_SCROLL_STRONG = 2
 
     /** 3D-эффект цилиндрического скролла сообщений в чате */
     @JvmField
     val chat3dScroll =
         addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
 
-    /** Сила 3D-эффекта наклона */
+    /** Сила 3D-эффекта наклона (legacy-индекс для обратной совместимости) */
     @JvmField
     val chat3dScrollIntensity =
         addConfig("OEAppearanceChat3dScrollIntensity", ConfigItem.configTypeInt, CHAT_3D_SCROLL_MEDIUM)
+
+    /** Угол 3D-эффекта наклона в градусах (настраивается слайдером 5°..60°) */
+    @JvmField
+    val chat3dScrollAngle =
+        addConfig("OEAppearanceChat3dScrollAngle", ConfigItem.configTypeInt, CHAT_3D_SCROLL_ANGLE_DEFAULT)
 
     @JvmStatic
     fun chat3dScroll(): Boolean {
         ensureLoaded()
         return chat3dScroll.Bool()
+    }
+
+    @JvmStatic
+    fun chat3dScrollAngle(): Int {
+        ensureLoaded()
+        val v = chat3dScrollAngle.Int()
+        if (v in CHAT_3D_SCROLL_ANGLE_MIN..CHAT_3D_SCROLL_ANGLE_MAX) {
+            return v
+        }
+        return CHAT_3D_SCROLL_ANGLE_DEFAULT
     }
 
     @JvmStatic
@@ -484,11 +503,7 @@ object AppearanceConfig {
     @JvmStatic
     fun chat3dScrollMaxAngle(): Float {
         ensureLoaded()
-        return when (chat3dScrollIntensity.Int()) {
-            CHAT_3D_SCROLL_SUBTLE -> 18f
-            CHAT_3D_SCROLL_STRONG -> 36f
-            else -> 26f
-        }
+        return chat3dScrollAngle().toFloat()
     }
 
     // ---- Папки-чипсы Material 3 ----

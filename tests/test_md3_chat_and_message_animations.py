@@ -472,39 +472,49 @@ def test_translucent_messages_and_3d_scroll_configs():
     assert "val messageBubbleTransparency" in content
     assert "fun messageBubbleAlpha(): Float" in content
     assert "val chat3dScroll" in content
-    assert "val chat3dScrollIntensity" in content
+    assert "val chat3dScrollAngle" in content
+    assert "fun chat3dScrollAngle(): Int" in content
     assert "fun chat3dScrollMaxAngle(): Float" in content
 
 
 def test_open_extera_appearance_translucent_and_3d_scroll_rows():
-    """Verify OpenExteraAppearanceActivity binds and handles translucent messages and 3D scroll."""
+    """Verify OpenExteraAppearanceActivity binds and handles translucent messages and 3D scroll slider."""
     oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
     with open(oea_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "translucentMessagesRow" in content
     assert "chat3dScrollRow" in content
     assert "chat3dScrollIntensityRow" in content
+    assert "TYPE_3D_SCROLL_SLIDER" in content
     assert "AppearanceConfig.messageBubbleTransparency" in content
     assert "AppearanceConfig.chat3dScroll" in content
+    assert "AppearanceConfig.chat3dScrollAngle" in content
 
 
-def test_chat_message_cell_bubble_alpha_and_stroke():
-    """Verify ChatMessageCell applies bubbleAlpha and subtle glass rim stroke when translucent."""
+def test_chat_message_cell_bubble_alpha_and_real_glass_blur():
+    """Verify ChatMessageCell applies real frosted glass background and removes fake stroke borders."""
     cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
     with open(cmc_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "getBubbleAlpha()" in content
-    assert "drawBubbleGlassStroke(canvas, bubbleAlpha)" in content
-    assert "bubbleGlassStrokePaint" in content
+    assert "drawBubbleBlurredBackground" in content
+    assert "blurBubblePaint" in content
+    assert "blurBitmapShader" in content
+    # Artificial 1dp stroke borders must NOT exist
+    assert "bubbleGlassStrokePaint" not in content
+    assert "drawBubbleGlassStroke" not in content
 
 
 def test_chat_activity_3d_scroll_implementation():
-    """Verify ChatActivity implements 3D cylindrical scroll in ChatListRecyclerView."""
+    """Verify ChatActivity implements cylindrical wheel 3D scroll with dynamic pivot and foreshortening."""
     ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
     with open(ca_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "update3dScroll()" in content
     assert "child.setRotationX(angle)" in content
+    assert "child.setScaleY(scaleY)" in content
+    assert "child.setTranslationY(transY)" in content
     assert "child.setCameraDistance(cameraDistance)" in content
     assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
+    assert "setBlurredWallpaperSource" in content
 
