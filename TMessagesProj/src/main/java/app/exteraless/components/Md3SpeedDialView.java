@@ -407,7 +407,6 @@ public class Md3SpeedDialView extends FrameLayout {
             storiesFab.animate().alpha(0f).scaleX(0.4f).scaleY(0.4f).setDuration(180).start();
         }
 
-        final boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         final int count = itemViews.size();
         for (int i = 0; i < count; i++) {
             final CapsuleItemView item = itemViews.get(i);
