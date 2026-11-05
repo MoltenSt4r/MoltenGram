@@ -5,6 +5,9 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.text.InputType;
+import android.text.TextUtils;
+import android.util.TypedValue;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.LinearLayout;
@@ -1136,9 +1139,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == mediaGroupCarouselRow) {
                         cell.setText(getString(R.string.media_group_carousel), "",
                                 AppearanceConfig.mediaGroupCarousel.Bool(), true, true);
-                    } else if (position == md3FabSpeedDialRow) {
-                        cell.setText(getString(R.string.OEAppearanceMd3SpeedDial), "",
-                                AppearanceConfig.md3FabSpeedDial(), true, true);
                     } else if (position == iosNavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceIosNavigationBarStyle), "",
                                 AppearanceConfig.iosNavigationBarStyle.Bool(), true, true);
