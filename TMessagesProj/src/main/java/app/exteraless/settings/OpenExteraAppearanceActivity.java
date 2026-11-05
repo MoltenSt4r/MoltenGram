@@ -1275,12 +1275,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValue("Размер основной кнопки FAB", AppearanceConfig.fabSize() + " dp", false);
                     } else if (position == fabColorRow) {
                         int col = AppearanceConfig.fabColor();
-                        cell.setTextAndValue("Цвет основной кнопки FAB", col == 0 ? "По умолчанию" : String.format("#%06X", (0xFFFFFF & col)), false);
+                        cell.setTextAndValue("Цвет основной кнопки FAB", app.exteraless.utils.UIUtil.getFabColorTitle(col), false);
                     } else if (position == subFabSizeRow) {
                         cell.setTextAndValue("Размер кнопки камеры FAB", AppearanceConfig.subFabSize() + " dp", false);
                     } else if (position == subFabColorRow) {
                         int col = AppearanceConfig.subFabColor();
-                        cell.setTextAndValue("Цвет кнопки камеры FAB", col == 0 ? "По умолчанию" : String.format("#%06X", (0xFFFFFF & col)), false);
+                        cell.setTextAndValue("Цвет кнопки камеры FAB", app.exteraless.utils.UIUtil.getFabColorTitle(col), false);
                     }
                     break;
                 }
@@ -1618,30 +1618,82 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     }
 
     private void showFabColorPicker(String title, tw.nekomimi.nekogram.config.ConfigItem item) {
+        if (getParentActivity() == null) return;
         final CharSequence[] options = new CharSequence[]{
             "По умолчанию (акцент темы)",
-            "Выбрать свой цвет..."
+            "Основной Monet (Primary)",
+            "Контейнер основного Monet (Primary Container)",
+            "Вторичный Monet (Secondary)",
+            "Контейнер вторичного Monet (Secondary Container)",
+            "Третичный Monet (Tertiary)",
+            "Контейнер третичного Monet (Tertiary Container)",
+            "Поверхность Monet (Surface)",
+            "Свой цвет (HEX)..."
+        };
+        final int[] values = new int[]{
+            app.exteraless.utils.UIUtil.FAB_COLOR_DEFAULT,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY_CONTAINER,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY_CONTAINER,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY_CONTAINER,
+            app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SURFACE
         };
         AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
         b.setTitle(title);
         b.setItems(options, (d, which) -> {
-            if (which == 0) {
-                item.setConfigInt(0);
+            if (which < values.length) {
+                item.setConfigInt(values[which]);
                 rebuildRowsAndNotify();
             } else {
-                int color = item.Int();
-                if (color == 0) {
-                    color = Theme.getColor(Theme.key_featuredStickers_addButton);
-                }
-                org.telegram.ui.Components.Paint.ColorPickerBottomSheet sheet = new org.telegram.ui.Components.Paint.ColorPickerBottomSheet(getContext(), getResourceProvider());
-                sheet.setColor(color);
-                sheet.setColorListener(newColor -> {
-                    item.setConfigInt(newColor);
-                    rebuildRowsAndNotify();
-                });
-                sheet.show();
+                showHexColorDialog(title, item);
             }
         });
+        b.setNegativeButton(getString(R.string.Cancel), null);
+        b.show();
+    }
+
+    private void showHexColorDialog(String title, tw.nekomimi.nekogram.config.ConfigItem item) {
+        if (getParentActivity() == null) return;
+        AlertDialog.Builder b = new AlertDialog.Builder(getParentActivity());
+        b.setTitle(title);
+
+        LinearLayout layout = new LinearLayout(getParentActivity());
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(AndroidUtilities.dp(20), AndroidUtilities.dp(12), AndroidUtilities.dp(20), AndroidUtilities.dp(8));
+
+        int curCol = item.Int();
+        String initialHex = curCol != 0 && curCol < 0 ? String.format("%06X", (0xFFFFFF & curCol)) : "6750A4";
+
+        final EditText input = new EditText(getParentActivity());
+        input.setText(initialHex);
+        input.setHint("RRGGBB (например: 6750A4)");
+        input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        input.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        input.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        bg.setCornerRadius(AndroidUtilities.dp(8));
+        input.setBackground(bg);
+        input.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(10), AndroidUtilities.dp(12), AndroidUtilities.dp(10));
+        layout.addView(input, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        b.setView(layout);
+        b.setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> {
+            String text = input.getText().toString().trim();
+            if (text.startsWith("#")) text = text.substring(1);
+            try {
+                long val = Long.parseLong(text, 16);
+                int parsed = (int) val;
+                if (text.length() <= 6) {
+                    parsed |= 0xFF000000;
+                }
+                item.setConfigInt(parsed);
+                rebuildRowsAndNotify();
+            } catch (Exception ignored) {}
+        });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
         b.show();
     }
 

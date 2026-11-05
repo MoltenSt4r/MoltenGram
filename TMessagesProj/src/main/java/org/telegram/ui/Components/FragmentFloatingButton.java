@@ -152,20 +152,23 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
     public void updateColors() {
         if (isSubButton) {
-            int iconCol = app.exteraless.appearance.AppearanceConfig.subFabIconColor();
-            if (iconCol == 0) {
-                iconCol = Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider);
-            }
+            int customBgCode = app.exteraless.appearance.AppearanceConfig.subFabColor();
+            int defBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+            int defIcon = Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider);
+            int customBg = app.exteraless.utils.UIUtil.resolveFabColor(customBgCode, 0);
+
+            int customIconCode = app.exteraless.appearance.AppearanceConfig.subFabIconColor();
+            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(customBgCode, customIconCode, defIcon);
+
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(iconCol);
 
-            int customBg = app.exteraless.appearance.AppearanceConfig.subFabColor();
-            if (customBg != 0) {
+            if (customBgCode != 0) {
                 int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
                 int pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
                 setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, customBg, pressedColor));
             } else {
-                iBlur3SourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                iBlur3SourceColor.setColor(defBg);
                 iBlur3ColorProviderTabs.updateColors();
                 iBlur3Background.updateColors();
                 invalidate();
@@ -175,33 +178,50 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
             }
         } else {
-            int iconCol = app.exteraless.appearance.AppearanceConfig.fabIconColor();
-            if (iconCol == 0) {
-                iconCol = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
-            }
+            int mainBgCode = app.exteraless.appearance.AppearanceConfig.fabColor();
+            int defBg = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+            int defIcon = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
+
+            int mainColor = app.exteraless.utils.UIUtil.resolveFabColor(mainBgCode, defBg);
+
+            int mainIconCode = app.exteraless.appearance.AppearanceConfig.fabIconColor();
+            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
+
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(iconCol);
 
-            int mainColor = app.exteraless.appearance.AppearanceConfig.fabColor();
             int pressedColor;
-            if (mainColor != 0) {
+            if (mainBgCode != 0) {
                 pressedColor = androidx.core.graphics.ColorUtils.blendARGB(mainColor, 0xFF000000, 0.15f);
             } else {
-                mainColor = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
                 pressedColor = Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider);
             }
             int size = app.exteraless.appearance.AppearanceConfig.fabSize();
             setBackground(app.exteraless.utils.UIUtil.createFabSelectorDrawable(size, mainColor, pressedColor));
+        }
+
+        // Synchronize layout params with updated size settings
+        int size = isSubButton ? app.exteraless.appearance.AppearanceConfig.subFabSize() : app.exteraless.appearance.AppearanceConfig.fabSize();
+        android.view.ViewGroup.LayoutParams lp = getLayoutParams();
+        if (lp instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
+            int curSize = dp(size);
+            if (flp.width != curSize || flp.height != curSize) {
+                FrameLayout.LayoutParams newLp = isSubButton ? createSubButtonLayoutParams() : createDefaultLayoutParams();
+                setLayoutParams(newLp);
+            }
         }
     }
 
     public static final int SIZE = 48;
 
     public static FrameLayout.LayoutParams createSubButtonLayoutParams() {
-        int size = app.exteraless.appearance.AppearanceConfig.subFabSize();
-        return LayoutHelper.createFrame(size, size,
+        int mainSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+        int subSize = app.exteraless.appearance.AppearanceConfig.subFabSize();
+        int horizontalOffset = 20 + Math.max(0, (mainSize - subSize) / 2);
+        return LayoutHelper.createFrame(subSize, subSize,
                 (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20, 0, 20, 14);
+                horizontalOffset, 0, horizontalOffset, 14);
     }
 
     public static FrameLayout.LayoutParams createDefaultLayoutParams() {

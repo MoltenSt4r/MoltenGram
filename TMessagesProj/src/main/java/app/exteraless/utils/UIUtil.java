@@ -53,6 +53,110 @@ public final class UIUtil {
         view.setStateListAnimator(animator);
     }
 
+    public static final int FAB_COLOR_DEFAULT = 0;
+    public static final int FAB_COLOR_MONET_PRIMARY = 1;
+    public static final int FAB_COLOR_MONET_PRIMARY_CONTAINER = 2;
+    public static final int FAB_COLOR_MONET_SECONDARY = 3;
+    public static final int FAB_COLOR_MONET_SECONDARY_CONTAINER = 4;
+    public static final int FAB_COLOR_MONET_TERTIARY = 5;
+    public static final int FAB_COLOR_MONET_TERTIARY_CONTAINER = 6;
+    public static final int FAB_COLOR_MONET_SURFACE = 7;
+
+    public static String getFabColorTitle(int col) {
+        switch (col) {
+            case FAB_COLOR_DEFAULT: return "По умолчанию";
+            case FAB_COLOR_MONET_PRIMARY: return "Основной Monet (Primary)";
+            case FAB_COLOR_MONET_PRIMARY_CONTAINER: return "Контейнер основного Monet";
+            case FAB_COLOR_MONET_SECONDARY: return "Вторичный Monet (Secondary)";
+            case FAB_COLOR_MONET_SECONDARY_CONTAINER: return "Контейнер вторичного Monet";
+            case FAB_COLOR_MONET_TERTIARY: return "Третичный Monet (Tertiary)";
+            case FAB_COLOR_MONET_TERTIARY_CONTAINER: return "Контейнер третичного Monet";
+            case FAB_COLOR_MONET_SURFACE: return "Поверхность Monet (Surface)";
+            default: return String.format("#%06X", (0xFFFFFF & col));
+        }
+    }
+
+    public static int resolveFabColor(int code, int defaultColor) {
+        switch (code) {
+            case FAB_COLOR_DEFAULT:
+                return defaultColor;
+            case FAB_COLOR_MONET_PRIMARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_PRIMARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary_container");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_SECONDARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_SECONDARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary_container");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_TERTIARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_TERTIARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary_container");
+                return c != null ? c : defaultColor;
+            }
+            case FAB_COLOR_MONET_SURFACE: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("surface_container_high");
+                if (c == null) c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("surface");
+                return c != null ? c : defaultColor;
+            }
+            default:
+                return code;
+        }
+    }
+
+    public static int resolveFabIconColor(int bgColCode, int iconColCode, int defaultIconColor) {
+        if (iconColCode != 0) {
+            return resolveFabColor(iconColCode, defaultIconColor);
+        }
+        switch (bgColCode) {
+            case FAB_COLOR_MONET_PRIMARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_primary");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_PRIMARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_primary_container");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_SECONDARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_secondary");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_SECONDARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_secondary_container");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_TERTIARY: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_tertiary");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_TERTIARY_CONTAINER: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_tertiary_container");
+                return c != null ? c : defaultIconColor;
+            }
+            case FAB_COLOR_MONET_SURFACE: {
+                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_surface");
+                return c != null ? c : defaultIconColor;
+            }
+            default: {
+                if (bgColCode < 0) {
+                    double lum = androidx.core.graphics.ColorUtils.calculateLuminance(bgColCode);
+                    return lum > 0.5 ? 0xFF000000 : 0xFFFFFFFF;
+                }
+                return defaultIconColor;
+            }
+        }
+    }
+
     /**
      * Фон плавающей кнопки. Апстрим всегда рисует круг
      * ({@code Theme.createSimpleSelectorCircleDrawable}); exteraGram при включённом

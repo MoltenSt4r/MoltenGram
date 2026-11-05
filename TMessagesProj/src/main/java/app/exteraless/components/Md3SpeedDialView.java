@@ -9,6 +9,7 @@ import android.graphics.Color;
 import android.graphics.Outline;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import android.os.Bundle;
 import android.text.TextUtils;
@@ -28,6 +29,8 @@ import android.widget.Toast;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
+
+import java.util.function.Consumer;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -117,11 +120,13 @@ public class Md3SpeedDialView extends FrameLayout {
     };
 
     public static final String[] ICON_CHOICES = new String[]{
-        "lightning", "link", "settings", "code", "bot", "message", "channel", "group", "saved", "search", "theme", "download", "camera", "secret", "share"
-    };
-
-    public static final String[] ICON_LABELS = new String[]{
-        "Молния / Действие", "Ссылка", "Настройки", "Код / Скрипт", "Бот", "Сообщение", "Канал", "Группа", "Избранное", "Поиск", "Тема / Оформление", "Загрузка", "Камера", "Секретный", "Поделиться"
+        "lightning", "message", "channel", "group", "secret", "settings",
+        "theme", "link", "bot", "saved", "search", "download",
+        "story", "camera", "share", "calls", "media", "location",
+        "pin", "archive", "send", "contacts", "help", "info",
+        "customize", "code", "stats", "copy", "edit", "language",
+        "profile", "notifications", "folders", "favorite", "emoji", "gift",
+        "music", "star"
     };
 
     public static int getIconResByName(String iconName) {
@@ -130,16 +135,38 @@ public class Md3SpeedDialView extends FrameLayout {
         if ("link".equals(iconName)) return R.drawable.msg_link;
         if ("code".equals(iconName) || "script".equals(iconName)) return R.drawable.msg_permissions;
         if ("bot".equals(iconName)) return R.drawable.msg_bot;
-        if ("message".equals(iconName)) return R.drawable.msg_message;
+        if ("message".equals(iconName) || "chat".equals(iconName)) return R.drawable.msg_message;
         if ("channel".equals(iconName)) return R.drawable.msg_channel;
         if ("group".equals(iconName)) return R.drawable.msg_groups;
         if ("saved".equals(iconName)) return R.drawable.msg_saved;
         if ("search".equals(iconName)) return R.drawable.msg_search;
-        if ("theme".equals(iconName) || "brush".equals(iconName)) return R.drawable.msg_theme;
+        if ("theme".equals(iconName) || "brush".equals(iconName) || "palette".equals(iconName)) return R.drawable.msg_theme;
         if ("download".equals(iconName)) return R.drawable.msg_download;
-        if ("camera".equals(iconName)) return R.drawable.outline_fab_story_24;
-        if ("secret".equals(iconName)) return R.drawable.msg_secret;
+        if ("story".equals(iconName)) return R.drawable.outline_fab_story_24;
+        if ("camera".equals(iconName)) return R.drawable.msg_camera;
+        if ("secret".equals(iconName) || "lock".equals(iconName)) return R.drawable.msg_secret;
         if ("share".equals(iconName)) return R.drawable.msg_share;
+        if ("calls".equals(iconName) || "call".equals(iconName) || "phone".equals(iconName)) return R.drawable.msg_calls;
+        if ("media".equals(iconName) || "gallery".equals(iconName)) return R.drawable.msg_media;
+        if ("location".equals(iconName) || "map".equals(iconName)) return R.drawable.msg_location;
+        if ("pin".equals(iconName)) return R.drawable.msg_pin;
+        if ("archive".equals(iconName)) return R.drawable.msg_archive;
+        if ("send".equals(iconName)) return R.drawable.msg_send;
+        if ("contacts".equals(iconName) || "user".equals(iconName)) return R.drawable.msg_contacts;
+        if ("help".equals(iconName)) return R.drawable.msg_help;
+        if ("info".equals(iconName)) return R.drawable.msg_info;
+        if ("stats".equals(iconName) || "chart".equals(iconName)) return R.drawable.msg_stats;
+        if ("copy".equals(iconName)) return R.drawable.msg_copy;
+        if ("edit".equals(iconName) || "pen".equals(iconName)) return R.drawable.msg_edit;
+        if ("language".equals(iconName) || "globe".equals(iconName)) return R.drawable.msg_language;
+        if ("profile".equals(iconName)) return R.drawable.msg_openprofile;
+        if ("notifications".equals(iconName) || "bell".equals(iconName)) return R.drawable.msg_notifications;
+        if ("folders".equals(iconName) || "folder".equals(iconName)) return R.drawable.msg_folders;
+        if ("favorite".equals(iconName) || "fave".equals(iconName) || "heart".equals(iconName)) return R.drawable.msg_fave;
+        if ("emoji".equals(iconName) || "smile".equals(iconName)) return R.drawable.msg_emoji_smiles;
+        if ("gift".equals(iconName)) return R.drawable.msg_gift_premium;
+        if ("music".equals(iconName)) return R.drawable.bot_music;
+        if ("star".equals(iconName)) return R.drawable.baseline_star_24;
         return R.drawable.msg_instant;
     }
 
@@ -532,7 +559,7 @@ public class Md3SpeedDialView extends FrameLayout {
 
             cells[i] = new CheckBoxCell(context, 1);
             cells[i].setBackground(Theme.getSelectorDrawable(false));
-            cells[i].setText(action.getTitle(), action.isCustom() ? "(" + action.actionType + ")" : "", checked, true);
+            cells[i].setText(action.getTitle(), action.isCustom() ? "(" + action.actionType + ")" : "", checked, false);
             final int index = i;
             cells[i].setOnClickListener(v -> cells[index].setChecked(!cells[index].isChecked(), true));
 
@@ -594,6 +621,70 @@ public class Md3SpeedDialView extends FrameLayout {
         builder.show();
     }
 
+    public static void showIconPickerGrid(Context context, String selectedIconName, Consumer<String> onSelected) {
+        if (context == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle("Выберите иконку");
+
+        ScrollView scrollView = new ScrollView(context);
+        LinearLayout gridLayout = new LinearLayout(context);
+        gridLayout.setOrientation(LinearLayout.VERTICAL);
+        gridLayout.setPadding(dp(16), dp(12), dp(16), dp(12));
+
+        final int columns = 5;
+        final int cellPad = dp(5);
+        final int iconSize = dp(46);
+
+        LinearLayout currentRow = null;
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+
+        for (int i = 0; i < ICON_CHOICES.length; i++) {
+            if (i % columns == 0) {
+                currentRow = new LinearLayout(context);
+                currentRow.setOrientation(LinearLayout.HORIZONTAL);
+                currentRow.setGravity(Gravity.CENTER_HORIZONTAL);
+                gridLayout.addView(currentRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+            }
+
+            final String iconName = ICON_CHOICES[i];
+            final int resId = getIconResByName(iconName);
+            final boolean isSelected = iconName.equals(selectedIconName);
+
+            FrameLayout cell = new FrameLayout(context);
+            GradientDrawable cellBg = new GradientDrawable();
+            cellBg.setCornerRadius(dp(12));
+            if (isSelected) {
+                cellBg.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+            } else {
+                cellBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+            }
+            cell.setBackground(cellBg);
+
+            ImageView iv = new ImageView(context);
+            iv.setImageResource(resId);
+            iv.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
+            iv.setColorFilter(isSelected ? 0xFFFFFFFF : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), PorterDuff.Mode.SRC_IN);
+            cell.addView(iv, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER, 8, 8, 8, 8));
+
+            cell.setOnClickListener(v -> {
+                if (onSelected != null) {
+                    onSelected.accept(iconName);
+                }
+                if (dialogRef[0] != null) {
+                    dialogRef[0].dismiss();
+                }
+            });
+
+            currentRow.addView(cell, LayoutHelper.createLinear(iconSize, iconSize, 0, cellPad, 0, cellPad, 0));
+        }
+
+        scrollView.addView(gridLayout);
+        builder.setView(scrollView);
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        dialogRef[0] = builder.create();
+        dialogRef[0].show();
+    }
+
     public static void showAddCustomActionDialog(Context context, @Nullable Runnable onDone) {
         if (context == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(context);
@@ -601,20 +692,35 @@ public class Md3SpeedDialView extends FrameLayout {
 
         LinearLayout container = new LinearLayout(context);
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(dp(20), dp(10), dp(20), dp(10));
+        container.setPadding(dp(20), dp(14), dp(20), dp(12));
+
+        // 1. Title
+        TextView titleLabel = new TextView(context);
+        titleLabel.setText("Название пункта:");
+        titleLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        titleLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        titleLabel.setTypeface(AndroidUtilities.bold());
+        container.addView(titleLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
 
         final EditText titleEdit = new EditText(context);
-        titleEdit.setHint("Название (например: Настройки, Поддержка)");
-        titleEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        titleEdit.setHint("Например: Настройки, Поддержка");
+        titleEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         titleEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         titleEdit.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        container.addView(titleEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+        GradientDrawable titleBg = new GradientDrawable();
+        titleBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        titleBg.setCornerRadius(dp(8));
+        titleEdit.setBackground(titleBg);
+        titleEdit.setPadding(dp(12), dp(10), dp(12), dp(10));
+        container.addView(titleEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
-        final TextView typeTitle = new TextView(context);
-        typeTitle.setText("Тип действия:");
-        typeTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        typeTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        container.addView(typeTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 4));
+        // 2. Type selector
+        TextView typeLabel = new TextView(context);
+        typeLabel.setText("Тип действия:");
+        typeLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        typeLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        typeLabel.setTypeface(AndroidUtilities.bold());
+        container.addView(typeLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
 
         final String[] types = new String[]{"deeplink", "chat", "setting", "plugin"};
         final String[] typeLabels = new String[]{"Ссылка / URL (tg://, https://)", "Чат / Канал (@username или ID)", "Настройки MoltenGram", "Функция / Команда плагина"};
@@ -622,9 +728,13 @@ public class Md3SpeedDialView extends FrameLayout {
 
         final TextView typeSelector = new TextView(context);
         typeSelector.setText(typeLabels[0]);
-        typeSelector.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        typeSelector.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
-        typeSelector.setPadding(0, dp(4), 0, dp(8));
+        typeSelector.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        typeSelector.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        GradientDrawable typeBg = new GradientDrawable();
+        typeBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        typeBg.setCornerRadius(dp(8));
+        typeSelector.setBackground(typeBg);
+        typeSelector.setPadding(dp(12), dp(10), dp(12), dp(10));
         typeSelector.setOnClickListener(v -> {
             AlertDialog.Builder typeBuilder = new AlertDialog.Builder(context);
             typeBuilder.setTitle("Выберите тип действия");
@@ -634,37 +744,65 @@ public class Md3SpeedDialView extends FrameLayout {
             });
             typeBuilder.show();
         });
-        container.addView(typeSelector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+        container.addView(typeSelector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+
+        // 3. Target value
+        TextView targetLabel = new TextView(context);
+        targetLabel.setText("Значение действия:");
+        targetLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        targetLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        targetLabel.setTypeface(AndroidUtilities.bold());
+        container.addView(targetLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
 
         final EditText targetEdit = new EditText(context);
-        targetEdit.setHint("Значение (URL, @username, команда, раздел)");
-        targetEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        targetEdit.setHint("URL, @username, id, раздел настроек");
+        targetEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         targetEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
         targetEdit.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        container.addView(targetEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+        GradientDrawable targetBg = new GradientDrawable();
+        targetBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        targetBg.setCornerRadius(dp(8));
+        targetEdit.setBackground(targetBg);
+        targetEdit.setPadding(dp(12), dp(10), dp(12), dp(10));
+        container.addView(targetEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
-        final TextView iconTitle = new TextView(context);
-        iconTitle.setText("Иконка пункта:");
-        iconTitle.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        iconTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        container.addView(iconTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 4));
+        // 4. Visual icon selector preview
+        TextView iconLabel = new TextView(context);
+        iconLabel.setText("Иконка кнопки:");
+        iconLabel.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        iconLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        iconLabel.setTypeface(AndroidUtilities.bold());
+        container.addView(iconLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
 
-        final int[] selectedIcon = new int[]{0};
-        final TextView iconSelector = new TextView(context);
-        iconSelector.setText(ICON_LABELS[0]);
-        iconSelector.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        iconSelector.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
-        iconSelector.setPadding(0, dp(4), 0, dp(8));
-        iconSelector.setOnClickListener(v -> {
-            AlertDialog.Builder iconBuilder = new AlertDialog.Builder(context);
-            iconBuilder.setTitle("Выберите иконку");
-            iconBuilder.setItems(ICON_LABELS, (d, which) -> {
-                selectedIcon[0] = which;
-                iconSelector.setText(ICON_LABELS[which]);
+        final String[] selectedIcon = new String[]{ICON_CHOICES[0]};
+
+        LinearLayout iconRow = new LinearLayout(context);
+        iconRow.setOrientation(LinearLayout.HORIZONTAL);
+        iconRow.setGravity(Gravity.CENTER_VERTICAL);
+        GradientDrawable iconRowBg = new GradientDrawable();
+        iconRowBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        iconRowBg.setCornerRadius(dp(8));
+        iconRow.setBackground(iconRowBg);
+        iconRow.setPadding(dp(12), dp(8), dp(12), dp(8));
+
+        final ImageView iconPreview = new ImageView(context);
+        iconPreview.setImageResource(getIconResByName(selectedIcon[0]));
+        iconPreview.setColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN);
+        iconRow.addView(iconPreview, LayoutHelper.createLinear(28, 28, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+
+        TextView iconPrompt = new TextView(context);
+        iconPrompt.setText("Выбрать иконку из галереи...");
+        iconPrompt.setTextColor(Theme.getColor(Theme.key_dialogTextLink));
+        iconPrompt.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        iconRow.addView(iconPrompt, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+        iconRow.setOnClickListener(v -> {
+            showIconPickerGrid(context, selectedIcon[0], chosen -> {
+                selectedIcon[0] = chosen;
+                iconPreview.setImageResource(getIconResByName(chosen));
             });
-            iconBuilder.show();
         });
-        container.addView(iconSelector, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+        container.addView(iconRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
 
         builder.setView(container);
         builder.setPositiveButton("Добавить", (dialog, which) -> {
@@ -674,7 +812,7 @@ public class Md3SpeedDialView extends FrameLayout {
                 title = "Действие";
             }
             String type = types[selectedType[0]];
-            String icon = ICON_CHOICES[selectedIcon[0]];
+            String icon = selectedIcon[0];
             String id = "custom_" + System.currentTimeMillis();
 
             List<SpeedDialAction> customList = getCustomActions();
