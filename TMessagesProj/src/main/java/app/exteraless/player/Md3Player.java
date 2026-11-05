@@ -32,7 +32,10 @@ public final class Md3Player {
     public static BottomSheet create(Context context, Theme.ResourcesProvider resourcesProvider) {
         if (handles(MediaController.getInstance().getPlayingMessageObject())) {
             if (PlayerSheet.instance != null) {
-                PlayerSheet.instance.dismissImmediately();
+                try {
+                    PlayerSheet.instance.dismissImmediately();
+                } catch (Throwable ignored) {}
+                PlayerSheet.instance = null;
             }
             return new PlayerSheet(context, resourcesProvider);
         }

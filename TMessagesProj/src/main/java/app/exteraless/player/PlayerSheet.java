@@ -626,7 +626,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     public void dismissImmediately() {
         skipMorph = true;
-        dismiss();
+        try {
+            dismiss();
+        } catch (Throwable ignored) {}
     }
 
     @Override
@@ -1118,9 +1120,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (smallCover != null) {
             smallCover.release();
         }
-        if (getWindow() != null) {
-            getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
-        }
+        try {
+            if (getWindow() != null && isShowing()) {
+                getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+            }
+        } catch (Throwable ignored) {}
         if (instance == this) {
             instance = null;
         }
@@ -1893,13 +1897,15 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         lyricsMode = value;
-        if (getWindow() != null) {
-            if (value && app.exteraless.appearance.AppearanceConfig.playerLyricsHideStatusBar()) {
-                getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
-            } else {
-                getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+        try {
+            if (getWindow() != null && isShowing()) {
+                if (value && app.exteraless.appearance.AppearanceConfig.playerLyricsHideStatusBar()) {
+                    getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                } else {
+                    getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                }
             }
-        }
+        } catch (Throwable ignored) {}
         lyricsButton.setActive(value, animated);
         lyricsButton.setRadius(dp(value ? 26 : 8), animated);
         if (value) {
@@ -2426,10 +2432,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     }
 
     private void setBars(boolean lightStatus, boolean lightNav) {
-        if (getWindow() != null) {
-            AndroidUtilities.setLightStatusBar(getWindow(), lightStatus);
-            AndroidUtilities.setLightNavigationBar(this, lightNav);
-        }
+        try {
+            if (getWindow() != null && isShowing()) {
+                AndroidUtilities.setLightStatusBar(getWindow(), lightStatus);
+                AndroidUtilities.setLightNavigationBar(this, lightNav);
+            }
+        } catch (Throwable ignored) {}
         if (Build.VERSION.SDK_INT >= 26) {
             AndroidUtilities.setLightStatusBar(container, lightStatus);
             AndroidUtilities.setLightNavigationBar(container, lightNav);

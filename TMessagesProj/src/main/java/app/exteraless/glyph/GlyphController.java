@@ -519,7 +519,10 @@ public final class GlyphController {
      * и/или запускает свечение глифов при записи видео.
      */
     public void onVideoRecordingStarted() {
-        final boolean wantGlyph = GlyphConfig.enabled() && GlyphConfig.onVideoRecording();
+        if (!GlyphConfig.enabled()) {
+            return;
+        }
+        final boolean wantGlyph = GlyphConfig.onVideoRecording();
         final boolean wantRedLed = GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported();
         if (!wantGlyph && !wantRedLed) {
             return;
@@ -542,10 +545,8 @@ public final class GlyphController {
     public void onVideoRecordingStopped() {
         handler.post(() -> {
             videoRecordingActive = false;
-            if (redIndicatorActive) {
-                redIndicatorActive = false;
-                setRedRecordingIndicatorHardware(false);
-            }
+            redIndicatorActive = false;
+            setRedRecordingIndicatorHardware(false);
             updateGlyphActivity();
         });
     }
@@ -785,6 +786,7 @@ public final class GlyphController {
             return;
         }
         boolean enableRedLight = recordingVideo
+                && GlyphConfig.enabled()
                 && GlyphConfig.redRecordingIndicator()
                 && isRedIndicatorSupported();
         boolean applied = false;
