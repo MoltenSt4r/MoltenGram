@@ -546,7 +546,7 @@ public class MoltenGramOtaManager {
         if (TextUtils.isEmpty(text)) {
             return 0;
         }
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,9})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,10})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -561,7 +561,7 @@ public class MoltenGramOtaManager {
         }
         try {
             PackageManager pm = context.getPackageManager();
-            android.content.pm.PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_ACTIVITIES);
+            android.content.pm.PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), 0);
             return info != null && !TextUtils.isEmpty(info.packageName);
         } catch (Throwable t) {
             FileLog.e("Failed to verify apk archive: " + apkFile, t);
