@@ -1026,11 +1026,15 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
             // Interpolate size
             float currentSizeDp = fromSizeDp + (targetSizeDp - fromSizeDp) * shapeMorphProgress;
-            // Map 36..96 dp to preview px (e.g. 60dp .. 118dp)
+            float maxPreviewPx = AndroidUtilities.dp(Math.max(48f, Math.min(110f, Math.max(fromSizeDp, targetSizeDp) * 1.15f)));
             float scaledPx = AndroidUtilities.dp(Math.max(48f, Math.min(110f, currentSizeDp * 1.15f)));
 
-            float left = (w - scaledPx) / 2f;
-            float top = (h - scaledPx) / 2f;
+            boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
+            float baseLeft = (w - maxPreviewPx) / 2f;
+            float baseTop = (h - maxPreviewPx) / 2f;
+
+            float left = isLeft ? baseLeft : baseLeft + (maxPreviewPx - scaledPx);
+            float top = baseTop;
 
             Path path;
             if (shapeMorphProgress >= 1f || fromShapeId == targetShapeId) {
@@ -1052,9 +1056,9 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             // Draw Icon with high-contrast onAccent color
             if (iconDrawable != null) {
                 int iconPx = (int) (scaledPx * 0.44f);
-                int cx = w / 2;
-                int cy = h / 2;
-                iconDrawable.setBounds(cx - iconPx / 2, cy - iconPx / 2, cx + iconPx / 2, cy + iconPx / 2);
+                float cx = left + scaledPx / 2f;
+                float cy = top + scaledPx / 2f;
+                iconDrawable.setBounds((int) (cx - iconPx / 2f), (int) (cy - iconPx / 2f), (int) (cx + iconPx / 2f), (int) (cy + iconPx / 2f));
 
                 int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(curCol);
                 iconDrawable.setColorFilter(new PorterDuffColorFilter(onAccent, PorterDuff.Mode.SRC_IN));

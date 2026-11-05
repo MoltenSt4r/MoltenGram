@@ -302,6 +302,13 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         final int startColor = fabBgPaint.getColor() != 0 ? fabBgPaint.getColor() : targetColor;
 
         int curShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        final int restingSizePx = dp(app.exteraless.appearance.AppearanceConfig.fabSize());
+        final int startSize = getLayoutParams() != null && getLayoutParams().width > 0 ? getLayoutParams().width : restingSizePx;
+        final int endSize = dp(targetSizeDp);
+
+        final float startShiftY = activeTranslationY;
+        final float targetShiftY = endSize < restingSizePx ? -(restingSizePx - endSize) : 0f;
+
         if (!animated) {
             if (shapeMorphAnimator != null) {
                 shapeMorphAnimator.cancel();
@@ -315,11 +322,12 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
             imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
             applyFabSize(targetSizeDp);
+            setActiveTranslationY(targetShiftY);
             invalidate();
             return;
         }
 
-        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor) {
+        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && startSize == endSize && activeTranslationY == targetShiftY) {
             applyFabSize(targetSizeDp);
             return;
         }
@@ -333,9 +341,6 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         currentShapeId = targetShape;
         shapeMorphProgress = 0f;
 
-        final int startSize = getLayoutParams() != null && getLayoutParams().width > 0 ? getLayoutParams().width : dp(app.exteraless.appearance.AppearanceConfig.fabSize());
-        final int endSize = dp(targetSizeDp);
-
         shapeMorphAnimator = ValueAnimator.ofFloat(0f, 1f);
         shapeMorphAnimator.setDuration(260);
         shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
@@ -344,6 +349,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             if (startSize != endSize) {
                 int curSize = (int) (startSize + (endSize - startSize) * shapeMorphProgress);
                 applyFabDimension(curSize);
+            }
+            if (startShiftY != targetShiftY) {
+                setActiveTranslationY(startShiftY + (targetShiftY - startShiftY) * shapeMorphProgress);
             }
             if (startColor != targetColor) {
                 int blended = androidx.core.graphics.ColorUtils.blendARGB(startColor, targetColor, shapeMorphProgress);
@@ -363,6 +371,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
                 imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
                 applyFabSize(targetSizeDp);
+                setActiveTranslationY(targetShiftY);
                 invalidate();
             }
         });
@@ -411,16 +420,28 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
 
+    private float activeTranslationY;
     private float additionalTranslationY;
     private float internalTranslationY;
     private boolean setTranslationInternal;
 
+    private void updateCombinedTranslationY() {
+        setTranslationInternal = true;
+        super.setTranslationY(internalTranslationY + additionalTranslationY + activeTranslationY);
+        setTranslationInternal = false;
+    }
+
+    public void setActiveTranslationY(float translationY) {
+        if (activeTranslationY != translationY) {
+            activeTranslationY = translationY;
+            updateCombinedTranslationY();
+        }
+    }
+
     private void setAdditionalTranslationY(float translationY) {
         if (additionalTranslationY != translationY) {
-            setTranslationInternal = true;
-            super.setTranslationY(internalTranslationY + translationY);
-            setTranslationInternal = false;
             additionalTranslationY = translationY;
+            updateCombinedTranslationY();
         }
     }
 
@@ -443,10 +464,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     @Override
     public void setTranslationY(float translationY) {
         if (internalTranslationY != translationY) {
-            setTranslationInternal = true;
-            super.setTranslationY(translationY + additionalTranslationY);
-            setTranslationInternal = false;
             internalTranslationY = translationY;
+            updateCombinedTranslationY();
         }
     }
 

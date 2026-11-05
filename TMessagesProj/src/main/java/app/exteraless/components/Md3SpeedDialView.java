@@ -312,7 +312,7 @@ public class Md3SpeedDialView extends FrameLayout {
         itemsContainer.setClipChildren(false);
         itemsContainer.setClipToPadding(false);
         addView(itemsContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
-                (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 16 : 0, 0, isLeft ? 0 : 16, 70));
+                (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 70));
 
         setVisibility(GONE);
         rebuildItems();
@@ -331,8 +331,8 @@ public class Md3SpeedDialView extends FrameLayout {
         FrameLayout.LayoutParams containerLp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
         if (containerLp != null) {
             containerLp.gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
-            containerLp.leftMargin = isLeft ? dp(16) : 0;
-            containerLp.rightMargin = isLeft ? 0 : dp(16);
+            containerLp.leftMargin = isLeft ? dp(20) : 0;
+            containerLp.rightMargin = isLeft ? 0 : dp(20);
             itemsContainer.setLayoutParams(containerLp);
         }
 
@@ -382,18 +382,16 @@ public class Md3SpeedDialView extends FrameLayout {
 
         rebuildItems();
 
+        final boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         int activeSize = AppearanceConfig.fabActiveSize();
-        int bottomMargin = dp(14 + activeSize + 12);
-        if (mainFab != null) {
-            float fabY = mainFab.getY();
-            float containerH = getHeight() > 0 ? getHeight() : (activity != null && activity.getFragmentView() != null ? activity.getFragmentView().getHeight() : 0);
-            if (containerH > fabY && fabY > 0) {
-                bottomMargin = Math.max(bottomMargin, (int) (containerH - fabY + dp(12)));
-            }
-        }
+        int restingSize = AppearanceConfig.fabSize();
+        int topSize = Math.max(activeSize, restingSize);
+        int bottomMargin = dp(14 + topSize + 10);
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
         if (lp != null) {
             lp.bottomMargin = bottomMargin;
+            lp.leftMargin = isLeft ? dp(20) : 0;
+            lp.rightMargin = isLeft ? 0 : dp(20);
             itemsContainer.setLayoutParams(lp);
         }
 
