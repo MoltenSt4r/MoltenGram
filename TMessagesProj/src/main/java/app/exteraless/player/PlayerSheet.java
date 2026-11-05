@@ -1394,17 +1394,17 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         root.setOrientation(LinearLayout.VERTICAL);
         root.setPadding(dp(22), dp(20), dp(22), dp(18));
 
-        int dialogBgColor = Theme.getColor(Theme.key_dialogBackground);
-        int textColor = Theme.getColor(Theme.key_dialogTextBlack);
-        int subtextColor = Theme.getColor(Theme.key_dialogTextGray2);
-        final int accent = Theme.getColor(Theme.key_featuredStickers_addButton) != 0 ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0xff00d2b4;
-        final int contrastOnAccent = AndroidUtilities.computePerceivedBrightness(accent) > 0.7f ? 0xff101010 : 0xffffffff;
-        final int chipBgUnselected = Theme.multAlpha(textColor, 0.08f);
+        int dialogBgColor = colors != null ? colors.surfaceContainer : Theme.getColor(Theme.key_dialogBackground);
+        int textColor = colors != null ? colors.onSurface : Theme.getColor(Theme.key_dialogTextBlack);
+        int subtextColor = colors != null ? colors.onSurfaceVariant : Theme.getColor(Theme.key_dialogTextGray2);
+        final int accent = colors != null ? colors.primary : (Theme.getColor(Theme.key_featuredStickers_addButton) != 0 ? Theme.getColor(Theme.key_featuredStickers_addButton) : 0xff00d2b4);
+        final int contrastOnAccent = colors != null ? colors.onPrimary : (AndroidUtilities.computePerceivedBrightness(accent) > 0.7f ? 0xff101010 : 0xffffffff);
+        final int chipBgUnselected = colors != null ? ColorUtils.blendARGB(colors.surfaceContainer, colors.onSurface, 0.08f) : Theme.multAlpha(textColor, 0.08f);
+        final int sliderInactive = colors != null ? ColorUtils.blendARGB(colors.surfaceContainer, colors.onSurface, 0.16f) : Theme.multAlpha(textColor, 0.14f);
 
         GradientDrawable bg = new GradientDrawable();
         bg.setCornerRadius(dp(28));
         bg.setColor(dialogBgColor);
-        bg.setStroke(dp(1), Theme.multAlpha(textColor, 0.08f));
         root.setBackground(bg);
 
         // Header: Title with Ndot/header typeface
@@ -1444,7 +1444,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         DecimalFormat speedFormat = new DecimalFormat("0.##", DecimalFormatSymbols.getInstance(currentLocale()));
         speedBadge.setText(speedFormat.format(currentSpeed) + "×");
 
-        Material3Slider speedBar = new Material3Slider(ctx, accent, minSpeed, maxSpeed, 0.05f, 1.0f);
+        Material3Slider speedBar = new Material3Slider(ctx, accent, sliderInactive, minSpeed, maxSpeed, 0.05f, 1.0f);
         speedBar.setValue(currentSpeed);
         root.addView(speedBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 0, 4, 0, 6));
 
@@ -1461,16 +1461,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             float cur = speedBar.getValue();
             for (int i = 0; i < speedPresetValues.length; i++) {
                 boolean selected = Math.abs(cur - speedPresetValues[i]) < 0.02f;
-                GradientDrawable chipBg = new GradientDrawable();
-                chipBg.setCornerRadius(dp(14));
-                if (selected) {
-                    chipBg.setColor(accent);
-                    speedChipViews[i].setTextColor(contrastOnAccent);
-                } else {
-                    chipBg.setColor(chipBgUnselected);
-                    speedChipViews[i].setTextColor(textColor);
-                }
-                speedChipViews[i].setBackground(chipBg);
+                int chipBgColor = selected ? accent : chipBgUnselected;
+                int chipTextColor = selected ? contrastOnAccent : textColor;
+                speedChipViews[i].setTextColor(chipTextColor);
+                speedChipViews[i].setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(14), chipBgColor, Theme.multAlpha(selected ? contrastOnAccent : textColor, 0.15f)));
             }
         };
 
@@ -1506,10 +1500,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         updateSpeedChips.run();
         root.addView(speedPresets);
 
-        // Divider between Speed and Pitch
-        View divider = new View(ctx);
-        divider.setBackgroundColor(Theme.multAlpha(textColor, 0.08f));
-        root.addView(divider, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 1, 0, 0, 0, dp(14)));
+        // Spacing between Speed and Pitch
+        View spacer = new View(ctx);
+        root.addView(spacer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 8));
 
         // --- PITCH SECTION ---
         LinearLayout pitchHeader = new LinearLayout(ctx);
@@ -1539,7 +1532,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             currentSemitones = Math.max(minSemitones, Math.min(maxSemitones, Math.round(currentSemitones)));
         }
 
-        Material3Slider pitchBar = new Material3Slider(ctx, accent, minSemitones, maxSemitones, 1.0f, 0.0f);
+        Material3Slider pitchBar = new Material3Slider(ctx, accent, sliderInactive, minSemitones, maxSemitones, 1.0f, 0.0f);
         pitchBar.setValue(currentSemitones);
         root.addView(pitchBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 0, 4, 0, 6));
 
@@ -1563,16 +1556,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             }
             for (int i = 0; i < pitchPresetValues.length; i++) {
                 boolean selected = Math.abs(val - pitchPresetValues[i]) < 0.2f;
-                GradientDrawable chipBg = new GradientDrawable();
-                chipBg.setCornerRadius(dp(14));
-                if (selected) {
-                    chipBg.setColor(accent);
-                    pitchChipViews[i].setTextColor(contrastOnAccent);
-                } else {
-                    chipBg.setColor(chipBgUnselected);
-                    pitchChipViews[i].setTextColor(textColor);
-                }
-                pitchChipViews[i].setBackground(chipBg);
+                int chipBgColor = selected ? accent : chipBgUnselected;
+                int chipTextColor = selected ? contrastOnAccent : textColor;
+                pitchChipViews[i].setTextColor(chipTextColor);
+                pitchChipViews[i].setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(14), chipBgColor, Theme.multAlpha(selected ? contrastOnAccent : textColor, 0.15f)));
             }
         };
 
@@ -1619,7 +1606,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         resetBtn.setText(getString(R.string.OEPlayerPitchResetAll));
         resetBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         resetBtn.setTextColor(subtextColor);
-        resetBtn.setPadding(dp(8), dp(8), dp(8), dp(8));
+        resetBtn.setPadding(dp(12), dp(8), dp(12), dp(8));
+        resetBtn.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(8), 0, Theme.multAlpha(textColor, 0.10f)));
         resetBtn.setOnClickListener(v -> {
             speedBar.setValue(1.0f);
             speedBadge.setText("1×");
@@ -1639,7 +1627,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         doneBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         doneBtn.setTypeface(AndroidUtilities.bold());
         doneBtn.setTextColor(accent);
-        doneBtn.setPadding(dp(12), dp(8), dp(8), dp(8));
+        doneBtn.setPadding(dp(16), dp(8), dp(16), dp(8));
+        doneBtn.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(8), 0, Theme.multAlpha(accent, 0.16f)));
         doneBtn.setOnClickListener(v -> dialog.dismiss());
         buttons.addView(doneBtn, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
 
@@ -1648,7 +1637,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         dialog.setContentView(root);
         if (dialog.getWindow() != null) {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(36), dp(380));
+            dialog.getWindow().setDimAmount(0.6f);
+            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(40), dp(360));
             dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
         dialog.show();
@@ -1672,7 +1662,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             void onValueChanged(float value, boolean fromUser);
         }
 
-        public Material3Slider(Context context, int accentColor, float min, float max, float step, float snapCenter) {
+        public Material3Slider(Context context, int accentColor, int inactiveColor, float min, float max, float step, float snapCenter) {
             super(context);
             this.min = min;
             this.max = max;
@@ -1681,7 +1671,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             this.value = snapCenter;
             activePaint.setColor(accentColor);
             thumbPaint.setColor(accentColor);
-            inactivePaint.setColor(Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack), 0.14f));
+            inactivePaint.setColor(inactiveColor);
+        }
+
+        public Material3Slider(Context context, int accentColor, float min, float max, float step, float snapCenter) {
+            this(context, accentColor, Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack), 0.14f), min, max, step, snapCenter);
         }
 
         public void setValue(float v) {

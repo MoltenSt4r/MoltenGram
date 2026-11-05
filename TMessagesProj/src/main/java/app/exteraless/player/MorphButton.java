@@ -31,6 +31,8 @@ public class MorphButton extends android.view.View {
     private final Spring alt = new Spring(0, 520f, 0.6f, 0.002f);
     private final Spring active = new Spring(0, 600f, 1f, 0.002f);
     private final Spring badge = new Spring(0, 600f, 1f, 0.002f);
+    private final Spring pressScale = new Spring(1f, 650f, 0.7f, 0.002f);
+    private final Spring pressAlpha = new Spring(0f, 650f, 0.8f, 0.002f);
     private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint badgePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -150,8 +152,13 @@ public class MorphButton extends android.view.View {
     public void setPressed(boolean pressed) {
         boolean changed = pressed != isPressed();
         super.setPressed(pressed);
-        if (changed && pressListener != null) {
-            pressListener.onPressChanged(this, pressed);
+        if (changed) {
+            pressScale.target = pressed ? 0.93f : 1.0f;
+            pressAlpha.target = pressed ? 1.0f : 0.0f;
+            invalidate();
+            if (pressListener != null) {
+                pressListener.onPressChanged(this, pressed);
+            }
         }
     }
 
@@ -172,9 +179,16 @@ public class MorphButton extends android.view.View {
         animating |= alt.step(dt);
         animating |= active.step(dt);
         animating |= badge.step(dt);
+        animating |= pressScale.step(dt);
+        animating |= pressAlpha.step(dt);
 
         float w = getWidth();
         float h = getHeight();
+
+        canvas.save();
+        float pScale = pressScale.value;
+        canvas.scale(pScale, pScale, w / 2f, h / 2f);
+
         float a = Math.max(0f, Math.min(1f, active.value));
         int bg = ColorUtils.blendARGB(bgColor, activeBgColor, a);
         int fg = ColorUtils.blendARGB(fgColor, activeFgColor, a);
@@ -188,6 +202,13 @@ public class MorphButton extends android.view.View {
             radii[2] = radii[3] = radii[4] = radii[5] = rr;
             path.rewind();
             path.addRoundRect(rect, radii, Path.Direction.CW);
+            canvas.drawPath(path, bgPaint);
+        }
+
+        float pa = pressAlpha.value;
+        if (pa > 0.005f) {
+            int pressHighlight = ColorUtils.setAlphaComponent(fg != 0 ? fg : 0xffffffff, (int) (36 * pa));
+            bgPaint.setColor(pressHighlight);
             canvas.drawPath(path, bgPaint);
         }
 
@@ -221,6 +242,8 @@ public class MorphButton extends android.view.View {
             badgeTextPaint.setColor(ColorUtils.setAlphaComponent(badgeFg, (int) (255 * b)));
             canvas.drawText(badgeText, bx, by - (badgeTextPaint.descent() + badgeTextPaint.ascent()) / 2f, badgeTextPaint);
         }
+
+        canvas.restore();
 
         if (animating) {
             postInvalidateOnAnimation();

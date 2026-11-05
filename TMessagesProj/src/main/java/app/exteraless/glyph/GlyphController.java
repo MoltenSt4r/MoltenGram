@@ -519,10 +519,7 @@ public final class GlyphController {
      * и/или запускает свечение глифов при записи видео.
      */
     public void onVideoRecordingStarted() {
-        if (!GlyphConfig.enabled()) {
-            return;
-        }
-        final boolean wantGlyph = GlyphConfig.onVideoRecording();
+        final boolean wantGlyph = GlyphConfig.enabled() && GlyphConfig.onVideoRecording();
         final boolean wantRedLed = GlyphConfig.redRecordingIndicator() && isRedIndicatorSupported();
         if (!wantGlyph && !wantRedLed) {
             return;
@@ -560,8 +557,36 @@ public final class GlyphController {
      * На моделях Phone (2a), Phone (2a) Plus, Phone (3a), Phone (3a) Pro, Phone (3a) Lite и CMF его физически нет!
      */
     public static boolean isRedIndicatorSupported() {
+        if (!NothingPhoneEasterEgg.isNothingOrCmfDevice()) {
+            return false;
+        }
+        try {
+            if (Common.is20111() || Common.is22111() || Common.is25111()) {
+                return true;
+            }
+        } catch (Throwable ignored) {}
+
         String name = NothingPhoneEasterEgg.getDeviceDisplayName();
-        return isRedIndicatorSupportedForModel(name);
+        if (isRedIndicatorSupportedForModel(name)) {
+            return true;
+        }
+
+        String model = Build.MODEL != null ? Build.MODEL.toUpperCase() : "";
+        String device = Build.DEVICE != null ? Build.DEVICE.toUpperCase() : "";
+        String product = Build.PRODUCT != null ? Build.PRODUCT.toUpperCase() : "";
+        String board = Build.BOARD != null ? Build.BOARD.toUpperCase() : "";
+
+        return model.contains("A063") || device.contains("SPACEWAR") || product.contains("SPACEWAR") || board.contains("SPACEWAR")
+                || model.contains("A065") || model.contains("AIN065") || device.contains("PONG") || product.contains("PONG") || board.contains("PONG")
+                || model.contains("A024") || device.contains("METROID") || product.contains("METROID") || board.contains("METROID")
+                || model.contains("A069") || device.contains("FROGGER") || product.contains("FROGGER") || board.contains("FROGGER")
+                || model.contains("A009P") || device.contains("BLASTOISE") || product.contains("BLASTOISE")
+                || device.contains("SUPERCONTRA") || product.contains("SUPERCONTRA")
+                || model.contains("PHONE 1") || model.contains("PHONE (1)")
+                || model.contains("PHONE 2") || model.contains("PHONE (2)")
+                || model.contains("PHONE 3") || model.contains("PHONE (3)")
+                || model.contains("PHONE 4A") || model.contains("PHONE (4A)")
+                || model.contains("PHONE 4B") || model.contains("PHONE (4B)");
     }
 
     public static boolean isRedIndicatorSupportedForModel(String modelName) {
@@ -590,6 +615,8 @@ public final class GlyphController {
             "/sys/class/leds/led:red/brightness",
             "/sys/class/leds/aw20036:led_red/brightness",
             "/sys/class/leds/aw210xx_led/red_led_br",
+            "/sys/class/leds/aw21024_led/red_led_br",
+            "/sys/class/leds/aw20036_led/red_led_br",
             "/sys/class/leds/vibrator_red/brightness",
             "/sys/class/leds/rec_led/brightness",
             "/sys/class/leds/front_cam_led_br/brightness"
@@ -633,7 +660,8 @@ public final class GlyphController {
             } catch (Throwable ignored) {}
         }
         final String payload = active ? "255" : "0";
-        final String stripPayload = active ? "13 255" : "13 0";
+        final String stripPayload1 = active ? "13 255" : "13 0";
+        final String stripPayload2 = active ? "33 255" : "33 0";
         boolean writtenDirectly = false;
         // Phone (1) и Phone (2): Awinic контроллер через led_strips
         try {
@@ -647,7 +675,9 @@ public final class GlyphController {
             java.io.File singleB = new java.io.File("/sys/class/leds/led_strips/single_brightness");
             if (singleB.exists() && singleB.canWrite()) {
                 try (java.io.FileOutputStream fos = new java.io.FileOutputStream(singleB)) {
-                    fos.write(stripPayload.getBytes());
+                    fos.write(stripPayload1.getBytes());
+                    fos.flush();
+                    fos.write(stripPayload2.getBytes());
                     fos.flush();
                     writtenDirectly = true;
                 }
@@ -669,22 +699,77 @@ public final class GlyphController {
         }
         if (!writtenDirectly) {
             new Thread(() -> {
-                String shellCmd = "if [ -e /sys/class/leds/led_strips/operating_mode ]; then echo 1 > /sys/class/leds/led_strips/operating_mode 2>/dev/null; fi; "
-                        + "if [ -e /sys/class/leds/led_strips/single_brightness ]; then echo \"" + stripPayload + "\" > /sys/class/leds/led_strips/single_brightness 2>/dev/null; fi; "
-                        + "for p in /sys/class/leds/red/brightness /sys/class/leds/led:red/brightness /sys/class/leds/aw20036:led_red/brightness /sys/class/leds/rec_led/brightness; do "
+                String stripCmd = "if [ -e /sys/class/leds/led_strips/operating_mode ]; then echo 1 > /sys/class/leds/led_strips/operating_mode 2>/dev/null; fi; "
+                        + "if [ -e /sys/class/leds/led_strips/single_brightness ]; then echo \"" + stripPayload1 + "\" > /sys/class/leds/led_strips/single_brightness 2>/dev/null; "
+                        + "echo \"" + stripPayload2 + "\" > /sys/class/leds/led_strips/single_brightness 2>/dev/null; fi";
+                String shellCmd = "for p in /sys/class/leds/red/brightness /sys/class/leds/led:red/brightness /sys/class/leds/aw20036:led_red/brightness /sys/class/leds/rec_led/brightness; do "
                         + "if [ -e \"$p\" ]; then echo " + payload + " > \"$p\" 2>/dev/null; fi; done";
                 try {
                     app.exteraless.shizuku.ShizukuController shizuku = app.exteraless.shizuku.ShizukuController.getInstance();
                     if (shizuku != null && shizuku.hasPermission()) {
+                        shizuku.runCommand(stripCmd);
                         shizuku.runCommand(shellCmd);
                         return;
                     }
                 } catch (Throwable ignored) {}
                 try {
-                    Process su = Runtime.getRuntime().exec(new String[]{"su", "-c", shellCmd});
+                    Process su = Runtime.getRuntime().exec(new String[]{"su", "-c", stripCmd + "; " + shellCmd});
                     su.waitFor();
                 } catch (Throwable ignored) {}
             }).start();
+        }
+    }
+
+    private static boolean isRedLightKeyName(String name) {
+        if (name == null) return false;
+        String lower = name.toLowerCase();
+        return lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
+                || lower.contains("recording_led") || lower.contains("record_led") || lower.contains("record_light")
+                || lower.contains("red_dot") || lower.contains("tally") || lower.contains("rec_indicator")
+                || lower.contains("recording_indicator")
+                || (lower.contains("nothing") && lower.contains("led"))
+                || lower.contains("video_red_light");
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void setCaptureKey(android.hardware.camera2.CaptureRequest.Builder builder, android.hardware.camera2.CaptureRequest.Key<?> key, boolean enable) {
+        byte bVal = (byte) (enable ? 1 : 0);
+        int iVal = enable ? 1 : 0;
+        try {
+            builder.set((android.hardware.camera2.CaptureRequest.Key<Byte>) key, bVal);
+        } catch (Throwable ignored) {
+            try {
+                builder.set((android.hardware.camera2.CaptureRequest.Key<Integer>) key, iVal);
+            } catch (Throwable ignored2) {
+                try {
+                    builder.set((android.hardware.camera2.CaptureRequest.Key<byte[]>) key, new byte[]{bVal});
+                } catch (Throwable ignored3) {
+                    try {
+                        builder.set((android.hardware.camera2.CaptureRequest.Key<int[]>) key, new int[]{iVal});
+                    } catch (Throwable ignored4) {}
+                }
+            }
+        }
+    }
+
+    @SuppressWarnings("unchecked")
+    private static void setCaptureKey(Camera2Interop.Extender<?> extender, CaptureRequest.Key<?> key, boolean enable) {
+        byte bVal = (byte) (enable ? 1 : 0);
+        int iVal = enable ? 1 : 0;
+        try {
+            extender.setCaptureRequestOption((CaptureRequest.Key<Byte>) key, bVal);
+        } catch (Throwable ignored) {
+            try {
+                extender.setCaptureRequestOption((CaptureRequest.Key<Integer>) key, iVal);
+            } catch (Throwable ignored2) {
+                try {
+                    extender.setCaptureRequestOption((CaptureRequest.Key<byte[]>) key, new byte[]{bVal});
+                } catch (Throwable ignored3) {
+                    try {
+                        extender.setCaptureRequestOption((CaptureRequest.Key<int[]>) key, new int[]{iVal});
+                    } catch (Throwable ignored4) {}
+                }
+            }
         }
     }
 
@@ -692,7 +777,6 @@ public final class GlyphController {
      * Применяет vendor-теги Nothing OS Camera2 (`CaptureRequest`) для включения/выключения
      * красного светодиода записи (`Rec. Light`) во время видеозаписи кружка или видео.
      */
-    @SuppressWarnings("unchecked")
     public static void applyNothingCameraRedIndicator(
             android.hardware.camera2.CameraCharacteristics characteristics,
             android.hardware.camera2.CaptureRequest.Builder builder,
@@ -701,45 +785,46 @@ public final class GlyphController {
             return;
         }
         boolean enableRedLight = recordingVideo
-                && GlyphConfig.enabled()
                 && GlyphConfig.redRecordingIndicator()
                 && isRedIndicatorSupported();
+        boolean applied = false;
         try {
             List<android.hardware.camera2.CaptureRequest.Key<?>> keys = characteristics.getAvailableCaptureRequestKeys();
-            if (keys == null) {
-                return;
-            }
-            for (android.hardware.camera2.CaptureRequest.Key<?> key : keys) {
-                if (key == null) continue;
-                String name = key.getName();
-                if (name == null) continue;
-                String lower = name.toLowerCase();
-                if (lower.contains("red_light") || lower.contains("reclight") || lower.contains("rec_light")
-                        || lower.contains("recording_led") || lower.contains("record_led") || lower.contains("record_light")
-                        || lower.contains("red_dot") || lower.contains("tally") || lower.contains("rec_indicator")
-                        || lower.contains("recording_indicator")
-                        || (lower.contains("nothing") && lower.contains("led"))) {
-                    byte bVal = (byte) (enableRedLight ? 1 : 0);
-                    int iVal = enableRedLight ? 1 : 0;
-                    try {
-                        ((android.hardware.camera2.CaptureRequest.Key<Byte>) key).getName();
-                        builder.set((android.hardware.camera2.CaptureRequest.Key<Byte>) key, bVal);
-                    } catch (Throwable ignored) {
-                        try {
-                            builder.set((android.hardware.camera2.CaptureRequest.Key<Integer>) key, iVal);
-                        } catch (Throwable ignored2) {
-                            try {
-                                builder.set((android.hardware.camera2.CaptureRequest.Key<byte[]>) key, new byte[]{bVal});
-                            } catch (Throwable ignored3) {
-                                try {
-                                    builder.set((android.hardware.camera2.CaptureRequest.Key<int[]>) key, new int[]{iVal});
-                                } catch (Throwable ignored4) {}
-                            }
-                        }
+            if (keys != null) {
+                for (android.hardware.camera2.CaptureRequest.Key<?> key : keys) {
+                    if (key == null) continue;
+                    String name = key.getName();
+                    if (isRedLightKeyName(name)) {
+                        setCaptureKey(builder, key, enableRedLight);
+                        applied = true;
                     }
                 }
             }
         } catch (Throwable ignored) {}
+
+        if (!applied) {
+            try {
+                Context context = ApplicationLoader.applicationContext;
+                if (context != null) {
+                    android.hardware.camera2.CameraManager cm = (android.hardware.camera2.CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+                    if (cm != null) {
+                        for (String id : cm.getCameraIdList()) {
+                            android.hardware.camera2.CameraCharacteristics cc = cm.getCameraCharacteristics(id);
+                            List<android.hardware.camera2.CaptureRequest.Key<?>> backKeys = cc.getAvailableCaptureRequestKeys();
+                            if (backKeys != null) {
+                                for (android.hardware.camera2.CaptureRequest.Key<?> key : backKeys) {
+                                    if (key != null && isRedLightKeyName(key.getName())) {
+                                        setCaptureKey(builder, key, enableRedLight);
+                                        applied = true;
+                                    }
+                                }
+                            }
+                            if (applied) break;
+                        }
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
     }
 
     /**
