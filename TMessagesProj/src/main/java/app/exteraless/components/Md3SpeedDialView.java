@@ -479,7 +479,7 @@ public class Md3SpeedDialView extends FrameLayout {
             } else if ("plugins".equalsIgnoreCase(target)) {
                 activity.presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
             } else {
-                activity.presentFragment(new app.exteraless.settings.OpenExteraActivity());
+                activity.presentFragment(new app.exteraless.settings.OpenExteraSettingsActivity());
             }
         } else if ("plugin".equals(type)) {
             if (!TextUtils.isEmpty(target)) {

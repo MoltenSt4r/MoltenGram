@@ -35,6 +35,7 @@ import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.BackupImageView;
@@ -690,7 +691,7 @@ public class Md3MediaCarouselView extends FrameLayout {
             this.currentMessage = message;
 
             ArrayList<TLRPC.PhotoSize> thumbs = message != null ? message.photoThumbs : null;
-            Object photoParentObject = message != null ? message.photoThumbsObject : null;
+            TLObject photoParentObject = message != null ? message.photoThumbsObject : null;
             if (thumbs == null || thumbs.isEmpty()) {
                 TLRPC.Document doc = message != null ? message.getDocument() : null;
                 if (doc != null && doc.thumbs != null && !doc.thumbs.isEmpty()) {
