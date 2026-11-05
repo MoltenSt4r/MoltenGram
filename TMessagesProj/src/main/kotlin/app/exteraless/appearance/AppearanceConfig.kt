@@ -453,6 +453,32 @@ object AppearanceConfig {
         }
     }
 
+    const val MESSAGE_GLASS_FROSTED = 0 // Матовое стекло (размытие фона + блики)
+    const val MESSAGE_GLASS_CLEAR = 1   // Чистая прозрачность (без размытия + блики)
+    const val MESSAGE_GLASS_SIMPLE = 2  // Простая полупрозрачность (без бликов)
+
+    /** Стиль стекла сообщений: 0 - матовое стекло, 1 - чистая прозрачность, 2 - простая */
+    @JvmField
+    val messageBubbleGlassStyle =
+        addConfig("OEAppearanceMessageBubbleGlassStyle", ConfigItem.configTypeInt, MESSAGE_GLASS_FROSTED)
+
+    @JvmStatic
+    fun messageBubbleGlassStyle(): Int {
+        ensureLoaded()
+        return messageBubbleGlassStyle.Int()
+    }
+
+    @JvmStatic
+    fun messageBubbleIsFrosted(): Boolean {
+        return messageBubbleGlassStyle() == MESSAGE_GLASS_FROSTED
+    }
+
+    @JvmStatic
+    fun messageBubbleHasGlare(): Boolean {
+        val s = messageBubbleGlassStyle()
+        return s == MESSAGE_GLASS_FROSTED || s == MESSAGE_GLASS_CLEAR
+    }
+
     // ---- 3D-эффект скролла сообщений (Cylinder 3D Scroll) ----
 
     const val CHAT_3D_SCROLL_ANGLE_MIN = 5

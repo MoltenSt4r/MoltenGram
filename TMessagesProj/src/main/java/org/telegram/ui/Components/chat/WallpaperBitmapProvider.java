@@ -39,7 +39,8 @@ public class WallpaperBitmapProvider {
                 sourceColor.setColor(Color.BLACK);
                 return sourceColor;
             }
-            sourceBitmap.setBitmap(motionDrawable.getBitmap());
+            Bitmap b = motionDrawable.getBitmap();
+            sourceBitmap.setBitmap(b != null ? blurredFromBitmap.get(b) : null);
             return sourceBitmap;
         }
 

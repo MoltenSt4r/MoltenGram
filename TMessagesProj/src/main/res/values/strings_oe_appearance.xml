@@ -92,6 +92,10 @@
     <string name="OEAppearanceTranslucentMessagesMedium">Medium (70%)</string>
     <string name="OEAppearanceTranslucentMessagesHeavy">High (55%)</string>
     <string name="OEAppearanceTranslucentMessagesGlass">Glass (40%)</string>
+    <string name="OEAppearanceMessageBubbleGlassStyle">Message Glass Style</string>
+    <string name="OEAppearanceMessageBubbleGlassStyleFrosted">Frosted Glass (Blur &amp; Glare)</string>
+    <string name="OEAppearanceMessageBubbleGlassStyleClear">Clear Glass (Glare Only)</string>
+    <string name="OEAppearanceMessageBubbleGlassStyleSimple">Simple (No Glare)</string>
     <string name="OEAppearanceChat3dScroll">3D Chat Scroll</string>
     <string name="OEAppearanceChat3dScrollInfo">Cylindrical roller 3D tilt effect for messages during scrolling</string>
     <string name="OEAppearanceChat3dScrollAngle">3D Tilt Angle</string>

@@ -5309,7 +5309,7 @@ public class ChatActivity extends BaseFragment implements
 
             {
                 setClipChildren(false);
-                setBlurredWallpaperSource(navbarContentSourceWallpaper);
+                setBlurredWallpaperSource(getGlassSource() != null ? getGlassSource() : navbarContentSourceWallpaper);
                 outlineActionBackgroundPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundPaint.setStrokeWidth(AndroidUtilities.dp(2));
@@ -5341,31 +5341,29 @@ public class ChatActivity extends BaseFragment implements
                 float centerY = height / 2f;
                 float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
                 float maxAngleRad = (float) Math.toRadians(maxAngle);
-                float sinMax = (float) Math.sin(maxAngleRad);
-                float cameraDistance = Math.max(2500f, getMeasuredWidth() * 4f);
+                // Радиус воображаемого цилиндра: R = centerY / maxAngleRad
+                float radius = maxAngleRad > 0.001f ? centerY / maxAngleRad : centerY * 100f;
+                float cameraDistance = Math.max(2500f, getMeasuredWidth() * 6f);
 
                 for (int i = 0; i < count; i++) {
                     View child = getChildAt(i);
                     if (child == null) {
                         continue;
                     }
-                    float childCenterY = child.getY() + child.getMeasuredHeight() / 2f;
+                    float childCenterY = child.getTop() + child.getMeasuredHeight() / 2f;
                     float factor = (childCenterY - centerY) / centerY;
                     factor = Math.max(-1.0f, Math.min(1.0f, factor));
 
-                    // Цилиндрическая проекция колеса: наклон плавно скругляется к краям
-                    float angleRad = (float) Math.asin(factor * sinMax);
+                    // Линейная зависимость угла от позиции — настоящий цилиндр/барабан,
+                    // без S-образного перегиба asin()
+                    float angleRad = factor * maxAngleRad;
                     float angle = -(float) Math.toDegrees(angleRad);
 
                     if (child.getCameraDistance() != cameraDistance) {
                         child.setCameraDistance(cameraDistance);
                     }
                     float pivotX = child.getMeasuredWidth() / 2f;
-                    // Динамический пивот: загиб колеса от касательной в центре
-                    float absFactor = Math.abs(factor);
-                    float pivotY = factor < 0
-                            ? child.getMeasuredHeight() * (0.5f + 0.5f * absFactor)
-                            : child.getMeasuredHeight() * (0.5f - 0.5f * absFactor);
+                    float pivotY = child.getMeasuredHeight() / 2f;
 
                     if (child.getPivotX() != pivotX) {
                         child.setPivotX(pivotX);
@@ -5377,16 +5375,16 @@ public class ChatActivity extends BaseFragment implements
                         child.setRotationX(angle);
                     }
 
-                    // Оптическое сжатие высоты (ракурс по цилиндру):
+                    // Оптическое сжатие: сегмент цилиндра, повёрнутый от зрителя → cos(θ)
                     float scaleY = (float) Math.cos(angleRad);
-                    scaleY = Math.max(0.6f, Math.min(1.0f, scaleY));
-                    if (Math.abs(child.getScaleY() - scaleY) > 0.01f) {
+                    scaleY = Math.max(0.55f, Math.min(1.0f, scaleY));
+                    if (Math.abs(child.getScaleY() - scaleY) > 0.005f) {
                         child.setScaleY(scaleY);
                     }
 
-                    // Поджатие сегментов цилиндра к центру дуги:
-                    float pull = (float) (centerY * (Math.abs(angleRad) - Math.abs(Math.sin(angleRad))));
-                    float transY = factor < 0 ? pull : -pull;
+                    // Вертикальный сдвиг к оси барабана: R·(1 − cos(θ))
+                    float displacement = radius * (1f - (float) Math.cos(angleRad));
+                    float transY = factor < 0 ? displacement : -displacement;
                     if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
                         child.setTranslationY(transY);
                     }
@@ -42516,7 +42514,7 @@ public class ChatActivity extends BaseFragment implements
     private class ChatMessageCellDelegate implements ChatMessageCell.ChatMessageCellDelegate {
         @Override
         public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getBlurredWallpaperSource() {
-            return navbarContentSourceWallpaper;
+            return getGlassSource() != null ? getGlassSource() : navbarContentSourceWallpaper;
         }
 
         @Override

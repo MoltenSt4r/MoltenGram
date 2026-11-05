@@ -97,6 +97,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int glassOutlineRow;
     private int glassMessageMenuRow;
     private int translucentMessagesRow;
+    private int messageBubbleGlassStyleRow;
     private int chat3dScrollRow;
     private int chat3dScrollIntensityRow;
     private int forceBlurRow;
@@ -286,6 +287,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         translucentMessagesRow = addRow("translucentMessages");
+        if (AppearanceConfig.messageBubbleTransparency.Int() != AppearanceConfig.BUBBLE_TRANSPARENCY_DISABLED) {
+            messageBubbleGlassStyleRow = addRow("messageBubbleGlassStyle");
+        } else {
+            messageBubbleGlassStyleRow = -1;
+        }
         chat3dScrollRow = addRow("chat3dScroll");
         if (AppearanceConfig.chat3dScroll.Bool()) {
             chat3dScrollIntensityRow = addRow("chat3dScrollIntensity");
@@ -775,7 +781,19 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     getString(R.string.OEAppearanceTranslucentMessagesMedium),
                     getString(R.string.OEAppearanceTranslucentMessagesHeavy),
                     getString(R.string.OEAppearanceTranslucentMessagesGlass)
-            }, AppearanceConfig.messageBubbleTransparency, null);
+            }, AppearanceConfig.messageBubbleTransparency, () -> {
+                updateRows();
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
+                }
+            });
+            return;
+        } else if (position == messageBubbleGlassStyleRow) {
+            showSelector(position, getString(R.string.OEAppearanceMessageBubbleGlassStyle), new CharSequence[]{
+                    getString(R.string.OEAppearanceMessageBubbleGlassStyleFrosted),
+                    getString(R.string.OEAppearanceMessageBubbleGlassStyleClear),
+                    getString(R.string.OEAppearanceMessageBubbleGlassStyleSimple)
+            }, AppearanceConfig.messageBubbleGlassStyle, null);
             return;
         } else if (position == chat3dScrollRow) {
             boolean enabled = AppearanceConfig.chat3dScroll.toggleConfigBool();
@@ -1246,6 +1264,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                 getString(R.string.OEAppearanceTranslucentMessagesGlass)
                         };
                         cell.setTextAndValue(getString(R.string.OEAppearanceTranslucentMessages), v[clamp(AppearanceConfig.messageBubbleTransparency.Int(), v.length)], true);
+                    } else if (position == messageBubbleGlassStyleRow) {
+                        String[] v = {
+                                getString(R.string.OEAppearanceMessageBubbleGlassStyleFrosted),
+                                getString(R.string.OEAppearanceMessageBubbleGlassStyleClear),
+                                getString(R.string.OEAppearanceMessageBubbleGlassStyleSimple)
+                        };
+                        cell.setTextAndValue(getString(R.string.OEAppearanceMessageBubbleGlassStyle), v[clamp(AppearanceConfig.messageBubbleGlassStyle.Int(), v.length)], true);
                     } else if (position == tabTitleStyleRow) {
                         CharSequence[] v = tabTitleOptions();
                         cell.setTextAndValue(getString(R.string.OEAppearanceTabTitleStyle), v[tabTitleIndex(NekoConfig.tabsTitleType.Int())], true);
@@ -1384,6 +1409,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
                     || position == translucentMessagesRow
+                    || position == messageBubbleGlassStyleRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow) {

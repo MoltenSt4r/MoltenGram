@@ -21581,9 +21581,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 alphaInternal *= getAlpha();
             }
             float bubbleAlpha = getBubbleAlpha();
-            if (bubbleAlpha < 1f && SharedConfig.chatBlurEnabled() && currentBackgroundDrawable != null) {
-                Path blurPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
-                if (blurPath != null) {
+            Path blurPath = null;
+            if (bubbleAlpha < 1f && currentBackgroundDrawable != null) {
+                blurPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
+                if (blurPath != null && SharedConfig.chatBlurEnabled() && app.exteraless.appearance.AppearanceConfig.messageBubbleIsFrosted()) {
                     drawBubbleBlurredBackground(canvas, blurPath);
                 }
             }
@@ -21600,6 +21601,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (currentBackgroundShadowDrawable != null && currentPosition == null) {
                     currentBackgroundShadowDrawable.setAlpha((int) (255 * alphaInternal * bubbleAlpha));
                     currentBackgroundShadowDrawable.draw(canvas);
+                }
+
+                if (bubbleAlpha < 1f && blurPath != null && app.exteraless.appearance.AppearanceConfig.messageBubbleHasGlare()) {
+                    drawBubbleGlassGlare(canvas, blurPath);
                 }
             } else {
                 if (isHighlightedAnimated) {
@@ -21644,6 +21649,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (currentBackgroundShadowDrawable != null && currentPosition == null) {
                     currentBackgroundShadowDrawable.setAlpha((int) (255 * alphaInternal * bubbleAlpha));
                     currentBackgroundShadowDrawable.draw(canvas);
+                }
+
+                if (bubbleAlpha < 1f && blurPath != null && app.exteraless.appearance.AppearanceConfig.messageBubbleHasGlare()) {
+                    drawBubbleGlassGlare(canvas, blurPath);
                 }
 
                 if (transitionParams.changePinnedBottomProgress != 1f && currentPosition == null) {
@@ -22832,9 +22841,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentBackgroundShadowDrawable.draw(canvas);
                 currentBackgroundShadowDrawable.setAlpha(255);
             }
-            if (bubbleAlpha < 1f && SharedConfig.chatBlurEnabled()) {
-                Path blurPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
-                if (blurPath != null) {
+            Path blurPath = null;
+            if (bubbleAlpha < 1f) {
+                blurPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
+                if (blurPath != null && SharedConfig.chatBlurEnabled() && app.exteraless.appearance.AppearanceConfig.messageBubbleIsFrosted()) {
                     drawBubbleBlurredBackground(canvas, blurPath);
                 }
             }
@@ -22843,6 +22853,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             currentBackgroundDrawable.setBounds(left, top, right, bottom);
             currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
             currentBackgroundDrawable.setAlpha(255);
+            if (bubbleAlpha < 1f && blurPath != null && app.exteraless.appearance.AppearanceConfig.messageBubbleHasGlare()) {
+                drawBubbleGlassGlare(canvas, blurPath);
+            }
         }
 
         animateCheckboxTranslation();
@@ -30647,6 +30660,35 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return null;
     }
 
+    private final Paint bubbleGlassGlarePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
+    private void drawBubbleGlassGlare(Canvas canvas, Path path) {
+        if (path == null) {
+            return;
+        }
+        bubbleGlassGlarePaint.setStyle(Paint.Style.STROKE);
+        bubbleGlassGlarePaint.setStrokeWidth(AndroidUtilities.dpf2(1.0f));
+
+        RectF bounds = AndroidUtilities.rectTmp;
+        path.computeBounds(bounds, true);
+        if (bounds.isEmpty()) {
+            return;
+        }
+
+        boolean isDark = Theme.isCurrentThemeDark();
+        int topHighlight = isDark ? 0x48FFFFFF : 0x55FFFFFF;
+        int midHighlight = isDark ? 0x14FFFFFF : 0x1A000000;
+        int botHighlight = isDark ? 0x20FFFFFF : 0x24000000;
+        LinearGradient gradient = new LinearGradient(
+                0, bounds.top, 0, bounds.bottom,
+                new int[]{topHighlight, midHighlight, botHighlight},
+                new float[]{0f, 0.4f, 1f},
+                Shader.TileMode.CLAMP
+        );
+        bubbleGlassGlarePaint.setShader(gradient);
+        canvas.drawPath(path, bubbleGlassGlarePaint);
+    }
+
     private void drawBubbleBlurredBackground(Canvas canvas, Path path) {
         if (path == null) {
             return;
@@ -30658,19 +30700,31 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         while (source instanceof org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped) {
             source = ((org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped) source).getSource();
         }
+        float rootX = getX();
+        float rootY = getY();
+        ViewParent vp = getParent();
+        if (vp instanceof View) {
+            View parentView = (View) vp;
+            rootX += parentView.getX();
+            rootY += parentView.getY();
+        }
+        if (source instanceof org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode) {
+            org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode renderNodeSource =
+                    (org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode) source;
+            RectF bounds = AndroidUtilities.rectTmp;
+            path.computeBounds(bounds, true);
+            canvas.save();
+            canvas.clipPath(path);
+            canvas.translate(-rootX, -rootY);
+            renderNodeSource.draw(canvas, rootX + bounds.left, rootY + bounds.top, rootX + bounds.right, rootY + bounds.bottom);
+            canvas.restore();
+            return;
+        }
         if (source instanceof org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap) {
             org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap bitmapSource = (org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap) source;
             Bitmap bitmap = bitmapSource.getBitmap();
             if (bitmap == null || bitmap.isRecycled()) {
                 return;
-            }
-            float rootX = getX();
-            float rootY = getY();
-            ViewParent vp = getParent();
-            if (vp instanceof View) {
-                View parentView = (View) vp;
-                rootX += parentView.getX();
-                rootY += parentView.getY();
             }
             if (blurBitmapShader == null || blurBitmapShaderBitmap != bitmap) {
                 blurBitmapShaderBitmap = bitmap;
@@ -30678,7 +30732,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 blurBubblePaint.setShader(blurBitmapShader);
             }
             blurShaderMatrix.set(bitmapSource.getMatrix());
-            blurShaderMatrix.preTranslate(rootX, rootY);
+            blurShaderMatrix.postTranslate(-rootX, -rootY);
             blurBitmapShader.setLocalMatrix(blurShaderMatrix);
             canvas.drawPath(path, blurBubblePaint);
         } else if (source instanceof org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor) {
