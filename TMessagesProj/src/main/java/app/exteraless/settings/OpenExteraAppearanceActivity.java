@@ -75,6 +75,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_ROUND_CHECK = 105;
     /** Слайдер угла 3D-скролла */
     private static final int TYPE_3D_SCROLL_SLIDER = 106;
+    /** Слайдер прозрачности/матовости стеклянных сообщений */
+    private static final int TYPE_GLASS_OPACITY_SLIDER = 107;
+    /** Слайдер рассеивания и преломления стеклянных сообщений */
+    private static final int TYPE_GLASS_REFRACTION_SLIDER = 108;
 
     // Appearance
     private int appearanceHeaderRow;
@@ -97,6 +101,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int glassOutlineRow;
     private int glassMessageMenuRow;
     private int glassMessagesRow;
+    private int glassMessagesOpacityRow;
+    private int glassMessagesRefractionRow;
     private int chat3dScrollRow;
     private int chat3dScrollIntensityRow;
     private int forceBlurRow;
@@ -286,6 +292,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
+        if (AppearanceConfig.glassMessages.Bool()) {
+            glassMessagesOpacityRow = addRow("glassMessagesOpacity");
+            glassMessagesRefractionRow = addRow("glassMessagesRefraction");
+        } else {
+            glassMessagesOpacityRow = -1;
+            glassMessagesRefractionRow = -1;
+        }
         chat3dScrollRow = addRow("chat3dScroll");
         if (AppearanceConfig.chat3dScroll.Bool()) {
             chat3dScrollIntensityRow = addRow("chat3dScrollIntensity");
@@ -591,6 +604,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         }
     }
 
+    private void onGlassMessagesOpacityChanged(int value) {
+        AppearanceConfig.glassMessagesOpacity.setConfigInt(value);
+    }
+
+    private void onGlassMessagesRefractionChanged(int value) {
+        AppearanceConfig.glassMessagesRefraction.setConfigInt(value);
+    }
+
     /** Все живые превью экрана — их надо дёргать на смене темы и стиля разделителя. */
     private void invalidatePreviews() {
         if (avatarCornersPreviewCell != null) avatarCornersPreviewCell.invalidate();
@@ -776,6 +797,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
+            rebuildRowsAndNotify();
+            rebuildAll();
+            return;
+        } else if (position == glassMessagesOpacityRow || position == glassMessagesRefractionRow) {
             return;
         } else if (position == chat3dScrollRow) {
             boolean enabled = AppearanceConfig.chat3dScroll.toggleConfigBool();
@@ -1053,6 +1078,32 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider3d.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider3d;
                     break;
+                case TYPE_GLASS_OPACITY_SLIDER:
+                    AvatarCornersSeekBar sliderOpacity = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onGlassMessagesOpacityChanged,
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MIN,
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MAX,
+                            getString(R.string.OEAppearanceGlassMessagesOpacity),
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MIN + "%",
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MAX + "%");
+                    sliderOpacity.setValueSuffix("%");
+                    sliderOpacity.setValue(AppearanceConfig.glassMessagesOpacity.Int());
+                    sliderOpacity.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderOpacity;
+                    break;
+                case TYPE_GLASS_REFRACTION_SLIDER:
+                    AvatarCornersSeekBar sliderRefraction = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onGlassMessagesRefractionChanged,
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MIN,
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MAX,
+                            getString(R.string.OEAppearanceGlassMessagesRefraction),
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MIN + "%",
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MAX + "%");
+                    sliderRefraction.setValueSuffix("%");
+                    sliderRefraction.setValue(AppearanceConfig.glassMessagesRefraction.Int());
+                    sliderRefraction.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderRefraction;
+                    break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1273,6 +1324,16 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setValue(AppearanceConfig.chat3dScrollAngle.Int());
                     break;
                 }
+                case TYPE_GLASS_OPACITY_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.glassMessagesOpacity.Int());
+                    break;
+                }
+                case TYPE_GLASS_REFRACTION_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.glassMessagesRefraction.Int());
+                    break;
+                }
                 case TYPE_DETAIL_SETTINGS: {
                     // Иконка слева, подпись под заголовком.
                     TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
@@ -1349,6 +1410,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_SECTION_SLIDER;
             } else if (position == chat3dScrollIntensityRow) {
                 return TYPE_3D_SCROLL_SLIDER;
+            } else if (position == glassMessagesOpacityRow) {
+                return TYPE_GLASS_OPACITY_SLIDER;
+            } else if (position == glassMessagesRefractionRow) {
+                return TYPE_GLASS_REFRACTION_SLIDER;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow

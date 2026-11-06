@@ -602,6 +602,26 @@ public final class ExteraConfig {
         AppearanceConfig.glassMessages.setConfigBool(value);
     }
 
+    public static int getGlassMessagesOpacity() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessagesOpacity();
+    }
+
+    public static void setGlassMessagesOpacity(int value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessagesOpacity.setConfigInt(value);
+    }
+
+    public static int getGlassMessagesRefraction() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessagesRefraction();
+    }
+
+    public static void setGlassMessagesRefraction(int value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessagesRefraction.setConfigInt(value);
+    }
+
     public static boolean getChat3dScroll() {
         ensureLoaded();
         return AppearanceConfig.chat3dScroll.Bool();

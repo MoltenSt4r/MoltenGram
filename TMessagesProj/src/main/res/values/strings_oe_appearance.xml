@@ -86,6 +86,8 @@
     <string name="OEAppearanceGlassMessageMenu">Glass Message Menu</string>
     <string name="OEAppearanceGlassMessages">Glass Messages</string>
     <string name="OEAppearanceGlassMessagesInfo">Frosted glass for message bubbles matching global style</string>
+    <string name="OEAppearanceGlassMessagesOpacity">Glass Opacity</string>
+    <string name="OEAppearanceGlassMessagesRefraction">Dispersion &amp; Refraction</string>
     <string name="OEAppearanceGlassMessageMenuInfo">The message menu and the reactions bar become frosted glass.</string>
     <string name="OEAppearanceGlassMessageMenuBlurOff">Glass menus need blur, which is currently off.</string>
     <string name="OEAppearanceChat3dScroll">3D Scroll</string>

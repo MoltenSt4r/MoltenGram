@@ -500,18 +500,28 @@ def test_chat_message_cell_clean_of_glass_bubble_hacks():
 
 
 def test_glass_messages_integration():
-    """Verify crash-proof frosted glass message bubbles using wallpaper blur source and GlassOutlineStyle."""
+    """Verify crash-proof frosted glass message bubbles using wallpaper blur source, sliders, container insets, and GlassOutlineStyle."""
     ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
     with open(ac_path, "r", encoding="utf-8") as f:
         ac = f.read()
     assert "val glassMessages" in ac
     assert "fun glassMessages(): Boolean" in ac
+    assert "val glassMessagesOpacity" in ac
+    assert "fun glassMessagesOpacity(): Int" in ac
+    assert "val glassMessagesRefraction" in ac
+    assert "fun glassMessagesRefraction(): Int" in ac
 
     oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
     with open(oea_path, "r", encoding="utf-8") as f:
         oea = f.read()
     assert "glassMessagesRow" in oea
+    assert "glassMessagesOpacityRow" in oea
+    assert "glassMessagesRefractionRow" in oea
+    assert "TYPE_GLASS_OPACITY_SLIDER" in oea
+    assert "TYPE_GLASS_REFRACTION_SLIDER" in oea
     assert "AppearanceConfig.glassMessages" in oea
+    assert "AppearanceConfig.glassMessagesOpacity" in oea
+    assert "AppearanceConfig.glassMessagesRefraction" in oea
 
     cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
     with open(cmc_path, "r", encoding="utf-8") as f:
@@ -522,7 +532,12 @@ def test_glass_messages_integration():
     assert "resolveWallpaperBitmapSource" in cmc
     assert "shouldDrawGlassBubble" in cmc
     assert "drawGlassBubble" in cmc
+    assert "currentBackgroundDrawable.getCurrentType() == MessageDrawable.TYPE_TEXT" in cmc
+    assert "currentBackgroundDrawable.makePath(backgroundCacheParams);" in cmc
+    assert "transitionParams.changePinnedBottomProgress != 1f && currentPosition == null && !shouldDrawGlassBubble()" in cmc
+    assert "(shouldDrawGlassBubble() || !botButtons.isEmpty()" in cmc
     assert "GlassOutlineStyle.current()" in cmc
+    assert "BlurredBackgroundDrawable.drawStroke(" in cmc
     assert "mapGlassOutColorKey" in cmc
     assert "glassFactory" not in cmc
     assert "bubbleGlassDrawable" not in cmc
