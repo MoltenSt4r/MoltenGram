@@ -62,6 +62,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private final Paint fabBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fabPressedPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private boolean isFabPressed;
+    private int currentIconColor = 0;
 
     public FragmentFloatingButton(@NonNull Context context, Theme.ResourcesProvider resourcesProvider) {
         this(context, resourcesProvider, false);
@@ -183,6 +184,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
             int customIconCode = app.exteraless.appearance.AppearanceConfig.subFabIconColor();
             int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(customBgCode, customIconCode, defIcon);
+            currentIconColor = iconCol;
 
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(iconCol);
@@ -210,6 +212,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
             int mainIconCode = app.exteraless.appearance.AppearanceConfig.fabIconColor();
             int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
+            currentIconColor = iconCol;
 
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(iconCol);
@@ -298,8 +301,15 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         }
 
         int defBg = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        int defIcon = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
         final int targetColor = app.exteraless.utils.UIUtil.resolveFabColor(targetColorCode, defBg);
+        int targetIconCode = (targetColorCode == app.exteraless.appearance.AppearanceConfig.fabActiveColor())
+                ? app.exteraless.appearance.AppearanceConfig.fabActiveIconColor()
+                : app.exteraless.appearance.AppearanceConfig.fabIconColor();
+        final int targetIconColor = app.exteraless.utils.UIUtil.resolveFabIconColor(targetColorCode, targetIconCode, defIcon);
+
         final int startColor = fabBgPaint.getColor() != 0 ? fabBgPaint.getColor() : targetColor;
+        final int startIconColor = currentIconColor != 0 ? currentIconColor : targetIconColor;
 
         int curShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
         final int restingSizePx = dp(app.exteraless.appearance.AppearanceConfig.fabSize());
@@ -319,15 +329,16 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             currentShapeId = targetShape;
             shapeMorphProgress = 1f;
             fabBgPaint.setColor(targetColor);
-            int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
-            imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
+            imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
+            progressView.setProgressColor(targetIconColor);
+            currentIconColor = targetIconColor;
             applyFabSize(targetSizeDp);
             setActiveTranslationY(targetShiftY);
             invalidate();
             return;
         }
 
-        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && startSize == endSize && activeTranslationY == targetShiftY) {
+        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && currentIconColor == targetIconColor && startSize == endSize && activeTranslationY == targetShiftY) {
             applyFabSize(targetSizeDp);
             return;
         }
@@ -356,8 +367,11 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             if (startColor != targetColor) {
                 int blended = androidx.core.graphics.ColorUtils.blendARGB(startColor, targetColor, shapeMorphProgress);
                 fabBgPaint.setColor(blended);
-                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(blended);
-                imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
+            }
+            if (startIconColor != targetIconColor) {
+                int blendedIcon = androidx.core.graphics.ColorUtils.blendARGB(startIconColor, targetIconColor, shapeMorphProgress);
+                imageView.setColorFilter(blendedIcon, PorterDuff.Mode.SRC_IN);
+                progressView.setProgressColor(blendedIcon);
             }
             invalidate();
         });
@@ -368,8 +382,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 currentShapeId = targetShapeId;
                 shapeMorphProgress = 1f;
                 fabBgPaint.setColor(targetColor);
-                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(targetColor);
-                imageView.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
+                imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
+                progressView.setProgressColor(targetIconColor);
+                currentIconColor = targetIconColor;
                 applyFabSize(targetSizeDp);
                 setActiveTranslationY(targetShiftY);
                 invalidate();

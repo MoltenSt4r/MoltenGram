@@ -147,9 +147,19 @@ public final class UIUtil {
                 Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_surface");
                 return c != null ? c : defaultIconColor;
             }
+            case FAB_COLOR_DEFAULT: {
+                if (defaultIconColor != 0) {
+                    return defaultIconColor;
+                }
+                int defaultBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+                return getOnAccentColor(defaultBg);
+            }
             default: {
-                if (bgColCode < 0) {
+                if (bgColCode != 0) {
                     return getOnAccentColor(bgColCode);
+                }
+                if (defaultIconColor != 0) {
+                    return defaultIconColor;
                 }
                 int defaultBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
                 return getOnAccentColor(defaultBg);
@@ -158,12 +168,37 @@ public final class UIUtil {
     }
 
     public static int getOnAccentColor(int color) {
-        double contrastWhite = androidx.core.graphics.ColorUtils.calculateContrast(0xFFFFFFFF, color);
-        double contrastBlack = androidx.core.graphics.ColorUtils.calculateContrast(0xFF000000, color);
-        if (contrastBlack > contrastWhite) {
-            return androidx.core.graphics.ColorUtils.blendARGB(color, 0xFF000000, 0.85f);
+        float[] hsl = new float[3];
+        androidx.core.graphics.ColorUtils.colorToHSL(color, hsl);
+        double lum = androidx.core.graphics.ColorUtils.calculateLuminance(color);
+        boolean isLight = lum > 0.28 || hsl[2] >= 0.48f;
+
+        if (isLight) {
+            // Light / pastel container -> deep rich saturated tone of the same hue
+            if (hsl[1] < 0.08f) {
+                return 0xFF1C1B1F;
+            }
+            float outH = hsl[0];
+            float outS = Math.min(1.0f, Math.max(0.78f, hsl[1] * 1.15f));
+            float outL = 0.18f;
+            int candidate = androidx.core.graphics.ColorUtils.HSLToColor(new float[]{outH, outS, outL});
+            if (androidx.core.graphics.ColorUtils.calculateContrast(candidate, color) < 4.2) {
+                candidate = androidx.core.graphics.ColorUtils.HSLToColor(new float[]{outH, outS, 0.12f});
+            }
+            return candidate;
         } else {
-            return 0xFFFFFFFF;
+            // Dark background -> luminous soft pastel tint of the same hue
+            if (hsl[1] < 0.08f) {
+                return 0xFFF1F0F4;
+            }
+            float outH = hsl[0];
+            float outS = Math.min(1.0f, Math.max(0.38f, hsl[1] * 0.85f));
+            float outL = 0.88f;
+            int candidate = androidx.core.graphics.ColorUtils.HSLToColor(new float[]{outH, outS, outL});
+            if (androidx.core.graphics.ColorUtils.calculateContrast(candidate, color) < 4.2) {
+                candidate = androidx.core.graphics.ColorUtils.HSLToColor(new float[]{outH, outS, 0.94f});
+            }
+            return candidate;
         }
     }
 

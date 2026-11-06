@@ -275,6 +275,17 @@ object AppearanceConfig {
         return fabIconColor.Int()
     }
 
+    /** Цвет иконки основной кнопки FAB в активном режиме (0 = как в покое). */
+    @JvmField
+    val fabActiveIconColor = addConfig("OEAppearanceFabActiveIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabActiveIconColor(): Int {
+        ensureLoaded()
+        val c = fabActiveIconColor.Int()
+        return if (c != 0) c else fabIconColor()
+    }
+
     /** Размер вторичной кнопки (истории / камера) FAB в dp (40, 48, 56). По умолчанию 48. */
     @JvmField
     val subFabSize = addConfig("OEAppearanceSubFabSize", ConfigItem.configTypeInt, 48)

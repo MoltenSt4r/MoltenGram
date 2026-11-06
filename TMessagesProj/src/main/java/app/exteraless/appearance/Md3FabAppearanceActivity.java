@@ -46,6 +46,7 @@ import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.Paint.ColorPickerBottomSheet;
 import org.telegram.ui.Components.RecyclerListView;
 
 import tw.nekomimi.nekogram.settings.BaseNekoSettingsActivity;
@@ -150,8 +151,11 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             AppearanceConfig.fabActiveSize.setConfigInt(56);
             AppearanceConfig.fabColor.setConfigInt(0);
             AppearanceConfig.fabActiveColor.setConfigInt(0);
+            AppearanceConfig.fabIconColor.setConfigInt(0);
+            AppearanceConfig.fabActiveIconColor.setConfigInt(0);
             AppearanceConfig.subFabSize.setConfigInt(48);
             AppearanceConfig.subFabColor.setConfigInt(0);
+            AppearanceConfig.subFabIconColor.setConfigInt(0);
             AppearanceConfig.fabAlignment.setConfigInt(AppearanceConfig.FAB_ALIGN_RIGHT);
             AppearanceConfig.subFabAlignment.setConfigInt(AppearanceConfig.SUB_FAB_ALIGN_CENTER);
 
@@ -232,6 +236,9 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
         private final TextView colorSectionTitle;
         private final LinearLayout colorPaletteContainer;
+
+        private final TextView iconColorSectionTitle;
+        private final LinearLayout iconColorPaletteContainer;
 
         private final LinearLayout alignmentContainer;
         private final TextView alignRightChip;
@@ -385,7 +392,22 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             colorPaletteContainer.setOrientation(HORIZONTAL);
             colorPaletteContainer.setGravity(Gravity.CENTER_VERTICAL);
             colorScroll.addView(colorPaletteContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
-            addView(colorScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+            addView(colorScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+
+            // 6b. Icon Color Swatches Section
+            iconColorSectionTitle = createSectionHeader(context, "ЦВЕТ СИМВОЛА / ИКОНКИ");
+            addView(iconColorSectionTitle, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 18, 4, 18, 8));
+
+            HorizontalScrollView iconColorScroll = new HorizontalScrollView(context);
+            iconColorScroll.setHorizontalScrollBarEnabled(false);
+            iconColorScroll.setClipToPadding(false);
+            iconColorScroll.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+
+            iconColorPaletteContainer = new LinearLayout(context);
+            iconColorPaletteContainer.setOrientation(HORIZONTAL);
+            iconColorPaletteContainer.setGravity(Gravity.CENTER_VERTICAL);
+            iconColorScroll.addView(iconColorPaletteContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+            addView(iconColorScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
             // 7. Placement & Alignment Controls (MD3 Segmented Chips - NO POPUPS)
             TextView placementHeader = createSectionHeader(context, "РАСПОЛОЖЕНИЕ И ВЫРАВНИВАНИЕ");
@@ -559,11 +581,13 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             int currentShape = getShapeForCurrentMode();
             int currentSize = getSizeForCurrentMode();
             int currentColor = getColorForCurrentMode();
+            int currentIconColor = getIconColorForCurrentMode();
 
             bigFabPreview.setMode(index);
             bigFabPreview.setShape(currentShape, animate);
             bigFabPreview.setSize(currentSize, animate);
             bigFabPreview.setColor(currentColor, animate);
+            bigFabPreview.setIconColor(currentIconColor, animate);
 
             updateLabels();
 
@@ -572,6 +596,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
             // Rebuild color swatches
             rebuildColorSwatches();
+            rebuildIconColorSwatches();
 
             // Scroll carousel to current shape
             carouselLayoutManager.scrollToPositionWithOffset(currentShape, AndroidUtilities.dp(16));
@@ -634,16 +659,32 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                     app.exteraless.utils.UIUtil.FAB_COLOR_DEFAULT,
                     app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY,
                     app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY_CONTAINER,
+                    app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY,
                     app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY_CONTAINER,
+                    app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY,
                     app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY_CONTAINER,
                     app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SURFACE,
-                    0xFFE53935, // Red
-                    0xFFD81B60, // Pink
-                    0xFFFB8C00, // Orange
-                    0xFF43A047, // Green
-                    0xFF00897B, // Teal
-                    0xFF1E88E5, // Blue
-                    0xFF8E24AA  // Purple
+                    // MD3 Pastels / Containers
+                    0xFF5DA8FF, // Sky Blue Container (как на фото)
+                    0xFFE28EFF, // Lavender Container (как на фото)
+                    0xFFCE93D8, // Soft Lilac
+                    0xFFFF85B3, // Soft Rose
+                    0xFFFF9E80, // Soft Peach
+                    0xFFFFD54F, // Soft Amber
+                    0xFFDCE775, // Soft Lime
+                    0xFF81C784, // Soft Mint
+                    0xFF4DD0E1, // Soft Cyan
+                    0xFF9FA8DA, // Soft Periwinkle
+                    // Deep / Rich Accents
+                    0xFF00305C, // Deep Navy
+                    0xFF4A005C, // Deep Purple
+                    0xFFC62828, // Crimson Red
+                    0xFFD81B60, // Cherry Pink
+                    0xFFFB8C00, // Vibrant Orange
+                    0xFF2E7D32, // Forest Green
+                    0xFF00897B, // Deep Teal
+                    0xFF1E88E5, // Ocean Blue
+                    0xFF263238  // Midnight Charcoal
             };
 
             int currentColorCode = getColorForCurrentMode();
@@ -672,13 +713,14 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                     applyColorForCurrentMode(colCode);
                     bigFabPreview.setColor(colCode, true);
                     rebuildColorSwatches();
+                    rebuildIconColorSwatches();
                     notifyFabChanged();
                 });
 
                 colorPaletteContainer.addView(swatch, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
             }
 
-            // Custom HEX button
+            // Custom Color button (opens visual ColorPickerBottomSheet)
             FrameLayout customBtn = new FrameLayout(context);
             GradientDrawable customBg = new GradientDrawable();
             customBg.setShape(GradientDrawable.OVAL);
@@ -691,18 +733,160 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             customIcon.setColorFilter(textColor, PorterDuff.Mode.SRC_IN);
             customBtn.addView(customIcon, LayoutHelper.createFrame(18, 18, Gravity.CENTER));
 
-            customBtn.setOnClickListener(v -> promptCustomHexColor());
+            customBtn.setOnClickListener(v -> showColorPickerBottomSheet(false));
             colorPaletteContainer.addView(customBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
         }
 
-        private void promptCustomHexColor() {
+        private void rebuildIconColorSwatches() {
+            iconColorPaletteContainer.removeAllViews();
+            final Context context = getContext();
+
+            int currentIconCode = getIconColorForCurrentMode();
+            int currentBgCode = getColorForCurrentMode();
+            int defBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+            int resolvedBg = app.exteraless.utils.UIUtil.resolveFabColor(currentBgCode, defBg);
+            int autoCalculatedIcon = app.exteraless.utils.UIUtil.resolveFabIconColor(currentBgCode, 0, app.exteraless.utils.UIUtil.getOnAccentColor(resolvedBg));
+
+            // Chip 0: "Авто (в тон фону)"
+            LinearLayout autoChip = new LinearLayout(context);
+            autoChip.setOrientation(HORIZONTAL);
+            autoChip.setGravity(Gravity.CENTER_VERTICAL);
+            autoChip.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(5), AndroidUtilities.dp(12), AndroidUtilities.dp(5));
+
+            View previewDot = new View(context);
+            GradientDrawable dotBg = new GradientDrawable();
+            dotBg.setShape(GradientDrawable.OVAL);
+            dotBg.setColor(autoCalculatedIcon);
+            previewDot.setBackground(dotBg);
+            autoChip.addView(previewDot, LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL, 0, 0, 6, 0));
+
+            TextView autoText = new TextView(context);
+            autoText.setText("Авто");
+            autoText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            autoChip.addView(autoText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
+
+            boolean isAuto = (currentIconCode == 0);
+            GradientDrawable chipBg = new GradientDrawable();
+            chipBg.setCornerRadius(AndroidUtilities.dp(16));
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accent == 0) accent = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText);
+            int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+
+            if (isAuto) {
+                chipBg.setColor(accent);
+                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(accent);
+                autoText.setTextColor(onAccent);
+                autoText.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
+            } else {
+                chipBg.setColor(Theme.multAlpha(textColor, 0.08f));
+                autoText.setTextColor(textColor);
+                autoText.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_REGULAR));
+            }
+            autoChip.setBackground(chipBg);
+            autoChip.setOnClickListener(v -> {
+                applyIconColorForCurrentMode(0);
+                bigFabPreview.setIconColor(0, true);
+                rebuildIconColorSwatches();
+                notifyFabChanged();
+            });
+            iconColorPaletteContainer.addView(autoChip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+
+            // Preset contrasting icon colors
+            final int[] iconPresets = new int[]{
+                    0xFF00305C, // Deep Navy
+                    0xFF4A005C, // Deep Purple
+                    0xFF1C1B1F, // Charcoal Black
+                    0xFFFFFFFF, // Pure White
+                    0xFFD0E4FF, // Pastel Sky Blue
+                    0xFFEEDBFF, // Pastel Lilac
+                    0xFFFFD54F  // Amber
+            };
+
+            for (int iconCode : iconPresets) {
+                final int colCode = iconCode;
+                FrameLayout swatch = new FrameLayout(context);
+                GradientDrawable bg = new GradientDrawable();
+                bg.setShape(GradientDrawable.OVAL);
+                bg.setColor(colCode);
+                swatch.setBackground(bg);
+
+                boolean isSelected = (currentIconCode == colCode);
+                if (isSelected) {
+                    ImageView check = new ImageView(context);
+                    check.setImageResource(R.drawable.msg_check);
+                    int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(colCode);
+                    check.setColorFilter(onAccent, PorterDuff.Mode.SRC_IN);
+                    swatch.addView(check, LayoutHelper.createFrame(18, 18, Gravity.CENTER));
+                }
+
+                swatch.setOnClickListener(v -> {
+                    applyIconColorForCurrentMode(colCode);
+                    bigFabPreview.setIconColor(colCode, true);
+                    rebuildIconColorSwatches();
+                    notifyFabChanged();
+                });
+
+                iconColorPaletteContainer.addView(swatch, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+            }
+
+            // Custom Icon Color button (palette icon)
+            FrameLayout customBtn = new FrameLayout(context);
+            GradientDrawable customBg = new GradientDrawable();
+            customBg.setShape(GradientDrawable.OVAL);
+            customBg.setColor(Theme.multAlpha(textColor, 0.08f));
+            customBtn.setBackground(customBg);
+
+            ImageView customIcon = new ImageView(context);
+            customIcon.setImageResource(R.drawable.msg_palette);
+            customIcon.setColorFilter(textColor, PorterDuff.Mode.SRC_IN);
+            customBtn.addView(customIcon, LayoutHelper.createFrame(18, 18, Gravity.CENTER));
+
+            customBtn.setOnClickListener(v -> showColorPickerBottomSheet(true));
+            iconColorPaletteContainer.addView(customBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+        }
+
+        private void showColorPickerBottomSheet(boolean forIcon) {
+            try {
+                ColorPickerBottomSheet sheet = new ColorPickerBottomSheet(getContext(), getResourceProvider());
+                int curColor = forIcon ? getIconColorForCurrentMode() : getColorForCurrentMode();
+                if (curColor == 0) {
+                    if (forIcon) {
+                        int bg = getColorForCurrentMode();
+                        int defBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+                        int resolvedBg = app.exteraless.utils.UIUtil.resolveFabColor(bg, defBg);
+                        curColor = app.exteraless.utils.UIUtil.resolveFabIconColor(bg, 0, app.exteraless.utils.UIUtil.getOnAccentColor(resolvedBg));
+                    } else {
+                        curColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                    }
+                }
+                sheet.setColor(curColor);
+                sheet.setColorListener(newColor -> {
+                    if (forIcon) {
+                        applyIconColorForCurrentMode(newColor);
+                        bigFabPreview.setIconColor(newColor, true);
+                        rebuildIconColorSwatches();
+                    } else {
+                        applyColorForCurrentMode(newColor);
+                        bigFabPreview.setColor(newColor, true);
+                        rebuildColorSwatches();
+                        rebuildIconColorSwatches();
+                    }
+                    notifyFabChanged();
+                });
+                sheet.show();
+            } catch (Throwable t) {
+                promptCustomHexColor(forIcon);
+            }
+        }
+
+        private void promptCustomHexColor(boolean forIcon) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
-            builder.setTitle("Пользовательский цвет (HEX)");
+            builder.setTitle(forIcon ? "Цвет иконки (HEX)" : "Цвет фона (HEX)");
 
             final EditText input = new EditText(getContext());
             input.setInputType(InputType.TYPE_CLASS_TEXT);
             input.setHint("#RRGGBB");
-            int cur = getColorForCurrentMode();
+            int cur = forIcon ? getIconColorForCurrentMode() : getColorForCurrentMode();
             if (cur < 0) {
                 input.setText(String.format("#%06X", (0xFFFFFF & cur)));
             }
@@ -719,9 +903,16 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                 }
                 try {
                     int parsed = android.graphics.Color.parseColor(hex);
-                    applyColorForCurrentMode(parsed);
-                    bigFabPreview.setColor(parsed, true);
-                    rebuildColorSwatches();
+                    if (forIcon) {
+                        applyIconColorForCurrentMode(parsed);
+                        bigFabPreview.setIconColor(parsed, true);
+                        rebuildIconColorSwatches();
+                    } else {
+                        applyColorForCurrentMode(parsed);
+                        bigFabPreview.setColor(parsed, true);
+                        rebuildColorSwatches();
+                        rebuildIconColorSwatches();
+                    }
                     notifyFabChanged();
                 } catch (Throwable t) {
                     BulletinFactory.of(Md3FabAppearanceActivity.this)
@@ -806,6 +997,31 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             }
         }
 
+        private int getIconColorForCurrentMode() {
+            switch (selectedModeIndex) {
+                case MODE_ACTIVE:
+                    return AppearanceConfig.fabActiveIconColor.Int();
+                case MODE_CAMERA:
+                    return AppearanceConfig.subFabIconColor.Int();
+                default:
+                    return AppearanceConfig.fabIconColor.Int();
+            }
+        }
+
+        private void applyIconColorForCurrentMode(int colorCode) {
+            switch (selectedModeIndex) {
+                case MODE_ACTIVE:
+                    AppearanceConfig.fabActiveIconColor.setConfigInt(colorCode);
+                    break;
+                case MODE_CAMERA:
+                    AppearanceConfig.subFabIconColor.setConfigInt(colorCode);
+                    break;
+                default:
+                    AppearanceConfig.fabIconColor.setConfigInt(colorCode);
+                    break;
+            }
+        }
+
         private class CarouselAdapter extends RecyclerView.Adapter<RecyclerListView.Holder> {
 
             @NonNull
@@ -843,6 +1059,9 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
         private int fromColor = 0;
         private int targetColor = 0;
+
+        private int fromIconColor = 0;
+        private int targetIconColor = 0;
 
         private int fromSizeDp = 56;
         private int targetSizeDp = 56;
@@ -911,11 +1130,13 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             int nextShape = isDemoActive ? AppearanceConfig.fabActiveShape() : AppearanceConfig.fabShape();
             int nextSize = isDemoActive ? AppearanceConfig.fabActiveSize() : AppearanceConfig.fabSize();
             int nextColCode = isDemoActive ? AppearanceConfig.fabActiveColor() : AppearanceConfig.fabColor();
+            int nextIconCode = isDemoActive ? AppearanceConfig.fabActiveIconColor() : AppearanceConfig.fabIconColor();
             int defBg = Theme.getColor(Theme.key_featuredStickers_addButton);
             int nextColor = app.exteraless.utils.UIUtil.resolveFabColor(nextColCode, defBg);
+            int nextIconColor = app.exteraless.utils.UIUtil.resolveFabIconColor(nextColCode, nextIconCode, app.exteraless.utils.UIUtil.getOnAccentColor(nextColor));
             float nextRot = isDemoActive ? 45f : 0f;
 
-            startFullMorph(nextShape, nextSize, nextColor, nextRot);
+            startFullMorph(nextShape, nextSize, nextColor, nextIconColor, nextRot);
         }
 
         public void setShape(int shapeId, boolean animate) {
@@ -962,7 +1183,22 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             startAnimator();
         }
 
-        private void startFullMorph(int targetShape, int targetSize, int nextColor, float nextRotation) {
+        public void setIconColor(int iconCode, boolean animate) {
+            int defBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+            int resolvedBg = app.exteraless.utils.UIUtil.resolveFabColor(targetColor, defBg);
+            int resolved = app.exteraless.utils.UIUtil.resolveFabIconColor(targetColor, iconCode, app.exteraless.utils.UIUtil.getOnAccentColor(resolvedBg));
+            if (!animate) {
+                fromIconColor = resolved;
+                targetIconColor = resolved;
+                invalidate();
+                return;
+            }
+            fromIconColor = targetIconColor != 0 ? targetIconColor : resolved;
+            targetIconColor = resolved;
+            startAnimator();
+        }
+
+        private void startFullMorph(int targetShape, int targetSize, int nextColor, int nextIconColor, float nextRotation) {
             fromShapeId = targetShapeId;
             targetShapeId = targetShape;
 
@@ -971,6 +1207,9 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
             fromColor = shapePaint.getColor() != 0 ? shapePaint.getColor() : nextColor;
             targetColor = nextColor;
+
+            fromIconColor = targetIconColor != 0 ? targetIconColor : nextIconColor;
+            targetIconColor = nextIconColor;
 
             targetRotation = nextRotation;
 
@@ -1000,6 +1239,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                     fromShapeId = targetShapeId;
                     fromSizeDp = targetSizeDp;
                     fromColor = targetColor;
+                    fromIconColor = targetIconColor;
                     shapeMorphProgress = 1f;
                     iconRotation = targetRotation;
                     invalidate();
@@ -1053,15 +1293,22 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             shapePaint.setColor(curCol);
             canvas.drawPath(path, shapePaint);
 
-            // Draw Icon with high-contrast onAccent color
+            // Draw Icon with tonal onAccent / customized icon color
             if (iconDrawable != null) {
                 int iconPx = (int) (scaledPx * 0.44f);
                 float cx = left + scaledPx / 2f;
                 float cy = top + scaledPx / 2f;
                 iconDrawable.setBounds((int) (cx - iconPx / 2f), (int) (cy - iconPx / 2f), (int) (cx + iconPx / 2f), (int) (cy + iconPx / 2f));
 
-                int onAccent = app.exteraless.utils.UIUtil.getOnAccentColor(curCol);
-                iconDrawable.setColorFilter(new PorterDuffColorFilter(onAccent, PorterDuff.Mode.SRC_IN));
+                int effectiveTargetIcon = targetIconColor != 0 ? targetIconColor : app.exteraless.utils.UIUtil.getOnAccentColor(curCol);
+                int effectiveFromIcon = fromIconColor != 0 ? fromIconColor : effectiveTargetIcon;
+                int curIconCol;
+                if (shapeMorphProgress >= 1f || effectiveFromIcon == effectiveTargetIcon) {
+                    curIconCol = effectiveTargetIcon;
+                } else {
+                    curIconCol = ColorUtils.blendARGB(effectiveFromIcon, effectiveTargetIcon, shapeMorphProgress);
+                }
+                iconDrawable.setColorFilter(new PorterDuffColorFilter(curIconCol, PorterDuff.Mode.SRC_IN));
 
                 if (Math.abs(iconRotation) > 0.01f) {
                     canvas.save();
@@ -1072,6 +1319,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                     iconDrawable.draw(canvas);
                 }
             }
+        }
         }
     }
 }

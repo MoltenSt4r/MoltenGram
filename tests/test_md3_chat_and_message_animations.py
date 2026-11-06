@@ -680,5 +680,52 @@ def test_voip_redesign_and_filled_sub_fab_camera():
     assert 'contains("ChatAttachAlert")' in rlv
 
 
+def test_fab_colors_tonal_contrast_and_color_picker():
+    """Verify expanded FAB palettes (pastels/containers + accents), visual ColorPickerBottomSheet, and tonal icon contrast."""
+    ui_util_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "utils", "UIUtil.java")
+    with open(ui_util_path, "r", encoding="utf-8") as f:
+        ui = f.read()
+    # Tonal contrast calculation
+    assert "ColorUtils.colorToHSL(color, hsl)" in ui
+    assert "ColorUtils.HSLToColor" in ui
+    assert "resolveFabIconColor(" in ui
+    assert "on_primary_container" in ui
+    assert "on_tertiary_container" in ui
+
+    app_cfg_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(app_cfg_path, "r", encoding="utf-8") as f:
+        cfg = f.read()
+    assert 'val fabActiveIconColor = addConfig("OEAppearanceFabActiveIconColor"' in cfg
+    assert "fun fabActiveIconColor(): Int" in cfg
+
+    ffb_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "FragmentFloatingButton.java")
+    with open(ffb_path, "r", encoding="utf-8") as f:
+        ffb = f.read()
+    assert "targetIconColor" in ffb
+    assert "currentIconColor" in ffb
+    assert "resolveFabIconColor" in ffb
+
+    activity_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "Md3FabAppearanceActivity.java")
+    with open(activity_path, "r", encoding="utf-8") as f:
+        act = f.read()
+    assert "ColorPickerBottomSheet" in act
+    assert "0xFF5DA8FF" in act  # Sky blue container from screenshot
+    assert "0xFFE28EFF" in act  # Lavender container from screenshot
+    assert "rebuildIconColorSwatches()" in act
+    assert "showColorPickerBottomSheet" in act
+    assert "setIconColor(" in act
+
+    ipm_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "icons", "IconPackManager.java")
+    with open(ipm_path, "r", encoding="utf-8") as f:
+        ipm = f.read()
+    assert '"camera"' in ipm
+
+    cam_solar_path = os.path.join(REPO, "TMessagesProj", "src", "main", "res", "drawable", "camera_solar.xml")
+    with open(cam_solar_path, "r", encoding="utf-8") as f:
+        cs = f.read()
+    assert 'fillType="evenOdd"' in cs
+
+
+
 
 
