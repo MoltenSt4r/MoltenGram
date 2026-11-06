@@ -1320,6 +1320,5 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                 }
             }
         }
-        }
     }
 }
