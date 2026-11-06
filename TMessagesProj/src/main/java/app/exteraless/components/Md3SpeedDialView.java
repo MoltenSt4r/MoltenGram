@@ -108,7 +108,7 @@ public class Md3SpeedDialView extends FrameLayout {
     public static final SpeedDialAction ACTION_CHANNEL = new SpeedDialAction("channel", R.drawable.msg_channel, R.string.NewChannel);
     public static final SpeedDialAction ACTION_GROUP = new SpeedDialAction("group", R.drawable.msg_groups, R.string.NewGroup);
     public static final SpeedDialAction ACTION_SECRET = new SpeedDialAction("secret", R.drawable.msg_secret, R.string.NewSecretChat);
-    public static final SpeedDialAction ACTION_STORY = new SpeedDialAction("story", R.drawable.outline_fab_story_24, R.string.StoryPrivacyButtonPost);
+    public static final SpeedDialAction ACTION_STORY = new SpeedDialAction("story", R.drawable.camera, R.string.StoryPrivacyButtonPost);
     public static final SpeedDialAction ACTION_QR = new SpeedDialAction("qr", R.drawable.msg_qrcode, R.string.AuthAnotherClientScan);
     public static final SpeedDialAction ACTION_SAVED = new SpeedDialAction("saved", R.drawable.msg_saved, R.string.SavedMessages);
 
@@ -141,7 +141,7 @@ public class Md3SpeedDialView extends FrameLayout {
         new IconChoice("channel", R.drawable.msg_channel, "Канал", "новости broadcast channel"),
         new IconChoice("group", R.drawable.msg_groups, "Группа", "чат сообщество group users"),
         new IconChoice("secret", R.drawable.msg_secret, "Секретный чат", "замок приватный lock secret"),
-        new IconChoice("story", R.drawable.outline_fab_story_24, "История", "сторис публикация camera story"),
+        new IconChoice("story", R.drawable.camera, "История", "сторис публикация camera story"),
         new IconChoice("qrcode", R.drawable.msg_qrcode, "QR-код", "скан qr code scan barcode"),
         new IconChoice("saved", R.drawable.msg_saved, "Избранное", "сохраненное закладка bookmark saved"),
         new IconChoice("settings", R.drawable.msg_settings, "Настройки", "параметры шестеренка gear options settings"),

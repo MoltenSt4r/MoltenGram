@@ -211,7 +211,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
         private final ModeTab[] MODES = new ModeTab[]{
                 new ModeTab(MODE_RESTING, "В покое", R.drawable.msg_edit, "Режим покоя основной кнопки"),
                 new ModeTab(MODE_ACTIVE, "При раскрытии", R.drawable.msg_close, "Активный режим Speed Dial"),
-                new ModeTab(MODE_CAMERA, "Кнопка камеры", R.drawable.msg_camera, "Дополнительная кнопка историй")
+                new ModeTab(MODE_CAMERA, "Кнопка камеры", R.drawable.camera, "Дополнительная кнопка историй")
         };
 
         private int selectedModeIndex = MODE_RESTING;
@@ -876,7 +876,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
         private void updateIcon() {
             int resId;
             if (mode == FabEditorCard.MODE_CAMERA) {
-                resId = R.drawable.msg_camera;
+                resId = R.drawable.camera;
             } else if (isDemoActive || mode == FabEditorCard.MODE_ACTIVE) {
                 resId = R.drawable.msg_edit;
                 targetRotation = 45f;

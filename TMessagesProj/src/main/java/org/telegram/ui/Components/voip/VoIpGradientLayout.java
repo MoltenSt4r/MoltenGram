@@ -222,51 +222,28 @@ public class VoIpGradientLayout extends FrameLayout {
         int primary = Theme.getColor(Theme.key_chats_actionBackground);
         boolean isDark = Theme.isCurrentThemeDark();
 
-        // 1. Base surface fill
-        canvas.drawColor(surface);
-
-        // 2. MD3 Expressive Atmospheric Bloom
-        float atmosphericAlpha = isDark ? 0.16f : 0.10f;
-        if (state == GradientState.CALLING && allowAnimations) {
-            atmosphericAlpha += (isDark ? 0.08f : 0.05f) * callingPulseProgress;
-        }
-        int topTonal = ColorUtils.blendARGB(surface, primary, Math.min(1.0f, atmosphericAlpha));
+        // 1. Flat MD3 tonal surface fill (no gradient bloom)
+        int flatBgColor = ColorUtils.blendARGB(surface, primary, isDark ? 0.14f : 0.08f);
         if (alphaOrangeRed > 0) {
-            int warmAlert = ColorUtils.blendARGB(surface, 0xFFE28B29, isDark ? 0.22f : 0.14f);
-            topTonal = ColorUtils.blendARGB(topTonal, warmAlert, alphaOrangeRed / 255f);
+            int warmAlert = ColorUtils.blendARGB(flatBgColor, 0xFFE28B29, isDark ? 0.18f : 0.12f);
+            flatBgColor = ColorUtils.blendARGB(flatBgColor, warmAlert, alphaOrangeRed / 255f);
         }
+        canvas.drawColor(flatBgColor);
 
-        if (gradientShader == null || lastW != w || lastH != h || lastTopColor != topTonal || lastBottomColor != surface) {
-            lastW = w;
-            lastH = h;
-            lastTopColor = topTonal;
-            lastBottomColor = surface;
-            gradientShader = new LinearGradient(
-                0, 0,
-                0, h * 0.75f,
-                new int[]{topTonal, ColorUtils.blendARGB(surface, primary, atmosphericAlpha * 0.35f), surface},
-                new float[]{0f, 0.45f, 1f},
-                Shader.TileMode.CLAMP
-            );
-            gradientPaint.setShader(gradientShader);
-        }
-        canvas.drawRect(0, 0, w, h, gradientPaint);
-
-        // 3. Circular reveal on call connected transition
+        // 2. Circular reveal on call connected transition
         if (showClip && clipRadius > 0) {
             clipPath.rewind();
             clipPath.addCircle(clipCx, clipCy, clipRadius, Path.Direction.CW);
             canvas.save();
             canvas.clipPath(clipPath);
-            int connectedTonal = ColorUtils.blendARGB(surface, primary, isDark ? 0.12f : 0.08f);
-            canvas.drawColor(connectedTonal);
+            canvas.drawColor(flatBgColor);
             canvas.restore();
         }
 
-        // 4. Update VoIPBackgroundProvider canvases for dock buttons and chips
+        // 3. Update VoIPBackgroundProvider canvases for dock buttons and chips
         int buttonTonalColor = isDark
-            ? ColorUtils.blendARGB(surface, primary, 0.22f)
-            : ColorUtils.blendARGB(surface, primary, 0.12f);
+            ? ColorUtils.blendARGB(flatBgColor, Color.BLACK, 0.38f)
+            : ColorUtils.blendARGB(flatBgColor, primary, 0.14f);
         int darkContainerColor = ColorUtils.setAlphaComponent(
             isDark ? Color.BLACK : Theme.getColor(Theme.key_windowBackgroundWhiteBlackText),
             (int) (255 * (isDark ? 0.35f : 0.10f))

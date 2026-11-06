@@ -508,8 +508,8 @@ public class TextMessageEnterTransition implements MessageEnterTransitionContain
                         (int) drawableTop,
                         drawableRight,
                         (int) drawableBottom,
-                        messageView.isDrawPinnedTop(),
-                        messageView.isDrawPinnedBottom(),
+                        messageView.drawPinnedTop(),
+                        messageView.drawPinnedBottom(),
                         alphaProgress,
                         true
                 );

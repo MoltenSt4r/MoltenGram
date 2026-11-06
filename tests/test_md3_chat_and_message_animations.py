@@ -535,6 +535,10 @@ def test_glass_messages_integration():
         tmet = f.read()
     assert "messageView.shouldDrawGlassBubble()" in tmet
     assert "messageView.drawGlassBubble(" in tmet
+    assert "messageView.drawPinnedTop()" in tmet
+    assert "messageView.drawPinnedBottom()" in tmet
+    assert "isDrawPinnedTop" not in tmet
+    assert "isDrawPinnedBottom" not in tmet
 
     anim_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "recyclerview", "ChatListItemAnimator.java")
     with open(anim_path, "r", encoding="utf-8") as f:
@@ -627,5 +631,36 @@ def test_md3_player_bottom_buttons_and_dialog_styling():
     # MorphButton must provide spring tactile feedback and ripple/highlight
     assert "pressScale.target = pressed ? 0.93f : 1.0f;" in mb_content
     assert "performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)" in mb_content
+
+
+def test_voip_redesign_and_filled_sub_fab_camera():
+    """Verify VoIP redesign (no gradient/waves, rotating shape, top status+title, 2-row dock) and filled sub-FAB camera icon."""
+    voip_frag_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "VoIPFragment.java")
+    with open(voip_frag_path, "r", encoding="utf-8") as f:
+        vf = f.read()
+    assert "callingUserTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 36)" in vf
+    assert "bottomSpeakerBtn.setShowText(true)" in vf
+    assert "bottomVideoBtn.setShowText(true)" in vf
+    assert "bottomMuteBtn.setShowText(true)" in vf
+    assert "bottomEndCallBtn.setPill(true, 166f)" in vf
+    assert "0xFFF26D5B" in vf
+
+    waves_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "ImageWithWavesView.java")
+    with open(waves_path, "r", encoding="utf-8") as f:
+        wv = f.read()
+    assert "shapeRotationAnimator" in wv
+    assert "shapeRotateMatrix.setRotate(shapeRotationDeg, cx, cy)" in wv
+    assert "avatarWavesDrawable.draw(" not in wv.split("protected void onDraw(Canvas canvas)")[1].split("@Override")[0]
+
+    grad_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "VoIpGradientLayout.java")
+    with open(grad_path, "r", encoding="utf-8") as f:
+        gl = f.read()
+    assert "canvas.drawColor(flatBgColor);" in gl
+
+    dialogs_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "DialogsActivity.java")
+    with open(dialogs_path, "r", encoding="utf-8") as f:
+        da = f.read()
+    assert "floatingButtonStories.setImageResource(R.drawable.camera);" in da
+
 
 

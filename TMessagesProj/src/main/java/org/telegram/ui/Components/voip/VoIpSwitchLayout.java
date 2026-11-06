@@ -71,23 +71,25 @@ public class VoIpSwitchLayout extends FrameLayout {
         this.backgroundProvider = backgroundProvider;
         setWillNotDraw(true);
         voIpButtonView = new VoIpButtonView(context, backgroundProvider);
-        addView(voIpButtonView, LayoutHelper.createFrame(VoIpButtonView.ITEM_SIZE + 1.5f, VoIpButtonView.ITEM_SIZE + 1.5f, Gravity.CENTER_HORIZONTAL));
+        addView(voIpButtonView, LayoutHelper.createFrame(VoIpButtonView.ITEM_WIDTH, VoIpButtonView.ITEM_HEIGHT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
         currentTextView = new TextView(context);
         currentTextView.setGravity(Gravity.CENTER_HORIZONTAL);
-        currentTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        currentTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        currentTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        currentTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         currentTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        currentTextView.setSingleLine(true);
         currentTextView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        addView(currentTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, VoIpButtonView.ITEM_SIZE + 6, 0, 2));
+        addView(currentTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, VoIpButtonView.ITEM_HEIGHT + 7, 0, 2));
 
         newTextView = new TextView(context);
         newTextView.setGravity(Gravity.CENTER_HORIZONTAL);
-        newTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
-        newTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        newTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        newTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
         newTextView.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        newTextView.setSingleLine(true);
         newTextView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-        addView(newTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, VoIpButtonView.ITEM_SIZE + 6, 0, 2));
+        addView(newTextView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL, 0, VoIpButtonView.ITEM_HEIGHT + 7, 0, 2));
         currentTextView.setVisibility(GONE);
         newTextView.setVisibility(GONE);
     }
@@ -176,7 +178,7 @@ public class VoIpSwitchLayout extends FrameLayout {
         if (voIpButtonView != null) {
             newVoIpButtonView.setShapeType(voIpButtonView.getShapeType());
         }
-        addView(newVoIpButtonView, LayoutHelper.createFrame(VoIpButtonView.ITEM_SIZE + 1.5f, VoIpButtonView.ITEM_SIZE + 1.5f, Gravity.CENTER_HORIZONTAL));
+        addView(newVoIpButtonView, LayoutHelper.createFrame(VoIpButtonView.ITEM_WIDTH, VoIpButtonView.ITEM_HEIGHT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
         final VoIpButtonView oldVoIpButton = voIpButtonView;
         voIpButtonView = newVoIpButtonView;
         newVoIpButtonView.animate().alpha(1f).setDuration(250).start();
@@ -282,10 +284,12 @@ public class VoIpSwitchLayout extends FrameLayout {
 
     public static class VoIpButtonView extends View {
         private static final int ITEM_SIZE = 52;
+        public static final int ITEM_WIDTH = 74;
+        public static final int ITEM_HEIGHT = 54;
 
         public static final int SHAPE_SQUIRCLE = 0;
         public static final int SHAPE_PILL = 1;
-        private int shapeType = SHAPE_SQUIRCLE;
+        private int shapeType = SHAPE_PILL;
         private final RectF shapeRect = new RectF();
 
         private RLottieDrawable unSelectedIcon;
@@ -295,7 +299,7 @@ public class VoIpSwitchLayout extends FrameLayout {
         private final Paint whiteCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Paint darkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
         private final Path clipPath = new Path();
-        private final int maxRadius = AndroidUtilities.dp(ITEM_SIZE / 2f);
+        private final int maxRadius = AndroidUtilities.dp(ITEM_WIDTH / 2f);
         private int unselectedRadius = maxRadius;
         private int selectedRadius = 0;
         private boolean isSelectedState = false;
@@ -313,21 +317,27 @@ public class VoIpSwitchLayout extends FrameLayout {
             return shapeType;
         }
 
-        private float getShapeCornerRadius(float r) {
-            return shapeType == SHAPE_PILL ? r : (r * 0.58f);
+        private float getShapeCornerRadius(float ry) {
+            return shapeType == SHAPE_PILL ? ry : (ry * 0.58f);
         }
 
         private void drawButtonShape(Canvas canvas, float cx, float cy, float r, Paint paint) {
             if (r <= 0) return;
-            shapeRect.set(cx - r, cy - r, cx + r, cy + r);
-            float corner = getShapeCornerRadius(r);
+            float frac = Math.min(1f, r / (float) maxRadius);
+            float halfW = (getWidth() > 0 ? getWidth() / 2f : AndroidUtilities.dp(ITEM_WIDTH / 2f)) * frac;
+            float halfH = (getHeight() > 0 ? getHeight() / 2f : AndroidUtilities.dp(ITEM_HEIGHT / 2f)) * frac;
+            shapeRect.set(cx - halfW, cy - halfH, cx + halfW, cy + halfH);
+            float corner = getShapeCornerRadius(halfH);
             canvas.drawRoundRect(shapeRect, corner, corner, paint);
         }
 
         private void addShapeToPath(Path path, float cx, float cy, float r) {
             if (r <= 0) return;
-            shapeRect.set(cx - r, cy - r, cx + r, cy + r);
-            float corner = getShapeCornerRadius(r);
+            float frac = Math.min(1f, r / (float) maxRadius);
+            float halfW = (getWidth() > 0 ? getWidth() / 2f : AndroidUtilities.dp(ITEM_WIDTH / 2f)) * frac;
+            float halfH = (getHeight() > 0 ? getHeight() / 2f : AndroidUtilities.dp(ITEM_HEIGHT / 2f)) * frac;
+            shapeRect.set(cx - halfW, cy - halfH, cx + halfW, cy + halfH);
+            float corner = getShapeCornerRadius(halfH);
             path.addRoundRect(shapeRect, corner, corner, Path.Direction.CW);
         }
 
@@ -463,6 +473,8 @@ public class VoIpSwitchLayout extends FrameLayout {
             backgroundProvider.setLightTranslation(left, top);
 
             if (singleIcon != null) {
+                int iconSize = AndroidUtilities.dp(ITEM_SIZE + 1.5f);
+                singleIcon.setBounds((int) (cx - iconSize / 2f), (int) (cy - iconSize / 2f), (int) (cx + iconSize / 2f), (int) (cy + iconSize / 2f));
                 if (singleIconBackgroundAlphaPercent > 20) {
                     darkPaint.setAlpha((int) (VoIPBackgroundProvider.DARK_LIGHT_DEFAULT_ALPHA * singleIconBackgroundAlphaPercent / 100f));
                     whiteCirclePaint.setAlpha((int) (255 * singleIconBackgroundAlphaPercent / 100f));
@@ -476,9 +488,16 @@ public class VoIpSwitchLayout extends FrameLayout {
                     }
                     singleIcon.draw(canvas);
                 }
+                canvas.restore();
                 return;
             }
-            if (selectedIcon == null || unSelectedIcon == null) return;
+            if (selectedIcon == null || unSelectedIcon == null) {
+                canvas.restore();
+                return;
+            }
+            int iconSize = AndroidUtilities.dp(ITEM_SIZE + 1.5f);
+            selectedIcon.setBounds((int) (cx - iconSize / 2f), (int) (cy - iconSize / 2f), (int) (cx + iconSize / 2f), (int) (cy + iconSize / 2f));
+            unSelectedIcon.setBounds((int) (cx - iconSize / 2f), (int) (cy - iconSize / 2f), (int) (cx + iconSize / 2f), (int) (cy + iconSize / 2f));
 
             boolean isUnSelected = unselectedRadius == maxRadius && selectedRadius == 0;
             boolean isSelected = selectedRadius == maxRadius && unselectedRadius == 0;
