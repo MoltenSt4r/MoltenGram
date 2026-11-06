@@ -292,7 +292,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
-        if (AppearanceConfig.glassMessages.Bool()) {
+        if (AppearanceConfig.glassMessages.Bool() && SharedConfig.chatBlurEnabled()) {
             glassMessagesOpacityRow = addRow("glassMessagesOpacity");
             glassMessagesRefractionRow = addRow("glassMessagesRefraction");
         } else {
@@ -793,6 +793,22 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             }, AppearanceConfig.glassOutlineStyle, null);
             return;
         } else if (position == glassMessagesRow) {
+            if (!SharedConfig.chatBlurEnabled()) {
+                AndroidUtilities.shakeViewSpring(view, -4f);
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.raw.info,
+                                    getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
+                                    getString(R.string.Enable),
+                                    () -> {
+                                        SharedConfig.toggleChatBlur();
+                                        rebuildRowsAndNotify();
+                                        rebuildAll();
+                                    })
+                            .show();
+                }
+                return;
+            }
             boolean enabled = AppearanceConfig.glassMessages.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
@@ -910,22 +926,29 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(SharedConfig.chatBlurEnabled());
             }
+            rebuildRowsAndNotify();
             rebuildAll();
             return;
         } else if (position == glassMessageMenuRow) {
+            if (!SharedConfig.chatBlurEnabled()) {
+                AndroidUtilities.shakeViewSpring(view, -4f);
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.raw.info,
+                                    getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
+                                    getString(R.string.Enable),
+                                    () -> {
+                                        SharedConfig.toggleChatBlur();
+                                        rebuildRowsAndNotify();
+                                        rebuildAll();
+                                    })
+                            .show();
+                }
+                return;
+            }
             boolean enabled = AppearanceConfig.glassMessageMenu.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
-            }
-            // Стеклянное меню рисуется поверх
-            // блюра, и без него настройка не даёт ничего видимого, поэтому предлагаем включить.
-            if (enabled && !SharedConfig.chatBlurEnabled() && getParentActivity() != null) {
-                BulletinFactory.of(this)
-                        .createSimpleBulletin(R.raw.info,
-                                getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
-                                getString(R.string.Enable),
-                                SharedConfig::toggleChatBlur)
-                        .show();
             }
             return;
         } else if (position == separateHeadersRow
@@ -1140,6 +1163,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     // иначе строка, побывавшая заблокированной, останется полупрозрачной.
                     cell.setEnabled(position != separateHeadersRow
                             || AppearanceConfig.dividerStyle.Int() != AppearanceConfig.DIVIDER_SEGMENTS, null);
+                    cell.setCheckBoxIcon((position == glassMessagesRow || position == glassMessageMenuRow) && !SharedConfig.chatBlurEnabled()
+                            ? R.drawable.permission_locked : 0);
                     if (position == centerTitleRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceCenterTitle),
                                 AppearanceConfig.INSTANCE.centerTitle(), true);
@@ -1156,9 +1181,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == separateHeadersRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSeparateHeaders), AppearanceConfig.separateHeaders.Bool(), true);
                     } else if (position == glassMessageMenuRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), getString(R.string.OEAppearanceGlassMessageMenuInfo), AppearanceConfig.glassMessageMenu.Bool(), true, true);
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), getString(R.string.OEAppearanceGlassMessageMenuInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessageMenu.Bool(), true, true);
                     } else if (position == glassMessagesRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessages), getString(R.string.OEAppearanceGlassMessagesInfo), AppearanceConfig.glassMessages.Bool(), true, true);
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessages), getString(R.string.OEAppearanceGlassMessagesInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessages.Bool(), true, true);
                     } else if (position == chat3dScrollRow) {
                         cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceChat3dScroll), getString(R.string.OEAppearanceChat3dScrollInfo), AppearanceConfig.chat3dScroll.Bool(), true, true);
                     } else if (position == forceBlurRow) {

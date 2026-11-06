@@ -22819,7 +22819,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return bottom;
     }
 
-    private boolean shouldDrawGlassBubble() {
+    public boolean shouldDrawGlassBubble() {
         return app.exteraless.appearance.AppearanceConfig.glassMessages()
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()
                 && currentMessageObject != null
@@ -22851,7 +22851,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         drawGlassBubble(canvas, bounds.left, bounds.top, bounds.right, bounds.bottom, drawPinnedTop, drawPinnedBottom, alphaInternal, false);
     }
 
-    private void drawGlassBubble(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal, boolean inParentSpace) {
+    public void drawGlassBubble(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal, boolean inParentSpace) {
         if (right <= left || bottom <= top) {
             return;
         }

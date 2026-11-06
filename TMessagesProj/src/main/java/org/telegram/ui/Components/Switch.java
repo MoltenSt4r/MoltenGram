@@ -990,6 +990,10 @@ public class Switch extends View {
         // Icons inside thumb:
         if (iconDrawable != null && animatorIconVisibility.getFloatValue() > 0) {
             float factor = animatorIconVisibility.getFloatValue();
+            int iconColor = lerpColor(surfaceBg, accentColor, pp);
+            if (lastIconColor != iconColor) {
+                iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = iconColor, PorterDuff.Mode.MULTIPLY));
+            }
             drawCenteredDrawable(canvas, iconDrawable, (int) thumbX, (int) thumbY, factor * 0.8f * scale, (int) (255 * factor));
         } else {
             // OFF icon: Cross '✕'

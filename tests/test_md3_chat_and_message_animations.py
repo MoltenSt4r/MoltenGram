@@ -522,6 +522,19 @@ def test_glass_messages_integration():
     assert "AppearanceConfig.glassMessages" in oea
     assert "AppearanceConfig.glassMessagesOpacity" in oea
     assert "AppearanceConfig.glassMessagesRefraction" in oea
+    assert "R.drawable.permission_locked" in oea
+    assert "!SharedConfig.chatBlurEnabled()" in oea
+
+    tmet_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "TextMessageEnterTransition.java")
+    with open(tmet_path, "r", encoding="utf-8") as f:
+        tmet = f.read()
+    assert "messageView.shouldDrawGlassBubble()" in tmet
+    assert "messageView.drawGlassBubble(" in tmet
+
+    anim_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "recyclerview", "ChatListItemAnimator.java")
+    with open(anim_path, "r", encoding="utf-8") as f:
+        anim = f.read()
+    assert "msg.isAnyKindOfSticker() || msg.isAnimatedEmoji()" in anim
 
     cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
     with open(cmc_path, "r", encoding="utf-8") as f:

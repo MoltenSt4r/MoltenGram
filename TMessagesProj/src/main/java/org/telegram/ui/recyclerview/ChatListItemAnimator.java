@@ -327,6 +327,9 @@ public class ChatListItemAnimator extends DefaultItemAnimator {
         if (holder != null && holder.itemView instanceof ChatMessageCell) {
             ChatMessageCell cell = (ChatMessageCell) holder.itemView;
             MessageObject msg = cell.getMessageObject();
+            if (msg != null && (msg.isAnyKindOfSticker() || msg.isAnimatedEmoji())) {
+                return app.exteraless.chats.ChatsConfig.MESSAGE_ANIM_DEFAULT;
+            }
             boolean isOut = msg != null && msg.isOutOwner();
             return isOut ? app.exteraless.chats.ChatsConfig.outgoingMessageAnimation() : app.exteraless.chats.ChatsConfig.incomingMessageAnimation();
         }
