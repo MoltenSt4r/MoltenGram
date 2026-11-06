@@ -40381,7 +40381,7 @@ public class ChatActivity extends BaseFragment implements
                 view = new ChatMessageCell(mContext, currentAccount, true, sharedResources, themeDelegate);
                 ChatMessageCell chatMessageCell = (ChatMessageCell) view;
                 chatMessageCell.setResourcesProvider(themeDelegate);
-                chatMessageCell.setGlassFactory(glassBackgroundDrawableFactory);
+                chatMessageCell.setWallpaperBlurSource(navbarContentSourceWallpaper);
                 chatMessageCell.shouldCheckVisibleOnScreen = false;
                 chatMessageCell.setDelegate(getChatMessageCellDelegate());
                 chatMessageCell.draftAnimationsPool = botDraftAnimationsPool;
@@ -47142,8 +47142,8 @@ public class ChatActivity extends BaseFragment implements
 
     public class ThemeDelegate implements Theme.ResourcesProvider, ChatActionCell.ThemeDelegate, MessagePreviewView.ResourcesDelegate {
 
-        public org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory getGlassBackgroundDrawableFactory() {
-            return glassBackgroundDrawableFactory;
+        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getWallpaperBlurSource() {
+            return navbarContentSourceWallpaper;
         }
 
         private final HashMap<String, Drawable> currentDrawables = new HashMap<>();

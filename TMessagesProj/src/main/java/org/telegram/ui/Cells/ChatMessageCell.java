@@ -100,9 +100,12 @@ import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
 
-import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
-import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
-import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
+import android.graphics.BitmapShader;
+import android.graphics.Matrix;
+import org.telegram.ui.Components.blur3.GlassOutlineStyle;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSource;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap;
+import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
@@ -1669,14 +1672,21 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean allowAssistant;
     public MessageDrawable currentBackgroundDrawable;
     private MessageDrawable currentBackgroundSelectedDrawable;
-    private BlurredBackgroundDrawableViewFactory glassFactory;
-    private BlurredBackgroundDrawable bubbleGlassDrawable;
+    private BlurredBackgroundSource wallpaperBlurSource;
+    private final Path glassBubblePath = new Path();
+    private final Path glassStrokePath = new Path();
+    private final RectF glassRectF = new RectF();
+    private final float[] glassRadii = new float[8];
+    private final Paint glassBitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Paint glassTintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glassSheenPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Matrix glassShaderMatrix = new Matrix();
+    private Bitmap lastGlassShaderBitmap;
+    private BitmapShader cachedGlassBitmapShader;
 
-    public void setGlassFactory(BlurredBackgroundDrawableViewFactory factory) {
-        if (this.glassFactory != factory) {
-            this.glassFactory = factory;
-            this.bubbleGlassDrawable = null;
-        }
+    public void setWallpaperBlurSource(BlurredBackgroundSource source) {
+        this.wallpaperBlurSource = source;
     }
     private int backgroundDrawableLeft;
     private int backgroundDrawableRight;
@@ -2195,9 +2205,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public void setResourcesProvider(Theme.ResourcesProvider resourcesProvider) {
         this.resourcesProvider = resourcesProvider;
         if (resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
-            BlurredBackgroundDrawableViewFactory factory = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getGlassBackgroundDrawableFactory();
-            if (factory != null) {
-                setGlassFactory(factory);
+            BlurredBackgroundSource src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
+            if (src != null) {
+                setWallpaperBlurSource(src);
             }
         }
         if (radialProgress != null) {
@@ -21753,6 +21763,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean drawBackgroundInParent() {
+        if (shouldDrawGlassBubble()) {
+            return false;
+        }
         if (canDrawBackgroundInParent && currentMessageObject != null && currentMessageObject.isOutOwner()) {
             return getThemedColor(Theme.key_chat_outBubbleGradient1) != 0;
         }
@@ -22807,36 +22820,44 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private boolean shouldDrawGlassBubble() {
-        return glassFactory != null
-                && app.exteraless.appearance.AppearanceConfig.glassMessages()
+        return app.exteraless.appearance.AppearanceConfig.glassMessages()
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()
                 && currentMessageObject != null
                 && !currentMessageObject.shouldDrawWithoutBackground()
                 && !currentMessageObject.isAnyKindOfSticker();
     }
 
-    private BlurredBackgroundDrawable getOrCreateGlassDrawable() {
-        if (bubbleGlassDrawable == null && glassFactory != null) {
-            bubbleGlassDrawable = glassFactory.create();
-            bubbleGlassDrawable.setColorProvider(BlurredBackgroundProviderImpl.topPanelChatActivity(resourcesProvider));
+    private BlurredBackgroundSourceBitmap resolveWallpaperBitmapSource() {
+        BlurredBackgroundSource src = this.wallpaperBlurSource;
+        if (src == null && resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
+            src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
+            this.wallpaperBlurSource = src;
         }
-        return bubbleGlassDrawable;
+        int depth = 0;
+        while (src instanceof BlurredBackgroundSourceWrapped && depth < 6) {
+            src = ((BlurredBackgroundSourceWrapped) src).getSource();
+            depth++;
+        }
+        if (src instanceof BlurredBackgroundSourceBitmap) {
+            return (BlurredBackgroundSourceBitmap) src;
+        }
+        return null;
     }
 
     private void drawGlassBubble(Canvas canvas, Rect bounds, float alphaInternal) {
         if (bounds == null || bounds.isEmpty()) {
             return;
         }
-        drawGlassBubble(canvas, bounds.left, bounds.top, bounds.right, bounds.bottom, drawPinnedTop, drawPinnedBottom, alphaInternal);
+        drawGlassBubble(canvas, bounds.left, bounds.top, bounds.right, bounds.bottom, drawPinnedTop, drawPinnedBottom, alphaInternal, false);
     }
 
-    private void drawGlassBubble(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal) {
+    private void drawGlassBubble(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal, boolean inParentSpace) {
+        if (right <= left || bottom <= top) {
+            return;
+        }
         try {
-            BlurredBackgroundDrawable glass = getOrCreateGlassDrawable();
-            if (glass == null) {
-                if (currentBackgroundDrawable != null) {
-                    currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
-                }
+            int alphaInt = Math.max(0, Math.min(255, Math.round(255f * alphaInternal)));
+            if (alphaInt == 0) {
                 return;
             }
 
@@ -22864,19 +22885,98 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 bottomLeft = pinnedBottom ? nearRad : rad;
             }
 
-            float rootX = getX();
-            float rootY = getY();
-            ViewParent p = getParent();
-            if (p instanceof View) {
-                rootX += ((View) p).getX();
-                rootY += ((View) p).getY();
+            glassRadii[0] = glassRadii[1] = topLeft;
+            glassRadii[2] = glassRadii[3] = topRight;
+            glassRadii[4] = glassRadii[5] = bottomRight;
+            glassRadii[6] = glassRadii[7] = bottomLeft;
+
+            glassRectF.set(left, top, right, bottom);
+            glassBubblePath.rewind();
+            glassBubblePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
+
+            boolean drewWallpaperBitmap = false;
+            BlurredBackgroundSourceBitmap bitmapSource = resolveWallpaperBitmapSource();
+            if (bitmapSource != null) {
+                Bitmap bmp = bitmapSource.getBitmap();
+                if (bmp != null && !bmp.isRecycled()) {
+                    if (lastGlassShaderBitmap != bmp || cachedGlassBitmapShader == null) {
+                        lastGlassShaderBitmap = bmp;
+                        cachedGlassBitmapShader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                        glassBitmapPaint.setShader(cachedGlassBitmapShader);
+                    }
+                    float offsetX = inParentSpace ? 0f : getX();
+                    float offsetY = inParentSpace ? 0f : getY();
+                    ViewParent p = getParent();
+                    if (p instanceof View) {
+                        offsetX += ((View) p).getX();
+                        offsetY += ((View) p).getY();
+                    }
+                    glassShaderMatrix.set(bitmapSource.getMatrix());
+                    glassShaderMatrix.postTranslate(-offsetX, -offsetY);
+                    cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                    glassBitmapPaint.setAlpha(alphaInt);
+                    canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                    drewWallpaperBitmap = true;
+                }
             }
 
-            glass.setRadius(topLeft, topRight, bottomRight, bottomLeft);
-            glass.setBounds(left, top, right, bottom);
-            glass.setSourceOffset(rootX, rootY);
-            glass.setAlpha(Math.max(0, Math.min(255, (int) (255 * alphaInternal))));
-            glass.draw(canvas);
+            boolean dark = isDark();
+            int baseVeilColor;
+            if (dark) {
+                int panelBg = Theme.getColor(Theme.key_chat_topPanelBackground, resourcesProvider);
+                int neutralDark = ColorUtils.blendARGB(ColorUtils.setAlphaComponent(panelBg, 255), 0xFF242428, 0.45f);
+                int veilAlpha = drewWallpaperBitmap ? 0x4E : 0x6A;
+                baseVeilColor = ColorUtils.setAlphaComponent(neutralDark, Math.round(veilAlpha * alphaInternal));
+            } else {
+                int veilAlpha = drewWallpaperBitmap ? 0x5E : 0x7A;
+                baseVeilColor = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round(veilAlpha * alphaInternal));
+            }
+            glassTintPaint.setColor(baseVeilColor);
+            canvas.drawPath(glassBubblePath, glassTintPaint);
+
+            int sheenTop = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round((dark ? 0x1E : 0x48) * alphaInternal));
+            int sheenBot = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round((dark ? 0x05 : 0x12) * alphaInternal));
+            glassSheenPaint.setShader(new LinearGradient(
+                    left, top, left, bottom,
+                    sheenTop, sheenBot,
+                    Shader.TileMode.CLAMP
+            ));
+            canvas.drawPath(glassBubblePath, glassSheenPaint);
+
+            GlassOutlineStyle outlineStyle = GlassOutlineStyle.current();
+            if (outlineStyle != GlassOutlineStyle.HIDDEN) {
+                float strokeWidth = AndroidUtilities.dpf2(outlineStyle == GlassOutlineStyle.GLARE ? 0.9f : 0.8f);
+                float halfStroke = strokeWidth * 0.5f;
+                glassRectF.set(left + halfStroke, top + halfStroke, right - halfStroke, bottom - halfStroke);
+                glassRadii[0] = glassRadii[1] = Math.max(0f, topLeft - halfStroke);
+                glassRadii[2] = glassRadii[3] = Math.max(0f, topRight - halfStroke);
+                glassRadii[4] = glassRadii[5] = Math.max(0f, bottomRight - halfStroke);
+                glassRadii[6] = glassRadii[7] = Math.max(0f, bottomLeft - halfStroke);
+                glassStrokePath.rewind();
+                glassStrokePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
+
+                glassStrokePaint.setStyle(Paint.Style.STROKE);
+                glassStrokePaint.setStrokeWidth(strokeWidth);
+                if (outlineStyle == GlassOutlineStyle.GLARE) {
+                    int c1 = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round((dark ? 0x6E : 0xAA) * alphaInternal));
+                    int c2 = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round((dark ? 0x18 : 0x36) * alphaInternal));
+                    int c3 = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.round((dark ? 0x3E : 0x6A) * alphaInternal));
+                    glassStrokePaint.setShader(new LinearGradient(
+                            left, top, right, bottom,
+                            new int[]{c1, c2, c3},
+                            new float[]{0f, 0.52f, 1f},
+                            Shader.TileMode.CLAMP
+                    ));
+                } else {
+                    glassStrokePaint.setShader(null);
+                    int solidColor = ColorUtils.setAlphaComponent(
+                            dark ? 0xFFFFFFFF : 0xFF000000,
+                            Math.round((dark ? 0x36 : 0x24) * alphaInternal)
+                    );
+                    glassStrokePaint.setColor(solidColor);
+                }
+                canvas.drawPath(glassStrokePath, glassStrokePaint);
+            }
         } catch (Throwable e) {
             if (currentBackgroundDrawable != null) {
                 currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
@@ -22925,7 +23025,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentBackgroundShadowDrawable.setAlpha(255);
             }
             if (shouldDrawGlassBubble()) {
-                drawGlassBubble(canvas, left, top, right, bottom, pinnedTop, pinnedBottom, getAlpha());
+                drawGlassBubble(canvas, left, top, right, bottom, pinnedTop, pinnedBottom, getAlpha(), true);
             } else {
                 currentBackgroundDrawable.setAlpha((int) (getAlpha() * (shouldTranslucentDeleted() && ayuDeleted ? 255 * 0.75f : 255)));
                 currentBackgroundDrawable.setBounds(left, top, right, bottom);
@@ -25924,6 +26024,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     setDrawableBounds(drawable, layoutWidth - dp(18.5f) - drawable.getIntrinsicWidth() + offsetX, layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
                 }
                 drawable.setAlpha((int) (255 * alpha));
+                ColorFilter prevFilter = drawable.getColorFilter();
+                boolean recolorGlassCheck = shouldDrawGlassBubble();
+                if (recolorGlassCheck) {
+                    drawable.setColorFilter(getAdaptiveEmojiColorFilter(2, getThemedColor(Theme.key_chat_inTimeText)));
+                }
                 if (useScale) {
                     canvas.save();
                     canvas.scale(scale, scale, drawable.getBounds().centerX(), drawable.getBounds().centerY());
@@ -25934,6 +26039,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
                 if (moveCheck) {
                     canvas.restore();
+                }
+                if (recolorGlassCheck) {
+                    drawable.setColorFilter(prevFilter);
                 }
                 drawable.setAlpha(255);
             }
@@ -25956,6 +26064,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 Drawable drawable = getThemedDrawable(drawSelectionBackground ? Theme.key_drawable_msgOutHalfCheckSelected : Theme.key_drawable_msgOutHalfCheck);
                 setDrawableBounds(drawable, layoutWidth - dp(18) - drawable.getIntrinsicWidth(), layoutHeight - dp(pinnedBottom || pinnedTop ? 9 : 8) - drawable.getIntrinsicHeight() + timeYOffset);
                 drawable.setAlpha((int) (255 * alpha));
+                ColorFilter prevFilter = drawable.getColorFilter();
+                boolean recolorGlassCheck = shouldDrawGlassBubble();
+                if (recolorGlassCheck) {
+                    drawable.setColorFilter(getAdaptiveEmojiColorFilter(2, getThemedColor(Theme.key_chat_inTimeText)));
+                }
                 if (useScale || moveCheck) {
                     canvas.save();
                     canvas.scale(scale, scale, drawable.getBounds().centerX(), drawable.getBounds().centerY());
@@ -25963,6 +26076,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 drawable.draw(canvas);
                 if (useScale || moveCheck) {
                     canvas.restore();
+                }
+                if (recolorGlassCheck) {
+                    drawable.setColorFilter(prevFilter);
                 }
                 drawable.setAlpha(255);
             }
@@ -30254,7 +30370,35 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
     }
 
+    private int mapGlassOutColorKey(int key) {
+        if (key == Theme.key_chat_messageTextOut) return Theme.key_chat_messageTextIn;
+        if (key == Theme.key_chat_messageLinkOut) return Theme.key_chat_messageLinkIn;
+        if (key == Theme.key_chat_outTimeText) return Theme.key_chat_inTimeText;
+        if (key == Theme.key_chat_outTimeSelectedText) return Theme.key_chat_inTimeSelectedText;
+        if (key == Theme.key_chat_outReplyLine) return Theme.key_chat_inReplyLine;
+        if (key == Theme.key_chat_outReplyNameText) return Theme.key_chat_inReplyNameText;
+        if (key == Theme.key_chat_outReplyMessageText) return Theme.key_chat_inReplyMessageText;
+        if (key == Theme.key_chat_outReplyMediaMessageText) return Theme.key_chat_inReplyMediaMessageText;
+        if (key == Theme.key_chat_outReplyMediaMessageSelectedText) return Theme.key_chat_inReplyMediaMessageSelectedText;
+        if (key == Theme.key_chat_outPreviewLine) return Theme.key_chat_inPreviewLine;
+        if (key == Theme.key_chat_outPreviewInstantText) return Theme.key_chat_inPreviewInstantText;
+        if (key == Theme.key_chat_outForwardedNameText) return Theme.key_chat_inForwardedNameText;
+        if (key == Theme.key_chat_outViaBotNameText) return Theme.key_chat_inViaBotNameText;
+        if (key == Theme.key_chat_outViews) return Theme.key_chat_inViews;
+        if (key == Theme.key_chat_outAdminText) return Theme.key_chat_inAdminText;
+        if (key == Theme.key_chat_outAdminSelectedText) return Theme.key_chat_inAdminSelectedText;
+        if (key == Theme.key_chat_outAudioTitleText) return Theme.key_chat_inAudioTitleText;
+        if (key == Theme.key_chat_outAudioPerformerText) return Theme.key_chat_inAudioPerformerText;
+        if (key == Theme.key_chat_outAudioDurationText) return Theme.key_chat_inAudioDurationText;
+        if (key == Theme.key_chat_outCodeBackground) return Theme.key_chat_inCodeBackground;
+        return key;
+    }
+
     public int getThemedColor(int key) {
+        if (app.exteraless.appearance.AppearanceConfig.glassMessages()
+                && org.telegram.messenger.SharedConfig.chatBlurEnabled()) {
+            key = mapGlassOutColorKey(key);
+        }
         return Theme.getColor(key, resourcesProvider);
     }
 

@@ -446,7 +446,7 @@ object AppearanceConfig {
     /** 3D-эффект цилиндрического скролла списков и чатов */
     @JvmField
     val chat3dScroll =
-        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
+        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, true)
 
     /** Сила 3D-эффекта наклона (legacy-индекс для обратной совместимости) */
     @JvmField

@@ -500,7 +500,7 @@ def test_chat_message_cell_clean_of_glass_bubble_hacks():
 
 
 def test_glass_messages_integration():
-    """Verify clean frosted glass message bubbles using client's blur engine."""
+    """Verify crash-proof frosted glass message bubbles using wallpaper blur source and GlassOutlineStyle."""
     ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
     with open(ac_path, "r", encoding="utf-8") as f:
         ac = f.read()
@@ -518,36 +518,43 @@ def test_glass_messages_integration():
         cmc = f.read()
     assert "import android.view.ViewParent;" in cmc
     assert "Rect bubbleRect = currentBackgroundDrawable.getBounds();" in cmc
-    assert "setGlassFactory" in cmc
+    assert "setWallpaperBlurSource" in cmc
+    assert "resolveWallpaperBitmapSource" in cmc
     assert "shouldDrawGlassBubble" in cmc
     assert "drawGlassBubble" in cmc
-    assert "bubbleGlassDrawable" in cmc
-    assert "topPanelChatActivity" in cmc
+    assert "GlassOutlineStyle.current()" in cmc
+    assert "mapGlassOutColorKey" in cmc
+    assert "glassFactory" not in cmc
+    assert "bubbleGlassDrawable" not in cmc
 
     ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
     with open(ca_path, "r", encoding="utf-8") as f:
         ca = f.read()
-    assert "chatMessageCell.setGlassFactory(glassBackgroundDrawableFactory)" in ca
-    assert "getGlassBackgroundDrawableFactory" in ca
+    assert "chatMessageCell.setWallpaperBlurSource(navbarContentSourceWallpaper)" in ca
+    assert "getWallpaperBlurSource" in ca
+    assert "setGlassFactory" not in ca
 
 
 def test_recycler_list_view_universal_3d_scroll():
-    """Verify RecyclerListView implements universal crash-proof 3D cylindrical scroll."""
+    """Verify RecyclerListView implements GPU AGSL RuntimeShader 3D cylindrical scroll without child rotationX hacks."""
     rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")
     with open(rlv_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "update3dScroll()" in content
-    assert "reset3dChild" in content
-    assert "onChildDetachedFromWindow" in content
-    assert "edgeThreshold" in content
-    assert "t * t * (3.0f - 2.0f * t)" in content
-    assert "0.5f - 0.5f * sign * s" in content
-    assert "child.setRotationX(angle)" in content
-    assert "child.setScaleY(scaleY)" in content
-    assert "child.setScaleX(scaleX)" in content
-    assert "child.setTranslationY(transY)" in content
-    assert "child.setCameraDistance(cameraDistance)" in content
+    assert "CylinderScrollEffect" in content
     assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
+    assert "child.setRotationX" not in content
+    assert "reset3dChild" not in content
+
+    cse_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "CylinderScrollEffect.java")
+    with open(cse_path, "r", encoding="utf-8") as f:
+        cse = f.read()
+    assert "RuntimeShader" in cse
+    assert "RenderEffect.createRuntimeShaderEffect" in cse
+    assert "uniform shader img;" in cse
+    assert "boundsY" in cse
+    assert "edgeHeight" in cse
+    assert "perspectiveK" in cse
 
 
 def test_md3_player_bottom_buttons_and_dialog_styling():

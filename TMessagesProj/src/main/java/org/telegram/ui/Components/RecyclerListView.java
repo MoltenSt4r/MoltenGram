@@ -1695,148 +1695,54 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         update3dScroll();
     }
 
-    @Override
-    public void onChildDetachedFromWindow(@NonNull View child) {
-        super.onChildDetachedFromWindow(child);
-        reset3dChild(child);
-    }
-
-    private boolean was3dActive;
+    private app.exteraless.appearance.CylinderScrollEffect cylinderScrollEffect;
 
     public void update3dScroll() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
         try {
             boolean enabled = app.exteraless.appearance.AppearanceConfig.chat3dScroll();
-            int count = getChildCount();
             if (!enabled) {
-                if (was3dActive) {
-                    was3dActive = false;
-                    for (int i = 0; i < count; i++) {
-                        View child = getChildAt(i);
-                        if (child != null) {
-                            reset3dChild(child);
-                        }
-                    }
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
                 }
                 return;
             }
 
             LayoutManager lm = getLayoutManager();
-            if (lm != null && !lm.canScrollVertically()) {
-                if (was3dActive) {
-                    was3dActive = false;
-                    for (int i = 0; i < count; i++) {
-                        reset3dChild(getChildAt(i));
-                    }
+            if (lm == null || !lm.canScrollVertically()) {
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
                 }
                 return;
             }
 
+            int width = getMeasuredWidth();
+            if (width <= 0) {
+                width = getWidth();
+            }
             int height = getMeasuredHeight();
             if (height <= 0) {
                 height = getHeight();
             }
-            if (height <= 0 || count == 0) {
+            if (width <= 0 || height <= 0) {
                 return;
             }
 
-            was3dActive = true;
-            if (getClipChildren()) {
-                setClipChildren(false);
+            if (cylinderScrollEffect == null) {
+                cylinderScrollEffect = new app.exteraless.appearance.CylinderScrollEffect(this);
             }
-
-            float centerY = height / 2f;
             float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
-            if (maxAngle < 5f) maxAngle = 5f;
-            if (maxAngle > 60f) maxAngle = 60f;
-
-            float maxAngleRad = (float) Math.toRadians(maxAngle);
-            float radius = maxAngleRad > 0.001f ? centerY / maxAngleRad : centerY * 100f;
-            float density = getResources().getDisplayMetrics().density;
-            float cameraDistance = Math.max(1600f, getWidth() * 1.8f) * (density > 0 ? density : 1f);
-
-            // Мертвая зона по центру экрана (где список абсолютно плоский, без малейшего наклона)
-            // Искривление / загиб начинается только ближе к верхнему и нижнему краю (последние ~35% высоты)
-            float edgeThreshold = 0.30f;
-
-            for (int i = 0; i < count; i++) {
-                View child = getChildAt(i);
-                if (child == null || child == pinnedHeader || child.getHeight() <= 0) {
-                    continue;
-                }
-
-                float childCenterY = child.getTop() + child.getHeight() / 2f;
-                float u = (childCenterY - centerY) / centerY;
-                u = Math.max(-1.0f, Math.min(1.0f, u));
-
-                float absU = Math.abs(u);
-                float s = 0f;
-                if (absU > edgeThreshold) {
-                    float t = (absU - edgeThreshold) / (1.0f - edgeThreshold);
-                    t = Math.max(0.0f, Math.min(1.0f, t));
-                    s = t * t * (3.0f - 2.0f * t); // smoothstep: гладкий переход без излома
-                }
-
-                float sign = Math.signum(u);
-                float angle = -sign * s * maxAngle;
-                if (Float.isNaN(angle) || Float.isInfinite(angle)) {
-                    continue;
-                }
-
-                if (child.getCameraDistance() != cameraDistance) {
-                    child.setCameraDistance(cameraDistance);
-                }
-
-                // В центре пивот посередине. При загибе к верхнему краю пивот смещается к нижнему краю элемента,
-                // а при загибе к нижнему краю — к верхнему краю элемента, обеспечивая непрерывное огибание горизонта:
-                float pivotX = child.getWidth() / 2f;
-                float pivotY = child.getHeight() * (0.5f - 0.5f * sign * s);
-                if (child.getPivotX() != pivotX) {
-                    child.setPivotX(pivotX);
-                }
-                if (Math.abs(child.getPivotY() - pivotY) > 0.5f) {
-                    child.setPivotY(pivotY);
-                }
-
-                if (Math.abs(child.getRotationX() - angle) > 0.05f) {
-                    child.setRotationX(angle);
-                }
-
-                // Оптическое сжатие высоты по поверхности загиба (перспектива горизонта)
-                float angleRad = (float) Math.toRadians(Math.abs(angle));
-                float scaleY = 1.0f - (1.0f - (float) Math.cos(angleRad)) * 0.75f;
-                scaleY = Math.max(0.65f, Math.min(1.0f, scaleY));
-                if (Math.abs(child.getScaleY() - scaleY) > 0.005f) {
-                    child.setScaleY(scaleY);
-                }
-
-                // Легкое баррель-растяжение по краям горизонта:
-                float scaleX = 1.0f + 0.045f * s;
-                if (Math.abs(child.getScaleX() - scaleX) > 0.005f) {
-                    child.setScaleX(scaleX);
-                }
-
-                // Смещение сегментов к линии горизонта:
-                float displacement = radius * (1f - (float) Math.cos(angleRad));
-                float transY = -sign * s * displacement * 0.35f;
-                if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
-                    child.setTranslationY(transY);
-                }
-            }
+            cylinderScrollEffect.update(width, height, getPaddingTop(), getPaddingBottom(), maxAngle);
         } catch (Throwable ignored) {
         }
     }
 
-    private void reset3dChild(View child) {
-        if (child == null) return;
-        try {
-            if (child.getRotationX() != 0f) child.setRotationX(0f);
-            if (child.getScaleY() != 1f) child.setScaleY(1f);
-            if (child.getScaleX() != 1f) child.setScaleX(1f);
-            if (child.getTranslationY() != 0f) child.setTranslationY(0f);
-            child.setPivotX(child.getWidth() / 2f);
-            child.setPivotY(child.getHeight() / 2f);
-        } catch (Throwable ignored) {
-        }
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+        super.setPadding(left, top, right, bottom);
+        update3dScroll();
     }
 
     public void setSelectorType(int type) {
@@ -2941,12 +2847,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.startAllHeavyOperations, 512);
         }
 
-        if (was3dActive) {
-            was3dActive = false;
-            int count = getChildCount();
-            for (int i = 0; i < count; i++) {
-                reset3dChild(getChildAt(i));
-            }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && cylinderScrollEffect != null) {
+            cylinderScrollEffect.clear();
         }
     }
 
