@@ -464,67 +464,55 @@ def test_noto_emoji_reactions_centering_and_anchor():
     assert 'emojiCenterX' in chat_code
 
 
-def test_translucent_messages_and_3d_scroll_configs():
-    """Verify AppearanceConfig defines message bubble transparency and 3D scroll configs."""
+def test_3d_scroll_configs():
+    """Verify AppearanceConfig defines 3D scroll configs."""
     ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
     with open(ac_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "val messageBubbleTransparency" in content
-    assert "fun messageBubbleAlpha(): Float" in content
-    assert "val messageBubbleGlassStyle" in content
-    assert "fun messageBubbleIsFrosted(): Boolean" in content
-    assert "fun messageBubbleHasGlare(): Boolean" in content
     assert "val chat3dScroll" in content
     assert "val chat3dScrollAngle" in content
     assert "fun chat3dScrollAngle(): Int" in content
     assert "fun chat3dScrollMaxAngle(): Float" in content
 
 
-def test_open_extera_appearance_translucent_and_3d_scroll_rows():
-    """Verify OpenExteraAppearanceActivity binds and handles translucent messages and 3D scroll slider."""
+def test_open_extera_appearance_3d_scroll_rows():
+    """Verify OpenExteraAppearanceActivity binds and handles 3D scroll slider."""
     oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
     with open(oea_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "translucentMessagesRow" in content
-    assert "messageBubbleGlassStyleRow" in content
     assert "chat3dScrollRow" in content
     assert "chat3dScrollIntensityRow" in content
     assert "TYPE_3D_SCROLL_SLIDER" in content
-    assert "AppearanceConfig.messageBubbleTransparency" in content
-    assert "AppearanceConfig.messageBubbleGlassStyle" in content
     assert "AppearanceConfig.chat3dScroll" in content
     assert "AppearanceConfig.chat3dScrollAngle" in content
 
 
-def test_chat_message_cell_bubble_alpha_and_real_glass_blur():
-    """Verify ChatMessageCell applies real frosted glass background and removes fake stroke borders."""
+def test_chat_message_cell_clean_of_glass_bubble_hacks():
+    """Verify ChatMessageCell is clean without crashing glass/stroke hacks."""
     cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
     with open(cmc_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "getBubbleAlpha()" in content
-    assert "drawBubbleBlurredBackground" in content
-    assert "blurBubblePaint" in content
-    assert "blurBitmapShader" in content
-    assert "drawBubbleGlassGlare" in content
-    assert "bubbleGlassGlarePaint" in content
-    assert "postTranslate(-rootX, -rootY)" in content
-    # Artificial 1dp stroke borders must NOT exist
     assert "bubbleGlassStrokePaint" not in content
     assert "drawBubbleGlassStroke" not in content
+    assert "bubbleGlassGlarePaint" not in content
+    assert "drawBubbleGlassGlare" not in content
+    assert "drawBubbleBlurredBackground" not in content
 
 
-def test_chat_activity_3d_scroll_implementation():
-    """Verify ChatActivity implements cylindrical wheel 3D scroll with dynamic pivot and foreshortening."""
-    ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
-    with open(ca_path, "r", encoding="utf-8") as f:
+def test_recycler_list_view_universal_3d_scroll():
+    """Verify RecyclerListView implements universal crash-proof 3D cylindrical scroll."""
+    rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")
+    with open(rlv_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "update3dScroll()" in content
+    assert "reset3dChild" in content
+    assert "onChildDetachedFromWindow" in content
     assert "child.setRotationX(angle)" in content
     assert "child.setScaleY(scaleY)" in content
+    assert "child.setScaleX(scaleX)" in content
     assert "child.setTranslationY(transY)" in content
     assert "child.setCameraDistance(cameraDistance)" in content
     assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
-    assert "setBlurredWallpaperSource" in content
 
 
 def test_md3_player_bottom_buttons_and_dialog_styling():

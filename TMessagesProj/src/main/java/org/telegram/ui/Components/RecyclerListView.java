@@ -1553,6 +1553,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 if (pendingHighlightPosition != null) {
                     highlightRowInternal(pendingHighlightPosition, 700, false);
                 }
+                update3dScroll();
             }
         });
         addOnItemTouchListener(new RecyclerListViewItemClickListener(context));
@@ -1690,6 +1691,138 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         checkSection(false);
         if (pendingHighlightPosition != null) {
             highlightRowInternal(pendingHighlightPosition, 700, false);
+        }
+        update3dScroll();
+    }
+
+    @Override
+    public void onChildDetachedFromWindow(@NonNull View child) {
+        super.onChildDetachedFromWindow(child);
+        reset3dChild(child);
+    }
+
+    private boolean was3dActive;
+
+    public void update3dScroll() {
+        try {
+            boolean enabled = app.exteraless.appearance.AppearanceConfig.chat3dScroll();
+            int count = getChildCount();
+            if (!enabled) {
+                if (was3dActive) {
+                    was3dActive = false;
+                    for (int i = 0; i < count; i++) {
+                        View child = getChildAt(i);
+                        if (child != null) {
+                            reset3dChild(child);
+                        }
+                    }
+                }
+                return;
+            }
+
+            LayoutManager lm = getLayoutManager();
+            if (lm != null && !lm.canScrollVertically()) {
+                if (was3dActive) {
+                    was3dActive = false;
+                    for (int i = 0; i < count; i++) {
+                        reset3dChild(getChildAt(i));
+                    }
+                }
+                return;
+            }
+
+            int height = getMeasuredHeight();
+            if (height <= 0) {
+                height = getHeight();
+            }
+            if (height <= 0 || count == 0) {
+                return;
+            }
+
+            was3dActive = true;
+            if (getClipChildren()) {
+                setClipChildren(false);
+            }
+
+            float centerY = height / 2f;
+            float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
+            if (maxAngle < 5f) maxAngle = 5f;
+            if (maxAngle > 60f) maxAngle = 60f;
+
+            float maxAngleRad = (float) Math.toRadians(maxAngle);
+            float radius = maxAngleRad > 0.001f ? centerY / maxAngleRad : centerY * 100f;
+            float density = getResources().getDisplayMetrics().density;
+            float cameraDistance = Math.max(1600f, getWidth() * 1.8f) * (density > 0 ? density : 1f);
+
+            for (int i = 0; i < count; i++) {
+                View child = getChildAt(i);
+                if (child == null || child == pinnedHeader || child.getHeight() <= 0) {
+                    continue;
+                }
+
+                float childCenterY = child.getTop() + child.getHeight() / 2f;
+                float factor = (childCenterY - centerY) / centerY;
+                factor = Math.max(-1.0f, Math.min(1.0f, factor));
+
+                float angleRad = factor * maxAngleRad;
+                float angle = -(float) Math.toDegrees(angleRad);
+                if (Float.isNaN(angle) || Float.isInfinite(angle)) {
+                    continue;
+                }
+
+                if (child.getCameraDistance() != cameraDistance) {
+                    child.setCameraDistance(cameraDistance);
+                }
+
+                float pivotX = child.getWidth() / 2f;
+                float pivotY = child.getHeight() / 2f;
+                if (child.getPivotX() != pivotX) {
+                    child.setPivotX(pivotX);
+                }
+                if (child.getPivotY() != pivotY) {
+                    child.setPivotY(pivotY);
+                }
+
+                if (Math.abs(child.getRotationX() - angle) > 0.05f) {
+                    child.setRotationX(angle);
+                }
+
+                // Оптическое сжатие высоты по поверхности цилиндра:
+                float scaleY = (float) Math.cos(angleRad);
+                scaleY = Math.max(0.6f, Math.min(1.0f, scaleY));
+                if (Math.abs(child.getScaleY() - scaleY) > 0.005f) {
+                    child.setScaleY(scaleY);
+                }
+
+                // Легкое растяжение по ширине («слегка растянутым как на примере»):
+                // При огибании цилиндра/линзы создается мягкий баррель-эффект:
+                float absFactor = Math.abs(factor);
+                float scaleX = 1.0f + 0.045f * absFactor;
+                if (Math.abs(child.getScaleX() - scaleX) > 0.005f) {
+                    child.setScaleX(scaleX);
+                }
+
+                // Смещение сегментов цилиндра к оси барабана:
+                float displacement = radius * (1f - (float) Math.cos(angleRad));
+                float transY = factor < 0 ? displacement * 0.45f : -displacement * 0.45f;
+                if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
+                    child.setTranslationY(transY);
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+    }
+
+    private void reset3dChild(View child) {
+        if (child == null) return;
+        try {
+            if (child.getRotationX() != 0f) child.setRotationX(0f);
+            if (child.getScaleY() != 1f) child.setScaleY(1f);
+            if (child.getScaleX() != 1f) child.setScaleX(1f);
+            if (child.getTranslationY() != 0f) child.setTranslationY(0f);
+            child.setPivotX(child.getWidth() / 2f);
+            child.setPivotY(child.getHeight() / 2f);
+        } catch (Throwable ignored) {
         }
     }
 
@@ -2793,6 +2926,14 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         if (stoppedAllHeavyOperations) {
             stoppedAllHeavyOperations = false;
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.startAllHeavyOperations, 512);
+        }
+
+        if (was3dActive) {
+            was3dActive = false;
+            int count = getChildCount();
+            for (int i = 0; i < count; i++) {
+                reset3dChild(getChildAt(i));
+            }
         }
     }
 

@@ -5308,99 +5308,12 @@ public class ChatActivity extends BaseFragment implements
             int lastH = 0;
 
             {
-                setClipChildren(false);
-                setBlurredWallpaperSource(getGlassSource() != null ? getGlassSource() : navbarContentSourceWallpaper);
                 outlineActionBackgroundPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundPaint.setStrokeWidth(AndroidUtilities.dp(2));
                 outlineActionBackgroundDarkenPaint.setStyle(Paint.Style.STROKE);
                 outlineActionBackgroundDarkenPaint.setStrokeCap(Paint.Cap.ROUND);
                 outlineActionBackgroundDarkenPaint.setStrokeWidth(AndroidUtilities.dp(2));
-            }
-
-            private void update3dScroll() {
-                boolean enabled = app.exteraless.appearance.AppearanceConfig.chat3dScroll();
-                int count = getChildCount();
-                if (!enabled) {
-                    for (int i = 0; i < count; i++) {
-                        View child = getChildAt(i);
-                        if (child != null) {
-                            if (child.getRotationX() != 0f) child.setRotationX(0f);
-                            if (child.getScaleY() != 1f) child.setScaleY(1f);
-                            if (child.getTranslationY() != 0f) child.setTranslationY(0f);
-                            child.setPivotX(child.getMeasuredWidth() / 2f);
-                            child.setPivotY(child.getMeasuredHeight() / 2f);
-                        }
-                    }
-                    return;
-                }
-                int height = getMeasuredHeight();
-                if (height <= 0) {
-                    return;
-                }
-                float centerY = height / 2f;
-                float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
-                float maxAngleRad = (float) Math.toRadians(maxAngle);
-                // Радиус воображаемого цилиндра: R = centerY / maxAngleRad
-                float radius = maxAngleRad > 0.001f ? centerY / maxAngleRad : centerY * 100f;
-                float cameraDistance = Math.max(2500f, getMeasuredWidth() * 6f);
-
-                for (int i = 0; i < count; i++) {
-                    View child = getChildAt(i);
-                    if (child == null) {
-                        continue;
-                    }
-                    float childCenterY = child.getTop() + child.getMeasuredHeight() / 2f;
-                    float factor = (childCenterY - centerY) / centerY;
-                    factor = Math.max(-1.0f, Math.min(1.0f, factor));
-
-                    // Линейная зависимость угла от позиции — настоящий цилиндр/барабан,
-                    // без S-образного перегиба asin()
-                    float angleRad = factor * maxAngleRad;
-                    float angle = -(float) Math.toDegrees(angleRad);
-
-                    if (child.getCameraDistance() != cameraDistance) {
-                        child.setCameraDistance(cameraDistance);
-                    }
-                    float pivotX = child.getMeasuredWidth() / 2f;
-                    float pivotY = child.getMeasuredHeight() / 2f;
-
-                    if (child.getPivotX() != pivotX) {
-                        child.setPivotX(pivotX);
-                    }
-                    if (Math.abs(child.getPivotY() - pivotY) > 0.5f) {
-                        child.setPivotY(pivotY);
-                    }
-                    if (Math.abs(child.getRotationX() - angle) > 0.05f) {
-                        child.setRotationX(angle);
-                    }
-
-                    // Оптическое сжатие: сегмент цилиндра, повёрнутый от зрителя → cos(θ)
-                    float scaleY = (float) Math.cos(angleRad);
-                    scaleY = Math.max(0.55f, Math.min(1.0f, scaleY));
-                    if (Math.abs(child.getScaleY() - scaleY) > 0.005f) {
-                        child.setScaleY(scaleY);
-                    }
-
-                    // Вертикальный сдвиг к оси барабана: R·(1 − cos(θ))
-                    float displacement = radius * (1f - (float) Math.cos(angleRad));
-                    float transY = factor < 0 ? displacement : -displacement;
-                    if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
-                        child.setTranslationY(transY);
-                    }
-                }
-            }
-
-            @Override
-            public void onChildDetachedFromWindow(View child) {
-                super.onChildDetachedFromWindow(child);
-                if (child != null) {
-                    if (child.getRotationX() != 0f) child.setRotationX(0f);
-                    if (child.getScaleY() != 1f) child.setScaleY(1f);
-                    if (child.getTranslationY() != 0f) child.setTranslationY(0f);
-                    child.setPivotX(child.getMeasuredWidth() / 2f);
-                    child.setPivotY(child.getMeasuredHeight() / 2f);
-                }
             }
 
             @Override
@@ -5436,7 +5349,6 @@ public class ChatActivity extends BaseFragment implements
             @Override
             protected void onLayout(boolean changed, int l, int t, int r, int b) {
                 super.onLayout(changed, l, t, r, b);
-                update3dScroll();
 
                 if (lastWidth != r - l) {
                     if (lastWidth != 0) {
@@ -6257,7 +6169,6 @@ public class ChatActivity extends BaseFragment implements
 
             @Override
             protected void dispatchDraw(Canvas canvas) {
-                update3dScroll();
                 drawLaterRoundProgressCell = null;
                 invalidated = false;
 
@@ -42513,11 +42424,6 @@ public class ChatActivity extends BaseFragment implements
 
     private class ChatMessageCellDelegate implements ChatMessageCell.ChatMessageCellDelegate {
         @Override
-        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getBlurredWallpaperSource() {
-            return getGlassSource() != null ? getGlassSource() : navbarContentSourceWallpaper;
-        }
-
-        @Override
         public boolean isReplyOrSelf() {
             return UserObject.isReplyUser(currentUser) || UserObject.isUserSelf(currentUser);
         }
@@ -52532,17 +52438,7 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
-    public abstract class ChatListRecyclerView extends RecyclerListViewInternal {
-
-        private org.telegram.ui.Components.blur3.source.BlurredBackgroundSource blurredWallpaperSource;
-
-        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getBlurredWallpaperSource() {
-            return blurredWallpaperSource;
-        }
-
-        public void setBlurredWallpaperSource(org.telegram.ui.Components.blur3.source.BlurredBackgroundSource blurredWallpaperSource) {
-            this.blurredWallpaperSource = blurredWallpaperSource;
-        }
+    private abstract class ChatListRecyclerView extends RecyclerListViewInternal {
 
         public ChatListRecyclerView(Context context, ThemeDelegate themeDelegate) {
             super(context, themeDelegate);

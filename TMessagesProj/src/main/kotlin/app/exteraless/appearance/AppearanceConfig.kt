@@ -422,64 +422,7 @@ object AppearanceConfig {
         return glassOutlineStyle.Int()
     }
 
-    // ---- Полупрозрачность сообщений (Translucent Message Bubbles) ----
-
-    const val BUBBLE_TRANSPARENCY_DISABLED = 0
-    const val BUBBLE_TRANSPARENCY_LIGHT = 1
-    const val BUBBLE_TRANSPARENCY_MEDIUM = 2
-    const val BUBBLE_TRANSPARENCY_HEAVY = 3
-    const val BUBBLE_TRANSPARENCY_GLASS = 4
-
-    /** Прозрачность фона сообщений: 0 - выкл (100%), 1 - 85%, 2 - 70%, 3 - 55%, 4 - 40% */
-    @JvmField
-    val messageBubbleTransparency =
-        addConfig("OEAppearanceMessageBubbleTransparency", ConfigItem.configTypeInt, BUBBLE_TRANSPARENCY_DISABLED)
-
-    @JvmStatic
-    fun messageBubbleTransparency(): Int {
-        ensureLoaded()
-        return messageBubbleTransparency.Int()
-    }
-
-    @JvmStatic
-    fun messageBubbleAlpha(): Float {
-        ensureLoaded()
-        return when (messageBubbleTransparency.Int()) {
-            BUBBLE_TRANSPARENCY_LIGHT -> 0.85f
-            BUBBLE_TRANSPARENCY_MEDIUM -> 0.70f
-            BUBBLE_TRANSPARENCY_HEAVY -> 0.55f
-            BUBBLE_TRANSPARENCY_GLASS -> 0.40f
-            else -> 1.0f
-        }
-    }
-
-    const val MESSAGE_GLASS_FROSTED = 0 // Матовое стекло (размытие фона + блики)
-    const val MESSAGE_GLASS_CLEAR = 1   // Чистая прозрачность (без размытия + блики)
-    const val MESSAGE_GLASS_SIMPLE = 2  // Простая полупрозрачность (без бликов)
-
-    /** Стиль стекла сообщений: 0 - матовое стекло, 1 - чистая прозрачность, 2 - простая */
-    @JvmField
-    val messageBubbleGlassStyle =
-        addConfig("OEAppearanceMessageBubbleGlassStyle", ConfigItem.configTypeInt, MESSAGE_GLASS_FROSTED)
-
-    @JvmStatic
-    fun messageBubbleGlassStyle(): Int {
-        ensureLoaded()
-        return messageBubbleGlassStyle.Int()
-    }
-
-    @JvmStatic
-    fun messageBubbleIsFrosted(): Boolean {
-        return messageBubbleGlassStyle() == MESSAGE_GLASS_FROSTED
-    }
-
-    @JvmStatic
-    fun messageBubbleHasGlare(): Boolean {
-        val s = messageBubbleGlassStyle()
-        return s == MESSAGE_GLASS_FROSTED || s == MESSAGE_GLASS_CLEAR
-    }
-
-    // ---- 3D-эффект скролла сообщений (Cylinder 3D Scroll) ----
+    // ---- 3D-эффект скролла списков и чатов (Cylinder 3D Scroll) ----
 
     const val CHAT_3D_SCROLL_ANGLE_MIN = 5
     const val CHAT_3D_SCROLL_ANGLE_MAX = 60
@@ -489,7 +432,7 @@ object AppearanceConfig {
     const val CHAT_3D_SCROLL_MEDIUM = 1
     const val CHAT_3D_SCROLL_STRONG = 2
 
-    /** 3D-эффект цилиндрического скролла сообщений в чате */
+    /** 3D-эффект цилиндрического скролла списков и чатов */
     @JvmField
     val chat3dScroll =
         addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
