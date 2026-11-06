@@ -83,6 +83,7 @@ import android.view.MotionEvent;
 import android.view.SoundEffectConstants;
 import android.view.View;
 import android.view.ViewConfiguration;
+import android.view.ViewParent;
 import android.view.ViewGroup;
 import android.view.ViewStructure;
 import android.view.Window;
@@ -21592,11 +21593,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (fromParent) {
                 alphaInternal *= getAlpha();
             }
-            Rect rect = currentBackgroundDrawable.getBounds();
+            Rect bubbleRect = currentBackgroundDrawable.getBounds();
             if (hasSelectionOverlay()) {
                 currentSelectedBackgroundAlpha = 0;
                 if (shouldDrawGlassBubble()) {
-                    drawGlassBubble(canvas, rect, alphaInternal);
+                    drawGlassBubble(canvas, bubbleRect, alphaInternal);
                 } else {
                     currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                     currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
@@ -21608,7 +21609,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 if (isHighlightedAnimated) {
                     if (shouldDrawGlassBubble()) {
-                        drawGlassBubble(canvas, rect, alphaInternal);
+                        drawGlassBubble(canvas, bubbleRect, alphaInternal);
                     } else {
                         currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                         currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
@@ -21620,7 +21621,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     }
                 } else if (selectedBackgroundProgress != 0 && (currentMessageObject == null || !currentMessageObject.preview) && !(currentMessagesGroup != null && currentMessagesGroup.isDocuments)) {
                     if (shouldDrawGlassBubble()) {
-                        drawGlassBubble(canvas, rect, alphaInternal);
+                        drawGlassBubble(canvas, bubbleRect, alphaInternal);
                     } else {
                         currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                         currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
@@ -21645,7 +21646,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else {
                         currentSelectedBackgroundAlpha = 0;
                         if (shouldDrawGlassBubble()) {
-                            drawGlassBubble(canvas, rect, alphaInternal);
+                            drawGlassBubble(canvas, bubbleRect, alphaInternal);
                         } else {
                             currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                             if (NaConfig.INSTANCE.getTranslucentDeletedMessages().Bool() && ayuDeleted && currentMessageObject.isOutOwner()) {
@@ -22874,7 +22875,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             glass.setRadius(topLeft, topRight, bottomRight, bottomLeft);
             glass.setBounds(left, top, right, bottom);
             glass.setSourceOffset(rootX, rootY);
-            glass.setAlpha((int) (255 * alphaInternal * getAlpha()));
+            glass.setAlpha(Math.max(0, Math.min(255, (int) (255 * alphaInternal))));
             glass.draw(canvas);
         } catch (Throwable e) {
             if (currentBackgroundDrawable != null) {

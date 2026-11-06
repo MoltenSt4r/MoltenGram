@@ -1754,6 +1754,10 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
             float density = getResources().getDisplayMetrics().density;
             float cameraDistance = Math.max(1600f, getWidth() * 1.8f) * (density > 0 ? density : 1f);
 
+            // Мертвая зона по центру экрана (где список абсолютно плоский, без малейшего наклона)
+            // Искривление / загиб начинается только ближе к верхнему и нижнему краю (последние ~35% высоты)
+            float edgeThreshold = 0.30f;
+
             for (int i = 0; i < count; i++) {
                 View child = getChildAt(i);
                 if (child == null || child == pinnedHeader || child.getHeight() <= 0) {
@@ -1761,11 +1765,19 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 }
 
                 float childCenterY = child.getTop() + child.getHeight() / 2f;
-                float factor = (childCenterY - centerY) / centerY;
-                factor = Math.max(-1.0f, Math.min(1.0f, factor));
+                float u = (childCenterY - centerY) / centerY;
+                u = Math.max(-1.0f, Math.min(1.0f, u));
 
-                float angleRad = factor * maxAngleRad;
-                float angle = -(float) Math.toDegrees(angleRad);
+                float absU = Math.abs(u);
+                float s = 0f;
+                if (absU > edgeThreshold) {
+                    float t = (absU - edgeThreshold) / (1.0f - edgeThreshold);
+                    t = Math.max(0.0f, Math.min(1.0f, t));
+                    s = t * t * (3.0f - 2.0f * t); // smoothstep: гладкий переход без излома
+                }
+
+                float sign = Math.signum(u);
+                float angle = -sign * s * maxAngle;
                 if (Float.isNaN(angle) || Float.isInfinite(angle)) {
                     continue;
                 }
@@ -1774,12 +1786,14 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                     child.setCameraDistance(cameraDistance);
                 }
 
+                // В центре пивот посередине. При загибе к верхнему краю пивот смещается к нижнему краю элемента,
+                // а при загибе к нижнему краю — к верхнему краю элемента, обеспечивая непрерывное огибание горизонта:
                 float pivotX = child.getWidth() / 2f;
-                float pivotY = child.getHeight() / 2f;
+                float pivotY = child.getHeight() * (0.5f - 0.5f * sign * s);
                 if (child.getPivotX() != pivotX) {
                     child.setPivotX(pivotX);
                 }
-                if (child.getPivotY() != pivotY) {
+                if (Math.abs(child.getPivotY() - pivotY) > 0.5f) {
                     child.setPivotY(pivotY);
                 }
 
@@ -1787,24 +1801,23 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                     child.setRotationX(angle);
                 }
 
-                // Оптическое сжатие высоты по поверхности цилиндра:
-                float scaleY = (float) Math.cos(angleRad);
-                scaleY = Math.max(0.6f, Math.min(1.0f, scaleY));
+                // Оптическое сжатие высоты по поверхности загиба (перспектива горизонта)
+                float angleRad = (float) Math.toRadians(Math.abs(angle));
+                float scaleY = 1.0f - (1.0f - (float) Math.cos(angleRad)) * 0.75f;
+                scaleY = Math.max(0.65f, Math.min(1.0f, scaleY));
                 if (Math.abs(child.getScaleY() - scaleY) > 0.005f) {
                     child.setScaleY(scaleY);
                 }
 
-                // Легкое растяжение по ширине («слегка растянутым как на примере»):
-                // При огибании цилиндра/линзы создается мягкий баррель-эффект:
-                float absFactor = Math.abs(factor);
-                float scaleX = 1.0f + 0.045f * absFactor;
+                // Легкое баррель-растяжение по краям горизонта:
+                float scaleX = 1.0f + 0.045f * s;
                 if (Math.abs(child.getScaleX() - scaleX) > 0.005f) {
                     child.setScaleX(scaleX);
                 }
 
-                // Смещение сегментов цилиндра к оси барабана:
+                // Смещение сегментов к линии горизонта:
                 float displacement = radius * (1f - (float) Math.cos(angleRad));
-                float transY = factor < 0 ? displacement * 0.45f : -displacement * 0.45f;
+                float transY = -sign * s * displacement * 0.35f;
                 if (Math.abs(child.getTranslationY() - transY) > 0.5f) {
                     child.setTranslationY(transY);
                 }

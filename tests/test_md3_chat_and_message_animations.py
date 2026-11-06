@@ -516,6 +516,8 @@ def test_glass_messages_integration():
     cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
     with open(cmc_path, "r", encoding="utf-8") as f:
         cmc = f.read()
+    assert "import android.view.ViewParent;" in cmc
+    assert "Rect bubbleRect = currentBackgroundDrawable.getBounds();" in cmc
     assert "setGlassFactory" in cmc
     assert "shouldDrawGlassBubble" in cmc
     assert "drawGlassBubble" in cmc
@@ -537,6 +539,9 @@ def test_recycler_list_view_universal_3d_scroll():
     assert "update3dScroll()" in content
     assert "reset3dChild" in content
     assert "onChildDetachedFromWindow" in content
+    assert "edgeThreshold" in content
+    assert "t * t * (3.0f - 2.0f * t)" in content
+    assert "0.5f - 0.5f * sign * s" in content
     assert "child.setRotationX(angle)" in content
     assert "child.setScaleY(scaleY)" in content
     assert "child.setScaleX(scaleX)" in content
