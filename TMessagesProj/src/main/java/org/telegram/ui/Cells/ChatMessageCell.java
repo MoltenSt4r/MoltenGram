@@ -22921,7 +22921,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             float offsetX = inParentSpace ? 0f : getX();
             float offsetY = inParentSpace ? 0f : getY();
             ViewParent p = getParent();
-            int pHeight = getParentHeight();
+            int pHeight = parentHeight;
             if (p instanceof View) {
                 View pv = (View) p;
                 offsetX += pv.getX();
