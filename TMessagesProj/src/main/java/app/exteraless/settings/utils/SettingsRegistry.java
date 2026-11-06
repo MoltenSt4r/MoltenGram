@@ -141,7 +141,7 @@ public class SettingsRegistry {
 
     public static List<String> newFeatures = new ArrayList<>(Arrays.asList(
             "customSavePath", "zoomSlider", "widePosts", "aiFeatures", "hideDialogsSearchBar",
-            "glassOutlineStyle", "glassMessageMenu", "chat3dScroll"));
+            "glassOutlineStyle", "glassMessageMenu", "glassMessages", "chat3dScroll"));
 
     private final ConcurrentHashMap<Integer, Entry> preparedEntries = new ConcurrentHashMap<>();
     private final ConcurrentHashMap<String, Entry> entriesStringAlias = new ConcurrentHashMap<>();

@@ -499,6 +499,36 @@ def test_chat_message_cell_clean_of_glass_bubble_hacks():
     assert "drawBubbleBlurredBackground" not in content
 
 
+def test_glass_messages_integration():
+    """Verify clean frosted glass message bubbles using client's blur engine."""
+    ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(ac_path, "r", encoding="utf-8") as f:
+        ac = f.read()
+    assert "val glassMessages" in ac
+    assert "fun glassMessages(): Boolean" in ac
+
+    oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(oea_path, "r", encoding="utf-8") as f:
+        oea = f.read()
+    assert "glassMessagesRow" in oea
+    assert "AppearanceConfig.glassMessages" in oea
+
+    cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
+    with open(cmc_path, "r", encoding="utf-8") as f:
+        cmc = f.read()
+    assert "setGlassFactory" in cmc
+    assert "shouldDrawGlassBubble" in cmc
+    assert "drawGlassBubble" in cmc
+    assert "bubbleGlassDrawable" in cmc
+    assert "topPanelChatActivity" in cmc
+
+    ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
+    with open(ca_path, "r", encoding="utf-8") as f:
+        ca = f.read()
+    assert "chatMessageCell.setGlassFactory(glassBackgroundDrawableFactory)" in ca
+    assert "getGlassBackgroundDrawableFactory" in ca
+
+
 def test_recycler_list_view_universal_3d_scroll():
     """Verify RecyclerListView implements universal crash-proof 3D cylindrical scroll."""
     rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")

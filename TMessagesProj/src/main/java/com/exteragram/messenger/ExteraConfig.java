@@ -592,6 +592,16 @@ public final class ExteraConfig {
         AppearanceConfig.glassMessageMenu.setConfigBool(value);
     }
 
+    public static boolean getGlassMessages() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessages.Bool();
+    }
+
+    public static void setGlassMessages(boolean value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessages.setConfigBool(value);
+    }
+
     public static boolean getChat3dScroll() {
         ensureLoaded();
         return AppearanceConfig.chat3dScroll.Bool();
@@ -2111,6 +2121,7 @@ public final class ExteraConfig {
             new PreferencesUtils.BackupItem("springAnimations", Boolean.class),
             new PreferencesUtils.BackupItem("glassOutlineStyle", Integer.class),
             new PreferencesUtils.BackupItem("glassMessageMenu", Boolean.class),
+            new PreferencesUtils.BackupItem("glassMessages", Boolean.class),
             new PreferencesUtils.BackupItem("chat3dScroll", Boolean.class),
             new PreferencesUtils.BackupItem("chat3dScrollAngle", Integer.class),
             new PreferencesUtils.BackupItem("forceBlur", Boolean.class),

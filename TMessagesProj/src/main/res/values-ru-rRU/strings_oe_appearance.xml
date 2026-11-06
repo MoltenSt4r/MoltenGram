@@ -68,6 +68,8 @@
     <string name="OEAppearanceGlassOutlineSolid">Сплошной</string>
     <string name="OEAppearanceGlassOutlineHidden">Скрыт</string>
     <string name="OEAppearanceGlassMessageMenu">Стеклянное меню сообщения</string>
+    <string name="OEAppearanceGlassMessages">Стеклянные сообщения</string>
+    <string name="OEAppearanceGlassMessagesInfo">Матовое стекло для сообщений по глобальному стилю</string>
     <string name="OEAppearanceChat3dScroll">3D-эффект скролла</string>
     <string name="OEAppearanceChat3dScrollInfo">Цилиндрический наклон списков и чатов в 3D-перспективе при прокрутке</string>
     <string name="OEAppearanceChat3dScrollAngle">Угол 3D-наклона</string>

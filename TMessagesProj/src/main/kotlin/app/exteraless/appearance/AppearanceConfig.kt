@@ -422,6 +422,17 @@ object AppearanceConfig {
         return glassOutlineStyle.Int()
     }
 
+    /** Стеклянные полупрозрачные сообщения (матовое стекло по глобальному стилю размытия) */
+    @JvmField
+    val glassMessages =
+        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun glassMessages(): Boolean {
+        ensureLoaded()
+        return glassMessages.Bool()
+    }
+
     // ---- 3D-эффект скролла списков и чатов (Cylinder 3D Scroll) ----
 
     const val CHAT_3D_SCROLL_ANGLE_MIN = 5
