@@ -168,9 +168,14 @@ public class AvatarCornersSeekBar extends FrameLayout {
      * Пусто у закругления аватарок, где число выводится без единиц.
      */
     private String valueSuffix = "";
+    private float valueScale = 1f;
 
     public void setValueSuffix(String suffix) {
         valueSuffix = suffix == null ? "" : suffix;
+    }
+
+    public void setValueScale(float scale) {
+        valueScale = scale > 0f ? scale : 1f;
     }
 
     public CharSequence getTextForHeader() {
@@ -179,12 +184,15 @@ public class AvatarCornersSeekBar extends FrameLayout {
             text = leftTextView.getText();
         } else if (roundedValue == max) {
             text = rightTextView.getText();
+        } else if (valueScale != 1f) {
+            String formatted = String.format(java.util.Locale.US, "%.1f", roundedValue * valueScale);
+            text = valueSuffix.isEmpty() ? formatted : formatted + " " + valueSuffix;
         } else {
             text = valueSuffix.isEmpty() ? String.valueOf(roundedValue) : roundedValue + " " + valueSuffix;
         }
         // Верхний регистр нужен закруглению аватарок («CIRCLE»), но не радиусу секций:
         // у экстеры там «20 dp», «Off», «Max» как есть.
-        return valueSuffix.isEmpty() ? text.toString().toUpperCase() : text;
+        return valueSuffix.isEmpty() && valueScale == 1f ? text.toString().toUpperCase() : text;
     }
 
     @Override

@@ -72,6 +72,7 @@
     <string name="OEAppearanceGlassMessagesInfo">Матовое стекло для сообщений по глобальному стилю</string>
     <string name="OEAppearanceGlassMessagesOpacity">Матовость и плотность стекла</string>
     <string name="OEAppearanceGlassMessagesRefraction">Рассеивание и преломление</string>
+    <string name="OEAppearanceGlassMessagesStroke">Толщина обводки и бликов</string>
     <string name="OEAppearanceChat3dScroll">3D-эффект скролла</string>
     <string name="OEAppearanceChat3dScrollInfo">Цилиндрический наклон списков и чатов в 3D-перспективе при прокрутке</string>
     <string name="OEAppearanceChat3dScrollAngle">Угол 3D-наклона</string>

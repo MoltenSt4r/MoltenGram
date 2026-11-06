@@ -430,6 +430,10 @@ object AppearanceConfig {
     const val GLASS_MESSAGES_REFRACTION_MAX = 100
     const val GLASS_MESSAGES_REFRACTION_DEFAULT = 50
 
+    const val GLASS_MESSAGES_STROKE_MIN = 0
+    const val GLASS_MESSAGES_STROKE_MAX = 30
+    const val GLASS_MESSAGES_STROKE_DEFAULT = 14
+
     /** Стеклянные полупрозрачные сообщения (матовое стекло по глобальному стилю размытия) */
     @JvmField
     val glassMessages =
@@ -444,6 +448,11 @@ object AppearanceConfig {
     @JvmField
     val glassMessagesRefraction =
         addConfig("OEAppearanceGlassMessagesRefraction", ConfigItem.configTypeInt, GLASS_MESSAGES_REFRACTION_DEFAULT)
+
+    /** Толщина обводки стеклянных сообщений в десятых долях dp (0..30 -> 0.0dp..3.0dp) */
+    @JvmField
+    val glassMessagesStrokeWidth =
+        addConfig("OEAppearanceGlassMessagesStrokeWidth", ConfigItem.configTypeInt, GLASS_MESSAGES_STROKE_DEFAULT)
 
     @JvmStatic
     fun glassMessages(): Boolean {
@@ -469,6 +478,16 @@ object AppearanceConfig {
             return v
         }
         return GLASS_MESSAGES_REFRACTION_DEFAULT
+    }
+
+    @JvmStatic
+    fun glassMessagesStrokeWidth(): Int {
+        ensureLoaded()
+        val v = glassMessagesStrokeWidth.Int()
+        if (v in GLASS_MESSAGES_STROKE_MIN..GLASS_MESSAGES_STROKE_MAX) {
+            return v
+        }
+        return GLASS_MESSAGES_STROKE_DEFAULT
     }
 
     // ---- 3D-эффект скролла списков и чатов (Cylinder 3D Scroll) ----

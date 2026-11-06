@@ -22915,8 +22915,24 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
             float opacityNorm = Math.max(0.05f, Math.min(0.85f, app.exteraless.appearance.AppearanceConfig.glassMessagesOpacity() / 100f));
             float refractionNorm = Math.max(0f, Math.min(1f, app.exteraless.appearance.AppearanceConfig.glassMessagesRefraction() / 100f));
+            float strokeDp = Math.max(0f, Math.min(3.0f, app.exteraless.appearance.AppearanceConfig.glassMessagesStrokeWidth() / 10f));
 
             boolean drewWallpaperBitmap = false;
+            float offsetX = inParentSpace ? 0f : getX();
+            float offsetY = inParentSpace ? 0f : getY();
+            ViewParent p = getParent();
+            int pHeight = getParentHeight();
+            if (p instanceof View) {
+                View pv = (View) p;
+                offsetX += pv.getX();
+                offsetY += pv.getY();
+                if (pv.getHeight() > 0) {
+                    pHeight = pv.getHeight();
+                }
+            }
+            if (pHeight <= 0) {
+                pHeight = AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920;
+            }
             BlurredBackgroundSourceBitmap bitmapSource = resolveWallpaperBitmapSource();
             if (bitmapSource != null) {
                 Bitmap bmp = bitmapSource.getBitmap();
@@ -22925,13 +22941,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         lastGlassShaderBitmap = bmp;
                         cachedGlassBitmapShader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
                         glassBitmapPaint.setShader(cachedGlassBitmapShader);
-                    }
-                    float offsetX = inParentSpace ? 0f : getX();
-                    float offsetY = inParentSpace ? 0f : getY();
-                    ViewParent p = getParent();
-                    if (p instanceof View) {
-                        offsetX += ((View) p).getX();
-                        offsetY += ((View) p).getY();
                     }
                     glassShaderMatrix.set(bitmapSource.getMatrix());
                     glassShaderMatrix.postTranslate(-offsetX, -offsetY);
@@ -22989,26 +22998,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             GlassOutlineStyle outlineStyle = GlassOutlineStyle.current();
-            if (outlineStyle == GlassOutlineStyle.GLARE) {
-                float strokeW = AndroidUtilities.dpf2(0.55f + 0.35f * refractionNorm);
-                float glareBoost = 0.45f + 0.55f * refractionNorm;
-                int topAlpha = Math.min(255, Math.round((dark ? 0x56 : 0xCC) * glareBoost * alphaInternal));
-                int botAlpha = Math.min(255, Math.round((dark ? 0x26 : 0x70) * glareBoost * alphaInternal));
-                glassStrokePaint.setShader(null);
-                glassStrokePaint.setStyle(Paint.Style.STROKE);
-                glassStrokePaint.setStrokeWidth(strokeW);
-                if (topAlpha > 0) {
-                    glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, topAlpha));
-                    org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
-                            canvas, bLeft, bTop, bRight, bBottom, glassRadii, strokeW, true, glassStrokePaint);
-                }
-                if (botAlpha > 0) {
-                    glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, botAlpha));
-                    org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
-                            canvas, bLeft, bTop, bRight, bBottom, glassRadii, strokeW, false, glassStrokePaint);
-                }
-            } else if (outlineStyle == GlassOutlineStyle.SOLID) {
-                float strokeWidth = AndroidUtilities.dpf2(0.75f);
+            if (outlineStyle != GlassOutlineStyle.HIDDEN && strokeDp > 0.05f) {
+                float strokeWidth = AndroidUtilities.dpf2(strokeDp);
                 float halfStroke = strokeWidth * 0.5f;
                 glassRectF.set(bLeft + halfStroke, bTop + halfStroke, bRight - halfStroke, bBottom - halfStroke);
                 glassRadii[0] = glassRadii[1] = Math.max(0f, topLeft - halfStroke);
@@ -23017,14 +23008,86 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 glassRadii[6] = glassRadii[7] = Math.max(0f, bottomLeft - halfStroke);
                 glassStrokePath.rewind();
                 glassStrokePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
-                glassStrokePaint.setShader(null);
-                glassStrokePaint.setStyle(Paint.Style.STROKE);
-                glassStrokePaint.setStrokeWidth(strokeWidth);
-                glassStrokePaint.setColor(ColorUtils.setAlphaComponent(
-                        dark ? 0xFFFFFFFF : 0xFF000000,
-                        Math.min(255, Math.round((dark ? 0x30 : 0x22) * (0.5f + 0.5f * refractionNorm) * alphaInternal))
-                ));
-                canvas.drawPath(glassStrokePath, glassStrokePaint);
+
+                if (outlineStyle == GlassOutlineStyle.GLARE) {
+                    if (drewWallpaperBitmap && cachedGlassBitmapShader != null) {
+                        float cx = (bLeft + bRight) * 0.5f;
+                        float cy = (bTop + bBottom) * 0.5f;
+                        float edgeScale = 1.04f + 0.06f * refractionNorm;
+                        glassShaderMatrix.set(bitmapSource.getMatrix());
+                        glassShaderMatrix.postTranslate(-offsetX, -offsetY);
+                        glassShaderMatrix.postScale(edgeScale, edgeScale, cx, cy);
+                        cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                        glassBitmapPaint.setStyle(Paint.Style.STROKE);
+                        glassBitmapPaint.setStrokeWidth(strokeWidth);
+                        glassBitmapPaint.setAlpha(Math.min(255, Math.round(255f * (0.55f + 0.40f * refractionNorm) * alphaInternal)));
+                        canvas.drawPath(glassStrokePath, glassBitmapPaint);
+                        glassBitmapPaint.setStyle(Paint.Style.FILL);
+                    }
+
+                    int accentColor = Theme.getColor(isOut ? Theme.key_chat_outBubble : Theme.key_windowBackgroundWhiteBlueHeader, resourcesProvider);
+                    int accentBright = ColorUtils.blendARGB(ColorUtils.setAlphaComponent(accentColor, 255), 0xFFFFFFFF, dark ? 0.58f : 0.72f);
+                    int coolEdge = ColorUtils.blendARGB(ColorUtils.setAlphaComponent(accentColor, 255), dark ? 0xFFA8C8FF : 0xFFFFFFFF, 0.75f);
+                    float screenCenterY = offsetY + (bTop + bBottom) * 0.5f;
+                    float scrollPhase = (screenCenterY / Math.max(1f, (float) pHeight)) * (float) (Math.PI * 2.5f);
+                    float angle = (float) (-Math.PI * 0.32f + Math.sin(scrollPhase) * 0.65f);
+                    float cosA = (float) Math.cos(angle);
+                    float sinA = (float) Math.sin(angle);
+                    float bw = bRight - bLeft;
+                    float bh = bBottom - bTop;
+                    float gx0 = (bLeft + bRight) * 0.5f - cosA * bw * 0.55f;
+                    float gy0 = (bTop + bBottom) * 0.5f - sinA * bh * 0.55f;
+                    float gx1 = (bLeft + bRight) * 0.5f + cosA * bw * 0.55f;
+                    float gy1 = (bTop + bBottom) * 0.5f + sinA * bh * 0.55f;
+
+                    float glareBoost = 0.55f + 0.45f * refractionNorm;
+                    int aPeak = Math.min(255, Math.round((dark ? 0xD8 : 0xF0) * glareBoost * alphaInternal));
+                    int aMid = Math.min(255, Math.round((dark ? 0x68 : 0x98) * glareBoost * alphaInternal));
+                    int aLow = Math.min(255, Math.round((dark ? 0x34 : 0x58) * glareBoost * alphaInternal));
+                    int aBot = Math.min(255, Math.round((dark ? 0x88 : 0xB8) * glareBoost * alphaInternal));
+
+                    int c0 = ColorUtils.setAlphaComponent(0xFFFFFFFF, aPeak);
+                    int c1 = ColorUtils.setAlphaComponent(accentBright, aMid);
+                    int c2 = ColorUtils.setAlphaComponent(coolEdge, aLow);
+                    int c3 = ColorUtils.setAlphaComponent(0xFFFFFFFF, aBot);
+
+                    LinearGradient glareGrad = new LinearGradient(
+                            gx0, gy0, gx1, gy1,
+                            new int[]{c0, c1, c2, c3},
+                            new float[]{0f, 0.35f, 0.72f, 1f},
+                            Shader.TileMode.CLAMP
+                    );
+                    glassStrokePaint.setShader(glareGrad);
+                    glassStrokePaint.setStyle(Paint.Style.STROKE);
+                    glassStrokePaint.setStrokeWidth(strokeWidth);
+                    glassStrokePaint.setColor(0xFFFFFFFF);
+                    canvas.drawPath(glassStrokePath, glassStrokePaint);
+                    glassStrokePaint.setShader(null);
+
+                    float specW = Math.max(AndroidUtilities.dpf2(0.6f), strokeWidth * 0.75f);
+                    int topAlpha = Math.min(255, Math.round((dark ? 0x58 : 0x90) * glareBoost * alphaInternal));
+                    int botAlpha = Math.min(255, Math.round((dark ? 0x24 : 0x48) * glareBoost * alphaInternal));
+                    glassStrokePaint.setStrokeWidth(specW);
+                    if (topAlpha > 0) {
+                        glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, topAlpha));
+                        org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
+                                canvas, bLeft, bTop, bRight, bBottom, glassRadii, specW, true, glassStrokePaint);
+                    }
+                    if (botAlpha > 0) {
+                        glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, botAlpha));
+                        org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
+                                canvas, bLeft, bTop, bRight, bBottom, glassRadii, specW, false, glassStrokePaint);
+                    }
+                } else if (outlineStyle == GlassOutlineStyle.SOLID) {
+                    glassStrokePaint.setShader(null);
+                    glassStrokePaint.setStyle(Paint.Style.STROKE);
+                    glassStrokePaint.setStrokeWidth(strokeWidth);
+                    glassStrokePaint.setColor(ColorUtils.setAlphaComponent(
+                            dark ? 0xFFFFFFFF : 0xFF000000,
+                            Math.min(255, Math.round((dark ? 0x48 : 0x36) * (0.55f + 0.45f * refractionNorm) * alphaInternal))
+                    ));
+                    canvas.drawPath(glassStrokePath, glassStrokePaint);
+                }
             }
         } catch (Throwable e) {
             if (currentBackgroundDrawable != null) {

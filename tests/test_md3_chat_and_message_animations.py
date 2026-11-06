@@ -510,6 +510,8 @@ def test_glass_messages_integration():
     assert "fun glassMessagesOpacity(): Int" in ac
     assert "val glassMessagesRefraction" in ac
     assert "fun glassMessagesRefraction(): Int" in ac
+    assert "val glassMessagesStrokeWidth" in ac
+    assert "fun glassMessagesStrokeWidth(): Int" in ac
 
     oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
     with open(oea_path, "r", encoding="utf-8") as f:
@@ -517,11 +519,14 @@ def test_glass_messages_integration():
     assert "glassMessagesRow" in oea
     assert "glassMessagesOpacityRow" in oea
     assert "glassMessagesRefractionRow" in oea
+    assert "glassMessagesStrokeRow" in oea
     assert "TYPE_GLASS_OPACITY_SLIDER" in oea
     assert "TYPE_GLASS_REFRACTION_SLIDER" in oea
+    assert "TYPE_GLASS_STROKE_SLIDER" in oea
     assert "AppearanceConfig.glassMessages" in oea
     assert "AppearanceConfig.glassMessagesOpacity" in oea
     assert "AppearanceConfig.glassMessagesRefraction" in oea
+    assert "AppearanceConfig.glassMessagesStrokeWidth" in oea
     assert "R.drawable.permission_locked" in oea
     assert "!SharedConfig.chatBlurEnabled()" in oea
 
@@ -550,6 +555,7 @@ def test_glass_messages_integration():
     assert "transitionParams.changePinnedBottomProgress != 1f && currentPosition == null && !shouldDrawGlassBubble()" in cmc
     assert "(shouldDrawGlassBubble() || !botButtons.isEmpty()" in cmc
     assert "GlassOutlineStyle.current()" in cmc
+    assert "LinearGradient glareGrad = new LinearGradient(" in cmc
     assert "BlurredBackgroundDrawable.drawStroke(" in cmc
     assert "mapGlassOutColorKey" in cmc
     assert "glassFactory" not in cmc
