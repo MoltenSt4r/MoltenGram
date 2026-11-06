@@ -232,9 +232,6 @@ public class VoIPButtonsLayout extends FrameLayout {
         super.onDraw(canvas);
         if (visibleChildCount > 0 && !containerRect.isEmpty() && drawPillDock) {
             canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerPaint);
-            if (containerStrokePaint != null) {
-                canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerStrokePaint);
-            }
         }
     }
 

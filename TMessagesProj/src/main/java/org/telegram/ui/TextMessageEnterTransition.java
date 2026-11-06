@@ -534,6 +534,16 @@ public class TextMessageEnterTransition implements MessageEnterTransitionContain
                 drawable.draw(canvas);
                 drawable.setDrawFullBubble(false);
                 drawable.setAlpha(255);
+                messageView.drawCustomBubbleBgOverlay(
+                        canvas,
+                        (int) drawableX,
+                        (int) drawableTop,
+                        drawableRight,
+                        (int) drawableBottom,
+                        messageView.drawPinnedTop(),
+                        messageView.drawPinnedBottom(),
+                        alphaProgress
+                );
             }
         }
         canvas.restore();

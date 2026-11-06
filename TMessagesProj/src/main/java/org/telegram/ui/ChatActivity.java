@@ -19032,6 +19032,9 @@ public class ChatActivity extends BaseFragment implements
         protected void dispatchDraw(Canvas canvas) {
             chatActivityEnterView.checkAnimation();
             updateChatListViewTopPadding();
+            if (messageEnterTransitionContainer != null && chatListView != null) {
+                messageEnterTransitionContainer.update3dScroll(chatListView.getPaddingTop(), chatListView.getPaddingBottom());
+            }
             if (invalidateMessagesVisiblePart || (chatListItemAnimator != null && chatListItemAnimator.isRunning())) {
                 invalidateMessagesVisiblePart = false;
                 updateMessagesVisiblePart(false);
@@ -19067,30 +19070,32 @@ public class ChatActivity extends BaseFragment implements
             //    }
             //    fragmentView.invalidate();
             // }
-            for (int a = 0, N = animateSendingViews.size(); a < N; a++) {
-                ChatMessageCell cell = animateSendingViews.get(a);
-                MessageObject.SendAnimationData data = cell.getMessageObject().sendAnimationData;
-                if (data != null) {
-                    canvas.save();
-                    final int actionBarBottom = actionBar.getVisibility() == VISIBLE ? (int) actionBar.getTranslationY() + actionBar.getMeasuredHeight() + (actionBarSearchTags != null ? actionBarSearchTags.getCurrentHeight() : 0) + (hashtagSearchTabs != null ? hashtagSearchTabs.getCurrentHeight() : 0) + (inPreviewMode ? AndroidUtilities.statusBarHeight : 0) : 0;
-                    canvas.clipRect(0, actionBarBottom + paddingTopHeight, getWidth(), getHeight());
-                    ImageReceiver imageReceiver = cell.getPhotoImage();
-                    cell.getLocationInWindow(AndroidUtilities.pointTmp2);
-                    int finalY = AndroidUtilities.pointTmp2[1];
-                    finalY -= cell.getTranslationY() * (1.0f - data.progress);
-                    finalY += chatActivityEnterView.topViewVisible() * AndroidUtilities.dp(48);
-                    if (!data.fromPreview) {
-                        canvas.translate(data.currentX, lerp(data.y, finalY + imageReceiver.getCenterY(), data.progress));
-                    } else {
-                        canvas.translate(data.currentX, lerp(data.y, finalY, data.progress));
+            if (!app.exteraless.appearance.AppearanceConfig.chat3dScroll() || messageEnterTransitionContainer == null) {
+                for (int a = 0, N = animateSendingViews.size(); a < N; a++) {
+                    ChatMessageCell cell = animateSendingViews.get(a);
+                    MessageObject.SendAnimationData data = cell.getMessageObject().sendAnimationData;
+                    if (data != null) {
+                        canvas.save();
+                        final int actionBarBottom = actionBar.getVisibility() == VISIBLE ? (int) actionBar.getTranslationY() + actionBar.getMeasuredHeight() + (actionBarSearchTags != null ? actionBarSearchTags.getCurrentHeight() : 0) + (hashtagSearchTabs != null ? hashtagSearchTabs.getCurrentHeight() : 0) + (inPreviewMode ? AndroidUtilities.statusBarHeight : 0) : 0;
+                        canvas.clipRect(0, actionBarBottom + paddingTopHeight, getWidth(), getHeight());
+                        ImageReceiver imageReceiver = cell.getPhotoImage();
+                        cell.getLocationInWindow(AndroidUtilities.pointTmp2);
+                        int finalY = AndroidUtilities.pointTmp2[1];
+                        finalY -= cell.getTranslationY() * (1.0f - data.progress);
+                        finalY += chatActivityEnterView.topViewVisible() * AndroidUtilities.dp(48);
+                        if (!data.fromPreview) {
+                            canvas.translate(data.currentX, lerp(data.y, finalY + imageReceiver.getCenterY(), data.progress));
+                        } else {
+                            canvas.translate(data.currentX, lerp(data.y, finalY, data.progress));
+                        }
+                        canvas.scale(data.currentScale, data.currentScale);
+                        if (!data.fromPreview) {
+                            canvas.translate(-imageReceiver.getCenterX(), -imageReceiver.getCenterY());
+                        }
+                        cell.setTimeAlpha(data.timeAlpha);
+                        cell.draw(canvas);
+                        canvas.restore();
                     }
-                    canvas.scale(data.currentScale, data.currentScale);
-                    if (!data.fromPreview) {
-                        canvas.translate(-imageReceiver.getCenterX(), -imageReceiver.getCenterY());
-                    }
-                    cell.setTimeAlpha(data.timeAlpha);
-                    cell.draw(canvas);
-                    canvas.restore();
                 }
             }
             if (scrimViewReaction == null || scrimView == null) {
@@ -41264,6 +41269,37 @@ public class ChatActivity extends BaseFragment implements
                                             return true;
                                         }
                                         animateSendingViews.add(messageCell);
+                                        final MessageEnterTransitionContainer.Transition sticker3dTransition = (app.exteraless.appearance.AppearanceConfig.chat3dScroll() && messageEnterTransitionContainer != null) ? transitionCanvas -> {
+                                            if (!animateSendingViews.contains(messageCell)) {
+                                                return;
+                                            }
+                                            MessageObject.SendAnimationData data = messageCell.getMessageObject() != null ? messageCell.getMessageObject().sendAnimationData : null;
+                                            if (data != null) {
+                                                transitionCanvas.save();
+                                                final int actionBarBottom = actionBar.getVisibility() == View.VISIBLE ? (int) actionBar.getTranslationY() + actionBar.getMeasuredHeight() + (actionBarSearchTags != null ? actionBarSearchTags.getCurrentHeight() : 0) + (hashtagSearchTabs != null ? hashtagSearchTabs.getCurrentHeight() : 0) + (inPreviewMode ? AndroidUtilities.statusBarHeight : 0) : 0;
+                                                transitionCanvas.clipRect(0, actionBarBottom + paddingTopHeight, messageEnterTransitionContainer.getWidth(), messageEnterTransitionContainer.getHeight());
+                                                ImageReceiver ir = messageCell.getPhotoImage();
+                                                messageCell.getLocationInWindow(AndroidUtilities.pointTmp2);
+                                                int finalY = AndroidUtilities.pointTmp2[1];
+                                                finalY -= messageCell.getTranslationY() * (1.0f - data.progress);
+                                                finalY += chatActivityEnterView.topViewVisible() * AndroidUtilities.dp(48);
+                                                if (!data.fromPreview) {
+                                                    transitionCanvas.translate(data.currentX, lerp(data.y, finalY + ir.getCenterY(), data.progress));
+                                                } else {
+                                                    transitionCanvas.translate(data.currentX, lerp(data.y, finalY, data.progress));
+                                                }
+                                                transitionCanvas.scale(data.currentScale, data.currentScale);
+                                                if (!data.fromPreview) {
+                                                    transitionCanvas.translate(-ir.getCenterX(), -ir.getCenterY());
+                                                }
+                                                messageCell.setTimeAlpha(data.timeAlpha);
+                                                messageCell.draw(transitionCanvas);
+                                                transitionCanvas.restore();
+                                            }
+                                        } : null;
+                                        if (sticker3dTransition != null) {
+                                            messageEnterTransitionContainer.addTransition(sticker3dTransition);
+                                        }
                                         ImageReceiver imageReceiver = messageCell.getPhotoImage();
                                         float w = imageReceiver.getImageWidth();
                                         float scale;
@@ -41300,6 +41336,9 @@ public class ChatActivity extends BaseFragment implements
                                                 if (fragmentView != null) {
                                                     fragmentView.invalidate();
                                                 }
+                                                if (messageEnterTransitionContainer != null) {
+                                                    messageEnterTransitionContainer.invalidate();
+                                                }
                                             }
 
                                             @Override
@@ -41316,6 +41355,9 @@ public class ChatActivity extends BaseFragment implements
                                                         object.progress = value;
                                                         if (fragmentView != null) {
                                                             fragmentView.invalidate();
+                                                        }
+                                                        if (messageEnterTransitionContainer != null) {
+                                                            messageEnterTransitionContainer.invalidate();
                                                         }
                                                     }
 
@@ -41335,6 +41377,9 @@ public class ChatActivity extends BaseFragment implements
                                             @Override
                                             public void onAnimationEnd(Animator animation) {
                                                 animateSendingViews.remove(messageCell);
+                                                if (sticker3dTransition != null && messageEnterTransitionContainer != null) {
+                                                    messageEnterTransitionContainer.removeTransition(sticker3dTransition);
+                                                }
                                                 if (fragmentView != null) {
                                                     fragmentView.invalidate();
                                                     chatListView.invalidate();

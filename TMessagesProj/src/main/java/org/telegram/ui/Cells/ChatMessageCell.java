@@ -1685,6 +1685,117 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private Bitmap lastGlassShaderBitmap;
     private BitmapShader cachedGlassBitmapShader;
 
+    private static Bitmap cachedCustomBubbleBgBitmap;
+    private static String cachedCustomBubbleBgPath;
+    private static BitmapShader cachedCustomBubbleBgShader;
+    private static final Matrix customBubbleBgMatrix = new Matrix();
+    private static final Paint customBubbleBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+
+    public static void invalidateCustomBubbleBgCache() {
+        cachedCustomBubbleBgBitmap = null;
+        cachedCustomBubbleBgPath = null;
+        cachedCustomBubbleBgShader = null;
+    }
+
+    private static Bitmap getCustomBubbleBgBitmap() {
+        String path = app.exteraless.appearance.AppearanceConfig.customMessageBubbleBg();
+        if (TextUtils.isEmpty(path)) {
+            return null;
+        }
+        if (path.equals(cachedCustomBubbleBgPath) && cachedCustomBubbleBgBitmap != null && !cachedCustomBubbleBgBitmap.isRecycled()) {
+            return cachedCustomBubbleBgBitmap;
+        }
+        try {
+            java.io.File file = new java.io.File(path);
+            if (!file.exists()) {
+                return null;
+            }
+            Bitmap bmp = android.graphics.BitmapFactory.decodeFile(path);
+            if (bmp != null) {
+                cachedCustomBubbleBgPath = path;
+                cachedCustomBubbleBgBitmap = bmp;
+                cachedCustomBubbleBgShader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                customBubbleBgPaint.setShader(cachedCustomBubbleBgShader);
+                return bmp;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    public boolean drawCustomBubbleBgOverlay(Canvas canvas, Rect bounds, float alphaInternal) {
+        if (bounds == null || bounds.isEmpty()) {
+            return false;
+        }
+        return drawCustomBubbleBgOverlay(canvas, bounds.left, bounds.top, bounds.right, bounds.bottom, drawPinnedTop, drawPinnedBottom, alphaInternal);
+    }
+
+    public boolean drawCustomBubbleBgOverlay(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal) {
+        if (currentMessageObject == null || currentMessageObject.shouldDrawWithoutBackground() || currentMessageObject.isAnyKindOfSticker()) {
+            return false;
+        }
+        Bitmap bmp = getCustomBubbleBgBitmap();
+        if (bmp == null || bmp.isRecycled() || cachedCustomBubbleBgShader == null) {
+            return false;
+        }
+        int alphaInt = Math.max(0, Math.min(255, Math.round(255f * alphaInternal)));
+        if (alphaInt == 0) {
+            return false;
+        }
+        Path clipPath = null;
+        if (currentBackgroundDrawable != null) {
+            clipPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
+        }
+        boolean isOut = currentMessageObject.isOutOwner();
+        boolean isTextType = currentBackgroundDrawable != null
+                ? currentBackgroundDrawable.getCurrentType() == MessageDrawable.TYPE_TEXT
+                : (!mediaBackground && !pinnedBottom);
+        int pad = AndroidUtilities.dp(2);
+        int tailPad = isTextType ? AndroidUtilities.dp(8) : pad;
+        float bLeft = left + (isOut ? pad : tailPad);
+        float bRight = right - (isOut ? tailPad : pad);
+        float bTop = top + pad;
+        float bBottom = bottom - pad;
+        if (bRight <= bLeft || bBottom <= bTop) {
+            return false;
+        }
+        if (clipPath == null) {
+            float rad = AndroidUtilities.dp(SharedConfig.bubbleRadius);
+            float nearRad = AndroidUtilities.dp(Math.min(6, SharedConfig.bubbleRadius));
+            float maxRad = Math.max(1f, Math.min((bBottom - bTop) * 0.5f, (bRight - bLeft) * 0.5f));
+            if (rad > maxRad) rad = maxRad;
+            if (nearRad > maxRad) nearRad = maxRad;
+            boolean botButtons = hasInlineBotButtons();
+            glassRadii[0] = glassRadii[1] = isOut ? rad : (pinnedTop ? nearRad : rad);
+            glassRadii[2] = glassRadii[3] = isOut ? (pinnedTop ? nearRad : rad) : rad;
+            glassRadii[4] = glassRadii[5] = isOut ? ((pinnedBottom || botButtons) ? nearRad : rad) : (botButtons ? nearRad : rad);
+            glassRadii[6] = glassRadii[7] = isOut ? (botButtons ? nearRad : rad) : ((pinnedBottom || botButtons) ? nearRad : rad);
+            glassRectF.set(bLeft, bTop, bRight, bBottom);
+            glassBubblePath.rewind();
+            glassBubblePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
+            clipPath = glassBubblePath;
+        }
+        float bw = bRight - bLeft;
+        float bh = bBottom - bTop;
+        float scale = Math.max(bw / Math.max(1f, (float) bmp.getWidth()), bh / Math.max(1f, (float) bmp.getHeight()));
+        float dx = bLeft + (bw - bmp.getWidth() * scale) * 0.5f;
+        float dy = bTop + (bh - bmp.getHeight() * scale) * 0.5f;
+        customBubbleBgMatrix.reset();
+        customBubbleBgMatrix.postScale(scale, scale);
+        customBubbleBgMatrix.postTranslate(dx, dy);
+        cachedCustomBubbleBgShader.setLocalMatrix(customBubbleBgMatrix);
+        customBubbleBgPaint.setStyle(Paint.Style.FILL);
+        customBubbleBgPaint.setAlpha(alphaInt);
+        canvas.drawPath(clipPath, customBubbleBgPaint);
+
+        boolean dark = isDark();
+        int tintAlpha = Math.round((dark ? 0x4C : 0x30) * alphaInternal);
+        glassTintPaint.setStyle(Paint.Style.FILL);
+        glassTintPaint.setColor(ColorUtils.setAlphaComponent(dark ? 0xFF141418 : 0xFFFFFFFF, Math.max(0, Math.min(255, tintAlpha))));
+        canvas.drawPath(clipPath, glassTintPaint);
+        return true;
+    }
+
     public void setWallpaperBlurSource(BlurredBackgroundSource source) {
         this.wallpaperBlurSource = source;
     }
@@ -21611,6 +21722,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 } else {
                     currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                     currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
+                    drawCustomBubbleBgOverlay(canvas, bubbleRect, alphaInternal);
                 }
                 if (currentBackgroundShadowDrawable != null && currentPosition == null && !shouldDrawGlassBubble()) {
                     currentBackgroundShadowDrawable.setAlpha((int) (255 * alphaInternal));
@@ -21623,6 +21735,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else {
                         currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                         currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
+                        drawCustomBubbleBgOverlay(canvas, bubbleRect, alphaInternal);
                     }
                     currentSelectedBackgroundAlpha = getHighlightAlpha();
                     if (currentPosition == null) {
@@ -21635,6 +21748,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else {
                         currentBackgroundDrawable.setAlpha((int) (255 * alphaInternal));
                         currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
+                        drawCustomBubbleBgOverlay(canvas, bubbleRect, alphaInternal);
                     }
                     currentSelectedBackgroundAlpha = selectedBackgroundProgress;
                     currentBackgroundSelectedDrawable.setAlpha((int) (currentSelectedBackgroundAlpha * alphaInternal * 255));
@@ -21663,6 +21777,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                 currentBackgroundDrawable.setAlpha((int) (255 * 0.75f));
                             }
                             currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
+                            drawCustomBubbleBgOverlay(canvas, bubbleRect, alphaInternal);
                         }
                     }
                 }
@@ -22933,8 +23048,28 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             if (pHeight <= 0) {
                 pHeight = AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920;
             }
-            BlurredBackgroundSourceBitmap bitmapSource = resolveWallpaperBitmapSource();
-            if (bitmapSource != null) {
+            Bitmap customBubbleBmp = getCustomBubbleBgBitmap();
+            BlurredBackgroundSourceBitmap bitmapSource = customBubbleBmp != null ? null : resolveWallpaperBitmapSource();
+            if (customBubbleBmp != null && !customBubbleBmp.isRecycled()) {
+                if (lastGlassShaderBitmap != customBubbleBmp || cachedGlassBitmapShader == null) {
+                    lastGlassShaderBitmap = customBubbleBmp;
+                    cachedGlassBitmapShader = new BitmapShader(customBubbleBmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                    glassBitmapPaint.setShader(cachedGlassBitmapShader);
+                }
+                float bw = bRight - bLeft;
+                float bh = bBottom - bTop;
+                float scale = Math.max(bw / Math.max(1f, (float) customBubbleBmp.getWidth()), bh / Math.max(1f, (float) customBubbleBmp.getHeight()));
+                float dx = bLeft + (bw - customBubbleBmp.getWidth() * scale) * 0.5f;
+                float dy = bTop + (bh - customBubbleBmp.getHeight() * scale) * 0.5f;
+                glassShaderMatrix.reset();
+                glassShaderMatrix.postScale(scale, scale);
+                glassShaderMatrix.postTranslate(dx, dy);
+                cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                glassBitmapPaint.setStyle(Paint.Style.FILL);
+                glassBitmapPaint.setAlpha(alphaInt);
+                canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                drewWallpaperBitmap = true;
+            } else if (bitmapSource != null) {
                 Bitmap bmp = bitmapSource.getBitmap();
                 if (bmp != null && !bmp.isRecycled()) {
                     if (lastGlassShaderBitmap != bmp || cachedGlassBitmapShader == null) {
@@ -22983,20 +23118,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             glassTintPaint.setColor(baseVeilColor);
             canvas.drawPath(glassBubblePath, glassTintPaint);
 
-            if (refractionNorm > 0.01f) {
-                int rimAlpha = Math.round((dark ? 0x1A : 0x38) * refractionNorm * alphaInternal);
-                if (rimAlpha > 0) {
-                    glassSheenPaint.setShader(null);
-                    glassSheenPaint.setStyle(Paint.Style.STROKE);
-                    glassSheenPaint.setStrokeWidth(AndroidUtilities.dpf2(1.4f + 2.2f * refractionNorm));
-                    glassSheenPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.min(255, rimAlpha)));
-                    canvas.save();
-                    canvas.clipPath(glassBubblePath);
-                    canvas.drawPath(glassBubblePath, glassSheenPaint);
-                    canvas.restore();
-                }
-            }
-
             GlassOutlineStyle outlineStyle = GlassOutlineStyle.current();
             if (outlineStyle != GlassOutlineStyle.HIDDEN && strokeDp > 0.05f) {
                 float strokeWidth = AndroidUtilities.dpf2(strokeDp);
@@ -23010,7 +23131,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 glassStrokePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
 
                 if (outlineStyle == GlassOutlineStyle.GLARE) {
-                    if (drewWallpaperBitmap && cachedGlassBitmapShader != null) {
+                    if (drewWallpaperBitmap && cachedGlassBitmapShader != null && bitmapSource != null) {
                         float cx = (bLeft + bRight) * 0.5f;
                         float cy = (bTop + bBottom) * 0.5f;
                         float edgeScale = 1.04f + 0.06f * refractionNorm;
@@ -23063,21 +23184,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     glassStrokePaint.setColor(0xFFFFFFFF);
                     canvas.drawPath(glassStrokePath, glassStrokePaint);
                     glassStrokePaint.setShader(null);
-
-                    float specW = Math.max(AndroidUtilities.dpf2(0.6f), strokeWidth * 0.75f);
-                    int topAlpha = Math.min(255, Math.round((dark ? 0x58 : 0x90) * glareBoost * alphaInternal));
-                    int botAlpha = Math.min(255, Math.round((dark ? 0x24 : 0x48) * glareBoost * alphaInternal));
-                    glassStrokePaint.setStrokeWidth(specW);
-                    if (topAlpha > 0) {
-                        glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, topAlpha));
-                        org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
-                                canvas, bLeft, bTop, bRight, bBottom, glassRadii, specW, true, glassStrokePaint);
-                    }
-                    if (botAlpha > 0) {
-                        glassStrokePaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, botAlpha));
-                        org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable.drawStroke(
-                                canvas, bLeft, bTop, bRight, bBottom, glassRadii, specW, false, glassStrokePaint);
-                    }
                 } else if (outlineStyle == GlassOutlineStyle.SOLID) {
                     glassStrokePaint.setShader(null);
                     glassStrokePaint.setStyle(Paint.Style.STROKE);
@@ -23143,6 +23249,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 currentBackgroundDrawable.setBounds(left, top, right, bottom);
                 currentBackgroundDrawable.drawCached(canvas, backgroundCacheParams);
                 currentBackgroundDrawable.setAlpha(255);
+                drawCustomBubbleBgOverlay(canvas, left, top, right, bottom, pinnedTop, pinnedBottom, getAlpha());
             }
         }
 

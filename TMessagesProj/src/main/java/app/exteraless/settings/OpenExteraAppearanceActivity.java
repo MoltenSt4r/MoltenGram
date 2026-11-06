@@ -81,6 +81,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_GLASS_REFRACTION_SLIDER = 108;
     /** Слайдер толщины обводки и бликов стеклянных сообщений */
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
+    private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
     private int appearanceHeaderRow;
@@ -106,6 +107,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int glassMessagesOpacityRow;
     private int glassMessagesRefractionRow;
     private int glassMessagesStrokeRow;
+    private int customBubbleBgRow;
     private int chat3dScrollRow;
     private int chat3dScrollIntensityRow;
     private int forceBlurRow;
@@ -304,6 +306,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             glassMessagesRefractionRow = -1;
             glassMessagesStrokeRow = -1;
         }
+        customBubbleBgRow = addRow("customBubbleBg");
         chat3dScrollRow = addRow("chat3dScroll");
         if (AppearanceConfig.chat3dScroll.Bool()) {
             chat3dScrollIntensityRow = addRow("chat3dScrollIntensity");
@@ -621,6 +624,81 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AppearanceConfig.glassMessagesStrokeWidth.setConfigInt(value);
     }
 
+    private void openCustomBubbleBgPicker() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(intent, PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void resetCustomBubbleBg() {
+        try {
+            String prev = AppearanceConfig.customMessageBubbleBg();
+            if (!TextUtils.isEmpty(prev)) {
+                java.io.File f = new java.io.File(prev);
+                if (f.exists()) {
+                    f.delete();
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        AppearanceConfig.customMessageBubbleBg.setConfigString("");
+        org.telegram.ui.Cells.ChatMessageCell.invalidateCustomBubbleBgCache();
+        if (listAdapter != null && customBubbleBgRow >= 0) {
+            listAdapter.notifyItemChanged(customBubbleBgRow);
+        }
+        rebuildAll();
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE) {
+            if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+                return;
+            }
+            android.net.Uri uri = data.getData();
+            java.io.File outFile = new java.io.File(ApplicationLoader.getFilesDirFixed(), "custom_message_bubble_bg.jpg");
+            try (java.io.InputStream in = ApplicationLoader.applicationContext.getContentResolver().openInputStream(uri)) {
+                if (in == null) {
+                    return;
+                }
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(in);
+                if (bmp == null) {
+                    return;
+                }
+                int maxSide = 1600;
+                int bw = bmp.getWidth();
+                int bh = bmp.getHeight();
+                if (bw > maxSide || bh > maxSide) {
+                    float scale = Math.min((float) maxSide / bw, (float) maxSide / bh);
+                    int nw = Math.max(1, Math.round(bw * scale));
+                    int nh = Math.max(1, Math.round(bh * scale));
+                    android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bmp, nw, nh, true);
+                    if (scaled != bmp) {
+                        bmp.recycle();
+                        bmp = scaled;
+                    }
+                }
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(outFile)) {
+                    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out);
+                }
+                bmp.recycle();
+                AppearanceConfig.customMessageBubbleBg.setConfigString(outFile.getAbsolutePath());
+                org.telegram.ui.Cells.ChatMessageCell.invalidateCustomBubbleBgCache();
+                if (listAdapter != null && customBubbleBgRow >= 0) {
+                    listAdapter.notifyItemChanged(customBubbleBgRow);
+                }
+                rebuildAll();
+            } catch (Throwable ignored) {
+            }
+            return;
+        }
+        super.onActivityResultFragment(requestCode, resultCode, data);
+    }
+
     /** Все живые превью экрана — их надо дёргать на смене темы и стиля разделителя. */
     private void invalidatePreviews() {
         if (avatarCornersPreviewCell != null) avatarCornersPreviewCell.invalidate();
@@ -826,6 +904,29 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildAll();
             return;
         } else if (position == glassMessagesOpacityRow || position == glassMessagesRefractionRow || position == glassMessagesStrokeRow) {
+            return;
+        } else if (position == customBubbleBgRow) {
+            if (AppearanceConfig.hasCustomMessageBubbleBg()) {
+                if (getParentActivity() == null) {
+                    return;
+                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle(getString(R.string.OEAppearanceCustomBubbleBg));
+                builder.setItems(new CharSequence[]{
+                        getString(R.string.OEAppearanceCustomBubbleBgChoose),
+                        getString(R.string.OEAppearanceCustomBubbleBgReset)
+                }, (dialog, which) -> {
+                    if (which == 0) {
+                        openCustomBubbleBgPicker();
+                    } else if (which == 1) {
+                        resetCustomBubbleBg();
+                    }
+                });
+                builder.setNegativeButton(getString(R.string.Cancel), null);
+                showDialog(builder.create());
+            } else {
+                openCustomBubbleBgPicker();
+            }
             return;
         } else if (position == chat3dScrollRow) {
             boolean enabled = AppearanceConfig.chat3dScroll.toggleConfigBool();
@@ -1341,6 +1442,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == glassOutlineRow) {
                         String[] v = {getString(R.string.OEAppearanceGlassOutlineGlare), getString(R.string.OEAppearanceGlassOutlineSolid), getString(R.string.OEAppearanceGlassOutlineHidden)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceGlassOutline), v[clamp(AppearanceConfig.glassOutlineStyle.Int(), v.length)], true);
+                    } else if (position == customBubbleBgRow) {
+                        String val = AppearanceConfig.hasCustomMessageBubbleBg()
+                                ? getString(R.string.OEAppearanceCustomBubbleBgSet)
+                                : getString(R.string.OEAppearanceSectionRadiusOff);
+                        cell.setTextAndValue(getString(R.string.OEAppearanceCustomBubbleBg), val, true);
                     } else if (position == tabTitleStyleRow) {
                         CharSequence[] v = tabTitleOptions();
                         cell.setTextAndValue(getString(R.string.OEAppearanceTabTitleStyle), v[tabTitleIndex(NekoConfig.tabsTitleType.Int())], true);
@@ -1499,6 +1605,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == hidePremiumSectionRow || position == hideHelpSectionRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
+                    || position == customBubbleBgRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow) {

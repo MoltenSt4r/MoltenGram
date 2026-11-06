@@ -73,6 +73,10 @@
     <string name="OEAppearanceGlassMessagesOpacity">Матовость и плотность стекла</string>
     <string name="OEAppearanceGlassMessagesRefraction">Рассеивание и преломление</string>
     <string name="OEAppearanceGlassMessagesStroke">Толщина обводки и бликов</string>
+    <string name="OEAppearanceCustomBubbleBg">Своё фото на фоне сообщений</string>
+    <string name="OEAppearanceCustomBubbleBgChoose">Выбрать фото</string>
+    <string name="OEAppearanceCustomBubbleBgReset">Сбросить фото</string>
+    <string name="OEAppearanceCustomBubbleBgSet">Установлено</string>
     <string name="OEAppearanceChat3dScroll">3D-эффект скролла</string>
     <string name="OEAppearanceChat3dScrollInfo">Цилиндрический наклон списков и чатов в 3D-перспективе при прокрутке</string>
     <string name="OEAppearanceChat3dScrollAngle">Угол 3D-наклона</string>

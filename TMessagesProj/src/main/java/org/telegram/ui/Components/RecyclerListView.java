@@ -1717,6 +1717,23 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 }
                 return;
             }
+            if (this instanceof org.telegram.ui.Components.ChatAttachAlert.AttachAlertGridView
+                    || getClass().getName().contains("ChatAttachAlert")) {
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
+                }
+                return;
+            }
+            android.view.ViewParent parent = getParent();
+            while (parent != null) {
+                if (parent.getClass().getName().contains("ChatAttachAlert")) {
+                    if (cylinderScrollEffect != null) {
+                        cylinderScrollEffect.clear();
+                    }
+                    return;
+                }
+                parent = parent.getParent();
+            }
 
             int width = getMeasuredWidth();
             if (width <= 0) {

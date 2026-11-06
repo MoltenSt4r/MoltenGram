@@ -560,7 +560,8 @@ def test_glass_messages_integration():
     assert "(shouldDrawGlassBubble() || !botButtons.isEmpty()" in cmc
     assert "GlassOutlineStyle.current()" in cmc
     assert "LinearGradient glareGrad = new LinearGradient(" in cmc
-    assert "BlurredBackgroundDrawable.drawStroke(" in cmc
+    assert "BlurredBackgroundDrawable.drawStroke(" not in cmc
+    assert "drawCustomBubbleBgOverlay" in cmc
     assert "mapGlassOutColorKey" in cmc
     assert "glassFactory" not in cmc
     assert "bubbleGlassDrawable" not in cmc
@@ -661,6 +662,23 @@ def test_voip_redesign_and_filled_sub_fab_camera():
     with open(dialogs_path, "r", encoding="utf-8") as f:
         da = f.read()
     assert "floatingButtonStories.setImageResource(R.drawable.camera);" in da
+
+    voip_btns_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "VoIPButtonsLayout.java")
+    with open(voip_btns_path, "r", encoding="utf-8") as f:
+        vb = f.read()
+    assert "containerStrokePaint" not in vb.split("protected void onDraw(Canvas canvas)")[1].split("}")[0]
+
+    metc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "MessageEnterTransitionContainer.java")
+    with open(metc_path, "r", encoding="utf-8") as f:
+        metc = f.read()
+    assert "update3dScroll(" in metc
+    assert "CylinderScrollEffect" in metc
+
+    rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")
+    with open(rlv_path, "r", encoding="utf-8") as f:
+        rlv = f.read()
+    assert 'contains("ChatAttachAlert")' in rlv
+
 
 
 

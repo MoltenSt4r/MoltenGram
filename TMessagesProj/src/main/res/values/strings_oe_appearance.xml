@@ -89,6 +89,10 @@
     <string name="OEAppearanceGlassMessagesOpacity">Glass Opacity</string>
     <string name="OEAppearanceGlassMessagesRefraction">Dispersion &amp; Refraction</string>
     <string name="OEAppearanceGlassMessagesStroke">Outline Thickness &amp; Glare</string>
+    <string name="OEAppearanceCustomBubbleBg">Message Bubble Image</string>
+    <string name="OEAppearanceCustomBubbleBgChoose">Choose Image</string>
+    <string name="OEAppearanceCustomBubbleBgReset">Reset Image</string>
+    <string name="OEAppearanceCustomBubbleBgSet">Installed</string>
     <string name="OEAppearanceGlassMessageMenuInfo">The message menu and the reactions bar become frosted glass.</string>
     <string name="OEAppearanceGlassMessageMenuBlurOff">Glass menus need blur, which is currently off.</string>
     <string name="OEAppearanceChat3dScroll">3D Scroll</string>

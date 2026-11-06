@@ -454,6 +454,23 @@ object AppearanceConfig {
     val glassMessagesStrokeWidth =
         addConfig("OEAppearanceGlassMessagesStrokeWidth", ConfigItem.configTypeInt, GLASS_MESSAGES_STROKE_DEFAULT)
 
+    /** Своё изображение для фона пузырьков сообщений (путь к файлу) */
+    @JvmField
+    val customMessageBubbleBg =
+        addConfig("OEAppearanceCustomMessageBubbleBg", ConfigItem.configTypeString, "")
+
+    @JvmStatic
+    fun customMessageBubbleBg(): String {
+        ensureLoaded()
+        return customMessageBubbleBg.String() ?: ""
+    }
+
+    @JvmStatic
+    fun hasCustomMessageBubbleBg(): Boolean {
+        val p = customMessageBubbleBg()
+        return p.isNotEmpty() && java.io.File(p).exists()
+    }
+
     @JvmStatic
     fun glassMessages(): Boolean {
         ensureLoaded()
