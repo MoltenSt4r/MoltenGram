@@ -58,19 +58,30 @@
 
 ### 🎨 Material 3 и интерфейс
 - **Карусель медиа (Media Carousel):** отображение альбомов с фото и видео в виде плавной горизонтальной карусели карточек вместо жесткой сетки.
-- **Формы аватарок:** раздельная настройка геометрических форм аватаров для пользователей, групп и каналов (Squircle, Rounded, Cookie, Clover и др.).
+- **Формы аватарок Material 3:** 15 параметрических геометрических форм аватаров (Squircle, Rounded, Cookie, Clover, Hexagon и др.) с индивидуальной настройкой для профилей, групп, каналов и избранного.
+- **Кастомизируемый MD3 Speed-Dial FAB:** раскрывающаяся плавающая кнопка с морфингом формы при скролле, расширенной пастельной палитрой тональных цветов и настраиваемым меню быстрых действий.
 - **Папки-чипсы:** настраиваемая панель папок чатов со стилями (Filled, Outlined, Ghost), плавным морфингом скруглений и анимациями перехода.
 - **Анимации ввода:** плавный курсор, эффекты появления текста и частицы при удалении символов.
 - **Коллекция иконок:** фирменные стили оформления лаунчера с адаптивными монохромными слоями под Nothing OS и Google Pixel.
 
-### 🎵 Медиа и плеер
-- **Material 3 Video Seekbar:** удобный ползунок перемотки видео в чатах.
-- **Локальные плейлисты:** создание и управление пользовательскими списками воспроизведения музыки с поддержкой M3U8 и .mplaylist.
-- **Синхронизированные тексты песен:** отображение текстов треков с поддержкой нескольких провайдеров.
-- **Управление воспроизведением:** слайдер скорости и непрерывный фоновый звук.
+### 🌀 3D-эффекты и визуальный стиль
+- **3D-цилиндрический скролл чата:** объемный цилиндрический наклон сообщений при прокрутке списка на базе шейдера AGSL RuntimeShader с точной регулировкой угла кривизны.
+- **Матовое стекло сообщений:** настоящие размытые пузыри сообщений в реальном времени с настраиваемой прозрачностью, преломлением и динамическим контурным бликом.
 
-### ⚡ Система и интеграции
-- **Nothing Glyph:** аппаратное управление светодиодными лентами и матрицей на Nothing Phone (1, 2, 2a, 3, 4) при событиях вызовов, сообщений и записи.
+### 🎵 Медиа и плеер
+- **Material 3 Video Seekbar:** удобный ползунок перемотки видео в чатах с превью.
+- **Продвинутый аудиоплеер:** мини-плеер и верхняя панель в чате с плавной анимацией морфинга формы.
+- **Локальные плейлисты:** создание и управление пользовательскими списками воспроизведения музыки с поддержкой экспорта в M3U8 и .mplaylist.
+- **Синхронизированные тексты песен:** отображение караоке-текстов треков с поддержкой нескольких провайдеров и настройкой приоритета.
+- **Управление воспроизведением:** слайдер скорости с корректировкой высоты тона и непрерывный фоновый звук.
+
+### ⚡ Система, безопасность и интеграции
+- **Nothing Glyph Interface:** аппаратное управление светодиодными лентами и глиф-матрицей на смартфонах Nothing Phone (1, 2, 2a, 3, 4) и CMF Phone при вызовах, сообщениях и съемке видеосообщений.
+- **Шрифт NDot:** системная поддержка фирменных шрифтов Nothing NDot 55 и NDot 57.
+- **Встроенный Tor Proxy:** встроенный нативный клиент Tor (v0.4.9.14) с вращающейся 9-лепестковой кнопкой-печеньем для быстрого защищенного подключения в один тап.
+- **Спуфинг устройств:** клиентская маскировка под смартфоны Google Pixel и Nothing Phone.
+- **Семантический ИИ-поиск (MobileCLIP):** умный поиск по фотографиям в чатах по текстовому описанию на базе встроенной нейросети MobileCLIP-S0 ONNX INT8 полностью локально на устройстве.
+- **Движок Python-плагинов:** встроенная среда Chaquopy Python 3.12, каталог дополнений с установкой в 1 клик, импорт `.py` скриптов, бэкап и экспорт.
 - **Интеграция с Shizuku:** бесшовное фоновое обновление клиента без диалогов системного инсталлятора.
 - **Кастомный эмодзи-статус:** установка анимированных статусов без подписки Telegram Premium через невидимый био-код.
 - **Быстрый прокси:** автоматический тест задержки и подключение к самому быстрому серверу.
@@ -128,7 +139,6 @@
 
 - Авторы и разработчики [exteraless](https://github.com/exteraless/exteraless)
 - [exteraGram](https://github.com/exteraSquad/exteraGram) & [BlueprintDsgn](https://t.me/BlueprintDsgn)
-- [AyuGram](https://github.com/AyuGram/AyuGram4A)
 - [Cherrygram](https://github.com/arsLan4k1390/Cherrygram)
 - [Nagram](https://github.com/NextAlone/Nagram) / [NagramX](https://github.com/risin42/NagramX)
 - [Nekogram](https://github.com/Nekogram/Nekogram)
@@ -167,14 +177,19 @@ The project follows a structured naming convention:
 - **Dynamic Monet:** Native Material You dynamic theming with proper Neutral 1 / Neutral 2 palette roles.
 - **Monochrome Icons:** System adaptive monochrome vectors under Nothing OS and Google Pixel.
 - **Floating Input & Animations:** Material 3 chat input bar with restrained physics message animations.
-- **MetroList Player & Synced Lyrics:** Modernized audio playback interface with multi-source synchronized lyrics.
+- **Advanced Music Player & Synced Lyrics:** Modernized audio playback interface with local playlists and multi-source synchronized lyrics.
 - **Telegram Base:** Updated upstream Telegram engine to version 12.10.6.
 
 ### Key Features
-- **Media Carousel:** View grouped photos and videos in a smooth horizontal card carousel instead of the classic grid.
-- **Material 3 UI:** Customizable avatar shapes per chat type, chip folders with fluid morphing and animations, and MD3 switches.
-- **Music & Video Player:** Material 3 video seekbar, MetroList-inspired player, multi-source synced lyrics with drag-and-drop priority.
-- **Built-in Plugin Store:** 1-click install and update for Python plugins, direct `.py` import, full backup and restore.
+- **Pure Material 3 & Dynamic Monet:** 15 custom avatar shapes per chat type, capsule profile action buttons, chip folders with fluid morphing and animations, and MD3 switches.
+- **Horizontal Media Carousels:** View grouped photos and videos in a smooth horizontal card carousel instead of the classic rigid grid.
+- **3D Cylindrical Chat Scroll & Frosted Glass:** AGSL RuntimeShader 3D chat curvature scroll and real-time frosted glass message bubbles with glare rim.
+- **Customizable MD3 Speed-Dial FAB:** Expandable action menu with pastel tonal color palettes, active shape morphing, and custom alignment.
+- **Nothing Glyph Interface & NDot Typography:** Full hardware LED strip and glyph matrix control for 13+ Nothing Phone and CMF Phone models with authentic NDot 55/57 fonts.
+- **Advanced Music Player & Synced Lyrics:** Material 3 video seekbar, local playlist manager with M3U8/.mplaylist export, multi-source synchronized lyrics, and morphing mini-player.
+- **Built-in Tor Proxy & Hardware Spoofing:** Native Tor daemon (v0.4.9.14) with rotating 9-lobe cookie button and client-side device spoofing presets for Pixel and Nothing devices.
+- **On-Device Semantic AI Search:** Offline multimodal semantic photo search across chats using MobileCLIP-S0 ONNX INT8.
+- **Python 3.12 Plugin Engine & Store:** Built-in Chaquopy runtime with 1-click plugin catalog, direct `.py` import, and full backup/restore.
 - **Shizuku Integration:** Seamless background app updates without manual package installer prompts.
 - **Smart Tools:** Fastest proxy auto-connect, text input animations, Passkey support, and AI chat utilities.
 
