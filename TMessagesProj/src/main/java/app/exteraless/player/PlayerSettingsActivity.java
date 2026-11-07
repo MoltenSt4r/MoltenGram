@@ -5,6 +5,7 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -38,6 +39,7 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;

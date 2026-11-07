@@ -140,6 +140,7 @@ import org.telegram.ui.Components.FilterShaders;
 import org.telegram.ui.Components.GestureDetectorFixDoubleTap;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.Paint.RenderView;
 import org.telegram.ui.Components.Paint.Views.EntityView;
 import org.telegram.ui.Components.Paint.Views.MessageEntityView;

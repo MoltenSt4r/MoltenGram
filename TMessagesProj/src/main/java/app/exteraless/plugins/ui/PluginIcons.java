@@ -79,7 +79,7 @@ public final class PluginIcons {
                     iconRes = R.drawable.msg_settings;
                     break;
                 case "tools":
-                    iconRes = R.drawable.msg_Ruler;
+                    iconRes = R.drawable.msg_customize_s;
                     break;
                 case "ai":
                     iconRes = R.drawable.msg_bot;

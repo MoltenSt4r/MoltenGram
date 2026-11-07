@@ -83,6 +83,10 @@ public class LiquidGlassSampleCell extends View {
     private int surface;
     private int surfaceAtElevation;
 
+    public LiquidGlassSampleCell(Context context) {
+        this(context, null);
+    }
+
     public LiquidGlassSampleCell(Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
         this.resourcesProvider = resourcesProvider;

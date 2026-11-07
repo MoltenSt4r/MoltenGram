@@ -5,6 +5,7 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;

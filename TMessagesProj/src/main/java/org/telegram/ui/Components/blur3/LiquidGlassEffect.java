@@ -124,7 +124,8 @@ public class LiquidGlassEffect {
             try {
                 RenderEffect blurEffect = RenderEffect.createBlurEffect(spec.blurPx, spec.blurPx, Shader.TileMode.CLAMP);
                 RenderEffect vibrantEffect = RenderEffect.createColorFilterEffect(LiquidGlassHelper.getVibrantColorFilter(), blurEffect);
-                effect = RenderEffect.createRuntimeShaderEffect(activeShader, "content", vibrantEffect);
+                RenderEffect shaderEffect = RenderEffect.createRuntimeShaderEffect(activeShader, "content");
+                effect = RenderEffect.createChainEffect(shaderEffect, vibrantEffect);
                 node.setRenderEffect(effect);
             } catch (Throwable e) {
                 FileLog.e(e);

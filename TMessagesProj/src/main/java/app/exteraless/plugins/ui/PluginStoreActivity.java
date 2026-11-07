@@ -628,7 +628,7 @@ public class PluginStoreActivity extends BaseFragment {
                 R.drawable.trusted_mini,
                 R.drawable.msg_theme,
                 R.drawable.msg_settings,
-                R.drawable.msg_Ruler,
+                R.drawable.msg_customize_s,
                 R.drawable.msg_photos,
                 R.drawable.msg_discussion,
                 R.drawable.msg_log

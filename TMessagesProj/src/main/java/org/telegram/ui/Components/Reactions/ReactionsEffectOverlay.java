@@ -679,7 +679,7 @@ public class ReactionsEffectOverlay {
                             }
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                             emojiImageView.getImageReceiver().setAllowStartAnimation(true);
-                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
+                            emojiImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
                         } else {
                             TLRPC.Document document = availableReaction.select_animation;
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
@@ -706,7 +706,7 @@ public class ReactionsEffectOverlay {
                             }
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                             emojiImageView.getImageReceiver().setAllowStartAnimation(true);
-                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
+                            emojiImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
                         } else {
                             TLRPC.Document document = availableReaction.activate_animation;
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");

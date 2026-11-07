@@ -31,9 +31,15 @@ public class LiquidGlassIntensityCell extends LinearLayout {
     private final TextView valueView;
     private final SeekBar seekBar;
     private OnIntensityChangeListener listener;
+    private final Theme.ResourcesProvider resourcesProvider;
 
     public LiquidGlassIntensityCell(@NonNull Context context) {
+        this(context, null);
+    }
+
+    public LiquidGlassIntensityCell(@NonNull Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
+        this.resourcesProvider = resourcesProvider;
         setOrientation(VERTICAL);
         setPadding(dp(21), dp(12), dp(21), dp(12));
 
@@ -98,6 +104,11 @@ public class LiquidGlassIntensityCell extends LinearLayout {
 
     public void setOnIntensityChangeListener(OnIntensityChangeListener listener) {
         this.listener = listener;
+    }
+
+    public void bind(int value) {
+        seekBar.setProgress(value);
+        updateValueText(value);
     }
 
     public void update() {

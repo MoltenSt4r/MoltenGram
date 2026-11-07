@@ -484,6 +484,10 @@ public final class LocalGgufManager {
         return list;
     }
 
+    public static List<LocalModelFile> getLocalModels() {
+        return getDownloadedModels();
+    }
+
     public static List<String> getDownloadedModelNames() {
         List<LocalModelFile> files = getDownloadedModels();
         List<String> names = new ArrayList<>(files.size());
