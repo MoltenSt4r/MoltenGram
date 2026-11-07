@@ -229,7 +229,7 @@ public class LocalAiModelsActivity extends BaseFragment {
         });
 
         ActionBarMenu menu = actionBar.createMenu();
-        ActionBarMenuItem searchItem = menu.addItem(ACTION_SEARCH, R.drawable.ic_ab_search);
+        ActionBarMenuItem searchItem = menu.addItem(ACTION_SEARCH, R.drawable.outline_header_search);
         searchItem.setIsSearchField(true).setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
             @Override
             public void onSearchExpand() {
@@ -358,8 +358,8 @@ public class LocalAiModelsActivity extends BaseFragment {
                 cItem.title = custom.name;
                 cItem.filename = custom.name;
                 cItem.creator = "Пользовательская модель";
-                cItem.sizeText = custom.sizeFormatted;
-                cItem.paramsText = custom.paramSize;
+                cItem.sizeText = AndroidUtilities.formatFileSize(custom.sizeBytes);
+                cItem.paramsText = "GGUF v" + custom.ggufVersion;
                 cItem.quantText = custom.quantization;
                 cItem.ramText = "Локально";
                 cItem.category = 0;
@@ -797,7 +797,7 @@ public class LocalAiModelsActivity extends BaseFragment {
             if (item.localFile == null || !item.localFile.file.exists()) return;
             AlertDialog.Builder builder = new AlertDialog.Builder(getContext());
             builder.setTitle("Удалить модель?");
-            builder.setMessage("Удалить файл " + item.localFile.name + " (" + item.localFile.sizeFormatted + ") с устройства?");
+            builder.setMessage("Удалить файл " + item.localFile.name + " (" + AndroidUtilities.formatFileSize(item.localFile.sizeBytes) + ") с устройства?");
             builder.setPositiveButton("Удалить", (dialog, which) -> {
                 if (item.localFile.file.delete()) {
                     if (item.localFile.name.equalsIgnoreCase(selectedModelName)) {
