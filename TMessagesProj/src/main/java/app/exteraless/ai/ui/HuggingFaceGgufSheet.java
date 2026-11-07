@@ -45,6 +45,7 @@ import app.exteraless.utils.UIUtil;
 public class HuggingFaceGgufSheet extends BottomSheet {
 
     private final Utilities.Callback<String> onModelSelected;
+    private final Utilities.Callback<LocalGgufManager.LocalModelFile> onModelSelectedFile;
     private String selectedModelName;
 
     private final LinearLayout localModelsContainer;
@@ -67,6 +68,17 @@ public class HuggingFaceGgufSheet extends BottomSheet {
             "Phi-3.5-mini-GGUF"
     };
 
+    private void notifyModelSelected(LocalGgufManager.LocalModelFile modelFile) {
+        if (modelFile == null) return;
+        selectedModelName = modelFile.name;
+        if (onModelSelectedFile != null) {
+            onModelSelectedFile.run(modelFile);
+        }
+        if (onModelSelected != null) {
+            onModelSelected.run(modelFile.name);
+        }
+    }
+
     public static void show(Context context, Theme.ResourcesProvider resourcesProvider,
                             String currentModel, Utilities.Callback<String> onModelSelected) {
         if (context == null) return;
@@ -74,11 +86,24 @@ public class HuggingFaceGgufSheet extends BottomSheet {
     }
 
     public HuggingFaceGgufSheet(Context context, Theme.ResourcesProvider resourcesProvider,
+                                Utilities.Callback<LocalGgufManager.LocalModelFile> onModelSelected) {
+        this(context, resourcesProvider, null, onModelSelected, null);
+    }
+
+    public HuggingFaceGgufSheet(Context context, Theme.ResourcesProvider resourcesProvider,
                                 String currentModel, Utilities.Callback<String> onModelSelected) {
+        this(context, resourcesProvider, currentModel, null, onModelSelected);
+    }
+
+    private HuggingFaceGgufSheet(Context context, Theme.ResourcesProvider resourcesProvider,
+                                 String currentModel,
+                                 Utilities.Callback<LocalGgufManager.LocalModelFile> onModelSelectedFile,
+                                 Utilities.Callback<String> onModelSelected) {
         super(context, true, resourcesProvider);
         setApplyTopPadding(false);
         setApplyBottomPadding(false);
         this.selectedModelName = currentModel;
+        this.onModelSelectedFile = onModelSelectedFile;
         this.onModelSelected = onModelSelected;
 
         int accent = getThemedColor(Theme.key_featuredStickers_addButton);
@@ -403,10 +428,7 @@ public class HuggingFaceGgufSheet extends BottomSheet {
             useBtn.setPadding(dp(12), dp(6), dp(12), dp(6));
             useBtn.setBackground(Theme.createRoundRectDrawable(dp(14), isSelected ? Theme.multAlpha(accent, 0.16f) : accent));
             useBtn.setOnClickListener(v -> {
-                selectedModelName = m.name;
-                if (onModelSelected != null) {
-                    onModelSelected.run(m.name);
-                }
+                notifyModelSelected(m);
                 refreshLocalModelsList(context);
                 dismiss();
             });
@@ -632,10 +654,7 @@ public class HuggingFaceGgufSheet extends BottomSheet {
                 public void onCompleted(LocalGgufManager.LocalModelFile modelFile) {
                     progressBar.setVisibility(View.GONE);
                     dlBtn.setText("Готово");
-                    selectedModelName = modelFile.name;
-                    if (onModelSelected != null) {
-                        onModelSelected.run(modelFile.name);
-                    }
+                    notifyModelSelected(modelFile);
                     refreshLocalModelsList(context);
                     BulletinFactory.of(container, resourcesProvider)
                             .createSimpleBulletin(R.raw.contact_check, "Модель загружена: " + modelFile.name)
@@ -731,10 +750,7 @@ public class HuggingFaceGgufSheet extends BottomSheet {
             }
             LocalGgufManager.importModelFromUri(context, android.net.Uri.fromFile(src), (model, err) -> {
                 if (model != null) {
-                    selectedModelName = model.name;
-                    if (onModelSelected != null) {
-                        onModelSelected.run(model.name);
-                    }
+                    notifyModelSelected(model);
                     refreshLocalModelsList(context);
                 } else {
                     BulletinFactory.of(container, resourcesProvider)
