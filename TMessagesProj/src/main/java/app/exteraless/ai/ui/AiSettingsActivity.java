@@ -124,9 +124,10 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
         providerRow = addRow("provider");
         urlRow = addRow("url");
         modelRow = addRow("model");
-        keyRow = addRow("key");
-        getKeyRow = keyUrl() == null ? -1 : addRow("getKey");
-        reasoningRow = addRow("reasoning");
+        boolean isLocal = app.exteraless.ai.gguf.LocalGgufManager.isLocalService(service());
+        keyRow = isLocal ? -1 : addRow("key");
+        getKeyRow = (isLocal || keyUrl() == null) ? -1 : addRow("getKey");
+        reasoningRow = isLocal ? -1 : addRow("reasoning");
         presetsRow = addRow("presets");
         testRow = addRow("test");
         serviceDividerRow = addRow();
@@ -190,7 +191,16 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         store(service);
                     });
         } else if (position == modelRow) {
-            AiModelPicker.show(getParentActivity(), resourcesProvider, service().getModel(),
+            Service currentService = service();
+            if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(currentService)) {
+                new HuggingFaceGgufSheet(getParentActivity(), resourcesProvider, localModel -> {
+                    Service service = service();
+                    service.setModel(localModel.name);
+                    store(service);
+                }).show();
+                return;
+            }
+            AiModelPicker.show(getParentActivity(), resourcesProvider, currentService.getModel(),
                     value -> {
                         Service service = service();
                         service.setModel(value);
@@ -320,6 +330,13 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         service.setUrl(provider.getUrl());
                         service.setModel(provider.getModel());
                         store(service);
+                        if ("local_gguf".equals(provider.getId())) {
+                            new HuggingFaceGgufSheet(getParentActivity(), resourcesProvider, localModel -> {
+                                Service s = service();
+                                s.setModel(localModel.name);
+                                store(s);
+                            }).show();
+                        }
                     }), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
         }
         list.addView(providerRow(context, getString(R.string.OEAiProviderCustom), null,

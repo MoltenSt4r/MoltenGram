@@ -81,6 +81,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_GLASS_REFRACTION_SLIDER = 108;
     /** Слайдер толщины обводки и бликов стеклянных сообщений */
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
+    private static final int TYPE_LIQUID_GLASS_SAMPLE = 110;
+    private static final int TYPE_LIQUID_GLASS_INTENSITY = 111;
     private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
@@ -99,8 +101,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int dividerStyleRow;
     private int sectionsDividerRow;
 
-    // Blur
+    // Blur & Liquid Glass
     private int blurHeaderRow;
+    private int liquidGlassRow;
+    private int liquidGlassSampleRow;
+    private int liquidGlassIntensityRow;
+    private int liquidGlassDispersionRow;
+    private int liquidGlassBottomBarRow;
+    private int liquidGlassElementsRow;
     private int glassOutlineRow;
     private int glassMessageMenuRow;
     private int glassMessagesRow;
@@ -113,6 +121,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int forceBlurRow;
     private int disableAvatarBlurRow;
     private int blurDividerRow;
+
+    private app.exteraless.player.LiquidGlassSampleCell liveSampleCell;
 
     // Avatar corners
     private int avatarCornersPreviewRow;
@@ -294,6 +304,20 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         sectionsDividerRow = addRow();
 
         blurHeaderRow = addRow("blurHeader");
+        liquidGlassRow = addRow("liquidGlass");
+        if (AppearanceConfig.liquidGlass.Bool() && Build.VERSION.SDK_INT >= 33) {
+            liquidGlassSampleRow = addRow("liquidGlassSample");
+            liquidGlassIntensityRow = addRow("liquidGlassIntensity");
+            liquidGlassDispersionRow = addRow("liquidGlassDispersion");
+            liquidGlassBottomBarRow = addRow("liquidGlassBottomBar");
+            liquidGlassElementsRow = addRow("liquidGlassElements");
+        } else {
+            liquidGlassSampleRow = -1;
+            liquidGlassIntensityRow = -1;
+            liquidGlassDispersionRow = -1;
+            liquidGlassBottomBarRow = -1;
+            liquidGlassElementsRow = -1;
+        }
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
@@ -1031,6 +1055,35 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             }
             rebuildAll();
             return;
+        } else if (position == liquidGlassRow) {
+            boolean enabled = AppearanceConfig.liquidGlass.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            rebuildRowsAndNotify();
+            rebuildAll();
+            return;
+        } else if (position == liquidGlassDispersionRow) {
+            boolean enabled = AppearanceConfig.liquidGlassDispersion.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            rebuildAll();
+            return;
+        } else if (position == liquidGlassBottomBarRow) {
+            boolean enabled = AppearanceConfig.liquidGlassBottomBar.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            rebuildAll();
+            return;
+        } else if (position == liquidGlassElementsRow) {
+            boolean enabled = AppearanceConfig.liquidGlassElements.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            rebuildAll();
+            return;
         } else if (position == forceBlurRow) {
             SharedConfig.toggleChatBlur();
             if (view instanceof TextCheckCell) {
@@ -1251,6 +1304,22 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     sliderStroke.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = sliderStroke;
                     break;
+                case TYPE_LIQUID_GLASS_SAMPLE: {
+                    liveSampleCell = new app.exteraless.player.LiquidGlassSampleCell(mContext, resourceProvider);
+                    view = liveSampleCell;
+                    break;
+                }
+                case TYPE_LIQUID_GLASS_INTENSITY: {
+                    app.exteraless.player.LiquidGlassIntensityCell intensityCell = new app.exteraless.player.LiquidGlassIntensityCell(mContext, resourceProvider);
+                    intensityCell.setOnIntensityChangeListener(intensity -> {
+                        AppearanceConfig.liquidGlassIntensity.setConfigInt(intensity);
+                        if (liveSampleCell != null) {
+                            liveSampleCell.invalidate();
+                        }
+                    });
+                    view = intensityCell;
+                    break;
+                }
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1310,6 +1379,41 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessages), getString(R.string.OEAppearanceGlassMessagesInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessages.Bool(), true, true);
                     } else if (position == chat3dScrollRow) {
                         cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceChat3dScroll), getString(R.string.OEAppearanceChat3dScrollInfo), AppearanceConfig.chat3dScroll.Bool(), true, true);
+                    } else if (position == liquidGlassRow) {
+                        cell.setTextAndValueAndCheck(
+                                getString(R.string.OEAppearanceLiquidGlass),
+                                Build.VERSION.SDK_INT >= 33
+                                        ? getString(R.string.OEAppearanceLiquidGlassDesc)
+                                        : getString(R.string.OEAppearancePlayerLiquidGlassDescLegacy),
+                                AppearanceConfig.liquidGlass.Bool(),
+                                true,
+                                AppearanceConfig.liquidGlass.Bool() && Build.VERSION.SDK_INT >= 33
+                        );
+                        cell.setEnabled(Build.VERSION.SDK_INT >= 33, null);
+                    } else if (position == liquidGlassDispersionRow) {
+                        cell.setTextAndValueAndCheck(
+                                getString(R.string.OEAppearanceLiquidGlassDispersion),
+                                getString(R.string.OEAppearanceLiquidGlassDispersionDesc),
+                                AppearanceConfig.liquidGlassDispersion.Bool(),
+                                true,
+                                true
+                        );
+                    } else if (position == liquidGlassBottomBarRow) {
+                        cell.setTextAndValueAndCheck(
+                                getString(R.string.OEAppearanceLiquidGlassBottomBar),
+                                getString(R.string.OEAppearanceLiquidGlassBottomBarDesc),
+                                AppearanceConfig.liquidGlassBottomBar.Bool(),
+                                true,
+                                true
+                        );
+                    } else if (position == liquidGlassElementsRow) {
+                        cell.setTextAndValueAndCheck(
+                                getString(R.string.OEAppearanceLiquidGlassElements),
+                                getString(R.string.OEAppearanceLiquidGlassElementsDesc),
+                                AppearanceConfig.liquidGlassElements.Bool(),
+                                true,
+                                false
+                        );
                     } else if (position == forceBlurRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceForceBlur), SharedConfig.chatBlurEnabled(), true);
                     } else if (position == disableAvatarBlurRow) {
@@ -1493,6 +1597,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setValue(AppearanceConfig.glassMessagesStrokeWidth.Int());
                     break;
                 }
+                case TYPE_LIQUID_GLASS_SAMPLE: {
+                    if (holder.itemView instanceof app.exteraless.player.LiquidGlassSampleCell) {
+                        ((app.exteraless.player.LiquidGlassSampleCell) holder.itemView).invalidate();
+                    }
+                    break;
+                }
+                case TYPE_LIQUID_GLASS_INTENSITY: {
+                    if (holder.itemView instanceof app.exteraless.player.LiquidGlassIntensityCell) {
+                        ((app.exteraless.player.LiquidGlassIntensityCell) holder.itemView).bind(AppearanceConfig.liquidGlassIntensity.Int());
+                    }
+                    break;
+                }
                 case TYPE_DETAIL_SETTINGS: {
                     // Иконка слева, подпись под заголовком.
                     TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
@@ -1551,6 +1667,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             final int type = holder.getItemViewType();
+            if (type == TYPE_LIQUID_GLASS_SAMPLE || type == TYPE_LIQUID_GLASS_INTENSITY) {
+                return false;
+            }
             if (type == TYPE_EXPANDABLE_SWITCH || type == TYPE_ROUND_CHECK) {
                 return true;
             }
@@ -1575,6 +1694,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_GLASS_REFRACTION_SLIDER;
             } else if (position == glassMessagesStrokeRow) {
                 return TYPE_GLASS_STROKE_SLIDER;
+            } else if (position == liquidGlassSampleRow) {
+                return TYPE_LIQUID_GLASS_SAMPLE;
+            } else if (position == liquidGlassIntensityRow) {
+                return TYPE_LIQUID_GLASS_INTENSITY;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow

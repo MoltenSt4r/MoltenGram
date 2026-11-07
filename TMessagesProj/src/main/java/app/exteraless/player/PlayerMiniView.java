@@ -35,6 +35,8 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 
+import app.exteraless.appearance.AppearanceConfig;
+
 public class PlayerMiniView extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
     public static final int HEIGHT_DP = 64;
@@ -73,7 +75,41 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         setClipChildren(false);
         setClipToPadding(false);
 
-        card = new LinearLayout(context);
+        card = new LinearLayout(context) {
+            private LiquidGlassHelper.GlassPane glassPane;
+
+            @Override
+            protected void dispatchDraw(Canvas canvas) {
+                if (AppearanceConfig.playerLiquidGlass() && getWidth() > 0 && getHeight() > 0) {
+                    if (glassPane == null) {
+                        glassPane = new LiquidGlassHelper.GlassPane();
+                    }
+                    float intensity = AppearanceConfig.playerGlassIntensityFloat();
+                    boolean still = LiquidGlassHelper.isBatterySaverStill();
+                    LiquidGlassHelper.GlassSpec glass = new LiquidGlassHelper.GlassSpec(intensity, still);
+                    int tint = colors != null ? glass.floatingTint(colors.surfaceContainer) : 0x80ffffff;
+                    int stillFill = colors != null ? glass.stillFill(colors.surfaceContainer) : 0xf0202020;
+
+                    glassPane.draw(
+                            canvas,
+                            0, 0, getWidth(), getHeight(),
+                            AndroidUtilities.dpf2(20f),
+                            null, 0, 0, getWidth(), getHeight(),
+                            true,
+                            glass.blurPx,
+                            AndroidUtilities.dpf2(12f) * glass.lensT,
+                            AndroidUtilities.dpf2(24f) * glass.lensT,
+                            true,
+                            true,
+                            true,
+                            tint,
+                            stillFill,
+                            still
+                    );
+                }
+                super.dispatchDraw(canvas);
+            }
+        };
         card.setOrientation(LinearLayout.HORIZONTAL);
         card.setGravity(Gravity.CENTER_VERTICAL);
         card.setPadding(dp(10), 0, dp(6), 0);
@@ -354,21 +390,24 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     private void applyColors(PlayerColors c) {
         colors = c;
-        cardBg.setColor(c.primaryContainer);
+        boolean liquidGlass = AppearanceConfig.playerLiquidGlass();
+        cardBg.setColor(liquidGlass ? android.graphics.Color.TRANSPARENT : c.primaryContainer);
         if (Build.VERSION.SDK_INT >= 28) {
             card.setOutlineSpotShadowColor(c.shadow());
             card.setOutlineAmbientShadowColor(c.shadow());
         }
         cover.setColors(c.secondaryContainer, c.onSecondaryContainer);
-        titleView.setTextColor(c.onPrimaryContainer);
-        artistView.setTextColor(c.onPrimaryContainer);
-        nextIcon.setColor(c.onPrimaryContainer);
-        closeIcon.setColor(c.onPrimaryContainer);
-        int ripple = ColorUtils.setAlphaComponent(c.onPrimaryContainer, 0x1f);
+        int fgColor = liquidGlass ? c.onSurface : c.onPrimaryContainer;
+        titleView.setTextColor(fgColor);
+        artistView.setTextColor(fgColor);
+        nextIcon.setColor(fgColor);
+        closeIcon.setColor(fgColor);
+        int ripple = ColorUtils.setAlphaComponent(fgColor, 0x1f);
         nextButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
         closeButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
         playButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
-        playButton.setColors(c.onPrimaryContainer, ColorUtils.setAlphaComponent(c.onPrimaryContainer, 46), c.onPrimaryContainer);
+        playButton.setColors(fgColor, ColorUtils.setAlphaComponent(fgColor, 46), fgColor);
         card.setForeground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_ALL));
+        card.invalidate();
     }
 }

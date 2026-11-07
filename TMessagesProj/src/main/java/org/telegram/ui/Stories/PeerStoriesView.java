@@ -546,10 +546,10 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
             }
         };
 
-        blurredBackgroundColorProvider = new BlurredBackgroundColorProviderThemed(resourcesProvider, Theme.key_chat_messagePanelBackground, 0.8f);
+        blurredBackgroundColorProvider = new BlurredBackgroundColorProviderThemed(resourcesProvider, Theme.key_chat_messagePanelBackground, 0.94f);
 
         blurredBackgroundSourceFallback = new BlurredBackgroundSourceColor();
-        blurredBackgroundSourceFallback.setColor(ColorUtils.blendARGB(Color.BLACK, Color.WHITE, 0.2f));
+        blurredBackgroundSourceFallback.setColor(Theme.getColor(Theme.key_chat_messagePanelBackground, resourcesProvider));
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SharedConfig.canBlurChat()) {
             blurredBackgroundSourceRenderNodeWithSaturation = new BlurredBackgroundSourceRenderNode(blurredBackgroundSourceFallback);
             blurredBackgroundSourceRenderNodeWithSaturation.setBlur(dp(8));
@@ -561,6 +561,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         }
 
         blurredBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(new ViewPositionWatcher(this), this, blurredBackgroundSourceWithSaturation);
+        blurredBackgroundDrawableFactory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) && app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassElements());
 
         inputFieldBackground = blurredBackgroundDrawableFactory.create(this, blurredBackgroundColorProvider);
         emojiKeyboardBackground = blurredBackgroundDrawableFactory.create(this, blurredBackgroundColorProvider);
@@ -7506,14 +7507,15 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         if (BIG_SCREEN) {
             inputBackgroundPaint.setColor(
                 ColorUtils.blendARGB(
-                    0xFF1C2229,
+                    Theme.getColor(Theme.key_chat_messagePanelBackground, resourcesProvider),
                     Theme.multAlpha(Color.BLACK, 0.44f),
                     progressToKeyboard
                 )
             );
             inputBackgroundPaint.setAlpha((int) (inputBackgroundPaint.getAlpha() * (1f - progressToDismiss) * hideInterfaceAlpha * (1f - outT)));
         } else {
-            inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(Color.BLACK, (int) (0xFF * 0.54f * hideInterfaceAlpha * (1f - outT))));
+            int panelBg = Theme.getColor(Theme.key_chat_messagePanelBackground, resourcesProvider);
+            inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(panelBg, (int) (0xFF * 0.92f * hideInterfaceAlpha * (1f - outT))));
         }
         if (
             forceUpdateOffsets ||
@@ -7948,7 +7950,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
             reactionsContainerLayout = new ReactionsContainerLayout(ReactionsContainerLayout.TYPE_STORY, LaunchActivity.getLastFragment(), getContext(), currentAccount, new WrappedResourceProvider(resourcesProvider) {
                 @Override
                 public void appendColors() {
-                    sparseIntArray.put(Theme.key_chat_emojiPanelBackground, ColorUtils.setAlphaComponent(Color.WHITE, 30));
+                    sparseIntArray.put(Theme.key_chat_emojiPanelBackground, Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
                 }
             });
             reactionsContainerLayout.setHint(getString(isGroup ? R.string.StoryGroupReactionsHint : R.string.StoryReactionsHint));
@@ -8021,11 +8023,20 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                         }
 
                         if (payStars <= 0) {
-                            BulletinFactory.of(storyContainer, resourcesProvider).createEmojiBulletin(document,
-                                getString(R.string.ReactionSent),
-                                getString(R.string.ViewInChat),
-                                () -> openChat()
-                            ).setDuration(Bulletin.DURATION_PROLONG).show();
+                            if (visibleReaction.emojicon != null && (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions())) {
+                                BulletinFactory.of(storyContainer, resourcesProvider).createSimpleBulletin(
+                                    Emoji.getEmojiDrawable(visibleReaction.emojicon),
+                                    getString(R.string.ReactionSent),
+                                    getString(R.string.ViewInChat),
+                                    () -> openChat()
+                                ).setDuration(Bulletin.DURATION_PROLONG).show();
+                            } else {
+                                BulletinFactory.of(storyContainer, resourcesProvider).createEmojiBulletin(document,
+                                    getString(R.string.ReactionSent),
+                                    getString(R.string.ViewInChat),
+                                    () -> openChat()
+                                ).setDuration(Bulletin.DURATION_PROLONG).show();
+                            }
                         }
                         if (reactionsContainerLayout.getReactionsWindow() != null) {
                             reactionsContainerLayout.getReactionsWindow().dismissWithAlpha();
@@ -8041,16 +8052,33 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
 
                 @Override
                 public void drawRoundRect(Canvas canvas, RectF rect, float radius, float offsetX, float offsetY, int alpha, boolean isWindow) {
-                    bitmapShaderTools.setBounds(-offsetX, -offsetY,
-                            -offsetX + getMeasuredWidth(),
-                            -offsetY + getMeasuredHeight());
-                    if (radius > 0) {
-                        canvas.drawRoundRect(rect, radius, radius, bitmapShaderTools.paint);
-                        canvas.drawRoundRect(rect, radius, radius, inputBackgroundPaint);
+                    int prevColor = inputBackgroundPaint.getColor();
+                    int md3Surface = Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider);
+                    boolean isLiquidGlass = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) && app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassElements();
+                    if (isLiquidGlass && isWindow) {
+                        float intensity = app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassIntensityFloat();
+                        int glassAlpha = (int) (255 * (0.86f - 0.16f * intensity));
+                        inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(md3Surface, Math.min(255, (int) (alpha * (glassAlpha / 255f)))));
                     } else {
-                        canvas.drawRect(rect, bitmapShaderTools.paint);
+                        inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(md3Surface, Math.min(255, (int) (alpha * 0.98f))));
+                    }
+                    float r = isWindow ? Math.max(radius, dp(24)) : radius;
+                    if (r > 0) {
+                        canvas.drawRoundRect(rect, r, r, inputBackgroundPaint);
+                    } else {
                         canvas.drawRect(rect, inputBackgroundPaint);
                     }
+                    if (isLiquidGlass && isWindow) {
+                        Paint stroke = resourcesProvider.getPaint("paint_glass_stroke");
+                        if (stroke == null) {
+                            stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
+                            stroke.setStyle(Paint.Style.STROKE);
+                            stroke.setStrokeWidth(dp(1.2f));
+                        }
+                        stroke.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (40 * (alpha / 255f))));
+                        canvas.drawRoundRect(rect, r, r, stroke);
+                    }
+                    inputBackgroundPaint.setColor(prevColor);
                 }
 
                 @Override
@@ -8074,7 +8102,7 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
             likesReactionLayout = new ReactionsContainerLayout(ReactionsContainerLayout.TYPE_STORY_LIKES, LaunchActivity.getLastFragment(), getContext(), currentAccount, new WrappedResourceProvider(resourcesProvider) {
                 @Override
                 public void appendColors() {
-                    sparseIntArray.put(Theme.key_chat_emojiPanelBackground, ColorUtils.setAlphaComponent(Color.WHITE, 30));
+                    sparseIntArray.put(Theme.key_chat_emojiPanelBackground, Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
                 }
             });
             likesReactionLayout.setPadding(0, 0, 0, AndroidUtilities.dp(22));
@@ -8114,10 +8142,30 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                             reactionMoveDrawable.addView(PeerStoriesView.this);
                         } else if (visibleReaction.emojicon != null) {
                             TLRPC.TL_availableReaction availableReaction = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
-                            if (availableReaction != null) {
-                                TLRPC.Document document = availableReaction.select_animation;//availableReaction.appear_animation;
+                            if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) {
+                                Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                                if (thumb instanceof Emoji.EmojiDrawable) {
+                                    ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                                }
+                                String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
+                                if (notoUrl != null) {
+                                    reactionMoveImageReceiver.setAllowStartAnimation(true);
+                                    reactionMoveImageReceiver.setImage(ImageLocation.getForVideoPath(notoUrl), "60_60", thumb, "webp", visibleReaction, 1);
+                                } else {
+                                    reactionMoveImageReceiver.setImageBitmap(thumb);
+                                }
+                            } else if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+                                Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                                if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                                    ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                                }
+                                reactionMoveImageReceiver.setImageBitmap(emojiDrawable);
+                            } else if (availableReaction != null) {
+                                TLRPC.Document document = availableReaction.select_animation;
                                 reactionMoveImageReceiver.setImage(null, null, ImageLocation.getForDocument(document), "60_60", null, null, null, 0, null, null, 0);
-                                document = availableReaction.around_animation;
+                            }
+                            if (availableReaction != null) {
+                                TLRPC.Document document = availableReaction.around_animation;
                                 String filer = ReactionsEffectOverlay.getFilterForAroundAnimation();
                                 reactionEffectImageReceiver.setImage(ImageLocation.getForDocument(document), filer, null, null, null, 0);
                                 if (reactionEffectImageReceiver.getLottieAnimation() != null) {

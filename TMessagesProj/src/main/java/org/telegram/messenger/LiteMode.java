@@ -151,6 +151,9 @@ public class LiteMode {
             // always enabled for tablets
             return true;
         }
+        if (flag == FLAG_LIQUID_GLASS) {
+            return app.exteraless.appearance.AppearanceConfig.liquidGlass();
+        }
         return (getValue() & preprocessFlag(flag)) > 0;
     }
 

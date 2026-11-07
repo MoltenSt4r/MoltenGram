@@ -17,7 +17,13 @@ public final class AiController {
 
     public static boolean canUseAI() {
         Service service = AiConfig.getSelectedService();
-        return service != null && !TextUtils.isEmpty(service.getKey())
+        if (service == null) {
+            return false;
+        }
+        if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(service)) {
+            return !TextUtils.isEmpty(service.getModel());
+        }
+        return !TextUtils.isEmpty(service.getKey())
                 && !TextUtils.isEmpty(service.getUrl()) && !TextUtils.isEmpty(service.getModel());
     }
 

@@ -29,6 +29,8 @@ import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.ScaleStateListAnimator;
 
+import app.exteraless.utils.UIUtil;
+
 public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable {
 
     private final LinearLayout layout;
@@ -46,24 +48,33 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
         super(context);
 
         layout = new LinearLayout(context) {
-            private final RectF a = new RectF(), b = new RectF(), c = new RectF();
+            private final RectF a = new RectF(), b = new RectF(), c = new RectF(), outerRect = new RectF();
             private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            private final Paint containerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             private void setRect(int mode, RectF rect) {
                 View view = mode <= -1 ? liveLayout : mode >= 1 ? videoLayout : photoLayout;
-                rect.set(view.getLeft(), view.getBottom() - dp(30), view.getRight(), view.getBottom());
+                rect.set(view.getLeft() + dp(2), view.getBottom() - dp(34), view.getRight() - dp(2), view.getBottom() - dp(2));
             }
             @Override
             protected void dispatchDraw(@NonNull Canvas canvas) {
+                outerRect.set(0, getHeight() - dp(36), getWidth(), getHeight());
+                containerPaint.setColor(Theme.multAlpha(ColorUtils.blendARGB(0xFF1E2025, 0xFFE5E7EB, invert), 0.86f));
+                canvas.drawRoundRect(outerRect, dp(18), dp(18), containerPaint);
+
                 setRect((int) Math.floor(mode), a);
                 setRect((int) Math.ceil(mode), b);
                 lerp(a, b, mode - (float) Math.floor(mode), c);
-                backgroundPaint.setColor(Theme.multAlpha(ColorUtils.blendARGB(Color.WHITE, Color.BLACK, invert), 0.15f));
+                int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+                if (accent == 0) accent = 0xFF8BC8F5;
+                backgroundPaint.setColor(accent);
                 canvas.drawRoundRect(c, c.height() / 2f, c.height() / 2f, backgroundPaint);
 
+                updateTabTextColors(accent);
                 super.dispatchDraw(canvas);
             }
         };
         layout.setOrientation(LinearLayout.HORIZONTAL);
+        layout.setPadding(dp(4), 0, dp(4), 0);
 
         liveLayout = new FrameLayout(context);
         live = new TextView(context);
@@ -71,8 +82,8 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
         live.setTypeface(AndroidUtilities.bold());
         live.setTextColor(0xFFFFFFFF);
         live.setText(getString(R.string.StoryLive));
-        liveLayout.addView(live, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 7));
-        layout.addView(liveLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.FILL_VERTICAL, 0, 0, 6.66f, 0));
+        liveLayout.addView(live, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 9));
+        layout.addView(liveLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.FILL_VERTICAL, 0, 0, 4f, 0));
         liveLayout.setOnClickListener(v -> switchModeInternal(-1));
         ScaleStateListAnimator.apply(liveLayout);
 
@@ -82,8 +93,8 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
         photo.setTypeface(AndroidUtilities.bold());
         photo.setTextColor(0xFFFFFFFF);
         photo.setText(getString(R.string.StoryPhoto));
-        photoLayout.addView(photo, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 7));
-        layout.addView(photoLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.FILL_VERTICAL, 0, 0, 6.66f, 0));
+        photoLayout.addView(photo, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 9));
+        layout.addView(photoLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.FILL_VERTICAL, 0, 0, 4f, 0));
         photoLayout.setOnClickListener(v -> switchModeInternal(0));
         ScaleStateListAnimator.apply(photoLayout);
 
@@ -93,12 +104,23 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
         video.setTypeface(AndroidUtilities.bold());
         video.setTextColor(0xFFFFFFFF);
         video.setText(getString(R.string.StoryVideo));
-        videoLayout.addView(video, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 7));
+        videoLayout.addView(video, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 16, 0, 16, 9));
         layout.addView(videoLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.FILL_VERTICAL, 0, 0, 0, 0));
         videoLayout.setOnClickListener(v -> switchModeInternal(1));
         ScaleStateListAnimator.apply(videoLayout);
 
         addView(layout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_HORIZONTAL | Gravity.FILL_VERTICAL));
+    }
+
+    private void updateTabTextColors(int accent) {
+        int inactiveColor = ColorUtils.blendARGB(0xCCFFFFFF, 0xCC000000, invert);
+        int activeColor = UIUtil.getOnAccentColor(accent);
+        float liveActive = Utilities.clamp(1f - Math.abs(mode - (-1f)), 1f, 0f);
+        float photoActive = Utilities.clamp(1f - Math.abs(mode - 0f), 1f, 0f);
+        float videoActive = Utilities.clamp(1f - Math.abs(mode - 1f), 1f, 0f);
+        live.setTextColor(ColorUtils.blendARGB(inactiveColor, activeColor, liveActive));
+        photo.setTextColor(ColorUtils.blendARGB(inactiveColor, activeColor, photoActive));
+        video.setTextColor(ColorUtils.blendARGB(inactiveColor, activeColor, videoActive));
     }
 
     private float mode;
@@ -157,9 +179,9 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
     @Override
     public void setInvert(float invert) {
         this.invert = invert;
-        live.setTextColor(ColorUtils.blendARGB(0xFFFFFFFF, 0xFF000000, invert));
-        photo.setTextColor(ColorUtils.blendARGB(0xFFFFFFFF, 0xFF000000, invert));
-        video.setTextColor(ColorUtils.blendARGB(0xFFFFFFFF, 0xFF000000, invert));
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xFF8BC8F5;
+        updateTabTextColors(accent);
     }
 
     @Override

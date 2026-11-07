@@ -217,4 +217,14 @@
     <string name="OEAppearanceMd3FabItems">Пункты меню FAB</string>
     <string name="OEAppearanceMd3FabItemsInfo">Настроить действия в раскрывающемся меню плавающей кнопки</string>
     <string name="OEAppearanceMd3FabCustomize">Настройка меню FAB</string>
+    <string name="OEAppearanceLiquidGlass">Жидкое стекло (Liquid Glass)</string>
+    <string name="OEAppearanceLiquidGlassDesc">Физическое преломление света, 7-полосная дисперсия и 45° блики на базе AGSL (как в InterTune)</string>
+    <string name="OEAppearanceLiquidGlassIntensity">Интенсивность стекла</string>
+    <string name="OEAppearanceLiquidGlassIntensityDesc">Сила преломления, матовость и глубина линзы</string>
+    <string name="OEAppearanceLiquidGlassDispersion">Хроматическая дисперсия</string>
+    <string name="OEAppearanceLiquidGlassDispersionDesc">Спектральное разложение света по граням стекла</string>
+    <string name="OEAppearanceLiquidGlassBottomBar">Нижняя панель навигации</string>
+    <string name="OEAppearanceLiquidGlassBottomBarDesc">Стеклянный эффект для нижней панели вкладок (меню)</string>
+    <string name="OEAppearanceLiquidGlassElements">Элементы интерфейса</string>
+    <string name="OEAppearanceLiquidGlassElementsDesc">Стеклянный эффект для шторок, диалогов, попапов, панелей ввода и кнопок</string>
 </resources>

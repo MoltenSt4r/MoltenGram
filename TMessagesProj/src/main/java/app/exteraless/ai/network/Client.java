@@ -122,6 +122,18 @@ public class Client {
             AndroidUtilities.runOnUIThread(() -> callback.run(null, "service is not configured"));
             return;
         }
+        if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(service)) {
+            List<app.exteraless.ai.gguf.LocalGgufManager.LocalModelFile> files = app.exteraless.ai.gguf.LocalGgufManager.getLocalModels();
+            ArrayList<String> models = new ArrayList<>();
+            for (app.exteraless.ai.gguf.LocalGgufManager.LocalModelFile f : files) {
+                models.add(f.name);
+            }
+            if (models.isEmpty()) {
+                models.add("local-gguf");
+            }
+            AndroidUtilities.runOnUIThread(() -> callback.run(models, null));
+            return;
+        }
         String base = Service.normalizeUrl(service.getUrl());
         String url = base + (base.endsWith("/") ? "models" : "/models");
         final Request built;
@@ -254,6 +266,34 @@ public class Client {
         if (service == null || TextUtils.isEmpty(service.getUrl())
                 || TextUtils.isEmpty(service.getModel())) {
             notifyError(requestId, callback, 0, "service is not configured");
+            return;
+        }
+        if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(service)) {
+            generating.set(true);
+            app.exteraless.ai.gguf.LocalGgufManager.generateLocalResponse(service.getModel(), role(), messages, streaming, new GenerationCallback() {
+                @Override
+                public void onChunk(String chunk) {
+                    if (!cancelled.contains(requestId)) {
+                        callback.onChunk(chunk);
+                    }
+                }
+
+                @Override
+                public void onResponse(String response) {
+                    generating.set(false);
+                    if (!cancelled.contains(requestId)) {
+                        callback.onResponse(response);
+                    }
+                }
+
+                @Override
+                public void onError(int code, String message) {
+                    generating.set(false);
+                    if (!cancelled.contains(requestId)) {
+                        notifyError(requestId, callback, code, message);
+                    }
+                }
+            });
             return;
         }
         if (TextUtils.isEmpty(service.getKey())) {

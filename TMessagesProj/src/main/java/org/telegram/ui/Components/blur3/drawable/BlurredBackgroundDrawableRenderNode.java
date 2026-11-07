@@ -143,8 +143,22 @@ public class BlurredBackgroundDrawableRenderNode extends BlurredBackgroundDrawab
             c.drawColor(backgroundColor);
         } else {
             c.drawRenderNode(renderNodeFill);
-            if (liquidGlassEffect == null && Color.alpha(backgroundColor) != 0) {
-                c.drawColor(backgroundColor);
+            if (liquidGlassEffect != null && Build.VERSION.SDK_INT >= 33) {
+                liquidGlassEffect.drawHighlight(
+                    c,
+                    boundProps.boundsWithPadding.width(),
+                    boundProps.boundsWithPadding.height(),
+                    boundProps.shaderRadii[0],
+                    boundProps.shaderRadii[2],
+                    boundProps.shaderRadii[4],
+                    boundProps.shaderRadii[6]
+                );
+            }
+            if (Color.alpha(backgroundColor) != 0) {
+                int tint = liquidGlassEffect != null && Build.VERSION.SDK_INT >= 33
+                    ? app.exteraless.player.LiquidGlassHelper.GlassSpec.of(app.exteraless.appearance.AppearanceConfig.liquidGlassIntensityFloat()).floatingTint(backgroundColor)
+                    : backgroundColor;
+                c.drawColor(tint);
             }
         }
         if (!boundProps.useFullStroke) {

@@ -244,7 +244,7 @@ public class CustomEmojiReactionsWindow {
 
                 @Override
                 public void getOutline(View view, Outline outline) {
-                    float radius = AndroidUtilities.lerp(fromRadius, dp(8), enterTransitionProgress);
+                    float radius = AndroidUtilities.lerp(fromRadius, dp(24), enterTransitionProgress);
                     rectTmp.set(0, 0, view.getMeasuredWidth(), view.getMeasuredHeight());
                     AndroidUtilities.lerp(fromRect, rectTmp, enterTransitionProgress, rectF);
                     rectF.round(rect);
@@ -799,11 +799,7 @@ public class CustomEmojiReactionsWindow {
             shadow = ContextCompat.getDrawable(context, R.drawable.reactions_bubble_shadow).mutate();
             shadowPad.left = shadowPad.top = shadowPad.right = shadowPad.bottom = dp(7);
             shadow.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_chat_messagePanelShadow, resourcesProvider), PorterDuff.Mode.MULTIPLY));
-            if (type == TYPE_STORY_LIKES) {
-                backgroundPaint.setColor(ColorUtils.blendARGB(Color.BLACK, Color.WHITE, 0.13f));
-            } else {
-                backgroundPaint.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
-            }
+            backgroundPaint.setColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
         }
 
         @Override
@@ -867,7 +863,7 @@ public class CustomEmojiReactionsWindow {
                 fromRect.offset(fromRectTranslateX, fromRectTranslateY);
             }
             AndroidUtilities.lerp(fromRect, AndroidUtilities.rectTmp, enterTransitionProgress, drawingRect);
-            float radius = AndroidUtilities.lerp(fromRadius, dp(type == TYPE_MESSAGE_EFFECTS ? 20 : 8), enterTransitionProgress);
+            float radius = AndroidUtilities.lerp(fromRadius, dp(24), enterTransitionProgress);
 
             transitionReactions.clear();
             if (type == TYPE_STORY || (reactionsContainerLayout.getDelegate() != null && reactionsContainerLayout.getDelegate().drawBackground())) {

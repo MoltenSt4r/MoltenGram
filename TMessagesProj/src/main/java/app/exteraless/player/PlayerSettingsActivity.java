@@ -67,7 +67,17 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
+    private int liquidGlassRow;
+    private int groupedControlsRow;
+    private int glassSampleRow;
+    private int glassIntensityRow;
     private int appearanceShadowRow;
+
+    private LiquidGlassSampleCell sampleCell;
+    private LiquidGlassIntensityCell intensityCell;
+
+    private static final int TYPE_GLASS_SAMPLE = 101;
+    private static final int TYPE_GLASS_INTENSITY = 102;
 
     private int lyricsHeaderRow;
     private int lyricsExperimentalRow;
@@ -111,6 +121,16 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
+
+        liquidGlassRow = addRow("liquidGlass");
+        groupedControlsRow = addRow("groupedControls");
+        glassSampleRow = addRow("glassSample");
+        if (AppearanceConfig.playerLiquidGlass()) {
+            glassIntensityRow = addRow("glassIntensity");
+        } else {
+            glassIntensityRow = -1;
+        }
+
         appearanceShadowRow = addRow();
 
         // Lyrics
@@ -253,6 +273,29 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerKeepScreenOn());
             }
+        } else if (position == liquidGlassRow) {
+            boolean next = !AppearanceConfig.playerLiquidGlass();
+            AppearanceConfig.playerLiquidGlass.setConfigBool(next);
+            updateRows();
+            if (listAdapter != null) {
+                listAdapter.notifyDataSetChanged();
+            }
+            if (sampleCell != null) {
+                sampleCell.invalidate();
+            }
+        } else if (position == groupedControlsRow) {
+            if (AppearanceConfig.playerLiquidGlass()) {
+                boolean next = !AppearanceConfig.playerGroupedControls();
+                AppearanceConfig.playerGroupedControls.setConfigBool(next);
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(next);
+                }
+                if (sampleCell != null) {
+                    sampleCell.invalidate();
+                }
+            } else {
+                BulletinFactory.of(this).createSimpleBulletin(R.drawable.msg_filled_data_music, getString(R.string.OEAppearancePlayerGroupedControlsDesc)).show();
+            }
         } else if (position == lyricsExperimentalRow) {
             AppearanceConfig.playerLyricsExperimental.setConfigBool(!AppearanceConfig.playerLyricsExperimental());
             if (view instanceof TextCheckCell) {
@@ -326,6 +369,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
+            int position = holder.getAdapterPosition();
+            if (position == groupedControlsRow && !AppearanceConfig.playerLiquidGlass()) {
+                return false;
+            }
             int type = holder.getItemViewType();
             return type == TYPE_CHECK || type == TYPE_SETTINGS;
         }
@@ -334,7 +381,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
+            } else if (position == glassSampleRow) {
+                return TYPE_GLASS_SAMPLE;
+            } else if (position == glassIntensityRow) {
+                return TYPE_GLASS_INTENSITY;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+                    || position == liquidGlassRow || position == groupedControlsRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
                     || position == crossfadeRow) {
                 return TYPE_CHECK;
@@ -346,6 +398,28 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
+        }
+
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_GLASS_SAMPLE) {
+                if (sampleCell == null) {
+                    sampleCell = new LiquidGlassSampleCell(mContext, resourcesProvider);
+                }
+                return new RecyclerListView.Holder(sampleCell);
+            } else if (viewType == TYPE_GLASS_INTENSITY) {
+                if (intensityCell == null) {
+                    intensityCell = new LiquidGlassIntensityCell(mContext);
+                    intensityCell.setOnIntensityChangeListener(intensity -> {
+                        if (sampleCell != null) {
+                            sampleCell.invalidate();
+                        }
+                    });
+                }
+                return new RecyclerListView.Holder(intensityCell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
@@ -368,6 +442,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
                 } else if (position == keepScreenOnRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
+                } else if (position == liquidGlassRow) {
+                    String desc = getString(Build.VERSION.SDK_INT >= 33 ? R.string.OEAppearancePlayerLiquidGlassDesc : R.string.OEAppearancePlayerLiquidGlassDescLegacy);
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLiquidGlass), desc, AppearanceConfig.playerLiquidGlass(), true, true);
+                } else if (position == groupedControlsRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerGroupedControls), getString(R.string.OEAppearancePlayerGroupedControlsDesc), AppearanceConfig.playerGroupedControls(), true, true);
+                    cell.setEnabled(AppearanceConfig.playerLiquidGlass());
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
                 } else if (position == lyricsTranslateRow) {
@@ -376,6 +456,14 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), true);
                 } else if (position == crossfadeRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerCrossfade), getString(R.string.OEAppearancePlayerCrossfadeDesc), AppearanceConfig.playerCrossfade(), true, true);
+                }
+            } else if (type == TYPE_GLASS_SAMPLE) {
+                if (sampleCell != null) {
+                    sampleCell.invalidate();
+                }
+            } else if (type == TYPE_GLASS_INTENSITY) {
+                if (intensityCell != null) {
+                    intensityCell.update();
                 }
             } else if (type == TYPE_SETTINGS) {
                 TextSettingsCell cell = (TextSettingsCell) holder.itemView;

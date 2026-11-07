@@ -443,7 +443,7 @@ public class ReactionsEffectOverlay {
                         emojiStaticImageView.setAlpha(1f);
                     }
                 }
-                if (animationType == LONG_ANIMATION && (isStories || (app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null))) {
+                if (animationType == LONG_ANIMATION && (isStories || ((app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && visibleReaction.emojicon != null))) {
                     emojiImageView.setAlpha(1f - animateOutProgress);
                 }
                 container.setTranslationX(x);
@@ -469,7 +469,7 @@ public class ReactionsEffectOverlay {
                     peakStartTime = System.currentTimeMillis();
                 }
 
-                boolean isNoto = app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null;
+                boolean isNoto = (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && visibleReaction.emojicon != null;
                 boolean peakHoldDone = peakStartTime != 0 && System.currentTimeMillis() - peakStartTime > 380;
                 boolean longAnimFinished;
                 RLottieDrawable lottie = emojiImageView.getImageReceiver().getLottieAnimation();
@@ -668,17 +668,45 @@ public class ReactionsEffectOverlay {
                     }
                 }
 
+                boolean useNotoReaction = (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && visibleReaction.emojicon != null;
                 if (animationType == ONLY_MOVE_ANIMATION) {
-                    TLRPC.Document document = isStories ? availableReaction.select_animation : availableReaction.appear_animation;
-                    emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
-                    emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
-                } else if (animationType == LONG_ANIMATION) {
-                    if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null) {
+                    if (useNotoReaction && isStories) {
                         String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
                         if (notoUrl != null) {
+                            Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                            if (thumb instanceof Emoji.EmojiDrawable) {
+                                ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                            }
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
                             emojiImageView.getImageReceiver().setAllowStartAnimation(true);
-                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, "webp");
+                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
+                        } else {
+                            TLRPC.Document document = availableReaction.select_animation;
+                            emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                            emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
+                        }
+                    } else if (isStories && app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
+                        emojiImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                    } else {
+                        TLRPC.Document document = isStories ? availableReaction.select_animation : availableReaction.appear_animation;
+                        emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                        emojiImageView.setImage(ImageLocation.getForDocument(document), emojiSizeForFilter + "_" + emojiSizeForFilter, null, null, 0, null);
+                    }
+                } else if (animationType == LONG_ANIMATION) {
+                    if (useNotoReaction) {
+                        String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
+                        if (notoUrl != null) {
+                            Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                            if (thumb instanceof Emoji.EmojiDrawable) {
+                                ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                            }
+                            emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
+                            emojiImageView.getImageReceiver().setAllowStartAnimation(true);
+                            emojiImageView.setImage(ImageLocation.getForVideoPath(notoUrl), emojiSizeForFilter + "_" + emojiSizeForFilter, thumb, "webp", visibleReaction, 1);
                         } else {
                             TLRPC.Document document = availableReaction.activate_animation;
                             emojiImageView.getImageReceiver().setUniqKeyPrefix((uniqPrefix++) + "_" + messageId + "_");
@@ -718,10 +746,12 @@ public class ReactionsEffectOverlay {
                 }
             }
 
-            emojiImageView.getImageReceiver().setAutoRepeat(0);
-            boolean isNotoAnim = app.exteraless.OpenExteraConfig.useNotoForBigReactions() && visibleReaction.emojicon != null;
+            boolean isNotoAnim = (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && visibleReaction.emojicon != null;
+            emojiImageView.getImageReceiver().setAutoRepeat(isNotoAnim ? 1 : 0);
             if (!isNotoAnim) {
                 emojiImageView.getImageReceiver().setAllowStartAnimation(false);
+            } else {
+                emojiImageView.getImageReceiver().setAllowStartAnimation(true);
             }
 
             if (emojiImageView.getImageReceiver().getLottieAnimation() != null) {

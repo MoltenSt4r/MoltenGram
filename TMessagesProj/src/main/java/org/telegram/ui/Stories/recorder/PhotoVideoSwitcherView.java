@@ -23,12 +23,16 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.Text;
+
+import app.exteraless.utils.UIUtil;
 
 public class PhotoVideoSwitcherView extends View implements FlashViews.Invertable {
 
     private final Paint selectorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float invert;
 
     private final Text liveText, photoText, videoText;
     private float scrollWidth;
@@ -148,7 +152,7 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
         float x = getScrollCx();
 
         final int oy = -dp(1);
-        final int h = dp(26);
+        final int h = dp(30);
         liveRect.set(x - dp(4 + 12 + 12) - photoText.getWidth() - liveText.getWidth() - dp(4 + 12 + 12), cy - h / 2f + oy, x - dp(4 + 12 + 12) - photoText.getWidth() - dp(4), cy + h / 2f + oy);
         photoRect.set(x - dp(4 + 12 + 12) - photoText.getWidth(), cy - h / 2f + oy, x - dp(4), cy + h / 2f + oy);
         videoRect.set(x + dp(4), cy - h / 2f + oy, x + dp(4 + 12 + 12) + videoText.getWidth(), cy + h / 2f + oy);
@@ -159,11 +163,20 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
         } else {
             lerp(photoRect, videoRect, t, selectorRect);
         }
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xFF8BC8F5;
+        selectorPaint.setColor(accent);
         canvas.drawRoundRect(selectorRect, h / 2f, h / 2f, selectorPaint);
 
-        liveText.draw(canvas,  x - dp(4 + 12 + 12) - photoText.getWidth() - liveText.getWidth() - dp(4 + 12), cy, 0xFFFFFFFF, 1.0f);
-        photoText.draw(canvas, x - dp(4 + 12) - photoText.getWidth(), cy, 0xFFFFFFFF, 1.0f);
-        videoText.draw(canvas, x + dp(4 + 12), cy, 0xFFFFFFFF, 1.0f);
+        int inactiveColor = ColorUtils.blendARGB(0xCCFFFFFF, 0xCC000000, invert);
+        int activeColor = UIUtil.getOnAccentColor(accent);
+        float liveActive = Utilities.clamp(1f - Math.abs(mode - (-1f)), 1f, 0f);
+        float photoActive = Utilities.clamp(1f - Math.abs(mode - 0f), 1f, 0f);
+        float videoActive = Utilities.clamp(1f - Math.abs(mode - 1f), 1f, 0f);
+
+        liveText.draw(canvas,  x - dp(4 + 12 + 12) - photoText.getWidth() - liveText.getWidth() - dp(4 + 12), cy, ColorUtils.blendARGB(inactiveColor, activeColor, liveActive), 1.0f);
+        photoText.draw(canvas, x - dp(4 + 12) - photoText.getWidth(), cy, ColorUtils.blendARGB(inactiveColor, activeColor, photoActive), 1.0f);
+        videoText.draw(canvas, x + dp(4 + 12), cy, ColorUtils.blendARGB(inactiveColor, activeColor, videoActive), 1.0f);
     }
 
     protected boolean allowTouch() {
@@ -240,9 +253,7 @@ public class PhotoVideoSwitcherView extends View implements FlashViews.Invertabl
     }
 
     public void setInvert(float invert) {
-        selectorPaint.setColor(ColorUtils.blendARGB(0x32ffffff, 0x20000000, invert));
-        liveText.setColor(ColorUtils.blendARGB(0xffffffff, 0xff000000, invert));
-        photoText.setColor(ColorUtils.blendARGB(0xffffffff, 0xff000000, invert));
-        videoText.setColor(ColorUtils.blendARGB(0xffffffff, 0xff000000, invert));
+        this.invert = invert;
+        invalidate();
     }
 }

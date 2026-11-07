@@ -63,6 +63,16 @@
     <string name="OEAppearancePlayerMiniCoverShape">Форма обложки в мини-плеере</string>
     <string name="OEAppearancePlayerVideoCover">Видео-обложки (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Заменять обложку на видеоклип при обнаружении</string>
+    <string name="OEAppearancePlayerLiquidGlass">Жидкое стекло</string>
+    <string name="OEAppearancePlayerLiquidGlassDesc">Плавающие стеклянные панели для мини-плеера и кнопок управления, а также более насыщенные цвета обложки на экране плеера</string>
+    <string name="OEAppearancePlayerLiquidGlassDescLegacy">Более насыщенные цвета обложки на экране плеера. Для плавающих стеклянных панелей нужен Android 13 или новее</string>
+    <string name="OEAppearancePlayerGroupedControls">Сгруппировать кнопки плеера</string>
+    <string name="OEAppearancePlayerGroupedControlsDesc">Собирает перемешивание, переключение треков, воспроизведение и повтор в одной стеклянной панели. Выключите — и кнопки будут стоять по отдельности поверх обложки. Нужно включить «Жидкое стекло».</string>
+    <string name="OEAppearancePlayerGlassIntensity">Интенсивность стекла</string>
+    <string name="OEAppearancePlayerGlassIntensityDesc">Чем выше, тем прозрачнее и сильнее преломление; чем ниже, тем ближе к обычным сплошным поверхностям</string>
+    <string name="OEAppearancePlayerGlassIntensityValue">%1$d%%</string>
+    <string name="OEAppearancePlayerGlassPreviewNeeds13">Для плавающих стеклянных панелей нужен Android 13 или новее</string>
+    <string name="OEAppearancePlayerGlassBatterySaverNote">Без размытия пока включён режим энергосбережения.</string>
     <string name="OEAppearancePlayerAudioHeader">Воспроизведение и аудио</string>
     <string name="OEAppearancePlayerCrossfade">Кроссфейд</string>
     <string name="OEAppearancePlayerCrossfadeDesc">Плавно затухает текущий трек по мере нарастания звука следующего</string>

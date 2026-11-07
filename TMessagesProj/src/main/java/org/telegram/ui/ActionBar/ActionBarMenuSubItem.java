@@ -427,7 +427,8 @@ public class ActionBarMenuSubItem extends FrameLayout {
     }
 
     public void updateBackground() {
-        setBackground(Theme.createRadSelectorDrawable(selectorColor, top ? selectorRad : 0, bottom ? selectorRad : 0));
+        int rad = AndroidUtilities.dp(10);
+        setBackground(Theme.createRadSelectorDrawable(selectorColor, top ? selectorRad : rad, bottom ? selectorRad : rad));
         // exteraGram: «вдавливание» пункта меню при нажатии (exteraGram — UIUtil.applyScaleStateListAnimator(this, ..., 0.04f, 1.5f))
         app.exteraless.utils.UIUtil.applyScaleStateListAnimator(this, 0.04f, 1.5f);
     }

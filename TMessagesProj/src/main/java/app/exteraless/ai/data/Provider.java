@@ -35,7 +35,12 @@ public final class Provider {
                     "https://api.deepseek.com/v1",
                     "deepseek-chat",
                     "https://platform.deepseek.com/api_keys",
-                    "deepseek.com")));
+                    "deepseek.com"),
+            new Provider("local_gguf", "Local GGUF (On-Device)",
+                    app.exteraless.ai.gguf.LocalGgufManager.LOCAL_GGUF_URL,
+                    "local-gguf",
+                    null,
+                    "huggingface.co")));
 
     private final String id;
     private final String title;

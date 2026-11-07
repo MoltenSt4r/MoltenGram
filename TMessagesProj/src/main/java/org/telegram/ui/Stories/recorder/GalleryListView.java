@@ -152,7 +152,7 @@ public class GalleryListView extends FrameLayout implements NotificationCenter.N
         this.collaging = collaging;
         this.onlyCollaging = onlyCollaging;
 
-        backgroundPaint.setColor(0xff1f1f1f);
+        backgroundPaint.setColor(Theme.getColor(Theme.key_dialogBackground, resourcesProvider));
         backgroundPaint.setShadowLayer(dp(2.33f), 0, dp(-.4f), 0x08000000);
 
         listView = new RecyclerListView(context, resourcesProvider) {
@@ -289,8 +289,8 @@ public class GalleryListView extends FrameLayout implements NotificationCenter.N
         });
 
         actionBar = new ActionBar(context, resourcesProvider);
-        actionBar.setBackgroundColor(0xff1f1f1f);
-        actionBar.setTitleColor(0xFFFFFFFF);
+        actionBar.setBackgroundColor(Theme.getColor(Theme.key_dialogBackground, resourcesProvider));
+        actionBar.setTitleColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
         actionBar.setAlpha(0f);
         actionBar.setVisibility(View.GONE);
         actionBar.setBackButtonImage(R.drawable.ic_ab_back);
@@ -574,7 +574,9 @@ public class GalleryListView extends FrameLayout implements NotificationCenter.N
             selectButton = new ImageView(context);
             selectButton.setScaleType(ImageView.ScaleType.CENTER);
             selectButton.setImageResource(R.drawable.floating_check);
-            selectButton.setBackground(Theme.createCircleDrawable(dp(56), Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)));
+            int selectAccent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+            selectButton.setColorFilter(new PorterDuffColorFilter(app.exteraless.utils.UIUtil.getOnAccentColor(selectAccent), PorterDuff.Mode.SRC_IN));
+            selectButton.setBackground(Theme.createCircleDrawable(dp(56), selectAccent));
             ScaleStateListAnimator.apply(selectButton, 0.1f, 1.5f);
             addView(selectButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 14, 14));
             selectButton.setOnClickListener(v -> selectMultiple(false));
@@ -695,8 +697,20 @@ public class GalleryListView extends FrameLayout implements NotificationCenter.N
         if (headerView != null) {
             headerView.setAlpha(1f - actionBarT);
         }
-        AndroidUtilities.rectTmp.set(0, top, getWidth(), getHeight() + dp(14));
-        canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(14), dp(14), backgroundPaint);
+        backgroundPaint.setColor(Theme.getColor(Theme.key_dialogBackground, resourcesProvider));
+        float sheetRadius = dp(28) * (1f - actionBarT);
+        AndroidUtilities.rectTmp.set(0, top, getWidth(), getHeight() + dp(28));
+        canvas.drawRoundRect(AndroidUtilities.rectTmp, sheetRadius, sheetRadius, backgroundPaint);
+        if (actionBarT < 1f) {
+            int handleColor = Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider), 0.45f * (1f - actionBarT));
+            int prevColor = backgroundPaint.getColor();
+            backgroundPaint.setColor(handleColor);
+            float hw = dp(36) / 2f;
+            float hh = dp(4);
+            AndroidUtilities.rectTmp.set(getWidth() / 2f - hw, top + dp(8), getWidth() / 2f + hw, top + dp(8) + hh);
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(2), dp(2), backgroundPaint);
+            backgroundPaint.setColor(prevColor);
+        }
         canvas.save();
         canvas.clipRect(0, top, getWidth(), getHeight());
         super.dispatchDraw(canvas);
@@ -1374,17 +1388,16 @@ public class GalleryListView extends FrameLayout implements NotificationCenter.N
         @Override
         public void draw(Canvas canvas) {
 
-            boolean restore = false;
-            if (topLeft || topRight) {
-                canvas.save();
-                clipPath.rewind();
-                AndroidUtilities.rectTmp.set(0, 0, getWidth(), getHeight());
-                radii[0] = radii[1] = topLeft ? dp(6) : 0;
-                radii[2] = radii[3] = topRight ? dp(6) : 0;
-                clipPath.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
-                canvas.clipPath(clipPath);
-                restore = true;
+            boolean restore = true;
+            canvas.save();
+            clipPath.rewind();
+            AndroidUtilities.rectTmp.set(dp(1.5f), dp(1.5f), getWidth() - dp(1.5f), getHeight() - dp(1.5f));
+            float cellR = dp(12);
+            for (int i = 0; i < 8; i++) {
+                radii[i] = cellR;
             }
+            clipPath.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
+            canvas.clipPath(clipPath);
 
             final float pad = checkBox.getProgress() * dp(12.66f);
             if (pad > 0) {

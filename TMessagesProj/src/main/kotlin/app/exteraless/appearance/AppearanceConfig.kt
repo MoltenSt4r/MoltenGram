@@ -416,6 +416,68 @@ object AppearanceConfig {
             }
         })
 
+    // ---- Жидкое стекло (Liquid Glass) по всей системе (InterTune AGSL) ----
+
+    /** Глобальное жидкое стекло (Liquid Glass) с хроматической дисперсией и бликами */
+    @JvmField
+    val liquidGlass =
+        addConfig("OEAppearanceLiquidGlass", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun liquidGlass(): Boolean {
+        ensureLoaded()
+        return liquidGlass.Bool()
+    }
+
+    /** Глобальная интенсивность жидкого стекла (0..100, по умолчанию 100) */
+    @JvmField
+    val liquidGlassIntensity =
+        addConfig("OEAppearanceLiquidGlassIntensity", ConfigItem.configTypeInt, 100)
+
+    @JvmStatic
+    fun liquidGlassIntensity(): Int {
+        ensureLoaded()
+        return liquidGlassIntensity.Int().coerceIn(0, 100)
+    }
+
+    @JvmStatic
+    fun liquidGlassIntensityFloat(): Float {
+        return liquidGlassIntensity() / 100f
+    }
+
+    /** 7-полосная спектральная хроматическая аберрация (дисперсия) */
+    @JvmField
+    val liquidGlassDispersion =
+        addConfig("OEAppearanceLiquidGlassDispersion", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun liquidGlassDispersion(): Boolean {
+        ensureLoaded()
+        return liquidGlassDispersion.Bool()
+    }
+
+    /** Жидкое стекло для нижней панели навигации (меню) */
+    @JvmField
+    val liquidGlassBottomBar =
+        addConfig("OEAppearanceLiquidGlassBottomBar", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun liquidGlassBottomBar(): Boolean {
+        ensureLoaded()
+        return liquidGlassBottomBar.Bool()
+    }
+
+    /** Жидкое стекло для элементов интерфейса (шторки, попапы, панели ввода, кнопки) */
+    @JvmField
+    val liquidGlassElements =
+        addConfig("OEAppearanceLiquidGlassElements", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun liquidGlassElements(): Boolean {
+        ensureLoaded()
+        return liquidGlassElements.Bool()
+    }
+
     /** Стеклянное меню сообщения. Дефолт true, как в exteraGram (BooleanPref(1)). */
     @JvmField
     val glassMessageMenu =
@@ -796,6 +858,44 @@ object AppearanceConfig {
     fun playerVideoCover(): Boolean {
         ensureLoaded()
         return playerVideoCover.Bool()
+    }
+
+    /** Жидкое стекло (Liquid Glass) в плеере и мини-плеере (как в InterTune). */
+    @JvmField
+    val playerLiquidGlass =
+        addConfig("OEAppearancePlayerLiquidGlass", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerLiquidGlass(): Boolean {
+        ensureLoaded()
+        return playerLiquidGlass.Bool()
+    }
+
+    /** Сгруппировать кнопки плеера внутри одной стеклянной панели (при включённом Liquid Glass). */
+    @JvmField
+    val playerGroupedControls =
+        addConfig("OEAppearancePlayerGroupedControls", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun playerGroupedControls(): Boolean {
+        ensureLoaded()
+        return playerGroupedControls.Bool()
+    }
+
+    /** Интенсивность стекла (0..100, по умолчанию 100). */
+    @JvmField
+    val playerGlassIntensity =
+        addConfig("OEAppearancePlayerGlassIntensity", ConfigItem.configTypeInt, 100)
+
+    @JvmStatic
+    fun playerGlassIntensity(): Int {
+        ensureLoaded()
+        return playerGlassIntensity.Int().coerceIn(0, 100)
+    }
+
+    @JvmStatic
+    fun playerGlassIntensityFloat(): Float {
+        return playerGlassIntensity() / 100f
     }
 
     /** Останавливать воспроизведение при отключении звука (громкость 0). */
