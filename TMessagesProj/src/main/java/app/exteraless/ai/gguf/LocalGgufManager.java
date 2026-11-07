@@ -5,6 +5,7 @@ import android.content.Context;
 import android.content.SharedPreferences;
 import android.net.Uri;
 import android.os.Build;
+import android.os.Process;
 import android.text.TextUtils;
 
 import org.json.JSONArray;
@@ -35,6 +36,7 @@ import java.util.concurrent.TimeUnit;
 import app.exteraless.ai.AiConfig;
 import app.exteraless.ai.data.Message;
 import app.exteraless.ai.data.Role;
+import app.exteraless.ai.data.Service;
 import app.exteraless.ai.network.GenerationCallback;
 import okhttp3.Call;
 import okhttp3.Callback;
