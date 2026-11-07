@@ -24,7 +24,7 @@
 
 ## Скачать и подключить
 
-* **Прямая загрузка APK (v12.10.6):** [MoltenGram-v12.10.6-ae8723f.1261.apk](https://github.com/MoltenSt4r/MoltenGram/releases/download/v12.10.6/MoltenGram-v12.10.6-ae8723f.1261.apk)
+* **Прямая загрузка APK (v12.10.6):** [MoltenGram-v12.10.6-ae8723f.1261.apk](https://github.com/MoltenSt4r/MoltenGram/releases/download/v12.10.6/MoltenGram-v12.10.6-b85079e.3257.apk)
 * **Официальный сайт:** [moltenstar.space](https://moltenstar.space)
 * **Репозиторий F-Droid:** `https://moltenst4r.github.io/MoltenGram/fdroid/repo`
   * Подключить в F-Droid / Neo Store / Droid-ify: `fdroidrepos://moltenst4r.github.io/MoltenGram/fdroid/repo?fingerprint=4B4EFFEE9D4CCBCB75DC3BF2E2A21655F2F35747B2D95FCF836E186FCE9D5030`
