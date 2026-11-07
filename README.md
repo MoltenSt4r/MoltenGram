@@ -80,10 +80,9 @@
 - **Шрифт NDot:** системная поддержка фирменных шрифтов Nothing NDot 55 и NDot 57.
 - **Встроенный Tor Proxy:** встроенный нативный клиент Tor (v0.4.9.14) с вращающейся 9-лепестковой кнопкой-печеньем для быстрого защищенного подключения в один тап.
 - **Спуфинг устройств:** клиентская маскировка под смартфоны Google Pixel и Nothing Phone.
-- **Семантический ИИ-поиск (MobileCLIP):** умный поиск по фотографиям в чатах по текстовому описанию на базе встроенной нейросети MobileCLIP-S0 ONNX INT8 полностью локально на устройстве.
+- **Кастомный эмодзи-статус без Premium:** установка анимированных статусов без подписки Telegram Premium через невидимый био-код.
 - **Движок Python-плагинов:** встроенная среда Chaquopy Python 3.12, каталог дополнений с установкой в 1 клик, импорт `.py` скриптов, бэкап и экспорт.
 - **Интеграция с Shizuku:** бесшовное фоновое обновление клиента без диалогов системного инсталлятора.
-- **Кастомный эмодзи-статус:** установка анимированных статусов без подписки Telegram Premium через невидимый био-код.
 - **Быстрый прокси:** автоматический тест задержки и подключение к самому быстрому серверу.
 
 ---
@@ -188,10 +187,10 @@ The project follows a structured naming convention:
 - **Nothing Glyph Interface & NDot Typography:** Full hardware LED strip and glyph matrix control for 13+ Nothing Phone and CMF Phone models with authentic NDot 55/57 fonts.
 - **Advanced Music Player & Synced Lyrics:** Material 3 video seekbar, local playlist manager with M3U8/.mplaylist export, multi-source synchronized lyrics, and morphing mini-player.
 - **Built-in Tor Proxy & Hardware Spoofing:** Native Tor daemon (v0.4.9.14) with rotating 9-lobe cookie button and client-side device spoofing presets for Pixel and Nothing devices.
-- **On-Device Semantic AI Search:** Offline multimodal semantic photo search across chats using MobileCLIP-S0 ONNX INT8.
+- **Custom Emoji Statuses without Premium:** Set animated custom emoji statuses without Telegram Premium subscription via invisible bio-code.
 - **Python 3.12 Plugin Engine & Store:** Built-in Chaquopy runtime with 1-click plugin catalog, direct `.py` import, and full backup/restore.
 - **Shizuku Integration:** Seamless background app updates without manual package installer prompts.
-- **Smart Tools:** Fastest proxy auto-connect, text input animations, Passkey support, and AI chat utilities.
+- **Smart Tools:** Fastest proxy auto-connect, text input animations, Passkey support, and quick chat utilities.
 
 ### Building
 ```bash
