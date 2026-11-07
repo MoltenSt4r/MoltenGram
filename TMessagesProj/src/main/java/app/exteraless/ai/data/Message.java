@@ -29,14 +29,6 @@ public final class Message {
         return content;
     }
 
-    public String getRole() {
-        return role;
-    }
-
-    public String getContent() {
-        return content;
-    }
-
     public byte[] getImageData() {
         return imageData;
     }

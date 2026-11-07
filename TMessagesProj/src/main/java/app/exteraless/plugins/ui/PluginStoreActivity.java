@@ -2871,6 +2871,15 @@ public class PluginStoreActivity extends BaseFragment {
                 }
             }
 
+            if (!iconApplied && plugin.chat != null) {
+                AvatarDrawable avatarDrawable = new AvatarDrawable();
+                avatarDrawable.setInfo(plugin.chat);
+                iconView.setForUserOrChat(plugin.chat, avatarDrawable);
+                iconView.setVisibility(VISIBLE);
+                defaultIconView.setVisibility(GONE);
+                iconApplied = true;
+            }
+
             if (!iconApplied) {
                 iconView.setImageDrawable(fallbackDrawable);
                 iconView.setVisibility(VISIBLE);

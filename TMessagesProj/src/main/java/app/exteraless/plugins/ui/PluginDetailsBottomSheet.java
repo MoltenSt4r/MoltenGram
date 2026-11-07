@@ -601,6 +601,15 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             }
         }
 
+        if (!iconApplied && target.chat != null) {
+            AvatarDrawable avatarDrawable = new AvatarDrawable();
+            avatarDrawable.setInfo(target.chat);
+            iconView.setForUserOrChat(target.chat, avatarDrawable);
+            iconView.setVisibility(View.VISIBLE);
+            defaultIconView.setVisibility(View.GONE);
+            iconApplied = true;
+        }
+
         if (!iconApplied) {
             iconView.setImageDrawable(fallbackDrawable);
             iconView.setVisibility(View.VISIBLE);

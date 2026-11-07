@@ -124,10 +124,9 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
         providerRow = addRow("provider");
         urlRow = addRow("url");
         modelRow = addRow("model");
-        boolean isLocal = app.exteraless.ai.gguf.LocalGgufManager.isLocalService(service());
-        keyRow = isLocal ? -1 : addRow("key");
-        getKeyRow = (isLocal || keyUrl() == null) ? -1 : addRow("getKey");
-        reasoningRow = isLocal ? -1 : addRow("reasoning");
+        keyRow = addRow("key");
+        getKeyRow = keyUrl() == null ? -1 : addRow("getKey");
+        reasoningRow = addRow("reasoning");
         presetsRow = addRow("presets");
         testRow = addRow("test");
         serviceDividerRow = addRow();
@@ -191,16 +190,7 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         store(service);
                     });
         } else if (position == modelRow) {
-            Service currentService = service();
-            if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(currentService)) {
-                presentFragment(new LocalAiModelsActivity(localModel -> {
-                    Service service = service();
-                    service.setModel(localModel.name);
-                    store(service);
-                }));
-                return;
-            }
-            AiModelPicker.show(getParentActivity(), resourcesProvider, currentService.getModel(),
+            AiModelPicker.show(getParentActivity(), resourcesProvider, service().getModel(),
                     value -> {
                         Service service = service();
                         service.setModel(value);
@@ -330,13 +320,6 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         service.setUrl(provider.getUrl());
                         service.setModel(provider.getModel());
                         store(service);
-                        if ("local_gguf".equals(provider.getId())) {
-                            presentFragment(new LocalAiModelsActivity(localModel -> {
-                                Service s = service();
-                                s.setModel(localModel.name);
-                                store(s);
-                            }));
-                        }
                     }), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
         }
         list.addView(providerRow(context, getString(R.string.OEAiProviderCustom), null,
