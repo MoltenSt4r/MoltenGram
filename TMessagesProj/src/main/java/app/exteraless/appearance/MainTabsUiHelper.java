@@ -78,11 +78,8 @@ public final class MainTabsUiHelper {
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin() - 0.334f);
     }
 
-    /** В M3 подложка прямоугольная (или 24dp при Liquid Glass), иначе скругление в половину высоты. */
+    /** В M3 подложка прямоугольная, иначе скругление в половину высоты. */
     public static float getBackgroundRadius() {
-        if (AppearanceConfig.liquidGlass() && AppearanceConfig.liquidGlassBottomBar() && isMaterial3NavigationBar()) {
-            return AndroidUtilities.dp(24);
-        }
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsHeight() / 2f);
     }
 

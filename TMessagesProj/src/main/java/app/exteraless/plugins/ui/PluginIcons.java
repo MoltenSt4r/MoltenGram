@@ -34,6 +34,8 @@ import app.exteraless.plugins.Plugin;
 public final class PluginIcons {
 
     private static final Pattern ICON_PATTERN = Pattern.compile("__icon__\\s*=\\s*[\"']([^\"']+)[\"']");
+    private static final Pattern STICKER_URL_PATTERN = Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", Pattern.CASE_INSENSITIVE);
+    private static final Pattern TG_STICKER_PATTERN = Pattern.compile("tg://addstickers\\?set=([a-zA-Z0-9_]+)(?:&index=([0-9]+))?", Pattern.CASE_INSENSITIVE);
 
     private PluginIcons() {
     }
@@ -45,7 +47,7 @@ public final class PluginIcons {
         try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(file), StandardCharsets.UTF_8))) {
             String line;
             int linesRead = 0;
-            while ((line = reader.readLine()) != null && linesRead < 120) {
+            while ((line = reader.readLine()) != null && linesRead < 150) {
                 linesRead++;
                 Matcher m = ICON_PATTERN.matcher(line);
                 if (m.find()) {
@@ -58,12 +60,6 @@ public final class PluginIcons {
         } catch (Exception ignored) {
         }
         return null;
-    }
-
-    public static String resolveDefaultPackIcon(String id, String name) {
-        String seed = (!TextUtils.isEmpty(id) ? id : "") + ":" + (!TextUtils.isEmpty(name) ? name : "plugin");
-        int idx = (seed.hashCode() & 0x7fffffff) % 24;
-        return "exteraPlugins/" + idx;
     }
 
     public static Drawable createCategoryFallbackDrawable(Context context, String category, int accentColor, int radiusDp) {
@@ -112,9 +108,6 @@ public final class PluginIcons {
 
     public static boolean apply(BackupImageView imageView, Plugin plugin, Runnable onLoaded) {
         String icon = plugin != null ? plugin.icon : null;
-        if (TextUtils.isEmpty(icon) && plugin != null) {
-            icon = resolveDefaultPackIcon(plugin.id, plugin.name);
-        }
         return apply(imageView, icon, onLoaded);
     }
 
@@ -127,6 +120,20 @@ public final class PluginIcons {
             return false;
         }
         String trimmed = icon.trim();
+
+        // 1. Direct Web / HTTP Image URL
+        if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+            imageView.setTag("plugin_web_" + trimmed);
+            imageView.setAnimatedEmojiDrawable(null);
+            imageView.setImage(trimmed, "100_100", fallbackDrawable);
+            imageView.setVisibility(android.view.View.VISIBLE);
+            if (onLoaded != null) {
+                onLoaded.run();
+            }
+            return true;
+        }
+
+        // 2. Custom Emoji by Document ID
         if (trimmed.startsWith("emoji/")) {
             try {
                 long docId = Long.parseLong(trimmed.substring("emoji/".length()).trim());
@@ -144,6 +151,22 @@ public final class PluginIcons {
             }
         }
 
+        // 3. Telegram Sticker Links (t.me/addstickers or tg://addstickers)
+        Matcher sm = STICKER_URL_PATTERN.matcher(trimmed);
+        if (sm.find()) {
+            String pack = sm.group(1);
+            String idx = sm.group(2) != null ? sm.group(2) : "0";
+            trimmed = pack + "/" + idx;
+        } else {
+            Matcher tgm = TG_STICKER_PATTERN.matcher(trimmed);
+            if (tgm.find()) {
+                String pack = tgm.group(1);
+                String idx = tgm.group(2) != null ? tgm.group(2) : "0";
+                trimmed = pack + "/" + idx;
+            }
+        }
+
+        // 4. Sticker Pack / Index (e.g. "exteraPlugins/12")
         final int slash = trimmed.lastIndexOf('/');
         if (slash <= 0 || slash == trimmed.length() - 1) {
             return false;

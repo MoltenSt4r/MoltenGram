@@ -130,7 +130,7 @@ public class PluginStoreActivity extends BaseFragment {
     private static final java.util.regex.Pattern DASH_UNDERSCORE_PATTERN = java.util.regex.Pattern.compile("[-_]");
     private static final java.util.regex.Pattern NORM_VERSION_SUFFIX_PATTERN = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|rel|ver)?\\s*[0-9]+(?:\\.[0-9]+)*(?:_rel_[0-9.]+)?.*$");
     private static final java.util.regex.Pattern NORM_PARENS_SUFFIX_PATTERN = java.util.regex.Pattern.compile("\\s*\\([0-9]+\\)$");
-    private static final java.util.regex.Pattern ICON_ATTR_PATTERN = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern ICON_ATTR_PATTERN = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([^\"'\r\n\t ]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern ICON_STICKER_URL_PATTERN = java.util.regex.Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern VER_TEXT_LABELED_PATTERN = java.util.regex.Pattern.compile("(?:version|версия|ver|v)\\.?\\s*[:=\\s]\\s*[\"']?([0-9]+(?:\\.[0-9]+)*)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern VER_TEXT_PREFIX_PATTERN = java.util.regex.Pattern.compile("(?:^|\\s)[vV]\\.?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE);
@@ -1378,7 +1378,19 @@ public class PluginStoreActivity extends BaseFragment {
         try {
             java.util.regex.Matcher m = ICON_ATTR_PATTERN.matcher(text);
             if (m.find()) {
-                return m.group(1);
+                String val = m.group(1);
+                if (!TextUtils.isEmpty(val)) {
+                    val = val.trim();
+                    if (val.contains("t.me/addstickers/")) {
+                        java.util.regex.Matcher sm = ICON_STICKER_URL_PATTERN.matcher(val);
+                        if (sm.find()) {
+                            String pack = sm.group(1);
+                            String idx = sm.group(2);
+                            return pack + "/" + (idx != null ? idx : "0");
+                        }
+                    }
+                    return val;
+                }
             }
             m = ICON_STICKER_URL_PATTERN.matcher(text);
             if (m.find()) {
@@ -2857,17 +2869,6 @@ public class PluginStoreActivity extends BaseFragment {
                         defaultIconView.setVisibility(GONE);
                     });
                 }
-            }
-
-            // Never use plugin.chat.photo (channel avatar) — resolve deterministic plugin sticker icon & category icon fallback
-            if (!iconApplied) {
-                String packIcon = PluginIcons.resolveDefaultPackIcon(plugin.id, plugin.name);
-                iconApplied = PluginIcons.apply(iconView, packIcon, fallbackDrawable, () -> {
-                    iconView.setVisibility(VISIBLE);
-                    defaultIconView.setVisibility(GONE);
-                });
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
             }
 
             if (!iconApplied) {

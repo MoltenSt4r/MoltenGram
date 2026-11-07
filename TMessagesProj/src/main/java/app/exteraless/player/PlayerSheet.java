@@ -1071,20 +1071,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         canvas.restore();
     }
 
-    public void drawBackdropForChild(Canvas canvas, int width, int height) {
-        RectF r = new RectF(0, 0, width, height);
-        int bgStyle = AppearanceConfig.playerBackgroundStyle();
-        if (bgStyle == 1 && cover != null && cover.getBitmap() != null) {
-            drawBlurredBackground(canvas, r, 0);
-        } else if (bgStyle == 2) {
-            drawGradientBackground(canvas, r, 0);
-        } else {
-            backgroundPaint.setShader(null);
-            backgroundPaint.setColor(colors.surface);
-            canvas.drawRect(r, backgroundPaint);
-        }
-    }
-
     private void drawGradientBackground(Canvas canvas, RectF rect, float r) {
         if (bgGradient == null || lastGradientSeed != colors.surface) {
             lastGradientSeed = colors.surface;
@@ -1110,21 +1096,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             }
         }
         if (cachedBlurredArt != null && !cachedBlurredArt.isRecycled()) {
-            boolean liquidGlass = AppearanceConfig.playerLiquidGlass();
-            float glassT = liquidGlass ? AppearanceConfig.playerGlassIntensityFloat() : 0f;
-            float stockOverlayAlpha = dark ? 0.6f : 0.46f;
-            float overlayAlpha = LiquidGlassHelper.lerp(stockOverlayAlpha, 0.12f, glassT);
-            float artAlpha = LiquidGlassHelper.lerp(1f, 0.7f, glassT);
-
             canvas.save();
             bgPath.reset();
             bgPath.addRoundRect(rect, r, r, Path.Direction.CW);
             canvas.clipPath(bgPath);
             bgSrcRect.set(0, 0, cachedBlurredArt.getWidth(), cachedBlurredArt.getHeight());
-            morphPaint.setAlpha(Math.round(255f * artAlpha));
             canvas.drawBitmap(cachedBlurredArt, bgSrcRect, rect, morphPaint);
-            morphPaint.setAlpha(255);
-            scrimPaint.setColor(ColorUtils.setAlphaComponent(dark ? 0x000000 : 0x000000, Math.round(255f * overlayAlpha)));
+            scrimPaint.setColor(dark ? 0x99000000 : 0x77000000);
             canvas.drawRect(rect, scrimPaint);
             canvas.restore();
         } else {
@@ -2427,20 +2405,17 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         timeLeft.setTextColor(c.onSurfaceVariant);
         bubbleBg.setColor(c.onSurface);
         bubble.setTextColor(c.surface);
-        controls.setColors(c);
-        controls.setBackdropSource(this::drawBackdropForChild, root.getWidth(), root.getHeight());
-
-        boolean liquidGlass = AppearanceConfig.playerLiquidGlass();
-        float intensity = AppearanceConfig.playerGlassIntensityFloat();
-        int actionBg = liquidGlass
-                ? ColorUtils.setAlphaComponent(c.surfaceHigh, Math.round(255f * LiquidGlassHelper.lerp(0.85f, 0.45f, intensity)))
-                : c.surfaceHigh;
-
-        speedButton.setColors(actionBg, c.onSurface, c.primary, c.onPrimary);
-        lyricsButton.setColors(actionBg, c.onSurface, c.primary, c.onPrimary);
-        playlistButton.setColors(actionBg, c.onSurface, actionBg, c.onSurface);
-        sleepButton.setColors(actionBg, c.onSurface, c.primary, c.onPrimary);
-        queueButton.setColors(actionBg, c.onSurface, actionBg, c.onSurface);
+        controls.shuffle.setColors(0, c.onSurfaceVariant, c.secondaryContainer, c.onSecondaryContainer);
+        controls.repeat.setColors(0, c.onSurfaceVariant, c.secondaryContainer, c.onSecondaryContainer);
+        controls.repeat.setBadgeColors(c.primary, c.onPrimary);
+        controls.prev.setColors(c.primaryContainer, c.onPrimaryContainer, c.primaryContainer, c.onPrimaryContainer);
+        controls.next.setColors(c.primaryContainer, c.onPrimaryContainer, c.primaryContainer, c.onPrimaryContainer);
+        controls.play.setColors(c.primary, c.onPrimary, c.primary, c.onPrimary);
+        speedButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
+        lyricsButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
+        playlistButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        sleepButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
+        queueButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
         applySystemBars(false);
     }
 

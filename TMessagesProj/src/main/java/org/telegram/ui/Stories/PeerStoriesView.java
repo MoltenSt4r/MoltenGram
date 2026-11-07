@@ -562,7 +562,6 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
         }
 
         blurredBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(new ViewPositionWatcher(this), this, blurredBackgroundSourceWithSaturation);
-        blurredBackgroundDrawableFactory.setLiquidGlassEffectAllowed(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) && app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassElements());
 
         inputFieldBackground = blurredBackgroundDrawableFactory.create(this, blurredBackgroundColorProvider);
         emojiKeyboardBackground = blurredBackgroundDrawableFactory.create(this, blurredBackgroundColorProvider);
@@ -8055,29 +8054,12 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                 public void drawRoundRect(Canvas canvas, RectF rect, float radius, float offsetX, float offsetY, int alpha, boolean isWindow) {
                     int prevColor = inputBackgroundPaint.getColor();
                     int md3Surface = Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider);
-                    boolean isLiquidGlass = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) && app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassElements();
-                    if (isLiquidGlass && isWindow) {
-                        float intensity = app.exteraless.appearance.AppearanceConfig.INSTANCE.liquidGlassIntensityFloat();
-                        int glassAlpha = (int) (255 * (0.86f - 0.16f * intensity));
-                        inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(md3Surface, Math.min(255, (int) (alpha * (glassAlpha / 255f)))));
-                    } else {
-                        inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(md3Surface, Math.min(255, (int) (alpha * 0.98f))));
-                    }
+                    inputBackgroundPaint.setColor(ColorUtils.setAlphaComponent(md3Surface, Math.min(255, (int) (alpha * 0.98f))));
                     float r = isWindow ? Math.max(radius, dp(24)) : radius;
                     if (r > 0) {
                         canvas.drawRoundRect(rect, r, r, inputBackgroundPaint);
                     } else {
                         canvas.drawRect(rect, inputBackgroundPaint);
-                    }
-                    if (isLiquidGlass && isWindow) {
-                        Paint stroke = resourcesProvider.getPaint("paint_glass_stroke");
-                        if (stroke == null) {
-                            stroke = new Paint(Paint.ANTI_ALIAS_FLAG);
-                            stroke.setStyle(Paint.Style.STROKE);
-                            stroke.setStrokeWidth(dp(1.2f));
-                        }
-                        stroke.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, (int) (40 * (alpha / 255f))));
-                        canvas.drawRoundRect(rect, r, r, stroke);
                     }
                     inputBackgroundPaint.setColor(prevColor);
                 }

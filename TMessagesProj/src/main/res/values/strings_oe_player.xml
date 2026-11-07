@@ -63,16 +63,6 @@
     <string name="OEAppearancePlayerMiniCoverShape">Mini-player cover shape</string>
     <string name="OEAppearancePlayerVideoCover">Video covers (Canvas)</string>
     <string name="OEAppearancePlayerVideoCoverDesc">Automatically replace album cover with video or clip when detected</string>
-    <string name="OEAppearancePlayerLiquidGlass">Liquid glass</string>
-    <string name="OEAppearancePlayerLiquidGlassDesc">Floating glass panels for the mini player and transport controls, and richer artwork colours behind the now playing screen</string>
-    <string name="OEAppearancePlayerLiquidGlassDescLegacy">Richer artwork colours behind the now playing screen. The floating glass panels need Android 13 or newer</string>
-    <string name="OEAppearancePlayerGroupedControls">Group the player buttons</string>
-    <string name="OEAppearancePlayerGroupedControlsDesc">Puts shuffle, skip, play and repeat together inside one glass bar. Turn it off to have the buttons sit on their own over the artwork. Needs Liquid glass to be on.</string>
-    <string name="OEAppearancePlayerGlassIntensity">Glass intensity</string>
-    <string name="OEAppearancePlayerGlassIntensityDesc">Higher is more see-through and more strongly refracted; lower is closer to plain solid surfaces</string>
-    <string name="OEAppearancePlayerGlassIntensityValue">%1$d%%</string>
-    <string name="OEAppearancePlayerGlassPreviewNeeds13">The floating glass panels need Android 13 or newer</string>
-    <string name="OEAppearancePlayerGlassBatterySaverNote">Without its blur while Battery Saver is on.</string>
     <string name="OEAppearancePlayerAudioHeader">Playback &amp; Audio</string>
     <string name="OEAppearancePlayerCrossfade">Crossfade</string>
     <string name="OEAppearancePlayerCrossfadeDesc">Smoothly fades out current track while fading in the next one</string>

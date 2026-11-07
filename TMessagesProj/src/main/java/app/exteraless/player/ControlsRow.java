@@ -1,16 +1,10 @@
 package app.exteraless.player;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
-import static org.telegram.messenger.AndroidUtilities.dpf2;
 
 import android.content.Context;
-import android.graphics.Canvas;
 import android.os.SystemClock;
 import android.view.ViewGroup;
-
-import androidx.annotation.NonNull;
-
-import app.exteraless.appearance.AppearanceConfig;
 
 public class ControlsRow extends ViewGroup implements MorphButton.PressListener {
 
@@ -29,15 +23,8 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     private boolean ticking;
     private final Runnable tick = this::tick;
 
-    private LiquidGlassHelper.GlassPane glassBarPane;
-    private LiquidGlassHelper.BackdropDrawer backdropDrawer;
-    private int backdropWidth;
-    private int backdropHeight;
-    private PlayerColors colors;
-
     public ControlsRow(Context context) {
         super(context);
-        setWillNotDraw(false);
         shuffle = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SHUFFLE, 22));
         prev = new MorphButton(context, PlayerIcon.fill(PlayerIcon.PREV, 28));
         play = new MorphButton(context, PlayerIcon.fill(PlayerIcon.PLAY, 36));
@@ -59,32 +46,6 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         prev.setRadius(dp(32), false);
         next.setRadius(dp(32), false);
         play.setRadius(dp(44), false);
-    }
-
-    public void setBackdropSource(LiquidGlassHelper.BackdropDrawer drawer, int width, int height) {
-        backdropDrawer = drawer;
-        backdropWidth = width;
-        backdropHeight = height;
-        invalidate();
-    }
-
-    public void setColors(PlayerColors c) {
-        colors = c;
-        updateButtonColors();
-    }
-
-    public void updateButtonColors() {
-        if (colors == null) return;
-        boolean groupedGlass = AppearanceConfig.playerLiquidGlass() && AppearanceConfig.playerGroupedControls();
-        int prevNextBg = groupedGlass ? 0 : colors.primaryContainer;
-        int prevNextFg = groupedGlass ? colors.onSurface : colors.onPrimaryContainer;
-        shuffle.setColors(0, colors.onSurfaceVariant, colors.secondaryContainer, colors.onSecondaryContainer);
-        repeat.setColors(0, colors.onSurfaceVariant, colors.secondaryContainer, colors.onSecondaryContainer);
-        repeat.setBadgeColors(colors.primary, colors.onPrimary);
-        prev.setColors(prevNextBg, prevNextFg, colors.primaryContainer, colors.onPrimaryContainer);
-        next.setColors(prevNextBg, prevNextFg, colors.primaryContainer, colors.onPrimaryContainer);
-        play.setColors(colors.primary, colors.onPrimary, colors.primary, colors.onPrimary);
-        invalidate();
     }
 
     @Override
@@ -222,51 +183,5 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
             button.layout(left, top, left + w, top + h);
             x += w + gap;
         }
-    }
-
-    @Override
-    protected void dispatchDraw(Canvas canvas) {
-        if (AppearanceConfig.playerLiquidGlass() && AppearanceConfig.playerGroupedControls() && buttons.length >= 5 && getWidth() > 0) {
-            if (glassBarPane == null) {
-                glassBarPane = new LiquidGlassHelper.GlassPane();
-            }
-            float barLeft = buttons[0].getLeft() - dp(8) * scale;
-            float barRight = buttons[4].getRight() + dp(8) * scale;
-            float barH = dp(64) * scale;
-            float barTop = (getHeight() - barH) * 0.5f;
-            float barBottom = barTop + barH;
-            float radius = dpf2(32f) * scale;
-
-            float intensity = AppearanceConfig.playerGlassIntensityFloat();
-            boolean still = LiquidGlassHelper.isBatterySaverStill();
-            LiquidGlassHelper.GlassSpec glass = new LiquidGlassHelper.GlassSpec(intensity, still);
-
-            int tint = colors != null ? glass.floatingTint(colors.surfaceContainer) : 0x40ffffff;
-            int stillFill = colors != null ? glass.stillFill(colors.surfaceContainer) : 0xf0202020;
-
-            int[] loc = new int[2];
-            getLocationInWindow(loc);
-
-            glassBarPane.draw(
-                    canvas,
-                    barLeft, barTop, barRight, barBottom,
-                    radius,
-                    backdropDrawer,
-                    loc[0], loc[1],
-                    backdropWidth > 0 ? backdropWidth : getWidth(),
-                    backdropHeight > 0 ? backdropHeight : getHeight(),
-                    true,
-                    dpf2(4f),
-                    dpf2(24f) * glass.lensT,
-                    dpf2(32f) * glass.lensT,
-                    true,
-                    true,
-                    true,
-                    tint,
-                    stillFill,
-                    still
-            );
-        }
-        super.dispatchDraw(canvas);
     }
 }

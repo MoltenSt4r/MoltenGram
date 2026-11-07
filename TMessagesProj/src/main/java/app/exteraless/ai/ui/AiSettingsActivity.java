@@ -193,11 +193,11 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
         } else if (position == modelRow) {
             Service currentService = service();
             if (app.exteraless.ai.gguf.LocalGgufManager.isLocalService(currentService)) {
-                new HuggingFaceGgufSheet(getParentActivity(), resourcesProvider, localModel -> {
+                presentFragment(new LocalAiModelsActivity(localModel -> {
                     Service service = service();
                     service.setModel(localModel.name);
                     store(service);
-                }).show();
+                }));
                 return;
             }
             AiModelPicker.show(getParentActivity(), resourcesProvider, currentService.getModel(),
@@ -331,11 +331,11 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         service.setModel(provider.getModel());
                         store(service);
                         if ("local_gguf".equals(provider.getId())) {
-                            new HuggingFaceGgufSheet(getParentActivity(), resourcesProvider, localModel -> {
+                            presentFragment(new LocalAiModelsActivity(localModel -> {
                                 Service s = service();
                                 s.setModel(localModel.name);
                                 store(s);
-                            }).show();
+                            }));
                         }
                     }), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
         }

@@ -226,14 +226,4 @@
     <string name="OEAppearanceMd3FabItems">FAB Menu Items</string>
     <string name="OEAppearanceMd3FabItemsInfo">Customize actions shown in the speed dial menu</string>
     <string name="OEAppearanceMd3FabCustomize">Customize FAB Menu</string>
-    <string name="OEAppearanceLiquidGlass">Liquid Glass</string>
-    <string name="OEAppearanceLiquidGlassDesc">Physical light refraction, 7-band chromatic dispersion, and 45° specular highlights (as in InterTune)</string>
-    <string name="OEAppearanceLiquidGlassIntensity">Glass Intensity</string>
-    <string name="OEAppearanceLiquidGlassIntensityDesc">Control refraction power, frost, and lens depth</string>
-    <string name="OEAppearanceLiquidGlassDispersion">Chromatic Dispersion</string>
-    <string name="OEAppearanceLiquidGlassDispersionDesc">7-band spectral dispersion along curved glass borders</string>
-    <string name="OEAppearanceLiquidGlassBottomBar">Bottom Navigation Bar</string>
-    <string name="OEAppearanceLiquidGlassBottomBarDesc">Apply liquid glass effect to bottom tabs menu</string>
-    <string name="OEAppearanceLiquidGlassElements">UI Elements</string>
-    <string name="OEAppearanceLiquidGlassElementsDesc">Apply liquid glass to sheets, dialogs, popups, inputs, and action buttons</string>
 </resources>

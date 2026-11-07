@@ -79,6 +79,16 @@ public class HuggingFaceGgufSheet extends BottomSheet {
         }
     }
 
+    @Override
+    public void show() {
+        org.telegram.ui.ActionBar.BaseFragment lastFragment = org.telegram.ui.LaunchActivity.getLastFragment();
+        if (lastFragment != null) {
+            lastFragment.presentFragment(new LocalAiModelsActivity(selectedModelName, this::notifyModelSelected));
+            return;
+        }
+        super.show();
+    }
+
     public static void show(Context context, Theme.ResourcesProvider resourcesProvider,
                             String currentModel, Utilities.Callback<String> onModelSelected) {
         if (context == null) return;

@@ -602,16 +602,6 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         }
 
         if (!iconApplied) {
-            String packIcon = PluginIcons.resolveDefaultPackIcon(target.id, target.name);
-            iconApplied = PluginIcons.apply(iconView, packIcon, fallbackDrawable, () -> {
-                iconView.setVisibility(View.VISIBLE);
-                defaultIconView.setVisibility(View.GONE);
-            });
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
-        }
-
-        if (!iconApplied) {
             iconView.setImageDrawable(fallbackDrawable);
             iconView.setVisibility(View.VISIBLE);
             defaultIconView.setVisibility(View.GONE);
