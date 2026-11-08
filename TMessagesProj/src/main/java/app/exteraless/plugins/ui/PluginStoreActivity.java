@@ -766,7 +766,7 @@ public class PluginStoreActivity extends BaseFragment {
             AndroidUtilities.runOnUIThread(() -> {
                 int delay = 0;
                 for (TLRPC.Chat c : folderChats) {
-                    if (c != null && !containsChat(activeSourceChats, c)) {
+                    if (c != null && !isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
                         activeSourceChats.add(c);
                         final TLRPC.Chat chatToSearch = c;
                         AndroidUtilities.runOnUIThread(() -> searchChatBatch(chatToSearch, 0, null, null), delay);
@@ -776,6 +776,19 @@ public class PluginStoreActivity extends BaseFragment {
                 AndroidUtilities.runOnUIThread(this::resolveKnownChannels, delay + 150);
             });
         });
+    }
+
+    private static boolean isBlockedChannel(TLRPC.Chat c) {
+        if (c == null) return true;
+        if (c.username != null) {
+            String u = c.username.toLowerCase(Locale.ROOT);
+            if (u.equals("exteraplugins") || u.equals("exerealplugins")) return true;
+        }
+        if (c.title != null) {
+            String t = c.title.toLowerCase(Locale.ROOT);
+            if (t.contains("exteraplugins") || t.contains("exerealplugins")) return true;
+        }
+        return false;
     }
 
     private static boolean containsChat(List<TLRPC.Chat> list, TLRPC.Chat chat) {
@@ -804,7 +817,7 @@ public class PluginStoreActivity extends BaseFragment {
                         if (r != null && !r.chats.isEmpty()) {
                             TLRPC.Chat c = r.chats.get(0);
                             AndroidUtilities.runOnUIThread(() -> {
-                                if (!containsChat(activeSourceChats, c)) {
+                                if (!isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
                                     activeSourceChats.add(c);
                                     searchChatBatch(c, 0, null, null);
                                 }
@@ -1590,7 +1603,7 @@ public class PluginStoreActivity extends BaseFragment {
                                     np.versions.add(v);
                                 }
                             }
-                            if (TextUtils.isEmpty(np.icon) && !TextUtils.isEmpty(existing.icon)) np.icon = existing.icon;
+                            if (!TextUtils.isEmpty(existing.icon)) np.icon = existing.icon;
                             if (np.chat == null && existing.chat != null) np.chat = existing.chat;
                             allPlugins.set(i, np);
                             changed = true;
@@ -2995,13 +3008,9 @@ public class PluginStoreActivity extends BaseFragment {
             iconView.setTag(null);
             iconView.setImageDrawable(null);
 
-            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-            if (accent == 0) accent = 0xff00d2b4;
-            Drawable fallbackDrawable = PluginIcons.createCategoryFallbackDrawable(getContext(), plugin.category, accent, 14);
-
             boolean iconApplied = false;
             if (!TextUtils.isEmpty(plugin.icon)) {
-                iconApplied = PluginIcons.apply(iconView, plugin.icon, fallbackDrawable, () -> {
+                iconApplied = PluginIcons.apply(iconView, plugin.icon, null, () -> {
                     iconView.setVisibility(VISIBLE);
                     defaultIconView.setVisibility(GONE);
                 });
@@ -3032,7 +3041,7 @@ public class PluginStoreActivity extends BaseFragment {
                 }
                 if (!TextUtils.isEmpty(savedIcon)) {
                     plugin.icon = savedIcon;
-                    iconApplied = PluginIcons.apply(iconView, savedIcon, fallbackDrawable, () -> {
+                    iconApplied = PluginIcons.apply(iconView, savedIcon, null, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
@@ -3047,7 +3056,7 @@ public class PluginStoreActivity extends BaseFragment {
                 Plugin installed = plugin.findInstalledPlugin();
                 if (installed != null && !TextUtils.isEmpty(installed.icon)) {
                     plugin.icon = installed.icon;
-                    iconApplied = PluginIcons.apply(iconView, installed.icon, fallbackDrawable, () -> {
+                    iconApplied = PluginIcons.apply(iconView, installed.icon, null, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
@@ -3067,19 +3076,9 @@ public class PluginStoreActivity extends BaseFragment {
                 });
             }
 
-            if (!iconApplied && plugin.chat != null) {
-                AvatarDrawable avatarDrawable = new AvatarDrawable();
-                avatarDrawable.setInfo(plugin.chat);
-                iconView.setForUserOrChat(plugin.chat, avatarDrawable);
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
-                iconApplied = true;
-            }
-
             if (!iconApplied) {
-                iconView.setImageDrawable(fallbackDrawable);
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
+                iconView.setVisibility(GONE);
+                defaultIconView.setVisibility(VISIBLE);
             }
         }
 

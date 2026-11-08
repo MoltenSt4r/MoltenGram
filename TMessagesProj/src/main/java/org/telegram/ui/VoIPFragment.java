@@ -177,6 +177,7 @@ public class VoIPFragment implements
     private VoIpSwitchLayout bottomVideoBtn;
     private VoIpSwitchLayout bottomMuteBtn;
     private VoIPToggleButton bottomEndCallBtn;
+    private static final int SEMANTIC_END_CALL_RED = 0xFFF01D2C;
     private final VoIPBackgroundProvider backgroundProvider = new VoIPBackgroundProvider();
 
     private ViewGroup fragmentView;
@@ -2595,6 +2596,14 @@ public class VoIPFragment implements
 
     private void showQuickReplySheet() {
         if (activity == null || isFinished) return;
+        long peerId = 0;
+        if (callingUser != null) {
+            peerId = callingUser.id;
+        } else if (VoIPService.getSharedState() != null && VoIPService.getSharedState().getUser() != null) {
+            peerId = VoIPService.getSharedState().getUser().id;
+        }
+        final long finalPeerId = peerId;
+
         BottomSheet.Builder builder = new BottomSheet.Builder(activity);
         builder.setTitle(LocaleController.getString(R.string.Message));
         CharSequence[] items = new CharSequence[] {
@@ -2606,26 +2615,28 @@ public class VoIPFragment implements
         };
         builder.setItems(items, (dialog, which) -> {
             if (which == items.length - 1) {
-                if (callingUser != null) {
+                if (finalPeerId != 0) {
                     Bundle args = new Bundle();
-                    args.putLong("user_id", callingUser.id);
+                    args.putLong("user_id", finalPeerId);
                     if (activity instanceof LaunchActivity) {
                         ((LaunchActivity) activity).presentFragment(new ChatActivity(args));
                     }
                 }
             } else {
-                if (callingUser != null) {
+                if (finalPeerId != 0) {
                     SendMessagesHelper.getInstance(currentAccount).sendMessage(
                         SendMessagesHelper.SendMessageParams.of(
                             items[which].toString(),
-                            callingUser.id
+                            finalPeerId,
+                            null, null, null, true, null, null, null, true, 0, 0, null, false
                         )
                     );
                 }
             }
             if (VoIPService.getSharedState() != null) {
                 VoIPService.getSharedState().declineIncomingCall();
-            } else {
+            }
+            if (windowView != null) {
                 windowView.finish();
             }
         });

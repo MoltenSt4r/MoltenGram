@@ -21,7 +21,7 @@ public class VoIPButtonsLayout extends FrameLayout {
     private final Paint containerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint containerStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float containerRadius;
-    private boolean drawPillDock = true;
+    private boolean drawPillDock = false;
     private boolean twoRowDock = true;
 
     public VoIPButtonsLayout(@NonNull Context context) {

@@ -559,12 +559,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
 
         boolean iconApplied = false;
         Context ctx = getContext() != null ? getContext() : ApplicationLoader.applicationContext;
-        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-        if (accent == 0) accent = 0xff00d2b4;
-        Drawable fallbackDrawable = PluginIcons.createCategoryFallbackDrawable(ctx, target.category, accent, 16);
 
         if (!TextUtils.isEmpty(target.icon)) {
-            iconApplied = PluginIcons.apply(iconView, target.icon, fallbackDrawable, () -> {
+            iconApplied = PluginIcons.apply(iconView, target.icon, null, () -> {
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
             });
@@ -593,7 +590,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             }
             if (!TextUtils.isEmpty(savedIcon)) {
                 target.icon = savedIcon;
-                iconApplied = PluginIcons.apply(iconView, savedIcon, fallbackDrawable, () -> {
+                iconApplied = PluginIcons.apply(iconView, savedIcon, null, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
@@ -608,7 +605,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             Plugin installed = target.findInstalledPlugin();
             if (installed != null && !TextUtils.isEmpty(installed.icon)) {
                 target.icon = installed.icon;
-                iconApplied = PluginIcons.apply(iconView, installed.icon, fallbackDrawable, () -> {
+                iconApplied = PluginIcons.apply(iconView, installed.icon, null, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
@@ -625,19 +622,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             });
         }
 
-        if (!iconApplied && target.chat != null) {
-            AvatarDrawable avatarDrawable = new AvatarDrawable();
-            avatarDrawable.setInfo(target.chat);
-            iconView.setForUserOrChat(target.chat, avatarDrawable);
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
-            iconApplied = true;
-        }
-
         if (!iconApplied) {
-            iconView.setImageDrawable(fallbackDrawable);
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
+            iconView.setVisibility(View.GONE);
+            defaultIconView.setVisibility(View.VISIBLE);
         }
     }
 

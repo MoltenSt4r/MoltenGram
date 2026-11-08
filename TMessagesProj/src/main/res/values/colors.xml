@@ -15,6 +15,6 @@
     <color name="monetRedCall">#EF5350</color>
     <color name="monetGreenCall">#4CAF50</color>
     <color name="shortcut_icon_background">#FF2B2F33</color>
-    <color name="moltengram_adaptive_background">#D9FFE6</color>
-    <color name="moltengram_adaptive_foreground">#1E713B</color>
+    <color name="moltengram_adaptive_background">#FFD8D1</color>
+    <color name="moltengram_adaptive_foreground">#7E1D0A</color>
 </resources>

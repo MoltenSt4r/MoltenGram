@@ -29,9 +29,11 @@ import org.telegram.messenger.R;
 public class AcceptDeclineView extends View {
 
     private final Paint trackBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-    private final Paint trackStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint knobPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint labelPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+
+    public static final int COLOR_ACCEPT = 0xFF40C749;
+    public static final int COLOR_DECLINE = 0xFFF01D2C;
 
     private final Paint messageBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final TextPaint messageTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -84,9 +86,6 @@ public class AcceptDeclineView extends View {
         super(context);
 
         trackBgPaint.setColor(0xFF0A2619); // Dark moss green container
-        trackStrokePaint.setStyle(Paint.Style.STROKE);
-        trackStrokePaint.setStrokeWidth(dp(1));
-        trackStrokePaint.setColor(0x184EE09B);
 
         knobPaint.setColor(0xFFFFFFFF); // Pure white draggable knob
 
@@ -253,7 +252,6 @@ public class AcceptDeclineView extends View {
 
         // 2. Draw Call Slider Capsule Track
         canvas.drawRoundRect(trackRect, trackRect.height() / 2f, trackRect.height() / 2f, trackBgPaint);
-        canvas.drawRoundRect(trackRect, trackRect.height() / 2f, trackRect.height() / 2f, trackStrokePaint);
 
         // 3. Draw Left Label ("Отклонить")
         float knobW = knobRect.width();
