@@ -230,6 +230,7 @@ public class SettingsHelper {
             "md3_avatar_shapes", "avatar_shapes",
             "ghost_mode", "ghost",
             "device_spoof", "devicespoof", "spoof",
+            "voice_changer", "voicechanger",
             "translator", "translate", "t", "emoji", "about", "passcode", "send_logs",
             "iconpacks", "pillstackweather"));
 
@@ -455,6 +456,10 @@ public class SettingsHelper {
                 case "spoof":
                     fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
                     break;
+                case "voice_changer":
+                case "voicechanger":
+                    fragment = neko_fragment = new app.exteraless.settings.OpenExteraVoiceChangerActivity();
+                    break;
                 default:
                     unknown.run();
                     return;
@@ -556,6 +561,10 @@ public class SettingsHelper {
                 case "devicespoofing":
                 case "spoof":
                     fragment = neko_fragment = new app.exteraless.spoof.DeviceSpoofActivity();
+                    break;
+                case "voice_changer":
+                case "voicechanger":
+                    fragment = neko_fragment = new app.exteraless.settings.OpenExteraVoiceChangerActivity();
                     break;
                 case "send_logs":
                     sendLogs(activity, false);

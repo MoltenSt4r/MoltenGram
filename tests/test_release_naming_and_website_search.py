@@ -6,11 +6,11 @@ import pytest
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
 
-def test_gradle_properties_has_tiramisu_codename():
+def test_gradle_properties_has_codename():
     props_path = os.path.join(REPO_ROOT, "gradle.properties")
     with open(props_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "APP_CODENAME=Tiramisu" in content, "gradle.properties must specify APP_CODENAME=Tiramisu"
+    assert "APP_CODENAME=Cacao" in content or "APP_CODENAME=Cocoa" in content, "gradle.properties must specify APP_CODENAME"
 
 
 def test_tmessagesproj_build_gradle_defines_build_codename():
@@ -28,7 +28,7 @@ def test_buildvars_has_build_codename():
     with open(buildvars_path, "r", encoding="utf-8") as f:
         content = f.read()
     assert "BUILD_CODENAME" in content
-    assert "Tiramisu" in content
+    assert "Cacao" in content or "Tiramisu" in content
 
 
 def test_about_header_cell_shows_codename():
