@@ -111,7 +111,7 @@ public class AcceptDeclineView extends View {
         declineText = LocaleController.getString(R.string.VoipDeclineCall);
         answerText = LocaleController.getString(R.string.VoipAnswerCall);
         messageText = LocaleController.getString(R.string.Message);
-        retryText = LocaleController.getString(R.string.VoipRetry);
+        retryText = LocaleController.getString(R.string.RetryCall);
 
         measureTexts();
     }

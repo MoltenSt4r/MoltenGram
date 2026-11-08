@@ -50959,7 +50959,7 @@ public class ChatActivity extends BaseFragment implements
                     if (getMessagesController().storiesEnabled() && StoryEntry.canRepostMessage(selectedObject)) {
                         items.add(LocaleController.getString(R.string.RepostToStory));
                         options.add(OPTION_REPOST_STORY);
-                        icons.add(R.drawable.msg_story);
+                        icons.add(R.drawable.msg_stories_add);
                     }
                 }
                 // --- NagramX Start ---
