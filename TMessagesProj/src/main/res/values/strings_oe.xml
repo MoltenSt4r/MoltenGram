@@ -51,6 +51,8 @@
     <string name="AppIconMoltenGramCandy">Candy</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
+    <string name="AppIconMoltenGramPizza">Pizza</string>
+    <string name="AppIconMoltenGramYinYang">Yin-Yang</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>
     <string name="OpenExteraPreferences">MoltenGram Preferences</string>

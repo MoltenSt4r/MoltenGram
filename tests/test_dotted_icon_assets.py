@@ -91,7 +91,7 @@ def test_launcher_icons_cinema_toxic_stilllife_candy_declared():
     path = '/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/LauncherIconController.java'
     with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
-    for name in ['MOLTENGRAM_CINEMA', 'MOLTENGRAM_TOXIC', 'MOLTENGRAM_STILLLIFE', 'MOLTENGRAM_CANDY']:
+    for name in ['MOLTENGRAM_CINEMA', 'MOLTENGRAM_TOXIC', 'MOLTENGRAM_STILLLIFE', 'MOLTENGRAM_CANDY', 'MOLTENGRAM_PIZZA', 'MOLTENGRAM_YINYANG']:
         assert name in content, f"{name} must be declared in LauncherIconController"
 
 
