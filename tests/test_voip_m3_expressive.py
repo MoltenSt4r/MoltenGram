@@ -356,4 +356,47 @@ def test_voip_end_call_button_touch_and_measure_safety():
     )
 
 
+def test_accept_decline_view_dynamic_monet_styling_no_moss_green():
+    """Verify AcceptDeclineView has no hardcoded moss green colors and uses dynamic translucent Monet-friendly styling."""
+    accept_path = os.path.join(VOIP_DIR, "AcceptDeclineView.java")
+    with open(accept_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Verify hardcoded moss green colors are eliminated
+    moss_green_colors = [
+        "0xFF0A2619",
+        "0xFFC1DEC9",
+        "0xFF0E3020",
+        "0xFF3ED88E",
+        "0xFF1D8348",
+        "0xFF14422D",
+        "0xFF0D2F1F",
+    ]
+    for color in moss_green_colors:
+        assert color not in content, f"AcceptDeclineView must not contain hardcoded moss green {color}"
+
+    # Verify translucent white track background (32 alpha)
+    assert "ColorUtils.setAlphaComponent(0xFFFFFFFF, 32)" in content, (
+        "AcceptDeclineView track background must use translucent white"
+    )
+
+    # Verify message button container uses translucent white (30 resting, 45 touching)
+    assert "touchingMessage ? 45 : 30" in content, (
+        "AcceptDeclineView message button background must adapt to touch state with translucent white"
+    )
+
+    # Verify labels use 0xD9FFFFFF / 85% alpha
+    assert "0xD9FFFFFF" in content, "AcceptDeclineView labels must use 85% white (0xD9FFFFFF)"
+
+    # Verify knob phone icon resting color is dark neutral 0xFF1C1B1F and transitions smoothly to COLOR_ACCEPT & COLOR_DECLINE
+    assert "0xFF1C1B1F" in content, "AcceptDeclineView knob icon resting color must be dark neutral 0xFF1C1B1F"
+    assert "ColorUtils.blendARGB(0xFF1C1B1F, COLOR_DECLINE, p)" in content, (
+        "AcceptDeclineView knob icon must transition to COLOR_DECLINE when dragged left"
+    )
+    assert "ColorUtils.blendARGB(0xFF1C1B1F, COLOR_ACCEPT, p)" in content, (
+        "AcceptDeclineView knob icon must transition to COLOR_ACCEPT when dragged right"
+    )
+
+
+
 

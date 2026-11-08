@@ -85,20 +85,20 @@ public class AcceptDeclineView extends View {
     public AcceptDeclineView(@NonNull Context context) {
         super(context);
 
-        trackBgPaint.setColor(0xFF0A2619); // Dark moss green container
+        trackBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, 32));
 
         knobPaint.setColor(0xFFFFFFFF); // Pure white draggable knob
 
         labelPaint.setTextSize(dp(15));
         labelPaint.setTypeface(AndroidUtilities.bold());
-        labelPaint.setColor(0xFFC1DEC9);
+        labelPaint.setColor(0xD9FFFFFF);
 
-        messageBgPaint.setColor(0xFF0E3020);
+        messageBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, 30));
         messageTextPaint.setTextSize(dp(14));
         messageTextPaint.setTypeface(AndroidUtilities.bold());
-        messageTextPaint.setColor(0xFF3ED88E);
+        messageTextPaint.setColor(0xFFFFFFFF);
 
-        retryPaint.setColor(0xFF1D8348);
+        retryPaint.setColor(COLOR_ACCEPT);
         retryTextPaint.setTextSize(dp(15));
         retryTextPaint.setTypeface(AndroidUtilities.bold());
         retryTextPaint.setColor(0xFFFFFFFF);
@@ -230,7 +230,7 @@ public class AcceptDeclineView extends View {
         }
 
         // 1. Draw "💬 Сообщение" Pill Button
-        messageBgPaint.setColor(touchingMessage ? 0xFF14422D : 0xFF0D2F1F);
+        messageBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, touchingMessage ? 45 : 30));
         canvas.drawRoundRect(messageRect, messageRect.height() / 2f, messageRect.height() / 2f, messageBgPaint);
 
         int msgIconSize = dp(18);
@@ -241,7 +241,7 @@ public class AcceptDeclineView extends View {
             int left = (int) msgStartX;
             int top = (int) (messageRect.centerY() - msgIconSize / 2f);
             messageDrawable.setBounds(left, top, left + msgIconSize, top + msgIconSize);
-            messageDrawable.setColorFilter(new PorterDuffColorFilter(0xFF3ED88E, PorterDuff.Mode.SRC_IN));
+            messageDrawable.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
             messageDrawable.draw(canvas);
         }
 
@@ -261,7 +261,7 @@ public class AcceptDeclineView extends View {
         if (dragOffset < 0 && maxDragLeft > 0) {
             leftAlpha = Math.max(0f, 1f - (-dragOffset / (maxDragLeft * 0.65f)));
         }
-        labelPaint.setAlpha((int) (255 * leftAlpha));
+        labelPaint.setAlpha((int) (0xD9 * leftAlpha));
         float labelY = trackRect.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2f;
         canvas.drawText(declineText, leftCenterX - declineTextWidth / 2f, labelY, labelPaint);
 
@@ -271,7 +271,7 @@ public class AcceptDeclineView extends View {
         if (dragOffset > 0 && maxDragRight > 0) {
             rightAlpha = Math.max(0f, 1f - (dragOffset / (maxDragRight * 0.65f)));
         }
-        labelPaint.setAlpha((int) (255 * rightAlpha));
+        labelPaint.setAlpha((int) (0xD9 * rightAlpha));
         canvas.drawText(answerText, rightCenterX - answerTextWidth / 2f, labelY, labelPaint);
 
         // 5. Draw Draggable White Knob
@@ -287,10 +287,14 @@ public class AcceptDeclineView extends View {
             float rotation = 0f;
             if (dragOffset < 0 && maxDragLeft > 0) {
                 float p = Math.min(1f, -dragOffset / (maxDragLeft * 0.75f));
-                iconColor = ColorUtils.blendARGB(0xFF1D8348, 0xFFD93025, p);
+                iconColor = ColorUtils.blendARGB(0xFF1C1B1F, COLOR_DECLINE, p);
                 rotation = p * 135f; // rotate downwards into hangup phone receiver
+            } else if (dragOffset > 0 && maxDragRight > 0) {
+                float p = Math.min(1f, dragOffset / (maxDragRight * 0.75f));
+                iconColor = ColorUtils.blendARGB(0xFF1C1B1F, COLOR_ACCEPT, p);
+                rotation = 0f;
             } else {
-                iconColor = 0xFF1D8348; // Answering / resting green
+                iconColor = 0xFF1C1B1F; // Resting dark neutral
             }
 
             canvas.rotate(rotation);
