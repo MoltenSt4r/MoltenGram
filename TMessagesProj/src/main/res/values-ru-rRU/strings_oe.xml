@@ -34,7 +34,7 @@
     <string name="AppIconMoltenGramBurning">Burning</string>
     <string name="AppIconMoltenGramAnotherChance">Another Chance</string>
     <string name="AppIconMoltenGramDotted">Точки</string>
-    <string name="AppIconMoltenGramEndeavourOS">EndeavourOS</string>
+    <string name="AppIconMoltenGramCinema">Синема</string>
     <string name="AppIconMoltenGramSunrise">Sunrise</string>
     <string name="AppIconMoltenGramStar">Star</string>
     <string name="AppIconMoltenGramCoffee">Coffee</string>
@@ -42,13 +42,12 @@
     <string name="AppIconMoltenGramGoogle">Google style</string>
     <string name="AppIconMoltenGramBeer">Пиво</string>
     <string name="AppIconMoltenGramMagma">Магма</string>
-    <string name="AppIconMoltenGramHolo">Голография</string>
-    <string name="AppIconMoltenGramKraft">Крафт</string>
+    <string name="AppIconMoltenGramStillLife">Натюрморт</string>
+    <string name="AppIconMoltenGramToxic">Токсик</string>
     <string name="AppIconMoltenGramCoral">Коралл</string>
     <string name="AppIconMoltenGramOnyx">Оникс</string>
-    <string name="AppIconMoltenGramNeon">Неон</string>
+    <string name="AppIconMoltenGramCandy">Кэнди</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
-    <string name="AppIconMoltenGramHalloween">Хэллоуин</string>
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconsSelect">Выбрать</string>
     <string name="AppIconsKeep">Оставить эту</string>

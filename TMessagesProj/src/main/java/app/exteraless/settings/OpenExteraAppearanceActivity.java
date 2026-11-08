@@ -721,13 +721,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (view instanceof org.telegram.ui.Cells.TextCheckCell) {
                 ((org.telegram.ui.Cells.TextCheckCell) view).setChecked(enabled);
             }
-            if (enabled) {
-                LauncherIconController.setIcon(LauncherIconController.LauncherIcon.MOLTENGRAM_HALLOWEEN);
-            } else {
-                if (LauncherIconController.getCurrentIcon() == LauncherIconController.LauncherIcon.MOLTENGRAM_HALLOWEEN) {
-                    LauncherIconController.setIcon(LauncherIconController.LauncherIcon.MOLTENGRAM);
-                }
-            }
             rebuildAll();
             app.exteraless.icons.IconPackManager.getInstance().reload();
             Theme.reloadAllResources(ApplicationLoader.applicationContext);

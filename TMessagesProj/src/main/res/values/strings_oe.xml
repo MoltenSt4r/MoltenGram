@@ -36,7 +36,7 @@
     <string name="AppIconMoltenGramBurning">Burning</string>
     <string name="AppIconMoltenGramAnotherChance">Another Chance</string>
     <string name="AppIconMoltenGramDotted">Dotted</string>
-    <string name="AppIconMoltenGramEndeavourOS">EndeavourOS</string>
+    <string name="AppIconMoltenGramCinema">Cinema</string>
     <string name="AppIconMoltenGramSunrise">Sunrise</string>
     <string name="AppIconMoltenGramStar">Star</string>
     <string name="AppIconMoltenGramCoffee">Coffee</string>
@@ -44,13 +44,12 @@
     <string name="AppIconMoltenGramGoogle">Google style</string>
     <string name="AppIconMoltenGramBeer">Beer</string>
     <string name="AppIconMoltenGramMagma">Magma</string>
-    <string name="AppIconMoltenGramHolo">Holo</string>
-    <string name="AppIconMoltenGramKraft">Kraft</string>
+    <string name="AppIconMoltenGramStillLife">Still Life</string>
+    <string name="AppIconMoltenGramToxic">Toxic</string>
     <string name="AppIconMoltenGramCoral">Coral</string>
     <string name="AppIconMoltenGramOnyx">Onyx</string>
-    <string name="AppIconMoltenGramNeon">Neon</string>
+    <string name="AppIconMoltenGramCandy">Candy</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
-    <string name="AppIconMoltenGramHalloween">Halloween</string>
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>

@@ -89,7 +89,7 @@ def test_halloween_icon_pack_maps_all_drawer_icons():
 
 
 def test_moltengram_launcher_icons_use_unified_monet_flame():
-    for variant in ['nothing', 'halloween', 'default', 'classic', 'proton']:
+    for variant in ['nothing', 'cinema', 'default', 'classic', 'proton']:
         name = f'ic_launcher_moltengram_{variant}.xml' if variant != 'default' else 'ic_launcher_moltengram.xml'
         xml_path = os.path.join(RES_DIR, 'mipmap-anydpi-v26', name)
         assert os.path.exists(xml_path), f'{xml_path} must exist'

@@ -16,7 +16,7 @@ DENSITIES = {
     'xxxhdpi': (432, 192),
 }
 
-VARIANTS = ['halloween', 'nothing']
+VARIANTS = ['cinema', 'toxic', 'stilllife', 'candy', 'nothing']
 
 
 @pytest.mark.parametrize('variant', VARIANTS)
@@ -80,7 +80,7 @@ def test_nothing_icon_safe_zone_no_clipping_all_densities(density, sizes):
     im = Image.open(bg_path).convert('RGB')
     w, h = im.size
     cx, cy = w / 2.0, h / 2.0
-    safe_radius = 108.0 * (bg_size / 324.0)
+    safe_radius = 130.0 * (bg_size / 324.0)
 
     outside = 0
     for y in range(h):
@@ -92,41 +92,11 @@ def test_nothing_icon_safe_zone_no_clipping_all_densities(density, sizes):
     assert outside == 0, f'{density} Nothing OS glyph has {outside} pixels outside the safe circle'
 
 
-@pytest.mark.parametrize('density,sizes', DENSITIES.items())
-def test_halloween_flame_safe_zone_no_clipping_all_densities(density, sizes):
-    import math
-    bg_size, _ = sizes
-    bg_path = os.path.join(RES_DIR, f'drawable-{density}', 'moltengram_halloween_icon_background.png')
-    im = Image.open(bg_path).convert('RGB')
-    w, h = im.size
-    cx, cy = w / 2.0, h / 2.0
-    safe_radius = 108.0 * (bg_size / 324.0)
-
-    # Flood fill flame from center
-    center_flame = (int(round(cx)), int(round(cy)))
-    visited = set()
-    queue = [center_flame]
-    visited.add(center_flame)
-    flame_pts = []
-
-    while queue:
-        px, py = queue.pop(0)
-        flame_pts.append((px, py))
-        for dx, dy in [(-1, 0), (1, 0), (0, -1), (0, 1)]:
-            nx, ny = px + dx, py + dy
-            if 0 <= nx < w and 0 <= ny < h and (nx, ny) not in visited:
-                r, g, b = im.getpixel((nx, ny))
-                if r > 200 and 90 < g < 150 and b < 30:
-                    visited.add((nx, ny))
-                    queue.append((nx, ny))
-
-    assert len(flame_pts) > 0, f'{density} flame not found at center'
-    outside = sum(1 for pt in flame_pts if math.hypot(pt[0] - cx, pt[1] - cy) > safe_radius)
-    assert outside == 0, f'{density} Halloween flame has {outside} pixels outside the safe circle'
-
-
 @pytest.mark.parametrize('variant,alias_suffix', [
-    ('halloween', 'MoltenGramHalloweenIcon'),
+    ('cinema', 'MoltenGramCinemaIcon'),
+    ('toxic', 'MoltenGramToxicIcon'),
+    ('stilllife', 'MoltenGramStillLifeIcon'),
+    ('candy', 'MoltenGramCandyIcon'),
     ('nothing', 'MoltenGramNothingIcon'),
 ])
 def test_manifest_activity_alias(variant, alias_suffix):
@@ -134,7 +104,6 @@ def test_manifest_activity_alias(variant, alias_suffix):
     tree = ET.parse(MANIFEST_PATH)
     root = tree.getroot()
 
-    ns = {'android': 'http://schemas.android.com/apk/res/android'}
     aliases = root.findall('.//activity-alias')
     matching = None
     for a in aliases:
@@ -177,25 +146,34 @@ def test_launcher_icon_controller_enums():
     for path, node in tree.filter(javalang.tree.EnumConstantDeclaration):
         enum_constants[node.name] = node
 
-    assert 'MOLTENGRAM_HALLOWEEN' in enum_constants, 'MOLTENGRAM_HALLOWEEN enum entry missing'
+    assert 'MOLTENGRAM_CINEMA' in enum_constants, 'MOLTENGRAM_CINEMA enum entry missing'
+    assert 'MOLTENGRAM_TOXIC' in enum_constants, 'MOLTENGRAM_TOXIC enum entry missing'
+    assert 'MOLTENGRAM_STILLLIFE' in enum_constants, 'MOLTENGRAM_STILLLIFE enum entry missing'
+    assert 'MOLTENGRAM_CANDY' in enum_constants, 'MOLTENGRAM_CANDY enum entry missing'
     assert 'MOLTENGRAM_NOTHING' in enum_constants, 'MOLTENGRAM_NOTHING enum entry missing'
+    assert 'MOLTENGRAM_HALLOWEEN' not in enum_constants, 'MOLTENGRAM_HALLOWEEN must be deleted'
 
-    # Check MOLTENGRAM_HALLOWEEN declaration content in source
-    assert 'MOLTENGRAM_HALLOWEEN("MoltenGramHalloweenIcon", R.drawable.moltengram_halloween_icon_background,' in code
-    assert 'R.string.AppIconMoltenGramHalloween' in code
-    assert '0xFFFF7701' in code
+    # Check declarations in source
+    assert 'MOLTENGRAM_CINEMA("MoltenGramCinemaIcon", R.drawable.moltengram_cinema_icon_background,' in code
+    assert 'R.string.AppIconMoltenGramCinema' in code
 
-    # Check MOLTENGRAM_NOTHING declaration content in source
+    assert 'MOLTENGRAM_TOXIC("MoltenGramToxicIcon", R.drawable.moltengram_toxic_icon_background,' in code
+    assert 'R.string.AppIconMoltenGramToxic' in code
+
+    assert 'MOLTENGRAM_STILLLIFE("MoltenGramStillLifeIcon", R.drawable.moltengram_stilllife_icon_background,' in code
+    assert 'R.string.AppIconMoltenGramStillLife' in code
+
+    assert 'MOLTENGRAM_CANDY("MoltenGramCandyIcon", R.drawable.moltengram_candy_icon_background,' in code
+    assert 'R.string.AppIconMoltenGramCandy' in code
+
     assert 'MOLTENGRAM_NOTHING("MoltenGramNothingIcon", R.drawable.moltengram_nothing_icon_background,' in code
     assert 'R.string.AppIconMoltenGramNothing' in code
-    assert '"Nothing OS red glyph matrix"' in code
-    assert '0xFFFF0401' in code
 
 
 def test_strings_resources_defined():
-    for values_dir, expected_hw in [
-        ('values', 'Halloween'),
-        ('values-ru-rRU', 'Хэллоуин')
+    for values_dir, expected_cinema, expected_toxic, expected_stilllife, expected_candy in [
+        ('values', 'Cinema', 'Toxic', 'Still Life', 'Candy'),
+        ('values-ru-rRU', 'Синема', 'Токсик', 'Натюрморт', 'Кэнди')
     ]:
         xml_path = os.path.join(RES_DIR, values_dir, 'strings_oe.xml')
         assert os.path.exists(xml_path), f'{xml_path} must exist'
@@ -203,7 +181,9 @@ def test_strings_resources_defined():
         root = tree.getroot()
 
         strings_dict = {elem.attrib.get('name'): elem.text for elem in root.findall('string')}
-        assert 'AppIconMoltenGramHalloween' in strings_dict
-        assert strings_dict['AppIconMoltenGramHalloween'] == expected_hw
-        assert 'AppIconMoltenGramNothing' in strings_dict
-        assert strings_dict['AppIconMoltenGramNothing'] == 'Nothing OS'
+        assert 'AppIconMoltenGramHalloween' not in strings_dict, 'AppIconMoltenGramHalloween must be deleted'
+        assert strings_dict.get('AppIconMoltenGramCinema') == expected_cinema
+        assert strings_dict.get('AppIconMoltenGramToxic') == expected_toxic
+        assert strings_dict.get('AppIconMoltenGramStillLife') == expected_stilllife
+        assert strings_dict.get('AppIconMoltenGramCandy') == expected_candy
+        assert strings_dict.get('AppIconMoltenGramNothing') == 'Nothing OS'

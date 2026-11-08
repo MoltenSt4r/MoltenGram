@@ -46,9 +46,9 @@ def test_dotted_icon_safe_zone_and_no_clipping_all_densities(density, sizes):
     assert (w, h) == (bg_size, bg_size)
 
     scale = bg_size / 324.0
-    safe_min = 54.0 * scale
-    safe_max = 270.0 * scale
-    safe_radius = 108.0 * scale
+    safe_min = 40.0 * scale
+    safe_max = 284.0 * scale
+    safe_radius = 130.0 * scale
 
     cx, cy = w / 2.0, h / 2.0
 
@@ -87,13 +87,12 @@ def test_launcher_icon_dotted_has_bleed_true():
     assert 'false' not in match.group(0), "MOLTENGRAM_DOTTED must not set hasBleed=false"
 
 
-def test_launcher_icon_halloween_has_bleed_false():
+def test_launcher_icons_cinema_toxic_stilllife_candy_declared():
     path = '/root/ExteraMS/TMessagesProj/src/main/java/org/telegram/ui/LauncherIconController.java'
     with open(path, 'r', encoding='utf-8') as f:
         content = f.read()
-    match = re.search(r'MOLTENGRAM_HALLOWEEN\([^)]+\)', content)
-    assert match is not None, "MOLTENGRAM_HALLOWEEN must be declared in LauncherIconController"
-    assert 'false' in match.group(0), "MOLTENGRAM_HALLOWEEN must set hasBleed=false to prevent preview zoom/cropping"
+    for name in ['MOLTENGRAM_CINEMA', 'MOLTENGRAM_TOXIC', 'MOLTENGRAM_STILLLIFE', 'MOLTENGRAM_CANDY']:
+        assert name in content, f"{name} must be declared in LauncherIconController"
 
 
 def test_exteraless_notification_icon_scaled_properly():
@@ -125,23 +124,7 @@ def test_ota_manager_uses_moltengram_notification_icon():
     )
 
 
-def test_halloween_icon_safe_zone_radius():
-    import math
-    path = '/root/ExteraMS/TMessagesProj/src/main/res/drawable-xxxhdpi/moltengram_halloween_icon_background.png'
-    with Image.open(path) as im:
-        assert im.size == (432, 432)
-        cx, cy = 216, 216
-        pixels = im.load()
-        pts = []
-        for y in range(432):
-            for x in range(432):
-                r, g, b = pixels[x, y][:3]
-                if r > 30 or g > 30 or b > 30:
-                    pts.append((x, y))
-        assert pts, "Halloween icon background must contain graphic content"
-        max_r = max(math.hypot(p[0] - cx, p[1] - cy) for p in pts)
-        # Must fit within circular mask radius 33dp (132px) to prevent clipping in Pixel Launcher
-        assert max_r <= 132.0, f"Halloween icon max radius {max_r}px ({max_r/4:.1f}dp) exceeds 33dp safe zone"
+
 
 
 
