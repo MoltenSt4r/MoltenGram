@@ -193,6 +193,7 @@
     <string name="OEVoiceChangerEnable">Enable Voice Changer</string>
     <string name="OEVoiceChangerEnableInfo">Applies selected audio effects to all voice and video notes</string>
     <string name="OEVoiceChangerPresets">Presets</string>
+    <string name="OEVoiceChangerEffects">Audio Effects</string>
     <string name="OEVoiceChangerPresetSelect">Select Preset</string>
     <string name="OEVoiceChangerPresetDefault">Default (Off)</string>
     <string name="OEVoiceChangerPresetGlitch">PC Freeze (Glitch)</string>

@@ -188,6 +188,7 @@
     <string name="OEVoiceChangerEnable">Включить войсченджер</string>
     <string name="OEVoiceChangerEnableInfo">Применяет выбранные эффекты ко всем голосовым и видеосообщениям</string>
     <string name="OEVoiceChangerPresets">Пресеты</string>
+    <string name="OEVoiceChangerEffects">Эффекты аудио</string>
     <string name="OEVoiceChangerPresetSelect">Выбрать пресет</string>
     <string name="OEVoiceChangerPresetDefault">Обычный (Выкл)</string>
     <string name="OEVoiceChangerPresetGlitch">Перегрев ПК (Глитч)</string>

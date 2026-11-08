@@ -125,7 +125,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
-    protected void onItemClick(View view, int position) {
+    protected void onItemClick(View view, int position, float x, float y) {
         if (position == masterEnableRow) {
             boolean next = !ChatsConfig.voiceChangerEnabled.Bool();
             ChatsConfig.voiceChangerEnabled.setConfigBool(next);
@@ -165,7 +165,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 getString(R.string.OEVoiceChangerPresetDemon),
                 getString(R.string.OEVoiceChangerPresetChipmunk),
                 getString(R.string.OEVoiceChangerPresetEcho),
-                getString(R.string.OEVoiceChangerPresetRadio)
+                getString(R.string.OEVoiceChangerPresetWalkie)
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -276,7 +276,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             return getString(R.string.OEVoiceChangerPresetEcho);
         }
         if (pitch == 1 && freq == 6000 && bit == 6 && echoDelay == 0 && echoFeedback == 0 && glitch == 15) {
-            return getString(R.string.OEVoiceChangerPresetRadio);
+            return getString(R.string.OEVoiceChangerPresetWalkie);
         }
         return getString(R.string.OEVoiceChangerPresetCustom);
     }
@@ -541,7 +541,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     } else if (position == effectsHeaderRow) {
                         cell.setText(getString(R.string.OEVoiceChangerEffects));
                     } else if (position == testHeaderRow) {
-                        cell.setText(getString(R.string.OEVoiceChangerTest));
+                        cell.setText(getString(R.string.OEVoiceChangerTestAudio));
                     }
                     break;
                 }
@@ -558,8 +558,8 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     if (position == presetsRow) {
                         cell.setTextAndValue(getString(R.string.OEVoiceChangerPresetSelect), getCurrentPresetName(), false);
                     } else if (position == testMicRow) {
-                        cell.setTextAndValue(getString(R.string.OEVoiceChangerTest),
-                                isTesting ? getString(R.string.OEVoiceChangerPlayingTest) : getString(R.string.OEVoiceChangerRecordTest), false);
+                        cell.setTextAndValue(getString(R.string.OEVoiceChangerTestAudio),
+                                isTesting ? getString(R.string.OEVoiceChangerStopTest) : getString(R.string.OEVoiceChangerRecordTest), false);
                     }
                     break;
                 }
