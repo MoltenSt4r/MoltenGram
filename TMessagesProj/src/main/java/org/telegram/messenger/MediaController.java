@@ -1156,6 +1156,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 int len = audioRecorder.read(buffer, buffer.capacity());
                 if (len > 0) {
                     buffer.limit(len);
+                    app.exteraless.voice.VoiceChangerController.getInstance().process(buffer, len);
                     double sum = 0;
                     try {
                         long newSamplesCount = samplesCount + len / 2;
@@ -4938,6 +4939,8 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         samplesCount = 0;
                         fileBuffer.rewind();
                         audioRecorder.startRecording();
+                app.exteraless.voice.VoiceChangerController.getInstance().resetState();
+                        app.exteraless.voice.VoiceChangerController.getInstance().resetState();
                         app.exteraless.glyph.GlyphController.getInstance().onRecordingStarted();
                         recordQueue.postRunnable(recordRunnable);
 
@@ -5028,6 +5031,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 AudioEnhance.INSTANCE.initVoiceEnhance(audioRecorder);
 
                 audioRecorder.startRecording();
+                app.exteraless.voice.VoiceChangerController.getInstance().resetState();
             } catch (Exception e) {
                 FileLog.e(e);
                 recordingAudio = null;

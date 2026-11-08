@@ -186,5 +186,33 @@
     <string name="DeviceSpoofingNothingNotice">Local device features (including Nothing Glyph interface and hardware checks) evaluate the actual hardware and remain fully operational. Telegram servers receive the selected spoofed parameters.</string>
     <string name="DeviceSpoofingDelete">Delete Preset</string>
     <string name="DeviceSpoofingDeleteConfirm">Are you sure you want to delete this preset?</string>
+
+    <!-- Voice Changer -->
+    <string name="OEVoiceChanger">Voice Changer</string>
+    <string name="OEVoiceChangerSubtitle">Built-in voice message audio effects</string>
+    <string name="OEVoiceChangerEnable">Enable Voice Changer</string>
+    <string name="OEVoiceChangerEnableInfo">Applies selected audio effects to all voice and video notes</string>
+    <string name="OEVoiceChangerPresets">Presets</string>
+    <string name="OEVoiceChangerPresetSelect">Select Preset</string>
+    <string name="OEVoiceChangerPresetDefault">Default (Off)</string>
+    <string name="OEVoiceChangerPresetGlitch">PC Freeze (Glitch)</string>
+    <string name="OEVoiceChangerPresetBitcrush">8-Bit Bitcrush</string>
+    <string name="OEVoiceChangerPresetDemon">Deep Demon</string>
+    <string name="OEVoiceChangerPresetChipmunk">Chipmunk</string>
+    <string name="OEVoiceChangerPresetEcho">Echo Chamber</string>
+    <string name="OEVoiceChangerPresetWalkie">Walkie-Talkie Lo-Fi</string>
+    <string name="OEVoiceChangerPresetCustom">Custom</string>
+    <string name="OEVoiceChangerPitch">Pitch (Тональность)</string>
+    <string name="OEVoiceChangerFreqCrush">Freqcrush (Частота)</string>
+    <string name="OEVoiceChangerBitCrush">Bitcrush (Разрядность)</string>
+    <string name="OEVoiceChangerEchoDelay">Echo Delay (Задержка)</string>
+    <string name="OEVoiceChangerEchoFeedback">Echo Strength (Сила)</string>
+    <string name="OEVoiceChangerGlitchRate">Glitch Frequency (Сбои ПК)</string>
+    <string name="OEVoiceChangerGlitchRateInfo">Random audio stutter effect like PC freezing or overheating</string>
+    <string name="OEVoiceChangerGlitchRepeats">Glitch Repeats (Повторы)</string>
+    <string name="OEVoiceChangerTestAudio">Test Audio</string>
+    <string name="OEVoiceChangerRecordTest">Record 3s Test</string>
+    <string name="OEVoiceChangerStopTest">Stop &amp; Play</string>
+    <string name="OEVoiceChangerOff">Off</string>
 </resources>
 

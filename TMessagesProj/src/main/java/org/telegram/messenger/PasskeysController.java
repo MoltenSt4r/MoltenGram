@@ -183,7 +183,9 @@ public class PasskeysController {
         if (!BuildVars.SUPPORTS_PASSKEYS) return null;
 
         final int defaultApiId = NekoXConfig.currentAppId();
-        ConnectionsManager.getInstance(currentAccount).setAppId(6);
+        if (defaultApiId != 6 && defaultApiId != 4) {
+            return null;
+        }
 
         final CredentialManager credentialManager = CredentialManager.create(context);
 

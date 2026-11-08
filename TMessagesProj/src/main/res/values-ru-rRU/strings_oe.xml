@@ -181,5 +181,33 @@
     <string name="DeviceSpoofingNothingNotice">Локальные функции устройства (включая интерфейс Nothing Glyph и системные проверки) определяют реальное железо и продолжают работать штатно. На серверы Telegram отправляются выбранные параметры.</string>
     <string name="DeviceSpoofingDelete">Удалить пресет</string>
     <string name="DeviceSpoofingDeleteConfirm">Вы уверены, что хотите удалить этот пресет?</string>
+
+    <!-- Voice Changer -->
+    <string name="OEVoiceChanger">Войсченджер</string>
+    <string name="OEVoiceChangerSubtitle">Встроенные эффекты для голосовых сообщений</string>
+    <string name="OEVoiceChangerEnable">Включить войсченджер</string>
+    <string name="OEVoiceChangerEnableInfo">Применяет выбранные эффекты ко всем голосовым и видеосообщениям</string>
+    <string name="OEVoiceChangerPresets">Пресеты</string>
+    <string name="OEVoiceChangerPresetSelect">Выбрать пресет</string>
+    <string name="OEVoiceChangerPresetDefault">Обычный (Выкл)</string>
+    <string name="OEVoiceChangerPresetGlitch">Перегрев ПК (Глитч)</string>
+    <string name="OEVoiceChangerPresetBitcrush">8-Бит Биткрашер</string>
+    <string name="OEVoiceChangerPresetDemon">Демон (Басс)</string>
+    <string name="OEVoiceChangerPresetChipmunk">Бурундук</string>
+    <string name="OEVoiceChangerPresetEcho">Эхо-камера</string>
+    <string name="OEVoiceChangerPresetWalkie">Рация Lo-Fi</string>
+    <string name="OEVoiceChangerPresetCustom">Пользовательский</string>
+    <string name="OEVoiceChangerPitch">Тональность</string>
+    <string name="OEVoiceChangerFreqCrush">Freqcrush (Частота)</string>
+    <string name="OEVoiceChangerBitCrush">Bitcrush (Разрядность)</string>
+    <string name="OEVoiceChangerEchoDelay">Задержка эха</string>
+    <string name="OEVoiceChangerEchoFeedback">Сила эха</string>
+    <string name="OEVoiceChangerGlitchRate">Частота глитчей</string>
+    <string name="OEVoiceChangerGlitchRateInfo">Случайные заикания звука как при зависании и перегреве ПК</string>
+    <string name="OEVoiceChangerGlitchRepeats">Повторы заикания</string>
+    <string name="OEVoiceChangerTestAudio">Проверка звука</string>
+    <string name="OEVoiceChangerRecordTest">Записать 3 сек теста</string>
+    <string name="OEVoiceChangerStopTest">Остановить и слушать</string>
+    <string name="OEVoiceChangerOff">Выкл</string>
 </resources>
 

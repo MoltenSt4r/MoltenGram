@@ -91,16 +91,8 @@ object AppearanceConfig {
     @JvmStatic
     fun md3ChatInput(): Boolean = app.exteraless.chats.ChatsConfig.md3ChatInput()
 
-    /** Хэллоуинская тема (иконка приложения и иконки внутри приложения). */
-    @JvmField
-    val halloweenTheme =
-        addConfig("OEAppearanceHalloweenTheme", ConfigItem.configTypeBool, true)
-
     @JvmStatic
-    fun halloweenTheme(): Boolean {
-        ensureLoaded()
-        return halloweenTheme.Bool()
-    }
+    fun halloweenTheme(): Boolean = false
 
     // ---- Список чатов ----
 

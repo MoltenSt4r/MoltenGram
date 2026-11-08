@@ -474,6 +474,87 @@ object ChatsConfig {
         }
     }
 
+    // ---- Войсченджер (Voice Changer) ----
+
+    @JvmField
+    val voiceChangerEnabled = addConfig("OEChatsVoiceChangerEnabled", ConfigItem.configTypeBool, false)
+
+    /** Тональность: -12 до +12 полутонов. 0 = выкл */
+    @JvmField
+    val voiceChangerPitch = addConfig("OEChatsVoiceChangerPitch", ConfigItem.configTypeInt, 0)
+
+    /** Freqcrush: частота дискретизации (1000 - 48000 Гц). 48000 = выкл */
+    @JvmField
+    val voiceChangerFreqCrush = addConfig("OEChatsVoiceChangerFreqCrush", ConfigItem.configTypeInt, 48000)
+
+    /** Bitcrush: разрядность аудио (2 - 16 бит). 16 = выкл */
+    @JvmField
+    val voiceChangerBitCrush = addConfig("OEChatsVoiceChangerBitCrush", ConfigItem.configTypeInt, 16)
+
+    /** Эхо: задержка (0 - 800 мс). 0 = выкл */
+    @JvmField
+    val voiceChangerEchoDelay = addConfig("OEChatsVoiceChangerEchoDelay", ConfigItem.configTypeInt, 0)
+
+    /** Эхо: сила/обратная связь (0 - 90%). */
+    @JvmField
+    val voiceChangerEchoFeedback = addConfig("OEChatsVoiceChangerEchoFeedback", ConfigItem.configTypeInt, 0)
+
+    /** Глитчи: частота случайных зависаний/заиканий звука как при перегреве ПК (0 - 100%). 0 = выкл */
+    @JvmField
+    val voiceChangerGlitchRate = addConfig("OEChatsVoiceChangerGlitchRate", ConfigItem.configTypeInt, 0)
+
+    /** Глитчи: количество повторов фрагмента при зависании (2 - 8). */
+    @JvmField
+    val voiceChangerGlitchRepeats = addConfig("OEChatsVoiceChangerGlitchRepeats", ConfigItem.configTypeInt, 4)
+
+    @JvmStatic
+    fun voiceChangerEnabled(): Boolean {
+        ensureLoaded()
+        return voiceChangerEnabled.Bool()
+    }
+
+    @JvmStatic
+    fun voiceChangerPitch(): Int {
+        ensureLoaded()
+        return voiceChangerPitch.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerFreqCrush(): Int {
+        ensureLoaded()
+        return voiceChangerFreqCrush.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerBitCrush(): Int {
+        ensureLoaded()
+        return voiceChangerBitCrush.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerEchoDelay(): Int {
+        ensureLoaded()
+        return voiceChangerEchoDelay.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerEchoFeedback(): Int {
+        ensureLoaded()
+        return voiceChangerEchoFeedback.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerGlitchRate(): Int {
+        ensureLoaded()
+        return voiceChangerGlitchRate.Int()
+    }
+
+    @JvmStatic
+    fun voiceChangerGlitchRepeats(): Int {
+        ensureLoaded()
+        return voiceChangerGlitchRepeats.Int()
+    }
+
     /** Сбрасывает настройки экрана «Chats» к значениям по умолчанию. */
     @JvmStatic
     fun reset() {

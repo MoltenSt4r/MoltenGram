@@ -184,6 +184,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int inlineMathCurrencyRow;
     private int hideSendAsPeerRow;
     private int tapToSwitchRecordRow;
+    private int voiceChangerRow;
     private int keepAttachButtonRow;
     private int textAnimationRow;
     private int chatsDividerRow;
@@ -431,6 +432,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
         hideSendAsPeerRow = addRow("hideSendAsPeer");
         tapToSwitchRecordRow = addRow("tapToSwitchRecord", "UseChatAttachEnterMenu");
+        voiceChangerRow = addRow("voiceChanger");
         keepAttachButtonRow = addRow("keepAttachButton");
         textAnimationRow = addRow("textAnimation");
         chatsDividerRow = addRow();
@@ -1741,6 +1743,11 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             return;
         }
 
+        if (position == voiceChangerRow) {
+            presentFragment(new OpenExteraVoiceChangerActivity());
+            return;
+        }
+
         if (position == tapToSwitchRecordRow) {
             boolean tapToSwitch = NekoConfig.useChatAttachMediaMenu.Bool();
             NekoConfig.useChatAttachMediaMenu.setConfigBool(!tapToSwitch);
@@ -2664,6 +2671,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsHideSendAsPeer), NekoConfig.hideSendAsChannel.Bool(), true);
             } else if (position == tapToSwitchRecordRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsTapToSwitchRecord), !NekoConfig.useChatAttachMediaMenu.Bool(), true);
+            } else if (position == voiceChangerRow) {
+                TextCell textCell = (TextCell) holder.itemView;
+                String status = ChatsConfig.voiceChangerEnabled.Bool() ? getString(R.string.OEShakeVibrationOn) : getString(R.string.OEShakeVibrationOff);
+                textCell.setTextAndValue(getString(R.string.OEVoiceChanger), status, true);
             } else if (position == keepAttachButtonRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
             } else if (position == removeMessageTailRow) {
@@ -2888,7 +2899,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
-            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
+            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow || position == voiceChangerRow) return TYPE_TEXT;
             if (isGroupHeader(position)) return TYPE_EXPANDABLE_SWITCH;
             if (groupHeaderFor(position) != -1) return TYPE_ROUND_CHECK;
             if (isSettings(position)) return TYPE_SETTINGS;

@@ -2581,6 +2581,9 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                         ByteBuffer byteBuffer = buffer.buffer[a];
                         byteBuffer.rewind();
                         readResult = audioRecorder.read(byteBuffer, 2048);
+                        if (readResult > 0) {
+                            app.exteraless.voice.VoiceChangerController.getInstance().process(byteBuffer, readResult);
+                        }
                         if (readResult > 0 && a % 2 == 0) {
                             byteBuffer.limit(readResult);
                             double s = 0;
