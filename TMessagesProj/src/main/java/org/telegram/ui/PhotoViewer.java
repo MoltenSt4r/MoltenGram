@@ -333,6 +333,7 @@ import org.telegram.ui.Stories.recorder.CaptionContainerView;
 import org.telegram.ui.Stories.recorder.HintView2;
 import org.telegram.ui.Stories.recorder.KeyboardNotifier;
 import org.telegram.ui.Stories.recorder.StoryEntry;
+import org.telegram.ui.Stories.recorder.StoryRecorder;
 
 import java.io.ByteArrayInputStream;
 import java.io.File;
@@ -8869,7 +8870,16 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 link = "https://" + MessagesController.getInstance(currentAccount).linkPrefix + "/" + username + "/" + msg.getId();
             }
         }
-        ShareAlert alert = new ShareAlert(parentActivity, parentChatActivity, messages, null, null, false, link, null, false, true, false, videoTimestamp, null) {
+        final boolean includeStory = messages != null && !messages.isEmpty() && StoryEntry.canRepostMessage(messages.get(0)) && MessagesController.getInstance(currentAccount).storiesEnabled();
+        ShareAlert alert = new ShareAlert(parentActivity, parentChatActivity, messages, null, null, false, link, null, false, true, includeStory, videoTimestamp, null) {
+            { includeStoryFromMessage = includeStory; }
+            @Override
+            protected void onShareStory(View cell) {
+                if (messages == null || messages.isEmpty()) return;
+                StoryRecorder editor = StoryRecorder.getInstance(parentActivity, currentAccount);
+                editor.openRepost(null, StoryEntry.repostMessage(messages));
+                dismiss();
+            }
             @Override
             protected void onSend(LongSparseArray<TLRPC.Dialog> dids, int count, TLRPC.TL_forumTopic topic, boolean showToast) {
                 if (!showToast) return;

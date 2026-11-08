@@ -31,6 +31,7 @@ import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.media.Image;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.PowerManager;
 import android.text.Layout;
 import android.text.Spannable;
@@ -81,6 +82,7 @@ import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
+import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
@@ -103,8 +105,11 @@ import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_phone;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
+import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.DarkAlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ChatActivity;
+import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
 import org.telegram.ui.Components.AnimatedEmojiSpan;
@@ -502,7 +507,7 @@ public class VoIPFragment implements
     private void setInsets(WindowInsets windowInsets) {
         lastInsets = windowInsets;
         ((FrameLayout.LayoutParams) buttonsLayout.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom();
-        ((FrameLayout.LayoutParams) acceptDeclineView.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom();
+        ((FrameLayout.LayoutParams) acceptDeclineView.getLayoutParams()).bottomMargin = lastInsets.getSystemWindowInsetBottom() + dp(16);
         ((FrameLayout.LayoutParams) backIcon.getLayoutParams()).topMargin = lastInsets.getSystemWindowInsetTop();
         ((FrameLayout.LayoutParams) addIcon.getLayoutParams()).topMargin = lastInsets.getSystemWindowInsetTop();
         ((FrameLayout.LayoutParams) speakerPhoneIcon.getLayoutParams()).topMargin = dp(56) + lastInsets.getSystemWindowInsetTop();
@@ -1170,13 +1175,18 @@ public class VoIPFragment implements
                     }
                 }
             }
+
+            @Override
+            public void onMessage() {
+                showQuickReplySheet();
+            }
         });
-        acceptDeclineView.setScaleX(1.15f);
-        acceptDeclineView.setScaleY(1.15f);
+        acceptDeclineView.setScaleX(1.0f);
+        acceptDeclineView.setScaleY(1.0f);
 
         frameLayout.addView(buttonsLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, 0, 0));
-        int horizontalMargin = isTablet() ? 100 : 27;
-        frameLayout.addView(acceptDeclineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 186, Gravity.BOTTOM, horizontalMargin, 0, horizontalMargin, 0));
+        int horizontalMargin = isTablet() ? 60 : 16;
+        frameLayout.addView(acceptDeclineView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 170, Gravity.BOTTOM, horizontalMargin, 0, horizontalMargin, 16));
 
         int topIconColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
         addIcon = new ImageView(context);
@@ -1362,8 +1372,8 @@ public class VoIPFragment implements
             @Override
             public void onAnimationEnd(Animator animation) {
                 after.run();
-                acceptDeclineView.setScaleX(1.15f);
-                acceptDeclineView.setScaleY(1.15f);
+                acceptDeclineView.setScaleX(1.0f);
+                acceptDeclineView.setScaleY(1.0f);
                 final ViewGroup.MarginLayoutParams lp = ((ViewGroup.MarginLayoutParams) acceptDeclineView.getLayoutParams());
                 lp.leftMargin = AndroidUtilities.dp(10);
                 lp.rightMargin = AndroidUtilities.dp(10);
@@ -1821,19 +1831,18 @@ public class VoIPFragment implements
                 showAcceptDeclineView = true;
                 lockOnScreen = false;
                 acceptDeclineView.setRetryMod(false);
+                statusTextView.setVisibility(View.GONE);
                 if (state != null && state.isConference()) {
-                    statusTextView.setText(LocaleController.getString(R.string.VoipInConferenceCallBranding), false, animated);
                     acceptDeclineView.setTranslationY(0);
                 } else if (state != null && state.isCallingVideo()) {
-                    statusTextView.setText(LocaleController.getString(R.string.VoipInVideoCallBranding), false, animated);
                     acceptDeclineView.setTranslationY(-AndroidUtilities.dp(60));
                 } else {
-                    statusTextView.setText(LocaleController.getString(R.string.VoipInCallBranding), false, animated);
                     acceptDeclineView.setTranslationY(0);
                 }
                 break;
             case VoIPService.STATE_WAIT_INIT:
             case VoIPService.STATE_WAIT_INIT_ACK:
+                statusTextView.setVisibility(View.VISIBLE);
                 statusTextView.setText(LocaleController.getString(R.string.VoipConnecting), true, animated);
                 break;
             case VoIPService.STATE_EXCHANGING_KEYS:
@@ -2584,9 +2593,49 @@ public class VoIPFragment implements
         }
     }
 
+    private void showQuickReplySheet() {
+        if (activity == null || isFinished) return;
+        BottomSheet.Builder builder = new BottomSheet.Builder(activity);
+        builder.setTitle(LocaleController.getString(R.string.Message));
+        CharSequence[] items = new CharSequence[] {
+            "Не могу говорить. Что случилось?",
+            "Я перезвоню позже.",
+            "Напиши мне в чат.",
+            "Не могу говорить прямо сейчас.",
+            "Написать своё сообщение..."
+        };
+        builder.setItems(items, (dialog, which) -> {
+            if (which == items.length - 1) {
+                if (callingUser != null) {
+                    Bundle args = new Bundle();
+                    args.putLong("user_id", callingUser.id);
+                    if (activity instanceof LaunchActivity) {
+                        ((LaunchActivity) activity).presentFragment(new ChatActivity(args));
+                    }
+                }
+            } else {
+                if (callingUser != null) {
+                    SendMessagesHelper.getInstance(currentAccount).sendMessage(
+                        SendMessagesHelper.SendMessageParams.of(
+                            items[which].toString(),
+                            callingUser.id
+                        )
+                    );
+                }
+            }
+            if (VoIPService.getSharedState() != null) {
+                VoIPService.getSharedState().declineIncomingCall();
+            } else {
+                windowView.finish();
+            }
+        });
+        builder.show();
+    }
+
     private void showAcceptDeclineView(boolean show, boolean animated) {
         if (!animated) {
             acceptDeclineView.setVisibility(show ? View.VISIBLE : View.GONE);
+            buttonsLayout.setVisibility(show ? View.GONE : View.VISIBLE);
         } else {
             if (show && acceptDeclineView.getTag() == null) {
                 acceptDeclineView.animate().setListener(null).cancel();
@@ -2595,6 +2644,7 @@ public class VoIPFragment implements
                     acceptDeclineView.setAlpha(0);
                 }
                 acceptDeclineView.animate().alpha(1f);
+                buttonsLayout.animate().alpha(0f).withEndAction(() -> buttonsLayout.setVisibility(View.GONE)).start();
             }
             if (!show && acceptDeclineView.getTag() != null) {
                 acceptDeclineView.animate().setListener(null).cancel();
@@ -2604,6 +2654,8 @@ public class VoIPFragment implements
                         acceptDeclineView.setVisibility(View.GONE);
                     }
                 }).alpha(0f);
+                buttonsLayout.setVisibility(View.VISIBLE);
+                buttonsLayout.animate().alpha(1f).start();
             }
         }
 

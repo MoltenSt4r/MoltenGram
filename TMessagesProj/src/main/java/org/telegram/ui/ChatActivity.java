@@ -1409,6 +1409,7 @@ public class ChatActivity extends BaseFragment implements
 
     public final static int OPTION_VIEW_STATISTICS = 115;
     public final static int OPTION_WELCOME_REVERT = 116;
+    public final static int OPTION_REPOST_STORY = 117;
 
     private final static int OPTION_COPY_PHOTO = 150;
     private final static int OPTION_COPY_PHOTO_AS_STICKER = 151;
@@ -35846,6 +35847,38 @@ public class ChatActivity extends BaseFragment implements
                 presentFragment(fragment);
                 break;
             }
+            case OPTION_REPOST_STORY: {
+                final ArrayList<MessageObject> messageObjects = new ArrayList<>();
+                if (selectedObjectGroup != null && selectedObjectGroup.messages != null && !selectedObjectGroup.messages.isEmpty()) {
+                    messageObjects.addAll(selectedObjectGroup.messages);
+                } else if (selectedObject != null) {
+                    messageObjects.add(selectedObject);
+                }
+                if (!messageObjects.isEmpty()) {
+                    StoryRecorder editor = StoryRecorder.getInstance(getParentActivity(), currentAccount);
+                    editor.setOnPrepareCloseListener((t, close, sent, did) -> {
+                        if (sent) {
+                            AndroidUtilities.runOnUIThread(() -> {
+                                String chatTitle = "";
+                                if (did < 0) {
+                                    TLRPC.Chat chat = getMessagesController().getChat(-did);
+                                    if (chat != null) {
+                                        chatTitle = chat.title;
+                                    }
+                                }
+                                BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.contact_check, AndroidUtilities.replaceTags(
+                                    TextUtils.isEmpty(chatTitle) ?
+                                        LocaleController.getString(R.string.RepostedToProfile) :
+                                        LocaleController.formatString(R.string.RepostedToChannelProfile, chatTitle)
+                                )).show();
+                            });
+                        }
+                        AndroidUtilities.runOnUIThread(close);
+                    });
+                    editor.openRepost(null, StoryEntry.repostMessage(messageObjects));
+                }
+                break;
+            }
             case OPTION_COPY: {
                 final TL_iv.RichMessage copyRichMessage = selectedObject.messageOwner != null ? selectedObject.messageOwner.rich_message : null;
                 if (selectedObject.isDice()) {
@@ -37218,6 +37251,93 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         }
+        return true;
+    }
+
+    @Override
+    public boolean canSelectStories() {
+        if (!getMessagesController().storiesEnabled()) {
+            return false;
+        }
+        if (forwardingMessage != null) {
+            return StoryEntry.canRepostMessage(forwardingMessage);
+        }
+        if (forwardingMessageGroup != null && forwardingMessageGroup.messages != null) {
+            for (MessageObject msg : forwardingMessageGroup.messages) {
+                if (StoryEntry.canRepostMessage(msg)) return true;
+            }
+        }
+        for (int a = 0; a < 2; a++) {
+            if (selectedMessagesIds[a] != null && selectedMessagesIds[a].size() > 0) {
+                for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                    MessageObject msg = selectedMessagesIds[a].valueAt(b);
+                    if (StoryEntry.canRepostMessage(msg)) return true;
+                }
+            }
+        }
+        return false;
+    }
+
+    @Override
+    public boolean didSelectStories(DialogsActivity dialogsFragment) {
+        final ArrayList<MessageObject> messageObjects = new ArrayList<>();
+        if (forwardingMessageGroup != null && forwardingMessageGroup.messages != null) {
+            for (int i = 0; i < forwardingMessageGroup.messages.size(); i++) {
+                MessageObject msg = forwardingMessageGroup.messages.get(i);
+                if (StoryEntry.canRepostMessage(msg)) {
+                    messageObjects.add(msg);
+                }
+            }
+        } else if (forwardingMessage != null) {
+            if (StoryEntry.canRepostMessage(forwardingMessage)) {
+                messageObjects.add(forwardingMessage);
+            }
+        } else {
+            for (int a = 1; a >= 0; a--) {
+                ArrayList<Integer> ids = new ArrayList<>();
+                for (int b = 0; b < selectedMessagesIds[a].size(); b++) {
+                    ids.add(selectedMessagesIds[a].keyAt(b));
+                }
+                Collections.sort(ids);
+                for (int b = 0; b < ids.size(); b++) {
+                    Integer id = ids.get(b);
+                    MessageObject msg = selectedMessagesIds[a].get(id);
+                    if (StoryEntry.canRepostMessage(msg)) {
+                        messageObjects.add(msg);
+                    }
+                }
+            }
+        }
+        if (messageObjects.isEmpty()) {
+            return false;
+        }
+        if (dialogsFragment != null) {
+            dialogsFragment.finishFragment();
+        }
+        if (actionBar.isActionModeShowed()) {
+            hideActionMode();
+        }
+        StoryRecorder editor = StoryRecorder.getInstance(getParentActivity(), currentAccount);
+        editor.setOnPrepareCloseListener((t, close, sent, did) -> {
+            if (sent) {
+                AndroidUtilities.runOnUIThread(() -> {
+                    String chatTitle = "";
+                    if (did < 0) {
+                        TLRPC.Chat chat = getMessagesController().getChat(-did);
+                        if (chat != null) {
+                            chatTitle = chat.title;
+                        }
+                    }
+                    BulletinFactory.of(ChatActivity.this).createSimpleBulletin(R.raw.contact_check, AndroidUtilities.replaceTags(
+                        TextUtils.isEmpty(chatTitle) ?
+                            LocaleController.getString(R.string.RepostedToProfile) :
+                            LocaleController.formatString(R.string.RepostedToChannelProfile, chatTitle)
+                    )).show();
+                });
+            }
+            AndroidUtilities.runOnUIThread(close);
+        });
+        editor.openRepost(null, StoryEntry.repostMessage(messageObjects));
         return true;
     }
 
@@ -50835,6 +50955,11 @@ public class ChatActivity extends BaseFragment implements
                         items.add(LocaleController.getString(R.string.Forward));
                         options.add(OPTION_FORWARD);
                         icons.add(NaConfig.INSTANCE.getShowNoQuoteForward().Bool() ? R.drawable.msg_forward : R.drawable.msg_forward_noquote);
+                    }
+                    if (getMessagesController().storiesEnabled() && StoryEntry.canRepostMessage(selectedObject)) {
+                        items.add(LocaleController.getString(R.string.RepostToStory));
+                        options.add(OPTION_REPOST_STORY);
+                        icons.add(R.drawable.msg_story);
                     }
                 }
                 // --- NagramX Start ---
