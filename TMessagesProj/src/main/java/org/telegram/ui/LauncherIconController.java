@@ -178,7 +178,7 @@ public class LauncherIconController {
         }
 
         LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author, String description, int glowColor) {
-            this(key, background, foreground, title, false, group, author, description, glowColor, group == IconGroup.TELEGRAM);
+            this(key, background, foreground, title, false, group, author, description, glowColor, true);
         }
 
         LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author, String description, int glowColor, boolean hasBleed) {
@@ -186,7 +186,7 @@ public class LauncherIconController {
         }
 
         LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author, String description, int glowColor) {
-            this(key, background, foreground, title, premium, group, author, description, glowColor, group == IconGroup.TELEGRAM);
+            this(key, background, foreground, title, premium, group, author, description, glowColor, true);
         }
 
         LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author, String description, int glowColor, boolean hasBleed) {
@@ -203,11 +203,11 @@ public class LauncherIconController {
         }
 
         LauncherIcon(String key, int background, int foreground, int title, IconGroup group, String author) {
-            this(key, background, foreground, title, false, group, author, null, 0xFF202020, group == IconGroup.TELEGRAM);
+            this(key, background, foreground, title, false, group, author, null, 0xFF202020, true);
         }
 
         LauncherIcon(String key, int background, int foreground, int title, boolean premium, IconGroup group, String author) {
-            this(key, background, foreground, title, premium, group, author, null, 0xFF202020, group == IconGroup.TELEGRAM);
+            this(key, background, foreground, title, premium, group, author, null, 0xFF202020, true);
         }
 
     }
