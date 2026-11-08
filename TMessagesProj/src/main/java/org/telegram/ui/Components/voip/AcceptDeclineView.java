@@ -128,6 +128,7 @@ public class AcceptDeclineView extends View {
 
     public void setRetryMod(boolean retryMod) {
         this.retryMod = retryMod;
+        updateLayoutBounds(getMeasuredWidth(), getMeasuredHeight());
         stopAnimations();
         invalidate();
     }
@@ -138,6 +139,7 @@ public class AcceptDeclineView extends View {
             resetAnimator = null;
         }
         dragOffset = 0f;
+        updateKnobRect();
         touchingKnob = false;
         touchingMessage = false;
         touchingRetry = false;
@@ -166,14 +168,11 @@ public class AcceptDeclineView extends View {
     private void updateLayoutBounds(int w, int h) {
         if (w <= 0 || h <= 0) return;
 
-        if (retryMod) {
-            float btnW = Math.max(dp(180), retryTextWidth + dp(64));
-            float btnH = dp(56);
-            float l = (w - btnW) / 2f;
-            float t = h - btnH - dp(24);
-            retryRect.set(l, t, l + btnW, t + btnH);
-            return;
-        }
+        float btnW = Math.max(dp(180), retryTextWidth + dp(64));
+        float btnH = dp(56);
+        float l = (w - btnW) / 2f;
+        float t = h - btnH - dp(24);
+        retryRect.set(l, t, l + btnW, t + btnH);
 
         // 1. Message Button ("💬 Сообщение")
         float msgBtnW = messageTextWidth + dp(46);
@@ -193,8 +192,8 @@ public class AcceptDeclineView extends View {
         float knobW = dp(84);
         float knobH = dp(62);
         float knobPad = dp(7);
-        maxDragLeft = (trackRect.width() - knobW) / 2f - knobPad;
-        maxDragRight = (trackRect.width() - knobW) / 2f - knobPad;
+        maxDragLeft = Math.max(0f, (trackRect.width() - knobW) / 2f - knobPad);
+        maxDragRight = Math.max(0f, (trackRect.width() - knobW) / 2f - knobPad);
 
         updateKnobRect();
     }
@@ -213,6 +212,7 @@ public class AcceptDeclineView extends View {
 
         if (retryMod) {
             // Draw Retry Button
+            retryPaint.setColor(touchingRetry ? ColorUtils.blendARGB(COLOR_ACCEPT, 0xFF000000, 0.15f) : COLOR_ACCEPT);
             canvas.drawRoundRect(retryRect, retryRect.height() / 2f, retryRect.height() / 2f, retryPaint);
             if (retryDrawable != null) {
                 int iconSize = dp(24);

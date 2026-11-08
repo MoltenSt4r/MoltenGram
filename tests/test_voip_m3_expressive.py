@@ -398,5 +398,27 @@ def test_accept_decline_view_dynamic_monet_styling_no_moss_green():
     )
 
 
+def test_accept_decline_view_state_and_animation_safety():
+    """Verify AcceptDeclineView synchronizes knob bounds on stopAnimations and calculates layout bounds unconditionally."""
+    accept_path = os.path.join(VOIP_DIR, "AcceptDeclineView.java")
+    with open(accept_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # stopAnimations must reset knobRect via updateKnobRect()
+    stop_anim = re.search(r'public void stopAnimations\(\)\s*\{([\s\S]*?)\n    \}', content)
+    assert stop_anim, "AcceptDeclineView must define stopAnimations()"
+    assert "updateKnobRect();" in stop_anim.group(1), (
+        "stopAnimations must invoke updateKnobRect() to synchronize knobRect with dragOffset"
+    )
+
+    # setRetryMod must update layout bounds
+    set_retry = re.search(r'public void setRetryMod\(boolean retryMod\)\s*\{([\s\S]*?)\n    \}', content)
+    assert set_retry, "AcceptDeclineView must define setRetryMod(boolean)"
+    assert "updateLayoutBounds(" in set_retry.group(1), (
+        "setRetryMod must invoke updateLayoutBounds to ensure retryRect/slider bounds are updated"
+    )
+
+
+
 
 
