@@ -636,11 +636,6 @@ MoltenGram is proudly built on open-source foundations and the incredible work o
 
 <br>
 
-<picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg">
-  <img src="assets/credit-light.svg" height="20" alt="Made with Expressive Profile">
-</picture>
-
 <p align="center">
   <sub>MoltenGram &copy; 2026 MoltenSt4r. Licensed under GNU General Public License v3.0.</sub>
 </p>
