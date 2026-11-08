@@ -4,8 +4,18 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
+import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.ScrollView;
+import android.widget.TextView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -13,6 +23,7 @@ import java.util.Locale;
 
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.AvatarCornersSeekBar;
+import app.exteraless.appearance.FabShapeCell;
 import app.exteraless.drawer.MainMenuHelper;
 import app.exteraless.drawer.MainMenuItem;
 import app.exteraless.drawer.MainMenuLayout;
@@ -67,6 +78,19 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int ID_HIDE_CONTACTS_TAB = -108;
     private static final int ID_HIDE_CALLS_TAB = -109;
     private static final int ID_HIDE_PROFILE_TAB = -110;
+
+    private static final int ID_FAB_APPEARANCE = -135;
+    private static final int ID_FAB_SHAPE = -120;
+    private static final int ID_FAB_ACTIVE_SHAPE = -127;
+    private static final int ID_FAB_SPEED_DIAL = -121;
+    private static final int ID_FAB_CUSTOMIZE = -122;
+    private static final int ID_FAB_SIZE_SLIDER = -123;
+    private static final int ID_FAB_ACTIVE_SIZE_SLIDER = -128;
+    private static final int ID_FAB_COLOR = -124;
+    private static final int ID_FAB_ALIGNMENT = -129;
+    private static final int ID_SUB_FAB_ALIGNMENT = -130;
+    private static final int ID_SUB_FAB_SIZE_SLIDER = -125;
+    private static final int ID_SUB_FAB_COLOR = -126;
 
     /** Кнопка «добавить разделитель». */
     private static final int ID_ADD_DIVIDER = -200;
@@ -173,6 +197,17 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         }
         items.add(UItem.asShadow(null));
 
+        items.add(UItem.asHeader("Плавающая кнопка (FAB)"));
+        items.add(UItem.asButton(ID_FAB_APPEARANCE, R.drawable.msg_theme, "Внешний вид и анимации FAB",
+                "Формы, размеры, цвета, выравнивание и интерактивный предпросмотр"));
+        items.add(UItem.asCheck(ID_FAB_SPEED_DIAL, getString(R.string.OEAppearanceMd3SpeedDial))
+                .setChecked(AppearanceConfig.md3FabSpeedDial()));
+        if (AppearanceConfig.md3FabSpeedDial()) {
+            items.add(UItem.asButton(ID_FAB_CUSTOMIZE, getString(R.string.OEAppearanceMd3FabItems),
+                    app.exteraless.components.Md3SpeedDialView.getItemsSummary()));
+        }
+        items.add(UItem.asShadow("Настройка экспрессивных форм Material Design 3, интерактивного предпросмотра, цветов палитры Monet, расположения кнопки и пунктов меню Speed Dial."));
+
         items.add(UItem.asHeader(getString(R.string.OEAppNavigation)));
         items.add(UItem.asCheck(ID_DRAWER, getString(R.string.OENavigationDrawer))
                 .setChecked(AppearanceConfig.navigationDrawer()));
@@ -256,16 +291,323 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         return slider;
     }
 
+    private View createFabShapeCell() {
+        FabShapeCell cell = new FabShapeCell(getContext(), () -> {
+            if (getParentLayout() != null) {
+                getParentLayout().rebuildFragments(0);
+            }
+        });
+        cell.setNeedDivider(true);
+        return cell;
+    }
+
+    private View createFabSizeSlider() {
+        AvatarCornersSeekBar slider = new AvatarCornersSeekBar(getContext(),
+                value -> {
+                    AppearanceConfig.fabSize.setConfigInt(value);
+                },
+                36, 96,
+                "Размер основной кнопки FAB",
+                "36 dp",
+                "96 dp");
+        slider.setValueSuffix(" dp");
+        slider.setValue(AppearanceConfig.fabSize());
+        return slider;
+    }
+
+    private View createSubFabSizeSlider() {
+        AvatarCornersSeekBar slider = new AvatarCornersSeekBar(getContext(),
+                value -> {
+                    AppearanceConfig.subFabSize.setConfigInt(value);
+                },
+                28, 72,
+                "Размер кнопки камеры FAB",
+                "28 dp",
+                "72 dp");
+        slider.setValueSuffix(" dp");
+        slider.setValue(AppearanceConfig.subFabSize());
+        return slider;
+    }
+
+    private View createFabActiveSizeSlider() {
+        AvatarCornersSeekBar slider = new AvatarCornersSeekBar(getContext(),
+                value -> {
+                    AppearanceConfig.fabActiveSize.setConfigInt(value);
+                },
+                36, 96,
+                "Размер FAB при раскрытии",
+                "36 dp",
+                "96 dp");
+        slider.setValueSuffix(" dp");
+        slider.setValue(AppearanceConfig.fabActiveSize());
+        return slider;
+    }
+
+    private void showFabAlignmentDialog() {
+        if (getContext() == null) return;
+        AlertDialog.Builder b = new AlertDialog.Builder(getContext());
+        b.setTitle("Расположение FAB");
+        String[] options = new String[]{"Справа (по умолчанию)", "Слева"};
+        final int[] values = new int[]{AppearanceConfig.FAB_ALIGN_RIGHT, AppearanceConfig.FAB_ALIGN_LEFT};
+        b.setItems(options, (dialog, which) -> {
+            AppearanceConfig.fabAlignment.setConfigInt(values[which]);
+            update();
+            if (getParentLayout() != null) {
+                getParentLayout().rebuildFragments(0);
+            }
+        });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        b.show();
+    }
+
+    private void showSubFabAlignmentDialog() {
+        if (getContext() == null) return;
+        AlertDialog.Builder b = new AlertDialog.Builder(getContext());
+        b.setTitle("Выравнивание кнопки камеры");
+        String[] options = new String[]{"По центру основной кнопки", "Ближе к краю экрана"};
+        final int[] values = new int[]{AppearanceConfig.SUB_FAB_ALIGN_CENTER, AppearanceConfig.SUB_FAB_ALIGN_EDGE};
+        b.setItems(options, (dialog, which) -> {
+            AppearanceConfig.subFabAlignment.setConfigInt(values[which]);
+            update();
+            if (getParentLayout() != null) {
+                getParentLayout().rebuildFragments(0);
+            }
+        });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        b.show();
+    }
+
+    private void showFabColorPicker(String title, ConfigItem item) {
+        Context context = getContext();
+        if (context == null) return;
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(context);
+        builder.setTitle(title);
+
+        ScrollView scrollView = new ScrollView(context);
+        LinearLayout listLayout = new LinearLayout(context);
+        listLayout.setOrientation(LinearLayout.VERTICAL);
+        listLayout.setPadding(0, dp(6), 0, dp(6));
+
+        class Option {
+            final int value;
+            final String title;
+            final String subtitle;
+            final int previewColor;
+            final boolean isHex;
+
+            Option(int value, String title, String subtitle, int previewColor, boolean isHex) {
+                this.value = value;
+                this.title = title;
+                this.subtitle = subtitle;
+                this.previewColor = previewColor;
+                this.isHex = isHex;
+            }
+        }
+
+        int defaultColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+        int currentColor = item.Int();
+
+        List<Option> options = new ArrayList<>();
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_DEFAULT,
+                "По умолчанию", "Акцент текущей темы",
+                defaultColor, false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY,
+                "Основной Monet", "Primary",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY_CONTAINER,
+                "Контейнер основного Monet", "Primary Container",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_PRIMARY_CONTAINER, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY,
+                "Вторичный Monet", "Secondary",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY_CONTAINER,
+                "Контейнер вторичного Monet", "Secondary Container",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SECONDARY_CONTAINER, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY,
+                "Третичный Monet", "Tertiary",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY_CONTAINER,
+                "Контейнер третичного Monet", "Tertiary Container",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_TERTIARY_CONTAINER, defaultColor), false));
+        options.add(new Option(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SURFACE,
+                "Поверхность Monet", "Surface",
+                app.exteraless.utils.UIUtil.resolveFabColor(app.exteraless.utils.UIUtil.FAB_COLOR_MONET_SURFACE, defaultColor), false));
+
+        boolean isCustomHex = currentColor < 0;
+        int hexPreviewColor = isCustomHex ? currentColor : 0xFF6750A4;
+        String hexSubtitle = isCustomHex ? String.format("#%06X", (0xFFFFFF & currentColor)) : "Ввод любого цвета";
+        options.add(new Option(-9999, "Свой цвет (HEX)", hexSubtitle, hexPreviewColor, true));
+
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+
+        for (Option opt : options) {
+            LinearLayout row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(18), dp(10), dp(18), dp(10));
+            row.setBackground(Theme.getSelectorDrawable(false));
+
+            View swatch = new View(context);
+            GradientDrawable swatchDrawable = new GradientDrawable();
+            swatchDrawable.setShape(GradientDrawable.OVAL);
+            swatchDrawable.setColor(opt.previewColor);
+            swatchDrawable.setStroke(dp(1.5f), Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack), 0.20f));
+            swatch.setBackground(swatchDrawable);
+            row.addView(swatch, LayoutHelper.createLinear(32, 32, Gravity.CENTER_VERTICAL, 0, 0, 14, 0));
+
+            LinearLayout textCol = new LinearLayout(context);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+
+            TextView titleTv = new TextView(context);
+            titleTv.setText(opt.title);
+            titleTv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            titleTv.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            titleTv.setSingleLine(true);
+            titleTv.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(titleTv, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            TextView subTv = new TextView(context);
+            subTv.setText(opt.subtitle);
+            subTv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            subTv.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+            subTv.setSingleLine(true);
+            subTv.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(subTv, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+            row.addView(textCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.CENTER_VERTICAL));
+
+            boolean isSelected = opt.isHex ? isCustomHex : (currentColor == opt.value);
+            if (isSelected) {
+                ImageView check = new ImageView(context);
+                check.setImageResource(R.drawable.msg_check);
+                check.setColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN);
+                row.addView(check, LayoutHelper.createLinear(22, 22, Gravity.CENTER_VERTICAL, 8, 0, 0, 0));
+            }
+
+            row.setOnClickListener(v -> {
+                if (dialogRef[0] != null) dialogRef[0].dismiss();
+                if (opt.isHex) {
+                    showHexColorDialog(title, item);
+                } else {
+                    item.setConfigInt(opt.value);
+                    update();
+                    if (getParentLayout() != null) {
+                        getParentLayout().rebuildFragments(0);
+                    }
+                }
+            });
+
+            listLayout.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+
+        scrollView.addView(listLayout);
+        builder.setView(scrollView);
+        builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        dialogRef[0] = builder.create();
+        dialogRef[0].show();
+    }
+
+    private void showHexColorDialog(String title, ConfigItem item) {
+        Context context = getContext();
+        if (context == null) return;
+        AlertDialog.Builder b = new AlertDialog.Builder(context);
+        b.setTitle(title);
+
+        LinearLayout layout = new LinearLayout(context);
+        layout.setOrientation(LinearLayout.VERTICAL);
+        layout.setPadding(dp(20), dp(12), dp(20), dp(8));
+
+        int curCol = item.Int();
+        String initialHex = curCol != 0 && curCol < 0 ? String.format("%06X", (0xFFFFFF & curCol)) : "6750A4";
+
+        LinearLayout inputRow = new LinearLayout(context);
+        inputRow.setOrientation(LinearLayout.HORIZONTAL);
+        inputRow.setGravity(Gravity.CENTER_VERTICAL);
+
+        final View previewCircle = new View(context);
+        final GradientDrawable circleBg = new GradientDrawable();
+        circleBg.setShape(GradientDrawable.OVAL);
+        try {
+            circleBg.setColor((int) Long.parseLong(initialHex, 16) | 0xFF000000);
+        } catch (Exception e) {
+            circleBg.setColor(0xFF6750A4);
+        }
+        circleBg.setStroke(dp(1.5f), Theme.multAlpha(Theme.getColor(Theme.key_dialogTextBlack), 0.20f));
+        previewCircle.setBackground(circleBg);
+        inputRow.addView(previewCircle, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 12, 0));
+
+        final EditText input = new EditText(context);
+        input.setText(initialHex);
+        input.setHint("RRGGBB (например: 6750A4)");
+        input.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        input.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        input.setHintTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        GradientDrawable bg = new GradientDrawable();
+        bg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        bg.setCornerRadius(dp(8));
+        input.setBackground(bg);
+        input.setPadding(dp(12), dp(10), dp(12), dp(10));
+
+        input.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+            @Override
+            public void onTextChanged(CharSequence s, int start, int before, int count) {}
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                String text = s.toString().trim();
+                if (text.startsWith("#")) text = text.substring(1);
+                try {
+                    if (text.length() >= 6) {
+                        int parsed = (int) Long.parseLong(text.substring(0, 6), 16) | 0xFF000000;
+                        circleBg.setColor(parsed);
+                        previewCircle.invalidate();
+                    }
+                } catch (Exception ignored) {}
+            }
+        });
+
+        inputRow.addView(input, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, Gravity.CENTER_VERTICAL));
+        layout.addView(inputRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        b.setView(layout);
+        b.setPositiveButton(LocaleController.getString(R.string.OK), (dialog, which) -> {
+            String text = input.getText().toString().trim();
+            if (text.startsWith("#")) text = text.substring(1);
+            try {
+                long val = Long.parseLong(text, 16);
+                int parsed = (int) val;
+                if (text.length() <= 6) {
+                    parsed |= 0xFF000000;
+                }
+                item.setConfigInt(parsed);
+                update();
+                if (getParentLayout() != null) {
+                    getParentLayout().rebuildFragments(0);
+                }
+            } catch (Exception ignored) {}
+        });
+        b.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
+        b.show();
+    }
+
     // ---- обработка ----
 
     private static final int[] LINK_IDS = {
             ID_TABLET_MODE, ID_BACK_ANIMATION, ID_PREDICTIVE_INTENSITY, ID_BOTTOM_NAVIGATION_BAR,
             ID_HIDE_TAB_TITLES, ID_HIDE_CONTACTS_TAB, ID_HIDE_CALLS_TAB, ID_HIDE_PROFILE_TAB,
+            ID_FAB_APPEARANCE, ID_FAB_SHAPE, ID_FAB_ACTIVE_SHAPE, ID_FAB_SPEED_DIAL, ID_FAB_CUSTOMIZE, ID_FAB_SIZE_SLIDER,
+            ID_FAB_ACTIVE_SIZE_SLIDER, ID_FAB_COLOR, ID_FAB_ALIGNMENT, ID_SUB_FAB_ALIGNMENT,
+            ID_SUB_FAB_SIZE_SLIDER, ID_SUB_FAB_COLOR,
             ID_DRAWER, ID_IMMERSIVE
     };
     private static final String[] LINK_KEYS = {
             "tabletMode", "backAnimation", "predictiveBackIntensity", "bottomNavigationBar",
             "MainTabsHideTitles", "MainTabsHideContacts", "MainTabsHideCallsSettings", "MainTabsHideProfile",
+            "fabAppearance", "fabShape", "fabActiveShape", "md3FabSpeedDial", "md3FabItems", "fabSize",
+            "fabActiveSize", "fabColor", "fabAlignment", "subFabAlignment",
+            "subFabSize", "subFabColor",
             "navigationDrawer", "immersiveDrawerAnimation"
     };
 
@@ -377,6 +719,63 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         if (id == ID_IMMERSIVE) {
             AppearanceConfig.immersiveDrawerAnimation.setConfigBool(!AppearanceConfig.immersiveDrawerAnimation());
             update();
+            return;
+        }
+        if (id == ID_FAB_APPEARANCE) {
+            presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity());
+            return;
+        }
+        if (id == ID_FAB_SPEED_DIAL) {
+            boolean enable = !AppearanceConfig.md3FabSpeedDial();
+            AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
+            update();
+            if (getParentLayout() != null) {
+                getParentLayout().rebuildFragments(0);
+            }
+            return;
+        }
+        if (id == ID_FAB_CUSTOMIZE) {
+            app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getContext(), this::update);
+            return;
+        }
+        if (id == ID_FAB_COLOR) {
+            showFabColorPicker("Цвет основной кнопки FAB", AppearanceConfig.fabColor);
+            return;
+        }
+        if (id == ID_SUB_FAB_COLOR) {
+            showFabColorPicker("Цвет кнопки камеры FAB", AppearanceConfig.subFabColor);
+            return;
+        }
+        if (id == ID_FAB_SHAPE) {
+            app.exteraless.appearance.Md3AvatarShapesActivity.openShapePicker(
+                    getContext(), getResourceProvider(), "Форма кнопки FAB",
+                    AppearanceConfig.fabShape(), shapeId -> {
+                        AppearanceConfig.fabShape.setConfigInt(shapeId);
+                        update();
+                        if (getParentLayout() != null) {
+                            getParentLayout().rebuildFragments(0);
+                        }
+                    });
+            return;
+        }
+        if (id == ID_FAB_ACTIVE_SHAPE) {
+            app.exteraless.appearance.Md3AvatarShapesActivity.openShapePicker(
+                    getContext(), getResourceProvider(), "Форма FAB при раскрытии",
+                    AppearanceConfig.fabActiveShape(), shapeId -> {
+                        AppearanceConfig.fabActiveShape.setConfigInt(shapeId);
+                        update();
+                    });
+            return;
+        }
+        if (id == ID_FAB_ALIGNMENT) {
+            showFabAlignmentDialog();
+            return;
+        }
+        if (id == ID_SUB_FAB_ALIGNMENT) {
+            showSubFabAlignmentDialog();
+            return;
+        }
+        if (id == ID_FAB_SIZE_SLIDER || id == ID_FAB_ACTIVE_SIZE_SLIDER || id == ID_SUB_FAB_SIZE_SLIDER) {
             return;
         }
         if (id == ID_HIDE_TAB_TITLES || id == ID_HIDE_CONTACTS_TAB
@@ -567,5 +966,13 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
 
     private static int clamp(int value, int size) {
         return value < 0 || value >= size ? 0 : value;
+    }
+
+    @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        if (getParentLayout() != null) {
+            getParentLayout().rebuildFragments(0);
+        }
     }
 }

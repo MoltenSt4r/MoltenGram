@@ -2,6 +2,7 @@ package org.telegram.ui.Components.voip;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.RectF;
 import android.view.MotionEvent;
@@ -21,6 +22,7 @@ public class VoIPButtonsLayout extends FrameLayout {
     private final Paint containerStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private float containerRadius;
     private boolean drawPillDock = false;
+    private boolean twoRowDock = true;
 
     public VoIPButtonsLayout(@NonNull Context context) {
         super(context);
@@ -35,16 +37,22 @@ public class VoIPButtonsLayout extends FrameLayout {
         int surface = Theme.getColor(Theme.key_windowBackgroundWhite);
         int primary = Theme.getColor(Theme.key_chats_actionBackground);
         boolean isDark = Theme.isCurrentThemeDark();
+        int baseBg = ColorUtils.blendARGB(surface, primary, isDark ? 0.14f : 0.08f);
         int fillColor = isDark
-            ? ColorUtils.blendARGB(surface, primary, 0.14f)
-            : ColorUtils.blendARGB(surface, primary, 0.08f);
+            ? ColorUtils.blendARGB(baseBg, Color.WHITE, 0.035f)
+            : ColorUtils.blendARGB(baseBg, primary, 0.08f);
         int strokeColor = ColorUtils.setAlphaComponent(
             Theme.getColor(Theme.key_windowBackgroundWhiteBlackText),
-            isDark ? (int) (255 * 0.08f) : (int) (255 * 0.06f)
+            isDark ? (int) (255 * 0.05f) : (int) (255 * 0.05f)
         );
         containerPaint.setColor(fillColor);
         containerStrokePaint.setColor(strokeColor);
         invalidate();
+    }
+
+    public void setTwoRowDock(boolean twoRowDock) {
+        this.twoRowDock = twoRowDock;
+        requestLayout();
     }
 
     int visibleChildCount;
@@ -67,14 +75,44 @@ public class VoIPButtonsLayout extends FrameLayout {
         int width = MeasureSpec.getSize(widthMeasureSpec);
 
         visibleChildCount = 0;
+        View endCallChild = null;
+        int topRowVisibleCount = 0;
         for (int i = 0; i < getChildCount(); i++) {
-            if (getChildAt(i).getVisibility() != View.GONE) {
+            View child = getChildAt(i);
+            if (child.getVisibility() != View.GONE) {
                 visibleChildCount++;
+                if (twoRowDock && startPadding && child instanceof VoIPToggleButton && i == getChildCount() - 1) {
+                    endCallChild = child;
+                } else {
+                    topRowVisibleCount++;
+                }
             }
         }
+
+        if (endCallChild != null && topRowVisibleCount > 0) {
+            int topItemWidth = Math.min(AndroidUtilities.dp(88), (width - AndroidUtilities.dp(24)) / Math.max(1, topRowVisibleCount));
+            int maxTopHeight = 0;
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() != View.GONE && child != endCallChild) {
+                    child.measure(MeasureSpec.makeMeasureSpec(topItemWidth, MeasureSpec.EXACTLY), heightMeasureSpec);
+                    maxTopHeight = Math.max(maxTopHeight, child.getMeasuredHeight());
+                }
+            }
+            maxTopHeight = Math.max(maxTopHeight, AndroidUtilities.dp(82));
+            int endCallW = AndroidUtilities.dp(170);
+            endCallChild.measure(MeasureSpec.makeMeasureSpec(endCallW, MeasureSpec.EXACTLY), heightMeasureSpec);
+            int endCallH = Math.max(endCallChild.getMeasuredHeight(), AndroidUtilities.dp(64));
+
+            int totalH = AndroidUtilities.dp(22) + maxTopHeight + AndroidUtilities.dp(16) + endCallH + AndroidUtilities.dp(20);
+            childWidth = topItemWidth;
+            setMeasuredDimension(width, totalH);
+            return;
+        }
+
         childWidth = AndroidUtilities.dp(childSize);
         int maxChildHeigth = 0;
-        childPadding = (width / getChildCount() - childWidth) / 2;
+        childPadding = (width / Math.max(1, getChildCount()) - childWidth) / 2;
         for (int i = 0; i < getChildCount(); i++) {
             if (getChildAt(i).getVisibility() != View.GONE) {
                 getChildAt(i).measure(MeasureSpec.makeMeasureSpec(childWidth, MeasureSpec.EXACTLY), heightMeasureSpec);
@@ -90,6 +128,51 @@ public class VoIPButtonsLayout extends FrameLayout {
 
     @Override
     protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+        View endCallChild = null;
+        int topRowVisibleCount = 0;
+        for (int i = 0; i < getChildCount(); i++) {
+            View child = getChildAt(i);
+            if (child.getVisibility() != View.GONE) {
+                if (twoRowDock && startPadding && child instanceof VoIPToggleButton && i == getChildCount() - 1) {
+                    endCallChild = child;
+                } else {
+                    topRowVisibleCount++;
+                }
+            }
+        }
+
+        if (endCallChild != null && topRowVisibleCount > 0) {
+            int width = getMeasuredWidth();
+            int sideInset = AndroidUtilities.dp(16);
+            int availW = width - sideInset * 2;
+            int itemW = childWidth;
+            int gap = (availW - itemW * topRowVisibleCount) / (topRowVisibleCount + 1);
+            int curX = sideInset + gap;
+            int topY = AndroidUtilities.dp(22);
+            int maxTopBottom = topY;
+
+            for (int i = 0; i < getChildCount(); i++) {
+                View child = getChildAt(i);
+                if (child.getVisibility() != View.GONE && child != endCallChild) {
+                    int cw = child.getMeasuredWidth();
+                    int ch = Math.max(child.getMeasuredHeight(), AndroidUtilities.dp(82));
+                    child.layout(curX, topY, curX + cw, topY + ch);
+                    maxTopBottom = Math.max(maxTopBottom, topY + ch);
+                    curX += cw + gap;
+                }
+            }
+
+            int endW = endCallChild.getMeasuredWidth();
+            int endH = endCallChild.getMeasuredHeight();
+            int endLeft = (width - endW) / 2;
+            int endTop = maxTopBottom + AndroidUtilities.dp(16);
+            endCallChild.layout(endLeft, endTop, endLeft + endW, endTop + endH);
+
+            containerRect.set(0, 0, width, getMeasuredHeight() + AndroidUtilities.dp(40));
+            containerRadius = AndroidUtilities.dp(32);
+            return;
+        }
+
         int minLeft = Integer.MAX_VALUE;
         int maxRight = Integer.MIN_VALUE;
         int minTop = Integer.MAX_VALUE;
@@ -112,7 +195,7 @@ public class VoIPButtonsLayout extends FrameLayout {
                 }
             }
         } else  {
-            int padding = visibleChildCount > 0 ? (getMeasuredWidth() - childWidth) / (visibleChildCount - 1) : 0;
+            int padding = visibleChildCount > 0 ? (getMeasuredWidth() - childWidth) / Math.max(1, visibleChildCount - 1) : 0;
             int k = 0;
             for (int i = 0; i < getChildCount(); i++) {
                 View child = getChildAt(i);
@@ -149,9 +232,6 @@ public class VoIPButtonsLayout extends FrameLayout {
         super.onDraw(canvas);
         if (visibleChildCount > 0 && !containerRect.isEmpty() && drawPillDock) {
             canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerPaint);
-            if (containerStrokePaint != null) {
-                canvas.drawRoundRect(containerRect, containerRadius, containerRadius, containerStrokePaint);
-            }
         }
     }
 

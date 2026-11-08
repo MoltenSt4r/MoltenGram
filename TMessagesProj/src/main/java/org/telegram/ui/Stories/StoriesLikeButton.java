@@ -2,9 +2,11 @@ package org.telegram.ui.Stories;
 
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.drawable.Drawable;
 import android.view.View;
 
 import org.telegram.messenger.DocumentObject;
+import org.telegram.messenger.Emoji;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MediaDataController;
@@ -104,6 +106,24 @@ public class StoriesLikeButton extends View {
                 if (attachedToWindow) {
                     emojiDrawable.addView(this);
                 }
+            } else if ((app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && visibleReaction.emojicon != null) {
+                String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
+                Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                if (thumb instanceof Emoji.EmojiDrawable) {
+                    ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                }
+                if (notoUrl != null) {
+                    reactionImageReceiver.setAllowStartAnimation(true);
+                    reactionImageReceiver.setImage(ImageLocation.getForVideoPath(notoUrl), "40_40", thumb, "webp", visibleReaction, 1);
+                } else {
+                    reactionImageReceiver.setImageBitmap(thumb);
+                }
+            } else if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && visibleReaction.emojicon != null) {
+                Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                    ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                }
+                reactionImageReceiver.setImageBitmap(emojiDrawable);
             } else {
                 TLRPC.TL_availableReaction r = MediaDataController.getInstance(UserConfig.selectedAccount).getReactionsMap().get(visibleReaction.emojicon);
                 if (r != null) {
@@ -125,6 +145,21 @@ public class StoriesLikeButton extends View {
 
     public void prepareAnimateReaction(ReactionsLayoutInBubble.VisibleReaction reaction) {
         if (reaction.documentId == 0) {
+            if ((app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) && reaction.emojicon != null) {
+                String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(reaction.emojicon);
+                if (notoUrl != null) {
+                    Drawable thumb = Emoji.getEmojiDrawable(reaction.emojicon);
+                    if (thumb instanceof Emoji.EmojiDrawable) {
+                        ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                    }
+                    animateReactionImageReceiver.setAllowStartAnimation(true);
+                    animateReactionImageReceiver.setImage(ImageLocation.getForVideoPath(notoUrl), "40_40", thumb, "webp", reaction, 1);
+                    animateReactionImageReceiver.setAutoRepeat(0);
+                    return;
+                }
+            } else if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && reaction.emojicon != null) {
+                return;
+            }
             TLRPC.TL_availableReaction r = MediaDataController.getInstance(UserConfig.selectedAccount).getReactionsMap().get(reaction.emojicon);
             if (r != null) {
                 animateReactionImageReceiver.setImage(ImageLocation.getForDocument(r.center_icon), "40_40_nolimit", null, "tgs", r, 1);

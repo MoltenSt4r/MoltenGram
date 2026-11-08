@@ -31,6 +31,7 @@ import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.OutlineTextContainerView;
 import org.telegram.ui.Components.UItem;
 import org.telegram.ui.Components.UniversalAdapter;
 import org.telegram.ui.Components.UniversalRecyclerView;
@@ -58,7 +59,6 @@ public class CustomCommandsActivity extends BaseFragment {
         actionBar.setTitle(getString(R.string.CustomCommandsTitle));
         if (actionBar.getTitleTextView() != null) {
             actionBar.getTitleTextView().setTextSize(18);
-            actionBar.getTitleTextView().setScrollNonFitText(true);
         }
 
         ActionBarMenuItem addMenu = actionBar.createMenu().addItem(ID_ADD, R.drawable.msg_add);
@@ -208,12 +208,6 @@ public class CustomCommandsActivity extends BaseFragment {
         titleView.setTextColor(textColor);
         layout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
 
-        TextView prefixLabel = new TextView(act);
-        prefixLabel.setText(getString(R.string.CustomCommandName));
-        prefixLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        prefixLabel.setTextColor(hintColor);
-        layout.addView(prefixLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
-
         String[] prefixes = new String[]{".", "/", "!", "$", "?"};
         TextView[] chipViews = new TextView[prefixes.length];
         String initialPrefix = existing != null && existing.prefix != null && !existing.prefix.isEmpty() ? existing.prefix : ".";
@@ -251,23 +245,33 @@ public class CustomCommandsActivity extends BaseFragment {
         updateChips.run();
         layout.addView(chipsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
 
+        int padH = AndroidUtilities.dp(14);
+        int padV = AndroidUtilities.dp(14);
+
+        OutlineTextContainerView nameOutlineView = new OutlineTextContainerView(act, getResourceProvider());
+        nameOutlineView.setText(getString(R.string.CustomCommandName));
+
         EditTextBoldCursor nameEdit = new EditTextBoldCursor(act);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         nameEdit.setTextColor(textColor);
-        nameEdit.setHintTextColor(hintColor);
-        nameEdit.setHintColor(hintColor);
-        nameEdit.setHintText(getString(R.string.CustomCommandNameHint));
-        nameEdit.setHint(getString(R.string.CustomCommandNameHint));
         nameEdit.setCursorColor(accentColor);
-        nameEdit.setBackground(Theme.createEditTextDrawable(act, true));
-        nameEdit.setLineColors(lineNormal, lineActive, lineError);
-        nameEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
+        nameEdit.setBackground(null);
+        nameEdit.setPadding(padH, padV, padH, padV);
         nameEdit.setSingleLine(true);
         nameEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
 
-        if (existing != null) {
-            nameEdit.setText(existing.name != null ? existing.name : "");
+        if (existing != null && existing.name != null) {
+            nameEdit.setText(existing.name);
         }
+
+        nameOutlineView.addView(nameEdit, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        nameOutlineView.attachEditText(nameEdit);
+        boolean hasName = !TextUtils.isEmpty(nameEdit.getText());
+        nameOutlineView.animateSelection(false, hasName, false);
+
+        nameEdit.setOnFocusChangeListener((v, hasFocus) -> {
+            nameOutlineView.animateSelection(hasFocus, hasFocus || !TextUtils.isEmpty(nameEdit.getText()));
+        });
 
         nameEdit.addTextChangedListener(new TextWatcher() {
             @Override
@@ -289,33 +293,49 @@ public class CustomCommandsActivity extends BaseFragment {
                         }
                     }
                 }
+                nameOutlineView.animateError(0f);
+                nameOutlineView.animateSelection(nameEdit.hasFocus(), nameEdit.hasFocus() || (s != null && s.length() > 0));
             }
         });
-        layout.addView(nameEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+        layout.addView(nameOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 16));
 
-        TextView descLabel = new TextView(act);
-        descLabel.setText(getString(R.string.CustomCommandDesc));
-        descLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        descLabel.setTextColor(hintColor);
-        layout.addView(descLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
+        OutlineTextContainerView descOutlineView = new OutlineTextContainerView(act, getResourceProvider());
+        descOutlineView.setText(getString(R.string.CustomCommandDesc));
 
         EditTextBoldCursor descEdit = new EditTextBoldCursor(act);
         descEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         descEdit.setTextColor(textColor);
-        descEdit.setHintTextColor(hintColor);
-        descEdit.setHintColor(hintColor);
-        descEdit.setHintText(getString(R.string.CustomCommandDescHint));
-        descEdit.setHint(getString(R.string.CustomCommandDescHint));
         descEdit.setCursorColor(accentColor);
-        descEdit.setBackground(Theme.createEditTextDrawable(act, true));
-        descEdit.setLineColors(lineNormal, lineActive, lineError);
-        descEdit.setPadding(0, AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6));
+        descEdit.setBackground(null);
+        descEdit.setPadding(padH, padV, padH, padV);
         descEdit.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_SENTENCES | InputType.TYPE_TEXT_FLAG_MULTI_LINE);
         descEdit.setMaxLines(3);
         if (existing != null && existing.description != null) {
             descEdit.setText(existing.description);
         }
-        layout.addView(descEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 20));
+
+        descOutlineView.addView(descEdit, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        descOutlineView.attachEditText(descEdit);
+        boolean hasDesc = !TextUtils.isEmpty(descEdit.getText());
+        descOutlineView.animateSelection(false, hasDesc, false);
+
+        descEdit.setOnFocusChangeListener((v, hasFocus) -> {
+            descOutlineView.animateSelection(hasFocus, hasFocus || !TextUtils.isEmpty(descEdit.getText()));
+        });
+
+        descEdit.addTextChangedListener(new TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void afterTextChanged(Editable s) {
+                descOutlineView.animateSelection(descEdit.hasFocus(), descEdit.hasFocus() || (s != null && s.length() > 0));
+            }
+        });
+        layout.addView(descOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 20));
 
         TextView saveButton = new TextView(act);
         saveButton.setText(getString(R.string.CustomCommandSave));
@@ -342,7 +362,8 @@ public class CustomCommandsActivity extends BaseFragment {
             String name = nameEdit.getText().toString().trim();
             String desc = descEdit.getText().toString().trim();
             if (name.isEmpty()) {
-                AndroidUtilities.shakeView(nameEdit);
+                nameOutlineView.animateError(1f);
+                AndroidUtilities.shakeView(nameOutlineView);
                 return;
             }
 
@@ -353,7 +374,8 @@ public class CustomCommandsActivity extends BaseFragment {
             }
 
             if (name.isEmpty()) {
-                AndroidUtilities.shakeView(nameEdit);
+                nameOutlineView.animateError(1f);
+                AndroidUtilities.shakeView(nameOutlineView);
                 return;
             }
 

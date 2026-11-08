@@ -43,27 +43,37 @@ public class NothingPhoneEasterEgg {
     }
 
     public static String getDeviceDisplayName() {
+        try {
+            if (com.nothing.ketchum.Common.is20111()) return "Nothing Phone (1)";
+            if (com.nothing.ketchum.Common.is22111()) return "Nothing Phone (2)";
+            if (com.nothing.ketchum.Common.is23113()) return "Nothing Phone (2a) Plus";
+            if (com.nothing.ketchum.Common.is23111()) return "Nothing Phone (2a)";
+            if (com.nothing.ketchum.Common.is24111()) return "Nothing Phone (3a)";
+        } catch (Throwable ignored) {}
+
         String model = (Build.MODEL != null ? Build.MODEL : "").toLowerCase();
         String device = (Build.DEVICE != null ? Build.DEVICE : "").toLowerCase();
+        String product = (Build.PRODUCT != null ? Build.PRODUCT : "").toLowerCase();
+        String board = (Build.BOARD != null ? Build.BOARD : "").toLowerCase();
 
         // 1. CMF Phone 2 Pro (A001 / Galaga)
-        if ((model.contains("cmf") && (model.contains("2") || model.contains("pro"))) || (model.contains("a001") && !model.contains("a001t")) || device.contains("galaga") || device.contains("cmf2")) {
+        if ((model.contains("cmf") && (model.contains("2") || model.contains("pro"))) || (model.contains("a001") && !model.contains("a001t")) || device.contains("galaga") || product.contains("galaga") || board.contains("galaga") || device.contains("cmf2")) {
             return "CMF Phone 2 Pro";
         }
         // 2. CMF Phone 1 (A015 / Tetris)
-        if (model.contains("cmf") || model.contains("a015") || device.contains("tetris")) {
+        if (model.contains("cmf") || model.contains("a015") || device.contains("tetris") || product.contains("tetris") || board.contains("tetris")) {
             return "CMF Phone 1";
         }
         // 3. Nothing Phone (4a) Pro (A069P / FroggerPro)
-        if (model.contains("a069p") || (model.contains("4a") && model.contains("pro")) || device.contains("froggerpro")) {
+        if (model.contains("a069p") || (model.contains("4a") && model.contains("pro")) || device.contains("froggerpro") || product.contains("froggerpro") || board.contains("froggerpro")) {
             return "Nothing Phone (4a) Pro";
         }
         // 4. Nothing Phone (4b) (A009P / Blastoise / SuperContra)
-        if (model.contains("a009p") || model.contains("4b") || device.contains("blastoise") || device.contains("supercontra")) {
+        if (model.contains("a009p") || model.contains("4b") || device.contains("blastoise") || device.contains("supercontra") || product.contains("blastoise") || product.contains("supercontra")) {
             return "Nothing Phone (4b)";
         }
         // 5. Nothing Phone (4a) (A069 / Frogger)
-        if (model.contains("a069") || model.contains("4a") || model.contains("phone 4") || device.contains("frogger")) {
+        if (model.contains("a069") || model.contains("4a") || model.contains("phone 4") || device.contains("frogger") || product.contains("frogger") || board.contains("frogger")) {
             return "Nothing Phone (4a)";
         }
         // 6. Nothing Phone (3a) Pro
@@ -71,31 +81,31 @@ public class NothingPhoneEasterEgg {
             return "Nothing Phone (3a) Pro";
         }
         // 7. Nothing Phone (3a) Lite (A001T / Galaxian)
-        if ((model.contains("3a") && model.contains("lite")) || model.contains("a001t") || device.contains("galaxian")) {
+        if ((model.contains("3a") && model.contains("lite")) || model.contains("a001t") || device.contains("galaxian") || product.contains("galaxian") || board.contains("galaxian")) {
             return "Nothing Phone (3a) Lite";
         }
         // 8. Nothing Phone (3a) (A059 / Asteroids)
-        if (model.contains("a059") || model.contains("3a") || device.contains("asteroids")) {
+        if (model.contains("a059") || model.contains("3a") || device.contains("asteroids") || product.contains("asteroids") || board.contains("asteroids")) {
             return "Nothing Phone (3a)";
         }
         // 9. Nothing Phone (3) (A024 / Metroid)
-        if (model.contains("a024") || model.contains("phone 3") || model.contains("phone (3)") || device.contains("metroid") || device.contains("phone3")) {
+        if (model.contains("a024") || model.contains("phone 3") || model.contains("phone (3)") || device.contains("metroid") || product.contains("metroid") || board.contains("metroid") || device.contains("phone3")) {
             return "Nothing Phone (3)";
         }
         // 10. Nothing Phone (2a) Plus (A142P / PacmanPro)
-        if (model.contains("a142p") || (model.contains("2a") && (model.contains("plus") || model.contains("+"))) || device.contains("pacmanpro")) {
+        if (model.contains("a142p") || (model.contains("2a") && (model.contains("plus") || model.contains("+"))) || device.contains("pacmanpro") || product.contains("pacmanpro") || board.contains("pacmanpro")) {
             return "Nothing Phone (2a) Plus";
         }
         // 11. Nothing Phone (2a) (A142 / Pacman / Aerodactyl)
-        if (model.contains("a142") || model.contains("2a") || device.contains("pacman") || device.contains("aerodactyl")) {
+        if (model.contains("a142") || model.contains("2a") || device.contains("pacman") || device.contains("aerodactyl") || product.contains("pacman") || product.contains("aerodactyl") || board.contains("pacman")) {
             return "Nothing Phone (2a)";
         }
         // 12. Nothing Phone (2) (A065 / Pong)
-        if (model.contains("a065") || model.contains("ain065") || device.contains("pong") || model.contains("phone 2") || model.contains("phone (2)")) {
+        if (model.contains("a065") || model.contains("ain065") || device.contains("pong") || product.contains("pong") || board.contains("pong") || model.contains("phone 2") || model.contains("phone (2)")) {
             return "Nothing Phone (2)";
         }
         // 13. Nothing Phone (1) (A063 / Spacewar)
-        if (model.contains("a063") || device.contains("spacewar") || model.contains("phone 1") || model.contains("phone (1)")) {
+        if (model.contains("a063") || device.contains("spacewar") || product.contains("spacewar") || board.contains("spacewar") || model.contains("phone 1") || model.contains("phone (1)")) {
             return "Nothing Phone (1)";
         }
         return "Nothing Phone";

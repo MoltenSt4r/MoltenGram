@@ -8,6 +8,7 @@ import android.content.Context;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.net.Uri;
 import android.text.TextUtils;
@@ -213,11 +214,11 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         installButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         installButton.setTypeface(AndroidUtilities.bold());
         installButton.setGravity(Gravity.CENTER);
-        installButton.setTextColor(0xffffffff);
-        GradientDrawable installBg = new GradientDrawable();
-        installBg.setCornerRadius(dp(22));
         int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
         if (accent == 0) accent = 0xff00d2b4;
+        installButton.setTextColor(app.exteraless.utils.UIUtil.getOnAccentColor(accent));
+        GradientDrawable installBg = new GradientDrawable();
+        installBg.setCornerRadius(dp(22));
         installBg.setColor(accent);
         installButton.setBackground(installBg);
         installButton.setPadding(dp(16), dp(10), dp(16), dp(10));
@@ -557,11 +558,17 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         iconView.setImageDrawable(null);
 
         boolean iconApplied = false;
+        Context ctx = getContext() != null ? getContext() : ApplicationLoader.applicationContext;
+
         if (!TextUtils.isEmpty(target.icon)) {
-            iconApplied = PluginIcons.apply(iconView, target.icon, () -> {
+            iconApplied = PluginIcons.apply(iconView, target.icon, null, () -> {
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
             });
+            if (iconApplied) {
+                iconView.setVisibility(View.VISIBLE);
+                defaultIconView.setVisibility(View.GONE);
+            }
         }
 
         if (!iconApplied && target.document != null && target.document.thumbs != null && !target.document.thumbs.isEmpty()) {
@@ -574,52 +581,50 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             }
         }
 
-        if (!iconApplied) {
-            Context ctx = getContext();
-            if (ctx == null) {
-                ctx = ApplicationLoader.applicationContext;
+        if (!iconApplied && ctx != null) {
+            String savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                    .getString("plugin_icon_" + target.id, null);
+            if (TextUtils.isEmpty(savedIcon)) {
+                savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString("plugin_icon_" + target.getNormalizedId(), null);
             }
-            if (ctx != null) {
-                String savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                        .getString("plugin_icon_" + target.id, null);
-                if (!TextUtils.isEmpty(savedIcon)) {
-                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
-                        iconView.setVisibility(View.VISIBLE);
-                        defaultIconView.setVisibility(View.GONE);
-                    });
+            if (!TextUtils.isEmpty(savedIcon)) {
+                target.icon = savedIcon;
+                iconApplied = PluginIcons.apply(iconView, savedIcon, null, () -> {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                });
+                if (iconApplied) {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
                 }
             }
         }
 
         if (!iconApplied) {
-            Plugin installed = PluginsController.getInstance().getPlugin(target.id);
+            Plugin installed = target.findInstalledPlugin();
             if (installed != null && !TextUtils.isEmpty(installed.icon)) {
-                iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
+                target.icon = installed.icon;
+                iconApplied = PluginIcons.apply(iconView, installed.icon, null, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
+                if (iconApplied) {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                }
             }
         }
 
-        if (!iconApplied && target.chat != null && target.chat.photo != null) {
-            AvatarDrawable avatarDrawable = new AvatarDrawable();
-            avatarDrawable.setInfo(target.chat);
-            iconView.setForUserOrChat(target.chat, avatarDrawable);
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
-            iconApplied = true;
+        if (!iconApplied) {
+            PluginStoreActivity.prefetchPluginIcon(UserConfig.selectedAccount, target, () -> {
+                bindIcon(iconView, defaultIconView, target);
+            });
         }
 
         if (!iconApplied) {
-            AvatarDrawable avatarDrawable = new AvatarDrawable();
-            avatarDrawable.setTextSize(AndroidUtilities.dp(22));
-            String name = target.name != null ? target.name : (target.id != null ? target.id : "Plugin");
-            long idHash = (long) Math.abs(name.hashCode());
-            avatarDrawable.setInfo(idHash, name, null);
-            iconView.setImageDrawable(avatarDrawable);
-            iconView.setVisibility(View.VISIBLE);
-            defaultIconView.setVisibility(View.GONE);
-            iconApplied = true;
+            iconView.setVisibility(View.GONE);
+            defaultIconView.setVisibility(View.VISIBLE);
         }
     }
 
@@ -754,7 +759,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                 dlBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
                 dlBtn.setTypeface(AndroidUtilities.bold());
                 dlBtn.setGravity(Gravity.CENTER);
-                dlBtn.setTextColor(0xffffffff);
+                dlBtn.setTextColor(app.exteraless.utils.UIUtil.getOnAccentColor(accent));
                 GradientDrawable dlBg = new GradientDrawable();
                 dlBg.setCornerRadius(dp(16));
                 dlBg.setColor(accent);

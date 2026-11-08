@@ -813,7 +813,7 @@ public class IconPackManager {
 
     private static final Set<String> BLACKLIST = new HashSet<>(Arrays.asList(
             "bar_selector", "blockpanel", "circle", "circle_big", "dice", "dino_pic",
-            "camera_btn", "cancel_big", "etg_splash", "ev_minus", "ev_plus",
+            "camera", "camera_btn", "cancel_big", "etg_splash", "ev_minus", "ev_plus",
             "chats_archive_arrow", "chats_archive_box", "chats_archive_muted", "chats_archive_pin",
             "chats_widget_preview", "contacts_widget_preview", "fast_scroll_empty", "field_carret_empty"
     ));

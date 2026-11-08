@@ -546,7 +546,7 @@ public class MoltenGramOtaManager {
         if (TextUtils.isEmpty(text)) {
             return 0;
         }
-        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,9})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
+        java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,10})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         if (m.find()) {
             try {
                 return Integer.parseInt(m.group(1));
@@ -561,7 +561,7 @@ public class MoltenGramOtaManager {
         }
         try {
             PackageManager pm = context.getPackageManager();
-            android.content.pm.PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), PackageManager.GET_ACTIVITIES);
+            android.content.pm.PackageInfo info = pm.getPackageArchiveInfo(apkFile.getAbsolutePath(), 0);
             return info != null && !TextUtils.isEmpty(info.packageName);
         } catch (Throwable t) {
             FileLog.e("Failed to verify apk archive: " + apkFile, t);
@@ -674,15 +674,15 @@ public class MoltenGramOtaManager {
                 String title = !TextUtils.isEmpty(update.title) ? update.title : ("MoltenGram " + update.version);
                 builder.setTitle(title);
 
-                StringBuilder sb = new StringBuilder();
+                android.text.SpannableStringBuilder sb = new android.text.SpannableStringBuilder();
                 sb.append(LocaleController.getString(R.string.OpenExteraUpdatesAvailable)).append(": ").append(update.version);
                 if (update.fileSize > 0) {
                     sb.append(" (").append(AndroidUtilities.formatFileSize(update.fileSize)).append(")");
                 }
                 if (!TextUtils.isEmpty(update.changelog)) {
-                    sb.append("\n\n").append(update.changelog);
+                    sb.append("\n\n").append(ChangelogFormatter.format(update.changelog));
                 }
-                builder.setMessage(sb.toString());
+                builder.setMessage(sb);
 
                 String positiveText = update.isDownloaded() ?
                         LocaleController.getString(R.string.OpenExteraUpdatesInstallNow) :
@@ -1386,7 +1386,7 @@ public class MoltenGramOtaManager {
         if (!TextUtils.isEmpty(update.changelog)) {
             builder.setStyle(new androidx.core.app.NotificationCompat.BigTextStyle()
                     .setBigContentTitle(title)
-                    .bigText(contentText + "\n\n" + update.changelog));
+                    .bigText(contentText + "\n\n" + ChangelogFormatter.toPlain(update.changelog)));
         }
 
         builder.addAction(getNotificationIconResId(), "Обновить", pendingIntent);

@@ -154,6 +154,65 @@ object AppearanceConfig {
         return squareFab.Bool()
     }
 
+    /** Форма основной кнопки FAB (0..43 из Md3AvatarShapes, по умолчанию 1 = квадрат). */
+    @JvmField
+    val fabShape = addConfig("OEAppearanceFabShape", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun fabShape(): Int {
+        ensureLoaded()
+        val s = fabShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else 1
+    }
+
+    /** Форма основной кнопки FAB в активном режиме (раскрытый Speed-Dial). */
+    @JvmField
+    val fabActiveShape = addConfig("OEAppearanceFabActiveShape", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun fabActiveShape(): Int {
+        ensureLoaded()
+        val s = fabActiveShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else fabShape()
+    }
+
+    /** Размер основной кнопки FAB в активном режиме в dp (36..96). */
+    @JvmField
+    val fabActiveSize = addConfig("OEAppearanceFabActiveSize", ConfigItem.configTypeInt, 56)
+
+    @JvmStatic
+    fun fabActiveSize(): Int {
+        ensureLoaded()
+        val s = fabActiveSize.Int()
+        return if (s in 36..96) s else fabSize()
+    }
+
+    const val FAB_ALIGN_RIGHT = 0
+    const val FAB_ALIGN_LEFT = 1
+
+    /** Расположение FAB на экране (0 = справа, 1 = слева). */
+    @JvmField
+    val fabAlignment = addConfig("OEAppearanceFabAlignment", ConfigItem.configTypeInt, FAB_ALIGN_RIGHT)
+
+    @JvmStatic
+    fun fabAlignment(): Int {
+        ensureLoaded()
+        return if (fabAlignment.Int() == FAB_ALIGN_LEFT) FAB_ALIGN_LEFT else FAB_ALIGN_RIGHT
+    }
+
+    const val SUB_FAB_ALIGN_CENTER = 0
+    const val SUB_FAB_ALIGN_EDGE = 1
+
+    /** Выравнивание кнопки камеры FAB (0 = по центру, 1 = ближе к краю). */
+    @JvmField
+    val subFabAlignment = addConfig("OEAppearanceSubFabAlignment", ConfigItem.configTypeInt, SUB_FAB_ALIGN_CENTER)
+
+    @JvmStatic
+    fun subFabAlignment(): Int {
+        ensureLoaded()
+        return if (subFabAlignment.Int() == SUB_FAB_ALIGN_EDGE) SUB_FAB_ALIGN_EDGE else SUB_FAB_ALIGN_CENTER
+    }
+
     /** MD3 Speed-Dial FAB: раскрывающееся меню плавающей кнопки. */
     @JvmField
     val md3FabSpeedDial = addConfig("OEAppearanceMd3FabSpeedDial", ConfigItem.configTypeBool, true)
@@ -172,6 +231,100 @@ object AppearanceConfig {
     fun md3FabItems(): String {
         ensureLoaded()
         return md3FabItems.String()
+    }
+
+    /** Размер основной кнопки FAB в dp (48, 56, 64, 72). По умолчанию 56. */
+    @JvmField
+    val fabSize = addConfig("OEAppearanceFabSize", ConfigItem.configTypeInt, 56)
+
+    @JvmStatic
+    fun fabSize(): Int {
+        ensureLoaded()
+        val s = fabSize.Int()
+        return if (s in 36..96) s else 56
+    }
+
+    /** Цвет фона основной кнопки FAB (0 = системный акцент). */
+    @JvmField
+    val fabColor = addConfig("OEAppearanceFabColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabColor(): Int {
+        ensureLoaded()
+        return fabColor.Int()
+    }
+
+    /** Цвет фона основной кнопки FAB в активном режиме (0 = как в покое). */
+    @JvmField
+    val fabActiveColor = addConfig("OEAppearanceFabActiveColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabActiveColor(): Int {
+        ensureLoaded()
+        val c = fabActiveColor.Int()
+        return if (c != 0) c else fabColor()
+    }
+
+    /** Цвет иконки основной кнопки FAB (0 = по умолчанию). */
+    @JvmField
+    val fabIconColor = addConfig("OEAppearanceFabIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabIconColor(): Int {
+        ensureLoaded()
+        return fabIconColor.Int()
+    }
+
+    /** Цвет иконки основной кнопки FAB в активном режиме (0 = как в покое). */
+    @JvmField
+    val fabActiveIconColor = addConfig("OEAppearanceFabActiveIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun fabActiveIconColor(): Int {
+        ensureLoaded()
+        val c = fabActiveIconColor.Int()
+        return if (c != 0) c else fabIconColor()
+    }
+
+    /** Размер вторичной кнопки (истории / камера) FAB в dp (40, 48, 56). По умолчанию 48. */
+    @JvmField
+    val subFabSize = addConfig("OEAppearanceSubFabSize", ConfigItem.configTypeInt, 48)
+
+    @JvmStatic
+    fun subFabSize(): Int {
+        ensureLoaded()
+        val s = subFabSize.Int()
+        return if (s in 28..72) s else 48
+    }
+
+    /** Цвет фона вторичной кнопки (истории / камера) FAB (0 = системный). */
+    @JvmField
+    val subFabColor = addConfig("OEAppearanceSubFabColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabColor(): Int {
+        ensureLoaded()
+        return subFabColor.Int()
+    }
+
+    /** Цвет иконки вторичной кнопки FAB (0 = по умолчанию). */
+    @JvmField
+    val subFabIconColor = addConfig("OEAppearanceSubFabIconColor", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabIconColor(): Int {
+        ensureLoaded()
+        return subFabIconColor.Int()
+    }
+
+    /** Кастомные пункты меню FAB в формате JSON. */
+    @JvmField
+    val md3FabCustomItems = addConfig("OEAppearanceMd3FabCustomItems", ConfigItem.configTypeString, "")
+
+    @JvmStatic
+    fun md3FabCustomItems(): String {
+        ensureLoaded()
+        return md3FabCustomItems.String()
     }
 
     /** Радиус скругления кнопки со стороной [size] dp. */
@@ -278,6 +431,144 @@ object AppearanceConfig {
     fun glassOutlineStyle(): Int {
         ensureLoaded()
         return glassOutlineStyle.Int()
+    }
+
+    const val GLASS_MESSAGES_OPACITY_MIN = 5
+    const val GLASS_MESSAGES_OPACITY_MAX = 85
+    const val GLASS_MESSAGES_OPACITY_DEFAULT = 28
+
+    const val GLASS_MESSAGES_REFRACTION_MIN = 0
+    const val GLASS_MESSAGES_REFRACTION_MAX = 100
+    const val GLASS_MESSAGES_REFRACTION_DEFAULT = 50
+
+    const val GLASS_MESSAGES_STROKE_MIN = 0
+    const val GLASS_MESSAGES_STROKE_MAX = 30
+    const val GLASS_MESSAGES_STROKE_DEFAULT = 14
+
+    /** Стеклянные полупрозрачные сообщения (матовое стекло по глобальному стилю размытия) */
+    @JvmField
+    val glassMessages =
+        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, true)
+
+    /** Прозрачность / матовость стеклянных сообщений (5%..85%) */
+    @JvmField
+    val glassMessagesOpacity =
+        addConfig("OEAppearanceGlassMessagesOpacity", ConfigItem.configTypeInt, GLASS_MESSAGES_OPACITY_DEFAULT)
+
+    /** Рассеивание и преломление света на гранях стеклянных сообщений (0%..100%) */
+    @JvmField
+    val glassMessagesRefraction =
+        addConfig("OEAppearanceGlassMessagesRefraction", ConfigItem.configTypeInt, GLASS_MESSAGES_REFRACTION_DEFAULT)
+
+    /** Толщина обводки стеклянных сообщений в десятых долях dp (0..30 -> 0.0dp..3.0dp) */
+    @JvmField
+    val glassMessagesStrokeWidth =
+        addConfig("OEAppearanceGlassMessagesStrokeWidth", ConfigItem.configTypeInt, GLASS_MESSAGES_STROKE_DEFAULT)
+
+    /** Своё изображение для фона пузырьков сообщений (путь к файлу) */
+    @JvmField
+    val customMessageBubbleBg =
+        addConfig("OEAppearanceCustomMessageBubbleBg", ConfigItem.configTypeString, "")
+
+    @JvmStatic
+    fun customMessageBubbleBg(): String {
+        ensureLoaded()
+        return customMessageBubbleBg.String() ?: ""
+    }
+
+    @JvmStatic
+    fun hasCustomMessageBubbleBg(): Boolean {
+        val p = customMessageBubbleBg()
+        return p.isNotEmpty() && java.io.File(p).exists()
+    }
+
+    @JvmStatic
+    fun glassMessages(): Boolean {
+        ensureLoaded()
+        return glassMessages.Bool()
+    }
+
+    @JvmStatic
+    fun glassMessagesOpacity(): Int {
+        ensureLoaded()
+        val v = glassMessagesOpacity.Int()
+        if (v in GLASS_MESSAGES_OPACITY_MIN..GLASS_MESSAGES_OPACITY_MAX) {
+            return v
+        }
+        return GLASS_MESSAGES_OPACITY_DEFAULT
+    }
+
+    @JvmStatic
+    fun glassMessagesRefraction(): Int {
+        ensureLoaded()
+        val v = glassMessagesRefraction.Int()
+        if (v in GLASS_MESSAGES_REFRACTION_MIN..GLASS_MESSAGES_REFRACTION_MAX) {
+            return v
+        }
+        return GLASS_MESSAGES_REFRACTION_DEFAULT
+    }
+
+    @JvmStatic
+    fun glassMessagesStrokeWidth(): Int {
+        ensureLoaded()
+        val v = glassMessagesStrokeWidth.Int()
+        if (v in GLASS_MESSAGES_STROKE_MIN..GLASS_MESSAGES_STROKE_MAX) {
+            return v
+        }
+        return GLASS_MESSAGES_STROKE_DEFAULT
+    }
+
+    // ---- 3D-эффект скролла списков и чатов (Cylinder 3D Scroll) ----
+
+    const val CHAT_3D_SCROLL_ANGLE_MIN = 5
+    const val CHAT_3D_SCROLL_ANGLE_MAX = 60
+    const val CHAT_3D_SCROLL_ANGLE_DEFAULT = 25
+
+    const val CHAT_3D_SCROLL_SUBTLE = 0
+    const val CHAT_3D_SCROLL_MEDIUM = 1
+    const val CHAT_3D_SCROLL_STRONG = 2
+
+    /** 3D-эффект цилиндрического скролла списков и чатов */
+    @JvmField
+    val chat3dScroll =
+        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, true)
+
+    /** Сила 3D-эффекта наклона (legacy-индекс для обратной совместимости) */
+    @JvmField
+    val chat3dScrollIntensity =
+        addConfig("OEAppearanceChat3dScrollIntensity", ConfigItem.configTypeInt, CHAT_3D_SCROLL_MEDIUM)
+
+    /** Угол 3D-эффекта наклона в градусах (настраивается слайдером 5°..60°) */
+    @JvmField
+    val chat3dScrollAngle =
+        addConfig("OEAppearanceChat3dScrollAngle", ConfigItem.configTypeInt, CHAT_3D_SCROLL_ANGLE_DEFAULT)
+
+    @JvmStatic
+    fun chat3dScroll(): Boolean {
+        ensureLoaded()
+        return chat3dScroll.Bool()
+    }
+
+    @JvmStatic
+    fun chat3dScrollAngle(): Int {
+        ensureLoaded()
+        val v = chat3dScrollAngle.Int()
+        if (v in CHAT_3D_SCROLL_ANGLE_MIN..CHAT_3D_SCROLL_ANGLE_MAX) {
+            return v
+        }
+        return CHAT_3D_SCROLL_ANGLE_DEFAULT
+    }
+
+    @JvmStatic
+    fun chat3dScrollIntensity(): Int {
+        ensureLoaded()
+        return chat3dScrollIntensity.Int()
+    }
+
+    @JvmStatic
+    fun chat3dScrollMaxAngle(): Float {
+        ensureLoaded()
+        return chat3dScrollAngle().toFloat()
     }
 
     // ---- Папки-чипсы Material 3 ----

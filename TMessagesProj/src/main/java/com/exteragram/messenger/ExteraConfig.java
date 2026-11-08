@@ -592,6 +592,56 @@ public final class ExteraConfig {
         AppearanceConfig.glassMessageMenu.setConfigBool(value);
     }
 
+    public static boolean getGlassMessages() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessages.Bool();
+    }
+
+    public static void setGlassMessages(boolean value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessages.setConfigBool(value);
+    }
+
+    public static int getGlassMessagesOpacity() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessagesOpacity();
+    }
+
+    public static void setGlassMessagesOpacity(int value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessagesOpacity.setConfigInt(value);
+    }
+
+    public static int getGlassMessagesRefraction() {
+        ensureLoaded();
+        return AppearanceConfig.glassMessagesRefraction();
+    }
+
+    public static void setGlassMessagesRefraction(int value) {
+        ensureLoaded();
+        AppearanceConfig.glassMessagesRefraction.setConfigInt(value);
+    }
+
+    public static boolean getChat3dScroll() {
+        ensureLoaded();
+        return AppearanceConfig.chat3dScroll.Bool();
+    }
+
+    public static void setChat3dScroll(boolean value) {
+        ensureLoaded();
+        AppearanceConfig.chat3dScroll.setConfigBool(value);
+    }
+
+    public static int getChat3dScrollAngle() {
+        ensureLoaded();
+        return AppearanceConfig.chat3dScrollAngle();
+    }
+
+    public static void setChat3dScrollAngle(int value) {
+        ensureLoaded();
+        AppearanceConfig.chat3dScrollAngle.setConfigInt(value);
+    }
+
     public static boolean getForceBlur() {
         return getPreferences().getBoolean("forceBlur", false);
     }
@@ -2091,6 +2141,9 @@ public final class ExteraConfig {
             new PreferencesUtils.BackupItem("springAnimations", Boolean.class),
             new PreferencesUtils.BackupItem("glassOutlineStyle", Integer.class),
             new PreferencesUtils.BackupItem("glassMessageMenu", Boolean.class),
+            new PreferencesUtils.BackupItem("glassMessages", Boolean.class),
+            new PreferencesUtils.BackupItem("chat3dScroll", Boolean.class),
+            new PreferencesUtils.BackupItem("chat3dScrollAngle", Integer.class),
             new PreferencesUtils.BackupItem("forceBlur", Boolean.class),
             new PreferencesUtils.BackupItem("eventType", Integer.class),
             new PreferencesUtils.BackupItem("navigationDrawer", Boolean.class),

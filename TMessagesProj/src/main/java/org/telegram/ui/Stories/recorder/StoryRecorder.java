@@ -140,6 +140,7 @@ import org.telegram.ui.Components.FilterShaders;
 import org.telegram.ui.Components.GestureDetectorFixDoubleTap;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.Paint.RenderView;
 import org.telegram.ui.Components.Paint.Views.EntityView;
 import org.telegram.ui.Components.Paint.Views.MessageEntityView;
@@ -2660,6 +2661,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         backButton.setImageResource(R.drawable.msg_photo_back);
         backButton.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.MULTIPLY));
         backButton.setBackground(Theme.createSelectorDrawable(0x20ffffff));
+        ScaleStateListAnimator.apply(backButton, 0.1f, 1.5f);
         backButton.setOnClickListener(e -> {
             if (awaitingPlayer) {
                 return;
@@ -2758,6 +2760,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         flashButton = new ToggleButton2(context);
         flashButton.setBackground(Theme.createSelectorDrawable(0x20ffffff));
+        ScaleStateListAnimator.apply(flashButton, 0.1f, 1.5f);
         flashButton.setOnClickListener(e -> {
             if (cameraView == null || awaitingPlayer) {
                 return;

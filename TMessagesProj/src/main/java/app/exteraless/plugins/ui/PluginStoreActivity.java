@@ -5,9 +5,11 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.app.Activity;
 import android.content.Context;
+import android.content.SharedPreferences;
 import android.graphics.Color;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
+import android.graphics.drawable.Drawable;
 import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -23,6 +25,7 @@ import android.widget.LinearLayout;
 import android.widget.TextView;
 
 import androidx.annotation.NonNull;
+import androidx.recyclerview.widget.GridLayoutManager;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -56,6 +59,7 @@ import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AvatarDrawable;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.FragmentFloatingButton;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.UItem;
@@ -84,6 +88,7 @@ import app.exteraless.plugins.PluginAutoConverter;
 import app.exteraless.plugins.PluginInstallHelper;
 import app.exteraless.plugins.PluginsConstants;
 import app.exteraless.plugins.PluginsController;
+import app.exteraless.utils.UIUtil;
 import org.telegram.ui.LaunchActivity;
 
 /**
@@ -126,7 +131,7 @@ public class PluginStoreActivity extends BaseFragment {
     private static final java.util.regex.Pattern DASH_UNDERSCORE_PATTERN = java.util.regex.Pattern.compile("[-_]");
     private static final java.util.regex.Pattern NORM_VERSION_SUFFIX_PATTERN = java.util.regex.Pattern.compile("(?:_|-|\\s+)(?:v|rel|ver)?\\s*[0-9]+(?:\\.[0-9]+)*(?:_rel_[0-9.]+)?.*$");
     private static final java.util.regex.Pattern NORM_PARENS_SUFFIX_PATTERN = java.util.regex.Pattern.compile("\\s*\\([0-9]+\\)$");
-    private static final java.util.regex.Pattern ICON_ATTR_PATTERN = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([a-zA-Z0-9_]+/[0-9]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
+    private static final java.util.regex.Pattern ICON_ATTR_PATTERN = java.util.regex.Pattern.compile("(?:__icon__|icon)\\s*[=:]\\s*[\"']?([^\"'\r\n\t ]+)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern ICON_STICKER_URL_PATTERN = java.util.regex.Pattern.compile("(?:https?://)?t\\.me/addstickers/([a-zA-Z0-9_]+)(?:/([0-9]+))?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern VER_TEXT_LABELED_PATTERN = java.util.regex.Pattern.compile("(?:version|версия|ver|v)\\.?\\s*[:=\\s]\\s*[\"']?([0-9]+(?:\\.[0-9]+)*)[\"']?", java.util.regex.Pattern.CASE_INSENSITIVE);
     private static final java.util.regex.Pattern VER_TEXT_PREFIX_PATTERN = java.util.regex.Pattern.compile("(?:^|\\s)[vV]\\.?([0-9]+(?:\\.[0-9]+)+)", java.util.regex.Pattern.CASE_INSENSITIVE);
@@ -203,6 +208,7 @@ public class PluginStoreActivity extends BaseFragment {
         public String description;
         public String updateDate;
         public String format = ".plugin";
+        public String category = "";
         public boolean isOpenSource = true;
         public List<String> tags = new ArrayList<>();
         public boolean downloading = false;
@@ -480,15 +486,16 @@ public class PluginStoreActivity extends BaseFragment {
         contentView.setOrientation(LinearLayout.VERTICAL);
         contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
 
-        // Chips bar
+        // Chips bar (MD3 Expressive tabs matching Avatar Shapes style)
         HorizontalScrollView chipsScroll = new HorizontalScrollView(context);
         chipsScroll.setHorizontalScrollBarEnabled(false);
         chipsScroll.setClipToPadding(false);
-        chipsScroll.setPadding(dp(12), dp(8), dp(12), dp(8));
-        chipsScroll.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
+        chipsScroll.setPadding(dp(14), dp(10), dp(14), dp(10));
+        chipsScroll.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundWhite));
 
         chipsLayout = new LinearLayout(context);
         chipsLayout.setOrientation(LinearLayout.HORIZONTAL);
+        chipsLayout.setGravity(Gravity.CENTER_VERTICAL);
         chipsScroll.addView(chipsLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT));
         contentView.addView(chipsScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         displayedCount = config.getPageSize();
@@ -497,12 +504,26 @@ public class PluginStoreActivity extends BaseFragment {
         }
         buildChips(context);
 
-        // RecyclerView
+        // RecyclerView (App Store Grid Layout)
         listView = new UniversalRecyclerView(this, this::fillItems, null, null);
-        listView.setSections();
         listView.adapter.setApplyBackground(false);
+        final int spanCount = AndroidUtilities.isTablet() ? 3 : 2;
+        GridLayoutManager gridLayoutManager = new GridLayoutManager(context, spanCount);
+        gridLayoutManager.setSpanSizeLookup(new GridLayoutManager.SpanSizeLookup() {
+            @Override
+            public int getSpanSize(int position) {
+                if (listView.adapter != null) {
+                    UItem item = listView.adapter.getItem(position);
+                    if (item != null && item.instanceOf(StorePluginItemFactory.class)) {
+                        return 1;
+                    }
+                }
+                return spanCount;
+            }
+        });
+        listView.setLayoutManager(gridLayoutManager);
         listView.setClipToPadding(false);
-        listView.setPadding(0, dp(4), 0, dp(88));
+        listView.setPadding(dp(6), dp(6), dp(6), dp(88));
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
@@ -524,27 +545,16 @@ public class PluginStoreActivity extends BaseFragment {
         FrameLayout rootLayout = new FrameLayout(context);
         rootLayout.addView(contentView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
-        // Aurora Store squircle search FAB
-        FrameLayout fab = new FrameLayout(context);
-        GradientDrawable fabBg = new GradientDrawable();
-        fabBg.setCornerRadius(dp(16));
-        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-        if (accent == 0) accent = 0xff00d2b4;
-        fabBg.setColor(accent);
-        fab.setBackground(fabBg);
-
-        ImageView fabIcon = new ImageView(context);
-        fabIcon.setImageResource(R.drawable.ic_ab_search_solar);
-        fabIcon.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
-        fabIcon.setColorFilter(new PorterDuffColorFilter(0xffffffff, PorterDuff.Mode.SRC_IN));
-        fab.addView(fabIcon, LayoutHelper.createFrame(24, 24, Gravity.CENTER));
-
+        // MD3 Customizable Search FAB matching main app FAB & photo picker camera FAB
+        FragmentFloatingButton fab = new FragmentFloatingButton(context, resourceProvider);
+        fab.setImageResource(R.drawable.ic_ab_search_solar);
+        fab.setContentDescription(getString(R.string.Search));
         fab.setOnClickListener(v -> {
             if (searchItem != null) {
                 searchItem.openSearch(true);
             }
         });
-        rootLayout.addView(fab, LayoutHelper.createFrame(56, 56, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, 16, 0, 16, 20));
+        rootLayout.addView(fab, FragmentFloatingButton.createDefaultLayoutParams());
         loadInitialCatalog();
 
         fragmentView = rootLayout;
@@ -613,40 +623,74 @@ public class PluginStoreActivity extends BaseFragment {
                 R.string.PluginsStoreFilterChats,
                 R.string.PluginsStoreFilterDev
         };
+        int[] iconResIds = {
+                R.drawable.baseline_extension_24,
+                R.drawable.msg_retry,
+                R.drawable.trusted_mini,
+                R.drawable.msg_theme,
+                R.drawable.msg_settings,
+                R.drawable.msg_customize_s,
+                R.drawable.msg_photos,
+                R.drawable.msg_discussion,
+                R.drawable.msg_log
+        };
+
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xff00d2b4;
+        int onAccent = UIUtil.getOnAccentColor(accent);
+        int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText);
+        int subTextColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
 
         for (int i = 0; i < filterIds.length; i++) {
             final int fId = filterIds[i];
-            TextView chip = new TextView(context);
+            boolean active = (currentFilter == fId);
+
+            LinearLayout chip = new LinearLayout(context);
+            chip.setOrientation(LinearLayout.HORIZONTAL);
+            chip.setGravity(Gravity.CENTER);
+            chip.setPadding(dp(14), dp(8), dp(14), dp(8));
+
+            int chipBgColor;
+            int chipFgColor;
+            if (active) {
+                chipBgColor = accent;
+                chipFgColor = onAccent;
+            } else if (fId == FILTER_UPDATES && updatesCount > 0) {
+                chipBgColor = Theme.multAlpha(accent, 0.14f);
+                chipFgColor = accent;
+            } else {
+                chipBgColor = Theme.multAlpha(textColor, 0.06f);
+                chipFgColor = subTextColor;
+            }
+
+            chip.setBackground(Theme.createSimpleSelectorRoundRectDrawable(
+                    dp(18),
+                    chipBgColor,
+                    Theme.multAlpha(active ? onAccent : accent, 0.16f)
+            ));
+
+            ImageView chipIcon = new ImageView(context);
+            chipIcon.setImageResource(iconResIds[i]);
+            chipIcon.setScaleType(ImageView.ScaleType.FIT_CENTER);
+            chipIcon.setColorFilter(new PorterDuffColorFilter(chipFgColor, PorterDuff.Mode.SRC_IN));
+            chip.addView(chipIcon, LayoutHelper.createLinear(18, 18, Gravity.CENTER_VERTICAL, 0, 0, 6, 0));
+
+            TextView chipText = new TextView(context);
             String title = getString(titleResIds[i]);
             if (fId == FILTER_UPDATES && updatesCount > 0) {
                 title += " (" + updatesCount + ")";
             }
-            chip.setText(title);
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-            chip.setTypeface(AndroidUtilities.bold());
-            chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(14), dp(6), dp(14), dp(6));
+            chipText.setText(title);
+            chipText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            chipText.setTypeface(AndroidUtilities.bold());
+            chipText.setTextColor(chipFgColor);
+            chipText.setSingleLine(true);
+            chip.addView(chipText, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
-            boolean active = (currentFilter == fId);
-            GradientDrawable bg = new GradientDrawable();
-            bg.setCornerRadius(dp(16));
-            if (active) {
-                int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-                if (accent == 0) accent = 0xff00d2b4;
-                bg.setColor(accent);
-                chip.setTextColor(0xffffffff);
-            } else if (fId == FILTER_UPDATES && updatesCount > 0) {
-                bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                chip.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-            } else {
-                bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-                chip.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            LinearLayout.LayoutParams lp = LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 36);
+            if (i < filterIds.length - 1) {
+                lp.rightMargin = dp(8);
             }
-            chip.setBackground(bg);
-
-            LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(
-                    LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT);
-            lp.rightMargin = dp(8);
             chip.setOnClickListener(v -> {
                 if (currentFilter != fId) {
                     currentFilter = fId;
@@ -722,7 +766,7 @@ public class PluginStoreActivity extends BaseFragment {
             AndroidUtilities.runOnUIThread(() -> {
                 int delay = 0;
                 for (TLRPC.Chat c : folderChats) {
-                    if (c != null && !containsChat(activeSourceChats, c)) {
+                    if (c != null && !isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
                         activeSourceChats.add(c);
                         final TLRPC.Chat chatToSearch = c;
                         AndroidUtilities.runOnUIThread(() -> searchChatBatch(chatToSearch, 0, null, null), delay);
@@ -732,6 +776,19 @@ public class PluginStoreActivity extends BaseFragment {
                 AndroidUtilities.runOnUIThread(this::resolveKnownChannels, delay + 150);
             });
         });
+    }
+
+    private static boolean isBlockedChannel(TLRPC.Chat c) {
+        if (c == null) return true;
+        if (c.username != null) {
+            String u = c.username.toLowerCase(Locale.ROOT);
+            if (u.equals("exteraplugins") || u.equals("exerealplugins")) return true;
+        }
+        if (c.title != null) {
+            String t = c.title.toLowerCase(Locale.ROOT);
+            if (t.contains("exteraplugins") || t.contains("exerealplugins")) return true;
+        }
+        return false;
     }
 
     private static boolean containsChat(List<TLRPC.Chat> list, TLRPC.Chat chat) {
@@ -760,7 +817,7 @@ public class PluginStoreActivity extends BaseFragment {
                         if (r != null && !r.chats.isEmpty()) {
                             TLRPC.Chat c = r.chats.get(0);
                             AndroidUtilities.runOnUIThread(() -> {
-                                if (!containsChat(activeSourceChats, c)) {
+                                if (!isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
                                     activeSourceChats.add(c);
                                     searchChatBatch(c, 0, null, null);
                                 }
@@ -821,6 +878,41 @@ public class PluginStoreActivity extends BaseFragment {
                             sp.message = msg;
                             sp.chat = chat;
                             sp.icon = parseIconFromText(msg.message);
+                            if (TextUtils.isEmpty(sp.icon) && msg.entities != null) {
+                                for (TLRPC.MessageEntity ent : msg.entities) {
+                                    if (ent instanceof TLRPC.TL_messageEntityCustomEmoji) {
+                                        long docId = ((TLRPC.TL_messageEntityCustomEmoji) ent).document_id;
+                                        if (docId != 0) {
+                                            sp.icon = "emoji/" + docId;
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+                            if (TextUtils.isEmpty(sp.icon)) {
+                                sp.icon = ApplicationLoader.applicationContext
+                                        .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                                        .getString("plugin_icon_" + sp.id, null);
+                                if (TextUtils.isEmpty(sp.icon)) {
+                                    sp.icon = ApplicationLoader.applicationContext
+                                            .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                                            .getString("plugin_icon_" + sp.getNormalizedId(), null);
+                                }
+                            }
+                            if (TextUtils.isEmpty(sp.icon)) {
+                                try {
+                                    File localFile = FileLoader.getInstance(currentAccount).getPathToMessage(msg);
+                                    if (localFile == null || !localFile.exists()) {
+                                        localFile = FileLoader.getInstance(currentAccount).getPathToAttach(doc, true);
+                                    }
+                                    if (localFile != null && localFile.exists()) {
+                                        sp.icon = PluginIcons.extractIconFromFile(localFile);
+                                        if (!TextUtils.isEmpty(sp.icon)) {
+                                            persistPluginIcon(sp);
+                                        }
+                                    }
+                                } catch (Exception ignored) {}
+                            }
                             sp.tags.add(sp.isOpenSource ? "OpenSource" : "Binary");
                             categorizePlugin(sp);
                             discovered.add(sp);
@@ -1316,7 +1408,19 @@ public class PluginStoreActivity extends BaseFragment {
         try {
             java.util.regex.Matcher m = ICON_ATTR_PATTERN.matcher(text);
             if (m.find()) {
-                return m.group(1);
+                String val = m.group(1);
+                if (!TextUtils.isEmpty(val)) {
+                    val = val.trim();
+                    if (val.contains("t.me/addstickers/")) {
+                        java.util.regex.Matcher sm = ICON_STICKER_URL_PATTERN.matcher(val);
+                        if (sm.find()) {
+                            String pack = sm.group(1);
+                            String idx = sm.group(2);
+                            return pack + "/" + (idx != null ? idx : "0");
+                        }
+                    }
+                    return val;
+                }
             }
             m = ICON_STICKER_URL_PATTERN.matcher(text);
             if (m.find()) {
@@ -1332,21 +1436,35 @@ public class PluginStoreActivity extends BaseFragment {
         String text = (sp.name + " " + (sp.description != null ? sp.description : "")).toLowerCase(Locale.ROOT);
         if (text.contains("ui") || text.contains("интерфейс") || text.contains("вид") || text.contains("style") || text.contains("theme") || text.contains("дизайн") || text.contains("стил") || text.contains("drawer") || text.contains("icon")) {
             if (!sp.tags.contains("Interface")) sp.tags.add("Interface");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Interface";
         }
         if (text.contains("tool") || text.contains("инструмент") || text.contains("download") || text.contains("скач") || text.contains("viewer") || text.contains("log") || text.contains("bot") || text.contains("бот") || text.contains("api") || text.contains("утилит")) {
             if (!sp.tags.contains("Tools")) sp.tags.add("Tools");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Tools";
         }
         if (text.contains("tweak") || text.contains("настройк") || text.contains("mod") || text.contains("custom") || text.contains("кастомизац") || text.contains("hide") || text.contains("скры")) {
             if (!sp.tags.contains("Tweaks")) sp.tags.add("Tweaks");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Tweaks";
         }
         if (text.contains("media") || text.contains("плеер") || text.contains("player") || text.contains("audio") || text.contains("видео") || text.contains("video") || text.contains("музык") || text.contains("music") || text.contains("sound") || text.contains("voice") || text.contains("звук") || text.contains("mp3") || text.contains("stream")) {
             if (!sp.tags.contains("Media")) sp.tags.add("Media");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Media";
         }
         if (text.contains("chat") || text.contains("сообщен") || text.contains("чат") || text.contains("диалог") || text.contains("msg") || text.contains("message") || text.contains("перевод") || text.contains("translate") || text.contains("forward") || text.contains("spam") || text.contains("reply")) {
             if (!sp.tags.contains("Chats")) sp.tags.add("Chats");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Chats";
         }
         if (text.contains("dev") || text.contains("отладк") || text.contains("hook") || text.contains("dex") || text.contains("script") || text.contains("debug") || text.contains("eval") || text.contains("разработ")) {
             if (!sp.tags.contains("Dev")) sp.tags.add("Dev");
+            if (TextUtils.isEmpty(sp.category)) sp.category = "Dev";
+        }
+        if (TextUtils.isEmpty(sp.category) && sp.tags != null) {
+            for (String t : sp.tags) {
+                if (!"OpenSource".equalsIgnoreCase(t) && !"Binary".equalsIgnoreCase(t)) {
+                    sp.category = t;
+                    break;
+                }
+            }
         }
     }
 
@@ -1485,7 +1603,7 @@ public class PluginStoreActivity extends BaseFragment {
                                     np.versions.add(v);
                                 }
                             }
-                            if (TextUtils.isEmpty(np.icon) && !TextUtils.isEmpty(existing.icon)) np.icon = existing.icon;
+                            if (!TextUtils.isEmpty(existing.icon)) np.icon = existing.icon;
                             if (np.chat == null && existing.chat != null) np.chat = existing.chat;
                             allPlugins.set(i, np);
                             changed = true;
@@ -1610,6 +1728,7 @@ public class PluginStoreActivity extends BaseFragment {
                         }
                     }
                 }
+                categorizePlugin(p);
                 list.add(p);
             }
             return list;
@@ -1836,12 +1955,12 @@ public class PluginStoreActivity extends BaseFragment {
         button.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         button.setTypeface(AndroidUtilities.bold());
         button.setGravity(Gravity.CENTER);
-        button.setTextColor(0xffffffff);
         GradientDrawable btnBg = new GradientDrawable();
         btnBg.setCornerRadius(dp(20));
         int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
         if (accent == 0) accent = 0xff00d2b4;
         btnBg.setColor(accent);
+        button.setTextColor(UIUtil.getOnAccentColor(accent));
         button.setBackground(btnBg);
         button.setPadding(dp(24), dp(10), dp(24), dp(10));
         button.setOnClickListener(v -> {
@@ -1870,13 +1989,165 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
+    private static final java.util.Set<String> prefetchingIcons = new java.util.HashSet<>();
+
+    public static void prefetchPluginIcon(int currentAccount, StorePlugin plugin, Runnable onReady) {
+        if (plugin == null || !TextUtils.isEmpty(plugin.icon)) {
+            return;
+        }
+
+        Context context = ApplicationLoader.applicationContext;
+        SharedPreferences prefs = context != null ? context.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE) : null;
+        if (prefs != null) {
+            String saved = prefs.getString("plugin_icon_" + plugin.id, null);
+            if (TextUtils.isEmpty(saved)) {
+                saved = prefs.getString("plugin_icon_" + plugin.getNormalizedId(), null);
+            }
+            if (!TextUtils.isEmpty(saved)) {
+                plugin.icon = saved;
+                if (onReady != null) {
+                    onReady.run();
+                }
+                return;
+            }
+        }
+
+        Plugin installed = plugin.findInstalledPlugin();
+        if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+            plugin.icon = installed.icon;
+            if (prefs != null) {
+                prefs.edit()
+                        .putString("plugin_icon_" + plugin.id, plugin.icon)
+                        .putString("plugin_icon_" + plugin.getNormalizedId(), plugin.icon)
+                        .apply();
+            }
+            if (onReady != null) {
+                onReady.run();
+            }
+            return;
+        }
+
+        TLRPC.Document doc = plugin.document;
+        TLRPC.Message msg = plugin.message;
+        if (doc == null && plugin.versions != null) {
+            for (StorePlugin v : plugin.versions) {
+                if (v != null && v.document != null) {
+                    doc = v.document;
+                    if (msg == null) msg = v.message;
+                    break;
+                }
+            }
+        }
+
+        if (doc == null || doc.size > 350 * 1024) {
+            return;
+        }
+
+        File localFile = null;
+        if (msg != null) {
+            localFile = FileLoader.getInstance(currentAccount).getPathToMessage(msg);
+        }
+        if (localFile == null || !localFile.exists() || localFile.length() == 0) {
+            localFile = FileLoader.getInstance(currentAccount).getPathToAttach(doc, true);
+        }
+
+        if (localFile != null && localFile.exists() && localFile.length() > 0) {
+            final File f = localFile;
+            Utilities.globalQueue.postRunnable(() -> {
+                String extracted = PluginIcons.extractIconFromFile(f);
+                if (!TextUtils.isEmpty(extracted)) {
+                    plugin.icon = extracted;
+                    if (prefs != null) {
+                        prefs.edit()
+                                .putString("plugin_icon_" + plugin.id, extracted)
+                                .putString("plugin_icon_" + plugin.getNormalizedId(), extracted)
+                                .apply();
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (onReady != null) onReady.run();
+                    });
+                }
+            });
+            return;
+        }
+
+        final String attachFileName = FileLoader.getAttachFileName(doc);
+        if (TextUtils.isEmpty(attachFileName)) {
+            return;
+        }
+
+        synchronized (prefetchingIcons) {
+            if (prefetchingIcons.contains(attachFileName)) {
+                return;
+            }
+            prefetchingIcons.add(attachFileName);
+        }
+
+        final TLRPC.Document finalDoc = doc;
+        final TLRPC.Message finalMsg = msg;
+        final String targetId = plugin.id;
+        final String targetNormId = plugin.getNormalizedId();
+
+        final NotificationCenter.NotificationCenterDelegate[] holder = new NotificationCenter.NotificationCenterDelegate[1];
+        NotificationCenter.NotificationCenterDelegate observer = (id, account, args) -> {
+            if (args == null || args.length == 0) return;
+            String location = (String) args[0];
+            if (!attachFileName.equals(location)) return;
+
+            NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoaded);
+            NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoadFailed);
+            synchronized (prefetchingIcons) {
+                prefetchingIcons.remove(attachFileName);
+            }
+
+            if (id == NotificationCenter.fileLoaded) {
+                Utilities.globalQueue.postRunnable(() -> {
+                    File file = null;
+                    if (finalMsg != null) {
+                        file = FileLoader.getInstance(currentAccount).getPathToMessage(finalMsg);
+                    }
+                    if (file == null || !file.exists() || file.length() == 0) {
+                        file = FileLoader.getInstance(currentAccount).getPathToAttach(finalDoc, true);
+                    }
+                    if (file != null && file.exists() && file.length() > 0) {
+                        String icon = PluginIcons.extractIconFromFile(file);
+                        if (!TextUtils.isEmpty(icon)) {
+                            plugin.icon = icon;
+                            if (prefs != null) {
+                                prefs.edit()
+                                        .putString("plugin_icon_" + targetId, icon)
+                                        .putString("plugin_icon_" + targetNormId, icon)
+                                        .apply();
+                            }
+                            AndroidUtilities.runOnUIThread(() -> {
+                                if (onReady != null) onReady.run();
+                            });
+                        }
+                    }
+                });
+            }
+        };
+        holder[0] = observer;
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoaded);
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoadFailed);
+
+        Object parentObject = msg != null ? new MessageObject(currentAccount, msg, false, false) : "plugin_store_icon";
+        FileLoader.getInstance(currentAccount).loadFile(finalDoc, parentObject, FileLoader.PRIORITY_LOW, 1);
+    }
+
     private void persistPluginIcon(StorePlugin plugin) {
-        if (plugin != null && !TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
-            ApplicationLoader.applicationContext
+        if (plugin != null && !TextUtils.isEmpty(plugin.icon)) {
+            SharedPreferences.Editor ed = ApplicationLoader.applicationContext
                     .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString("plugin_icon_" + plugin.id, plugin.icon)
-                    .apply();
+                    .edit();
+            if (!TextUtils.isEmpty(plugin.id)) {
+                ed.putString("plugin_icon_" + plugin.id, plugin.icon);
+            }
+            String norm = plugin.getNormalizedId();
+            if (!TextUtils.isEmpty(norm)) {
+                ed.putString("plugin_icon_" + norm, plugin.icon);
+            }
+            ed.apply();
         }
     }
 
@@ -2524,8 +2795,7 @@ public class PluginStoreActivity extends BaseFragment {
             if (accentPressed == 0) accentPressed = 0x3300d2b4;
             pillContainer.setBackground(Theme.createSimpleSelectorRoundRectDrawable(AndroidUtilities.dp(22), accent, accentPressed));
 
-            int textColor = Theme.getColor(Theme.key_featuredStickers_buttonText);
-            if (textColor == 0) textColor = 0xffffffff;
+            int textColor = UIUtil.getOnAccentColor(accent);
 
             textView = new TextView(context);
             textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -2609,19 +2879,20 @@ public class PluginStoreActivity extends BaseFragment {
         private final TextView openButton;
         private StorePlugin plugin;
         private StorePluginDelegate delegate;
-        private boolean expanded = false;
         private boolean isIconLoaded = false;
 
         public StorePluginCell(Context context) {
             super(context);
             setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-            setPadding(dp(12), dp(4), dp(12), dp(6));
+            setPadding(dp(4), dp(4), dp(4), dp(4));
 
             card = new LinearLayout(context);
             card.setOrientation(LinearLayout.VERTICAL);
-            int radius = app.exteraless.appearance.AppearanceConfig.sectionRadius();
-            card.setBackground(Theme.createRoundRectDrawable(dp(radius), Theme.getColor(Theme.key_windowBackgroundWhite)));
-            card.setPadding(dp(14), dp(14), dp(14), dp(14));
+            int radius = Math.max(20, app.exteraless.appearance.AppearanceConfig.sectionRadius());
+            int cardBgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+            int cardRippleColor = Theme.multAlpha(Theme.getColor(Theme.key_featuredStickers_addButton), 0.10f);
+            card.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(radius), cardBgColor, cardRippleColor));
+            card.setPadding(dp(12), dp(12), dp(12), dp(12));
             card.setOnClickListener(v -> {
                 if (delegate != null && plugin != null) {
                     delegate.onCardClick(plugin);
@@ -2629,11 +2900,9 @@ public class PluginStoreActivity extends BaseFragment {
             });
             addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-            // Header row
-            LinearLayout headerRow = new LinearLayout(context);
-            headerRow.setOrientation(LinearLayout.HORIZONTAL);
-            headerRow.setGravity(Gravity.CENTER_VERTICAL);
-            card.addView(headerRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            // Top row: Plugin Squircle Icon (left) + Format/OpenSource badge (right)
+            FrameLayout topRow = new FrameLayout(context);
+            card.addView(topRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
             FrameLayout iconContainer = new FrameLayout(context);
             GradientDrawable iconBg = new GradientDrawable();
@@ -2651,67 +2920,48 @@ public class PluginStoreActivity extends BaseFragment {
             iconView.setRoundRadius(dp(14));
             iconView.setVisibility(GONE);
             iconContainer.addView(iconView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-            headerRow.addView(iconContainer, LayoutHelper.createLinear(50, 50));
-
-            LinearLayout titleCol = new LinearLayout(context);
-            titleCol.setOrientation(LinearLayout.VERTICAL);
-            titleCol.setGravity(Gravity.CENTER_VERTICAL);
-            headerRow.addView(titleCol, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 12, 0, 8, 0));
-
-            nameView = new TextView(context);
-            nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-            nameView.setTypeface(AndroidUtilities.bold());
-            nameView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            nameView.setMaxLines(2);
-            nameView.setEllipsize(TextUtils.TruncateAt.END);
-            titleCol.addView(nameView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+            topRow.addView(iconContainer, LayoutHelper.createFrame(48, 48, Gravity.LEFT | Gravity.TOP));
 
             typeBadge = new TextView(context);
-            typeBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+            typeBadge.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
             typeBadge.setTypeface(AndroidUtilities.bold());
-            typeBadge.setPadding(dp(7), dp(2), dp(7), dp(2));
-            titleCol.addView(typeBadge, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 3, 0, 0));
+            typeBadge.setPadding(dp(7), dp(3), dp(7), dp(3));
+            typeBadge.setSingleLine(true);
+            topRow.addView(typeBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.TOP));
 
+            // Plugin Title
+            nameView = new TextView(context);
+            nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            nameView.setTypeface(AndroidUtilities.bold());
+            nameView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            nameView.setSingleLine(true);
+            nameView.setEllipsize(TextUtils.TruncateAt.END);
+            card.addView(nameView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 10, 0, 0));
+
+            // Author & Version subtitle
             subView = new TextView(context);
-            subView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            subView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
             subView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
             subView.setSingleLine(true);
             subView.setEllipsize(TextUtils.TruncateAt.END);
-            titleCol.addView(subView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+            card.addView(subView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
-            // Description
+            // Description (fixed 2 lines in grid card for clean visual rhythm)
             descView = new TextView(context);
-            descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            descView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            descView.setLineSpacing(0, 1.15f);
-            descView.setMaxLines(3);
+            descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            descView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            descView.setLineSpacing(0, 1.12f);
+            descView.setLines(2);
+            descView.setMaxLines(2);
             descView.setEllipsize(TextUtils.TruncateAt.END);
-            descView.setOnClickListener(v -> {
-                expanded = !expanded;
-                descView.setMaxLines(expanded ? Integer.MAX_VALUE : 3);
-            });
-            card.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 10, 0, 0));
+            card.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 6, 0, 0));
 
-            // Tags
             tagsView = new TextView(context);
-            tagsView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
-            tagsView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4));
-            card.addView(tagsView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 6, 0, 0));
-
-            // Actions row
-            LinearLayout actionsRow = new LinearLayout(context);
-            actionsRow.setOrientation(LinearLayout.HORIZONTAL);
-            actionsRow.setGravity(Gravity.CENTER_VERTICAL);
-            card.addView(actionsRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 10, 0, 0));
-
+            tagsView.setVisibility(GONE);
             openButton = new TextView(context);
-            openButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-            openButton.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-            openButton.setSingleLine(true);
-            openButton.setEllipsize(TextUtils.TruncateAt.END);
-            openButton.setPadding(0, dp(4), dp(8), dp(4));
-            actionsRow.addView(openButton, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+            openButton.setVisibility(GONE);
 
+            // Full-width MD3 Action Pill Button at bottom of card
             actionButton = new TextView(context);
             actionButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             actionButton.setTypeface(AndroidUtilities.bold());
@@ -2719,9 +2969,8 @@ public class PluginStoreActivity extends BaseFragment {
             actionButton.setSingleLine(true);
             actionButton.setEllipsize(TextUtils.TruncateAt.END);
             actionButton.setMinHeight(dp(36));
-            actionButton.setMinimumWidth(dp(84));
-            actionButton.setPadding(dp(14), dp(6), dp(14), dp(6));
-            actionsRow.addView(actionButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+            actionButton.setPadding(dp(12), dp(6), dp(12), dp(6));
+            card.addView(actionButton, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 36, 0, 10, 0, 0));
         }
 
         @Override
@@ -2761,10 +3010,14 @@ public class PluginStoreActivity extends BaseFragment {
 
             boolean iconApplied = false;
             if (!TextUtils.isEmpty(plugin.icon)) {
-                iconApplied = PluginIcons.apply(iconView, plugin.icon, () -> {
+                iconApplied = PluginIcons.apply(iconView, plugin.icon, null, () -> {
                     iconView.setVisibility(VISIBLE);
                     defaultIconView.setVisibility(GONE);
                 });
+                if (iconApplied) {
+                    iconView.setVisibility(VISIBLE);
+                    defaultIconView.setVisibility(GONE);
+                }
             }
 
             if (!iconApplied) {
@@ -2782,43 +3035,50 @@ public class PluginStoreActivity extends BaseFragment {
             if (!iconApplied) {
                 String savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
                         .getString("plugin_icon_" + plugin.id, null);
+                if (TextUtils.isEmpty(savedIcon)) {
+                    savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                            .getString("plugin_icon_" + plugin.getNormalizedId(), null);
+                }
                 if (!TextUtils.isEmpty(savedIcon)) {
-                    iconApplied = PluginIcons.apply(iconView, savedIcon, () -> {
+                    plugin.icon = savedIcon;
+                    iconApplied = PluginIcons.apply(iconView, savedIcon, null, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
+                    if (iconApplied) {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    }
                 }
             }
 
             if (!iconApplied) {
-                Plugin installed = PluginsController.getInstance().getPlugin(plugin.id);
+                Plugin installed = plugin.findInstalledPlugin();
                 if (installed != null && !TextUtils.isEmpty(installed.icon)) {
-                    iconApplied = PluginIcons.apply(iconView, installed.icon, () -> {
+                    plugin.icon = installed.icon;
+                    iconApplied = PluginIcons.apply(iconView, installed.icon, null, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
+                    if (iconApplied) {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    }
                 }
             }
 
-            if (!iconApplied && plugin.chat != null && plugin.chat.photo != null) {
-                AvatarDrawable avatarDrawable = new AvatarDrawable();
-                avatarDrawable.setInfo(plugin.chat);
-                iconView.setForUserOrChat(plugin.chat, avatarDrawable);
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
-                iconApplied = true;
+            if (!iconApplied) {
+                prefetchPluginIcon(UserConfig.selectedAccount, plugin, () -> {
+                    if (isAttachedToWindow() && this.plugin == plugin) {
+                        isIconLoaded = false;
+                        loadIcon();
+                    }
+                });
             }
 
             if (!iconApplied) {
-                AvatarDrawable avatarDrawable = new AvatarDrawable();
-                avatarDrawable.setTextSize(AndroidUtilities.dp(16));
-                String name = plugin.name != null ? plugin.name : (plugin.id != null ? plugin.id : "Plugin");
-                long idHash = (long) Math.abs(name.hashCode());
-                avatarDrawable.setInfo(idHash, name, null);
-                iconView.setImageDrawable(avatarDrawable);
-                iconView.setVisibility(VISIBLE);
-                defaultIconView.setVisibility(GONE);
-                iconApplied = true;
+                iconView.setVisibility(GONE);
+                defaultIconView.setVisibility(VISIBLE);
             }
         }
 
@@ -2830,61 +3090,45 @@ public class PluginStoreActivity extends BaseFragment {
             this.delegate = d;
             nameView.setText(p.name != null ? p.name : p.id);
 
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accent == 0) accent = 0xff00d2b4;
+            int onAccent = UIUtil.getOnAccentColor(accent);
+
             GradientDrawable tbBg = new GradientDrawable();
             tbBg.setCornerRadius(dp(8));
             if (p.isOpenSource) {
-                tbBg.setColor(0x2200c853);
-                typeBadge.setTextColor(0xff00c853);
-                typeBadge.setText(getString(R.string.PluginsStoreOpenSource) + " (" + (p.format != null ? p.format : ".plugin") + ")");
+                int badgeColor = Theme.getColor(Theme.key_windowBackgroundWhiteGreenText);
+                if (badgeColor == 0) badgeColor = accent;
+                tbBg.setColor(Theme.multAlpha(badgeColor, 0.14f));
+                typeBadge.setTextColor(badgeColor);
+                typeBadge.setText(p.format != null ? p.format : ".plugin");
             } else {
-                tbBg.setColor(0x22888888);
-                typeBadge.setTextColor(0xff888888);
+                int grayColor = Theme.getColor(Theme.key_windowBackgroundWhiteGrayText);
+                tbBg.setColor(Theme.multAlpha(grayColor, 0.14f));
+                typeBadge.setTextColor(grayColor);
                 typeBadge.setText(p.format != null ? p.format : ".eaf");
             }
             typeBadge.setBackground(tbBg);
 
             StringBuilder sub = new StringBuilder();
-            if (!TextUtils.isEmpty(p.author)) sub.append(p.author);
             if (!TextUtils.isEmpty(p.version)) {
-                if (sub.length() > 0) sub.append(" • ");
                 sub.append("v").append(p.version);
             }
-            if (!TextUtils.isEmpty(p.size)) {
+            if (!TextUtils.isEmpty(p.author)) {
+                if (sub.length() > 0) sub.append(" • ");
+                sub.append(p.author);
+            } else if (!TextUtils.isEmpty(p.size)) {
                 if (sub.length() > 0) sub.append(" • ");
                 sub.append(p.size);
             }
             subView.setText(sub.toString());
 
-            descView.setText(p.description != null ? p.description : "");
-            descView.setVisibility(TextUtils.isEmpty(p.description) ? GONE : VISIBLE);
-
-            if (p.tags != null && !p.tags.isEmpty()) {
-                StringBuilder tb = new StringBuilder();
-                for (String t : p.tags) {
-                    if (tb.length() > 0) tb.append("  ");
-                    tb.append("#").append(t);
-                }
-                tagsView.setText(tb.toString());
-                tagsView.setVisibility(VISIBLE);
-            } else {
-                tagsView.setVisibility(GONE);
-            }
-
-            String source = !TextUtils.isEmpty(p.sourceChannel) ? p.sourceChannel : p.author;
-            if (!TextUtils.isEmpty(source)) {
-                openButton.setText(source + (!TextUtils.isEmpty(p.channelPost) ? " ↗" : ""));
-                openButton.setVisibility(VISIBLE);
-                openButton.setOnClickListener(v -> {
-                    if (delegate != null) delegate.onAuthorClick(p);
-                });
-            } else {
-                openButton.setVisibility(GONE);
-            }
+            String descText = p.description != null ? p.description.trim() : "";
+            descView.setText(!TextUtils.isEmpty(descText) ? descText : (p.size != null ? p.size : ""));
+            descView.setVisibility(VISIBLE);
 
             GradientDrawable btnBg = new GradientDrawable();
-            btnBg.setCornerRadius(dp(17));
-            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-            if (accent == 0) accent = 0xff00d2b4;
+            btnBg.setCornerRadius(dp(18));
 
             if (p.downloading) {
                 btnBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -2896,7 +3140,7 @@ public class PluginStoreActivity extends BaseFragment {
                 if (p.hasUpdate()) {
                     btnBg.setColor(accent);
                     actionButton.setBackground(btnBg);
-                    actionButton.setTextColor(0xffffffff);
+                    actionButton.setTextColor(onAccent);
                     actionButton.setText(getString(R.string.PluginsStoreUpdate));
                     actionButton.setEnabled(true);
                     actionButton.setOnClickListener(v -> {
@@ -2915,7 +3159,7 @@ public class PluginStoreActivity extends BaseFragment {
             } else {
                 btnBg.setColor(accent);
                 actionButton.setBackground(btnBg);
-                actionButton.setTextColor(0xffffffff);
+                actionButton.setTextColor(onAccent);
                 actionButton.setText(getString(R.string.PluginsStoreInstall));
                 actionButton.setEnabled(true);
                 actionButton.setOnClickListener(v -> {

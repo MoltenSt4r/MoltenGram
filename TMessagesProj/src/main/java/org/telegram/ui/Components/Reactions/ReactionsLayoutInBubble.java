@@ -1411,7 +1411,24 @@ public class ReactionsLayoutInBubble {
                 if (visibleReaction.isStar) {
 
                 } else if (visibleReaction.emojicon != null) {
-                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+                    if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) {
+                        Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (thumb instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) thumb).fullSize = false;
+                        }
+                        previewImageReceiver = new ImageReceiver(parent);
+                        previewImageReceiver.setLayerNum(7);
+                        previewImageReceiver.onAttachedToWindow();
+                        previewImageReceiver.setRoundRadius(dp(14));
+                        String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(visibleReaction.emojicon);
+                        if (notoUrl != null) {
+                            previewImageReceiver.setAllowStartAnimation(true);
+                            previewImageReceiver.setAutoRepeat(1);
+                            previewImageReceiver.setImage(ImageLocation.getForVideoPath(notoUrl), "140_140", thumb, "webp", visibleReaction, 1);
+                        } else {
+                            previewImageReceiver.setImageBitmap(thumb);
+                        }
+                    } else if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
                         Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
                         if (emojiDrawable instanceof Emoji.EmojiDrawable) {
                             ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;

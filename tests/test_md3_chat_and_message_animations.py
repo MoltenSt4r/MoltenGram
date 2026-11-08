@@ -462,3 +462,270 @@ def test_noto_emoji_reactions_centering_and_anchor():
         chat_code = f.read()
     assert 'primaryMessage.notoAnimatedEmojiUrl != null' in chat_code
     assert 'emojiCenterX' in chat_code
+
+
+def test_3d_scroll_configs():
+    """Verify AppearanceConfig defines 3D scroll configs."""
+    ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(ac_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "val chat3dScroll" in content
+    assert "val chat3dScrollAngle" in content
+    assert "fun chat3dScrollAngle(): Int" in content
+    assert "fun chat3dScrollMaxAngle(): Float" in content
+
+
+def test_open_extera_appearance_3d_scroll_rows():
+    """Verify OpenExteraAppearanceActivity binds and handles 3D scroll slider."""
+    oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(oea_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "chat3dScrollRow" in content
+    assert "chat3dScrollIntensityRow" in content
+    assert "TYPE_3D_SCROLL_SLIDER" in content
+    assert "AppearanceConfig.chat3dScroll" in content
+    assert "AppearanceConfig.chat3dScrollAngle" in content
+
+
+def test_chat_message_cell_clean_of_glass_bubble_hacks():
+    """Verify ChatMessageCell is clean without crashing glass/stroke hacks."""
+    cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
+    with open(cmc_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "bubbleGlassStrokePaint" not in content
+    assert "drawBubbleGlassStroke" not in content
+    assert "bubbleGlassGlarePaint" not in content
+    assert "drawBubbleGlassGlare" not in content
+    assert "drawBubbleBlurredBackground" not in content
+
+
+def test_glass_messages_integration():
+    """Verify crash-proof frosted glass message bubbles using wallpaper blur source, sliders, container insets, and GlassOutlineStyle."""
+    ac_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(ac_path, "r", encoding="utf-8") as f:
+        ac = f.read()
+    assert "val glassMessages" in ac
+    assert "fun glassMessages(): Boolean" in ac
+    assert "val glassMessagesOpacity" in ac
+    assert "fun glassMessagesOpacity(): Int" in ac
+    assert "val glassMessagesRefraction" in ac
+    assert "fun glassMessagesRefraction(): Int" in ac
+    assert "val glassMessagesStrokeWidth" in ac
+    assert "fun glassMessagesStrokeWidth(): Int" in ac
+
+    oea_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(oea_path, "r", encoding="utf-8") as f:
+        oea = f.read()
+    assert "glassMessagesRow" in oea
+    assert "glassMessagesOpacityRow" in oea
+    assert "glassMessagesRefractionRow" in oea
+    assert "glassMessagesStrokeRow" in oea
+    assert "TYPE_GLASS_OPACITY_SLIDER" in oea
+    assert "TYPE_GLASS_REFRACTION_SLIDER" in oea
+    assert "TYPE_GLASS_STROKE_SLIDER" in oea
+    assert "AppearanceConfig.glassMessages" in oea
+    assert "AppearanceConfig.glassMessagesOpacity" in oea
+    assert "AppearanceConfig.glassMessagesRefraction" in oea
+    assert "AppearanceConfig.glassMessagesStrokeWidth" in oea
+    assert "R.drawable.permission_locked" in oea
+    assert "!SharedConfig.chatBlurEnabled()" in oea
+
+    tmet_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "TextMessageEnterTransition.java")
+    with open(tmet_path, "r", encoding="utf-8") as f:
+        tmet = f.read()
+    assert "messageView.shouldDrawGlassBubble()" in tmet
+    assert "messageView.drawGlassBubble(" in tmet
+    assert "messageView.drawPinnedTop()" in tmet
+    assert "messageView.drawPinnedBottom()" in tmet
+    assert "isDrawPinnedTop" not in tmet
+    assert "isDrawPinnedBottom" not in tmet
+
+    anim_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "recyclerview", "ChatListItemAnimator.java")
+    with open(anim_path, "r", encoding="utf-8") as f:
+        anim = f.read()
+    assert "msg.isAnyKindOfSticker() || msg.isAnimatedEmoji()" in anim
+
+    cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
+    with open(cmc_path, "r", encoding="utf-8") as f:
+        cmc = f.read()
+    assert "import android.view.ViewParent;" in cmc
+    assert "Rect bubbleRect = currentBackgroundDrawable.getBounds();" in cmc
+    assert "setWallpaperBlurSource" in cmc
+    assert "resolveWallpaperBitmapSource" in cmc
+    assert "shouldDrawGlassBubble" in cmc
+    assert "drawGlassBubble" in cmc
+    assert "currentBackgroundDrawable.getCurrentType() == MessageDrawable.TYPE_TEXT" in cmc
+    assert "currentBackgroundDrawable.makePath(backgroundCacheParams);" in cmc
+    assert "transitionParams.changePinnedBottomProgress != 1f && currentPosition == null && !shouldDrawGlassBubble()" in cmc
+    assert "(shouldDrawGlassBubble() || !botButtons.isEmpty()" in cmc
+    assert "GlassOutlineStyle.current()" in cmc
+    assert "LinearGradient glareGrad = new LinearGradient(" in cmc
+    assert "BlurredBackgroundDrawable.drawStroke(" not in cmc
+    assert "drawCustomBubbleBgOverlay" in cmc
+    assert "mapGlassOutColorKey" in cmc
+    assert "glassFactory" not in cmc
+    assert "bubbleGlassDrawable" not in cmc
+
+    ca_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "ChatActivity.java")
+    with open(ca_path, "r", encoding="utf-8") as f:
+        ca = f.read()
+    assert "chatMessageCell.setWallpaperBlurSource(navbarContentSourceWallpaper)" in ca
+    assert "getWallpaperBlurSource" in ca
+    assert "setGlassFactory" not in ca
+
+
+def test_recycler_list_view_universal_3d_scroll():
+    """Verify RecyclerListView implements GPU AGSL RuntimeShader 3D cylindrical scroll without child rotationX hacks."""
+    rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")
+    with open(rlv_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "update3dScroll()" in content
+    assert "CylinderScrollEffect" in content
+    assert "AppearanceConfig.chat3dScrollMaxAngle()" in content
+    assert "child.setRotationX" not in content
+    assert "reset3dChild" not in content
+
+    cse_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "CylinderScrollEffect.java")
+    with open(cse_path, "r", encoding="utf-8") as f:
+        cse = f.read()
+    assert "RuntimeShader" in cse
+    assert "RenderEffect.createRuntimeShaderEffect" in cse
+    assert "uniform shader img;" in cse
+    assert "boundsY" in cse
+    assert "edgeHeight" in cse
+    assert "perspectiveK" in cse
+
+
+def test_md3_player_bottom_buttons_and_dialog_styling():
+    """Verify player bottom buttons are clean icon-only with tactile feedback and MD3 popup styling."""
+    ps_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "PlayerSheet.java")
+    with open(ps_path, "r", encoding="utf-8") as f:
+        ps_content = f.read()
+
+    # Bottom buttons must NOT have text labels
+    assert "lyricsButton.setText(" not in ps_content
+    assert "queueButton.setText(" not in ps_content
+    assert "speedButton.setText(" not in ps_content
+
+    # Bottom buttons must use equal 1f weights and have accessibility descriptions
+    assert "group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(playlistButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(sleepButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1f" in ps_content
+    assert "speedButton.setContentDescription(" in ps_content
+    assert "lyricsButton.setContentDescription(" in ps_content
+    assert "queueButton.setContentDescription(" in ps_content
+
+    # Detach must safely check isShowing() and catch IllegalArgumentException / unattached window
+    assert "if (getWindow() != null && isShowing())" in ps_content
+
+    # Speed & Pitch dialog must use Monet tokens and preserve Dotted header font
+    assert "colors.surfaceContainer" in ps_content
+    assert "colors.onSurface" in ps_content
+    assert "AndroidUtilities.headerTypeface()" in ps_content
+
+    mb_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "player", "MorphButton.java")
+    with open(mb_path, "r", encoding="utf-8") as f:
+        mb_content = f.read()
+
+    # MorphButton must provide spring tactile feedback and ripple/highlight
+    assert "pressScale.target = pressed ? 0.93f : 1.0f;" in mb_content
+    assert "performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP)" in mb_content
+
+
+def test_voip_redesign_and_filled_sub_fab_camera():
+    """Verify VoIP redesign (no gradient/waves, rotating shape, top status+title, 2-row dock) and filled sub-FAB camera icon."""
+    voip_frag_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "VoIPFragment.java")
+    with open(voip_frag_path, "r", encoding="utf-8") as f:
+        vf = f.read()
+    assert "callingUserTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 36)" in vf
+    assert "bottomSpeakerBtn.setShowText(true)" in vf
+    assert "bottomVideoBtn.setShowText(true)" in vf
+    assert "bottomMuteBtn.setShowText(true)" in vf
+    assert "bottomEndCallBtn.setPill(true, 166f)" in vf
+    assert "0xFFF26D5B" in vf
+
+    waves_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "ImageWithWavesView.java")
+    with open(waves_path, "r", encoding="utf-8") as f:
+        wv = f.read()
+    assert "shapeRotationAnimator" in wv
+    assert "shapeRotateMatrix.setRotate(shapeRotationDeg, cx, cy)" in wv
+    assert "avatarWavesDrawable.draw(" not in wv.split("protected void onDraw(Canvas canvas)")[1].split("@Override")[0]
+
+    grad_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "VoIpGradientLayout.java")
+    with open(grad_path, "r", encoding="utf-8") as f:
+        gl = f.read()
+    assert "canvas.drawColor(flatBgColor);" in gl
+
+    dialogs_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "DialogsActivity.java")
+    with open(dialogs_path, "r", encoding="utf-8") as f:
+        da = f.read()
+    assert "floatingButtonStories.setImageResource(R.drawable.camera);" in da
+
+    voip_btns_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "voip", "VoIPButtonsLayout.java")
+    with open(voip_btns_path, "r", encoding="utf-8") as f:
+        vb = f.read()
+    assert "containerStrokePaint" not in vb.split("protected void onDraw(Canvas canvas)")[1].split("}")[0]
+
+    metc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "MessageEnterTransitionContainer.java")
+    with open(metc_path, "r", encoding="utf-8") as f:
+        metc = f.read()
+    assert "update3dScroll(" in metc
+    assert "CylinderScrollEffect" in metc
+
+    rlv_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "RecyclerListView.java")
+    with open(rlv_path, "r", encoding="utf-8") as f:
+        rlv = f.read()
+    assert 'contains("ChatAttachAlert")' in rlv
+
+
+def test_fab_colors_tonal_contrast_and_color_picker():
+    """Verify expanded FAB palettes (pastels/containers + accents), visual ColorPickerBottomSheet, and tonal icon contrast."""
+    ui_util_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "utils", "UIUtil.java")
+    with open(ui_util_path, "r", encoding="utf-8") as f:
+        ui = f.read()
+    # Tonal contrast calculation
+    assert "ColorUtils.colorToHSL(color, hsl)" in ui
+    assert "ColorUtils.HSLToColor" in ui
+    assert "resolveFabIconColor(" in ui
+    assert "on_primary_container" in ui
+    assert "on_tertiary_container" in ui
+
+    app_cfg_path = os.path.join(REPO, "TMessagesProj", "src", "main", "kotlin", "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(app_cfg_path, "r", encoding="utf-8") as f:
+        cfg = f.read()
+    assert 'val fabActiveIconColor = addConfig("OEAppearanceFabActiveIconColor"' in cfg
+    assert "fun fabActiveIconColor(): Int" in cfg
+
+    ffb_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Components", "FragmentFloatingButton.java")
+    with open(ffb_path, "r", encoding="utf-8") as f:
+        ffb = f.read()
+    assert "targetIconColor" in ffb
+    assert "currentIconColor" in ffb
+    assert "resolveFabIconColor" in ffb
+
+    activity_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "Md3FabAppearanceActivity.java")
+    with open(activity_path, "r", encoding="utf-8") as f:
+        act = f.read()
+    assert "ColorPickerBottomSheet" in act
+    assert "0xFF5DA8FF" in act  # Sky blue container from screenshot
+    assert "0xFFE28EFF" in act  # Lavender container from screenshot
+    assert "rebuildIconColorSwatches()" in act
+    assert "showColorPickerBottomSheet" in act
+    assert "setIconColor(" in act
+
+    ipm_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "icons", "IconPackManager.java")
+    with open(ipm_path, "r", encoding="utf-8") as f:
+        ipm = f.read()
+    assert '"camera"' in ipm
+
+    cam_solar_path = os.path.join(REPO, "TMessagesProj", "src", "main", "res", "drawable", "camera_solar.xml")
+    with open(cam_solar_path, "r", encoding="utf-8") as f:
+        cs = f.read()
+    assert 'fillType="evenOdd"' in cs
+
+
+
+
+

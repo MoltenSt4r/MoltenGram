@@ -28,20 +28,16 @@ public class PluginStoreConfig {
     public static final int MAX_PAGE_SIZE = 100;
 
     public static final List<String> DEFAULT_CHANNELS = Collections.unmodifiableList(Arrays.asList(
-            "PESSDES_Plugins",
-            "PluginProject",
-            "nonPlugins",
-            "ApplePlugins",
-            "ExerealPlugins",
-            "MLPlugins",
-            "CactusPlugins",
-            "doctashare",
-            "exteraPlugins",
-            "TheDotted",
-            "anivPlugins",
-            "bleizixPlugins",
             "QuantaPlugins",
-            "shareui"
+            "rndev_plugins",
+            "bleizixPlugins",
+            "TheDotted",
+            "zwyPlugins",
+            "CactusPlugins",
+            "PESSDES_Plugins",
+            "ytilities",
+            "anivPlugins",
+            "exteragram_utilities"
     ));
 
     private static volatile PluginStoreConfig instance;

@@ -6,10 +6,12 @@ import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
 import android.graphics.Color;
+import android.graphics.Matrix;
 import android.graphics.Path;
 import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
+import android.view.animation.LinearInterpolator;
 import android.widget.FrameLayout;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -28,6 +30,10 @@ public class ImageWithWavesView extends FrameLayout {
     private final AvatarWavesDrawable avatarWavesDrawable;
     private final BackupImageView backupImageView;
     private AnimatorSet animatorSet;
+    private ValueAnimator shapeRotationAnimator;
+    private float shapeRotationDeg = 0f;
+    private final Matrix shapeRotateMatrix = new Matrix();
+    private final Path rotatedShapePath = new Path();
     private boolean isConnectedCalled;
     private boolean isMuted;
     private final boolean allowAnimations;
@@ -43,26 +49,52 @@ public class ImageWithWavesView extends FrameLayout {
         int userShape = AppearanceConfig.getAvatarShape(Md3AvatarShapes.PEER_TYPE_USER);
         shapeId = userShape > 0 ? userShape : Md3AvatarShapes.SHAPE_SCALLOP;
         avatarWavesDrawable = new AvatarWavesDrawable(AndroidUtilities.dp(104), AndroidUtilities.dp(111), AndroidUtilities.dp(12), 8);
-        avatarWavesDrawable.setAmplitude(3f);
-        avatarWavesDrawable.setShowWaves(true, this);
+        avatarWavesDrawable.setAmplitude(0f);
+        avatarWavesDrawable.setShowWaves(false, this);
         backupImageView = new BackupImageView(context);
         if (shapeId >= 0) {
             backupImageView.setRoundRadius(0);
         }
-        addView(backupImageView, LayoutHelper.createFrame(135, 135, Gravity.CENTER));
+        addView(backupImageView, LayoutHelper.createFrame(196, 196, Gravity.CENTER));
         setWillNotDraw(false);
-        animatorSet = new AnimatorSet();
-        animatorSet.playTogether(
-                ObjectAnimator.ofFloat(this, View.SCALE_X, 1.f, 1.05f, 1f, 1.05f, 1f),
-                ObjectAnimator.ofFloat(this, View.SCALE_Y, 1.f, 1.05f, 1f, 1.05f, 1f)
-        );
-        animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT);
-        animatorSet.setDuration(3000);
         allowAnimations = LiteMode.isEnabled(LiteMode.FLAG_CALLS_ANIMATIONS);
-        if (allowAnimations) {
-            animatorSet.start();
-        }
+        startShapeRotation();
         setClipChildren(false);
+    }
+
+    private void startShapeRotation() {
+        if (!allowAnimations) {
+            return;
+        }
+        if (shapeRotationAnimator != null) {
+            shapeRotationAnimator.cancel();
+        }
+        shapeRotationAnimator = ValueAnimator.ofFloat(0f, 360f);
+        shapeRotationAnimator.setDuration(18000);
+        shapeRotationAnimator.setInterpolator(new LinearInterpolator());
+        shapeRotationAnimator.setRepeatCount(ValueAnimator.INFINITE);
+        shapeRotationAnimator.setRepeatMode(ValueAnimator.RESTART);
+        shapeRotationAnimator.addUpdateListener(anim -> {
+            shapeRotationDeg = (Float) anim.getAnimatedValue();
+            invalidate();
+        });
+        shapeRotationAnimator.start();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        if (shapeRotationAnimator != null) {
+            shapeRotationAnimator.cancel();
+        }
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        if (allowAnimations && (shapeRotationAnimator == null || !shapeRotationAnimator.isRunning())) {
+            startShapeRotation();
+        }
     }
 
     public void setImage(ImageLocation imageLocation, String imageFilter, String ext, Drawable thumb, Object parentObject) {
@@ -110,26 +142,18 @@ public class ImageWithWavesView extends FrameLayout {
     }
 
     public void setShowWaves(boolean showWaves) {
-        avatarWavesDrawable.setShowWaves(showWaves, this);
+        avatarWavesDrawable.setShowWaves(false, this);
     }
 
     public void setMute(boolean isMuted, boolean isFast) {
         if (this.isMuted != isMuted) {
             this.isMuted = isMuted;
-            if (isMuted) {
-                avatarWavesDrawable.setAmplitude(3f);
-            }
             avatarWavesDrawable.setMuteToStatic(isMuted, isFast, this);
         }
     }
 
     public void setAmplitude(double value) {
-        if (isMuted) return;
-        if (value > 1.5f) {
-            avatarWavesDrawable.setAmplitude(value);
-        } else {
-            avatarWavesDrawable.setAmplitude(0);
-        }
+        avatarWavesDrawable.setAmplitude(0);
     }
 
     public void onConnected() {
@@ -140,20 +164,15 @@ public class ImageWithWavesView extends FrameLayout {
             animatorSet.cancel();
         }
         isConnectedCalled = true;
-        animatorSet = new AnimatorSet();
-        animatorSet.playTogether(
-                ObjectAnimator.ofFloat(this, View.SCALE_X, this.getScaleX(), 1.05f, 1f),
-                ObjectAnimator.ofFloat(this, View.SCALE_Y, this.getScaleY(), 1.05f, 1f)
-        );
-        animatorSet.setInterpolator(CubicBezierInterpolator.EASE_OUT);
-        animatorSet.setDuration(400);
-        animatorSet.start();
     }
 
     public void onNeedRating() {
         setShowWaves(false);
         if (animatorSet != null) {
             animatorSet.cancel();
+        }
+        if (shapeRotationAnimator != null) {
+            shapeRotationAnimator.cancel();
         }
         animatorSet = new AnimatorSet();
         animatorSet.playTogether(
@@ -170,12 +189,6 @@ public class ImageWithWavesView extends FrameLayout {
 
     @Override
     protected void onDraw(Canvas canvas) {
-        if(allowAnimations) {
-            avatarWavesDrawable.update();
-            int cx = getWidth() / 2;
-            int cy = getHeight() / 2;
-            avatarWavesDrawable.draw(canvas, cx, cy, this);
-        }
         super.onDraw(canvas);
     }
 
@@ -195,7 +208,17 @@ public class ImageWithWavesView extends FrameLayout {
             }
             if (shapePath != null) {
                 canvas.save();
-                canvas.clipPath(shapePath);
+                if (shapeRotationDeg != 0f) {
+                    float cx = left + w / 2f;
+                    float cy = top + h / 2f;
+                    shapeRotateMatrix.reset();
+                    shapeRotateMatrix.setRotate(shapeRotationDeg, cx, cy);
+                    rotatedShapePath.reset();
+                    shapePath.transform(shapeRotateMatrix, rotatedShapePath);
+                    canvas.clipPath(rotatedShapePath);
+                } else {
+                    canvas.clipPath(shapePath);
+                }
                 super.dispatchDraw(canvas);
                 canvas.restore();
                 return;

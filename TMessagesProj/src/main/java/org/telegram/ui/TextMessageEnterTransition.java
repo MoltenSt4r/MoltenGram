@@ -407,7 +407,7 @@ public class TextMessageEnterTransition implements MessageEnterTransitionContain
             }
         });
 
-        if (SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH) {
+        if (SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_HIGH && !messageView.shouldDrawGlassBubble()) {
             MessageDrawable drawable = messageView.getCurrentBackgroundDrawable(true);
             if (drawable != null) {
                 fromMessageDrawable = drawable.getTransitionDrawable(getThemedColor(Theme.key_chat_messagePanelBackground));
@@ -501,26 +501,50 @@ public class TextMessageEnterTransition implements MessageEnterTransitionContain
 
         if (drawable != null) {
             messageView.setBackgroundTopY(container.getTop() - listView.getTop());
-            Drawable shadowDrawable = drawable.getShadowDrawable();
+            if (messageView.shouldDrawGlassBubble()) {
+                messageView.drawGlassBubble(
+                        canvas,
+                        (int) drawableX,
+                        (int) drawableTop,
+                        drawableRight,
+                        (int) drawableBottom,
+                        messageView.drawPinnedTop(),
+                        messageView.drawPinnedBottom(),
+                        alphaProgress,
+                        true
+                );
+            } else {
+                Drawable shadowDrawable = drawable.getShadowDrawable();
 
-            if (alphaProgress != 1f && fromMessageDrawable != null) {
-                fromMessageDrawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
-                fromMessageDrawable.draw(canvas);
+                if (alphaProgress != 1f && fromMessageDrawable != null) {
+                    fromMessageDrawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
+                    fromMessageDrawable.draw(canvas);
+                }
+
+                if (shadowDrawable != null) {
+                    shadowDrawable.setAlpha((int) (255 * progressX));
+                    shadowDrawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
+                    shadowDrawable.draw(canvas);
+                    shadowDrawable.setAlpha(255);
+                }
+
+                drawable.setAlpha((int) (255 * alphaProgress));
+                drawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
+                drawable.setDrawFullBubble(true);
+                drawable.draw(canvas);
+                drawable.setDrawFullBubble(false);
+                drawable.setAlpha(255);
+                messageView.drawCustomBubbleBgOverlay(
+                        canvas,
+                        (int) drawableX,
+                        (int) drawableTop,
+                        drawableRight,
+                        (int) drawableBottom,
+                        messageView.drawPinnedTop(),
+                        messageView.drawPinnedBottom(),
+                        alphaProgress
+                );
             }
-
-            if (shadowDrawable != null) {
-                shadowDrawable.setAlpha((int) (255 * progressX));
-                shadowDrawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
-                shadowDrawable.draw(canvas);
-                shadowDrawable.setAlpha(255);
-            }
-
-            drawable.setAlpha((int) (255 * alphaProgress));
-            drawable.setBounds((int) drawableX, (int) drawableTop, drawableRight, (int) drawableBottom);
-            drawable.setDrawFullBubble(true);
-            drawable.draw(canvas);
-            drawable.setDrawFullBubble(false);
-            drawable.setAlpha(255);
         }
         canvas.restore();
 

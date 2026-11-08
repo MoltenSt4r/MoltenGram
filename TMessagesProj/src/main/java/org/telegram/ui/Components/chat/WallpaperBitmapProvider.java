@@ -35,12 +35,10 @@ public class WallpaperBitmapProvider {
 
         if (drawable instanceof MotionBackgroundDrawable) {
             final MotionBackgroundDrawable motionDrawable = (MotionBackgroundDrawable) drawable;
-            if (motionDrawable.getIntensity() < 0) {
-                sourceColor.setColor(Color.BLACK);
-                return sourceColor;
+            if (motionDrawable.getIntensity() >= 0) {
+                sourceBitmap.setBitmap(motionDrawable.getBitmap());
+                return sourceBitmap;
             }
-            sourceBitmap.setBitmap(motionDrawable.getBitmap());
-            return sourceBitmap;
         }
 
         if (drawable instanceof BitmapDrawable) {

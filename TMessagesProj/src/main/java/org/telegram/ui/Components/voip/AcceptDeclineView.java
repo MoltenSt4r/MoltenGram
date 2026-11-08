@@ -2,7 +2,6 @@ package org.telegram.ui.Components.voip;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 
-import android.animation.Animator;
 import android.animation.ValueAnimator;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -10,24 +9,14 @@ import android.graphics.Color;
 import android.graphics.Paint;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
-import android.graphics.PorterDuffXfermode;
 import android.graphics.Rect;
-import android.graphics.drawable.BitmapDrawable;
+import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
-import android.os.Build;
-import android.os.Bundle;
-import android.text.Layout;
-import android.text.StaticLayout;
 import android.text.TextPaint;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
-import android.view.ViewConfiguration;
-import android.view.ViewParent;
-import android.view.accessibility.AccessibilityEvent;
-import android.view.accessibility.AccessibilityManager;
-import android.view.accessibility.AccessibilityNodeInfo;
-import android.view.accessibility.AccessibilityNodeProvider;
-import android.widget.Button;
+import android.view.animation.OvershootInterpolator;
 
 import androidx.annotation.NonNull;
 import androidx.core.content.ContextCompat;
@@ -36,126 +25,284 @@ import androidx.core.graphics.ColorUtils;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
-import app.exteraless.appearance.Md3AvatarShapes;
-import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Components.ButtonBounce;
-import org.telegram.ui.Components.RLottieDrawable;
 
 public class AcceptDeclineView extends View {
 
-    private final FabBackgroundDrawable acceptDrawable;
-    private final FabBackgroundDrawable declineDrawable;
-    private final Drawable callDrawable;
-    private final Drawable cancelDrawable;
-    private final Paint acceptCirclePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint trackBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint knobPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint labelPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
-    private final StaticLayout acceptLayout;
-    private final StaticLayout declineLayout;
-    private final StaticLayout retryLayout;
+    public static final int COLOR_ACCEPT = 0xFF40C749;
+    public static final int COLOR_DECLINE = 0xFFF01D2C;
 
-    private final ButtonBounce acceptBounce = new ButtonBounce(this);
-    private final ButtonBounce declineBounce = new ButtonBounce(this);
+    private final Paint messageBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint messageTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
-    private AcceptDeclineAccessibilityNodeProvider accessibilityNodeProvider;
+    private final Paint retryPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final TextPaint retryTextPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
 
-    private int buttonWidth;
-    private int currentFocusedVirtualViewId = View.NO_ID;
-    float smallRadius;
-    float bigRadius;
-    boolean expandSmallRadius = true;
-    boolean expandBigRadius = true;
+    private final Drawable phoneDrawable;
+    private final Drawable messageDrawable;
+    private final Drawable retryDrawable;
 
-    boolean startDrag;
-    boolean captured;
-    long capturedTime;
-    boolean leftDrag;
-    float startX;
-    float startY;
-    float touchSlop;
-    float leftOffsetX;
-    float rigthOffsetX;
-    float maxOffset;
+    private final RectF trackRect = new RectF();
+    private final RectF knobRect = new RectF();
+    private final RectF messageRect = new RectF();
+    private final RectF retryRect = new RectF();
 
-    Rect acceptRect = new Rect();
-    Rect declineRect = new Rect();
-    Animator leftAnimator;
-    Animator rightAnimator;
+    private final String declineText;
+    private final String answerText;
+    private final String messageText;
+    private final String retryText;
 
-    Listener listener;
+    private float declineTextWidth;
+    private float answerTextWidth;
+    private float messageTextWidth;
+    private float retryTextWidth;
 
-    boolean retryMod;
-    Drawable rippleDrawable;
-    Paint linePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private float dragOffset = 0f;
+    private float maxDragLeft = 0f;
+    private float maxDragRight = 0f;
 
-    private boolean isVideo;// = true;
-    private RLottieDrawable acceptVoiceDrawable;
-    private Drawable acceptVideoDrawable;
-    private final ImageWithWavesView.AvatarWavesDrawable avatarWavesDrawable;
-    private final Paint maskPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean touchingKnob = false;
+    private boolean touchingMessage = false;
+    private boolean touchingRetry = false;
+    private float startTouchX = 0f;
+    private float initialDragOffset = 0f;
+
+    private boolean retryMod = false;
+    private ValueAnimator resetAnimator;
+    private Listener listener;
+
+    private boolean triggered = false;
+
+    public interface Listener {
+        void onAccept();
+        void onDecline();
+        default void onMessage() {}
+    }
 
     public AcceptDeclineView(@NonNull Context context) {
         super(context);
-        avatarWavesDrawable = new ImageWithWavesView.AvatarWavesDrawable(dp(45), dp(50), dp(8), 4);
-        avatarWavesDrawable.muteToStatic = true;
-        avatarWavesDrawable.muteToStaticProgress = 0f;
-        avatarWavesDrawable.wavesEnter = 0;
-        avatarWavesDrawable.setAmplitude(0);
 
-        maskPaint.setColor(Color.BLACK);
-        maskPaint.setXfermode(new PorterDuffXfermode(PorterDuff.Mode.DST_OUT));
+        trackBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, 32));
 
-        touchSlop = ViewConfiguration.get(context).getScaledTouchSlop();
-        buttonWidth = dp(60);
-        acceptDrawable = new FabBackgroundDrawable();
-        acceptDrawable.setColor(0xFF40C749);
-        acceptDrawable.setShapeId(Md3AvatarShapes.SHAPE_SCALLOP);
+        knobPaint.setColor(0xFFFFFFFF); // Pure white draggable knob
 
-        declineDrawable = new FabBackgroundDrawable();
-        declineDrawable.setColor(0xFFF01D2C);
-        declineDrawable.setShapeId(Md3AvatarShapes.SHAPE_SCALLOP);
+        labelPaint.setTextSize(dp(15));
+        labelPaint.setTypeface(AndroidUtilities.bold());
+        labelPaint.setColor(0xD9FFFFFF);
 
-        declineDrawable.setBounds(0, 0, buttonWidth, buttonWidth);
-        acceptDrawable.setBounds(0, 0, buttonWidth, buttonWidth);
+        messageBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, 30));
+        messageTextPaint.setTextSize(dp(14));
+        messageTextPaint.setTypeface(AndroidUtilities.bold());
+        messageTextPaint.setColor(0xFFFFFFFF);
 
-        TextPaint textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-        textPaint.setTextSize(dp(11));
-        textPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-        textPaint.setTypeface(AndroidUtilities.getTypeface("fonts/rmedium.ttf"));
+        retryPaint.setColor(COLOR_ACCEPT);
+        retryTextPaint.setTextSize(dp(15));
+        retryTextPaint.setTypeface(AndroidUtilities.bold());
+        retryTextPaint.setColor(0xFFFFFFFF);
 
-        String acceptStr = LocaleController.getString(R.string.AcceptCall);
-        String declineStr = LocaleController.getString(R.string.DeclineCall);
-        String retryStr = LocaleController.getString(R.string.RetryCall);
+        phoneDrawable = ContextCompat.getDrawable(context, R.drawable.round_call_24_white);
+        messageDrawable = ContextCompat.getDrawable(context, R.drawable.msg_discussion);
+        retryDrawable = ContextCompat.getDrawable(context, R.drawable.round_call_24_white);
 
-        acceptLayout = new StaticLayout(acceptStr, textPaint, (int) textPaint.measureText(acceptStr), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-        declineLayout = new StaticLayout(declineStr, textPaint, (int) textPaint.measureText(declineStr), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+        declineText = LocaleController.getString(R.string.VoipDeclineCall);
+        answerText = LocaleController.getString(R.string.VoipAnswerCall);
+        messageText = LocaleController.getString(R.string.Message);
+        retryText = LocaleController.getString(R.string.RetryCall);
 
-        retryLayout = new StaticLayout(retryStr, textPaint, (int) textPaint.measureText(retryStr), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
-
-        callDrawable = ContextCompat.getDrawable(context, R.drawable.calls_decline).mutate();
-        cancelDrawable = ContextCompat.getDrawable(context, R.drawable.ic_close_white).mutate();
-        cancelDrawable.setColorFilter(new PorterDuffColorFilter(Color.BLACK, PorterDuff.Mode.MULTIPLY));
-        acceptVoiceDrawable = new RLottieDrawable(R.raw.call_accept, dp(48), dp(48), true, null);
-        acceptVoiceDrawable.setAutoRepeat(1);
-        acceptVoiceDrawable.setCustomEndFrame(90);
-        acceptVoiceDrawable.setMasterParent(this);
-        acceptVideoDrawable = ContextCompat.getDrawable(context, R.drawable.calls_video).mutate();
-        acceptCirclePaint.setColor(Color.WHITE);
-        acceptCirclePaint.setAlpha(20);
-        rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(52), 0, ColorUtils.setAlphaComponent(Color.WHITE, (int) (255 * 0.3f)));
-        rippleDrawable.setCallback(this);
+        measureTexts();
     }
+
+    private void measureTexts() {
+        declineTextWidth = labelPaint.measureText(declineText);
+        answerTextWidth = labelPaint.measureText(answerText);
+        messageTextWidth = messageTextPaint.measureText(messageText);
+        retryTextWidth = retryTextPaint.measureText(retryText);
+    }
+
+    public void setListener(Listener listener) {
+        this.listener = listener;
+    }
+
+    public void setRetryMod(boolean retryMod) {
+        this.retryMod = retryMod;
+        stopAnimations();
+        invalidate();
+    }
+
+    public void stopAnimations() {
+        if (resetAnimator != null) {
+            resetAnimator.cancel();
+            resetAnimator = null;
+        }
+        dragOffset = 0f;
+        touchingKnob = false;
+        touchingMessage = false;
+        touchingRetry = false;
+        triggered = false;
+        invalidate();
+    }
+
+    // Compatibility methods so other callers don't fail
+    public void setShapeId(int shapeId) {}
+    public void setShapes(int acceptShapeId, int declineShapeId) {}
+    public int getAcceptShapeId() { return 0; }
+    public int getDeclineShapeId() { return 0; }
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(widthMeasureSpec, heightMeasureSpec);
-        maxOffset = getMeasuredWidth() / 2f - (buttonWidth / 2f + dp(46));
+        updateLayoutBounds(getMeasuredWidth(), getMeasuredHeight());
+    }
 
-        int padding = (buttonWidth - dp(28)) / 2;
-        callDrawable.setBounds(padding, padding, padding + dp(28), padding + dp(28));
-        cancelDrawable.setBounds(padding, padding, padding + dp(28), padding + dp(28));
+    @Override
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        updateLayoutBounds(w, h);
+    }
 
-        linePaint.setStrokeWidth(dp(3));
-        linePaint.setColor(Color.WHITE);
+    private void updateLayoutBounds(int w, int h) {
+        if (w <= 0 || h <= 0) return;
+
+        if (retryMod) {
+            float btnW = Math.max(dp(180), retryTextWidth + dp(64));
+            float btnH = dp(56);
+            float l = (w - btnW) / 2f;
+            float t = h - btnH - dp(24);
+            retryRect.set(l, t, l + btnW, t + btnH);
+            return;
+        }
+
+        // 1. Message Button ("💬 Сообщение")
+        float msgBtnW = messageTextWidth + dp(46);
+        float msgBtnH = dp(38);
+        float msgLeft = (w - msgBtnW) / 2f;
+        float msgTop = dp(10);
+        messageRect.set(msgLeft, msgTop, msgLeft + msgBtnW, msgTop + msgBtnH);
+
+        // 2. Call Slider Track ("Отклонить" — [Knob] — "Ответить")
+        float trackMargin = dp(8);
+        float trackH = dp(76);
+        float trackTop = h - trackH - dp(18);
+        float trackBottom = trackTop + trackH;
+        trackRect.set(trackMargin, trackTop, w - trackMargin, trackBottom);
+
+        // 3. Knob dimensions
+        float knobW = dp(84);
+        float knobH = dp(62);
+        float knobPad = dp(7);
+        maxDragLeft = (trackRect.width() - knobW) / 2f - knobPad;
+        maxDragRight = (trackRect.width() - knobW) / 2f - knobPad;
+
+        updateKnobRect();
+    }
+
+    private void updateKnobRect() {
+        float knobW = dp(84);
+        float knobH = dp(62);
+        float cx = trackRect.centerX() + dragOffset;
+        float cy = trackRect.centerY();
+        knobRect.set(cx - knobW / 2f, cy - knobH / 2f, cx + knobW / 2f, cy + knobH / 2f);
+    }
+
+    @Override
+    protected void onDraw(Canvas canvas) {
+        super.onDraw(canvas);
+
+        if (retryMod) {
+            // Draw Retry Button
+            canvas.drawRoundRect(retryRect, retryRect.height() / 2f, retryRect.height() / 2f, retryPaint);
+            if (retryDrawable != null) {
+                int iconSize = dp(24);
+                int left = (int) (retryRect.left + dp(18));
+                int top = (int) (retryRect.centerY() - iconSize / 2f);
+                retryDrawable.setBounds(left, top, left + iconSize, top + iconSize);
+                retryDrawable.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
+                retryDrawable.draw(canvas);
+            }
+            float textX = retryRect.left + dp(48);
+            Paint.FontMetrics fm = retryTextPaint.getFontMetrics();
+            float textY = retryRect.centerY() - (fm.ascent + fm.descent) / 2f;
+            canvas.drawText(retryText, textX, textY, retryTextPaint);
+            return;
+        }
+
+        // 1. Draw "💬 Сообщение" Pill Button
+        messageBgPaint.setColor(ColorUtils.setAlphaComponent(0xFFFFFFFF, touchingMessage ? 45 : 30));
+        canvas.drawRoundRect(messageRect, messageRect.height() / 2f, messageRect.height() / 2f, messageBgPaint);
+
+        int msgIconSize = dp(18);
+        float totalMsgW = msgIconSize + dp(8) + messageTextWidth;
+        float msgStartX = messageRect.left + (messageRect.width() - totalMsgW) / 2f;
+
+        if (messageDrawable != null) {
+            int left = (int) msgStartX;
+            int top = (int) (messageRect.centerY() - msgIconSize / 2f);
+            messageDrawable.setBounds(left, top, left + msgIconSize, top + msgIconSize);
+            messageDrawable.setColorFilter(new PorterDuffColorFilter(0xFFFFFFFF, PorterDuff.Mode.SRC_IN));
+            messageDrawable.draw(canvas);
+        }
+
+        float msgTextX = msgStartX + msgIconSize + dp(8);
+        Paint.FontMetrics msgFm = messageTextPaint.getFontMetrics();
+        float msgTextY = messageRect.centerY() - (msgFm.ascent + msgFm.descent) / 2f;
+        canvas.drawText(messageText, msgTextX, msgTextY, messageTextPaint);
+
+        // 2. Draw Call Slider Capsule Track
+        canvas.drawRoundRect(trackRect, trackRect.height() / 2f, trackRect.height() / 2f, trackBgPaint);
+
+        // 3. Draw Left Label ("Отклонить")
+        float knobW = knobRect.width();
+        float leftAreaWidth = (trackRect.width() - knobW) / 2f;
+        float leftCenterX = trackRect.left + leftAreaWidth / 2f;
+        float leftAlpha = 1f;
+        if (dragOffset < 0 && maxDragLeft > 0) {
+            leftAlpha = Math.max(0f, 1f - (-dragOffset / (maxDragLeft * 0.65f)));
+        }
+        labelPaint.setAlpha((int) (0xD9 * leftAlpha));
+        float labelY = trackRect.centerY() - (labelPaint.ascent() + labelPaint.descent()) / 2f;
+        canvas.drawText(declineText, leftCenterX - declineTextWidth / 2f, labelY, labelPaint);
+
+        // 4. Draw Right Label ("Ответить")
+        float rightCenterX = trackRect.right - leftAreaWidth / 2f;
+        float rightAlpha = 1f;
+        if (dragOffset > 0 && maxDragRight > 0) {
+            rightAlpha = Math.max(0f, 1f - (dragOffset / (maxDragRight * 0.65f)));
+        }
+        labelPaint.setAlpha((int) (0xD9 * rightAlpha));
+        canvas.drawText(answerText, rightCenterX - answerTextWidth / 2f, labelY, labelPaint);
+
+        // 5. Draw Draggable White Knob
+        canvas.drawRoundRect(knobRect, knobRect.height() / 2f, knobRect.height() / 2f, knobPaint);
+
+        // 6. Draw Phone Icon inside Knob
+        if (phoneDrawable != null) {
+            int iconSize = dp(28);
+            canvas.save();
+            canvas.translate(knobRect.centerX(), knobRect.centerY());
+
+            int iconColor;
+            float rotation = 0f;
+            if (dragOffset < 0 && maxDragLeft > 0) {
+                float p = Math.min(1f, -dragOffset / (maxDragLeft * 0.75f));
+                iconColor = ColorUtils.blendARGB(0xFF1C1B1F, COLOR_DECLINE, p);
+                rotation = p * 135f; // rotate downwards into hangup phone receiver
+            } else if (dragOffset > 0 && maxDragRight > 0) {
+                float p = Math.min(1f, dragOffset / (maxDragRight * 0.75f));
+                iconColor = ColorUtils.blendARGB(0xFF1C1B1F, COLOR_ACCEPT, p);
+                rotation = 0f;
+            } else {
+                iconColor = 0xFF1C1B1F; // Resting dark neutral
+            }
+
+            canvas.rotate(rotation);
+            phoneDrawable.setBounds(-iconSize / 2, -iconSize / 2, iconSize / 2, iconSize / 2);
+            phoneDrawable.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN));
+            phoneDrawable.draw(canvas);
+            canvas.restore();
+        }
     }
 
     @Override
@@ -163,474 +310,153 @@ public class AcceptDeclineView extends View {
         if (!isEnabled()) {
             return false;
         }
-        switch (event.getAction()) {
-            case MotionEvent.ACTION_DOWN:
-                startX = event.getX();
-                startY = event.getY();
-                if (leftAnimator == null && declineRect.contains((int) event.getX(), (int) event.getY())) {
-                    rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(52), 0, retryMod ? Theme.getColor(Theme.key_listSelector) : 0xFFFF3846);
-                    captured = true;
-                    leftDrag = true;
-                    declineBounce.setPressed(true);
-                    acceptBounce.setPressed(false);
-                    setPressed(true);
-                    invalidate();
-                    return true;
-                }
-                if (rightAnimator == null && acceptRect.contains((int) event.getX(), (int) event.getY())) {
-                    rippleDrawable = Theme.createSimpleSelectorCircleDrawable(dp(52), 0, 0xFF4DD156);
-                    captured = true;
-                    leftDrag = false;
-                    declineBounce.setPressed(false);
-                    acceptBounce.setPressed(true);
-                    setPressed(true);
-                    if (rightAnimator != null) {
-                        rightAnimator.cancel();
+
+        float x = event.getX();
+        float y = event.getY();
+
+        if (retryMod) {
+            switch (event.getAction()) {
+                case MotionEvent.ACTION_DOWN:
+                    if (retryRect.contains(x, y)) {
+                        touchingRetry = true;
+                        invalidate();
+                        return true;
                     }
-                    invalidate();
-                    return true;
-                }
-                break;
-            case MotionEvent.ACTION_MOVE:
-                if (captured) {
-                    return true;
-                }
-                break;
-            case MotionEvent.ACTION_CANCEL:
-            case MotionEvent.ACTION_UP:
-                float dy = event.getY() - startY;
-                if (captured) {
-                    if (leftDrag) {
-                        ValueAnimator animator = ValueAnimator.ofFloat(leftOffsetX, 0);
-                        animator.addUpdateListener(valueAnimator -> {
-                            leftOffsetX = (float) valueAnimator.getAnimatedValue();
-                            invalidate();
-                            leftAnimator = null;
-                        });
-                        animator.start();
-                        leftAnimator = animator;
+                    break;
+                case MotionEvent.ACTION_UP:
+                    if (touchingRetry && retryRect.contains(x, y)) {
+                        touchingRetry = false;
+                        invalidate();
+                        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                         if (listener != null) {
-                            if ((!startDrag && Math.abs(dy) < touchSlop) || leftOffsetX > maxOffset * 0.8f) {
-                                listener.onDecline();
-                            }
-                        }
-                    } else {
-                        ValueAnimator animator = ValueAnimator.ofFloat(rigthOffsetX, 0);
-                        animator.addUpdateListener(valueAnimator -> {
-                            rigthOffsetX = (float) valueAnimator.getAnimatedValue();
-                            invalidate();
-                            rightAnimator = null;
-                        });
-                        animator.start();
-                        rightAnimator = animator;
-                        if (listener != null) {
-                            if ((!startDrag && Math.abs(dy) < touchSlop) || -rigthOffsetX > maxOffset * 0.8f) {
-                                listener.onAccept();
-                            }
-                        }
-                    }
-                }
-                getParent().requestDisallowInterceptTouchEvent(false);
-                captured = false;
-                startDrag = false;
-                declineBounce.setPressed(false);
-                acceptBounce.setPressed(false);
-                setPressed(false);
-                break;
-        }
-        return false;
-    }
-
-    @Override
-    protected void onDraw(Canvas canvas) {
-        if (!retryMod) {
-            if (expandSmallRadius) {
-                smallRadius += dp(2) * 0.04f;
-                if (smallRadius > dp(4)) {
-                    smallRadius = dp(4);
-                    expandSmallRadius = false;
-                }
-            } else {
-                smallRadius -= dp(2) * 0.04f;
-                if (smallRadius < 0) {
-                    smallRadius = 0;
-                    expandSmallRadius = true;
-                }
-            }
-
-            if (expandBigRadius) {
-                bigRadius += dp(4) * 0.03f;
-                if (bigRadius > dp(10)) {
-                    bigRadius = dp(10);
-                    expandBigRadius = false;
-                }
-            } else {
-                bigRadius -= dp(5) * 0.03f;
-                if (bigRadius < dp(5)) {
-                    bigRadius = dp(5);
-                    expandBigRadius = true;
-                }
-            }
-            invalidate();
-        }
-
-        bigRadius += dp(8) * 0.005f;
-        declineRect.set(getMeasuredWidth() - dp(46) - buttonWidth, dp(40), getMeasuredWidth() - dp(46), dp(40) + buttonWidth);
-        canvas.save();
-        canvas.translate(0, dp(40));
-        canvas.save();
-        float s = declineBounce.getScale(0.1f);
-        canvas.scale(s, s, declineRect.centerX(), declineRect.top + buttonWidth / 2f);
-        canvas.translate(rigthOffsetX + getMeasuredWidth() - dp(46) - buttonWidth, 0);
-
-        if (retryMod) {
-            canvas.saveLayer(0, 0, getMeasuredWidth(), getMeasuredHeight(), linePaint, Canvas.ALL_SAVE_FLAG);
-            declineDrawable.draw(canvas);
-            if (cancelDrawable instanceof BitmapDrawable) {
-                BitmapDrawable bitmapDrawable = (BitmapDrawable) cancelDrawable;
-                if (bitmapDrawable.getBitmap() != null) {
-                    canvas.drawBitmap(bitmapDrawable.getBitmap(), null, bitmapDrawable.getBounds(), maskPaint);
-                }
-            }
-            canvas.restore();
-        } else {
-            declineDrawable.draw(canvas);
-            callDrawable.draw(canvas);
-        }
-
-        canvas.save();
-        canvas.translate(buttonWidth / 2f - declineLayout.getWidth() / 2f, buttonWidth + dp(4));
-        declineLayout.draw(canvas);
-        canvas.restore();
-
-        if (leftDrag) {
-            rippleDrawable.setBounds(dp(4), dp(4), buttonWidth - dp(4), buttonWidth - dp(4));
-            rippleDrawable.draw(canvas);
-        }
-
-        canvas.restore();
-
-        acceptRect.set(dp(46), dp(40), dp(46) + buttonWidth, dp(40) + buttonWidth);
-        canvas.save();
-        s = acceptBounce.getScale(0.1f);
-        canvas.scale(s, s, acceptRect.centerX(), acceptRect.top + buttonWidth / 2f);
-        canvas.translate(leftOffsetX + dp(46), 0);
-        if (!retryMod) {
-            avatarWavesDrawable.update();
-            int cx = (int) (buttonWidth / 2f);
-            avatarWavesDrawable.draw(canvas, cx, cx, this);
-        }
-        acceptDrawable.draw(canvas);
-
-        if (retryMod) {
-            canvas.save();
-            canvas.translate(buttonWidth / 2f - retryLayout.getWidth() / 2f, buttonWidth + dp(4));
-            retryLayout.draw(canvas);
-            canvas.restore();
-        } else {
-            canvas.save();
-            canvas.translate(buttonWidth / 2f - acceptLayout.getWidth() / 2f, buttonWidth + dp(4));
-            acceptLayout.draw(canvas);
-            canvas.restore();
-        }
-
-        canvas.save();
-        canvas.translate(dp(6), dp(6));
-        if (isVideo) {
-            final int sz = dp(28);
-            canvas.translate((dp(48) - sz) / 2f, (dp(48) - sz) / 2f);
-            acceptVideoDrawable.setBounds(0, 0, sz, sz);
-            acceptVideoDrawable.draw(canvas);
-        } else {
-            acceptVoiceDrawable.draw(canvas);
-        }
-        canvas.restore();
-
-        if (!leftDrag) {
-            rippleDrawable.setBounds(dp(4), dp(4), buttonWidth - dp(4), buttonWidth - dp(4));
-            rippleDrawable.draw(canvas);
-        }
-
-        canvas.restore();
-        canvas.restore();
-
-        if (captured) {
-            invalidate();
-        }
-    }
-
-    public void setListener(Listener listener) {
-        this.listener = listener;
-    }
-
-    public interface Listener {
-        void onAccept();
-
-        void onDecline();
-    }
-
-    public void setShapeId(int shapeId) {
-        acceptDrawable.setShapeId(shapeId);
-        declineDrawable.setShapeId(shapeId);
-        invalidate();
-    }
-
-    public void setShapes(int acceptShapeId, int declineShapeId) {
-        acceptDrawable.setShapeId(acceptShapeId);
-        declineDrawable.setShapeId(declineShapeId);
-        invalidate();
-    }
-
-    public int getAcceptShapeId() {
-        return acceptDrawable.getShapeId();
-    }
-
-    public int getDeclineShapeId() {
-        return declineDrawable.getShapeId();
-    }
-
-    public FabBackgroundDrawable getAcceptDrawable() {
-        return acceptDrawable;
-    }
-
-    public FabBackgroundDrawable getDeclineDrawable() {
-        return declineDrawable;
-    }
-
-    private ValueAnimator callAnimator;
-
-    public void setRetryMod(boolean retryMod) {
-        this.retryMod = retryMod;
-        if (retryMod) {
-            declineDrawable.setColor(Color.WHITE);
-        } else {
-            acceptVoiceDrawable.start();
-            avatarWavesDrawable.setShowWaves(true, this);
-            declineDrawable.setColor(0xFFF01D2C);
-
-            callAnimator = ValueAnimator.ofInt(0, 60, 0, 0, 60, 0, 0, 0, 0);
-            callAnimator.addUpdateListener(a -> {
-                avatarWavesDrawable.setAmplitude((int) a.getAnimatedValue());
-            });
-
-            callAnimator.setDuration(1500);
-            callAnimator.setRepeatMode(ValueAnimator.RESTART);
-            callAnimator.setRepeatCount(ValueAnimator.INFINITE);
-            callAnimator.start();
-        }
-    }
-
-    public void stopAnimations() {
-        if (callAnimator != null) {
-            callAnimator.cancel();
-            callAnimator = null;
-            acceptVoiceDrawable.stop();
-        }
-    }
-
-    @Override
-    protected void onDetachedFromWindow() {
-        super.onDetachedFromWindow();
-        stopAnimations();
-    }
-
-    @Override
-    protected void drawableStateChanged() {
-        super.drawableStateChanged();
-        rippleDrawable.setState(getDrawableState());
-    }
-
-    @Override
-    public boolean verifyDrawable(@NonNull Drawable drawable) {
-        return rippleDrawable == drawable || super.verifyDrawable(drawable);
-    }
-
-    @Override
-    public void jumpDrawablesToCurrentState() {
-        super.jumpDrawablesToCurrentState();
-        if (rippleDrawable != null) {
-            rippleDrawable.jumpToCurrentState();
-        }
-    }
-
-    @Override
-    public boolean dispatchHoverEvent(MotionEvent event) {
-        if (accessibilityNodeProvider != null && accessibilityNodeProvider.dispatchHoverEvent(event)) {
-            return true;
-        }
-        return super.dispatchHoverEvent(event);
-    }
-
-    @Override
-    public boolean performAccessibilityAction(int action, Bundle arguments) {
-        if (action == AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS) currentFocusedVirtualViewId = NO_ID;
-        return super.performAccessibilityAction(action, arguments);
-    }
-
-    @Override
-    public AccessibilityNodeProvider getAccessibilityNodeProvider() {
-        if (accessibilityNodeProvider == null) {
-            accessibilityNodeProvider = new AcceptDeclineAccessibilityNodeProvider(this, 2) {
-
-                private static final int ACCEPT_VIEW_ID = 0;
-                private static final int DECLINE_VIEW_ID = 1;
-
-                private final int[] coords = {0, 0};
-
-                @Override
-                protected CharSequence getVirtualViewText(int virtualViewId) {
-                    if (virtualViewId == ACCEPT_VIEW_ID) {
-                        if (retryMod) {
-                            if (retryLayout != null) {
-                                return retryLayout.getText();
-                            }
-                        } else {
-                            if (acceptLayout != null) {
-                                return acceptLayout.getText();
-                            }
-                        }
-                    } else if (virtualViewId == DECLINE_VIEW_ID) {
-                        if (declineLayout != null) {
-                            return declineLayout.getText();
-                        }
-                    }
-                    return null;
-                }
-
-                @Override
-                protected void getVirtualViewBoundsInScreen(int virtualViewId, Rect outRect) {
-                    getVirtualViewBoundsInParent(virtualViewId, outRect);
-                    getLocationOnScreen(coords);
-                    outRect.offset(coords[0], coords[1]);
-                }
-
-                @Override
-                protected void getVirtualViewBoundsInParent(int virtualViewId, Rect outRect) {
-                    if (virtualViewId == ACCEPT_VIEW_ID) {
-                        outRect.set(acceptRect);
-                    } else if (virtualViewId == DECLINE_VIEW_ID) {
-                        outRect.set(declineRect);
-                    } else {
-                        outRect.setEmpty();
-                    }
-                }
-
-                @Override
-                protected void onVirtualViewClick(int virtualViewId) {
-                    if (listener != null) {
-                        if (virtualViewId == ACCEPT_VIEW_ID) {
                             listener.onAccept();
-                        } else if (virtualViewId == DECLINE_VIEW_ID) {
-                            listener.onDecline();
-                        }
-                    }
-                }
-            };
-        }
-        return accessibilityNodeProvider;
-    }
-
-    public static abstract class AcceptDeclineAccessibilityNodeProvider extends AccessibilityNodeProvider {
-
-        private final View hostView;
-        private final int virtualViewsCount;
-        private final Rect rect = new Rect();
-        private final AccessibilityManager accessibilityManager;
-
-        private int currentFocusedVirtualViewId = View.NO_ID;
-
-        protected AcceptDeclineAccessibilityNodeProvider(View hostView, int virtualViewsCount) {
-            this.hostView = hostView;
-            this.virtualViewsCount = virtualViewsCount;
-            this.accessibilityManager = ContextCompat.getSystemService(hostView.getContext(), AccessibilityManager.class);
-        }
-
-        @Override
-        public AccessibilityNodeInfo createAccessibilityNodeInfo(int virtualViewId) {
-            AccessibilityNodeInfo nodeInfo;
-            if (virtualViewId == HOST_VIEW_ID) {
-                nodeInfo = AccessibilityNodeInfo.obtain(hostView);
-                nodeInfo.setPackageName(hostView.getContext().getPackageName());
-                for (int i = 0; i < virtualViewsCount; i++) {
-                    nodeInfo.addChild(hostView, i);
-                }
-            } else {
-                nodeInfo = AccessibilityNodeInfo.obtain(hostView, virtualViewId);
-                nodeInfo.setPackageName(hostView.getContext().getPackageName());
-                if (Build.VERSION.SDK_INT >= 21) {
-                    nodeInfo.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_CLICK);
-                }
-                nodeInfo.setText(getVirtualViewText(virtualViewId));
-                nodeInfo.setClassName(Button.class.getName());
-                if (Build.VERSION.SDK_INT >= 24) {
-                    nodeInfo.setImportantForAccessibility(true);
-                }
-                nodeInfo.setVisibleToUser(true);
-                nodeInfo.setClickable(true);
-                nodeInfo.setEnabled(true);
-                nodeInfo.setParent(hostView);
-                getVirtualViewBoundsInScreen(virtualViewId, rect);
-                nodeInfo.setBoundsInScreen(rect);
-            }
-            return nodeInfo;
-        }
-
-        @Override
-        public boolean performAction(int virtualViewId, int action, Bundle arguments) {
-            if (virtualViewId == HOST_VIEW_ID) {
-                return hostView.performAccessibilityAction(action, arguments);
-            } else {
-                if (action == AccessibilityNodeInfo.ACTION_ACCESSIBILITY_FOCUS) {
-                    currentFocusedVirtualViewId = virtualViewId;
-                    sendAccessibilityEventForVirtualView(virtualViewId, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED);
-                } else if (action == AccessibilityNodeInfo.ACTION_CLICK) {
-                    onVirtualViewClick(virtualViewId);
-                }
-            }
-            return true;// For action accessibilityFocus should be return true too,because in other case screenreader will consider,what it's the last node on the screen,and we will hear sound fron it,which announce about it.
-        }
-
-        public boolean dispatchHoverEvent(MotionEvent event) {
-            final int x = (int) event.getX();
-            final int y = (int) event.getY();
-            if (event.getAction() == MotionEvent.ACTION_HOVER_ENTER || event.getAction() == MotionEvent.ACTION_HOVER_MOVE) {
-                for (int i = 0; i < virtualViewsCount; i++) {
-                    getVirtualViewBoundsInParent(i, rect);
-                    if (rect.contains(x, y)) {
-                        if (i != currentFocusedVirtualViewId) {
-                            currentFocusedVirtualViewId = i;
-                            sendAccessibilityEventForVirtualView(i, AccessibilityEvent.TYPE_VIEW_ACCESSIBILITY_FOCUSED);
                         }
                         return true;
                     }
-                }
-            } else if (event.getAction() == MotionEvent.ACTION_HOVER_EXIT) {
-                if (currentFocusedVirtualViewId != -1) {
-                    currentFocusedVirtualViewId = -1;
+                    touchingRetry = false;
+                    invalidate();
+                    break;
+                case MotionEvent.ACTION_CANCEL:
+                    touchingRetry = false;
+                    invalidate();
+                    break;
+            }
+            return super.onTouchEvent(event);
+        }
+
+        switch (event.getAction()) {
+            case MotionEvent.ACTION_DOWN: {
+                triggered = false;
+                if (messageRect.contains(x, y)) {
+                    touchingMessage = true;
+                    invalidate();
                     return true;
                 }
-            }
-            return false;
-        }
-
-        private void sendAccessibilityEventForVirtualView(int virtualViewId, int eventType) {
-            if (accessibilityManager.isTouchExplorationEnabled()) {
-                final ViewParent parent = hostView.getParent();
-                if (parent != null) {
-                    final AccessibilityEvent event = AccessibilityEvent.obtain(eventType);
-                    event.setPackageName(hostView.getContext().getPackageName());
-                    event.setSource(hostView, virtualViewId);
-                    parent.requestSendAccessibilityEvent(hostView, event);
+                if (trackRect.contains(x, y) || knobRect.contains(x, y)) {
+                    if (resetAnimator != null) {
+                        resetAnimator.cancel();
+                        resetAnimator = null;
+                    }
+                    touchingKnob = true;
+                    startTouchX = x;
+                    initialDragOffset = dragOffset;
+                    getParent().requestDisallowInterceptTouchEvent(true);
+                    return true;
                 }
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                if (touchingKnob && !triggered) {
+                    float deltaX = x - startTouchX;
+                    dragOffset = Math.max(-maxDragLeft, Math.min(maxDragRight, initialDragOffset + deltaX));
+                    updateKnobRect();
+
+                    // Check Decline threshold (left)
+                    if (dragOffset <= -maxDragLeft * 0.85f) {
+                        triggered = true;
+                        touchingKnob = false;
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        if (listener != null) {
+                            listener.onDecline();
+                        }
+                    }
+                    // Check Accept threshold (right)
+                    else if (dragOffset >= maxDragRight * 0.85f) {
+                        triggered = true;
+                        touchingKnob = false;
+                        performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                        if (listener != null) {
+                            listener.onAccept();
+                        }
+                    }
+                    invalidate();
+                    return true;
+                }
+                break;
+            }
+            case MotionEvent.ACTION_UP: {
+                if (touchingMessage) {
+                    touchingMessage = false;
+                    invalidate();
+                    if (messageRect.contains(x, y)) {
+                        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                        if (listener != null) {
+                            listener.onMessage();
+                        }
+                    }
+                    return true;
+                }
+                if (touchingKnob) {
+                    touchingKnob = false;
+                    if (!triggered) {
+                        if (dragOffset <= -maxDragLeft * 0.65f) {
+                            triggered = true;
+                            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                            if (listener != null) {
+                                listener.onDecline();
+                            }
+                        } else if (dragOffset >= maxDragRight * 0.65f) {
+                            triggered = true;
+                            performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
+                            if (listener != null) {
+                                listener.onAccept();
+                            }
+                        } else {
+                            animateKnobToCenter();
+                        }
+                    }
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                    return true;
+                }
+                break;
+            }
+            case MotionEvent.ACTION_CANCEL: {
+                touchingMessage = false;
+                if (touchingKnob) {
+                    touchingKnob = false;
+                    animateKnobToCenter();
+                    getParent().requestDisallowInterceptTouchEvent(false);
+                }
+                invalidate();
+                break;
             }
         }
+        return super.onTouchEvent(event);
+    }
 
-        protected abstract CharSequence getVirtualViewText(int virtualViewId);
-
-        protected abstract void getVirtualViewBoundsInScreen(int virtualViewId, Rect outRect);
-
-        protected abstract void getVirtualViewBoundsInParent(int virtualViewId, Rect outRect);
-
-        protected abstract void onVirtualViewClick(int virtualViewId);
+    private void animateKnobToCenter() {
+        if (dragOffset == 0f) return;
+        if (resetAnimator != null) {
+            resetAnimator.cancel();
+        }
+        resetAnimator = ValueAnimator.ofFloat(dragOffset, 0f);
+        resetAnimator.setDuration(260);
+        resetAnimator.setInterpolator(new OvershootInterpolator(1.2f));
+        resetAnimator.addUpdateListener(a -> {
+            dragOffset = (float) a.getAnimatedValue();
+            updateKnobRect();
+            invalidate();
+        });
+        resetAnimator.start();
     }
 }

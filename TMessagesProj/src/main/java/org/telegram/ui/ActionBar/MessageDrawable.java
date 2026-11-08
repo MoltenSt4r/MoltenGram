@@ -47,6 +47,10 @@ public class MessageDrawable extends Drawable {
     public boolean isSelected;
     private Path path;
 
+    public int getCurrentType() {
+        return currentType;
+    }
+
     public Path getPath() {
         return path;
     }

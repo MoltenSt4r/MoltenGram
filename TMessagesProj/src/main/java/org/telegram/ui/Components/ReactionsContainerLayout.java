@@ -2171,7 +2171,7 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
             resetAnimation();
             currentReaction = react;
             hasEnterAnimation = currentReaction.isStar || (currentReaction.emojicon != null && (showCustomEmojiReaction() || allReactionsIsDefault)) && LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_REACTIONS);
-            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction.emojicon != null)) {
+            if (type == TYPE_STICKER_SET_EMOJI || currentReaction.isEffect || ((app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() || app.exteraless.OpenExteraConfig.useNotoForBigReactions()) && currentReaction.emojicon != null)) {
                 hasEnterAnimation = false;
             }
             if (currentReaction.isStar || currentReaction.emojicon != null) {
@@ -2236,7 +2236,38 @@ public class ReactionsContainerLayout extends FrameLayout implements Notificatio
                 }
                 enterImageView.getImageReceiver().setImageBitmap(emojiDrawable);
                 loopImageView.getImageReceiver().setImageBitmap(emojiDrawable);
-                pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                if (type != TYPE_STICKER_SET_EMOJI && (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji())) {
+                    String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(react.emojicon);
+                    if (notoUrl != null) {
+                        pressedBackupImageView.getImageReceiver().setAllowStartAnimation(true);
+                        pressedBackupImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), "60_60", null, null, emojiDrawable, 0, "webp", react, 1);
+                    } else {
+                        pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                    }
+                } else {
+                    pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                }
+            } else if ((app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() || app.exteraless.OpenExteraConfig.useNotoForBigReactions()) && react != null && react.emojicon != null) {
+                Drawable emojiDrawable = Emoji.getEmojiDrawable(react.emojicon);
+                if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                    ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                }
+                String notoUrl = app.exteraless.chats.NotoEmojiHelper.getWebpUrl(react.emojicon);
+                if (notoUrl != null && LiteMode.isEnabled(LiteMode.FLAG_ANIMATED_EMOJI_REACTIONS)) {
+                    enterImageView.getImageReceiver().setAllowStartAnimation(true);
+                    loopImageView.getImageReceiver().setAllowStartAnimation(true);
+                    pressedBackupImageView.getImageReceiver().setAllowStartAnimation(true);
+                    enterImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), "60_60", null, null, emojiDrawable, 0, "webp", react, 1);
+                    loopImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), "60_60", null, null, emojiDrawable, 0, "webp", currentReaction, 1);
+                    pressedBackupImageView.getImageReceiver().setImage(ImageLocation.getForVideoPath(notoUrl), "60_60", null, null, emojiDrawable, 0, "webp", react, 1);
+                } else {
+                    enterImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                    loopImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                    pressedBackupImageView.getImageReceiver().setImageBitmap(emojiDrawable);
+                }
+                if (lockIconView != null) {
+                    lockIconView.setImageReceiver(loopImageView.getImageReceiver());
+                }
             } else if (currentReaction.isEffect) {
                 TLRPC.Document document = MessagesController.getInstance(currentAccount).getEffectDocument(currentReaction.documentId);
                 SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(document, Theme.key_windowBackgroundWhiteGrayIcon, 0.2f);

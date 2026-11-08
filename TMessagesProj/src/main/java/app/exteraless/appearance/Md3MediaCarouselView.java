@@ -3,6 +3,7 @@ package app.exteraless.appearance;
 import android.content.Context;
 import android.graphics.Color;
 import android.graphics.drawable.GradientDrawable;
+import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
@@ -27,17 +28,22 @@ import com.google.android.material.carousel.MultiBrowseCarouselStrategy;
 import com.google.android.material.shape.ShapeAppearanceModel;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.DownloadController;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
+import org.telegram.messenger.UserConfig;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RadialProgressView;
 
+import java.io.File;
+import java.lang.ref.WeakReference;
 import java.util.ArrayList;
 import java.util.Locale;
 
@@ -57,6 +63,7 @@ public class Md3MediaCarouselView extends FrameLayout {
     private ChatMessageCell parentCell;
     private long currentGroupId = 0;
     private boolean isHorizontalDrag;
+    private final ArrayList<CarouselItemObserver> fileObservers = new ArrayList<>();
 
     public boolean isScrollingOrDragging() {
         return isHorizontalDrag || recyclerView.getScrollState() != RecyclerView.SCROLL_STATE_IDLE;
@@ -154,9 +161,47 @@ public class Md3MediaCarouselView extends FrameLayout {
         addView(recyclerView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
     }
 
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        attachFileObservers();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        detachFileObservers();
+    }
+
+    private void detachFileObservers() {
+        for (CarouselItemObserver obs : fileObservers) {
+            obs.detach();
+        }
+        fileObservers.clear();
+    }
+
+    private void attachFileObservers() {
+        detachFileObservers();
+        int account = parentCell != null ? parentCell.currentAccount : UserConfig.selectedAccount;
+        for (MessageObject msg : messages) {
+            if (msg == null) continue;
+            boolean loaded = isMediaLoaded(msg, account);
+            String fn = getMessageFileName(msg);
+            if (!loaded && !TextUtils.isEmpty(fn)) {
+                CarouselItemObserver obs = new CarouselItemObserver(this, account, msg, fn);
+                fileObservers.add(obs);
+                obs.attach();
+                if (DownloadController.getInstance(account).canDownloadMedia(msg)) {
+                    startMediaDownload(msg, account);
+                }
+            }
+        }
+    }
+
     public void setGroup(MessageObject.GroupedMessages group, ChatMessageCell cell) {
         this.parentCell = cell;
         if (group == null || group.messages == null || group.messages.isEmpty()) {
+            detachFileObservers();
             messages.clear();
             currentGroupId = 0;
             adapter.notifyDataSetChanged();
@@ -164,6 +209,7 @@ public class Md3MediaCarouselView extends FrameLayout {
         }
 
         if (currentGroupId != group.groupId || messages.size() != group.messages.size()) {
+            detachFileObservers();
             currentGroupId = group.groupId;
             messages.clear();
             if (group.reversed) {
@@ -176,8 +222,14 @@ public class Md3MediaCarouselView extends FrameLayout {
             updateCarouselStrategy();
             adapter.notifyDataSetChanged();
             recyclerView.scrollToPosition(0);
+            if (isAttachedToWindow()) {
+                attachFileObservers();
+            }
         } else {
             updateCarouselStrategy();
+            if (isAttachedToWindow() && fileObservers.isEmpty() && !messages.isEmpty()) {
+                attachFileObservers();
+            }
         }
     }
 
@@ -348,6 +400,105 @@ public class Md3MediaCarouselView extends FrameLayout {
         }
     }
 
+    public static boolean isMediaLoaded(MessageObject message, int currentAccount) {
+        if (message == null) return false;
+        if (message.mediaExists) return true;
+        if (message.messageOwner != null && !TextUtils.isEmpty(message.messageOwner.attachPath)) {
+            File f = new File(message.messageOwner.attachPath);
+            if (f.exists()) return true;
+        }
+        if (message.messageOwner != null) {
+            File f = FileLoader.getInstance(currentAccount).getPathToMessage(message.messageOwner);
+            if (f != null && f.exists()) return true;
+        }
+        return false;
+    }
+
+    public static void startMediaDownload(MessageObject message, int currentAccount) {
+        if (message == null || isMediaLoaded(message, currentAccount)) return;
+        TLRPC.Document doc = message.getDocument();
+        if (doc != null) {
+            FileLoader.getInstance(currentAccount).loadFile(doc, message, FileLoader.PRIORITY_NORMAL, 0);
+        } else {
+            TLRPC.PhotoSize photo = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, AndroidUtilities.getPhotoSize());
+            if (photo != null) {
+                FileLoader.getInstance(currentAccount).loadFile(ImageLocation.getForObject(photo, message.photoThumbsObject), message, null, FileLoader.PRIORITY_NORMAL, 0);
+            }
+        }
+    }
+
+    public static String getMessageFileName(MessageObject message) {
+        if (message == null) return null;
+        TLRPC.Document doc = message.getDocument();
+        if (doc != null) {
+            return FileLoader.getAttachFileName(doc);
+        }
+        TLRPC.PhotoSize photo = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, AndroidUtilities.getPhotoSize());
+        if (photo != null) {
+            return FileLoader.getAttachFileName(photo);
+        }
+        return message.getFileName();
+    }
+
+    private static class CarouselItemObserver implements DownloadController.FileDownloadProgressListener {
+        private final WeakReference<Md3MediaCarouselView> viewRef;
+        private final int currentAccount;
+        private final int tag;
+        private final MessageObject message;
+        private final String fileName;
+
+        public CarouselItemObserver(Md3MediaCarouselView view, int currentAccount, MessageObject message, String fileName) {
+            this.viewRef = new WeakReference<>(view);
+            this.currentAccount = currentAccount;
+            this.message = message;
+            this.fileName = fileName;
+            this.tag = DownloadController.getInstance(currentAccount).generateObserverTag();
+        }
+
+        @Override
+        public void onFailedDownload(String fileName, boolean canceled) {
+            Md3MediaCarouselView view = viewRef.get();
+            if (view != null) {
+                view.onFailedDownload(fileName, canceled);
+            }
+        }
+
+        @Override
+        public void onSuccessDownload(String fileName) {
+            Md3MediaCarouselView view = viewRef.get();
+            if (view != null) {
+                view.onSuccessDownload(fileName);
+            }
+        }
+
+        @Override
+        public void onProgressDownload(String fileName, long downloadSize, long totalSize) {
+            Md3MediaCarouselView view = viewRef.get();
+            if (view != null) {
+                view.onProgressDownload(fileName, downloadSize, totalSize);
+            }
+        }
+
+        @Override
+        public void onProgressUpload(String fileName, long downloadSize, long totalSize, boolean isEncrypted) {
+        }
+
+        @Override
+        public int getObserverTag() {
+            return tag;
+        }
+
+        public void attach() {
+            if (!TextUtils.isEmpty(fileName)) {
+                DownloadController.getInstance(currentAccount).addLoadingFileObserver(fileName, message, this);
+            }
+        }
+
+        public void detach() {
+            DownloadController.getInstance(currentAccount).removeLoadingFileObserver(this);
+        }
+    }
+
     private static class TwoPhotoCarouselStrategy extends CarouselStrategy {
 
         @NonNull
@@ -429,6 +580,7 @@ public class Md3MediaCarouselView extends FrameLayout {
             progressView.setSize(AndroidUtilities.dp(36));
             progressView.setProgressColor(Color.WHITE);
             progressView.setBackgroundResource(R.drawable.circle_big);
+            progressView.setNoProgress(true);
             frameLayout.addView(progressView, LayoutHelper.createFrame(48, 48, Gravity.CENTER));
 
             return new CarouselViewHolder(frameLayout, imageView, videoBadge, durationText, progressView);
@@ -465,8 +617,16 @@ public class Md3MediaCarouselView extends FrameLayout {
 
             itemView.setOnClickListener(v -> {
                 int pos = getAdapterPosition();
-                if (pos >= 0 && pos < messages.size() && parentCell != null) {
-                    parentCell.didPressCarouselItem(messages.get(pos));
+                if (pos >= 0 && pos < messages.size()) {
+                    MessageObject msg = messages.get(pos);
+                    int account = parentCell != null ? parentCell.currentAccount : UserConfig.selectedAccount;
+                    if (!isMediaLoaded(msg, account)) {
+                        startMediaDownload(msg, account);
+                        updateLoadingState();
+                    }
+                    if (parentCell != null) {
+                        parentCell.didPressCarouselItem(msg);
+                    }
                 }
             });
 
@@ -485,7 +645,10 @@ public class Md3MediaCarouselView extends FrameLayout {
         }
 
         public boolean matchesFileName(String fileName) {
-            return fileName != null && currentFileName != null && (fileName.equals(currentFileName) || fileName.contains(currentFileName) || currentFileName.contains(fileName));
+            if (fileName == null || currentFileName == null) {
+                return false;
+            }
+            return fileName.equals(currentFileName) || fileName.endsWith(currentFileName) || currentFileName.endsWith(fileName);
         }
 
         public void setProgress(float progress) {
@@ -493,12 +656,18 @@ public class Md3MediaCarouselView extends FrameLayout {
                 if (progressView.getVisibility() != View.VISIBLE) {
                     progressView.setVisibility(View.VISIBLE);
                 }
+                progressView.setNoProgress(false);
                 progressView.setProgress(progress);
             }
         }
 
         public void onDownloadFinished() {
-            updateLoadingState();
+            if (progressView != null) {
+                progressView.setVisibility(View.GONE);
+            }
+            if (currentMessage != null) {
+                bind(currentMessage);
+            }
         }
 
         private void updateLoadingState() {
@@ -506,30 +675,47 @@ public class Md3MediaCarouselView extends FrameLayout {
                 if (progressView != null) progressView.setVisibility(View.GONE);
                 return;
             }
-            boolean loaded = imageView.getImageReceiver().hasNotThumb() || currentMessage.mediaExists();
+            int account = parentCell != null ? parentCell.currentAccount : UserConfig.selectedAccount;
+            boolean loaded = isMediaLoaded(currentMessage, account) || imageView.getImageReceiver().hasNotThumb();
             if (progressView != null) {
-                progressView.setVisibility(loaded ? View.GONE : View.VISIBLE);
+                if (loaded) {
+                    progressView.setVisibility(View.GONE);
+                } else {
+                    progressView.setVisibility(View.VISIBLE);
+                    progressView.setNoProgress(true);
+                }
             }
         }
 
         public void bind(MessageObject message) {
             this.currentMessage = message;
-            this.currentFileName = message != null ? message.getFileName() : null;
 
-            TLRPC.PhotoSize photoSize = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, AndroidUtilities.getPhotoSize());
-            TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(message.photoThumbs, 100);
-
-            if (currentFileName == null && photoSize != null && photoSize.location != null) {
-                currentFileName = FileLoader.getAttachFileName(photoSize.location);
+            ArrayList<TLRPC.PhotoSize> thumbs = message != null ? message.photoThumbs : null;
+            TLObject photoParentObject = message != null ? message.photoThumbsObject : null;
+            if (thumbs == null || thumbs.isEmpty()) {
+                TLRPC.Document doc = message != null ? message.getDocument() : null;
+                if (doc != null && doc.thumbs != null && !doc.thumbs.isEmpty()) {
+                    thumbs = doc.thumbs;
+                    photoParentObject = doc;
+                }
             }
 
+            TLRPC.PhotoSize photoSize = FileLoader.getClosestPhotoSizeWithSize(thumbs, AndroidUtilities.getPhotoSize());
+            TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(thumbs, 100);
+
+            this.currentFileName = getMessageFileName(message);
+
             if (photoSize != null) {
+                // Pass null for imageFilter so image decodes at full native resolution without downscaled blur
                 imageView.setImage(
-                        ImageLocation.getForObject(photoSize, message.photoThumbsObject),
-                        "320_320",
-                        ImageLocation.getForObject(thumbSize, message.photoThumbsObject),
-                        "100_100_b",
+                        ImageLocation.getForObject(photoSize, photoParentObject),
+                        null,
+                        ImageLocation.getForObject(thumbSize, photoParentObject),
+                        "b",
+                        message != null ? message.strippedThumb : null,
+                        null,
                         photoSize.size,
+                        0,
                         message
                 );
             } else {
@@ -538,7 +724,7 @@ public class Md3MediaCarouselView extends FrameLayout {
 
             updateLoadingState();
 
-            if (message.isVideo()) {
+            if (message != null && message.isVideo()) {
                 videoBadge.setVisibility(View.VISIBLE);
                 int duration = (int) message.getDuration();
                 int minutes = duration / 60;

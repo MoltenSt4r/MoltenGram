@@ -174,11 +174,11 @@ public class RecordControl extends View implements FlashViews.Invertable {
 
         galleryImage.setParentView(this);
         galleryImage.setCrossfadeWithOldImage(true);
-        galleryImage.setRoundRadius(dp(6));
+        galleryImage.setRoundRadius(dp(14));
 
         final Drawable noPhotosIcon = context.getResources().getDrawable(R.drawable.msg_media_gallery).mutate();
-        noPhotosIcon.setColorFilter(new PorterDuffColorFilter(0x4dFFFFFF, PorterDuff.Mode.MULTIPLY));
-        noGalleryDrawable = new CombinedDrawable(Theme.createRoundRectDrawable(dp(6), 0xFF2E2E2F), noPhotosIcon);
+        noPhotosIcon.setColorFilter(new PorterDuffColorFilter(0xCCFFFFFF, PorterDuff.Mode.MULTIPLY));
+        noGalleryDrawable = new CombinedDrawable(Theme.createRoundRectDrawable(dp(14), 0xFF26282E), noPhotosIcon);
         noGalleryDrawable.setFullsize(false);
         noGalleryDrawable.setIconSize(dp(24), dp(24));
 
@@ -277,7 +277,7 @@ public class RecordControl extends View implements FlashViews.Invertable {
         setDrawableBounds(unlockDrawable, leftCx, cy);
         setDrawableBounds(lockDrawable, leftCx, cy);
         setDrawableBounds(pauseDrawable, leftCx, cy);
-        galleryImage.setImageCoords(leftCx - dp(20), cy - dp(20), dp(40), dp(40));
+        galleryImage.setImageCoords(leftCx - dp(22), cy - dp(22), dp(44), dp(44));
 
         redMatrix.reset();
         redMatrix.postTranslate(cx, cy);
@@ -524,6 +524,8 @@ public class RecordControl extends View implements FlashViews.Invertable {
             canvas.save();
             canvas.scale(scale, scale, leftCx, cy);
             canvas.rotate(-getRotation(), leftCx, cy);
+            AndroidUtilities.rectTmp.set(leftCx - dp(23.5f), cy - dp(23.5f), leftCx + dp(23.5f), cy + dp(23.5f));
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(15.5f), dp(15.5f), buttonPaint);
             galleryImage.draw(canvas);
             canvas.restore();
         }
@@ -534,7 +536,12 @@ public class RecordControl extends View implements FlashViews.Invertable {
             scale = flipButton.getScale(.2f) * dualT * (1.0f - check);
             canvas.scale(scale, scale, rightCx, cy);
             canvas.rotate(flipDrawableRotateT.set(flipDrawableRotate) - getRotation(), rightCx, cy);
-            canvas.drawCircle(rightCx, cy, dp(22), buttonPaintWhite);
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+            if (accent == 0) accent = WHITE;
+            buttonPaintWhite.setColor(accent);
+            AndroidUtilities.rectTmp.set(rightCx - dp(22), cy - dp(22), rightCx + dp(22), cy + dp(22));
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(14), dp(14), buttonPaintWhite);
+            flipDrawableBlack.setColorFilter(new PorterDuffColorFilter(app.exteraless.utils.UIUtil.getOnAccentColor(accent), PorterDuff.Mode.MULTIPLY));
             flipDrawableBlack.draw(canvas);
             canvas.restore();
         }
@@ -543,7 +550,8 @@ public class RecordControl extends View implements FlashViews.Invertable {
             scale = flipButton.getScale(.2f) * (1f - dualT) * (1.0f - check);
             canvas.scale(scale, scale, rightCx, cy);
             canvas.rotate(flipDrawableRotateT.set(flipDrawableRotate) - getRotation(), rightCx, cy);
-            canvas.drawCircle(rightCx, cy, dp(22), buttonPaint);
+            AndroidUtilities.rectTmp.set(rightCx - dp(22), cy - dp(22), rightCx + dp(22), cy + dp(22));
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, dp(14), dp(14), buttonPaint);
             flipDrawableWhite.draw(canvas);
             canvas.restore();
         }

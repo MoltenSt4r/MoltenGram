@@ -4961,7 +4961,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
         floatingButtonStories = new FragmentFloatingButton(context, resourceProvider, true);
         floatingButtonStories.setContentDescription(getString(R.string.StoryPrivacyButtonPost));
-        floatingButtonStories.setImageResource(R.drawable.outline_fab_story_24);
+        floatingButtonStories.setImageResource(R.drawable.camera);
         floatingButtonStories.setOnClickListener(v -> openStoriesRecorder());
         contentView.addView(floatingButtonStories, FragmentFloatingButton.createSubButtonLayoutParams());
 
@@ -5002,21 +5002,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
                 openWriteContacts();
             }
-        });
-        floatingButton3.setOnLongClickListener(v -> {
-            if (initialDialogsType != DIALOGS_TYPE_WIDGET && app.exteraless.appearance.AppearanceConfig.md3FabSpeedDial()) {
-                floatingButton3.performHapticFeedback(HapticFeedbackConstants.LONG_PRESS);
-                if (speedDialView != null && speedDialView.isOpen()) {
-                    speedDialView.close(false);
-                }
-                app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getContext(), () -> {
-                    if (speedDialView != null) {
-                        speedDialView.rebuildItems();
-                    }
-                });
-                return true;
-            }
-            return false;
         });
 
         if (!isArchive() && initialDialogsType == DIALOGS_TYPE_DEFAULT) {
@@ -9222,9 +9207,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             floatingButton3.setTranslationY(baseTranslationY);
         }
         if (floatingButtonStories != null) {
-            floatingButtonStories.setTranslationY(baseTranslationY - dp(52));
+            int mainFabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+            float storiesOffset = dp(mainFabSize + 12);
+            floatingButtonStories.setTranslationY(baseTranslationY - storiesOffset);
             if (storyHint != null) {
-                storyHint.setTranslationY(baseTranslationY - dp(52));
+                storyHint.setTranslationY(baseTranslationY - storiesOffset);
             }
         }
     }

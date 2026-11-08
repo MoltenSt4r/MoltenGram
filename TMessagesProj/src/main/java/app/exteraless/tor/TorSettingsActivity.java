@@ -1012,12 +1012,33 @@ public class TorSettingsActivity extends BaseNekoSettingsActivity implements Tor
 
         private void drawPlayTriangle(Canvas canvas, float cx, float cy) {
             float size = AndroidUtilities.dp(24);
-            trianglePath.reset();
             float shiftX = AndroidUtilities.dp(2.5f); // Оптический баланс треугольника
-            trianglePath.moveTo(cx - size * 0.35f + shiftX, cy - size * 0.5f);
-            trianglePath.lineTo(cx + size * 0.5f + shiftX, cy);
-            trianglePath.lineTo(cx - size * 0.35f + shiftX, cy + size * 0.5f);
+            float xL = cx - size * 0.35f + shiftX;
+            float xR = cx + size * 0.5f + shiftX;
+            float yT = cy - size * 0.5f;
+            float yB = cy + size * 0.5f;
+            float yM = cy;
+
+            float r = AndroidUtilities.dp(4.5f);
+            float dx = xR - xL;
+            float dy = yM - yT;
+            float hypLen = (float) Math.hypot(dx, dy);
+            float ux = dx / hypLen;
+            float uy = dy / hypLen;
+
+            float dTip = r * 1.6f;
+            float dBack = r * 1.5f;
+
+            trianglePath.reset();
+            trianglePath.moveTo(xL, yT + dBack);
+            trianglePath.lineTo(xL, yB - dBack);
+            trianglePath.quadTo(xL, yB, xL + dBack * ux, yB - dBack * uy);
+            trianglePath.lineTo(xR - dTip * ux, yM + dTip * uy);
+            trianglePath.quadTo(xR, yM, xR - dTip * ux, yM - dTip * uy);
+            trianglePath.lineTo(xL + dBack * ux, yT + dBack * uy);
+            trianglePath.quadTo(xL, yT, xL, yT + dBack);
             trianglePath.close();
+
             canvas.drawPath(trianglePath, iconPaint);
         }
     }

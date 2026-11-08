@@ -170,7 +170,11 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == actionRow) {
+        if (position == statusRow) {
+            if (otaManager.isUpdateAvailable() && getParentActivity() != null) {
+                otaManager.showUpdateAvailableDialog(getParentActivity(), otaManager.getPendingUpdate());
+            }
+        } else if (position == actionRow) {
             handleActionClick();
         } else if (position == changelogRow) {
             Browser.openUrl(getParentActivity(), "https://github.com/MoltenSt4r/MoltenGram/releases");
@@ -332,9 +336,15 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                         } else if (otaManager.isUpdateAvailable()) {
                             MoltenGramOtaManager.OtaUpdate u = otaManager.getPendingUpdate();
                             String sizeStr = u != null && u.fileSize > 0 ? AndroidUtilities.formatFileSize(u.fileSize) : "";
-                            String sub = !TextUtils.isEmpty(sizeStr) ? ("Размер: " + sizeStr) : "";
+                            android.text.SpannableStringBuilder sub = new android.text.SpannableStringBuilder();
+                            if (!TextUtils.isEmpty(sizeStr)) {
+                                sub.append("Размер: ").append(sizeStr);
+                            }
                             if (u != null && !TextUtils.isEmpty(u.changelog)) {
-                                sub += (sub.isEmpty() ? "" : " • ") + u.changelog;
+                                if (sub.length() > 0) {
+                                    sub.append("\n\n");
+                                }
+                                sub.append(app.exteraless.ota.ChangelogFormatter.format(u.changelog));
                             }
                             cell.setTextAndValue("Доступно обновление: MoltenGram " + (u != null ? u.version : ""), sub, false);
                         } else {

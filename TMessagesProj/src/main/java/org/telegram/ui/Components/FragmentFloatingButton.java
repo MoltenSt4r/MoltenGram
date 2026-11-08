@@ -4,9 +4,14 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.view.Gravity;
 import android.view.View;
@@ -48,6 +53,17 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private ArrayList<View> additionalContentViews;
     private final boolean isSubButton;
 
+    private int currentShapeId = -1;
+    private int fromShapeId = 0;
+    private int targetShapeId = 0;
+    private float shapeMorphProgress = 1f;
+    private ValueAnimator shapeMorphAnimator;
+    private final Path shapePath = new Path();
+    private final Paint fabBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint fabPressedPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean isFabPressed;
+    private int currentIconColor = 0;
+
     public FragmentFloatingButton(@NonNull Context context, Theme.ResourcesProvider resourcesProvider) {
         this(context, resourcesProvider, false);
     }
@@ -70,11 +86,20 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
         ScaleStateListAnimator.apply(this);
         if (!isSubButton) {
-            // exteraGram 12.9.0, FragmentFloatingButton.java:67 — squircle вместо круга.
-            setOutlineProvider(app.exteraless.appearance.AppearanceConfig.squareFab()
-                    ? ViewOutlineProviderImpl.boundsWithPaddingRoundRect(0, dp(14))
-                    : ViewOutlineProviderImpl.BOUNDS_OVAL);
+            setOutlineProvider(new android.view.ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, android.graphics.Outline outline) {
+                    int shape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+                    if (shape == 0) {
+                        outline.setOval(0, 0, view.getWidth(), view.getHeight());
+                    } else {
+                        int rad = dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(Math.min(view.getWidth(), view.getHeight())));
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), rad);
+                    }
+                }
+            });
             setTranslationZ(dpf2(0.5f));
+            setClipToOutline(false);
         }
 
         if (isSubButton) {
@@ -152,58 +177,286 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
     public void updateColors() {
         if (isSubButton) {
-            imageView.setColorFilter(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider), PorterDuff.Mode.SRC_IN);
-            progressView.setProgressColor(Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider));
+            int customBgCode = app.exteraless.appearance.AppearanceConfig.subFabColor();
+            int defBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+            int defIcon = Theme.getColor(Theme.key_actionBarDefaultIcon, resourcesProvider);
+            int customBg = app.exteraless.utils.UIUtil.resolveFabColor(customBgCode, 0);
 
-            iBlur3SourceColor.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
-            iBlur3ColorProviderTabs.updateColors();
-            iBlur3Background.updateColors();
-            invalidate();
+            int customIconCode = app.exteraless.appearance.AppearanceConfig.subFabIconColor();
+            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(customBgCode, customIconCode, defIcon);
+            currentIconColor = iconCol;
 
-            int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
-            int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
-            setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
+            imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
+            progressView.setProgressColor(iconCol);
+
+            if (customBgCode != 0) {
+                int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
+                int pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
+                setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, customBg, pressedColor));
+            } else {
+                iBlur3SourceColor.setColor(defBg);
+                iBlur3ColorProviderTabs.updateColors();
+                iBlur3Background.updateColors();
+                invalidate();
+
+                int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
+                int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
+                setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
+            }
         } else {
-            imageView.setColorFilter(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider), PorterDuff.Mode.SRC_IN);
-            progressView.setProgressColor(Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider));
-            setBackground(app.exteraless.utils.UIUtil.createFabSelectorDrawable(48,
-                Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider),
-                Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider)
-            ));
+            int mainBgCode = app.exteraless.appearance.AppearanceConfig.fabColor();
+            int defBg = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+            int defIcon = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
+
+            int mainColor = app.exteraless.utils.UIUtil.resolveFabColor(mainBgCode, defBg);
+
+            int mainIconCode = app.exteraless.appearance.AppearanceConfig.fabIconColor();
+            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
+            currentIconColor = iconCol;
+
+            imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
+            progressView.setProgressColor(iconCol);
+
+            int pressedColor;
+            if (mainBgCode != 0) {
+                pressedColor = androidx.core.graphics.ColorUtils.blendARGB(mainColor, 0xFF000000, 0.15f);
+            } else {
+                pressedColor = Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider);
+            }
+
+            fabBgPaint.setColor(mainColor);
+            fabPressedPaint.setColor(pressedColor);
+            setBackground(null);
+
+            if (currentShapeId < 0) {
+                currentShapeId = app.exteraless.appearance.AppearanceConfig.fabShape();
+                fromShapeId = currentShapeId;
+                targetShapeId = currentShapeId;
+            }
+            invalidate();
+        }
+
+        // Synchronize layout params with updated size and alignment settings
+        android.view.ViewGroup.LayoutParams lp = getLayoutParams();
+        if (lp instanceof FrameLayout.LayoutParams) {
+            FrameLayout.LayoutParams flp = (FrameLayout.LayoutParams) lp;
+            FrameLayout.LayoutParams targetLp = isSubButton ? createSubButtonLayoutParams() : createDefaultLayoutParams();
+            if (flp.width != targetLp.width || flp.height != targetLp.height || flp.gravity != targetLp.gravity
+                    || flp.leftMargin != targetLp.leftMargin || flp.rightMargin != targetLp.rightMargin) {
+                setLayoutParams(targetLp);
+            }
+        }
+    }
+
+    @Override
+    public void setPressed(boolean pressed) {
+        super.setPressed(pressed);
+        if (!isSubButton && isFabPressed != pressed) {
+            isFabPressed = pressed;
+            invalidate();
+        }
+    }
+
+    @Override
+    protected void dispatchDraw(Canvas canvas) {
+        if (isSubButton) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+
+        int w = getWidth();
+        int h = getHeight();
+        if (w <= 0 || h <= 0) {
+            super.dispatchDraw(canvas);
+            return;
+        }
+
+        updateShapePath(w, h);
+        canvas.drawPath(shapePath, isFabPressed ? fabPressedPaint : fabBgPaint);
+
+        canvas.save();
+        canvas.clipPath(shapePath);
+        super.dispatchDraw(canvas);
+        canvas.restore();
+    }
+
+    private void updateShapePath(float w, float h) {
+        shapePath.reset();
+        int shape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        if (shapeMorphProgress >= 1f || fromShapeId == targetShapeId) {
+            shapePath.set(app.exteraless.appearance.Md3AvatarShapes.getShapePath(shape, 0, 0, w, h));
+        } else {
+            shapePath.set(app.exteraless.appearance.Md3AvatarShapes.getMorphPath(fromShapeId, targetShapeId, shapeMorphProgress, 0, 0, w, h));
+        }
+    }
+
+    public void morphTo(int targetShape, int targetSizeDp, boolean animated) {
+        morphTo(targetShape, targetSizeDp, app.exteraless.appearance.AppearanceConfig.fabColor(), animated);
+    }
+
+    public void morphTo(int targetShape, int targetSizeDp, int targetColorCode, boolean animated) {
+        if (isSubButton) return;
+        if (targetShape < 0 || targetShape >= app.exteraless.appearance.Md3AvatarShapes.SHAPES_COUNT) {
+            targetShape = app.exteraless.appearance.AppearanceConfig.fabShape();
+        }
+
+        int defBg = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        int defIcon = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
+        final int targetColor = app.exteraless.utils.UIUtil.resolveFabColor(targetColorCode, defBg);
+        int targetIconCode = (targetColorCode == app.exteraless.appearance.AppearanceConfig.fabActiveColor())
+                ? app.exteraless.appearance.AppearanceConfig.fabActiveIconColor()
+                : app.exteraless.appearance.AppearanceConfig.fabIconColor();
+        final int targetIconColor = app.exteraless.utils.UIUtil.resolveFabIconColor(targetColorCode, targetIconCode, defIcon);
+
+        final int startColor = fabBgPaint.getColor() != 0 ? fabBgPaint.getColor() : targetColor;
+        final int startIconColor = currentIconColor != 0 ? currentIconColor : targetIconColor;
+
+        int curShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        final int restingSizePx = dp(app.exteraless.appearance.AppearanceConfig.fabSize());
+        final int startSize = getLayoutParams() != null && getLayoutParams().width > 0 ? getLayoutParams().width : restingSizePx;
+        final int endSize = dp(targetSizeDp);
+
+        final float startShiftY = activeTranslationY;
+        final float targetShiftY = endSize < restingSizePx ? -(restingSizePx - endSize) : 0f;
+
+        if (!animated) {
+            if (shapeMorphAnimator != null) {
+                shapeMorphAnimator.cancel();
+                shapeMorphAnimator = null;
+            }
+            fromShapeId = targetShape;
+            targetShapeId = targetShape;
+            currentShapeId = targetShape;
+            shapeMorphProgress = 1f;
+            fabBgPaint.setColor(targetColor);
+            imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
+            progressView.setProgressColor(targetIconColor);
+            currentIconColor = targetIconColor;
+            applyFabSize(targetSizeDp);
+            setActiveTranslationY(targetShiftY);
+            invalidate();
+            return;
+        }
+
+        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && currentIconColor == targetIconColor && startSize == endSize && activeTranslationY == targetShiftY) {
+            applyFabSize(targetSizeDp);
+            return;
+        }
+
+        if (shapeMorphAnimator != null) {
+            shapeMorphAnimator.cancel();
+        }
+
+        fromShapeId = (shapeMorphProgress < 1f) ? fromShapeId : curShape;
+        targetShapeId = targetShape;
+        currentShapeId = targetShape;
+        shapeMorphProgress = 0f;
+
+        shapeMorphAnimator = ValueAnimator.ofFloat(0f, 1f);
+        shapeMorphAnimator.setDuration(260);
+        shapeMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        shapeMorphAnimator.addUpdateListener(anim -> {
+            shapeMorphProgress = (Float) anim.getAnimatedValue();
+            if (startSize != endSize) {
+                int curSize = (int) (startSize + (endSize - startSize) * shapeMorphProgress);
+                applyFabDimension(curSize);
+            }
+            if (startShiftY != targetShiftY) {
+                setActiveTranslationY(startShiftY + (targetShiftY - startShiftY) * shapeMorphProgress);
+            }
+            if (startColor != targetColor) {
+                int blended = androidx.core.graphics.ColorUtils.blendARGB(startColor, targetColor, shapeMorphProgress);
+                fabBgPaint.setColor(blended);
+            }
+            if (startIconColor != targetIconColor) {
+                int blendedIcon = androidx.core.graphics.ColorUtils.blendARGB(startIconColor, targetIconColor, shapeMorphProgress);
+                imageView.setColorFilter(blendedIcon, PorterDuff.Mode.SRC_IN);
+                progressView.setProgressColor(blendedIcon);
+            }
+            invalidate();
+        });
+        shapeMorphAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                fromShapeId = targetShapeId;
+                currentShapeId = targetShapeId;
+                shapeMorphProgress = 1f;
+                fabBgPaint.setColor(targetColor);
+                imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
+                progressView.setProgressColor(targetIconColor);
+                currentIconColor = targetIconColor;
+                applyFabSize(targetSizeDp);
+                setActiveTranslationY(targetShiftY);
+                invalidate();
+            }
+        });
+        shapeMorphAnimator.start();
+    }
+
+    private void applyFabSize(int sizeDp) {
+        applyFabDimension(dp(sizeDp));
+    }
+
+    private void applyFabDimension(int sizePx) {
+        android.view.ViewGroup.LayoutParams lp = getLayoutParams();
+        if (lp != null && (lp.width != sizePx || lp.height != sizePx)) {
+            lp.width = sizePx;
+            lp.height = sizePx;
+            setLayoutParams(lp);
         }
     }
 
     public static final int SIZE = 48;
 
     public static FrameLayout.LayoutParams createSubButtonLayoutParams() {
-        return LayoutHelper.createFrame(48, 48,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20, 0, 20, 14);
+        int mainSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+        int subSize = app.exteraless.appearance.AppearanceConfig.subFabSize();
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        boolean isEdge = app.exteraless.appearance.AppearanceConfig.subFabAlignment() == app.exteraless.appearance.AppearanceConfig.SUB_FAB_ALIGN_EDGE;
+
+        int horizontalOffset = isEdge ? 20 : (20 + Math.max(0, (mainSize - subSize) / 2));
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(subSize, subSize, gravity,
+                isLeft ? horizontalOffset : 0, 0, isLeft ? 0 : horizontalOffset, 14);
     }
 
     public static FrameLayout.LayoutParams createDefaultLayoutParams() {
-        return LayoutHelper.createFrame(48, 48,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20, 0, 20, 14);
+        int size = app.exteraless.appearance.AppearanceConfig.fabSize();
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(size, size, gravity,
+                isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
-
 
     public static FrameLayout.LayoutParams createDefaultLayoutParamsBig() {
-        return LayoutHelper.createFrame(56, 56,
-                (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM,
-                20 /*24*/, 0, 20 /*24*/, 14 /*16*/);
+        boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        int gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
+        return LayoutHelper.createFrame(56, 56, gravity,
+                isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
 
+    private float activeTranslationY;
     private float additionalTranslationY;
     private float internalTranslationY;
     private boolean setTranslationInternal;
 
+    private void updateCombinedTranslationY() {
+        setTranslationInternal = true;
+        super.setTranslationY(internalTranslationY + additionalTranslationY + activeTranslationY);
+        setTranslationInternal = false;
+    }
+
+    public void setActiveTranslationY(float translationY) {
+        if (activeTranslationY != translationY) {
+            activeTranslationY = translationY;
+            updateCombinedTranslationY();
+        }
+    }
+
     private void setAdditionalTranslationY(float translationY) {
         if (additionalTranslationY != translationY) {
-            setTranslationInternal = true;
-            super.setTranslationY(internalTranslationY + translationY);
-            setTranslationInternal = false;
             additionalTranslationY = translationY;
+            updateCombinedTranslationY();
         }
     }
 
@@ -226,10 +479,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     @Override
     public void setTranslationY(float translationY) {
         if (internalTranslationY != translationY) {
-            setTranslationInternal = true;
-            super.setTranslationY(translationY + additionalTranslationY);
-            setTranslationInternal = false;
             internalTranslationY = translationY;
+            updateCombinedTranslationY();
         }
     }
 

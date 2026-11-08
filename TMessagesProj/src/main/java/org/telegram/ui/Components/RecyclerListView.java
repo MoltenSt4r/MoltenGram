@@ -1553,6 +1553,7 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 if (pendingHighlightPosition != null) {
                     highlightRowInternal(pendingHighlightPosition, 700, false);
                 }
+                update3dScroll();
             }
         });
         addOnItemTouchListener(new RecyclerListViewItemClickListener(context));
@@ -1691,6 +1692,73 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         if (pendingHighlightPosition != null) {
             highlightRowInternal(pendingHighlightPosition, 700, false);
         }
+        update3dScroll();
+    }
+
+    private app.exteraless.appearance.CylinderScrollEffect cylinderScrollEffect;
+
+    public void update3dScroll() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) {
+            return;
+        }
+        try {
+            boolean enabled = app.exteraless.appearance.AppearanceConfig.chat3dScroll();
+            if (!enabled) {
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
+                }
+                return;
+            }
+
+            LayoutManager lm = getLayoutManager();
+            if (lm == null || !lm.canScrollVertically()) {
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
+                }
+                return;
+            }
+            if (getClass().getName().contains("ChatAttachAlert")) {
+                if (cylinderScrollEffect != null) {
+                    cylinderScrollEffect.clear();
+                }
+                return;
+            }
+            android.view.ViewParent parent = getParent();
+            while (parent != null) {
+                if (parent.getClass().getName().contains("ChatAttachAlert")) {
+                    if (cylinderScrollEffect != null) {
+                        cylinderScrollEffect.clear();
+                    }
+                    return;
+                }
+                parent = parent.getParent();
+            }
+
+            int width = getMeasuredWidth();
+            if (width <= 0) {
+                width = getWidth();
+            }
+            int height = getMeasuredHeight();
+            if (height <= 0) {
+                height = getHeight();
+            }
+            if (width <= 0 || height <= 0) {
+                return;
+            }
+
+            if (cylinderScrollEffect == null) {
+                cylinderScrollEffect = new app.exteraless.appearance.CylinderScrollEffect(this);
+            }
+            float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
+            cylinderScrollEffect.update(width, height, getPaddingTop(), getPaddingBottom(), maxAngle);
+        } catch (Throwable ignored) {
+        }
+    }
+
+    @Override
+    public void setPadding(int left, int top, int right, int bottom) {
+        super.setPadding(left, top, right, bottom);
+        update3dScroll();
     }
 
     public void setSelectorType(int type) {
@@ -2793,6 +2861,10 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
         if (stoppedAllHeavyOperations) {
             stoppedAllHeavyOperations = false;
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.startAllHeavyOperations, 512);
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && cylinderScrollEffect != null) {
+            cylinderScrollEffect.clear();
         }
     }
 

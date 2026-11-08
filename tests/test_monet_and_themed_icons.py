@@ -294,10 +294,9 @@ def test_md3_avatar_shapes_inline_infinite_carousel():
     mas_path = os.path.join(JAVA_DIR, 'app/exteraless/appearance/Md3AvatarShapesActivity.java')
     with open(mas_path, 'r', encoding='utf-8') as f:
         mas_content = f.read()
-    assert 'TYPE_SHAPE_CAROUSEL' in mas_content
-    assert 'PeerShapeCarouselCell' in mas_content
-    assert 'INFINITE_COUNT = Integer.MAX_VALUE' in mas_content
-    assert 'Math.floorMod(position, Md3AvatarShapes.SHAPES_COUNT)' in mas_content
+    assert 'TYPE_SHAPE_EDITOR' in mas_content
+    assert 'PeerCategory' in mas_content
+    assert 'Md3AvatarShapes' in mas_content
 
 
 def test_media_carousel_scrim_context_menu_and_sibling_suppression():

@@ -40,7 +40,6 @@ import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.AvatarCornersPreviewCell;
 import app.exteraless.appearance.AvatarCornersSeekBar;
 import app.exteraless.appearance.ChatListPreviewCell;
-import app.exteraless.appearance.FabShapeCell;
 import app.exteraless.appearance.FoldersPreviewCell;
 import app.exteraless.icons.IconPacksActivity;
 import app.exteraless.pillstack.PillStackSettingsActivity;
@@ -74,12 +73,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_EXPANDABLE_SWITCH = 104;
     /** Круглая галочка внутри группы. */
     private static final int TYPE_ROUND_CHECK = 105;
-    /** Две карточки-превью формы плавающей кнопки. */
-    private static final int TYPE_FAB_SHAPE = 106;
+    /** Слайдер угла 3D-скролла */
+    private static final int TYPE_3D_SCROLL_SLIDER = 106;
+    /** Слайдер прозрачности/матовости стеклянных сообщений */
+    private static final int TYPE_GLASS_OPACITY_SLIDER = 107;
+    /** Слайдер рассеивания и преломления стеклянных сообщений */
+    private static final int TYPE_GLASS_REFRACTION_SLIDER = 108;
+    /** Слайдер толщины обводки и бликов стеклянных сообщений */
+    private static final int TYPE_GLASS_STROKE_SLIDER = 109;
+    private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
     private int appearanceHeaderRow;
-    private int fabShapeRow;
     private int useSystemFontsRow;
     private int ndotFontHeadersRow;
     private int useSystemEmojiRow;
@@ -98,6 +103,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int blurHeaderRow;
     private int glassOutlineRow;
     private int glassMessageMenuRow;
+    private int glassMessagesRow;
+    private int glassMessagesOpacityRow;
+    private int glassMessagesRefractionRow;
+    private int glassMessagesStrokeRow;
+    private int customBubbleBgRow;
+    private int chat3dScrollRow;
+    private int chat3dScrollIntensityRow;
     private int forceBlurRow;
     private int disableAvatarBlurRow;
     private int blurDividerRow;
@@ -131,8 +143,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3MiniPlayerRow;
     private int md3ChatInputRow;
     private int mediaGroupCarouselRow;
-    private int md3FabSpeedDialRow;
-    private int md3FabItemsRow;
     private boolean md3Expanded;
     private int iosGroupRow;
     private int iosNavBarRow;
@@ -179,7 +189,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private AvatarCornersPreviewCell avatarCornersPreviewCell;
     private ChatListPreviewCell chatListPreviewCell;
     private FoldersPreviewCell foldersPreviewCell;
-    private FabShapeCell fabShapeCell;
 
     /**
      * Отложенный rebuild после слайдера радиуса секций. exteraGram
@@ -248,7 +257,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         linksDividerRow = addRow();
 
         appearanceHeaderRow = addRow("appearanceHeader");
-        fabShapeRow = addRow("fabShape");
         useSystemFontsRow = addRow("useSystemFonts");
         ndotFontHeadersRow = addRow("ndotFontHeaders");
         // Material Design 3 — сворачиваемая группа, как у exteraGram
@@ -264,15 +272,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3MiniPlayerRow = addRow("md3MiniPlayer");
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
-            md3FabSpeedDialRow = addRow("md3FabSpeedDial");
-            if (AppearanceConfig.md3FabSpeedDial()) {
-                md3FabItemsRow = addRow("md3FabItems");
-            } else {
-                md3FabItemsRow = -1;
-            }
         } else {
             md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
-            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = md3FabSpeedDialRow = md3FabItemsRow = -1;
+            md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
         if (iosExpanded) {
@@ -294,6 +296,23 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         blurHeaderRow = addRow("blurHeader");
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
+        glassMessagesRow = addRow("glassMessages");
+        if (AppearanceConfig.glassMessages.Bool() && SharedConfig.chatBlurEnabled()) {
+            glassMessagesOpacityRow = addRow("glassMessagesOpacity");
+            glassMessagesRefractionRow = addRow("glassMessagesRefraction");
+            glassMessagesStrokeRow = addRow("glassMessagesStroke");
+        } else {
+            glassMessagesOpacityRow = -1;
+            glassMessagesRefractionRow = -1;
+            glassMessagesStrokeRow = -1;
+        }
+        customBubbleBgRow = addRow("customBubbleBg");
+        chat3dScrollRow = addRow("chat3dScroll");
+        if (AppearanceConfig.chat3dScroll.Bool()) {
+            chat3dScrollIntensityRow = addRow("chat3dScrollIntensity");
+        } else {
+            chat3dScrollIntensityRow = -1;
+        }
         forceBlurRow = addRow("forceBlur");
         disableAvatarBlurRow = addRow("disableAvatarBlur");
         blurDividerRow = addRow();
@@ -586,6 +605,100 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AndroidUtilities.runOnUIThread(sectionRadiusRebuild, 350);
     }
 
+    private void onChat3dAngleChanged(int value) {
+        AppearanceConfig.chat3dScrollAngle.setConfigInt(value);
+        if (listView != null) {
+            listView.update3dScroll();
+        }
+    }
+
+    private void onGlassMessagesOpacityChanged(int value) {
+        AppearanceConfig.glassMessagesOpacity.setConfigInt(value);
+    }
+
+    private void onGlassMessagesRefractionChanged(int value) {
+        AppearanceConfig.glassMessagesRefraction.setConfigInt(value);
+    }
+
+    private void onGlassMessagesStrokeChanged(int value) {
+        AppearanceConfig.glassMessagesStrokeWidth.setConfigInt(value);
+    }
+
+    private void openCustomBubbleBgPicker() {
+        Intent intent = new Intent(Intent.ACTION_GET_CONTENT);
+        intent.setType("image/*");
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        try {
+            startActivityForResult(intent, PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE);
+        } catch (Exception ignored) {
+        }
+    }
+
+    private void resetCustomBubbleBg() {
+        try {
+            String prev = AppearanceConfig.customMessageBubbleBg();
+            if (!TextUtils.isEmpty(prev)) {
+                java.io.File f = new java.io.File(prev);
+                if (f.exists()) {
+                    f.delete();
+                }
+            }
+        } catch (Throwable ignored) {
+        }
+        AppearanceConfig.customMessageBubbleBg.setConfigString("");
+        org.telegram.ui.Cells.ChatMessageCell.invalidateCustomBubbleBgCache();
+        if (listAdapter != null && customBubbleBgRow >= 0) {
+            listAdapter.notifyItemChanged(customBubbleBgRow);
+        }
+        rebuildAll();
+    }
+
+    @Override
+    public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE) {
+            if (resultCode != Activity.RESULT_OK || data == null || data.getData() == null) {
+                return;
+            }
+            android.net.Uri uri = data.getData();
+            java.io.File outFile = new java.io.File(ApplicationLoader.getFilesDirFixed(), "custom_message_bubble_bg.jpg");
+            try (java.io.InputStream in = ApplicationLoader.applicationContext.getContentResolver().openInputStream(uri)) {
+                if (in == null) {
+                    return;
+                }
+                android.graphics.Bitmap bmp = android.graphics.BitmapFactory.decodeStream(in);
+                if (bmp == null) {
+                    return;
+                }
+                int maxSide = 1600;
+                int bw = bmp.getWidth();
+                int bh = bmp.getHeight();
+                if (bw > maxSide || bh > maxSide) {
+                    float scale = Math.min((float) maxSide / bw, (float) maxSide / bh);
+                    int nw = Math.max(1, Math.round(bw * scale));
+                    int nh = Math.max(1, Math.round(bh * scale));
+                    android.graphics.Bitmap scaled = android.graphics.Bitmap.createScaledBitmap(bmp, nw, nh, true);
+                    if (scaled != bmp) {
+                        bmp.recycle();
+                        bmp = scaled;
+                    }
+                }
+                try (java.io.FileOutputStream out = new java.io.FileOutputStream(outFile)) {
+                    bmp.compress(android.graphics.Bitmap.CompressFormat.JPEG, 92, out);
+                }
+                bmp.recycle();
+                AppearanceConfig.customMessageBubbleBg.setConfigString(outFile.getAbsolutePath());
+                org.telegram.ui.Cells.ChatMessageCell.invalidateCustomBubbleBgCache();
+                if (listAdapter != null && customBubbleBgRow >= 0) {
+                    listAdapter.notifyItemChanged(customBubbleBgRow);
+                }
+                rebuildAll();
+            } catch (Throwable ignored) {
+            }
+            return;
+        }
+        super.onActivityResultFragment(requestCode, resultCode, data);
+    }
+
     /** Все живые превью экрана — их надо дёргать на смене темы и стиля разделителя. */
     private void invalidatePreviews() {
         if (avatarCornersPreviewCell != null) avatarCornersPreviewCell.invalidate();
@@ -596,7 +709,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 app.exteraless.appearance.ChipFoldersController.getInstance().refreshPreview(foldersPreviewCell);
             }
         }
-        if (fabShapeCell != null) fabShapeCell.invalidate();
     }
 
     @Override
@@ -705,15 +817,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             AppearanceConfig.mediaGroupCarousel.setConfigBool(!AppearanceConfig.mediaGroupCarousel.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.mediaGroupCarousel.Bool());
             return;
-        } else if (position == md3FabSpeedDialRow) {
-            boolean enable = !AppearanceConfig.md3FabSpeedDial();
-            AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
-            rebuildAllAndSelf(view, enable);
-            rebuildRowsAndNotify();
-            return;
-        } else if (position == md3FabItemsRow) {
-            app.exteraless.components.Md3SpeedDialView.showCustomizeDialog(getParentActivity(), this::rebuildRowsAndNotify);
-            return;
         } else if (position == iosGroupRow) {
             iosExpanded = !iosExpanded;
             rebuildRowsAndNotify();
@@ -775,6 +878,75 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     getString(R.string.OEAppearanceGlassOutlineSolid),
                     getString(R.string.OEAppearanceGlassOutlineHidden)
             }, AppearanceConfig.glassOutlineStyle, null);
+            return;
+        } else if (position == glassMessagesRow) {
+            if (!SharedConfig.chatBlurEnabled()) {
+                AndroidUtilities.shakeViewSpring(view, -4f);
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.raw.info,
+                                    getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
+                                    getString(R.string.Enable),
+                                    () -> {
+                                        SharedConfig.toggleChatBlur();
+                                        rebuildRowsAndNotify();
+                                        rebuildAll();
+                                    })
+                            .show();
+                }
+                return;
+            }
+            boolean enabled = AppearanceConfig.glassMessages.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            rebuildRowsAndNotify();
+            rebuildAll();
+            return;
+        } else if (position == glassMessagesOpacityRow || position == glassMessagesRefractionRow || position == glassMessagesStrokeRow) {
+            return;
+        } else if (position == customBubbleBgRow) {
+            if (AppearanceConfig.hasCustomMessageBubbleBg()) {
+                if (getParentActivity() == null) {
+                    return;
+                }
+                AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+                builder.setTitle(getString(R.string.OEAppearanceCustomBubbleBg));
+                builder.setItems(new CharSequence[]{
+                        getString(R.string.OEAppearanceCustomBubbleBgChoose),
+                        getString(R.string.OEAppearanceCustomBubbleBgReset)
+                }, (dialog, which) -> {
+                    if (which == 0) {
+                        openCustomBubbleBgPicker();
+                    } else if (which == 1) {
+                        resetCustomBubbleBg();
+                    }
+                });
+                builder.setNegativeButton(getString(R.string.Cancel), null);
+                showDialog(builder.create());
+            } else {
+                openCustomBubbleBgPicker();
+            }
+            return;
+        } else if (position == chat3dScrollRow) {
+            boolean enabled = AppearanceConfig.chat3dScroll.toggleConfigBool();
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(enabled);
+            }
+            int prevIntensity = chat3dScrollIntensityRow;
+            updateRows();
+            if (listAdapter != null) {
+                if (prevIntensity == -1 && chat3dScrollIntensityRow != -1) {
+                    listAdapter.notifyItemInserted(chat3dScrollIntensityRow);
+                } else if (prevIntensity != -1 && chat3dScrollIntensityRow == -1) {
+                    listAdapter.notifyItemRemoved(prevIntensity);
+                }
+            }
+            if (listView != null) {
+                listView.update3dScroll();
+            }
+            return;
+        } else if (position == chat3dScrollIntensityRow) {
             return;
         } else if (position == tabTitleStyleRow) {
             if (getParentActivity() == null) {
@@ -864,22 +1036,29 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(SharedConfig.chatBlurEnabled());
             }
+            rebuildRowsAndNotify();
             rebuildAll();
             return;
         } else if (position == glassMessageMenuRow) {
+            if (!SharedConfig.chatBlurEnabled()) {
+                AndroidUtilities.shakeViewSpring(view, -4f);
+                if (getParentActivity() != null) {
+                    BulletinFactory.of(this)
+                            .createSimpleBulletin(R.raw.info,
+                                    getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
+                                    getString(R.string.Enable),
+                                    () -> {
+                                        SharedConfig.toggleChatBlur();
+                                        rebuildRowsAndNotify();
+                                        rebuildAll();
+                                    })
+                            .show();
+                }
+                return;
+            }
             boolean enabled = AppearanceConfig.glassMessageMenu.toggleConfigBool();
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
-            }
-            // Стеклянное меню рисуется поверх
-            // блюра, и без него настройка не даёт ничего видимого, поэтому предлагаем включить.
-            if (enabled && !SharedConfig.chatBlurEnabled() && getParentActivity() != null) {
-                BulletinFactory.of(this)
-                        .createSimpleBulletin(R.raw.info,
-                                getString(R.string.OEAppearanceGlassMessageMenuBlurOff),
-                                getString(R.string.Enable),
-                                SharedConfig::toggleChatBlur)
-                        .show();
             }
             return;
         } else if (position == separateHeadersRow
@@ -998,12 +1177,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     foldersPreviewCell = new FoldersPreviewCell(mContext, resourcesProvider);
                     view = foldersPreviewCell;
                     break;
-                case TYPE_FAB_SHAPE:
-                    fabShapeCell = new FabShapeCell(mContext,
-                            OpenExteraAppearanceActivity.this::rebuildAll);
-                    fabShapeCell.setNeedDivider(true);
-                    view = fabShapeCell;
-                    break;
                 case TYPE_DETAIL_SETTINGS: {
                     // Базовый класс делает такую же ячейку, но многострочной; exteraGram
                     // (asButtonWithSubtext(..., 64, 60) :456-458) держит ровно 64 dp.
@@ -1024,6 +1197,59 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setValue(AppearanceConfig.sectionRadius.Int());
                     slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider;
+                    break;
+                case TYPE_3D_SCROLL_SLIDER:
+                    AvatarCornersSeekBar slider3d = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onChat3dAngleChanged,
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MIN,
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MAX,
+                            getString(R.string.OEAppearanceChat3dScrollAngle),
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MIN + "°",
+                            AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MAX + "°");
+                    slider3d.setValueSuffix("°");
+                    slider3d.setValue(AppearanceConfig.chat3dScrollAngle.Int());
+                    slider3d.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider3d;
+                    break;
+                case TYPE_GLASS_OPACITY_SLIDER:
+                    AvatarCornersSeekBar sliderOpacity = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onGlassMessagesOpacityChanged,
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MIN,
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MAX,
+                            getString(R.string.OEAppearanceGlassMessagesOpacity),
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MIN + "%",
+                            AppearanceConfig.GLASS_MESSAGES_OPACITY_MAX + "%");
+                    sliderOpacity.setValueSuffix("%");
+                    sliderOpacity.setValue(AppearanceConfig.glassMessagesOpacity.Int());
+                    sliderOpacity.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderOpacity;
+                    break;
+                case TYPE_GLASS_REFRACTION_SLIDER:
+                    AvatarCornersSeekBar sliderRefraction = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onGlassMessagesRefractionChanged,
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MIN,
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MAX,
+                            getString(R.string.OEAppearanceGlassMessagesRefraction),
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MIN + "%",
+                            AppearanceConfig.GLASS_MESSAGES_REFRACTION_MAX + "%");
+                    sliderRefraction.setValueSuffix("%");
+                    sliderRefraction.setValue(AppearanceConfig.glassMessagesRefraction.Int());
+                    sliderRefraction.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderRefraction;
+                    break;
+                case TYPE_GLASS_STROKE_SLIDER:
+                    AvatarCornersSeekBar sliderStroke = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onGlassMessagesStrokeChanged,
+                            AppearanceConfig.GLASS_MESSAGES_STROKE_MIN,
+                            AppearanceConfig.GLASS_MESSAGES_STROKE_MAX,
+                            getString(R.string.OEAppearanceGlassMessagesStroke),
+                            getString(R.string.OEAppearanceSectionRadiusOff),
+                            "3.0 dp");
+                    sliderStroke.setValueScale(0.1f);
+                    sliderStroke.setValueSuffix("dp");
+                    sliderStroke.setValue(AppearanceConfig.glassMessagesStrokeWidth.Int());
+                    sliderStroke.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderStroke;
                     break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
@@ -1061,6 +1287,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     // иначе строка, побывавшая заблокированной, останется полупрозрачной.
                     cell.setEnabled(position != separateHeadersRow
                             || AppearanceConfig.dividerStyle.Int() != AppearanceConfig.DIVIDER_SEGMENTS, null);
+                    cell.setCheckBoxIcon((position == glassMessagesRow || position == glassMessageMenuRow) && !SharedConfig.chatBlurEnabled()
+                            ? R.drawable.permission_locked : 0);
                     if (position == centerTitleRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceCenterTitle),
                                 AppearanceConfig.INSTANCE.centerTitle(), true);
@@ -1077,7 +1305,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == separateHeadersRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSeparateHeaders), AppearanceConfig.separateHeaders.Bool(), true);
                     } else if (position == glassMessageMenuRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), getString(R.string.OEAppearanceGlassMessageMenuInfo), AppearanceConfig.glassMessageMenu.Bool(), true, true);
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), getString(R.string.OEAppearanceGlassMessageMenuInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessageMenu.Bool(), true, true);
+                    } else if (position == glassMessagesRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessages), getString(R.string.OEAppearanceGlassMessagesInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessages.Bool(), true, true);
+                    } else if (position == chat3dScrollRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceChat3dScroll), getString(R.string.OEAppearanceChat3dScrollInfo), AppearanceConfig.chat3dScroll.Bool(), true, true);
                     } else if (position == forceBlurRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceForceBlur), SharedConfig.chatBlurEnabled(), true);
                     } else if (position == disableAvatarBlurRow) {
@@ -1169,9 +1401,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == mediaGroupCarouselRow) {
                         cell.setText(getString(R.string.media_group_carousel), "",
                                 AppearanceConfig.mediaGroupCarousel.Bool(), true, true);
-                    } else if (position == md3FabSpeedDialRow) {
-                        cell.setText(getString(R.string.OEAppearanceMd3SpeedDial), "",
-                                AppearanceConfig.md3FabSpeedDial(), true, true);
                     } else if (position == iosNavBarRow) {
                         cell.setText(getString(R.string.OEAppearanceIosNavigationBarStyle), "",
                                 AppearanceConfig.iosNavigationBarStyle.Bool(), true, true);
@@ -1213,6 +1442,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == glassOutlineRow) {
                         String[] v = {getString(R.string.OEAppearanceGlassOutlineGlare), getString(R.string.OEAppearanceGlassOutlineSolid), getString(R.string.OEAppearanceGlassOutlineHidden)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceGlassOutline), v[clamp(AppearanceConfig.glassOutlineStyle.Int(), v.length)], true);
+                    } else if (position == customBubbleBgRow) {
+                        String val = AppearanceConfig.hasCustomMessageBubbleBg()
+                                ? getString(R.string.OEAppearanceCustomBubbleBgSet)
+                                : getString(R.string.OEAppearanceSectionRadiusOff);
+                        cell.setTextAndValue(getString(R.string.OEAppearanceCustomBubbleBg), val, true);
                     } else if (position == tabTitleStyleRow) {
                         CharSequence[] v = tabTitleOptions();
                         cell.setTextAndValue(getString(R.string.OEAppearanceTabTitleStyle), v[tabTitleIndex(NekoConfig.tabsTitleType.Int())], true);
@@ -1231,10 +1465,32 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int titleText = clamp(AppearanceConfig.titleText.Int(), v.length);
                         cell.setTextAndValue(getString(R.string.OEAppearanceTitleText),
                                 titleText == AppearanceConfig.TITLE_TEXT_CUSTOM ? NaConfig.INSTANCE.getCustomTitle().String() : v[titleText], false);
-                    } else if (position == md3FabItemsRow) {
-                        cell.setTextAndValue(getString(R.string.OEAppearanceMd3FabItems),
-                                app.exteraless.components.Md3SpeedDialView.getItemsSummary(), false);
                     }
+                    break;
+                }
+                case TYPE_SECTION_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.sectionRadius.Int());
+                    break;
+                }
+                case TYPE_3D_SCROLL_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.chat3dScrollAngle.Int());
+                    break;
+                }
+                case TYPE_GLASS_OPACITY_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.glassMessagesOpacity.Int());
+                    break;
+                }
+                case TYPE_GLASS_REFRACTION_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.glassMessagesRefraction.Int());
+                    break;
+                }
+                case TYPE_GLASS_STROKE_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.glassMessagesStrokeWidth.Int());
                     break;
                 }
                 case TYPE_DETAIL_SETTINGS: {
@@ -1311,6 +1567,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_FOLDERS;
             } else if (position == sectionRadiusRow) {
                 return TYPE_SECTION_SLIDER;
+            } else if (position == chat3dScrollIntensityRow) {
+                return TYPE_3D_SCROLL_SLIDER;
+            } else if (position == glassMessagesOpacityRow) {
+                return TYPE_GLASS_OPACITY_SLIDER;
+            } else if (position == glassMessagesRefractionRow) {
+                return TYPE_GLASS_REFRACTION_SLIDER;
+            } else if (position == glassMessagesStrokeRow) {
+                return TYPE_GLASS_STROKE_SLIDER;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow
@@ -1322,8 +1586,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == chatListDividerRow || position == foldersDividerRow
                     || position == linksDividerRow || position == hidingDividerRow) {
                 return TYPE_INFO_PRIVACY;
-            } else if (position == fabShapeRow) {
-                return TYPE_FAB_SHAPE;
             } else if (position == appNavigationRow || position == appIconRow
                     || position == iconPacksRow || position == emojiSetsRow || position == pillStackRow
                     || position == playerSettingsRow) {
@@ -1337,17 +1599,16 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == md3PlayerRow || position == md3MiniPlayerRow
                     || (position == md3ChatInputRow && md3ChatInputRow != -1)
                     || position == mediaGroupCarouselRow
-                    || position == md3FabSpeedDialRow
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosChatHeaderRow
                     || position == hidePremiumSectionRow || position == hideHelpSectionRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
+                    || position == customBubbleBgRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
-                    || position == chipFoldersRow || position == md3AvatarShapesRow
-                    || position == md3FabItemsRow) {
+                    || position == chipFoldersRow || position == md3AvatarShapesRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
