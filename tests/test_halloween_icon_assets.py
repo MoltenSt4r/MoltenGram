@@ -181,9 +181,70 @@ def test_strings_resources_defined():
         root = tree.getroot()
 
         strings_dict = {elem.attrib.get('name'): elem.text for elem in root.findall('string')}
-        assert 'AppIconMoltenGramHalloween' not in strings_dict, 'AppIconMoltenGramHalloween must be deleted'
+        for legacy in ['AppIconMoltenGramHalloween', 'AppIconMoltenGramEndeavourOS', 'AppIconMoltenGramKraft', 'AppIconMoltenGramHolo', 'AppIconMoltenGramNeon']:
+            assert legacy not in strings_dict, f'{legacy} must be deleted'
         assert strings_dict.get('AppIconMoltenGramCinema') == expected_cinema
         assert strings_dict.get('AppIconMoltenGramToxic') == expected_toxic
         assert strings_dict.get('AppIconMoltenGramStillLife') == expected_stilllife
         assert strings_dict.get('AppIconMoltenGramCandy') == expected_candy
         assert strings_dict.get('AppIconMoltenGramNothing') == 'Nothing OS'
+
+
+def test_all_21_archive_icons_present():
+    """Verify all 21 icons from /root/newicons.zip are present in Controller, Manifest, Strings, mipmaps and drawables."""
+    archive_variants = [
+        ('anotherchance', 'MoltenGramAnotherChanceIcon', 'AppIconMoltenGramAnotherChance'),
+        ('beer', 'MoltenGramBeerIcon', 'AppIconMoltenGramBeer'),
+        ('burning', 'MoltenGramBurningIcon', 'AppIconMoltenGramBurning'),
+        ('candy', 'MoltenGramCandyIcon', 'AppIconMoltenGramCandy'),
+        ('cinema', 'MoltenGramCinemaIcon', 'AppIconMoltenGramCinema'),
+        ('classic', 'MoltenGramClassicIcon', 'AppIconMoltenGramClassic'),
+        ('coffee', 'MoltenGramCoffeeIcon', 'AppIconMoltenGramCoffee'),
+        ('coral', 'MoltenGramCoralIcon', 'AppIconMoltenGramCoral'),
+        ('dotted', 'MoltenGramDottedIcon', 'AppIconMoltenGramDotted'),
+        ('exteragram', 'MoltenGramExteraGramIcon', 'AppIconMoltenGramExteraGram'),
+        ('glacier', 'MoltenGramGlacierIcon', 'AppIconMoltenGramGlacier'),
+        ('google', 'MoltenGramGoogleIcon', 'AppIconMoltenGramGoogle'),
+        ('magma', 'MoltenGramMagmaIcon', 'AppIconMoltenGramMagma'),
+        ('nothing', 'MoltenGramNothingIcon', 'AppIconMoltenGramNothing'),
+        ('onyx', 'MoltenGramOnyxIcon', 'AppIconMoltenGramOnyx'),
+        ('proton', 'MoltenGramProtonIcon', 'AppIconMoltenGramProton'),
+        ('sad', 'MoltenGramSadIcon', 'AppIconMoltenGramSad'),
+        ('schizophrenia', 'MoltenGramSchizophreniaIcon', 'AppIconMoltenGramSchizophrenia'),
+        ('star', 'MoltenGramStarIcon', 'AppIconMoltenGramStar'),
+        ('stilllife', 'MoltenGramStillLifeIcon', 'AppIconMoltenGramStillLife'),
+        ('sunrise', 'MoltenGramSunriseIcon', 'AppIconMoltenGramSunrise'),
+        ('toxic', 'MoltenGramToxicIcon', 'AppIconMoltenGramToxic'),
+    ]
+
+    with open(LAUNCHER_CONTROLLER_PATH, 'r', encoding='utf-8') as f:
+        ctrl_text = f.read()
+
+    tree = ET.parse(MANIFEST_PATH)
+    manifest_aliases = [
+        a.attrib.get('{http://schemas.android.com/apk/res/android}name', '').split('.')[-1]
+        for a in tree.findall('.//activity-alias')
+    ]
+
+    en_tree = ET.parse(os.path.join(RES_DIR, 'values', 'strings_oe.xml'))
+    en_strings = {s.attrib.get('name'): s.text for s in en_tree.findall('.//string')}
+
+    ru_tree = ET.parse(os.path.join(RES_DIR, 'values-ru-rRU', 'strings_oe.xml'))
+    ru_strings = {s.attrib.get('name'): s.text for s in ru_tree.findall('.//string')}
+
+    for var, alias, str_key in archive_variants:
+        assert f'"{alias}"' in ctrl_text, f'Controller missing alias {alias}'
+        assert f'R.string.{str_key}' in ctrl_text, f'Controller missing string {str_key}'
+        assert alias in manifest_aliases, f'Manifest missing activity-alias {alias}'
+        assert str_key in en_strings and en_strings[str_key], f'strings_oe.xml missing {str_key}'
+        assert str_key in ru_strings and ru_strings[ru_strings.get(str_key) is not None and str_key], f'ru strings_oe.xml missing {str_key}'
+
+        bg_res = 'moltengram_icon_background' if var == 'classic' else f'moltengram_{var}_icon_background'
+        for density in DENSITIES.keys():
+            bg_file = os.path.join(RES_DIR, f'drawable-{density}', f'{bg_res}.png')
+            assert os.path.exists(bg_file), f'Missing drawable {bg_file}'
+            mip_file = os.path.join(RES_DIR, f'mipmap-{density}', f'ic_launcher_moltengram_{var}.png')
+            assert os.path.exists(mip_file), f'Missing mipmap {mip_file}'
+            round_file = os.path.join(RES_DIR, f'mipmap-{density}', f'ic_launcher_moltengram_{var}_round.png')
+            assert os.path.exists(round_file), f'Missing round mipmap {round_file}'
+
