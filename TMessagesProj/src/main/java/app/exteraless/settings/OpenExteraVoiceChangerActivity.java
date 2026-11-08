@@ -384,11 +384,15 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
-    protected BaseNekoSettingsActivity.Adapter createAdapter() {
-        return new ListAdapter();
+    protected BaseListAdapter createAdapter(Context context) {
+        return new ListAdapter(context);
     }
 
-    private class ListAdapter extends BaseNekoSettingsActivity.Adapter {
+    private class ListAdapter extends BaseListAdapter {
+
+        public ListAdapter(Context context) {
+            super(context);
+        }
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
