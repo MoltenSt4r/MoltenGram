@@ -92,6 +92,18 @@ public class SettingsHelper {
         SEARCH_TITLE_ALIASES.put("OEChats:replaceEdited", "OEChatsReplaceEditedWithIcon");
         SEARCH_TITLE_ALIASES.put("OEChats:videoMessagesCamera", "CameraInVideoMessages");
         SEARCH_TITLE_ALIASES.put("OEChats:voskModels", "VoskModelsShort");
+        SEARCH_TITLE_ALIASES.put("OEChats:voiceChanger", "OEVoiceChanger");
+        SEARCH_TITLE_ALIASES.put("OpenExtera:voiceChanger", "OEVoiceChanger");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:masterEnable", "OEVoiceChangerEnable");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:presets", "OEVoiceChangerPresets");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:pitchSlider", "OEVoiceChangerPitch");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:freqCrushSlider", "OEVoiceChangerFreqCrush");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:bitCrushSlider", "OEVoiceChangerBitCrush");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:echoDelaySlider", "OEVoiceChangerEchoDelay");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:echoFeedbackSlider", "OEVoiceChangerEchoFeedback");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:glitchRateSlider", "OEVoiceChangerGlitchRate");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:glitchRepeatsSlider", "OEVoiceChangerGlitchRepeats");
+        SEARCH_TITLE_ALIASES.put("OEVoiceChanger:testMic", "OEVoiceChangerTestAudio");
         MOVED_ROWS.put("chats:translateInSheet", "general");
         MOVED_ROWS.put("other:unlimitedPinnedDialogs", "general");
         MOVED_ROWS.put("other:glyph", "general");
@@ -767,6 +779,7 @@ public class SettingsHelper {
         exteralessFragments.add(new OpenExteraGeneralActivity());
         exteralessFragments.add(new OpenExteraAppearanceActivity());
         exteralessFragments.add(new OpenExteraChatsActivity());
+        exteralessFragments.add(new app.exteraless.settings.OpenExteraVoiceChangerActivity());
         exteralessFragments.add(new OpenExteraOtherActivity());
         exteralessFragments.add(new OpenExteraAyuMomentsActivity());
         exteralessFragments.add(new PillStackSettingsActivity());

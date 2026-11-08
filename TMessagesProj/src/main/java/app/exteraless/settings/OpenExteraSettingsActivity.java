@@ -35,6 +35,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int generalRow;
     private int appearanceRow;
     private int chatsRow;
+    private int voiceChangerRow;
     private int deviceSpoofRow;
     private int torRow;
     private int pluginsRow;
@@ -64,6 +65,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         generalRow = addRow("general");
         appearanceRow = addRow("appearance");
         chatsRow = addRow("chats");
+        voiceChangerRow = addRow("voiceChanger");
         deviceSpoofRow = addRow("deviceSpoof");
         torRow = addRow("tor");
         pluginsRow = addRow("plugins");
@@ -157,6 +159,9 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     public void onResume() {
         super.onResume();
         if (listAdapter != null && listView != null && !listView.isComputingLayout()) {
+            if (voiceChangerRow != -1) {
+                listAdapter.notifyItemChanged(voiceChangerRow);
+            }
             if (deviceSpoofRow != -1) {
                 listAdapter.notifyItemChanged(deviceSpoofRow);
             }
@@ -204,6 +209,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new OpenExteraAppearanceActivity());
         } else if (position == chatsRow) {
             presentFragment(new OpenExteraChatsActivity());
+        } else if (position == voiceChangerRow) {
+            presentFragment(new OpenExteraVoiceChangerActivity());
         } else if (position == deviceSpoofRow) {
             presentFragment(new app.exteraless.spoof.DeviceSpoofActivity());
         } else if (position == torRow) {
@@ -271,6 +278,9 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndIcon(getString(R.string.OpenExteraAppearance), R.drawable.msg_theme, true);
                     } else if (position == chatsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraChats), R.drawable.msg_discussion, true);
+                    } else if (position == voiceChangerRow) {
+                        boolean vcEnabled = app.exteraless.chats.ChatsConfig.voiceChangerEnabled.Bool();
+                        cell.setTextAndValueAndIcon(getString(R.string.OEVoiceChanger), getString(vcEnabled ? R.string.NotificationsOn : R.string.OEVoiceChangerOff), R.drawable.msg_voice, true);
                     } else if (position == deviceSpoofRow) {
                         boolean spoofing = app.exteraless.spoof.DeviceSpoofManager.getInstance().isSpoofingEnabled();
                         String val = spoofing ? app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel() : null;

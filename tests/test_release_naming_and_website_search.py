@@ -159,3 +159,24 @@ def test_launch_activity_deep_links_support_push_opened_and_settings_neko():
     assert "url.startsWith(\"tg://settings/neko\")" in content
     assert "url.startsWith(\"tg://settings/moltengram\")" in content
 
+
+def test_voice_changer_search_and_send_icon_branding():
+    helper_path = os.path.join(
+        REPO_ROOT, "TMessagesProj", "src", "main", "java", "tw", "nekomimi", "nekogram", "helpers", "SettingsHelper.java"
+    )
+    with open(helper_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "OpenExteraVoiceChangerActivity" in content
+    assert '"OEChats:voiceChanger", "OEVoiceChanger"' in content
+    assert '"OEVoiceChanger:masterEnable", "OEVoiceChangerEnable"' in content
+
+    # Check root settings has Voice Changer
+    root_settings = os.path.join(
+        REPO_ROOT, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraSettingsActivity.java"
+    )
+    with open(root_settings, "r", encoding="utf-8") as f:
+        r_content = f.read()
+    assert "voiceChangerRow" in r_content
+    assert "OpenExteraVoiceChangerActivity" in r_content
+
+

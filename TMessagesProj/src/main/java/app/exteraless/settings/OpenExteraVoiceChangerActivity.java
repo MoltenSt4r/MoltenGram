@@ -78,6 +78,42 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    public int getSearchGuid() {
+        return 27000;
+    }
+
+    @Override
+    public int getSearchIcon() {
+        return R.drawable.msg_voice;
+    }
+
+    @Override
+    public String getSearchPrefix() {
+        return "OEVoiceChanger";
+    }
+
+    @Override
+    public String getSearchTitle() {
+        return getString(R.string.OEVoiceChanger);
+    }
+
+    @Override
+    public void buildRowsForSearch() {
+        getSearchRows().clear();
+        int r = 0;
+        getSearchRows().put(r++, "masterEnable");
+        getSearchRows().put(r++, "presets");
+        getSearchRows().put(r++, "pitchSlider");
+        getSearchRows().put(r++, "freqCrushSlider");
+        getSearchRows().put(r++, "bitCrushSlider");
+        getSearchRows().put(r++, "echoDelaySlider");
+        getSearchRows().put(r++, "echoFeedbackSlider");
+        getSearchRows().put(r++, "glitchRateSlider");
+        getSearchRows().put(r++, "glitchRepeatsSlider");
+        getSearchRows().put(r++, "testMic");
+    }
+
+    @Override
     protected void updateRows() {
         super.updateRows();
 
