@@ -280,7 +280,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndIcon(getString(R.string.OpenExteraChats), R.drawable.msg_discussion, true);
                     } else if (position == voiceChangerRow) {
                         boolean vcEnabled = app.exteraless.chats.ChatsConfig.voiceChangerEnabled.Bool();
-                        cell.setTextAndValueAndIcon(getString(R.string.OEVoiceChanger), getString(vcEnabled ? R.string.NotificationsOn : R.string.OEVoiceChangerOff), R.drawable.msg_voice, true);
+                        cell.setTextAndValueAndIcon(getString(R.string.OEVoiceChanger), getString(vcEnabled ? R.string.NotificationsOn : R.string.OEVoiceChangerOff), R.drawable.msg_voicechat, true);
                     } else if (position == deviceSpoofRow) {
                         boolean spoofing = app.exteraless.spoof.DeviceSpoofManager.getInstance().isSpoofingEnabled();
                         String val = spoofing ? app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel() : null;

@@ -84,7 +84,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
 
     @Override
     public int getSearchIcon() {
-        return R.drawable.msg_voice;
+        return R.drawable.msg_voicechat;
     }
 
     @Override
