@@ -2671,10 +2671,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsHideSendAsPeer), NekoConfig.hideSendAsChannel.Bool(), true);
             } else if (position == tapToSwitchRecordRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsTapToSwitchRecord), !NekoConfig.useChatAttachMediaMenu.Bool(), true);
-            } else if (position == voiceChangerRow) {
-                TextCell textCell = (TextCell) holder.itemView;
-                String status = ChatsConfig.voiceChangerEnabled.Bool() ? getString(R.string.OEShakeVibrationOn) : getString(R.string.OEShakeVibrationOff);
-                textCell.setTextAndValue(getString(R.string.OEVoiceChanger), status, true);
             } else if (position == keepAttachButtonRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
             } else if (position == removeMessageTailRow) {
@@ -2857,6 +2853,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 CharSequence[] options = messageAnimationOptions();
                 cell.setTextAndValue(getString(R.string.OEChatsOutgoingMessageAnimation),
                         options[clampIndex(ChatsConfig.outgoingMessageAnimation(), options.length)], true);
+            } else if (position == voiceChangerRow) {
+                String status = ChatsConfig.voiceChangerEnabled.Bool() ? getString(R.string.NotificationsOn) : getString(R.string.NotificationsOff);
+                cell.setTextAndValue(getString(R.string.OEVoiceChanger), status, true);
             }
         }
 
@@ -2899,7 +2898,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
-            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow || position == voiceChangerRow) return TYPE_TEXT;
+            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
             if (isGroupHeader(position)) return TYPE_EXPANDABLE_SWITCH;
             if (groupHeaderFor(position) != -1) return TYPE_ROUND_CHECK;
             if (isSettings(position)) return TYPE_SETTINGS;
@@ -2949,7 +2948,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || position == openAiCredentialsRow || position == voskModelsRow
                     || position == textAnimationRow || position == trackingFilterRow
                     || position == pluginCommandPrefixesRow || position == customCommandsRow
-                    || position == setEmojiStatusRow
+                    || position == setEmojiStatusRow || position == voiceChangerRow
                     || position == incomingMessageAnimationRow || position == outgoingMessageAnimationRow;
         }
     }

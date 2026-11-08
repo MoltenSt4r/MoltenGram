@@ -22,14 +22,13 @@ import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCheckCell;
-import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.RecyclerListView;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
-import java.util.ArrayList;
 
 import app.exteraless.appearance.AvatarCornersSeekBar;
 import app.exteraless.chats.ChatsConfig;
@@ -47,13 +46,6 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
  * - Быстрые пресеты и тест микрофона
  */
 public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
-
-    private static final int TYPE_HEADER = 0;
-    private static final int TYPE_CHECK = 1;
-    private static final int TYPE_SETTINGS = 2;
-    private static final int TYPE_DETAIL_SETTINGS = 3;
-    private static final int TYPE_SHADOW = 4;
-    private static final int TYPE_SLIDER = 5;
 
     private int masterHeaderRow;
     private int masterEnableRow;
@@ -79,6 +71,11 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
 
     private boolean isTesting = false;
     private AudioTrack activeTestTrack = null;
+
+    @Override
+    protected String getActionBarTitle() {
+        return getString(R.string.OEVoiceChanger);
+    }
 
     @Override
     protected void updateRows() {
@@ -112,7 +109,6 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             presetsHeaderRow = -1;
             presetsRow = -1;
             presetsDividerRow = -1;
-
             effectsHeaderRow = -1;
             pitchSliderRow = -1;
             freqCrushSliderRow = -1;
@@ -122,7 +118,6 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             glitchRateSliderRow = -1;
             glitchRepeatsSliderRow = -1;
             effectsDividerRow = -1;
-
             testHeaderRow = -1;
             testMicRow = -1;
             testDividerRow = -1;
@@ -130,24 +125,12 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
-    public boolean onFragmentCreate() {
-        super.onFragmentCreate();
-        return true;
-    }
-
-    @Override
-    public View createView(Context context) {
-        View view = super.createView(context);
-        actionBar.setTitle(getString(R.string.OEVoiceChanger));
-        return view;
-    }
-
-    @Override
-    protected void onItemClick(View view, int position, float x, float y) {
+    protected void onItemClick(View view, int position) {
         if (position == masterEnableRow) {
-            boolean enabled = ChatsConfig.voiceChangerEnabled.toggleConfigBool();
+            boolean next = !ChatsConfig.voiceChangerEnabled.Bool();
+            ChatsConfig.voiceChangerEnabled.setConfigBool(next);
             if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(enabled);
+                ((TextCheckCell) view).setChecked(next);
             }
             VoiceChangerController.getInstance().resetState();
             updateRows();
@@ -155,21 +138,34 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 listAdapter.notifyDataSetChanged();
             }
         } else if (position == presetsRow) {
-            showPresetsDialog();
+            showPresetDialog();
         } else if (position == testMicRow) {
-            startAudioTest();
+            if (isTesting) {
+                stopAudioTest();
+            } else {
+                startAudioTest();
+            }
         }
     }
 
-    private void showPresetsDialog() {
-        final String[] presetNames = {
+    @Override
+    public void onFragmentDestroy() {
+        super.onFragmentDestroy();
+        stopAudioTest();
+    }
+
+    private void showPresetDialog() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        String[] presetNames = new String[] {
                 getString(R.string.OEVoiceChangerPresetDefault),
                 getString(R.string.OEVoiceChangerPresetGlitch),
                 getString(R.string.OEVoiceChangerPresetBitcrush),
                 getString(R.string.OEVoiceChangerPresetDemon),
                 getString(R.string.OEVoiceChangerPresetChipmunk),
                 getString(R.string.OEVoiceChangerPresetEcho),
-                getString(R.string.OEVoiceChangerPresetWalkie)
+                getString(R.string.OEVoiceChangerPresetRadio)
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -180,7 +176,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             if (listAdapter != null) {
                 listAdapter.notifyDataSetChanged();
             }
-            BulletinFactory.of(this).createSimpleBulletin(R.raw.voip_unmute, presetNames[which]).show();
+            BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, presetNames[which]).show();
         });
         showDialog(builder.create());
     }
@@ -257,21 +253,30 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         int pitch = ChatsConfig.voiceChangerPitch.Int();
         int freq = ChatsConfig.voiceChangerFreqCrush.Int();
         int bit = ChatsConfig.voiceChangerBitCrush.Int();
-        int delay = ChatsConfig.voiceChangerEchoDelay.Int();
-        int rate = ChatsConfig.voiceChangerGlitchRate.Int();
+        int echoDelay = ChatsConfig.voiceChangerEchoDelay.Int();
+        int echoFeedback = ChatsConfig.voiceChangerEchoFeedback.Int();
+        int glitch = ChatsConfig.voiceChangerGlitchRate.Int();
 
-        if (pitch == 0 && freq == 48000 && bit == 16 && delay == 0 && rate == 0) {
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) {
             return getString(R.string.OEVoiceChangerPresetDefault);
-        } else if (rate >= 60 && delay > 0) {
+        }
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 40 && echoFeedback == 45 && glitch == 75) {
             return getString(R.string.OEVoiceChangerPresetGlitch);
-        } else if (bit <= 6 && freq <= 10000) {
+        }
+        if (pitch == 0 && freq == 8000 && bit == 4 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) {
             return getString(R.string.OEVoiceChangerPresetBitcrush);
-        } else if (pitch < -3) {
+        }
+        if (pitch == -6 && freq == 48000 && bit == 16 && echoDelay == 120 && echoFeedback == 35 && glitch == 0) {
             return getString(R.string.OEVoiceChangerPresetDemon);
-        } else if (pitch > 4) {
+        }
+        if (pitch == 8 && freq == 48000 && bit == 16 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) {
             return getString(R.string.OEVoiceChangerPresetChipmunk);
-        } else if (delay > 200) {
+        }
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 280 && echoFeedback == 65 && glitch == 0) {
             return getString(R.string.OEVoiceChangerPresetEcho);
+        }
+        if (pitch == 1 && freq == 6000 && bit == 6 && echoDelay == 0 && echoFeedback == 0 && glitch == 15) {
+            return getString(R.string.OEVoiceChangerPresetRadio);
         }
         return getString(R.string.OEVoiceChangerPresetCustom);
     }
@@ -281,7 +286,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             return;
         }
         isTesting = true;
-        BulletinFactory.of(this).createSimpleBulletin(R.raw.voip_unmute, getString(R.string.OEVoiceChangerRecordTest)).show();
+        BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, getString(R.string.OEVoiceChangerRecordTest)).show();
 
         Utilities.globalQueue.postRunnable(() -> {
             AudioRecord record = null;
@@ -293,31 +298,22 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
 
             try {
                 record = new AudioRecord(MediaRecorder.AudioSource.DEFAULT, sampleRate, AudioFormat.CHANNEL_IN_MONO, AudioFormat.ENCODING_PCM_16BIT, bufferSize * 2);
-                record.startRecording();
-                VoiceChangerController.getInstance().resetState();
+                if (record.getState() == AudioRecord.STATE_INITIALIZED) {
+                    record.startRecording();
+                    int maxRecordSeconds = 3;
+                    int maxBytes = sampleRate * 2 * maxRecordSeconds;
+                    recordedData = new byte[maxBytes];
 
-                // Записываем 2.5 секунды аудио
-                int maxBytes = sampleRate * 2 * 5 / 2; // ~2.5 sec = 240,000 bytes
-                ByteBuffer accumulator = ByteBuffer.allocate(maxBytes);
-                accumulator.order(ByteOrder.nativeOrder());
-                ByteBuffer chunk = ByteBuffer.allocateDirect(bufferSize);
-                chunk.order(ByteOrder.nativeOrder());
-
-                long startTime = System.currentTimeMillis();
-                while (System.currentTimeMillis() - startTime < 2500 && accumulator.remaining() >= bufferSize) {
-                    chunk.rewind();
-                    int read = record.read(chunk, bufferSize);
-                    if (read > 0) {
-                        chunk.limit(read);
-                        VoiceChangerController.getInstance().process(chunk, read);
-                        chunk.position(0);
-                        accumulator.put(chunk);
-                        totalBytes += read;
+                    long start = System.currentTimeMillis();
+                    while (isTesting && System.currentTimeMillis() - start < 3000 && totalBytes + bufferSize <= maxBytes) {
+                        int read = record.read(recordedData, totalBytes, bufferSize);
+                        if (read > 0) {
+                            totalBytes += read;
+                        } else {
+                            break;
+                        }
                     }
                 }
-                recordedData = new byte[totalBytes];
-                accumulator.position(0);
-                accumulator.get(recordedData, 0, totalBytes);
             } catch (Exception e) {
                 FileLog.e(e);
             } finally {
@@ -325,62 +321,67 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     try {
                         record.stop();
                         record.release();
-                    } catch (Exception ignored) {
-                    }
+                    } catch (Exception ignored) {}
                 }
             }
 
-            if (recordedData != null && totalBytes > 0) {
-                final byte[] audioToPlay = recordedData;
-                final int bytesToPlay = totalBytes;
-                AndroidUtilities.runOnUIThread(() -> {
-                    BulletinFactory.of(this).createSimpleBulletin(R.raw.sound_on, getString(R.string.OEVoiceChangerStopTest)).show();
-                    playAudioTest(audioToPlay, bytesToPlay, sampleRate);
-                });
-            } else {
-                AndroidUtilities.runOnUIThread(() -> isTesting = false);
-            }
-        });
-    }
+            final byte[] finalData = recordedData;
+            final int finalTotal = totalBytes;
 
-    private void playAudioTest(byte[] data, int length, int sampleRate) {
-        Utilities.globalQueue.postRunnable(() -> {
-            AudioTrack track = null;
-            try {
-                int minBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
-                track = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT, Math.max(minBuf, length), AudioTrack.MODE_STREAM);
-                activeTestTrack = track;
-                track.play();
-                track.write(data, 0, length);
-                // Ждём завершения воспроизведения
-                Thread.sleep(length / (sampleRate * 2 / 1000) + 200);
-            } catch (Exception e) {
-                FileLog.e(e);
-            } finally {
-                if (track != null) {
+            AndroidUtilities.runOnUIThread(() -> {
+                if (!isTesting) {
+                    return;
+                }
+                if (finalData == null || finalTotal <= 0) {
+                    stopAudioTest();
+                    return;
+                }
+
+                // Process recorded audio through Voice Changer
+                VoiceChangerController.getInstance().resetState();
+                ByteBuffer buf = ByteBuffer.wrap(finalData, 0, finalTotal).order(ByteOrder.LITTLE_ENDIAN);
+                VoiceChangerController.getInstance().process(buf, finalTotal);
+
+                // Playback processed audio
+                Utilities.globalQueue.postRunnable(() -> {
                     try {
-                        track.stop();
-                        track.release();
-                    } catch (Exception ignored) {
+                        int minOutBuf = AudioTrack.getMinBufferSize(sampleRate, AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT);
+                        activeTestTrack = new AudioTrack(AudioManager.STREAM_MUSIC, sampleRate,
+                                AudioFormat.CHANNEL_OUT_MONO, AudioFormat.ENCODING_PCM_16BIT,
+                                Math.max(minOutBuf, finalTotal), AudioTrack.MODE_STREAM);
+                        activeTestTrack.play();
+                        activeTestTrack.write(finalData, 0, finalTotal);
+
+                        long playDurationMs = (long) (finalTotal / 2.0 / sampleRate * 1000L) + 500L;
+                        Thread.sleep(Math.max(500, playDurationMs));
+                    } catch (Exception e) {
+                        FileLog.e(e);
+                    } finally {
+                        stopAudioTest();
                     }
-                }
-                activeTestTrack = null;
-                AndroidUtilities.runOnUIThread(() -> isTesting = false);
-            }
+                });
+            });
         });
+
+        if (listAdapter != null) {
+            listAdapter.notifyDataSetChanged();
+        }
     }
 
-    @Override
-    public void onFragmentDestroy() {
-        super.onFragmentDestroy();
+    private void stopAudioTest() {
+        isTesting = false;
         if (activeTestTrack != null) {
             try {
                 activeTestTrack.stop();
                 activeTestTrack.release();
-            } catch (Exception ignored) {
-            }
+            } catch (Exception ignored) {}
             activeTestTrack = null;
         }
+        AndroidUtilities.runOnUIThread(() -> {
+            if (listAdapter != null) {
+                listAdapter.notifyDataSetChanged();
+            }
+        });
     }
 
     @Override
@@ -389,6 +390,18 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     private class ListAdapter extends BaseListAdapter {
+
+        private static final int TYPE_HEADER = 0;
+        private static final int TYPE_CHECK = 1;
+        private static final int TYPE_SETTINGS = 2;
+        private static final int TYPE_SHADOW = 3;
+        private static final int TYPE_PITCH_SLIDER = 4;
+        private static final int TYPE_FREQ_SLIDER = 5;
+        private static final int TYPE_BITCRUSH_SLIDER = 6;
+        private static final int TYPE_ECHO_DELAY_SLIDER = 7;
+        private static final int TYPE_ECHO_FEEDBACK_SLIDER = 8;
+        private static final int TYPE_GLITCH_RATE_SLIDER = 9;
+        private static final int TYPE_GLITCH_REPEATS_SLIDER = 10;
 
         public ListAdapter(Context context) {
             super(context);
@@ -410,16 +423,105 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     view = new TextSettingsCell(mContext);
                     view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     break;
-                case TYPE_DETAIL_SETTINGS:
-                    view = new TextDetailSettingsCell(mContext);
-                    view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-                    break;
-                case TYPE_SLIDER: {
-                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext, value -> {}, 0, 100, "", "", "");
+                case TYPE_PITCH_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerPitch.setConfigInt(value);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            -12, 12,
+                            getString(R.string.OEVoiceChangerPitch),
+                            "-12 st", "+12 st");
+                    slider.setValueSuffix("st");
                     slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider;
                     break;
                 }
+                case TYPE_FREQ_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerFreqCrush.setConfigInt(value * 1000);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            4, 48,
+                            getString(R.string.OEVoiceChangerFreqCrush),
+                            "4 kHz", "48 kHz (Off)");
+                    slider.setValueSuffix("kHz");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_BITCRUSH_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerBitCrush.setConfigInt(value);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            2, 16,
+                            getString(R.string.OEVoiceChangerBitCrush),
+                            "2 bit", "16 bit (Off)");
+                    slider.setValueSuffix("bit");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_ECHO_DELAY_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerEchoDelay.setConfigInt(value * 10);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            0, 80,
+                            getString(R.string.OEVoiceChangerEchoDelay),
+                            "0 ms", "800 ms");
+                    slider.setValueSuffix("0 ms");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_ECHO_FEEDBACK_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerEchoFeedback.setConfigInt(value);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            0, 90,
+                            getString(R.string.OEVoiceChangerEchoFeedback),
+                            "0%", "90%");
+                    slider.setValueSuffix("%");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_GLITCH_RATE_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerGlitchRate.setConfigInt(value);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            0, 100,
+                            getString(R.string.OEVoiceChangerGlitchRate),
+                            "0%", "100%");
+                    slider.setValueSuffix("%");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_GLITCH_REPEATS_SLIDER: {
+                    AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
+                            value -> {
+                                ChatsConfig.voiceChangerGlitchRepeats.setConfigInt(value);
+                                VoiceChangerController.getInstance().resetState();
+                            },
+                            2, 8,
+                            getString(R.string.OEVoiceChangerGlitchRepeats),
+                            "2x", "8x");
+                    slider.setValueSuffix("x");
+                    slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider;
+                    break;
+                }
+                case TYPE_SHADOW:
                 default:
                     view = new TextInfoPrivacyCell(mContext);
                     break;
@@ -437,104 +539,63 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     } else if (position == presetsHeaderRow) {
                         cell.setText(getString(R.string.OEVoiceChangerPresets));
                     } else if (position == effectsHeaderRow) {
-                        cell.setText(getString(R.string.OEVoiceChangerSubtitle));
+                        cell.setText(getString(R.string.OEVoiceChangerEffects));
                     } else if (position == testHeaderRow) {
-                        cell.setText(getString(R.string.OEVoiceChangerTestAudio));
+                        cell.setText(getString(R.string.OEVoiceChangerTest));
                     }
                     break;
                 }
                 case TYPE_CHECK: {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     if (position == masterEnableRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEVoiceChangerEnable),
-                                getString(R.string.OEVoiceChangerEnableInfo),
-                                ChatsConfig.voiceChangerEnabled.Bool(), false, true);
+                        cell.setTextAndCheck(getString(R.string.OEVoiceChangerEnable),
+                                ChatsConfig.voiceChangerEnabled.Bool(), false);
                     }
                     break;
                 }
                 case TYPE_SETTINGS: {
                     TextSettingsCell cell = (TextSettingsCell) holder.itemView;
                     if (position == presetsRow) {
-                        cell.setTextAndValue(getString(R.string.OEVoiceChangerPresets), getCurrentPresetName(), false);
+                        cell.setTextAndValue(getString(R.string.OEVoiceChangerPresetSelect), getCurrentPresetName(), false);
                     } else if (position == testMicRow) {
-                        cell.setText(getString(R.string.OEVoiceChangerRecordTest), false);
+                        cell.setTextAndValue(getString(R.string.OEVoiceChangerTest),
+                                isTesting ? getString(R.string.OEVoiceChangerPlayingTest) : getString(R.string.OEVoiceChangerRecordTest), false);
                     }
                     break;
                 }
-                case TYPE_SLIDER: {
+                case TYPE_PITCH_SLIDER: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
-                    if (position == pitchSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerPitch));
-                        slider.setRange(-12, 12);
-                        slider.setValueSuffix(" st");
-                        slider.setLeftRightText("-12", "+12");
-                        slider.setValue(ChatsConfig.voiceChangerPitch.Int());
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerPitch.setConfigInt(value);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == freqCrushSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerFreqCrush));
-                        slider.setRange(1, 48);
-                        slider.setValueSuffix(" kHz");
-                        slider.setLeftRightText("1 kHz", "48 kHz");
-                        int khz = Math.max(1, ChatsConfig.voiceChangerFreqCrush.Int() / 1000);
-                        slider.setValue(khz);
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerFreqCrush.setConfigInt(value * 1000);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == bitCrushSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerBitCrush));
-                        slider.setRange(2, 16);
-                        slider.setValueSuffix(" bit");
-                        slider.setLeftRightText("2 bit", "16 bit");
-                        slider.setValue(ChatsConfig.voiceChangerBitCrush.Int());
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerBitCrush.setConfigInt(value);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == echoDelaySliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerEchoDelay));
-                        slider.setRange(0, 80);
-                        slider.setValueSuffix("0 ms");
-                        slider.setLeftRightText("0 ms", "800 ms");
-                        slider.setValue(ChatsConfig.voiceChangerEchoDelay.Int() / 10);
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerEchoDelay.setConfigInt(value * 10);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == echoFeedbackSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerEchoFeedback));
-                        slider.setRange(0, 90);
-                        slider.setValueSuffix("%");
-                        slider.setLeftRightText("0%", "90%");
-                        slider.setValue(ChatsConfig.voiceChangerEchoFeedback.Int());
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerEchoFeedback.setConfigInt(value);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == glitchRateSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerGlitchRate));
-                        slider.setRange(0, 100);
-                        slider.setValueSuffix("%");
-                        slider.setLeftRightText("0%", "100%");
-                        slider.setValue(ChatsConfig.voiceChangerGlitchRate.Int());
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerGlitchRate.setConfigInt(value);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    } else if (position == glitchRepeatsSliderRow) {
-                        slider.setTitle(getString(R.string.OEVoiceChangerGlitchRepeats));
-                        slider.setRange(2, 8);
-                        slider.setValueSuffix("x");
-                        slider.setLeftRightText("2x", "8x");
-                        slider.setValue(ChatsConfig.voiceChangerGlitchRepeats.Int());
-                        slider.setOnDrag(value -> {
-                            ChatsConfig.voiceChangerGlitchRepeats.setConfigInt(value);
-                            VoiceChangerController.getInstance().resetState();
-                        });
-                    }
+                    slider.setValue(ChatsConfig.voiceChangerPitch.Int());
+                    break;
+                }
+                case TYPE_FREQ_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerFreqCrush.Int() / 1000);
+                    break;
+                }
+                case TYPE_BITCRUSH_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerBitCrush.Int());
+                    break;
+                }
+                case TYPE_ECHO_DELAY_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerEchoDelay.Int() / 10);
+                    break;
+                }
+                case TYPE_ECHO_FEEDBACK_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerEchoFeedback.Int());
+                    break;
+                }
+                case TYPE_GLITCH_RATE_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerGlitchRate.Int());
+                    break;
+                }
+                case TYPE_GLITCH_REPEATS_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(ChatsConfig.voiceChangerGlitchRepeats.Int());
                     break;
                 }
                 case TYPE_SHADOW: {
@@ -559,11 +620,20 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 return TYPE_CHECK;
             } else if (position == presetsRow || position == testMicRow) {
                 return TYPE_SETTINGS;
-            } else if (position == pitchSliderRow || position == freqCrushSliderRow
-                    || position == bitCrushSliderRow || position == echoDelaySliderRow
-                    || position == echoFeedbackSliderRow || position == glitchRateSliderRow
-                    || position == glitchRepeatsSliderRow) {
-                return TYPE_SLIDER;
+            } else if (position == pitchSliderRow) {
+                return TYPE_PITCH_SLIDER;
+            } else if (position == freqCrushSliderRow) {
+                return TYPE_FREQ_SLIDER;
+            } else if (position == bitCrushSliderRow) {
+                return TYPE_BITCRUSH_SLIDER;
+            } else if (position == echoDelaySliderRow) {
+                return TYPE_ECHO_DELAY_SLIDER;
+            } else if (position == echoFeedbackSliderRow) {
+                return TYPE_ECHO_FEEDBACK_SLIDER;
+            } else if (position == glitchRateSliderRow) {
+                return TYPE_GLITCH_RATE_SLIDER;
+            } else if (position == glitchRepeatsSliderRow) {
+                return TYPE_GLITCH_REPEATS_SLIDER;
             }
             return TYPE_SHADOW;
         }
