@@ -568,6 +568,10 @@ public class PluginDetailsBottomSheet extends BottomSheet {
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
             });
+            if (iconApplied) {
+                iconView.setVisibility(View.VISIBLE);
+                defaultIconView.setVisibility(View.GONE);
+            }
         }
 
         if (!iconApplied && target.document != null && target.document.thumbs != null && !target.document.thumbs.isEmpty()) {
@@ -583,22 +587,42 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         if (!iconApplied && ctx != null) {
             String savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
                     .getString("plugin_icon_" + target.id, null);
+            if (TextUtils.isEmpty(savedIcon)) {
+                savedIcon = ctx.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                        .getString("plugin_icon_" + target.getNormalizedId(), null);
+            }
             if (!TextUtils.isEmpty(savedIcon)) {
+                target.icon = savedIcon;
                 iconApplied = PluginIcons.apply(iconView, savedIcon, fallbackDrawable, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
+                if (iconApplied) {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                }
             }
         }
 
         if (!iconApplied) {
-            Plugin installed = PluginsController.getInstance().getPlugin(target.id);
+            Plugin installed = target.findInstalledPlugin();
             if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+                target.icon = installed.icon;
                 iconApplied = PluginIcons.apply(iconView, installed.icon, fallbackDrawable, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
+                if (iconApplied) {
+                    iconView.setVisibility(View.VISIBLE);
+                    defaultIconView.setVisibility(View.GONE);
+                }
             }
+        }
+
+        if (!iconApplied) {
+            PluginStoreActivity.prefetchPluginIcon(UserConfig.selectedAccount, target, () -> {
+                bindIcon(iconView, defaultIconView, target);
+            });
         }
 
         if (!iconApplied && target.chat != null) {

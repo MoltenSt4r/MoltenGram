@@ -876,10 +876,26 @@ public class PluginStoreActivity extends BaseFragment {
                                 }
                             }
                             if (TextUtils.isEmpty(sp.icon)) {
+                                sp.icon = ApplicationLoader.applicationContext
+                                        .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                                        .getString("plugin_icon_" + sp.id, null);
+                                if (TextUtils.isEmpty(sp.icon)) {
+                                    sp.icon = ApplicationLoader.applicationContext
+                                            .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                                            .getString("plugin_icon_" + sp.getNormalizedId(), null);
+                                }
+                            }
+                            if (TextUtils.isEmpty(sp.icon)) {
                                 try {
                                     File localFile = FileLoader.getInstance(currentAccount).getPathToMessage(msg);
+                                    if (localFile == null || !localFile.exists()) {
+                                        localFile = FileLoader.getInstance(currentAccount).getPathToAttach(doc, true);
+                                    }
                                     if (localFile != null && localFile.exists()) {
                                         sp.icon = PluginIcons.extractIconFromFile(localFile);
+                                        if (!TextUtils.isEmpty(sp.icon)) {
+                                            persistPluginIcon(sp);
+                                        }
                                     }
                                 } catch (Exception ignored) {}
                             }
@@ -1959,13 +1975,165 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
+    private static final java.util.Set<String> prefetchingIcons = new java.util.HashSet<>();
+
+    public static void prefetchPluginIcon(int currentAccount, StorePlugin plugin, Runnable onReady) {
+        if (plugin == null || !TextUtils.isEmpty(plugin.icon)) {
+            return;
+        }
+
+        Context context = ApplicationLoader.applicationContext;
+        SharedPreferences prefs = context != null ? context.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE) : null;
+        if (prefs != null) {
+            String saved = prefs.getString("plugin_icon_" + plugin.id, null);
+            if (TextUtils.isEmpty(saved)) {
+                saved = prefs.getString("plugin_icon_" + plugin.getNormalizedId(), null);
+            }
+            if (!TextUtils.isEmpty(saved)) {
+                plugin.icon = saved;
+                if (onReady != null) {
+                    onReady.run();
+                }
+                return;
+            }
+        }
+
+        Plugin installed = plugin.findInstalledPlugin();
+        if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+            plugin.icon = installed.icon;
+            if (prefs != null) {
+                prefs.edit()
+                        .putString("plugin_icon_" + plugin.id, plugin.icon)
+                        .putString("plugin_icon_" + plugin.getNormalizedId(), plugin.icon)
+                        .apply();
+            }
+            if (onReady != null) {
+                onReady.run();
+            }
+            return;
+        }
+
+        TLRPC.Document doc = plugin.document;
+        TLRPC.Message msg = plugin.message;
+        if (doc == null && plugin.versions != null) {
+            for (StorePlugin v : plugin.versions) {
+                if (v != null && v.document != null) {
+                    doc = v.document;
+                    if (msg == null) msg = v.message;
+                    break;
+                }
+            }
+        }
+
+        if (doc == null || doc.size > 350 * 1024) {
+            return;
+        }
+
+        File localFile = null;
+        if (msg != null) {
+            localFile = FileLoader.getInstance(currentAccount).getPathToMessage(msg);
+        }
+        if (localFile == null || !localFile.exists() || localFile.length() == 0) {
+            localFile = FileLoader.getInstance(currentAccount).getPathToAttach(doc, true);
+        }
+
+        if (localFile != null && localFile.exists() && localFile.length() > 0) {
+            final File f = localFile;
+            Utilities.globalQueue.postRunnable(() -> {
+                String extracted = PluginIcons.extractIconFromFile(f);
+                if (!TextUtils.isEmpty(extracted)) {
+                    plugin.icon = extracted;
+                    if (prefs != null) {
+                        prefs.edit()
+                                .putString("plugin_icon_" + plugin.id, extracted)
+                                .putString("plugin_icon_" + plugin.getNormalizedId(), extracted)
+                                .apply();
+                    }
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (onReady != null) onReady.run();
+                    });
+                }
+            });
+            return;
+        }
+
+        final String attachFileName = FileLoader.getAttachFileName(doc);
+        if (TextUtils.isEmpty(attachFileName)) {
+            return;
+        }
+
+        synchronized (prefetchingIcons) {
+            if (prefetchingIcons.contains(attachFileName)) {
+                return;
+            }
+            prefetchingIcons.add(attachFileName);
+        }
+
+        final TLRPC.Document finalDoc = doc;
+        final TLRPC.Message finalMsg = msg;
+        final String targetId = plugin.id;
+        final String targetNormId = plugin.getNormalizedId();
+
+        final NotificationCenter.NotificationCenterDelegate[] holder = new NotificationCenter.NotificationCenterDelegate[1];
+        NotificationCenter.NotificationCenterDelegate observer = (id, account, args) -> {
+            if (args == null || args.length == 0) return;
+            String location = (String) args[0];
+            if (!attachFileName.equals(location)) return;
+
+            NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoaded);
+            NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoadFailed);
+            synchronized (prefetchingIcons) {
+                prefetchingIcons.remove(attachFileName);
+            }
+
+            if (id == NotificationCenter.fileLoaded) {
+                Utilities.globalQueue.postRunnable(() -> {
+                    File file = null;
+                    if (finalMsg != null) {
+                        file = FileLoader.getInstance(currentAccount).getPathToMessage(finalMsg);
+                    }
+                    if (file == null || !file.exists() || file.length() == 0) {
+                        file = FileLoader.getInstance(currentAccount).getPathToAttach(finalDoc, true);
+                    }
+                    if (file != null && file.exists() && file.length() > 0) {
+                        String icon = PluginIcons.extractIconFromFile(file);
+                        if (!TextUtils.isEmpty(icon)) {
+                            plugin.icon = icon;
+                            if (prefs != null) {
+                                prefs.edit()
+                                        .putString("plugin_icon_" + targetId, icon)
+                                        .putString("plugin_icon_" + targetNormId, icon)
+                                        .apply();
+                            }
+                            AndroidUtilities.runOnUIThread(() -> {
+                                if (onReady != null) onReady.run();
+                            });
+                        }
+                    }
+                });
+            }
+        };
+        holder[0] = observer;
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoaded);
+        NotificationCenter.getInstance(currentAccount).addObserver(observer, NotificationCenter.fileLoadFailed);
+
+        Object parentObject = msg != null ? new MessageObject(currentAccount, msg, false, false) : "plugin_store_icon";
+        FileLoader.getInstance(currentAccount).loadFile(finalDoc, parentObject, FileLoader.PRIORITY_LOW, 1);
+    }
+
     private void persistPluginIcon(StorePlugin plugin) {
-        if (plugin != null && !TextUtils.isEmpty(plugin.icon) && !TextUtils.isEmpty(plugin.id)) {
-            ApplicationLoader.applicationContext
+        if (plugin != null && !TextUtils.isEmpty(plugin.icon)) {
+            SharedPreferences.Editor ed = ApplicationLoader.applicationContext
                     .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
-                    .edit()
-                    .putString("plugin_icon_" + plugin.id, plugin.icon)
-                    .apply();
+                    .edit();
+            if (!TextUtils.isEmpty(plugin.id)) {
+                ed.putString("plugin_icon_" + plugin.id, plugin.icon);
+            }
+            String norm = plugin.getNormalizedId();
+            if (!TextUtils.isEmpty(norm)) {
+                ed.putString("plugin_icon_" + norm, plugin.icon);
+            }
+            ed.apply();
         }
     }
 
@@ -2836,6 +3004,10 @@ public class PluginStoreActivity extends BaseFragment {
                     iconView.setVisibility(VISIBLE);
                     defaultIconView.setVisibility(GONE);
                 });
+                if (iconApplied) {
+                    iconView.setVisibility(VISIBLE);
+                    defaultIconView.setVisibility(GONE);
+                }
             }
 
             if (!iconApplied) {
@@ -2853,22 +3025,45 @@ public class PluginStoreActivity extends BaseFragment {
             if (!iconApplied) {
                 String savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
                         .getString("plugin_icon_" + plugin.id, null);
+                if (TextUtils.isEmpty(savedIcon)) {
+                    savedIcon = ApplicationLoader.applicationContext.getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
+                            .getString("plugin_icon_" + plugin.getNormalizedId(), null);
+                }
                 if (!TextUtils.isEmpty(savedIcon)) {
+                    plugin.icon = savedIcon;
                     iconApplied = PluginIcons.apply(iconView, savedIcon, fallbackDrawable, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
+                    if (iconApplied) {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    }
                 }
             }
 
             if (!iconApplied) {
-                Plugin installed = PluginsController.getInstance().getPlugin(plugin.id);
+                Plugin installed = plugin.findInstalledPlugin();
                 if (installed != null && !TextUtils.isEmpty(installed.icon)) {
+                    plugin.icon = installed.icon;
                     iconApplied = PluginIcons.apply(iconView, installed.icon, fallbackDrawable, () -> {
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                     });
+                    if (iconApplied) {
+                        iconView.setVisibility(VISIBLE);
+                        defaultIconView.setVisibility(GONE);
+                    }
                 }
+            }
+
+            if (!iconApplied) {
+                prefetchPluginIcon(UserConfig.selectedAccount, plugin, () -> {
+                    if (isAttachedToWindow() && this.plugin == plugin) {
+                        isIconLoaded = false;
+                        loadIcon();
+                    }
+                });
             }
 
             if (!iconApplied && plugin.chat != null) {
