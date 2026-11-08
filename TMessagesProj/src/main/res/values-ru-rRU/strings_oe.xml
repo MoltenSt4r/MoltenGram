@@ -27,26 +27,26 @@
     <string name="AppIconsExteraMS" translatable="false">Иконки MoltenGram</string>
     <string name="AppIconsTelegram" translatable="false">Иконки Telegram</string>
     <string name="AppIconMoltenGramDefault">Material You</string>
-    <string name="AppIconMoltenGramClassic">Классическая</string>
+    <string name="AppIconMoltenGramClassic">Classic</string>
     <string name="AppIconMoltenGramProton">Proton</string>
     <string name="AppIconMoltenGramSad">Sad</string>
     <string name="AppIconMoltenGramSchizophrenia">Schizophrenia</string>
     <string name="AppIconMoltenGramBurning">Burning</string>
     <string name="AppIconMoltenGramAnotherChance">Another Chance</string>
-    <string name="AppIconMoltenGramDotted">Точки</string>
-    <string name="AppIconMoltenGramCinema">Синема</string>
+    <string name="AppIconMoltenGramDotted">Dotted</string>
+    <string name="AppIconMoltenGramCinema">Cinema</string>
     <string name="AppIconMoltenGramSunrise">Sunrise</string>
     <string name="AppIconMoltenGramStar">Star</string>
     <string name="AppIconMoltenGramCoffee">Coffee</string>
-    <string name="AppIconMoltenGramGlacier">Ледник</string>
+    <string name="AppIconMoltenGramGlacier">Glacier</string>
     <string name="AppIconMoltenGramGoogle">Google style</string>
-    <string name="AppIconMoltenGramBeer">Пиво</string>
-    <string name="AppIconMoltenGramMagma">Магма</string>
-    <string name="AppIconMoltenGramStillLife">Натюрморт</string>
-    <string name="AppIconMoltenGramToxic">Токсик</string>
-    <string name="AppIconMoltenGramCoral">Коралл</string>
-    <string name="AppIconMoltenGramOnyx">Оникс</string>
-    <string name="AppIconMoltenGramCandy">Кэнди</string>
+    <string name="AppIconMoltenGramBeer">Beer</string>
+    <string name="AppIconMoltenGramMagma">Magma</string>
+    <string name="AppIconMoltenGramStillLife">Still Life</string>
+    <string name="AppIconMoltenGramToxic">Toxic</string>
+    <string name="AppIconMoltenGramCoral">Coral</string>
+    <string name="AppIconMoltenGramOnyx">Onyx</string>
+    <string name="AppIconMoltenGramCandy">Candy</string>
     <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconsSelect">Выбрать</string>

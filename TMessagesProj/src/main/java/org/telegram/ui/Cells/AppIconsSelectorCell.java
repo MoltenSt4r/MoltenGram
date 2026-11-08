@@ -326,7 +326,7 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
 
     public static class AdaptiveIconImageView extends ImageView {
         private boolean isNekoXIcon = false;
-        private boolean hasBleed = true;
+        private boolean hasBleed = false;
         private Drawable foreground;
         private Path path = new Path();
         private int outerPadding = AndroidUtilities.dp(5);

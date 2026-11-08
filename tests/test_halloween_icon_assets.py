@@ -173,7 +173,7 @@ def test_launcher_icon_controller_enums():
 def test_strings_resources_defined():
     for values_dir, expected_cinema, expected_toxic, expected_stilllife, expected_candy in [
         ('values', 'Cinema', 'Toxic', 'Still Life', 'Candy'),
-        ('values-ru-rRU', 'Синема', 'Токсик', 'Натюрморт', 'Кэнди')
+        ('values-ru-rRU', 'Cinema', 'Toxic', 'Still Life', 'Candy')
     ]:
         xml_path = os.path.join(RES_DIR, values_dir, 'strings_oe.xml')
         assert os.path.exists(xml_path), f'{xml_path} must exist'

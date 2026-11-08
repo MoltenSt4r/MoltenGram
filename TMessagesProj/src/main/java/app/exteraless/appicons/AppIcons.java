@@ -122,7 +122,7 @@ public final class AppIcons {
     }
 
     public static void draw(Canvas canvas, Drawable background, Drawable foreground, int size) {
-        draw(canvas, background, foreground, size, true);
+        draw(canvas, background, foreground, size, false);
     }
 
     static int accent(Context context, LauncherIcon icon) {

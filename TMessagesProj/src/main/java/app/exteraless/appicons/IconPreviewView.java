@@ -26,8 +26,8 @@ public class IconPreviewView extends View {
     private Drawable foreground;
     private Drawable oldBackground;
     private Drawable oldForeground;
-    private boolean hasBleed = true;
-    private boolean oldHasBleed = true;
+    private boolean hasBleed = false;
+    private boolean oldHasBleed = false;
     private float progress = 1f;
     private ValueAnimator animator;
     private float scale = 1f;
