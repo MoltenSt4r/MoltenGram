@@ -79,6 +79,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int ID_HIDE_CALLS_TAB = -109;
     private static final int ID_HIDE_PROFILE_TAB = -110;
 
+    private static final int ID_FAB_APPEARANCE = -135;
     private static final int ID_FAB_SHAPE = -120;
     private static final int ID_FAB_ACTIVE_SHAPE = -127;
     private static final int ID_FAB_SPEED_DIAL = -121;

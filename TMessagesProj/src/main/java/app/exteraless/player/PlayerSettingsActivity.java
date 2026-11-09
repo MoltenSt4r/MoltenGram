@@ -38,11 +38,13 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.Switch;
 
 import java.util.ArrayList;
@@ -1007,18 +1009,37 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
         builder.setTitle(getString(R.string.OEPlayerActionButtons));
-        builder.setMultiChoiceItems(items, checked, (dialog, which, isChecked) -> {
-            checked[which] = isChecked;
-            int count = 0;
-            for (boolean b : checked) {
-                if (b) count++;
-            }
-            if (count < 2) {
-                checked[which] = true;
-                ((AlertDialog) dialog).getListView().setItemChecked(which, true);
-                BulletinFactory.of(this).createSimpleBulletin(R.drawable.msg_info, getString(R.string.OEPlayerActionButtonsMin)).show();
-            }
-        });
+
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(4), 0, dp(4));
+
+        CheckBoxCell[] cells = new CheckBoxCell[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final int index = i;
+            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, getResourceProvider());
+            cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setText(items[i], "", checked[i], false);
+            cell.setOnClickListener(v -> {
+                boolean next = !cells[index].isChecked();
+                if (!next) {
+                    int count = 0;
+                    for (int j = 0; j < cells.length; j++) {
+                        if (j == index ? next : cells[j].isChecked()) count++;
+                    }
+                    if (count < 2) {
+                        BulletinFactory.of(this).createSimpleBulletin(R.drawable.msg_info, getString(R.string.OEPlayerActionButtonsMin)).show();
+                        return;
+                    }
+                }
+                cells[index].setChecked(next, true);
+                checked[index] = next;
+            });
+            cells[i] = cell;
+            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+        }
+
+        builder.setView(container);
         builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < keys.length; i++) {

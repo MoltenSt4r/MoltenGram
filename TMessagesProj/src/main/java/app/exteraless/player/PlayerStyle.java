@@ -22,6 +22,14 @@ public final class PlayerStyle {
     public static final int ACTIONS_BUTTONS = 0;
     public static final int ACTIONS_ISLAND = 1;
 
+    public static final String ACTION_SPEED = "speed";
+    public static final String ACTION_LYRICS = "lyrics";
+    public static final String ACTION_PLAYLIST = "playlist";
+    public static final String ACTION_SLEEP = "sleep";
+    public static final String ACTION_QUEUE = "queue";
+    public static final String ACTION_SHARE = "share";
+    public static final String ACTION_LIKE = "like";
+
     public static final int COLORS_COVER = 0;
     public static final int COLORS_THEME = 1;
 
@@ -161,11 +169,11 @@ public final class PlayerStyle {
         }
         if (list.size() < 2) {
             list.clear();
-            list.add("speed");
-            list.add("lyrics");
-            list.add("playlist");
-            list.add("sleep");
-            list.add("queue");
+            list.add(ACTION_SPEED);
+            list.add(ACTION_LYRICS);
+            list.add(ACTION_PLAYLIST);
+            list.add(ACTION_SLEEP);
+            list.add(ACTION_QUEUE);
         }
         return list;
     }

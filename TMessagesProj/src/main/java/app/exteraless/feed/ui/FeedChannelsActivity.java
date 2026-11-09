@@ -8,6 +8,7 @@ import android.view.View;
 import android.widget.EditText;
 import android.widget.FrameLayout;
 
+import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;

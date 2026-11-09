@@ -647,7 +647,7 @@ public class LocalPlaylistsController {
         cancelBtn.setTypeface(AndroidUtilities.bold());
         cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         cancelBtn.setTextColor(accentColor);
-        cancelBtn.setBackground(Theme.createSelectorDrawable(accentColor & 0x1AFFFFFF, Theme.RIPPLE_MASK_ROUNDRECT_8DP));
+        cancelBtn.setBackground(Theme.createRadSelectorDrawable(accentColor & 0x1AFFFFFF, 8, 8));
         cancelBtn.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12));
         cancelBtn.setOnClickListener(v -> bottomSheet.dismiss());
         layout.addView(cancelBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
