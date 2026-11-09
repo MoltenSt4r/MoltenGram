@@ -277,6 +277,8 @@ Source:
 
     <!-- Shizuku Integration -->
     <string name="ShizukuSettings">Shizuku Integration</string>
+    <string name="ShizukuStatusHeader">Connection</string>
+    <string name="ShizukuMaintenanceHeader">System Maintenance</string>
     <string name="ShizukuStatusConnected">Connected</string>
     <string name="ShizukuStatusDisconnected">Not running</string>
     <string name="ShizukuStatusPermissionRequired">Permission Required</string>

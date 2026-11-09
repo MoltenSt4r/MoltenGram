@@ -273,6 +273,8 @@
 
     <!-- Интеграция с Shizuku -->
     <string name="ShizukuSettings">Интеграция с Shizuku</string>
+    <string name="ShizukuStatusHeader">Подключение</string>
+    <string name="ShizukuMaintenanceHeader">Обслуживание системы</string>
     <string name="ShizukuStatusConnected">Подключено</string>
     <string name="ShizukuStatusDisconnected">Служба Shizuku не запущена</string>
     <string name="ShizukuStatusPermissionRequired">Требуется разрешение</string>

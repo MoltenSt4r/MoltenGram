@@ -498,7 +498,6 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                                     getString(R.string.SensitiveAbout), sensitiveEnabled, true, false);
                             cell.setEnabled(sensitiveCanChange, null);
                         }
-                    }
                     break;
                 }
                 case TYPE_TEXT: {
