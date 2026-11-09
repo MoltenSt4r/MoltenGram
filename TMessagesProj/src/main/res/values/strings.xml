@@ -11229,4 +11229,7 @@
     <string name="UnsupportedMessageTitle">Unsupported Message</string>
     <string name="UnsupportedMessageMessage">Update Telegram to view this message</string>
     <string name="UnsupportedUpdate">Update</string>
+
+    <string name="ManagePhotosAccess">Manage Photos Access</string>
+    <string name="AllowPhotosAccess">Allow Photos Access</string>
 </resources>

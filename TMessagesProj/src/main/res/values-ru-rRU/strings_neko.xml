@@ -270,4 +270,6 @@
     <string name="EmojiUseDefault">Использовать системные эмодзи</string>
     <string name="Chat">Чаты</string>
     <string name="Appearance">Внешний вид</string>
+    <string name="ManagePhotosAccess">Управление доступом к фото</string>
+    <string name="AllowPhotosAccess">Разрешить доступ к фото</string>
 </resources>
