@@ -104,6 +104,42 @@ def test_player_settings_activity_modernization():
     assert "lyricsPreviewRow" in content
     assert "systemEqualizerRow" not in content
     assert "actionsStyleRow" not in content
+    assert "ScrollView scrollView = new ScrollView(" in content
+    assert "R.raw.info" in content
+    assert "R.drawable.msg_info" not in content, "Must not pass drawable ID to createSimpleBulletin"
+
+
+def test_player_style_actions_and_robustness():
+    style_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerStyle.java")
+    with open(style_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    assert 'ACTION_SPEED = "speed"' in content
+    assert 'ACTION_LYRICS = "lyrics"' in content
+    assert 'ACTION_PLAYLIST = "playlist"' in content
+    assert 'ACTION_SLEEP = "sleep"' in content
+    assert 'ACTION_QUEUE = "queue"' in content
+    assert 'ACTION_SHARE = "share"' in content
+    assert 'ACTION_LIKE = "like"' in content
+    assert "isValidAction(" in content
+
+
+def test_build_fix_regressions_and_constants():
+    nav_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "settings", "OpenExteraAppNavigationActivity.java")
+    with open(nav_path, "r", encoding="utf-8") as f:
+        nav_content = f.read()
+    assert "ID_FAB_APPEARANCE = -135" in nav_content
+
+    feed_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "feed", "ui", "FeedChannelsActivity.java")
+    with open(feed_path, "r", encoding="utf-8") as f:
+        feed_content = f.read()
+    assert "import org.telegram.messenger.MessagesController;" in feed_content
+
+    ctrl_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "LocalPlaylistsController.java")
+    with open(ctrl_path, "r", encoding="utf-8") as f:
+        ctrl_content = f.read()
+    assert "Theme.createRadSelectorDrawable" in ctrl_content
+    assert "Theme.RIPPLE_MASK_ROUNDRECT_8DP" not in ctrl_content
 
 
 def test_wavy_seekbar_indicator_and_thickness():

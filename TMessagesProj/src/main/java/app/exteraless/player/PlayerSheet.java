@@ -1461,6 +1461,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     mb.setRadius(dp(8), false);
                 }
             }
+            if (child.getParent() instanceof ViewGroup) {
+                ((ViewGroup) child.getParent()).removeView(child);
+            }
             group.addView(child, LayoutHelper.createLinear(0, 52, 1f, leftMargin, 0, rightMargin, 0));
         }
     }
@@ -2968,6 +2971,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             updateGroupActions();
             // PlayerStyle.actionsIsland() disabled per user request
         }
+        updateLike(false);
         if (sourceView != null) {
             sourceView.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);
         }

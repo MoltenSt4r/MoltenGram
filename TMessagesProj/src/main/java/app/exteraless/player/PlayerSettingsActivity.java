@@ -1010,9 +1010,11 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
         builder.setTitle(getString(R.string.OEPlayerActionButtons));
 
+        ScrollView scrollView = new ScrollView(getParentActivity());
         LinearLayout container = new LinearLayout(getParentActivity());
         container.setOrientation(LinearLayout.VERTICAL);
         container.setPadding(0, dp(4), 0, dp(4));
+        scrollView.addView(container);
 
         CheckBoxCell[] cells = new CheckBoxCell[keys.length];
         for (int i = 0; i < keys.length; i++) {
@@ -1028,7 +1030,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         if (j == index ? next : cells[j].isChecked()) count++;
                     }
                     if (count < 2) {
-                        BulletinFactory.of(this).createSimpleBulletin(R.drawable.msg_info, getString(R.string.OEPlayerActionButtonsMin)).show();
+                        AndroidUtilities.shakeView(cells[index]);
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.info, getString(R.string.OEPlayerActionButtonsMin)).show();
                         return;
                     }
                 }
@@ -1039,7 +1042,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
         }
 
-        builder.setView(container);
+        builder.setView(scrollView);
         builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
             StringBuilder sb = new StringBuilder();
             for (int i = 0; i < keys.length; i++) {

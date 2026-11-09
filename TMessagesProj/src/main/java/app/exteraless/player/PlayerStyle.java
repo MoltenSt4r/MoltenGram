@@ -157,14 +157,32 @@ public final class PlayerStyle {
         return false;
     }
 
+    public static boolean isValidAction(String action) {
+        if (action == null) return false;
+        switch (action) {
+            case ACTION_SPEED:
+            case ACTION_LYRICS:
+            case ACTION_PLAYLIST:
+            case ACTION_SLEEP:
+            case ACTION_QUEUE:
+            case ACTION_SHARE:
+            case ACTION_LIKE:
+                return true;
+            default:
+                return false;
+        }
+    }
+
     public static List<String> actionButtons() {
         String raw = AppearanceConfig.playerActionButtons();
-        String[] parts = raw.split(",");
         List<String> list = new ArrayList<>();
-        for (String p : parts) {
-            String trimmed = p.trim().toLowerCase();
-            if (!trimmed.isEmpty() && !list.contains(trimmed)) {
-                list.add(trimmed);
+        if (raw != null && !raw.isEmpty()) {
+            String[] parts = raw.split(",");
+            for (String p : parts) {
+                String trimmed = p.trim().toLowerCase();
+                if (isValidAction(trimmed) && !list.contains(trimmed)) {
+                    list.add(trimmed);
+                }
             }
         }
         if (list.size() < 2) {
@@ -179,6 +197,7 @@ public final class PlayerStyle {
     }
 
     public static boolean isActionEnabled(String action) {
+        if (action == null) return false;
         return actionButtons().contains(action.toLowerCase());
     }
 
