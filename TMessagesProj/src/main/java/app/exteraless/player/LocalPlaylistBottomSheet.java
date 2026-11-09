@@ -288,34 +288,101 @@ public class LocalPlaylistBottomSheet extends BottomSheet {
 
     private void showRenameDialog(Theme.ResourcesProvider rp) {
         if (activity == null || playlist == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity, rp);
-        builder.setTitle(getString(R.string.AudioPlaylistRename));
+        BottomSheet.Builder builder = new BottomSheet.Builder(activity);
+        builder.setApplyTopPadding(false);
+        builder.setApplyBottomPadding(false);
 
-        LinearLayout layout = new LinearLayout(activity);
+        Context context = activity;
+        LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(dp(24), dp(16), dp(24), dp(8));
+        layout.setPadding(dp(22), dp(16), dp(22), dp(24));
 
-        EditTextBoldCursor nameEdit = new EditTextBoldCursor(activity);
+        int textColor = Theme.getColor(Theme.key_dialogTextBlack, rp);
+        int hintColor = Theme.getColor(Theme.key_dialogTextHint, rp);
+        int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, rp);
+        int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, rp);
+
+        // Drag handle pill
+        View handle = new View(context);
+        GradientDrawable handleBg = new GradientDrawable();
+        handleBg.setCornerRadius(dp(3));
+        handleBg.setColor(Theme.getColor(Theme.key_sheet_scrollUp, rp));
+        handle.setBackground(handleBg);
+        layout.addView(handle, LayoutHelper.createLinear(36, 4, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 14));
+
+        TextView title = new TextView(context);
+        title.setText(getString(R.string.AudioPlaylistRename));
+        title.setTypeface(AndroidUtilities.bold());
+        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
+        title.setTextColor(textColor);
+        layout.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
+
+        org.telegram.ui.Components.OutlineTextContainerView nameOutlineView = new org.telegram.ui.Components.OutlineTextContainerView(context);
+        nameOutlineView.setText(getString(R.string.AudioPlaylistNameHint));
+
+        EditTextBoldCursor nameEdit = new EditTextBoldCursor(context);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        nameEdit.setTextColor(textColor);
+        nameEdit.setCursorColor(accentColor);
+        nameEdit.setHintColor(hintColor);
+        nameEdit.setBackground(null);
+        nameEdit.setPadding(dp(14), dp(14), dp(14), dp(14));
+        nameEdit.setSingleLine(true);
         nameEdit.setText(playlist.name);
         nameEdit.setSelection(nameEdit.getText().length());
-        nameEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, rp));
-        nameEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, rp));
-        nameEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, rp));
-        nameEdit.setSingleLine(true);
-        layout.addView(nameEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        builder.setView(layout);
-        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
+        nameOutlineView.addView(nameEdit, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        nameOutlineView.attachEditText(nameEdit);
+        nameOutlineView.animateSelection(false, !TextUtils.isEmpty(nameEdit.getText()), false);
+        nameEdit.setOnFocusChangeListener((v, hasFocus) -> {
+            nameOutlineView.animateSelection(hasFocus, hasFocus || !TextUtils.isEmpty(nameEdit.getText()));
+        });
+        nameEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                nameOutlineView.animateSelection(nameEdit.hasFocus(), nameEdit.hasFocus() || (s != null && s.length() > 0));
+            }
+        });
+        layout.addView(nameOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 20));
+
+        builder.setCustomView(layout);
+        BottomSheet bottomSheet = builder.create();
+
+        TextView saveBtn = new TextView(context);
+        saveBtn.setText(getString(R.string.Save));
+        saveBtn.setGravity(Gravity.CENTER);
+        saveBtn.setTypeface(AndroidUtilities.bold());
+        saveBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        saveBtn.setTextColor(buttonTextColor);
+        saveBtn.setBackground(Theme.AdaptiveRipple.filledRectByKey(Theme.key_featuredStickers_addButton, 10));
+        saveBtn.setPadding(0, dp(14), 0, dp(14));
+        saveBtn.setOnClickListener(v -> {
             String newName = nameEdit.getText().toString().trim();
             if (!TextUtils.isEmpty(newName)) {
                 LocalPlaylistsController.getInstance().renamePlaylist(playlist.id, newName);
                 playlist.name = newName;
                 updateUI();
+                bottomSheet.dismiss();
             }
         });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        builder.show();
+        layout.addView(saveBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        TextView cancelBtn = new TextView(context);
+        cancelBtn.setText(getString(R.string.Cancel));
+        cancelBtn.setGravity(Gravity.CENTER);
+        cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        cancelBtn.setTextColor(textColor);
+        cancelBtn.setPadding(0, dp(10), 0, dp(10));
+        cancelBtn.setOnClickListener(v -> bottomSheet.dismiss());
+        layout.addView(cancelBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        bottomSheet.show();
     }
 
     private void showExportDialog(Theme.ResourcesProvider rp) {

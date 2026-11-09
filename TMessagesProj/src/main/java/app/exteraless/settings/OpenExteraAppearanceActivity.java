@@ -142,8 +142,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int iosGroupRow;
     private int iosNavBarRow;
     private int iosChatHeaderRow;
-    private int iosLiquidGlassNavBarRow;
-    private int iosLiquidGlassFabRow;
+
     private boolean iosExpanded;
     private int hidingHeaderRow;
     private int hidingDividerRow;
@@ -154,6 +153,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int hideAiIvRow;
     private boolean hideAiExpanded;
     private int hideSettingsGroupRow;
+    private int hideAccountsSectionRow;
     private int hidePremiumSectionRow;
     private int hideHelpSectionRow;
     private boolean hideSettingsExpanded;
@@ -274,10 +274,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (iosExpanded) {
             iosNavBarRow = addRow("iosNavBar");
             iosChatHeaderRow = addRow("iosChatHeader");
-            iosLiquidGlassNavBarRow = addRow("iosLiquidGlassNavBar");
-            iosLiquidGlassFabRow = addRow("iosLiquidGlassFab");
         } else {
-            iosNavBarRow = iosChatHeaderRow = iosLiquidGlassNavBarRow = iosLiquidGlassFabRow = -1;
+            iosNavBarRow = iosChatHeaderRow = -1;
         }
         gooeyAvatarRow = addRow("gooeyAvatar");
         customThemesRow = addRow("customThemes");
@@ -322,12 +320,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else {
             hideAiEditorRow = hideAiSummaryRow = hideAiIvRow = -1;
         }
-        hideSettingsGroupRow = addRow("hideSettingsSections", "HidePremiumSection", "HideHelpSection");
+        hideSettingsGroupRow = addRow("hideSettingsSections", "HidePremiumSection", "HideHelpSection", "hideAccountsSection");
         if (hideSettingsExpanded) {
+            hideAccountsSectionRow = addRow("hideAccountsSection", "OEAppearanceHideSettingsAccounts");
             hidePremiumSectionRow = addRow("hidePremiumSection", "HidePremiumSection");
             hideHelpSectionRow = addRow("hideHelpSection", "HideHelpSection");
         } else {
-            hidePremiumSectionRow = hideHelpSectionRow = -1;
+            hideAccountsSectionRow = hidePremiumSectionRow = hideHelpSectionRow = -1;
         }
         hidingDividerRow = addRow();
 
@@ -819,28 +818,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             }
             rebuildAllAndSelf(view, AppearanceConfig.iosChatHeader.Bool());
             return;
-        } else if (position == iosLiquidGlassNavBarRow) {
-            boolean enable = !AppearanceConfig.liquidGlassNavBar.Bool();
-            AppearanceConfig.liquidGlassNavBar.setConfigBool(enable);
-            if (view instanceof org.telegram.ui.Cells.CheckBoxCell) {
-                ((org.telegram.ui.Cells.CheckBoxCell) view).setChecked(enable, true);
-            }
-            if (listAdapter != null && iosGroupRow >= 0) {
-                listAdapter.notifyItemChanged(iosGroupRow);
-            }
-            rebuildAllAndSelf(view, enable);
-            return;
-        } else if (position == iosLiquidGlassFabRow) {
-            boolean enable = !AppearanceConfig.liquidGlassFab.Bool();
-            AppearanceConfig.liquidGlassFab.setConfigBool(enable);
-            if (view instanceof org.telegram.ui.Cells.CheckBoxCell) {
-                ((org.telegram.ui.Cells.CheckBoxCell) view).setChecked(enable, true);
-            }
-            if (listAdapter != null && iosGroupRow >= 0) {
-                listAdapter.notifyItemChanged(iosGroupRow);
-            }
-            rebuildAllAndSelf(view, enable);
-            return;
+
         } else if (position == hideAiGroupRow) {
             hideAiExpanded = !hideAiExpanded;
             rebuildRowsAndNotify();
@@ -857,6 +835,17 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         } else if (position == hideSettingsGroupRow) {
             hideSettingsExpanded = !hideSettingsExpanded;
             rebuildRowsAndNotify();
+            return;
+        } else if (position == hideAccountsSectionRow) {
+            boolean next = !AppearanceConfig.hideSettingsAccounts();
+            AppearanceConfig.hideSettingsAccounts.setConfigBool(next);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(next);
+            }
+            if (listAdapter != null && hideSettingsGroupRow >= 0) {
+                listAdapter.notifyItemChanged(hideSettingsGroupRow);
+            }
+            rebuildAll();
             return;
         } else if (position == hidePremiumSectionRow) {
             toggleHideSettingsSection(view, NaConfig.INSTANCE.getHidePremiumSection());
@@ -1407,12 +1396,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == iosChatHeaderRow) {
                         cell.setText(getString(R.string.OEAppearanceIosChatHeader), "",
                                 AppearanceConfig.iosChatHeader.Bool(), true, true);
-                    } else if (position == iosLiquidGlassNavBarRow) {
-                        cell.setText(getString(R.string.OEAppearanceLiquidGlassNavBar), "",
-                                AppearanceConfig.liquidGlassNavBar.Bool(), true, true);
-                    } else if (position == iosLiquidGlassFabRow) {
-                        cell.setText(getString(R.string.OEAppearanceLiquidGlassFab), "",
-                                AppearanceConfig.liquidGlassFab.Bool(), false, true);
+
                     } else if (position == hideAiEditorRow) {
                         cell.setText(getString(R.string.OEAppearanceHideAiEditor), "",
                                 AppearanceConfig.hideAiEditor.Bool(), true, true);
@@ -1422,6 +1406,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == hideAiIvRow) {
                         cell.setText(getString(R.string.OEAppearanceHideAiIv), "",
                                 AppearanceConfig.hideIvSummary.Bool(), false, true);
+                    } else if (position == hideAccountsSectionRow) {
+                        cell.setText(getString(R.string.OEAppearanceHideSettingsAccounts), "",
+                                AppearanceConfig.hideSettingsAccounts(), true, true);
                     } else if (position == hidePremiumSectionRow) {
                         cell.setText(getString(R.string.TelegramPremium), "",
                                 NaConfig.INSTANCE.getHidePremiumSection().Bool(), true, true);
@@ -1607,7 +1594,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == hideAiEditorRow
                     || position == hideAiSummaryRow || position == hideAiIvRow
                     || position == iosNavBarRow || position == iosChatHeaderRow
-                    || position == iosLiquidGlassNavBarRow || position == iosLiquidGlassFabRow
+                    || position == hideAccountsSectionRow
                     || position == hidePremiumSectionRow || position == hideHelpSectionRow) {
                 return TYPE_ROUND_CHECK;
             } else if (position == dividerStyleRow || position == glassOutlineRow
@@ -1650,10 +1637,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         rebuildRowsAndNotify();
     }
 
-    private static final int HIDE_SETTINGS_COUNT = 2;
+    private static final int HIDE_SETTINGS_COUNT = 3;
 
     private int hideSettingsSelectedCount() {
         int n = 0;
+        if (AppearanceConfig.hideSettingsAccounts()) n++;
         if (NaConfig.INSTANCE.getHidePremiumSection().Bool()) n++;
         if (NaConfig.INSTANCE.getHideHelpSection().Bool()) n++;
         return n;
@@ -1673,6 +1661,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
 
     private void toggleAllHideSettingsSections() {
         boolean enable = hideSettingsSelectedCount() == 0;
+        AppearanceConfig.hideSettingsAccounts.setConfigBool(enable);
         NaConfig.INSTANCE.getHidePremiumSection().setConfigBool(enable);
         NaConfig.INSTANCE.getHideHelpSection().setConfigBool(enable);
         rebuildAll();
@@ -1766,14 +1755,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         }
     }
 
-    private static final int IOS_STYLE_COUNT = 4;
+    private static final int IOS_STYLE_COUNT = 2;
 
     private int iosSelectedCount() {
         int n = 0;
         if (AppearanceConfig.iosNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.iosChatHeader.Bool()) n++;
-        if (AppearanceConfig.liquidGlassNavBar.Bool()) n++;
-        if (AppearanceConfig.liquidGlassFab.Bool()) n++;
         return n;
     }
 
@@ -1781,8 +1768,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         boolean enable = iosSelectedCount() == 0;
         AppearanceConfig.iosNavigationBarStyle.setConfigBool(enable);
         AppearanceConfig.iosChatHeader.setConfigBool(enable);
-        AppearanceConfig.liquidGlassNavBar.setConfigBool(enable);
-        AppearanceConfig.liquidGlassFab.setConfigBool(enable);
         if (enable) {
             AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
         }

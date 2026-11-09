@@ -164,6 +164,10 @@ public class UserObject {
         if (local != null && local != 0) {
             return local;
         }
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getEmojiStatusDocumentId(user);
+        if (invisible != null && invisible != 0) {
+            return invisible;
+        }
         Long custom = app.exteraless.chats.CustomEmojiStatusHelper.getEmojiStatusDocumentId(user.id);
         if (custom != null && custom != 0) {
             return custom;
@@ -207,6 +211,9 @@ public class UserObject {
         if (user == null) return 0;
         if (user.color instanceof TLRPC.TL_peerColor && (user.color.flags & 1) != 0) return user.color.color;
 
+        Integer invisible = app.exteraless.chats.ProfileInvisibleMetadata.getNameColorId(user);
+        if (invisible != null) return invisible;
+
         Integer replace = LocalPeerColorHelper.getColorId(user);
         if (replace != null) return replace;
 
@@ -215,6 +222,9 @@ public class UserObject {
 
     public static long getEmojiId(TLRPC.User user) {
         if (user != null && user.color instanceof TLRPC.TL_peerColor && (user.color.flags & 2) != 0) return user.color.background_emoji_id;
+
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getNameEmojiId(user);
+        if (invisible != null) return invisible;
 
         Long replace = LocalPeerColorHelper.getEmojiId(user);
         if (replace != null) return replace;
@@ -225,6 +235,9 @@ public class UserObject {
     public static int getProfileColorId(TLRPC.User user) {
         if (user == null) return 0;
         if (user.profile_color instanceof TLRPC.TL_peerColor && (user.profile_color.flags & 1) != 0) return user.profile_color.color;
+
+        Integer invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileColorId(user);
+        if (invisible != null) return invisible;
 
         Integer replace = LocalPeerColorHelper.getProfileColorId(user);
         if (replace != null) return replace;
@@ -237,6 +250,9 @@ public class UserObject {
             return ((TLRPC.TL_emojiStatusCollectible) user.emoji_status).pattern_document_id;
         }
         if (user != null && user.profile_color != null && (user.profile_color.flags & 2) != 0) return user.profile_color.background_emoji_id;
+
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileEmojiId(user);
+        if (invisible != null) return invisible;
 
         Long replace = LocalPeerColorHelper.getProfileEmojiId(user);
         if (replace != null) return replace;

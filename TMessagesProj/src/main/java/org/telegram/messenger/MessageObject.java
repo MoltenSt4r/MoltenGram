@@ -9865,6 +9865,9 @@ public class MessageObject {
             return true;
         }
         if (searchType != 0) {
+            if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+                return false;
+            }
             return true;
         }
         boolean channelSignatureProfiles = false;
@@ -9892,6 +9895,9 @@ public class MessageObject {
             return true;
         }
         if (searchType != 0) {
+            if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+                return false;
+            }
             return true;
         }
         boolean channelSignatureProfiles = false;

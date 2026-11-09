@@ -193,7 +193,7 @@
     <string name="OEPlayerTitleBelow">Below cover</string>
     <string name="OEPlayerTitleAboveCover">Above cover</string>
     <string name="OEPlayerShowLike">Like button</string>
-    <string name="OEPlayerShowSource">Source button</string>
+    <string name="OEPlayerShowSource">Source</string>
     <string name="OEPlayerBlockProgress">Progress</string>
     <string name="OEPlayerShowWave">Wave seekbar</string>
     <string name="OEPlayerBlockControls">Controls</string>
@@ -229,4 +229,13 @@
     <string name="OEPlayerMiniNext">Next</string>
     <string name="OEPlayerMiniClose">Close</string>
     <string name="OEPlayerPlaybackOrder">Playback order…</string>
+    <string name="OEPlayerActionButtons">Action buttons</string>
+    <string name="OEPlayerActionButtonsMin">Select at least 2 buttons</string>
+    <string name="OEPlayerSeekbarIndicator">Position indicator</string>
+    <string name="OEPlayerSeekbarIndicatorDot">Dot</string>
+    <string name="OEPlayerSeekbarIndicatorBar">Bar</string>
+    <string name="OEPlayerSeekbarThickness">Line thickness</string>
+    <string name="OEPlayerSeekbarThicknessThin">Thin</string>
+    <string name="OEPlayerSeekbarThicknessNormal">Normal</string>
+    <string name="OEPlayerSeekbarThicknessThick">Thick</string>
 </resources>

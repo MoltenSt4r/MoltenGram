@@ -359,10 +359,6 @@ public class Md3SpeedDialView extends FrameLayout {
         itemsContainer.removeAllViews();
         itemViews.clear();
 
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            boolean glass = AppearanceConfig.liquidGlassFab() || org.telegram.messenger.LiteMode.isEnabled(org.telegram.messenger.LiteMode.FLAG_LIQUID_GLASS);
-            scrimView.setRenderEffect(glass ? android.graphics.RenderEffect.createBlurEffect(dp(16), dp(16), android.graphics.Shader.TileMode.CLAMP) : null);
-        }
 
         boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
@@ -1575,10 +1571,7 @@ public class Md3SpeedDialView extends FrameLayout {
                 textView.setTextColor(textColor);
             }
 
-            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                boolean glass = AppearanceConfig.liquidGlassFab() || org.telegram.messenger.LiteMode.isEnabled(org.telegram.messenger.LiteMode.FLAG_LIQUID_GLASS);
-                setRenderEffect(glass ? android.graphics.RenderEffect.createBlurEffect(dp(12), dp(12), android.graphics.Shader.TileMode.CLAMP) : null);
-            }
+
         }
     }
 }

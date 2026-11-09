@@ -556,36 +556,103 @@ public class LocalPlaylistsController {
     public void showNewPlaylistDialog(Activity activity, Theme.ResourcesProvider rp, Utilities.Callback<LocalPlaylist> onCreated) {
         if (activity == null) return;
 
-        AlertDialog.Builder builder = new AlertDialog.Builder(activity, rp);
-        builder.setTitle(getString(R.string.AudioNewPlaylist));
+        org.telegram.ui.ActionBar.BottomSheet.Builder builder = new org.telegram.ui.ActionBar.BottomSheet.Builder(activity);
+        builder.setApplyTopPadding(false);
+        builder.setApplyBottomPadding(false);
 
-        LinearLayout layout = new LinearLayout(activity);
+        Context context = activity;
+        LinearLayout layout = new LinearLayout(context);
         layout.setOrientation(LinearLayout.VERTICAL);
-        layout.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(16), AndroidUtilities.dp(24), AndroidUtilities.dp(8));
+        layout.setPadding(AndroidUtilities.dp(22), AndroidUtilities.dp(16), AndroidUtilities.dp(22), AndroidUtilities.dp(24));
 
-        EditTextBoldCursor nameEdit = new EditTextBoldCursor(activity);
+        int textColor = Theme.getColor(Theme.key_dialogTextBlack, rp);
+        int hintColor = Theme.getColor(Theme.key_dialogTextHint, rp);
+        int accentColor = Theme.getColor(Theme.key_featuredStickers_addButton, rp);
+        int buttonTextColor = Theme.getColor(Theme.key_featuredStickers_buttonText, rp);
+
+        android.view.View handle = new android.view.View(context);
+        android.graphics.drawable.GradientDrawable handleBg = new android.graphics.drawable.GradientDrawable();
+        handleBg.setCornerRadius(AndroidUtilities.dp(3));
+        handleBg.setColor(Theme.getColor(Theme.key_sheet_scrollUp, rp));
+        handle.setBackground(handleBg);
+        layout.addView(handle, LayoutHelper.createLinear(36, 4, Gravity.CENTER_HORIZONTAL, 0, 0, 0, 14));
+
+        TextView title = new TextView(context);
+        title.setText(getString(R.string.AudioNewPlaylist));
+        title.setTypeface(AndroidUtilities.bold());
+        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 19);
+        title.setTextColor(textColor);
+        layout.addView(title, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
+
+        org.telegram.ui.Components.OutlineTextContainerView nameOutlineView = new org.telegram.ui.Components.OutlineTextContainerView(context);
+        nameOutlineView.setText(getString(R.string.AudioPlaylistNameHint));
+
+        EditTextBoldCursor nameEdit = new EditTextBoldCursor(context);
         nameEdit.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        nameEdit.setHint(getString(R.string.AudioPlaylistNameHint));
-        nameEdit.setTextColor(Theme.getColor(Theme.key_dialogTextBlack, rp));
-        nameEdit.setHintColor(Theme.getColor(Theme.key_dialogTextHint, rp));
-        nameEdit.setCursorColor(Theme.getColor(Theme.key_dialogTextBlack, rp));
+        nameEdit.setTextColor(textColor);
+        nameEdit.setCursorColor(accentColor);
+        nameEdit.setHintColor(hintColor);
+        nameEdit.setBackground(null);
+        nameEdit.setPadding(AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(14), AndroidUtilities.dp(14));
         nameEdit.setSingleLine(true);
-        layout.addView(nameEdit, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        builder.setView(layout);
-        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
+        nameOutlineView.addView(nameEdit, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        nameOutlineView.attachEditText(nameEdit);
+        nameOutlineView.animateSelection(false, false, false);
+        nameEdit.setOnFocusChangeListener((v, hasFocus) -> {
+            nameOutlineView.animateSelection(hasFocus, hasFocus || !TextUtils.isEmpty(nameEdit.getText()));
+        });
+        nameEdit.addTextChangedListener(new android.text.TextWatcher() {
+            @Override
+            public void beforeTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void onTextChanged(CharSequence s, int start, int count, int after) {}
+
+            @Override
+            public void afterTextChanged(android.text.Editable s) {
+                nameOutlineView.animateSelection(nameEdit.hasFocus(), nameEdit.hasFocus() || (s != null && s.length() > 0));
+            }
+        });
+        layout.addView(nameOutlineView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 20));
+
+        builder.setCustomView(layout);
+        org.telegram.ui.ActionBar.BottomSheet bottomSheet = builder.create();
+
+        TextView createBtn = new TextView(context);
+        createBtn.setText(getString(R.string.OK));
+        createBtn.setGravity(Gravity.CENTER);
+        createBtn.setTypeface(AndroidUtilities.bold());
+        createBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        createBtn.setTextColor(buttonTextColor);
+        createBtn.setBackground(Theme.AdaptiveRipple.filledRectByKey(Theme.key_featuredStickers_addButton, 10));
+        createBtn.setPadding(0, AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14));
+        createBtn.setOnClickListener(v -> {
             String name = nameEdit.getText().toString().trim();
             if (name.isEmpty()) {
                 name = getString(R.string.AudioPlaylists);
             }
             LocalPlaylist pl = createPlaylist(name);
             showBulletin(activity, rp, getString(R.string.AudioPlaylistCreated));
+            bottomSheet.dismiss();
             if (onCreated != null) {
                 onCreated.run(pl);
             }
         });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        builder.show();
+        layout.addView(createBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+        TextView cancelBtn = new TextView(context);
+        cancelBtn.setText(getString(R.string.Cancel));
+        cancelBtn.setGravity(Gravity.CENTER);
+        cancelBtn.setTypeface(AndroidUtilities.bold());
+        cancelBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        cancelBtn.setTextColor(accentColor);
+        cancelBtn.setBackground(Theme.createSelectorDrawable(accentColor & 0x1AFFFFFF, Theme.RIPPLE_MASK_ROUNDRECT_8DP));
+        cancelBtn.setPadding(0, AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12));
+        cancelBtn.setOnClickListener(v -> bottomSheet.dismiss());
+        layout.addView(cancelBtn, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        bottomSheet.show();
     }
 
     public void showBulletin(Activity activity, Theme.ResourcesProvider rp, String text) {

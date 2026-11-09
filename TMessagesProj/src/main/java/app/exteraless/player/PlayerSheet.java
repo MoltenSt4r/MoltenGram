@@ -97,6 +97,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final TextView headerTitle;
     private final CoverImage cover;
     private final LinearLayout titleRow;
+    private final View titleLeftSpacer;
     private LinearLayout titles;
     private final TextView titleView;
     private final TextView artistView;
@@ -124,6 +125,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final MorphButton playlistButton;
     private final MorphButton sleepButton;
     private final MorphButton queueButton;
+    private final MorphButton shareButton;
+    private final MorphButton bottomLikeButton;
 
     private FrameLayout editorPanel;
     private PlayerStyleEditor styleEditor;
@@ -445,6 +448,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         titleRow = new LinearLayout(context);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
+        titleLeftSpacer = new View(context);
+        titleRow.addView(titleLeftSpacer, LayoutHelper.createLinear(60, 48, Gravity.CENTER_VERTICAL));
         titles = new LinearLayout(context);
         titles.setOrientation(LinearLayout.VERTICAL);
         titleView = new TextView(context);
@@ -638,6 +643,28 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         queueButton.setContentDescription(getString(R.string.OEPlayerQueue));
         queueButton.setOnClickListener(v -> openQueue());
         group.addView(queueButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 0, 0));
+
+        shareButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.SHARE, 20));
+        shareButton.setRadius(dp(8), false);
+        shareButton.setContentDescription(getString(R.string.Forward));
+        shareButton.setOnClickListener(v -> {
+            MessageObject mo = current;
+            if (mo != null && activity != null) {
+                PlayerActions.forward(activity, mo);
+            }
+        });
+
+        bottomLikeButton = new MorphButton(context, heartIcon);
+        bottomLikeButton.setRadius(dp(8), false);
+        bottomLikeButton.setContentDescription(getString(R.string.AudioSaveToMyProfile));
+        bottomLikeButton.setOnClickListener(v -> toggleProfile());
+        bottomLikeButton.setOnLongClickListener(v -> {
+            AndroidUtilities.vibrateCursor(v);
+            saveCurrentToSavedMessages();
+            return true;
+        });
+
+        updateGroupActions();
         layout.addView(group);
 
         bubble = new TextView(context);
@@ -1387,18 +1414,84 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
+    private void updateGroupActions() {
+        if (group == null) return;
+        group.removeAllViews();
+        java.util.List<String> actions = PlayerStyle.actionButtons();
+        java.util.List<View> toAdd = new java.util.ArrayList<>();
+        for (String action : actions) {
+            switch (action) {
+                case PlayerStyle.ACTION_SPEED:
+                    if (speedButton != null) toAdd.add(speedButton);
+                    break;
+                case PlayerStyle.ACTION_LYRICS:
+                    if (lyricsButton != null) toAdd.add(lyricsButton);
+                    break;
+                case PlayerStyle.ACTION_PLAYLIST:
+                    if (playlistButton != null) toAdd.add(playlistButton);
+                    break;
+                case PlayerStyle.ACTION_SLEEP:
+                    if (sleepButton != null) toAdd.add(sleepButton);
+                    break;
+                case PlayerStyle.ACTION_QUEUE:
+                    if (queueButton != null) toAdd.add(queueButton);
+                    break;
+                case PlayerStyle.ACTION_SHARE:
+                    if (shareButton != null) toAdd.add(shareButton);
+                    break;
+                case PlayerStyle.ACTION_LIKE:
+                    if (bottomLikeButton != null) toAdd.add(bottomLikeButton);
+                    break;
+            }
+        }
+        int count = toAdd.size();
+        for (int i = 0; i < count; i++) {
+            View child = toAdd.get(i);
+            int leftMargin = (i == 0) ? 0 : dp(2);
+            int rightMargin = (i == count - 1) ? 0 : dp(2);
+            if (child instanceof MorphButton) {
+                MorphButton mb = (MorphButton) child;
+                if (count == 1) {
+                    mb.setRadius(dp(26), false);
+                } else if (i == 0) {
+                    mb.setRadius(dp(26), dp(8), false);
+                } else if (i == count - 1) {
+                    mb.setRadius(dp(8), dp(26), false);
+                } else {
+                    mb.setRadius(dp(8), false);
+                }
+            }
+            group.addView(child, LayoutHelper.createLinear(0, 52, 1f, leftMargin, 0, rightMargin, 0));
+        }
+    }
+
     private void updateLike(boolean animated) {
         MessageObject mo = current;
         boolean visible = mo != null && (!PlayerActions.noForwards(mo) || mo.getDocument() == null);
-        likeButton.setVisibility(visible ? View.VISIBLE : View.GONE);
+        boolean likeInBottom = PlayerStyle.isActionEnabled(PlayerStyle.ACTION_LIKE);
+        if (likeButton != null) {
+            likeButton.setVisibility((visible && PlayerStyle.showLike() && !likeInBottom) ? View.VISIBLE : View.GONE);
+        }
+        if (titleLeftSpacer != null) {
+            titleLeftSpacer.setVisibility((PlayerStyle.titleCentered() && likeButton != null && likeButton.getVisibility() == View.VISIBLE) ? View.VISIBLE : View.GONE);
+        }
+        if (bottomLikeButton != null) {
+            bottomLikeButton.setVisibility((visible && likeInBottom) ? View.VISIBLE : View.GONE);
+        }
         if (!visible) {
             return;
         }
         boolean saved = PlayerActions.isSavedToProfile(mo);
-        likeButton.setActive(saved, animated);
-        likeButton.setRadius(dp(saved ? 14 : 24), animated);
+        if (likeButton != null) {
+            likeButton.setActive(saved, animated);
+            likeButton.setRadius(dp(saved ? 14 : 24), animated);
+            likeButton.setContentDescription(getString(saved ? R.string.ProfilePlaylistRemoveFromProfile : R.string.AudioSaveToMyProfile));
+        }
+        if (bottomLikeButton != null) {
+            bottomLikeButton.setActive(saved, animated);
+            bottomLikeButton.setContentDescription(getString(saved ? R.string.ProfilePlaylistRemoveFromProfile : R.string.AudioSaveToMyProfile));
+        }
         heartIcon.setFillStroke(saved);
-        likeButton.setContentDescription(getString(saved ? R.string.ProfilePlaylistRemoveFromProfile : R.string.AudioSaveToMyProfile));
     }
 
     private void toggleProfile() {
@@ -1411,7 +1504,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 return;
             }
             boolean save = !PlayerActions.isSavedToProfile(mo);
-            likeButton.setActive(save, true);
+            if (likeButton != null) {
+                likeButton.setActive(save, true);
+                likeButton.setRadius(dp(save ? 14 : 24), true);
+            }
+            if (bottomLikeButton != null) {
+                bottomLikeButton.setActive(save, true);
+            }
+            heartIcon.setFillStroke(save);
             likeButton.setRadius(dp(save ? 14 : 24), true);
             heartIcon.setFillStroke(save);
             PlayerActions.saveToProfile(mo, save, error -> {
@@ -1933,35 +2033,13 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private float discRotation;
 
     private void updateDiscSpin() {
-        boolean playing = !MediaController.getInstance().isMessagePaused();
-        boolean spin = playing && PlayerStyle.coverStyle() == PlayerStyle.COVER_DISC && PlayerStyle.discSpin();
-        if (spin) {
-            if (discSpinAnimator == null) {
-                discSpinAnimator = ValueAnimator.ofFloat(discRotation, discRotation + 360f);
-                discSpinAnimator.setDuration(12000);
-                discSpinAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
-                discSpinAnimator.setRepeatCount(ValueAnimator.INFINITE);
-                discSpinAnimator.addUpdateListener(anim -> {
-                    discRotation = (float) anim.getAnimatedValue() % 360f;
-                    if (cover != null && !coverAnimating) {
-                        cover.setRotation(discRotation);
-                    }
-                });
-                discSpinAnimator.start();
-            } else if (!discSpinAnimator.isStarted()) {
-                discSpinAnimator.start();
-            }
-        } else {
-            if (discSpinAnimator != null) {
-                discSpinAnimator.cancel();
-                discSpinAnimator = null;
-            }
-            if (PlayerStyle.coverStyle() != PlayerStyle.COVER_DISC) {
-                discRotation = 0f;
-                if (cover != null && !coverAnimating) {
-                    cover.setRotation(0f);
-                }
-            }
+        if (discSpinAnimator != null) {
+            discSpinAnimator.cancel();
+            discSpinAnimator = null;
+        }
+        discRotation = 0f;
+        if (cover != null && !coverAnimating) {
+            cover.setRotation(0f);
         }
     }
 
@@ -2436,21 +2514,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             o.dismiss();
             LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
         });
-        o.add(R.drawable.baseline_volume_up_24, getString(R.string.OEAppearancePlayerEqualizer), () -> {
-            o.dismiss();
-            try {
-                Intent eqIntent = new Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL);
-                eqIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, getContext().getPackageName());
-                eqIntent.putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC);
-                if (activity != null && eqIntent.resolveActivity(activity.getPackageManager()) != null) {
-                    activity.startActivity(eqIntent);
-                } else {
-                    BulletinFactory.global().createSimpleBulletin(R.drawable.baseline_volume_up_24, getString(R.string.OEAppearancePlayerEqualizerNotFound)).show();
-                }
-            } catch (Throwable t) {
-                FileLog.e(t);
-            }
-        });
         o.addGap();
         o.add(R.drawable.msg_customize, getString(R.string.OEPlayerCustomize), () -> {
             o.dismiss();
@@ -2458,7 +2521,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             if (activity != null) {
                 activity.presentFragment(new PlayerSettingsActivity());
             }
+            // openEditor();
         });
+        // Note: R.string.OEAppearancePlayerEqualizer removed from options menu
         o.add(R.drawable.msg_filled_data_music, getString(R.string.OEPlayerClassic), () -> {
             o.dismiss();
             openClassic();
@@ -2609,6 +2674,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         playlistButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
         sleepButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         queueButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        if (shareButton != null) {
+            shareButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        }
+        if (bottomLikeButton != null) {
+            bottomLikeButton.setColors(c.surfaceHigh, c.onSurface, c.primaryContainer, c.onPrimaryContainer);
+        }
         bindEditorColors(c);
         applySystemBars(false);
     }
@@ -2827,12 +2898,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             seekBar.invalidate();
         }
         if (cover != null) {
-            int style = PlayerStyle.coverStyle();
-            int shapeId = (style == PlayerStyle.COVER_DISC) ? -1 : PlayerArt.getOrCycleShape(current);
+            int shapeId = PlayerArt.getOrCycleShape(current);
             cover.setShapeId(shapeId, animated);
             if (shapeId < 0) {
-                int r = (style == PlayerStyle.COVER_DISC) ? dp(1000) : dp(PlayerStyle.coverRadiusDp());
-                cover.setRadius(r);
+                cover.setRadius(dp(PlayerStyle.coverRadiusDp()));
             }
             cover.setCrop(AppearanceConfig.playerCropCover());
             updateDiscSpin();
@@ -2876,29 +2945,28 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
 
         // Elements visibility
+        boolean likeInBottom = PlayerStyle.isActionEnabled(PlayerStyle.ACTION_LIKE);
         if (likeButton != null) {
-            likeButton.setVisibility(PlayerStyle.showLike() ? View.VISIBLE : View.GONE);
+            likeButton.setVisibility((PlayerStyle.showLike() && !likeInBottom) ? View.VISIBLE : View.GONE);
+        }
+        if (titleLeftSpacer != null) {
+            titleLeftSpacer.setVisibility((center && likeButton != null && likeButton.getVisibility() == View.VISIBLE) ? View.VISIBLE : View.GONE);
         }
         if (controls != null) {
             int modesVis = PlayerStyle.showModes() ? View.VISIBLE : View.INVISIBLE;
             controls.shuffle.setVisibility(modesVis);
             controls.repeat.setVisibility(modesVis);
             float scale = PlayerStyle.controlsScale();
-            controls.setScaleX(scale);
-            controls.setScaleY(scale);
+            controls.setScaleX(1f);
+            controls.setScaleY(1f);
+            controls.requestLayout();
         }
         if (group != null) {
             group.setVisibility(PlayerStyle.showActions() ? View.VISIBLE : View.GONE);
-            if (PlayerStyle.actionsIsland()) {
-                GradientDrawable islandBg = new GradientDrawable();
-                islandBg.setCornerRadius(dp(26));
-                islandBg.setColor(colors.surfaceContainer);
-                group.setBackground(islandBg);
-                group.setPadding(dp(6), dp(4), dp(6), dp(4));
-            } else {
-                group.setBackground(null);
-                group.setPadding(0, 0, 0, 0);
-            }
+            group.setBackground(null);
+            group.setPadding(0, 0, 0, 0);
+            updateGroupActions();
+            // PlayerStyle.actionsIsland() disabled per user request
         }
         if (sourceView != null) {
             sourceView.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);

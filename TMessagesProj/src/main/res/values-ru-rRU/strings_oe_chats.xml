@@ -229,4 +229,8 @@
     <string name="OECleanBioDisplayInfo">Убирать невидимые символы статуса при просмотре профилей.</string>
     <string name="OESetEmojiStatus">Выбрать эмодзи-статус</string>
     <string name="OESetEmojiStatusInfo">Выбрать анимированный или кастомный эмодзи для отображения рядом с вашим именем.</string>
+    <string name="FeedHideChannelAvatars">Скрыть аватарки каналов</string>
+    <string name="FeedHideChannelAvatarsInfo">Не показывать аватарки каналов рядом с публикациями в ленте.</string>
+    <string name="OEAppearanceHideSettingsAccounts">Скрыть вкладку «Аккаунты»</string>
+    <string name="OEAppearanceHideSettingsAccountsInfo">Скрыть переключатель аккаунтов над настройками MoltenGram в главном меню настроек.</string>
 </resources>

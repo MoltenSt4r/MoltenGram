@@ -151,7 +151,7 @@ public class ChangeNameActivity extends BaseFragment {
         if (user != null) {
             firstNameField.setText(user.first_name);
             firstNameField.setSelection(firstNameField.length());
-            lastNameField.setText(user.last_name);
+            lastNameField.setText(app.exteraless.chats.ProfileInvisibleMetadata.cleanLastName(user.last_name));
         }
 
         return fragmentView;
@@ -175,6 +175,7 @@ public class ChangeNameActivity extends BaseFragment {
         }
         String newFirst = firstNameField.getText().toString();
         String newLast = lastNameField.getText().toString();
+        newLast = app.exteraless.chats.ProfileInvisibleMetadata.formatLastName(newLast, app.exteraless.chats.ProfileInvisibleMetadata.getMetadata(currentUser));
         if (currentUser.first_name != null && currentUser.first_name.equals(newFirst) && currentUser.last_name != null && currentUser.last_name.equals(newLast)) {
             return;
         }

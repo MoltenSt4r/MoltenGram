@@ -224,13 +224,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 pressedColor = Theme.getColor(Theme.key_featuredStickers_addButtonPressed, resourcesProvider);
             }
 
-            boolean isLiquidGlass = app.exteraless.appearance.AppearanceConfig.liquidGlassFab() || org.telegram.messenger.LiteMode.isEnabled(org.telegram.messenger.LiteMode.FLAG_LIQUID_GLASS);
-            if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
-                setRenderEffect(isLiquidGlass ? android.graphics.RenderEffect.createBlurEffect(dp(10), dp(10), android.graphics.Shader.TileMode.CLAMP) : null);
-            }
-            int bg = isLiquidGlass ? androidx.core.graphics.ColorUtils.setAlphaComponent(mainColor, 204) : mainColor;
-
-            fabBgPaint.setColor(bg);
+            fabBgPaint.setColor(mainColor);
             fabPressedPaint.setColor(pressedColor);
             setBackground(null);
 

@@ -148,7 +148,14 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        scale = Math.min(1f, (width - dp(16)) / (float) dp(312));
+        float userScale = PlayerStyle.controlsScale();
+        float baseNeeded = dp(340);
+        float available = width - dp(24);
+        if (available > 0) {
+            scale = Math.min(userScale, available / baseNeeded);
+        } else {
+            scale = userScale;
+        }
         int height = Math.round(dp(88) * scale);
         measureButtons();
         setMeasuredDimension(width, height);
@@ -173,8 +180,9 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         for (MorphButton button : buttons) {
             total += button.getMeasuredWidth();
         }
-        float gap = (width - total) / (buttons.length - 1f);
-        float x = 0;
+        float gap = Math.max(0, (width - total) / (buttons.length - 1f));
+        float startX = Math.max(0, (width - (total + gap * (buttons.length - 1))) / 2f);
+        float x = startX;
         for (MorphButton button : buttons) {
             int w = button.getMeasuredWidth();
             int h = button.getMeasuredHeight();

@@ -55,6 +55,7 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
     private static final int ID_FEED_IN_CHAT_MENU = Integer.MAX_VALUE - 4;
     private static final int ID_INCLUDE_ARCHIVED = Integer.MAX_VALUE;
     private static final int ID_ADD_NEW_CHANNELS = Integer.MAX_VALUE - 3;
+    private static final int ID_HIDE_CHANNEL_AVATARS = Integer.MAX_VALUE - 5;
 
     private static final Comparator<TLRPC.Chat> BY_TITLE =
             Comparator.comparing(FeedChannelsActivity::sortKey);
@@ -237,6 +238,9 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
             items.add(UItem.asCheck(ID_ADD_NEW_CHANNELS, getString(R.string.FeedAddNewChannels),
                     getString(config.getAddNewChannels() ? R.string.FeedAddNewChannelsOnInfo : R.string.FeedAddNewChannelsOffInfo), true)
                     .setChecked(config.getAddNewChannels()));
+            items.add(UItem.asCheck(ID_HIDE_CHANNEL_AVATARS, getString(R.string.FeedHideChannelAvatars),
+                    getString(R.string.FeedHideChannelAvatarsInfo), true)
+                    .setChecked(AppearanceConfig.hideFeedChannelAvatars()));
             items.add(UItem.asShadow((CharSequence) null));
         }
 
@@ -289,6 +293,11 @@ public class FeedChannelsActivity extends BaseFragment implements NotificationCe
             FeedConfig config = FeedConfig.getInstance(currentAccount);
             config.setAddNewChannels(!config.getAddNewChannels(), channelIds());
             update();
+        } else if (item.id == ID_HIDE_CHANNEL_AVATARS) {
+            boolean next = !AppearanceConfig.hideFeedChannelAvatars();
+            AppearanceConfig.hideFeedChannelAvatars.setConfigBool(next);
+            update();
+            NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_AVATAR);
         } else if (item.id == ID_INCLUDE_ARCHIVED) {
             FeedConfig config = FeedConfig.getInstance(currentAccount);
             config.setIncludeArchived(!config.getIncludeArchived());

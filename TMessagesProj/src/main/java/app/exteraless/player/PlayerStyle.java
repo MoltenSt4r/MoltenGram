@@ -146,7 +146,32 @@ public final class PlayerStyle {
     }
 
     public static boolean actionsIsland() {
-        return item(AppearanceConfig.playerActionsStyle).Int() == ACTIONS_ISLAND;
+        return false;
+    }
+
+    public static List<String> actionButtons() {
+        String raw = AppearanceConfig.playerActionButtons();
+        String[] parts = raw.split(",");
+        List<String> list = new ArrayList<>();
+        for (String p : parts) {
+            String trimmed = p.trim().toLowerCase();
+            if (!trimmed.isEmpty() && !list.contains(trimmed)) {
+                list.add(trimmed);
+            }
+        }
+        if (list.size() < 2) {
+            list.clear();
+            list.add("speed");
+            list.add("lyrics");
+            list.add("playlist");
+            list.add("sleep");
+            list.add("queue");
+        }
+        return list;
+    }
+
+    public static boolean isActionEnabled(String action) {
+        return actionButtons().contains(action.toLowerCase());
     }
 
     public static boolean showModes() {
@@ -200,7 +225,11 @@ public final class PlayerStyle {
     }
 
     public static int miniProgress() {
-        return choice(AppearanceConfig.playerMiniProgress, MINI_PROGRESS_BORDER);
+        int val = choice(AppearanceConfig.playerMiniProgress, MINI_PROGRESS_RING);
+        if (val == MINI_PROGRESS_BORDER) {
+            return MINI_PROGRESS_RING;
+        }
+        return val;
     }
 
     public static boolean miniThemeColors() {
@@ -244,7 +273,7 @@ public final class PlayerStyle {
                 AppearanceConfig.playerColors.setConfigInt(COLORS_COVER);
                 AppearanceConfig.playerSeekbarStyle.setConfigInt(1);
                 AppearanceConfig.playerWavy.setConfigBool(true);
-                AppearanceConfig.playerActionsStyle.setConfigInt(ACTIONS_ISLAND);
+                AppearanceConfig.playerActionsStyle.setConfigInt(ACTIONS_BUTTONS);
                 AppearanceConfig.playerShowActions.setConfigBool(true);
                 AppearanceConfig.playerShowModes.setConfigBool(true);
                 AppearanceConfig.playerShowLike.setConfigBool(true);

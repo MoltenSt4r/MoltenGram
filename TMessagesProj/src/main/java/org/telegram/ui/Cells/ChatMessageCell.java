@@ -7379,6 +7379,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             final boolean wideChannelPostHeader = messageObject.hasWideChannelPostHeader() && !messageObject.isOutOwner();
             isAvatarVisible = !wideChannelPostHeader && needDrawAvatar() && (currentPosition == null || currentPosition.edge);
             boolean drawAvatar = !wideChannelPostHeader && needDrawAvatar();
+            if (messageObject != null && messageObject.searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+                isAvatarVisible = false;
+                drawAvatar = false;
+            }
             if (!wideChannelPostHeader && (messageObject.customAvatarDrawable != null || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null)) {
                 isAvatarVisible = true;
                 drawAvatar = true;

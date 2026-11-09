@@ -32,6 +32,7 @@ public class PlayerIcon extends Drawable {
     public static final String QUEUE = "M4 6h12M4 11h12M4 16h7M15 14v6l5-3z";
     public static final String SLEEP = "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z";
     public static final String PLAYLIST_ADD = "M4 6h16M4 11h10M4 16h6M18 14v6M15 17h6";
+    public static final String SHARE = "M18 16.08a3 3 0 0 0-2.24 1.02L8.91 13.6a3.27 3.27 0 0 0 0-1.2l6.85-3.5a3 3 0 1 0-.91-1.8 3.2 3.2 0 0 0 .06.5L8.06 11.1a3 3 0 1 0 0 3.8l6.85 3.5a2.97 2.97 0 1 0 3.09-2.32z";
     public static final String NOTE = "M9 17V5l11-2v12" + circle(6.5f, 17, 2.5f) + circle(17.5f, 15, 2.5f);
     public static final String CLOSE = "M6 6l12 12M18 6L6 18";
     public static final String CHEVRON_UP = "M6 15l6-6 6 6";

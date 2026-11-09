@@ -2003,6 +2003,7 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
             finishFragment();
         } else {
             LocalPeerColorHelper.apply(namePage.selectedColor, namePage.selectedEmoji, profilePage.selectedColor, profilePage.selectedEmoji);
+            app.exteraless.chats.ProfileInvisibleMetadata.updateSelfColors(currentAccount, namePage.selectedColor, namePage.selectedEmoji, profilePage.selectedColor, profilePage.selectedEmoji, null);
             final TLRPC.User me = getUserConfig().getCurrentUser();
             if (me.color == null) {
                 me.color = new TLRPC.TL_peerColor();

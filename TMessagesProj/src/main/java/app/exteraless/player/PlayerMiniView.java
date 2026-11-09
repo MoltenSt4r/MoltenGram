@@ -400,11 +400,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private void applyColors(PlayerColors c) {
         colors = c;
         cardBg.setColor(c.primaryContainer);
-        if (PlayerStyle.miniProgress() == PlayerStyle.MINI_PROGRESS_BORDER) {
-            cardBg.setStroke(dp(1.5f), c.primary);
-        } else {
-            cardBg.setStroke(0, 0);
-        }
+        cardBg.setStroke(0, 0);
         if (Build.VERSION.SDK_INT >= 28) {
             card.setOutlineSpotShadowColor(c.shadow());
             card.setOutlineAmbientShadowColor(c.shadow());
@@ -426,14 +422,20 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     public static PlayerMiniView preview(Context context) {
         PlayerMiniView view = new PlayerMiniView(context, null, null);
+        view.setVisibility(VISIBLE);
         view.shown = true;
         view.showProgress = 1f;
         view.card.setTranslationY(0);
         view.card.setAlpha(1f);
         view.titleView.setText("Track Title");
         view.artistView.setText("Artist Name");
+        view.playButton.setPlaying(true, false);
         view.applyStyle(false);
         return view;
+    }
+
+    public void applyStyle() {
+        applyStyle(false);
     }
 
     public void applyStyle(boolean animated) {

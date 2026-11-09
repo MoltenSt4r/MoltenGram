@@ -232,4 +232,8 @@
     <string name="OECleanBioDisplayInfo">Hide invisible encoding characters when viewing profile bios.</string>
     <string name="OESetEmojiStatus">Choose Emoji Status</string>
     <string name="OESetEmojiStatusInfo">Select an animated or custom emoji to display next to your name.</string>
+    <string name="FeedHideChannelAvatars">Hide channel avatars</string>
+    <string name="FeedHideChannelAvatarsInfo">Do not display channel avatars next to posts in the feed.</string>
+    <string name="OEAppearanceHideSettingsAccounts">Hide Accounts tab</string>
+    <string name="OEAppearanceHideSettingsAccountsInfo">Hide the accounts selector above MoltenGram settings in the root settings menu.</string>
 </resources>

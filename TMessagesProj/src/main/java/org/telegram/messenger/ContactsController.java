@@ -3072,7 +3072,7 @@ public class ContactsController extends BaseController {
             firstName = firstName.substring(0, i);
         }
         if (lastName != null) {
-            lastName = lastName.trim();
+            lastName = app.exteraless.chats.ProfileInvisibleMetadata.cleanLastName(lastName).trim();
         }
         StringBuilder result = new StringBuilder((firstName != null ? firstName.length() : 0) + (lastName != null ? lastName.length() : 0) + 1);
         if (NekoConfig.nameOrder.Int() == 1) {

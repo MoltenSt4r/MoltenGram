@@ -193,7 +193,7 @@
     <string name="OEPlayerTitleBelow">Под обложкой</string>
     <string name="OEPlayerTitleAboveCover">Над обложкой</string>
     <string name="OEPlayerShowLike">Кнопка «Нравится»</string>
-    <string name="OEPlayerShowSource">Кнопка источника</string>
+    <string name="OEPlayerShowSource">Источник</string>
     <string name="OEPlayerBlockProgress">Прогресс</string>
     <string name="OEPlayerShowWave">Волнистая полоса</string>
     <string name="OEPlayerBlockControls">Управление</string>
@@ -229,4 +229,13 @@
     <string name="OEPlayerMiniNext">Вперёд</string>
     <string name="OEPlayerMiniClose">Закрыть</string>
     <string name="OEPlayerPlaybackOrder">Порядок воспроизведения…</string>
+    <string name="OEPlayerActionButtons">Кнопки действий</string>
+    <string name="OEPlayerActionButtonsMin">Выберите минимум 2 кнопки</string>
+    <string name="OEPlayerSeekbarIndicator">Индикатор позиции</string>
+    <string name="OEPlayerSeekbarIndicatorDot">Точка</string>
+    <string name="OEPlayerSeekbarIndicatorBar">Полоска</string>
+    <string name="OEPlayerSeekbarThickness">Толщина линии</string>
+    <string name="OEPlayerSeekbarThicknessThin">Тонкая</string>
+    <string name="OEPlayerSeekbarThicknessNormal">Стандартная</string>
+    <string name="OEPlayerSeekbarThicknessThick">Толстая</string>
 </resources>

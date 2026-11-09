@@ -111,10 +111,6 @@ public class PlayerStyleEditor extends LinearLayout {
             changed();
         });
 
-        addSegmented(new String[]{
-                getString(R.string.OEPlayerCoverCard), getString(R.string.OEPlayerCoverWide),
-                getString(R.string.OEPlayerCoverFull), getString(R.string.OEPlayerCoverDisc)
-        }, PlayerStyle::coverStyle, value -> AppearanceConfig.playerCoverStyle.setConfigInt(value));
         sizeRow = addSlider(R.string.OEPlayerCoverSize, PlayerStyle.COVER_SIZE_MIN, PlayerStyle.COVER_SIZE_MAX, 5, "%",
                 () -> Math.round(PlayerStyle.coverSize() * 100), value -> AppearanceConfig.playerCoverSize.setConfigInt(value));
         radiusRow = addSlider(R.string.OEPlayerCoverRadius, 0, PlayerStyle.COVER_RADIUS_MAX, 2, "",
@@ -157,9 +153,8 @@ public class PlayerStyleEditor extends LinearLayout {
         });
 
         coverChips = addChips();
-        spinRow = addChip(coverChips, R.string.OEPlayerDiscSpin, AppearanceConfig.playerDiscSpin);
         swipeRow = addChip(coverChips, R.string.OEAppearancePlayerSwipeTrack, AppearanceConfig.playerSwipeTrack);
-        extendRow = addChip(coverChips, R.string.OEPlayerCoverExtend, AppearanceConfig.playerCoverExtend);
+        addChip(coverChips, R.string.OEAppearancePlayerVideoCover, AppearanceConfig.playerVideoCover);
         addChip(coverChips, R.string.OEAppearancePlayerCropCover, AppearanceConfig.playerCropCover);
 
         addHeader(R.string.OEPlayerStyleColors);
@@ -221,9 +216,6 @@ public class PlayerStyleEditor extends LinearLayout {
 
         blockCard[PlayerStyle.BLOCK_ACTIONS] = new ElementCard(context, TARGET_ACTIONS, getString(R.string.OEPlayerBlockActions),
                 AppearanceConfig.playerShowActions, true);
-        section = blockCard[PlayerStyle.BLOCK_ACTIONS].body;
-        addSegmented(new String[]{getString(R.string.OEPlayerActionsButtons), getString(R.string.OEPlayerActionsIsland)},
-                () -> PlayerStyle.actionsIsland() ? 1 : 0, value -> AppearanceConfig.playerActionsStyle.setConfigInt(value));
         layoutBlockCards();
 
         section = sections[1];
@@ -266,12 +258,12 @@ public class PlayerStyleEditor extends LinearLayout {
         addInfo(R.string.OEPlayerMiniProgress);
         addSegmented(new String[]{
                 getString(R.string.OEPlayerMiniProgressRing), getString(R.string.OEPlayerMiniProgressLine),
-                getString(R.string.OEPlayerMiniProgressBorder), getString(R.string.OEPlayerMiniProgressNone)
+                getString(R.string.OEPlayerMiniProgressNone)
         }, () -> {
             int value = PlayerStyle.miniProgress();
-            return value == PlayerStyle.MINI_PROGRESS_BORDER ? 2 : value == PlayerStyle.MINI_PROGRESS_NONE ? 3 : value;
+            return value == PlayerStyle.MINI_PROGRESS_LINE ? 1 : value == PlayerStyle.MINI_PROGRESS_NONE ? 2 : 0;
         }, value -> AppearanceConfig.playerMiniProgress.setConfigInt(
-                value == 2 ? PlayerStyle.MINI_PROGRESS_BORDER : value == 3 ? PlayerStyle.MINI_PROGRESS_NONE : value));
+                value == 1 ? PlayerStyle.MINI_PROGRESS_LINE : value == 2 ? PlayerStyle.MINI_PROGRESS_NONE : PlayerStyle.MINI_PROGRESS_RING));
         addInfo(R.string.OEPlayerMiniColors);
         addSegmented(new String[]{getString(R.string.OEPlayerColorsCover), getString(R.string.OEPlayerColorsTheme)},
                 () -> PlayerStyle.miniThemeColors() ? 1 : 0, value -> AppearanceConfig.playerMiniColors.setConfigInt(value));
@@ -320,37 +312,21 @@ public class PlayerStyleEditor extends LinearLayout {
             }
         });
 
-        addHeader(R.string.OEPlayerMusic);
-        ChipGroup audioActionChips = addChips();
-        Chip eqChip = new Chip(context, getString(R.string.OEAppearancePlayerEqualizer), () -> false, v -> {
-            try {
-                Intent intent = new Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL);
-                intent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, context.getPackageName());
-                intent.putExtra(AudioEffect.EXTRA_AUDIO_SESSION, 0);
-                intent.putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC);
-                context.startActivity(intent);
-            } catch (Exception ignore) {
-            }
-        });
-        audioActionChips.addView(eqChip);
-        parts.add(eqChip);
-
-        Chip playlistChip = new Chip(context, getString(R.string.OEPlayerLocalPlaylists), () -> false, v -> {
-            try {
-                android.app.Activity act = context instanceof android.app.Activity ? (android.app.Activity) context : null;
-                if (act != null) {
-                    new LocalPlaylistBottomSheet(act, null, null).show();
-                }
-            } catch (Exception ignore) {
-            }
-        });
-        audioActionChips.addView(playlistChip);
-        parts.add(playlistChip);
-
+        // LocalPlaylistBottomSheet reference for audio tab
         ChipGroup behaviorChips = addChips();
         addChip(behaviorChips, R.string.OEAppearancePlayerKeepScreenOn, AppearanceConfig.playerKeepScreenOn);
         addChip(behaviorChips, R.string.OEAppearancePlayerPauseOnMute, AppearanceConfig.playerPauseOnMute);
         addChip(behaviorChips, R.string.OEAppearancePlayerResumeOnBluetooth, AppearanceConfig.playerResumeOnBluetooth);
+
+        Chip playlistChip = new Chip(context, getString(R.string.OEPlayerLocalPlaylists), () -> false, v -> {
+            try {
+                if (context instanceof android.app.Activity) {
+                    LocalPlaylistsController.getInstance().showPlaylistsDialog((android.app.Activity) context, colors != null ? colors.provider(null) : null);
+                }
+            } catch (Exception ignore) {}
+        });
+        behaviorChips.addView(playlistChip);
+        parts.add(playlistChip);
 
         // Section 4: Lyrics
         section = sections[4];

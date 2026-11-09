@@ -235,29 +235,7 @@ object CustomEmojiStatusHelper {
         user.flags2 = user.flags2 or 1
         MessagesController.getInstance(account).putUser(user, true)
 
-        val userFull = MessagesController.getInstance(account).getUserFull(user.id)
-        val currentBio = userFull?.about ?: ""
-        val tag = encodeEmojiId(documentId)
-        val newBio = formatBioWithTag(currentBio, tag, false)
-
-        val req = TL_account.updateProfile()
-        req.about = newBio
-        req.flags = 4
-
-        ConnectionsManager.getInstance(account).sendRequest(req) { _, error ->
-            val success = error == null
-            if (success && userFull != null) {
-                userFull.about = newBio
-            }
-            AndroidUtilities.runOnUIThread {
-                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.userEmojiStatusUpdated, user)
-                NotificationCenter.getInstance(account).postNotificationName(
-                    NotificationCenter.updateInterfaces,
-                    MessagesController.UPDATE_MASK_EMOJI_STATUS or MessagesController.UPDATE_MASK_NAME
-                )
-                callback?.invoke(success)
-            }
-        }
+        ProfileInvisibleMetadata.updateSelfEmojiStatus(account, documentId, callback)
     }
 
     @JvmStatic
@@ -274,27 +252,6 @@ object CustomEmojiStatusHelper {
         user.flags2 = user.flags2 and 1.inv()
         MessagesController.getInstance(account).putUser(user, true)
 
-        val userFull = MessagesController.getInstance(account).getUserFull(user.id)
-        val currentBio = userFull?.about ?: ""
-        val cleanedBio = cleanBio(currentBio)
-
-        val req = TL_account.updateProfile()
-        req.about = cleanedBio
-        req.flags = 4
-
-        ConnectionsManager.getInstance(account).sendRequest(req) { _, error ->
-            val success = error == null
-            if (success && userFull != null) {
-                userFull.about = cleanedBio
-            }
-            AndroidUtilities.runOnUIThread {
-                NotificationCenter.getInstance(account).postNotificationName(NotificationCenter.userEmojiStatusUpdated, user)
-                NotificationCenter.getInstance(account).postNotificationName(
-                    NotificationCenter.updateInterfaces,
-                    MessagesController.UPDATE_MASK_EMOJI_STATUS or MessagesController.UPDATE_MASK_NAME
-                )
-                callback?.invoke(success)
-            }
-        }
+        ProfileInvisibleMetadata.updateSelfEmojiStatus(account, 0L, callback)
     }
 }

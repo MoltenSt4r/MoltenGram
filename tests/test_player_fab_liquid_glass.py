@@ -19,17 +19,15 @@ def test_liquid_glass_in_appearance_config():
     assert "fun liquidGlassFab(): Boolean" in content, "liquidGlassFab() accessor missing"
 
 
-def test_liquid_glass_in_ios_appearance_section():
+def test_liquid_glass_removed_from_ios_appearance_section():
     activity_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
     assert os.path.exists(activity_path), "OpenExteraAppearanceActivity.java must exist"
     with open(activity_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    assert "iosLiquidGlassNavBarRow" in content, "iosLiquidGlassNavBarRow missing"
-    assert "iosLiquidGlassFabRow" in content, "iosLiquidGlassFabRow missing"
-    assert "IOS_STYLE_COUNT = 4" in content, "IOS_STYLE_COUNT should be 4 with liquid glass items"
-    assert "OEAppearanceLiquidGlassNavBar" in content, "OEAppearanceLiquidGlassNavBar string reference missing"
-    assert "OEAppearanceLiquidGlassFab" in content, "OEAppearanceLiquidGlassFab string reference missing"
+    assert "iosLiquidGlassNavBarRow" not in content, "iosLiquidGlassNavBarRow should be removed"
+    assert "iosLiquidGlassFabRow" not in content, "iosLiquidGlassFabRow should be removed"
+    assert "IOS_STYLE_COUNT = 2" in content, "IOS_STYLE_COUNT should be 2 without liquid glass items"
 
 
 def test_liquid_glass_strings_in_resources():

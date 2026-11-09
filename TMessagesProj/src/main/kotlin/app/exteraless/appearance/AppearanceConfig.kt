@@ -846,6 +846,34 @@ object AppearanceConfig {
         return playerSeekbarStyle.Int()
     }
 
+    @JvmField
+    val playerActionButtons = addConfig("OEPlayerActionButtons", ConfigItem.configTypeString, "speed,lyrics,playlist,sleep,queue")
+
+    @JvmStatic
+    fun playerActionButtons(): String {
+        ensureLoaded()
+        val s = playerActionButtons.String()
+        return if (s.isNullOrEmpty()) "speed,lyrics,playlist,sleep,queue" else s
+    }
+
+    @JvmField
+    val playerSeekbarIndicator = addConfig("OEPlayerSeekbarIndicator", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun playerSeekbarIndicator(): Int {
+        ensureLoaded()
+        return playerSeekbarIndicator.Int()
+    }
+
+    @JvmField
+    val playerSeekbarThickness = addConfig("OEPlayerSeekbarThickness", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun playerSeekbarThickness(): Int {
+        ensureLoaded()
+        return playerSeekbarThickness.Int()
+    }
+
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */
     @JvmField
     val playerColorStyle =
@@ -1307,6 +1335,28 @@ object AppearanceConfig {
     fun showFeedUnreadCounter(): Boolean {
         ensureLoaded()
         return showFeedUnreadCounter.Bool()
+    }
+
+    /** Скрыть аватарки каналов в ленте */
+    @JvmField
+    val hideFeedChannelAvatars =
+        addConfig("OEAppearanceFeedHideChannelAvatars", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun hideFeedChannelAvatars(): Boolean {
+        ensureLoaded()
+        return hideFeedChannelAvatars.Bool()
+    }
+
+    /** Скрыть вкладку Аккаунты в корне настроек */
+    @JvmField
+    val hideSettingsAccounts =
+        addConfig("OEAppearanceHideSettingsAccounts", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun hideSettingsAccounts(): Boolean {
+        ensureLoaded()
+        return hideSettingsAccounts.Bool()
     }
 
     @JvmStatic
