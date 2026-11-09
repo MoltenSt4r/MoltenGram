@@ -11,6 +11,7 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.Rect;
 import android.graphics.drawable.Drawable;
 import android.os.Looper;
+import java.lang.ref.WeakReference;
 import android.text.TextUtils;
 import android.util.Log;
 import android.util.LongSparseArray;
@@ -931,10 +932,10 @@ public class AnimatedEmojiDrawable extends Drawable {
 
             if (!attached) {
                 AndroidUtilities.cancelRunOnUIThread(cleanup);
-                AndroidUtilities.runOnUIThread(cleanup, 5000);
+                AndroidUtilities.runOnUIThread(cleanup, 1000);
             }
         }
-    }
+        }
 
     private static final Runnable cleanup = () -> {
         AndroidUtilities.cancelRunOnUIThread(AnimatedEmojiDrawable.cleanup);
@@ -1125,8 +1126,8 @@ public class AnimatedEmojiDrawable extends Drawable {
         private final AnimatedFloat changeProgress = new AnimatedFloat((View) null, 300, CubicBezierInterpolator.EASE_OUT);
         private final AnimatedFloat particlesAlpha = new AnimatedFloat((View) null, 300, CubicBezierInterpolator.EASE_OUT);
         private final Drawable[] drawables = new Drawable[2];
-        private View parentView;
-        private View secondParent;
+        private WeakReference<View> parentViewRef;
+        private WeakReference<View> secondParentRef;
         private boolean invalidateParent;
         private int size;
         private int alpha = 255;
@@ -1146,8 +1147,9 @@ public class AnimatedEmojiDrawable extends Drawable {
         }
 
         public SwapAnimatedEmojiDrawable(View parentView, boolean invalidateParent, int size, int cacheType) {
-            changeProgress.setParent(this.parentView = parentView);
-            particlesAlpha.setParent(this.parentView = parentView);
+            this.parentViewRef = parentView != null ? new WeakReference<>(parentView) : null;
+            changeProgress.setParent(parentView);
+            particlesAlpha.setParent(parentView);
             this.size = size;
             this.cacheType = cacheType;
             this.invalidateParent = invalidateParent;
@@ -1159,9 +1161,9 @@ public class AnimatedEmojiDrawable extends Drawable {
         }
 
         public void setParentView(View parentView) {
+            this.parentViewRef = parentView != null ? new WeakReference<>(parentView) : null;
             changeProgress.setParent(parentView);
             particlesAlpha.setParent(parentView);
-            this.parentView = parentView;
         }
 
         public void play() {
@@ -1232,9 +1234,9 @@ public class AnimatedEmojiDrawable extends Drawable {
                 particles.setBounds(bounds);
                 particles.process();
                 particles.draw(canvas, Theme.multAlpha(lastColor == null ? 0xFFFFFFFF : lastColor, particlesAlpha));
-                Choreographer60FpsContent.getInstance().addFrameCallback(invalidateRunnable, 15);
+                updateFrameCallback(true);
             } else {
-                Choreographer60FpsContent.getInstance().removeFrameCallback(invalidateRunnable);
+                updateFrameCallback(false);
             }
             if (drawables[1] != null && progress < 1) {
                 drawables[1].setAlpha((int) (alpha * (1f - progress)));
@@ -1461,6 +1463,7 @@ public class AnimatedEmojiDrawable extends Drawable {
                 return;
             }
             attached = false;
+            updateFrameCallback(false);
             if (drawables[0] instanceof AnimatedEmojiDrawable) {
                 ((AnimatedEmojiDrawable) drawables[0]).removeView(this);
             }
@@ -1474,6 +1477,9 @@ public class AnimatedEmojiDrawable extends Drawable {
                 return;
             }
             attached = true;
+            if (hasParticles && particlesAlpha.get() > 0) {
+                updateFrameCallback(true);
+            }
             if (drawables[0] instanceof AnimatedEmojiDrawable) {
                 ((AnimatedEmojiDrawable) drawables[0]).addView(this);
             }
@@ -1505,9 +1511,39 @@ public class AnimatedEmojiDrawable extends Drawable {
             return PixelFormat.TRANSPARENT;
         }
 
-        private final Runnable invalidateRunnable = this::invalidate;
+        private boolean frameCallbackAttached;
+        private void updateFrameCallback(boolean add) {
+            if (add) {
+                if (!frameCallbackAttached) {
+                    frameCallbackAttached = true;
+                    Choreographer60FpsContent.getInstance().addFrameCallback(invalidateRunnable, 15);
+                }
+            } else {
+                if (frameCallbackAttached) {
+                    frameCallbackAttached = false;
+                    Choreographer60FpsContent.getInstance().removeFrameCallback(invalidateRunnable);
+                }
+            }
+        }
+
+        private final Runnable invalidateRunnable = this::onFrameUpdate;
+
+        private void onFrameUpdate() {
+            if (!attached) {
+                updateFrameCallback(false);
+                return;
+            }
+            View parentView = parentViewRef != null ? parentViewRef.get() : null;
+            if (parentView != null && !parentView.isAttachedToWindow()) {
+                updateFrameCallback(false);
+                return;
+            }
+            invalidate();
+        }
+
         @Override
         public void invalidate() {
+            View parentView = parentViewRef != null ? parentViewRef.get() : null;
             if (parentView != null) {
                 if (invalidateParent && parentView.getParent() instanceof View) {
                     ((View) parentView.getParent()).invalidate();
@@ -1515,6 +1551,7 @@ public class AnimatedEmojiDrawable extends Drawable {
                     parentView.invalidate();
                 }
             }
+            View secondParent = secondParentRef != null ? secondParentRef.get() : null;
             if (secondParent != null) {
                 secondParent.invalidate();
             }
@@ -1522,7 +1559,7 @@ public class AnimatedEmojiDrawable extends Drawable {
         }
 
         public void setSecondParent(View secondParent) {
-            this.secondParent = secondParent;
+            this.secondParentRef = secondParent != null ? new WeakReference<>(secondParent) : null;
         }
 
         public void setResourcesProvider(Theme.ResourcesProvider resourcesProvider) {
