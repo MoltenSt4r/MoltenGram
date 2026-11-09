@@ -136,6 +136,8 @@
     <string name="OEAppearanceIosDesign" translatable="false">iOS Design</string>
     <string name="OEAppearanceIosNavigationBarStyle">Панель навигации</string>
     <string name="OEAppearanceIosChatHeader">Шапка чата в стиле iOS</string>
+    <string name="OEAppearanceLiquidGlassNavBar">Liquid Glass для панели навигации</string>
+    <string name="OEAppearanceLiquidGlassFab">Liquid Glass для плавающей кнопки (FAB)</string>
     <string name="OEAppearanceIosFirstFolderOnTabTap">Тап по вкладке — первая папка</string>
     <string name="OEAppearanceHiding">Скрытие элементов</string>
     <string name="OEAppearanceHideActionBarStatus">Скрыть статус</string>

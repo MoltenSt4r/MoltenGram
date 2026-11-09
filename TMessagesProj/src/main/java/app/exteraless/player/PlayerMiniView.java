@@ -474,7 +474,17 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         invalidate();
     }
 
+    private static boolean postingStyleChange = false;
+
     public static void styleChanged() {
-        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+        if (postingStyleChange) {
+            return;
+        }
+        postingStyleChange = true;
+        try {
+            NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+        } finally {
+            postingStyleChange = false;
+        }
     }
 }

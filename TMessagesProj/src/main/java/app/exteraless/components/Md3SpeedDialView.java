@@ -359,6 +359,11 @@ public class Md3SpeedDialView extends FrameLayout {
         itemsContainer.removeAllViews();
         itemViews.clear();
 
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            boolean glass = AppearanceConfig.liquidGlassFab() || org.telegram.messenger.LiteMode.isEnabled(org.telegram.messenger.LiteMode.FLAG_LIQUID_GLASS);
+            scrimView.setRenderEffect(glass ? android.graphics.RenderEffect.createBlurEffect(dp(16), dp(16), android.graphics.Shader.TileMode.CLAMP) : null);
+        }
+
         boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
         FrameLayout.LayoutParams containerLp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
@@ -1206,13 +1211,12 @@ public class Md3SpeedDialView extends FrameLayout {
         titleView.setTextColor(textColor);
         layout.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 16));
 
-        final String[] types = new String[]{"deeplink", "chat", "setting", "plugin"};
-        final String[] typeLabels = new String[]{"URL", "Чат", "Настройки", "Плагин"};
+        final String[] types = new String[]{"deeplink", "chat", "setting"};
+        final String[] typeLabels = new String[]{"URL", "Чат", "Настройки"};
         final String[] typePlaceholders = new String[]{
                 "https://... или tg://...",
                 "@username или ID канала",
-                "Раздел (appearance, general, chat...)",
-                "Команда или функция плагина"
+                "Раздел (appearance, general, chat...)"
         };
         final int[] selectedType = new int[]{0};
 
@@ -1569,6 +1573,11 @@ public class Md3SpeedDialView extends FrameLayout {
                 setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, bgColor, pressedColor));
                 iconView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
                 textView.setTextColor(textColor);
+            }
+
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                boolean glass = AppearanceConfig.liquidGlassFab() || org.telegram.messenger.LiteMode.isEnabled(org.telegram.messenger.LiteMode.FLAG_LIQUID_GLASS);
+                setRenderEffect(glass ? android.graphics.RenderEffect.createBlurEffect(dp(12), dp(12), android.graphics.Shader.TileMode.CLAMP) : null);
             }
         }
     }

@@ -816,6 +816,7 @@ public class SettingsHelper {
         exteralessFragments.add(new TextAnimationSettingsActivity());
         exteralessFragments.add(new OpenExteraGlyphActivity());
         exteralessFragments.add(new app.exteraless.appearance.Md3AvatarShapesActivity());
+        exteralessFragments.add(new app.exteraless.appearance.Md3FabAppearanceActivity());
         exteralessFragments.add(new app.exteraless.spoof.DeviceSpoofActivity());
 
         String e_title = getString(R.string.OpenExtera);
@@ -845,6 +846,30 @@ public class SettingsHelper {
                         uid + entry.getKey(), title, e_title, f_title, drawable, open));
             }
         }
+
+        String navTitle = getString(R.string.OEAppNavigation);
+        int navUid = 993000;
+        int navIcon = R.drawable.msg_actions;
+        items.add(new SettingsSearchResult(
+                navUid + 1, "FAB (Плавающая кнопка)", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 2, "Кнопка действия (FAB)", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 3, "Меню FAB и Speed Dial", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 4, "Форма и цвет FAB", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 5, "Навигация и плавающая кнопка", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.settings.OpenExteraAppNavigationActivity())
+        ));
 
         String n_title = getString(R.string.Language);
         for (BaseNekoXSettingsActivity fragment: fragments) {

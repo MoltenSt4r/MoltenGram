@@ -506,12 +506,12 @@ public class PlayerStyleEditor extends LinearLayout {
         if (miniPreview != null) {
             miniPreview.applyStyle(true);
         }
-        PlayerMiniView.styleChanged();
     }
 
     private void changed() {
         refreshVisibility();
         refreshMini();
+        PlayerMiniView.styleChanged();
         if (listener != null) {
             listener.onStyleChanged();
         }

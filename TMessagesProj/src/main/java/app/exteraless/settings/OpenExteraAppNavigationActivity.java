@@ -78,8 +78,10 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int ID_HIDE_CONTACTS_TAB = -108;
     private static final int ID_HIDE_CALLS_TAB = -109;
     private static final int ID_HIDE_PROFILE_TAB = -110;
+    private static final int ID_LIQUID_GLASS_NAV_BAR = -111;
 
     private static final int ID_FAB_APPEARANCE = -135;
+    private static final int ID_LIQUID_GLASS_FAB = -136;
     private static final int ID_FAB_SHAPE = -120;
     private static final int ID_FAB_ACTIVE_SHAPE = -127;
     private static final int ID_FAB_SPEED_DIAL = -121;
@@ -195,11 +197,15 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
             items.add(UItem.asCheck(ID_HIDE_PROFILE_TAB, getString(R.string.MainTabsHideProfile))
                     .setChecked(NaConfig.INSTANCE.getMainTabsHideProfile().Bool()));
         }
-        items.add(UItem.asShadow(null));
+        items.add(UItem.asCheck(ID_LIQUID_GLASS_NAV_BAR, "Liquid Glass для панели навигации")
+                .setChecked(AppearanceConfig.liquidGlassNavBar()));
+        items.add(UItem.asShadow("Применить эффект жидкого стекла и размытия (Liquid Glass) к нижней панели навигации."));
 
         items.add(UItem.asHeader("Плавающая кнопка (FAB)"));
         items.add(UItem.asButton(ID_FAB_APPEARANCE, R.drawable.msg_theme, "Внешний вид и анимации FAB",
                 "Формы, размеры, цвета, выравнивание и интерактивный предпросмотр"));
+        items.add(UItem.asCheck(ID_LIQUID_GLASS_FAB, "Liquid Glass для FAB")
+                .setChecked(AppearanceConfig.liquidGlassFab()));
         items.add(UItem.asCheck(ID_FAB_SPEED_DIAL, getString(R.string.OEAppearanceMd3SpeedDial))
                 .setChecked(AppearanceConfig.md3FabSpeedDial()));
         if (AppearanceConfig.md3FabSpeedDial()) {

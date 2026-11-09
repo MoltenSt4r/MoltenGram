@@ -146,6 +146,8 @@
     <string name="OEAppearanceIosDesign" translatable="false">iOS Design</string>
     <string name="OEAppearanceIosNavigationBarStyle">Navigation Bar</string>
     <string name="OEAppearanceIosChatHeader">iOS Chat Header</string>
+    <string name="OEAppearanceLiquidGlassNavBar">Liquid Glass for Navigation Bar</string>
+    <string name="OEAppearanceLiquidGlassFab">Liquid Glass for Floating Action Button</string>
     <string name="OEAppearanceIosFirstFolderOnTabTap">Tab Tap Opens First Folder</string>
     <string name="OEAppearanceHiding">Hide Elements</string>
     <string name="OEAppearanceHideAi">Hide AI</string>

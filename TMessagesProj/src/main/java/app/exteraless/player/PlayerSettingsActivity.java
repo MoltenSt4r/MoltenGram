@@ -62,6 +62,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int styleEditorShadowRow;
 
     private int appearanceHeaderRow;
+    private int coverStyleRow;
+    private int discSpinRow;
+    private int coverExtendRow;
     private int bgStyleRow;
     private int seekbarStyleRow;
     private int colorStyleRow;
@@ -71,6 +74,31 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int cropCoverRow;
     private int keepScreenOnRow;
     private int appearanceShadowRow;
+
+    private int controlsHeaderRow;
+    private int controlsSizeRow;
+    private int titleAlignRow;
+    private int titleSizeRow;
+    private int titleAboveRow;
+    private int wavySeekbarRow;
+    private int actionsStyleRow;
+    private int showModesRow;
+    private int showActionsRow;
+    private int showLikeRow;
+    private int showSourceRow;
+    private int controlsShadowRow;
+
+    private int miniHeaderRow;
+    private int miniCoverRow;
+    private int miniShapeRow;
+    private int miniProgressRow;
+    private int miniColorsRow;
+    private int miniCompactRow;
+    private int miniArtistRow;
+    private int miniPreviousRow;
+    private int miniNextRow;
+    private int miniCloseRow;
+    private int miniShadowRow;
 
     private int lyricsHeaderRow;
     private int lyricsExperimentalRow;
@@ -83,6 +111,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsShadowRow;
 
     private int audioHeaderRow;
+    private int pauseOnMuteRow;
+    private int resumeOnBluetoothRow;
     private int crossfadeRow;
     private int crossfadeDurationRow;
     private int playlistsRow;
@@ -110,6 +140,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Appearance
         appearanceHeaderRow = addRow("appearanceHeader");
+        coverStyleRow = addRow("coverStyle");
+        discSpinRow = addRow("discSpin");
+        coverExtendRow = addRow("coverExtend");
         bgStyleRow = addRow("bgStyle");
         seekbarStyleRow = addRow("seekbarStyle");
         colorStyleRow = addRow("colorStyle");
@@ -119,6 +152,33 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
         appearanceShadowRow = addRow();
+
+        // Controls
+        controlsHeaderRow = addRow("controlsHeader");
+        controlsSizeRow = addRow("controlsSize");
+        titleAlignRow = addRow("titleAlign");
+        titleSizeRow = addRow("titleSize");
+        titleAboveRow = addRow("titleAbove");
+        wavySeekbarRow = addRow("wavySeekbar");
+        actionsStyleRow = addRow("actionsStyle");
+        showModesRow = addRow("showModes");
+        showActionsRow = addRow("showActions");
+        showLikeRow = addRow("showLike");
+        showSourceRow = addRow("showSource");
+        controlsShadowRow = addRow();
+
+        // Mini Player
+        miniHeaderRow = addRow("miniHeader");
+        miniCoverRow = addRow("miniCover");
+        miniShapeRow = addRow("miniShape");
+        miniProgressRow = addRow("miniProgress");
+        miniColorsRow = addRow("miniColors");
+        miniCompactRow = addRow("miniCompact");
+        miniArtistRow = addRow("miniArtist");
+        miniPreviousRow = addRow("miniPrevious");
+        miniNextRow = addRow("miniNext");
+        miniCloseRow = addRow("miniClose");
+        miniShadowRow = addRow();
 
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
@@ -133,6 +193,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Audio
         audioHeaderRow = addRow("audioHeader");
+        pauseOnMuteRow = addRow("pauseOnMute");
+        resumeOnBluetoothRow = addRow("resumeOnBluetooth");
         crossfadeRow = addRow("crossfade");
         crossfadeDurationRow = addRow("crossfadeDuration");
         playlistsRow = addRow("playlists");
@@ -150,6 +212,207 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     protected void onItemClick(View view, int position, float x, float y) {
         if (position == styleEditorRow) {
             PlayerSheet.openStyleEditor(this);
+        } else if (position == coverStyleRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerCoverCard),
+                    getString(R.string.OEPlayerCoverWide),
+                    getString(R.string.OEPlayerCoverFull),
+                    getString(R.string.OEPlayerCoverDisc)
+            };
+            showSelector(getString(R.string.OEPlayerStyleCover), options, which -> {
+                AppearanceConfig.playerCoverStyle.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(coverStyleRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == discSpinRow) {
+            boolean nextVal = !AppearanceConfig.playerDiscSpin.Bool();
+            AppearanceConfig.playerDiscSpin.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == coverExtendRow) {
+            boolean nextVal = !AppearanceConfig.playerCoverExtend.Bool();
+            AppearanceConfig.playerCoverExtend.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == controlsSizeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerControlsCompact),
+                    getString(R.string.OEPlayerControlsNormal),
+                    getString(R.string.OEPlayerControlsLarge)
+            };
+            showSelector(getString(R.string.OEPlayerBlockControls), options, which -> {
+                AppearanceConfig.playerControlsSize.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(controlsSizeRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == titleAlignRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerAlignStart),
+                    getString(R.string.OEPlayerAlignCenter)
+            };
+            showSelector(getString(R.string.OEPlayerTitleAboveCover), options, which -> {
+                AppearanceConfig.playerTitleAlign.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(titleAlignRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == titleSizeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerSizeSmall),
+                    getString(R.string.OEPlayerSizeMedium),
+                    getString(R.string.OEPlayerSizeLarge)
+            };
+            showSelector(getString(R.string.OEPlayerTitleAboveCover), options, which -> {
+                AppearanceConfig.playerTitleSize.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(titleSizeRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == titleAboveRow) {
+            boolean nextVal = !AppearanceConfig.playerTitleAbove.Bool();
+            AppearanceConfig.playerTitleAbove.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == wavySeekbarRow) {
+            boolean nextVal = !AppearanceConfig.playerWavy.Bool();
+            AppearanceConfig.playerWavy.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == actionsStyleRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerActionsButtons),
+                    getString(R.string.OEPlayerActionsIsland)
+            };
+            showSelector(getString(R.string.OEPlayerBlockActions), options, which -> {
+                AppearanceConfig.playerActionsStyle.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(actionsStyleRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == showModesRow) {
+            boolean nextVal = !AppearanceConfig.playerShowModes.Bool();
+            AppearanceConfig.playerShowModes.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == showActionsRow) {
+            boolean nextVal = !AppearanceConfig.playerShowActions.Bool();
+            AppearanceConfig.playerShowActions.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == showLikeRow) {
+            boolean nextVal = !AppearanceConfig.playerShowLike.Bool();
+            AppearanceConfig.playerShowLike.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == showSourceRow) {
+            boolean nextVal = !AppearanceConfig.playerShowSource.Bool();
+            AppearanceConfig.playerShowSource.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == miniCoverRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerMiniCoverRounded),
+                    getString(R.string.OEPlayerMiniCoverRound),
+                    getString(R.string.OEPlayerMiniCoverHidden)
+            };
+            showSelector(getString(R.string.OEPlayerStyleCover), options, which -> {
+                AppearanceConfig.playerMiniCover.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == miniShapeRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerMiniShapeRounded),
+                    getString(R.string.OEPlayerMiniShapePill),
+                    getString(R.string.OEPlayerMiniShapeSquare)
+            };
+            showSelector(getString(R.string.OEPlayerMiniShape), options, which -> {
+                AppearanceConfig.playerMiniShape.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(miniShapeRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == miniProgressRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerMiniProgressRing),
+                    getString(R.string.OEPlayerMiniProgressLine),
+                    getString(R.string.OEPlayerMiniProgressBorder),
+                    getString(R.string.OEPlayerMiniProgressNone)
+            };
+            showSelector(getString(R.string.OEPlayerMiniProgress), options, which -> {
+                AppearanceConfig.playerMiniProgress.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(miniProgressRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == miniColorsRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerColorsCover),
+                    getString(R.string.OEPlayerColorsTheme)
+            };
+            showSelector(getString(R.string.OEPlayerMiniColors), options, which -> {
+                AppearanceConfig.playerMiniColors.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(miniColorsRow);
+                notifyPlayerChanged();
+            });
+        } else if (position == miniCompactRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniCompact.Bool();
+            AppearanceConfig.playerMiniCompact.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == miniArtistRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniArtist.Bool();
+            AppearanceConfig.playerMiniArtist.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == miniPreviousRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniPrevious.Bool();
+            AppearanceConfig.playerMiniPrevious.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == miniNextRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniNext.Bool();
+            AppearanceConfig.playerMiniNext.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == miniCloseRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniClose.Bool();
+            AppearanceConfig.playerMiniClose.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyPlayerChanged();
+        } else if (position == pauseOnMuteRow) {
+            boolean nextVal = !AppearanceConfig.playerPauseOnMute();
+            AppearanceConfig.playerPauseOnMute.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == resumeOnBluetoothRow) {
+            boolean nextVal = !AppearanceConfig.playerResumeOnBluetooth();
+            AppearanceConfig.playerResumeOnBluetooth.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
         } else if (position == bgStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
@@ -373,17 +636,29 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
+            if (position == appearanceHeaderRow || position == controlsHeaderRow || position == miniHeaderRow
+                    || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+                    || position == discSpinRow || position == coverExtendRow || position == titleAboveRow
+                    || position == wavySeekbarRow || position == showModesRow || position == showActionsRow
+                    || position == showLikeRow || position == showSourceRow || position == miniCompactRow
+                    || position == miniArtistRow || position == miniPreviousRow || position == miniNextRow
+                    || position == miniCloseRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
                     || position == crossfadeRow) {
                 return TYPE_CHECK;
-            } else if (position == styleEditorRow || position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+            } else if (position == styleEditorRow || position == coverStyleRow || position == bgStyleRow
+                    || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow
+                    || position == miniCoverShapeRow || position == controlsSizeRow || position == titleAlignRow
+                    || position == titleSizeRow || position == actionsStyleRow || position == miniCoverRow
+                    || position == miniShapeRow || position == miniProgressRow || position == miniColorsRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow) {
+                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow
+                    || position == sleepTimerRow || position == systemEqualizerRow) {
                 return TYPE_SETTINGS;
-            } else if (position == styleEditorShadowRow || position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
+            } else if (position == styleEditorShadowRow || position == appearanceShadowRow || position == controlsShadowRow
+                    || position == miniShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
@@ -396,6 +671,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 HeaderCell cell = (HeaderCell) holder.itemView;
                 if (position == appearanceHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerAppearanceHeader));
+                } else if (position == controlsHeaderRow) {
+                    cell.setText(getString(R.string.OEPlayerBlockControls));
+                } else if (position == miniHeaderRow) {
+                    cell.setText(getString(R.string.OEPlayerStyleMini));
                 } else if (position == lyricsHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerLyricsHeader));
                 } else if (position == audioHeaderRow) {
@@ -408,13 +687,43 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 } else if (position == cropCoverRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
                 } else if (position == keepScreenOnRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
+                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), true);
+                } else if (position == discSpinRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerDiscSpin), AppearanceConfig.playerDiscSpin.Bool(), true);
+                } else if (position == coverExtendRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerCoverExtend), AppearanceConfig.playerCoverExtend.Bool(), false);
+                } else if (position == titleAboveRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerTitleAboveCover), AppearanceConfig.playerTitleAbove.Bool(), true);
+                } else if (position == wavySeekbarRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerShowWave), AppearanceConfig.playerWavy.Bool(), true);
+                } else if (position == showModesRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerShowModes), AppearanceConfig.playerShowModes.Bool(), true);
+                } else if (position == showActionsRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerShowActions), AppearanceConfig.playerShowActions.Bool(), true);
+                } else if (position == showLikeRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerShowLike), AppearanceConfig.playerShowLike.Bool(), true);
+                } else if (position == showSourceRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerShowSource), AppearanceConfig.playerShowSource.Bool(), false);
+                } else if (position == miniCompactRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniCompact), AppearanceConfig.playerMiniCompact.Bool(), true);
+                } else if (position == miniArtistRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniArtist), AppearanceConfig.playerMiniArtist.Bool(), true);
+                } else if (position == miniPreviousRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniPrevious), AppearanceConfig.playerMiniPrevious.Bool(), true);
+                } else if (position == miniNextRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniNext), AppearanceConfig.playerMiniNext.Bool(), true);
+                } else if (position == miniCloseRow) {
+                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniClose), AppearanceConfig.playerMiniClose.Bool(), false);
+                } else if (position == pauseOnMuteRow) {
+                    cell.setTextAndCheck("Пауза при отключении звука", AppearanceConfig.playerPauseOnMute(), true);
+                } else if (position == resumeOnBluetoothRow) {
+                    cell.setTextAndCheck("Возобновлять при подключении Bluetooth", AppearanceConfig.playerResumeOnBluetooth(), true);
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
                 } else if (position == lyricsTranslateRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsTranslate), getString(R.string.OEAppearancePlayerLyricsTranslateDesc), AppearanceConfig.playerLyricsTranslate(), true, true);
                 } else if (position == lyricsAutoscrollRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), true);
+                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), false);
                 } else if (position == crossfadeRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerCrossfade), getString(R.string.OEAppearancePlayerCrossfadeDesc), AppearanceConfig.playerCrossfade(), true, true);
                 }
@@ -423,6 +732,42 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 cell.setIcon(0);
                 if (position == styleEditorRow) {
                     cell.setTextAndValue(getString(R.string.OEPlayerCustomize), getString(R.string.OEPlayerStyleInfo), false);
+                } else if (position == coverStyleRow) {
+                    int cStyle = AppearanceConfig.playerCoverStyle.Int();
+                    String cName = cStyle == 1 ? getString(R.string.OEPlayerCoverWide) : cStyle == 2 ? getString(R.string.OEPlayerCoverFull) : cStyle == 3 ? getString(R.string.OEPlayerCoverDisc) : getString(R.string.OEPlayerCoverCard);
+                    cell.setTextAndValue(getString(R.string.OEPlayerStyleCover), cName, true);
+                } else if (position == controlsSizeRow) {
+                    int cSize = AppearanceConfig.playerControlsSize.Int();
+                    String sName = cSize == 0 ? getString(R.string.OEPlayerControlsCompact) : cSize == 2 ? getString(R.string.OEPlayerControlsLarge) : getString(R.string.OEPlayerControlsNormal);
+                    cell.setTextAndValue(getString(R.string.OEPlayerBlockControls), sName, true);
+                } else if (position == titleAlignRow) {
+                    int tAlign = AppearanceConfig.playerTitleAlign.Int();
+                    String aName = tAlign == 1 ? getString(R.string.OEPlayerAlignCenter) : getString(R.string.OEPlayerAlignStart);
+                    cell.setTextAndValue("Выравнивание заголовка", aName, true);
+                } else if (position == titleSizeRow) {
+                    int tSize = AppearanceConfig.playerTitleSize.Int();
+                    String szName = tSize == 0 ? getString(R.string.OEPlayerSizeSmall) : tSize == 2 ? getString(R.string.OEPlayerSizeLarge) : getString(R.string.OEPlayerSizeMedium);
+                    cell.setTextAndValue("Размер заголовка", szName, true);
+                } else if (position == actionsStyleRow) {
+                    int aStyle = AppearanceConfig.playerActionsStyle.Int();
+                    String actName = aStyle == 1 ? getString(R.string.OEPlayerActionsIsland) : getString(R.string.OEPlayerActionsButtons);
+                    cell.setTextAndValue(getString(R.string.OEPlayerBlockActions), actName, true);
+                } else if (position == miniCoverRow) {
+                    int mCover = AppearanceConfig.playerMiniCover.Int();
+                    String mcName = mCover == 1 ? getString(R.string.OEPlayerMiniCoverRound) : mCover == 2 ? getString(R.string.OEPlayerMiniCoverHidden) : getString(R.string.OEPlayerMiniCoverRounded);
+                    cell.setTextAndValue("Обложка мини-плеера", mcName, true);
+                } else if (position == miniShapeRow) {
+                    int mShape = AppearanceConfig.playerMiniShape.Int();
+                    String msName = mShape == 1 ? getString(R.string.OEPlayerMiniShapePill) : mShape == 2 ? getString(R.string.OEPlayerMiniShapeSquare) : getString(R.string.OEPlayerMiniShapeRounded);
+                    cell.setTextAndValue(getString(R.string.OEPlayerMiniShape), msName, true);
+                } else if (position == miniProgressRow) {
+                    int mProg = AppearanceConfig.playerMiniProgress.Int();
+                    String mpName = mProg == 1 ? getString(R.string.OEPlayerMiniProgressLine) : mProg == 2 ? getString(R.string.OEPlayerMiniProgressBorder) : mProg == 3 ? getString(R.string.OEPlayerMiniProgressNone) : getString(R.string.OEPlayerMiniProgressRing);
+                    cell.setTextAndValue(getString(R.string.OEPlayerMiniProgress), mpName, true);
+                } else if (position == miniColorsRow) {
+                    int mColors = AppearanceConfig.playerMiniColors.Int();
+                    String mcName = mColors == 0 ? getString(R.string.OEPlayerColorsCover) : getString(R.string.OEPlayerColorsTheme);
+                    cell.setTextAndValue(getString(R.string.OEPlayerMiniColors), mcName, true);
                 } else if (position == bgStyleRow) {
                     int bgStyle = AppearanceConfig.playerBackgroundStyle();
                     String bgStyleName = bgStyle == 1 ? getString(R.string.OEAppearancePlayerBackgroundStyleBlur) : bgStyle == 2 ? getString(R.string.OEAppearancePlayerBackgroundStyleGradient) : getString(R.string.OEAppearancePlayerBackgroundStyleTheme);

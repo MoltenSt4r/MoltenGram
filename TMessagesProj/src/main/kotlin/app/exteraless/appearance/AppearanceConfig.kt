@@ -429,6 +429,24 @@ object AppearanceConfig {
     val glassMessageMenu =
         addConfig("OEAppearanceGlassMessageMenu", ConfigItem.configTypeBool, true)
 
+    val liquidGlassNavBar =
+        addConfig("OEAppearanceLiquidGlassNavBar", ConfigItem.configTypeBool, false)
+
+    val liquidGlassFab =
+        addConfig("OEAppearanceLiquidGlassFab", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun liquidGlassNavBar(): Boolean {
+        ensureLoaded()
+        return liquidGlassNavBar.Bool()
+    }
+
+    @JvmStatic
+    fun liquidGlassFab(): Boolean {
+        ensureLoaded()
+        return liquidGlassFab.Bool()
+    }
+
     @JvmStatic
     fun glassMessageMenu(): Boolean {
         ensureLoaded()

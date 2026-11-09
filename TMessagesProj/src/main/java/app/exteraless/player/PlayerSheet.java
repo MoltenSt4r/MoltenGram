@@ -168,6 +168,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     };
 
     private final Paint backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private boolean applyingStyle = false;
     private final RectF morphFrom = new RectF();
     private final RectF morphTo = new RectF();
     private final RectF morphCoverFrom = new RectF();
@@ -1251,7 +1252,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.reloadInterface) {
-            applyStyle(false);
+            if (!applyingStyle) {
+                applyStyle(false);
+            }
             return;
         }
         if (id == NotificationCenter.messagePlayingDidStart) {
@@ -2451,10 +2454,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         o.addGap();
         o.add(R.drawable.msg_customize, getString(R.string.OEPlayerCustomize), () -> {
             o.dismiss();
-            openEditor();
-        });
-        o.add(R.drawable.msg_settings, getString(R.string.OEAppearancePlayerSettings), () -> {
-            o.dismiss();
             dismissImmediately();
             if (activity != null) {
                 activity.presentFragment(new PlayerSettingsActivity());
@@ -2815,9 +2814,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     }
 
     public void applyStyle(boolean animated) {
-        if (styleEditor != null) {
-            styleEditor.refresh();
+        if (applyingStyle) {
+            return;
         }
+        applyingStyle = true;
+        try {
+            if (styleEditor != null) {
+                styleEditor.refresh();
+            }
         if (seekBar != null) {
             seekBar.setWave(PlayerStyle.wavy());
             seekBar.invalidate();
@@ -2935,6 +2939,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
         // Mini player & global interface sync
         PlayerMiniView.styleChanged();
+        } finally {
+            applyingStyle = false;
+        }
     }
 
     private class PlayerLayout extends ViewGroup {
