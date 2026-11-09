@@ -1429,7 +1429,7 @@ public class EmojiView extends FrameLayout implements
                 if (emoticon == null && document != null) {
                     emoticon = MessageObject.findAnimatedEmojiEmoticon(document);
                 }
-                if (!MessageObject.isFreeEmoji(document) && !UserConfig.getInstance(currentAccount).isPremium() && !(delegate != null && delegate.isUserSelf()) && !allowEmojisForNonPremium() && !isGroupEmojis) {
+                if (!MessageObject.isFreeEmoji(document) && !UserConfig.getInstance(currentAccount).isPremium() && !(delegate != null && delegate.isUserSelf()) && !allowEmojisForNonPremium() && !isGroupEmojis && !app.exteraless.chats.LinkedCustomEmoji.canSend(currentAccount)) {
                     if (delegate != null && delegate.onNonPremiumCustomEmojiSelected(documentId, document, emoticon, imageViewEmoji.isRecent)) {
                         shownBottomTabAfterClick = SystemClock.elapsedRealtime();
                         showBottomTab(true, true);

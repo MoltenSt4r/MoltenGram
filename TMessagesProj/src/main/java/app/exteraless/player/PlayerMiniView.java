@@ -68,6 +68,8 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private float baseTranslation;
     private Runnable offsetListener;
 
+    public boolean isPreview;
+
     public PlayerMiniView(Context context, BaseFragment fragment, Theme.ResourcesProvider resourcesProvider) {
         super(context);
         this.fragment = fragment;
@@ -84,8 +86,8 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             @Override
             protected void dispatchDraw(Canvas canvas) {
                 super.dispatchDraw(canvas);
-                if (PlayerStyle.miniProgress() == PlayerStyle.MINI_PROGRESS_LINE && current != null && colors != null) {
-                    float p = Math.max(0f, Math.min(1f, current.audioProgress));
+                if (PlayerStyle.miniProgress() == PlayerStyle.MINI_PROGRESS_LINE && (current != null || isPreview) && colors != null) {
+                    float p = current != null ? Math.max(0f, Math.min(1f, current.audioProgress)) : 0.65f;
                     linePaint.setColor(colors.primary);
                     int h = dp(2.5f);
                     canvas.drawRect(0, getHeight() - h, getWidth() * p, getHeight(), linePaint);
@@ -104,7 +106,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             }
         });
         card.setClipToOutline(true);
-        card.setElevation(dp(6));
+        card.setElevation(0f);
         card.setOnClickListener(v -> Md3Player.open(fragment, this));
         card.setContentDescription(getString(R.string.OEPlayerOpen));
         addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, HEIGHT_DP, Gravity.BOTTOM, 12, 0, 12, 12));
@@ -163,7 +165,12 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         closeButton.setScaleType(ImageView.ScaleType.CENTER);
         closeButton.setImageDrawable(closeIcon);
         closeButton.setContentDescription(getString(R.string.AccDescrClosePlayer));
-        closeButton.setOnClickListener(v -> MediaController.getInstance().cleanupPlayer(true, true));
+        closeButton.setOnClickListener(v -> {
+            if (isPreview) {
+                return;
+            }
+            MediaController.getInstance().cleanupPlayer(true, true);
+        });
         card.addView(closeButton, LayoutHelper.createLinear(44, 48));
 
         applyColors(colors);
@@ -422,6 +429,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     public static PlayerMiniView preview(Context context) {
         PlayerMiniView view = new PlayerMiniView(context, null, null);
+        view.isPreview = true;
         view.setVisibility(VISIBLE);
         view.shown = true;
         view.showProgress = 1f;

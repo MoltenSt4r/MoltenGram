@@ -807,6 +807,15 @@ object AppearanceConfig {
     val playerMiniClose = addConfig("OEPlayerMiniClose", ConfigItem.configTypeBool, true)
 
     @JvmField
+    val playerMiniWavy = addConfig("OEPlayerMiniWavy", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun playerMiniWavy(): Boolean {
+        ensureLoaded()
+        return playerMiniWavy.Bool()
+    }
+
+    @JvmField
     val playerMiniTop = addConfig("OEPlayerMiniTop", ConfigItem.configTypeBool, false)
 
     @JvmStatic
@@ -866,12 +875,17 @@ object AppearanceConfig {
     }
 
     @JvmField
-    val playerSeekbarThickness = addConfig("OEPlayerSeekbarThickness", ConfigItem.configTypeInt, 1)
+    val playerSeekbarThickness = addConfig("OEPlayerSeekbarThickness", ConfigItem.configTypeInt, 4)
 
     @JvmStatic
     fun playerSeekbarThickness(): Int {
         ensureLoaded()
-        return playerSeekbarThickness.Int()
+        val v = playerSeekbarThickness.Int()
+        return if (v <= 2) {
+            if (v == 0) 2 else if (v == 2) 8 else 4
+        } else {
+            v
+        }
     }
 
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */
@@ -1219,6 +1233,16 @@ object AppearanceConfig {
     }
 
     @JvmField
+    val playerLyricsAudioRecognition =
+        addConfig("OEAppearancePlayerLyricsAudioRecognition", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun playerLyricsAudioRecognition(): Boolean {
+        ensureLoaded()
+        return playerLyricsAudioRecognition.Bool()
+    }
+
+    @JvmField
     val profileMusicCard =
         addConfig("OEAppearanceProfileMusicCard", ConfigItem.configTypeBool, true)
 
@@ -1421,9 +1445,24 @@ object AppearanceConfig {
         return mediaGroupCarousel.Bool()
     }
 
+    @JvmField
+    val avatarShapesById =
+        addConfig("OEAppearanceAvatarShapesById", ConfigItem.configTypeBool, false)
+
     @JvmStatic
-    fun getAvatarShape(peerType: Int): Int {
+    fun avatarShapesById(): Boolean {
         ensureLoaded()
+        return avatarShapesById.Bool()
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun getAvatarShape(peerType: Int, peerId: Long = 0L): Int {
+        ensureLoaded()
+        if (avatarShapesById.Bool() && peerId != 0L) {
+            val absId = Math.abs(peerId)
+            return (absId % 28L).toInt() + 1
+        }
         return when (peerType) {
             Md3AvatarShapes.PEER_TYPE_BOT -> avatarShapeBots.Int()
             Md3AvatarShapes.PEER_TYPE_GROUP -> avatarShapeGroups.Int()
@@ -1436,7 +1475,8 @@ object AppearanceConfig {
     @JvmStatic
     fun hasAnyCustomAvatarShape(): Boolean {
         ensureLoaded()
-        return avatarShapeUsers.Int() != 0 ||
+        return avatarShapesById.Bool() ||
+                avatarShapeUsers.Int() != 0 ||
                 avatarShapeBots.Int() != 0 ||
                 avatarShapeGroups.Int() != 0 ||
                 avatarShapeChannels.Int() != 0 ||

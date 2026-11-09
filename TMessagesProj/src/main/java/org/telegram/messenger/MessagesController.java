@@ -951,7 +951,7 @@ public class MessagesController extends BaseController implements NotificationCe
     }
 
     public boolean isPremiumUser(TLRPC.User currentUser) {
-        return currentUser != null && (currentUser.premium || currentUser.id == getUserConfig().getClientUserId() && NekoConfig.localPremium.Bool()) && !isSupportUser(currentUser);
+        return currentUser != null && (currentUser.premium || (currentUser.id == getUserConfig().getClientUserId() && NekoConfig.localPremium.Bool()) || UserObject.getEmojiStatusDocumentId(currentUser) != null) && !isSupportUser(currentUser);
     }
 
     public boolean didPressTranscribeButtonEnough() {

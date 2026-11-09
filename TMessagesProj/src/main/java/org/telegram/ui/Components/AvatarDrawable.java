@@ -120,6 +120,7 @@ public class AvatarDrawable extends Drawable {
     private Theme.ResourcesProvider resourcesProvider;
 
     public int peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+    public long peerId = 0L;
 
     public void setPeerType(int type) {
         this.peerType = type;
@@ -456,6 +457,7 @@ public class AvatarDrawable extends Drawable {
     }
 
     public void setInfo(long id, String firstName, String lastName, String custom, Integer customColor, MessagesController.PeerColor profileColor, boolean advancedGradient) {
+        this.peerId = id;
         invalidateTextLayout = true;
         if (advancedGradient) {
             hasGradient = false;
@@ -821,7 +823,7 @@ public class AvatarDrawable extends Drawable {
         if (avatarType == AVATAR_TYPE_SAVED || avatarType == AVATAR_TYPE_MY_NOTES) {
             currentPeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
         }
-        int shapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(currentPeerType);
+        int shapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(currentPeerType, peerId);
         if (shapeId > 0) {
             final float inset = half * (1f - scale);
             android.graphics.Path path = app.exteraless.appearance.Md3AvatarShapes.getShapePath(shapeId, inset, inset, size - inset * 2, size - inset * 2);

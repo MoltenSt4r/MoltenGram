@@ -3500,7 +3500,12 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                     long dialogBotVerificationIcon = 0;
                     if (user != null) {
                         user = MessagesController.getInstance(currentAccount).getUser(user.id);
-                        if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
+                        Long userStatusDocId = user != null ? UserObject.getEmojiStatusDocumentId(user) : null;
+                        if (user != null && userStatusDocId != null && userStatusDocId != 0) {
+                            nameLayoutEllipsizeByGradient = true;
+                            emojiStatus.set(userStatusDocId, animated);
+                            emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);
+                        } else if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
                             emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);

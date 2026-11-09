@@ -186,7 +186,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         miniShapeRow = addRow("miniShape");
         miniProgressRow = addRow("miniProgress");
         miniColorsRow = addRow("miniColors");
-        miniCompactRow = addRow("miniCompact");
+        miniCompactRow = -1;
         miniArtistRow = addRow("miniArtist");
         miniPreviousRow = addRow("miniPrevious");
         miniNextRow = addRow("miniNext");
@@ -310,16 +310,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 notifyPlayerChanged();
             });
         } else if (position == seekbarThicknessRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerSeekbarThicknessThin),
-                    getString(R.string.OEPlayerSeekbarThicknessNormal),
-                    getString(R.string.OEPlayerSeekbarThicknessThick)
-            };
-            showSelector(getString(R.string.OEPlayerSeekbarThickness), options, which -> {
-                AppearanceConfig.playerSeekbarThickness.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarThicknessRow);
-                notifyPlayerChanged();
-            });
+            showSeekbarThicknessDialog();
         } else if (position == showModesRow) {
             boolean nextVal = !AppearanceConfig.playerShowModes.Bool();
             AppearanceConfig.playerShowModes.setConfigBool(nextVal);
@@ -727,7 +718,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
                 container.setPadding(dp(16), dp(8), dp(16), dp(12));
                 miniPreview = PlayerMiniView.preview(mContext);
-                container.addView(miniPreview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, PlayerMiniView.HEIGHT_DP));
+                container.addView(miniPreview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, PlayerMiniView.HEIGHT_DP + 16));
                 return new RecyclerListView.Holder(container);
             } else if (viewType == TYPE_LYRICS_PREVIEW) {
                 LinearLayout container = new LinearLayout(mContext);
@@ -892,8 +883,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndValue(getString(R.string.OEPlayerSeekbarIndicator), indName, true);
                 } else if (position == seekbarThicknessRow) {
                     int th = AppearanceConfig.playerSeekbarThickness();
-                    String thName = th == 0 ? getString(R.string.OEPlayerSeekbarThicknessThin) : th == 2 ? getString(R.string.OEPlayerSeekbarThicknessThick) : getString(R.string.OEPlayerSeekbarThicknessNormal);
-                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarThickness), thName, true);
+                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarThickness), th + " dp", true);
                 } else if (position == miniCoverRow) {
                     int mCover = AppearanceConfig.playerMiniCover.Int();
                     String mcName = mCover == 1 ? getString(R.string.OEPlayerMiniCoverRound) : mCover == 2 ? getString(R.string.OEPlayerMiniCoverHidden) : getString(R.string.OEPlayerMiniCoverRounded);
@@ -1354,6 +1344,79 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
             int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(32), dp(350));
             dialog.getWindow().setLayout(dialogWidth, dp(440));
+        }
+        dialog.show();
+    }
+
+    private void showSeekbarThicknessDialog() {
+        if (getContext() == null) return;
+        android.app.Dialog dialog = new android.app.Dialog(getContext());
+        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
+
+        LinearLayout root = new LinearLayout(getContext());
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setPadding(dp(20), dp(20), dp(20), dp(16));
+
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadius(dp(24));
+        bg.setColor(Theme.getColor(Theme.key_dialogBackground));
+        root.setBackground(bg);
+
+        TextView title = new TextView(getContext());
+        title.setText(getString(R.string.OEPlayerSeekbarThickness));
+        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+        title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+        root.addView(title);
+
+        int current = AppearanceConfig.playerSeekbarThickness();
+        if (current <= 0) current = 4;
+        final int[] val = new int[]{current};
+
+        TextView valueText = new TextView(getContext());
+        valueText.setText(val[0] + " dp");
+        valueText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+        valueText.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
+        valueText.setPadding(0, dp(12), 0, dp(12));
+        root.addView(valueText);
+
+        android.widget.SeekBar seekBar = new android.widget.SeekBar(getContext());
+        seekBar.setMax(24);
+        if (Build.VERSION.SDK_INT >= 26) {
+            seekBar.setMin(1);
+        }
+        seekBar.setProgress(Math.max(1, Math.min(24, val[0])));
+        seekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
+            @Override
+            public void onProgressChanged(android.widget.SeekBar bar, int progress, boolean fromUser) {
+                val[0] = Math.max(1, progress);
+                valueText.setText(val[0] + " dp");
+            }
+            @Override public void onStartTrackingTouch(android.widget.SeekBar bar) {}
+            @Override public void onStopTrackingTouch(android.widget.SeekBar bar) {}
+        });
+        root.addView(seekBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        TextView doneBtn = new TextView(getContext());
+        doneBtn.setText(getString(R.string.Done));
+        doneBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+        doneBtn.setTypeface(AndroidUtilities.bold());
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        doneBtn.setTextColor(accent != 0 ? accent : 0xff00d2b4);
+        doneBtn.setGravity(Gravity.RIGHT);
+        doneBtn.setPadding(dp(16), dp(16), dp(8), dp(4));
+        doneBtn.setOnClickListener(v -> {
+            AppearanceConfig.playerSeekbarThickness.setConfigInt(val[0]);
+            dialog.dismiss();
+            if (listAdapter != null) listAdapter.notifyItemChanged(seekbarThicknessRow);
+            notifyPlayerChanged();
+        });
+        root.addView(doneBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+        dialog.setContentView(root);
+        if (dialog.getWindow() != null) {
+            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
+            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(32), dp(350));
+            dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
         }
         dialog.show();
     }

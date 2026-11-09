@@ -52,6 +52,12 @@
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconMoltenGramPizza">Пицца</string>
     <string name="AppIconMoltenGramYinYang">Инь-Ян</string>
+    <string name="AppIconMoltenGramRage">Rage</string>
+    <string name="CreateQuote">Создать цитату</string>
+    <string name="QuoteSent">Цитата отправлена</string>
+    <string name="QuoteCopied">Цитата скопирована в буфер обмена</string>
+    <string name="QuoteSticker">Стикер</string>
+    <string name="QuoteFile">Файл</string>
     <string name="AppIconsSelect">Выбрать</string>
     <string name="AppIconsKeep">Оставить эту</string>
     <string name="OpenExteraPreferences">Настройки MoltenGram</string>

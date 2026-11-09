@@ -319,11 +319,17 @@ def test_new_brand_launcher_icons_exist():
         launcher = os.path.join(TMESSAGES_RES, f"mipmap-{density}", "ic_launcher.png")
         launcher_round = os.path.join(TMESSAGES_RES, f"mipmap-{density}", "ic_launcher_round.png")
         bg = os.path.join(TMESSAGES_RES, f"drawable-{density}", "moltengram_icon_background.png")
+        rage_launcher = os.path.join(TMESSAGES_RES, f"mipmap-{density}", "ic_launcher_moltengram_rage.png")
+        rage_bg = os.path.join(TMESSAGES_RES, f"drawable-{density}", "moltengram_rage_icon_background.png")
         assert os.path.isfile(launcher), f"{launcher} missing"
         assert os.path.isfile(launcher_round), f"{launcher_round} missing"
         assert os.path.isfile(bg), f"{bg} missing"
+        assert os.path.isfile(rage_launcher), f"{rage_launcher} missing"
+        assert os.path.isfile(rage_bg), f"{rage_bg} missing"
         assert os.path.getsize(launcher) > 100
         assert os.path.getsize(launcher_round) > 100
         assert os.path.getsize(bg) > 100
+        assert os.path.getsize(rage_launcher) > 100
+        assert os.path.getsize(rage_bg) > 100
 
 

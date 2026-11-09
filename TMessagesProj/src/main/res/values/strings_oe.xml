@@ -54,6 +54,12 @@
     <string name="AppIconMoltenGramNothing">Nothing OS</string>
     <string name="AppIconMoltenGramPizza">Pizza</string>
     <string name="AppIconMoltenGramYinYang">Yin-Yang</string>
+    <string name="AppIconMoltenGramRage">Rage</string>
+    <string name="CreateQuote">Create quote</string>
+    <string name="QuoteSent">Quote sent</string>
+    <string name="QuoteCopied">Quote copied to clipboard</string>
+    <string name="QuoteSticker">Sticker</string>
+    <string name="QuoteFile">File</string>
     <string name="AppIconsSelect">Select</string>
     <string name="AppIconsKeep">Keep this one</string>
     <string name="OpenExteraPreferences">MoltenGram Preferences</string>

@@ -690,8 +690,13 @@ public class UserCell extends FrameLayout implements NotificationCenter.Notifica
             botVerification.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
             nameTextView.setLeftDrawable(botVerification);
         }
-        if (currentUser != null && MessagesController.getInstance(currentAccount).isPremiumUser(currentUser) && !MessagesController.getInstance(currentAccount).premiumFeaturesBlocked()) {
-            if (DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
+        Long userDocId = currentUser != null ? UserObject.getEmojiStatusDocumentId(currentUser) : null;
+        if (currentUser != null && (MessagesController.getInstance(currentAccount).isPremiumUser(currentUser) || userDocId != null) && !MessagesController.getInstance(currentAccount).premiumFeaturesBlocked()) {
+            if (userDocId != null && userDocId != 0) {
+                emojiStatus.set(userDocId, false);
+                emojiStatus.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
+                nameTextView.setRightDrawable(emojiStatus);
+            } else if (DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
                 emojiStatus.set(DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status), false);
                 emojiStatus.setColor(Theme.getColor(Theme.key_chats_verifiedBackground, resourcesProvider));
                 nameTextView.setRightDrawable(emojiStatus);

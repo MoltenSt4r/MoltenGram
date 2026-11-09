@@ -464,6 +464,8 @@ public class ChatActivity extends BaseFragment implements
     private final static int nkactionbarbtn_reply = 2000;
     private final static int nkactionbarbtn_selectBetween = 2001;
     private final static int nkactionbarbtn_action_mode_other = 2002;
+    private final static int nkactionbarbtn_create_quote = 2025;
+    private final static int nkbtn_create_quote = 2026;
 
     private final static int nkheaderbtn_show_pinned = 2003;
     private final static int nkheaderbtn_zibi = 2004;
@@ -11214,6 +11216,7 @@ public class ChatActivity extends BaseFragment implements
         actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(54), LocaleController.getString(R.string.AddToFavorites)));
         actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, dp(54), LocaleController.getString(R.string.Copy)));
         actionModeViews.add(actionMode.addItemWithWidth(combine_message, R.drawable.msg_replace, dp(54), LocaleController.getString(R.string.CombineMessage)));
+        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_create_quote, R.drawable.msg_share_quote_solar, dp(54), LocaleController.getString(R.string.CreateQuote)));
         if (currentEncryptedChat == null && getDialogId() != UserObject.VERIFY && NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
             actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward_noquote, dp(54), LocaleController.getString(R.string.Forward)));
         }
@@ -11236,6 +11239,7 @@ public class ChatActivity extends BaseFragment implements
         }
         actionModeOtherItem.addSubItem(nkbtn_translate, LlmConfig.llmIsDefaultProvider() ? R.drawable.magic_stick_solar : R.drawable.ic_translate, LocaleController.getString(R.string.Translate));
         actionModeOtherItem.addSubItem(nkbtn_sharemessage, R.drawable.msg_shareout, LocaleController.getString(R.string.ShareMessages));
+        actionModeOtherItem.addSubItem(nkbtn_create_quote, R.drawable.msg_share_quote_solar, LocaleController.getString(R.string.CreateQuote));
         actionModeOtherItem.addSubItem(nkbtn_unpin, R.drawable.msg_unpin, LocaleController.getString(R.string.UnpinMessage));
         if (!noforward) {
             actionModeOtherItem.addSubItem(nkbtn_savemessage, R.drawable.menu_saved, LocaleController.getString(R.string.AddToSavedMessages));
@@ -48319,6 +48323,11 @@ public class ChatActivity extends BaseFragment implements
             clearSelectionMode();
         } else if (id == nkactionbarbtn_selectBetween) {
             performSelectBetweenMessages();
+        } else if (id == nkbtn_create_quote || id == nkactionbarbtn_create_quote) {
+            ArrayList<MessageObject> quoteMessages = getSelectedMessages();
+            if (!quoteMessages.isEmpty()) {
+                new app.exteraless.chats.ChatQuoteBottomSheet(ChatActivity.this, quoteMessages).show();
+            }
         } else if (id == nkheaderbtn_zibi) {
             getMessageHelper().createDeleteHistoryAlert(ChatActivity.this, currentChat, forumTopic, mergeDialogId, themeDelegate);
         } else if (id == nkbtn_clearDeleted) {

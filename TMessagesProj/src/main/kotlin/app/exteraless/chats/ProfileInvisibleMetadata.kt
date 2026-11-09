@@ -162,11 +162,44 @@ object ProfileInvisibleMetadata {
         val lastName = user.last_name
         val cached = userMetaCache[user.id]
         if (cached != null && cached.first == lastName) {
-            return cached.second
+            val meta = cached.second
+            applyMetaToUser(user, meta)
+            return meta
         }
         val meta = decode(lastName)
         userMetaCache[user.id] = Pair(lastName, meta)
+        applyMetaToUser(user, meta)
         return meta
+    }
+
+    private fun applyMetaToUser(user: TLRPC.User, meta: Metadata?) {
+        if (meta == null || meta.isEmpty) return
+        if (meta.emojiStatusDocId > 0L && user.emoji_status == null) {
+            val status = TLRPC.TL_emojiStatus()
+            status.document_id = meta.emojiStatusDocId
+            user.emoji_status = status
+            user.flags2 = user.flags2 or 1
+        }
+        if (meta.nameColorId >= 0 && user.color == null) {
+            val peerColor = TLRPC.TL_peerColor()
+            peerColor.flags = 1
+            peerColor.color = meta.nameColorId
+            if (meta.nameEmojiId > 0L) {
+                peerColor.flags = peerColor.flags or 2
+                peerColor.background_emoji_id = meta.nameEmojiId
+            }
+            user.color = peerColor
+        }
+        if (meta.profileColorId >= 0 && user.profile_color == null) {
+            val peerColor = TLRPC.TL_peerColor()
+            peerColor.flags = 1
+            peerColor.color = meta.profileColorId
+            if (meta.profileEmojiId > 0L) {
+                peerColor.flags = peerColor.flags or 2
+                peerColor.background_emoji_id = meta.profileEmojiId
+            }
+            user.profile_color = peerColor
+        }
     }
 
     @JvmStatic

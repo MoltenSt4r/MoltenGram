@@ -13367,6 +13367,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         emojiView.setAllow(allowStickers, allowGifs, true);
         emojiView.allowLocalPremiumEmojis(LinkedCustomEmoji.canSend(currentAccount));
+        emojiView.allowEmojisForNonPremium(LinkedCustomEmoji.canSend(currentAccount));
         emojiView.setVisibility(GONE);
         emojiView.setShowing(false);
         if (windowInsetsInAppController != null) {
@@ -13421,8 +13422,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             @Override
             public boolean allowNonPremiumCustomEmoji() {
                 return !UserConfig.getInstance(currentAccount).isPremium()
-                    && !LinkedCustomEmoji.canSend(currentAccount)
-                    && NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool()
+                    && (LinkedCustomEmoji.canSend(currentAccount) || NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool())
                     && dialog_id != UserConfig.getInstance(currentAccount).getClientUserId();
             }
 

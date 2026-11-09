@@ -479,8 +479,11 @@ public class GroupCallUserCell extends FrameLayout {
 
             nameTextView.setText(UserObject.getUserName(currentUser));
             botVerificationIcon = DialogObject.getBotVerificationIcon(currentUser);
+            Long userDocId = currentUser != null ? UserObject.getEmojiStatusDocumentId(currentUser) : null;
             if (currentUser != null && currentUser.verified) {
                 rightDrawable.set(verifiedDrawable = (verifiedDrawable == null ? new VerifiedDrawable(getContext()) : verifiedDrawable), animated);
+            } else if (userDocId != null && userDocId != 0) {
+                rightDrawable.set(userDocId, animated);
             } else if (currentUser != null && DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
                 rightDrawable.set(DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status), animated);
             } else if (currentUser != null && currentUser.premium) {

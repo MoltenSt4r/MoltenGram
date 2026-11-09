@@ -442,6 +442,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         }
         if (object instanceof TLRPC.User) {
             TLRPC.User user = (TLRPC.User) object;
+            oePeerId = user.id;
             if (UserObject.isUserSelf(user)) {
                 oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
             } else if (user.bot) {
@@ -451,6 +452,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             }
         } else if (object instanceof TLRPC.Chat) {
             TLRPC.Chat chat = (TLRPC.Chat) object;
+            oePeerId = chat.id;
             if (ChatObject.isChannel(chat) && !chat.megagroup) {
                 oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_CHANNEL;
             } else {
@@ -460,6 +462,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_GROUP;
         } else if (avatarDrawable instanceof AvatarDrawable) {
             AvatarDrawable ad = (AvatarDrawable) avatarDrawable;
+            oePeerId = ad.peerId;
             if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
                 oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
                 ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
@@ -1515,7 +1518,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                         roundPaint.setAlpha(alpha);
                         roundRect.set(drawRegion);
 
-                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) : 0;
+                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId) : 0;
                         if (md3ShapeId > 0) {
                             try {
                                 if (canvas != null) {
@@ -1636,7 +1639,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
 
                         roundPaint.setAlpha(alpha);
 
-                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) : 0;
+                        int md3ShapeId = oeIsAvatar ? app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId) : 0;
                         if (md3ShapeId > 0) {
                             try {
                                 if (canvas != null) {
@@ -2159,10 +2162,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 }
             }
 
-            boolean md3Clip = oeIsAvatar && canvas != null && app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType) > 0;
+            boolean md3Clip = oeIsAvatar && canvas != null && app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId) > 0;
             if (md3Clip) {
                 canvas.save();
-                canvas.clipPath(app.exteraless.appearance.Md3AvatarShapes.getShapePath(app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType), imageX, imageY, imageW, imageH));
+                canvas.clipPath(app.exteraless.appearance.Md3AvatarShapes.getShapePath(app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId), imageX, imageY, imageW, imageH));
             }
 
             if (drawable != null) {
@@ -2716,6 +2719,15 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     private final int[] oeRequestedRoundRadius = new int[4];
     private boolean oeIsAvatar;
     private int oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_USER;
+    private long oePeerId;
+
+    public void setPeerId(long id) {
+        this.oePeerId = id;
+    }
+
+    public long getPeerId() {
+        return this.oePeerId;
+    }
     private float oeRadiusWidth;
     // openExtera: радиус посчитан вызывающим через AppearanceConfig.getAvatarCorners(сторона) —
     // масштабировать его второй раз нельзя. См. setAvatarCornersApplied.

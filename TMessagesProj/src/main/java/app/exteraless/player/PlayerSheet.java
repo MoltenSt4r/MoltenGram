@@ -1386,6 +1386,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     }
 
     private void updateHeader() {
+        if (headerLabel != null) {
+            headerLabel.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);
+        }
         MessageObject mo = current;
         if (mo == null) {
             return;
@@ -1447,8 +1450,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         int count = toAdd.size();
         for (int i = 0; i < count; i++) {
             View child = toAdd.get(i);
-            int leftMargin = (i == 0) ? 0 : dp(2);
-            int rightMargin = (i == count - 1) ? 0 : dp(2);
+            int rightMargin = (i == count - 1) ? 0 : 2;
             if (child instanceof MorphButton) {
                 MorphButton mb = (MorphButton) child;
                 if (count == 1) {
@@ -1464,7 +1466,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             if (child.getParent() instanceof ViewGroup) {
                 ((ViewGroup) child.getParent()).removeView(child);
             }
-            group.addView(child, LayoutHelper.createLinear(0, 52, 1f, leftMargin, 0, rightMargin, 0));
+            group.addView(child, LayoutHelper.createLinear(0, 52, 1f, 0, 0, rightMargin, 0));
         }
     }
 
@@ -2972,6 +2974,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             // PlayerStyle.actionsIsland() disabled per user request
         }
         updateLike(false);
+        if (headerLabel != null) {
+            headerLabel.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);
+        }
         if (sourceView != null) {
             sourceView.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);
         }
