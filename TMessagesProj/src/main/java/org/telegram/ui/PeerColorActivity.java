@@ -1273,7 +1273,7 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
                     buttonState.subText = null;
                 }
             } else {
-                buttonState.text = !getUserConfig().isPremiumOrLocal() && !isChannel ? buttonLocked : (selectedEmojiCollectible != null ? buttonCollectible : buttonUnlocked);
+                buttonState.text = selectedEmojiCollectible != null ? buttonCollectible : buttonUnlocked;
                 buttonState.subText = null;
             }
             if (getButtonPage() == this) {
@@ -1888,7 +1888,7 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
 
     @Override
     public boolean onBackPressed(boolean invoked) {
-        if (!isChannel && hasUnsavedChanged() && getUserConfig().isPremiumOrLocal()) {
+        if (!isChannel && hasUnsavedChanged()) {
             if (invoked) showUnsavedAlert();
             return false;
         }
@@ -1897,7 +1897,7 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
 
     @Override
     public boolean isSwipeBackEnabled(MotionEvent event) {
-        if (!isChannel && hasUnsavedChanged() && getUserConfig().isPremiumOrLocal()) {
+        if (!isChannel && hasUnsavedChanged()) {
             return false;
         }
         return super.isSwipeBackEnabled(event);
@@ -1927,11 +1927,6 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
         }
         if (isChannel) {
             finishFragment();
-        } else {
-            if (!getUserConfig().isPremiumOrLocal()) {
-                showDialog(new PremiumFeatureBottomSheet(PeerColorActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_NAME_COLOR, true));
-                return;
-            }
         }
 
         final Page page = getButtonPage();
@@ -1995,7 +1990,7 @@ public class PeerColorActivity extends BaseFragment implements NotificationCente
     private boolean applyingName, applyingProfile;
     private boolean applying;
     private void apply() {
-        if (applying || !isChannel && !getUserConfig().isPremiumOrLocal()) {
+        if (applying) {
             return;
         }
 

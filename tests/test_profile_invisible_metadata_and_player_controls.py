@@ -259,3 +259,35 @@ def test_mini_player_preview_visible_and_no_border():
         content = f.read()
     assert "MINI_PROGRESS_RING" in content
 
+
+def test_peer_color_unlocked_for_all_users():
+    color_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "PeerColorActivity.java")
+    with open(color_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # The button should not lock out users from applying styles
+    assert "buttonState.text = selectedEmojiCollectible != null ? buttonCollectible : buttonUnlocked;" in content
+    # apply() should not be guarded by !getUserConfig().isPremiumOrLocal()
+    assert "if (applying || !isChannel && !getUserConfig().isPremiumOrLocal())" not in content
+
+    user_obj_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "messenger", "UserObject.java")
+    with open(user_obj_path, "r", encoding="utf-8") as f:
+        user_content = f.read()
+    assert "getOnlyProfileEmojiId" in user_content
+    assert "ProfileInvisibleMetadata.getProfileEmojiId(user)" in user_content
+
+
+def test_new_brand_launcher_icons_exist():
+    densities = ["mdpi", "hdpi", "xhdpi", "xxhdpi", "xxxhdpi"]
+    for density in densities:
+        launcher = os.path.join(TMESSAGES_RES, f"mipmap-{density}", "ic_launcher.png")
+        launcher_round = os.path.join(TMESSAGES_RES, f"mipmap-{density}", "ic_launcher_round.png")
+        bg = os.path.join(TMESSAGES_RES, f"drawable-{density}", "moltengram_icon_background.png")
+        assert os.path.isfile(launcher), f"{launcher} missing"
+        assert os.path.isfile(launcher_round), f"{launcher_round} missing"
+        assert os.path.isfile(bg), f"{bg} missing"
+        assert os.path.getsize(launcher) > 100
+        assert os.path.getsize(launcher_round) > 100
+        assert os.path.getsize(bg) > 100
+
+

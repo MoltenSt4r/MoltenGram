@@ -262,6 +262,13 @@ public class UserObject {
 
     public static long getOnlyProfileEmojiId(TLRPC.User user) {
         if (user != null && user.profile_color instanceof TLRPC.TL_peerColor && (user.profile_color.flags & 2) != 0) return user.profile_color.background_emoji_id;
+
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileEmojiId(user);
+        if (invisible != null) return invisible;
+
+        Long replace = LocalPeerColorHelper.getProfileEmojiId(user);
+        if (replace != null) return replace;
+
         return 0;
     }
 

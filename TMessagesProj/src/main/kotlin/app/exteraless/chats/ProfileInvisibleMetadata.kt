@@ -48,7 +48,7 @@ object ProfileInvisibleMetadata {
         Regex.escape(START_TAG) + "([\\uFE00-\\uFE0F\\u200B\\u206A-\\u206E]+?)" + Regex.escape(END_TAG)
     )
 
-    private val userMetaCache = ConcurrentHashMap<Long, Metadata>()
+    private val userMetaCache = ConcurrentHashMap<Long, Pair<String?, Metadata?>>()
 
     /**
      * Encodes a positive number into invisible Variation Selectors (VS1..VS16: U+FE00..U+FE0F) via hex digits.
@@ -159,12 +159,13 @@ object ProfileInvisibleMetadata {
     @JvmStatic
     fun getMetadata(user: TLRPC.User?): Metadata? {
         if (user == null) return null
+        val lastName = user.last_name
         val cached = userMetaCache[user.id]
-        if (cached != null) return cached
-        val meta = decode(user.last_name)
-        if (meta != null) {
-            userMetaCache[user.id] = meta
+        if (cached != null && cached.first == lastName) {
+            return cached.second
         }
+        val meta = decode(lastName)
+        userMetaCache[user.id] = Pair(lastName, meta)
         return meta
     }
 
@@ -243,7 +244,7 @@ object ProfileInvisibleMetadata {
     ) {
         val newLastName = formatLastName(user.last_name, meta)
         user.last_name = newLastName
-        userMetaCache[user.id] = meta
+        userMetaCache[user.id] = Pair(newLastName, meta)
 
         // Apply locally immediately
         if (meta.emojiStatusDocId > 0L) {
@@ -272,6 +273,8 @@ object ProfileInvisibleMetadata {
                 user.profile_color.flags = user.profile_color.flags or 2
                 user.profile_color.background_emoji_id = meta.profileEmojiId
             }
+        } else if (user.profile_color != null && !user.premium) {
+            user.profile_color.flags = user.profile_color.flags and 1.inv()
         }
         MessagesController.getInstance(account).putUser(user, true)
 
