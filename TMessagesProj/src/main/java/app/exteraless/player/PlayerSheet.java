@@ -447,12 +447,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         titles = new LinearLayout(context);
         titles.setOrientation(LinearLayout.VERTICAL);
         titleView = new TextView(context);
+        titleView.setText("MoltenGram");
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 26);
         titleView.setTypeface(AndroidUtilities.headerTypeface());
         titleView.setSingleLine(true);
         titleView.setEllipsize(TextUtils.TruncateAt.END);
         titles.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         artistView = new TextView(context);
+        artistView.setText("Player Style Preview");
         artistView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         artistView.setSingleLine(true);
         artistView.setEllipsize(TextUtils.TruncateAt.END);
@@ -2841,10 +2843,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         // Colors: Monet theme accent vs Album cover seed
         int colorStyle = AppearanceConfig.playerColorStyle();
-        Integer seed = (colorStyle == 1) ? fallbackSeed : PlayerArt.cachedSeed(current);
-        if (seed == null) {
-            seed = fallbackSeed;
-        }
+        Integer coverSeed = (current != null) ? PlayerArt.cachedSeed(current) : null;
+        int seed = (colorStyle == 1 || coverSeed == null) ? fallbackSeed : coverSeed.intValue();
         animateColors(PlayerColors.fromSeed(seed, dark), animated);
 
         // Background: invalidate cached gradient/blurred art

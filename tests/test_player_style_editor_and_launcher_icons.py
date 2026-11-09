@@ -198,3 +198,14 @@ def test_player_style_and_settings_real_effects():
     assert "ColorUtils.setAlphaComponent(primary" in colors_content
 
 
+def test_player_sheet_safe_seed_null_handling():
+    sheet_path = os.path.join(TMESSAGES, "java", "app", "exteraless", "player", "PlayerSheet.java")
+    with open(sheet_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Must not contain unboxing ternary bug: (colorStyle == 1) ? fallbackSeed : PlayerArt.cachedSeed(current)
+    assert "? fallbackSeed : PlayerArt.cachedSeed" not in content
+    assert "coverSeed == null" in content
+
+
+
