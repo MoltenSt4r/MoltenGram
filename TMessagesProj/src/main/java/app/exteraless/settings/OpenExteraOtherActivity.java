@@ -479,14 +479,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                 case TYPE_CHECK: {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setEnabled(true, null);
-                    if (position == nagramSettingsRow) {
-                        cell.setTextAndCheck(getString(R.string.OEGeneralNagramSettings),
-                                GeneralConfig.showNagramSettings(), true);
-                        // setIcon после setTextAndCheck — тот сбрасывает отступы текста.
-                        cell.setIcon(R.drawable.msg_settings);
-                    } else {
-                        cell.setIcon(0);
-                        if (position == localPremiumRow) {
+                    cell.setIcon(0);
+                    if (position == localPremiumRow) {
                             cell.setTextAndValueAndCheck(getString(R.string.localPremium),
                                     getString(R.string.OELocalPremiumInfo), NekoConfig.localPremium.Bool(), true, true);
                         } else if (position == unlimitedPinnedDialogsRow) {

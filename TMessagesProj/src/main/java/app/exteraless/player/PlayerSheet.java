@@ -36,6 +36,7 @@ import android.view.animation.PathInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
@@ -2289,7 +2290,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 FileLog.e(t);
             }
         });
-        o.add(R.drawable.msg_customize_solar, getString(R.string.OEPlayerCustomize), () -> {
+        o.add(R.drawable.msg_theme_solar, getString(R.string.OEPlayerCustomize), () -> {
             o.dismiss();
             openEditor();
         });
@@ -2629,7 +2630,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         scroll.setVerticalScrollBarEnabled(false);
         scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
         styleEditor = new PlayerStyleEditor(context, colors, () -> applyStyle(true));
-        scroll.addView(styleEditor, new ScrollView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        scroll.addView(styleEditor, new FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
         scroll.setClipToPadding(false);
         scroll.setPadding(0, 0, 0, getBottomInset());
         editorPanel.addView(scroll, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, 68, 0, 0));

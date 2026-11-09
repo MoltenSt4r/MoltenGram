@@ -68,6 +68,10 @@ public class LocalPlaylistBottomSheet extends BottomSheet {
     private LocalPlaylistsController.LocalPlaylist playlist;
     private boolean touchInList;
 
+    public LocalPlaylistBottomSheet(Context context, LocalPlaylistsController.LocalPlaylist playlist) {
+        this(context instanceof Activity ? (Activity) context : null, playlist, null);
+    }
+
     public LocalPlaylistBottomSheet(Activity activity, LocalPlaylistsController.LocalPlaylist playlist, Theme.ResourcesProvider resourcesProvider) {
         super(activity, false, resourcesProvider);
         this.activity = activity;

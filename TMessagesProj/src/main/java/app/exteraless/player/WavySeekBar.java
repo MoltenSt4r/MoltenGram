@@ -86,6 +86,20 @@ public class WavySeekBar extends View {
         invalidate();
     }
 
+    public void setWave(boolean wave) {
+        int current = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
+        if (wave) {
+            if (current == 0 || current == 2) {
+                app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle.setConfigInt(1);
+            }
+        } else {
+            if (current == 1 || current == 3) {
+                app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle.setConfigInt(0);
+            }
+        }
+        invalidate();
+    }
+
     private void cancelAnimations() {
         if (returnAnimator != null) {
             returnAnimator.cancel();

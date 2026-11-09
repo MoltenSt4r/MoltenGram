@@ -371,4 +371,48 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         playButton.setColors(c.onPrimaryContainer, ColorUtils.setAlphaComponent(c.onPrimaryContainer, 46), c.onPrimaryContainer);
         card.setForeground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_ALL));
     }
+
+    public static PlayerMiniView preview(Context context) {
+        PlayerMiniView view = new PlayerMiniView(context, null, null);
+        view.shown = true;
+        view.showProgress = 1f;
+        view.card.setTranslationY(0);
+        view.card.setAlpha(1f);
+        view.titleView.setText("Track Title");
+        view.artistView.setText("Artist Name");
+        view.applyStyle(false);
+        return view;
+    }
+
+    public void applyStyle(boolean animated) {
+        int shape = PlayerStyle.miniShape();
+        final int radius = shape == PlayerStyle.MINI_SHAPE_PILL ? dp(32) : shape == PlayerStyle.MINI_SHAPE_SQUARE ? dp(8) : dp(20);
+        cardBg.setCornerRadius(radius);
+        if (Build.VERSION.SDK_INT >= 21) {
+            card.setOutlineProvider(new ViewOutlineProvider() {
+                @Override
+                public void getOutline(View view, Outline outline) {
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), radius);
+                }
+            });
+        }
+        int coverMode = PlayerStyle.miniCover();
+        if (coverMode == PlayerStyle.MINI_COVER_HIDDEN) {
+            cover.setVisibility(View.GONE);
+        } else {
+            cover.setVisibility(View.VISIBLE);
+            cover.setRadius(coverMode == PlayerStyle.MINI_COVER_ROUND ? dp(22) : dp(12));
+        }
+        artistView.setVisibility(PlayerStyle.miniArtist() ? View.VISIBLE : View.GONE);
+        closeButton.setVisibility(PlayerStyle.miniClose() ? View.VISIBLE : View.GONE);
+        nextButton.setVisibility(PlayerStyle.miniNext() ? View.VISIBLE : View.GONE);
+        if (colors != null) {
+            applyColors(colors);
+        }
+        invalidate();
+    }
+
+    public static void styleChanged() {
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.reloadInterface);
+    }
 }

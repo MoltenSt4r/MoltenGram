@@ -34,6 +34,12 @@ public class PlayerIcon extends Drawable {
     public static final String PLAYLIST_ADD = "M4 6h16M4 11h10M4 16h6M18 14v6M15 17h6";
     public static final String NOTE = "M9 17V5l11-2v12" + circle(6.5f, 17, 2.5f) + circle(17.5f, 15, 2.5f);
     public static final String CLOSE = "M6 6l12 12M18 6L6 18";
+    public static final String CHEVRON_UP = "M6 15l6-6 6 6";
+    public static final String CHECK = "M5 13l4 4L19 7";
+    public static final String ARROW_UP = "M12 19V5M5 12l7-7 7 7";
+    public static final String ARROW_DOWN = "M12 5v14M19 12l-7 7-7-7";
+    public static final String EYE = "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" + circle(12, 12, 3);
+    public static final String EYE_OFF = "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22";
 
     private static final HashMap<String, Path> cache = new HashMap<>();
 

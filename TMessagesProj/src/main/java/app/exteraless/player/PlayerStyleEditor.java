@@ -230,11 +230,11 @@ public class PlayerStyleEditor extends LinearLayout {
             if (index == 0) {
                 SleepTimer.getInstance().cancel();
             } else if (index == 1) {
-                SleepTimer.getInstance().start(15 * 60 * 1000);
+                SleepTimer.getInstance().start(15);
             } else if (index == 2) {
-                SleepTimer.getInstance().start(30 * 60 * 1000);
+                SleepTimer.getInstance().start(30);
             } else if (index == 3) {
-                SleepTimer.getInstance().start(60 * 60 * 1000);
+                SleepTimer.getInstance().start(60);
             }
         });
 
@@ -255,7 +255,10 @@ public class PlayerStyleEditor extends LinearLayout {
 
         Chip playlistChip = new Chip(context, getString(R.string.OEPlayerLocalPlaylists), () -> false, v -> {
             try {
-                new LocalPlaylistBottomSheet(context, null).show();
+                android.app.Activity act = context instanceof android.app.Activity ? (android.app.Activity) context : null;
+                if (act != null) {
+                    new LocalPlaylistBottomSheet(act, null, null).show();
+                }
             } catch (Exception ignore) {
             }
         });
