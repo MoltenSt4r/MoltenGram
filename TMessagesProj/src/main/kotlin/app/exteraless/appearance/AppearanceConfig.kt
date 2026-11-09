@@ -429,9 +429,11 @@ object AppearanceConfig {
     val glassMessageMenu =
         addConfig("OEAppearanceGlassMessageMenu", ConfigItem.configTypeBool, true)
 
+    @JvmField
     val liquidGlassNavBar =
         addConfig("OEAppearanceLiquidGlassNavBar", ConfigItem.configTypeBool, false)
 
+    @JvmField
     val liquidGlassFab =
         addConfig("OEAppearanceLiquidGlassFab", ConfigItem.configTypeBool, false)
 

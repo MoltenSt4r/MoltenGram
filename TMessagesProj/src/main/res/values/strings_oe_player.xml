@@ -201,6 +201,7 @@
     <string name="OEPlayerControlsNormal">Normal</string>
     <string name="OEPlayerControlsLarge">Large</string>
     <string name="OEPlayerShowModes">Playback modes</string>
+    <string name="OEPlayerShowActions">Show actions</string>
     <string name="OEPlayerBlockActions">Actions</string>
     <string name="OEPlayerActionsButtons">Buttons</string>
     <string name="OEPlayerActionsIsland">Island</string>

@@ -201,6 +201,7 @@
     <string name="OEPlayerControlsNormal">Обычно</string>
     <string name="OEPlayerControlsLarge">Крупно</string>
     <string name="OEPlayerShowModes">Режимы воспроизведения</string>
+    <string name="OEPlayerShowActions">Панель действий</string>
     <string name="OEPlayerBlockActions">Действия</string>
     <string name="OEPlayerActionsButtons">Кнопки</string>
     <string name="OEPlayerActionsIsland">Островок</string>
