@@ -333,3 +333,45 @@ def test_new_brand_launcher_icons_exist():
         assert os.path.getsize(rage_bg) > 100
 
 
+def test_quote_bottom_sheet_and_chat_activity_compilation_safety():
+    sheet_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "chats", "ChatQuoteBottomSheet.java")
+    with open(sheet_path, "r", encoding="utf-8") as f:
+        sheet_content = f.read()
+
+    # Valid drawables used
+    assert "R.drawable.msg_openprofile" in sheet_content
+    assert "R.drawable.msg_contacts_time" in sheet_content
+    assert "R.drawable.msg_sendfile" in sheet_content
+    assert "R.drawable.msg_user" not in sheet_content
+    assert "R.drawable.msg_history" not in sheet_content
+    assert "R.drawable.msg_document" not in sheet_content
+
+    # Wallpaper safely retrieved
+    assert "Theme.getCachedWallpaperNonBlocking" in sheet_content
+
+    # Correct static SendMessagesHelper calls
+    assert "SendMessagesHelper.prepareSendingPhoto(" in sheet_content
+    assert "chatActivity.getAccountInstance()" in sheet_content
+    assert "SendMessagesHelper.prepareSendingDocument(" in sheet_content
+
+    # ChatActivity getSelectedMessages is public
+    chat_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "ChatActivity.java")
+    with open(chat_path, "r", encoding="utf-8") as f:
+        chat_content = f.read()
+    assert "public ArrayList<MessageObject> getSelectedMessages()" in chat_content
+    assert "public ArrayList<MessageObject> getSelectedMessages1()" in chat_content
+
+    # TextCheckCell imported in Md3AvatarShapesActivity
+    md3_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "appearance", "Md3AvatarShapesActivity.java")
+    with open(md3_path, "r", encoding="utf-8") as f:
+        md3_content = f.read()
+    assert "import org.telegram.ui.Cells.TextCheckCell;" in md3_content
+
+    # PlayerSettingsActivity uses android.os.Build
+    player_settings = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerSettingsActivity.java")
+    with open(player_settings, "r", encoding="utf-8") as f:
+        player_content = f.read()
+    assert "android.os.Build.VERSION.SDK_INT" in player_content
+
+
+

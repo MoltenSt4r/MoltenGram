@@ -1381,7 +1381,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         android.widget.SeekBar seekBar = new android.widget.SeekBar(getContext());
         seekBar.setMax(24);
-        if (Build.VERSION.SDK_INT >= 26) {
+        if (android.os.Build.VERSION.SDK_INT >= 26) {
             seekBar.setMin(1);
         }
         seekBar.setProgress(Math.max(1, Math.min(24, val[0])));

@@ -3826,7 +3826,7 @@ public class ChatActivity extends BaseFragment implements
         }
     }
 
-    private ArrayList<MessageObject> getSelectedMessages() {
+    public ArrayList<MessageObject> getSelectedMessages() {
         ArrayList<MessageObject> fmessages = new ArrayList<>();
         for (int a = 1; a >= 0; a--) {
             ArrayList<Integer> ids = new ArrayList<>();
@@ -3851,7 +3851,7 @@ public class ChatActivity extends BaseFragment implements
         return fmessages;
     }
 
-    private ArrayList<MessageObject> getSelectedMessages1() {
+    public ArrayList<MessageObject> getSelectedMessages1() {
         ArrayList<MessageObject> fmessages = new ArrayList<>();
         for (int a = 1; a >= 0; a--) {
             for (int b = 0; b < selectedMessagesIds[a].size(); b++) {

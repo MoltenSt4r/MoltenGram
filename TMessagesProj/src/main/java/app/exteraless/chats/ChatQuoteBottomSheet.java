@@ -129,14 +129,14 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         });
         optionsRow.addView(toggleWallpaperBtn, LayoutHelper.createLinear(44, 44, Gravity.CENTER, 6, 0, 6, 0));
 
-        toggleSendersBtn = createOptionButton(R.drawable.msg_user, "Авторы", showSenders, v -> {
+        toggleSendersBtn = createOptionButton(R.drawable.msg_openprofile, "Авторы", showSenders, v -> {
             showSenders = !showSenders;
             updateOptionButtons();
             generateQuoteBitmap();
         });
         optionsRow.addView(toggleSendersBtn, LayoutHelper.createLinear(44, 44, Gravity.CENTER, 6, 0, 6, 0));
 
-        toggleTimeBtn = createOptionButton(R.drawable.msg_history, "Время", showTime, v -> {
+        toggleTimeBtn = createOptionButton(R.drawable.msg_contacts_time, "Время", showTime, v -> {
             showTime = !showTime;
             updateOptionButtons();
             generateQuoteBitmap();
@@ -164,7 +164,7 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         actionsRow.setWeightSum(5f);
 
         actionsRow.addView(createActionButton(R.drawable.msg_forward, LocaleController.getString("Forward", R.string.Forward), v -> forwardQuote()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
-        actionsRow.addView(createActionButton(R.drawable.msg_document, LocaleController.getString("QuoteFile", R.string.QuoteFile), v -> sendQuoteAsFile()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+        actionsRow.addView(createActionButton(R.drawable.msg_sendfile, LocaleController.getString("QuoteFile", R.string.QuoteFile), v -> sendQuoteAsFile()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
         actionsRow.addView(createActionButton(R.drawable.msg_sticker, LocaleController.getString("QuoteSticker", R.string.QuoteSticker), v -> sendQuoteAsSticker()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
         actionsRow.addView(createActionButton(R.drawable.msg_copy, LocaleController.getString("Copy", R.string.Copy), v -> copyQuoteToClipboard()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
         actionsRow.addView(createActionButton(R.drawable.msg_share, LocaleController.getString("ShareFile", R.string.ShareFile), v -> shareQuote()), LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
@@ -236,11 +236,11 @@ public class ChatQuoteBottomSheet extends BottomSheet {
 
         // Background
         Drawable bgDrawable = null;
-        if (useWallpaper && chatActivity.getResourceProvider() != null) {
-            bgDrawable = chatActivity.getResourceProvider().getWallpaperDrawable();
-        }
-        if (bgDrawable == null && useWallpaper) {
-            bgDrawable = Theme.getCachedWallpaper();
+        if (useWallpaper) {
+            bgDrawable = Theme.getCachedWallpaperNonBlocking();
+            if (bgDrawable == null) {
+                bgDrawable = Theme.getCachedWallpaper();
+            }
         }
         if (bgDrawable != null && useWallpaper) {
             cardLayout.setBackground(bgDrawable);
@@ -279,9 +279,8 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         renderedBitmap = bmp;
         previewImageView.setImageBitmap(renderedBitmap);
 
-        infoTextView.setText(String.format(Locale.getDefault(), "%d %s · %dx%d",
-                messageCount,
-                LocaleController.getString("Messages", R.string.Messages).toLowerCase(Locale.getDefault()),
+        infoTextView.setText(String.format(Locale.getDefault(), "%s · %dx%d",
+                LocaleController.formatPluralString("messages", messageCount),
                 width, height));
     }
 
@@ -325,7 +324,7 @@ public class ChatQuoteBottomSheet extends BottomSheet {
             nameView.setText(name);
             nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             nameView.setTypeface(AndroidUtilities.bold());
-            int nameColor = Theme.getColor(Theme.key_chat_inSubText, resourcesProvider);
+            int nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText, resourcesProvider);
             if (senderUser != null && senderUser.color != null) {
                 nameColor = Theme.getColor(Theme.keys_avatar_nameInMessage[UserObject.getColorId(senderUser)]);
             }
@@ -383,9 +382,25 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         File file = saveBitmapToFile(renderedBitmap, false);
         if (file == null) return;
 
-        chatActivity.getSendMessagesHelper().prepareSendingPhoto(
-                file.getAbsolutePath(), null, chatActivity.getDialogId(),
-                null, null, null, null, null, null, 0, null, false, 0, null, null, 0, false, null, false
+        SendMessagesHelper.prepareSendingPhoto(
+                chatActivity.getAccountInstance(),
+                file.getAbsolutePath(),
+                null,
+                chatActivity.getDialogId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                null,
+                0,
+                null,
+                true,
+                0,
+                0,
+                (String) null,
+                0
         );
 
         dismiss();
@@ -398,9 +413,24 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         File file = saveBitmapToFile(renderedBitmap, false);
         if (file == null) return;
 
-        chatActivity.getSendMessagesHelper().prepareSendingDocument(
-                file.getAbsolutePath(), file.getAbsolutePath(), null, "image/png",
-                chatActivity.getDialogId(), null, null, null, null, null, 0, null, false, 0, null, null, 0, false, null, false
+        SendMessagesHelper.prepareSendingDocument(
+                chatActivity.getAccountInstance(),
+                file.getAbsolutePath(),
+                file.getAbsolutePath(),
+                null,
+                null,
+                "image/png",
+                chatActivity.getDialogId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                0,
+                null,
+                chatActivity.getMessageChatSendParams(),
+                false
         );
 
         dismiss();
@@ -421,9 +451,24 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         File file = saveBitmapToFile(stickerBmp, true);
         if (file == null) return;
 
-        chatActivity.getSendMessagesHelper().prepareSendingDocument(
-                file.getAbsolutePath(), file.getAbsolutePath(), null, "image/webp",
-                chatActivity.getDialogId(), null, null, null, null, null, 0, null, false, 0, null, null, 0, false, null, false
+        SendMessagesHelper.prepareSendingDocument(
+                chatActivity.getAccountInstance(),
+                file.getAbsolutePath(),
+                file.getAbsolutePath(),
+                null,
+                null,
+                "image/webp",
+                chatActivity.getDialogId(),
+                null,
+                null,
+                null,
+                null,
+                null,
+                true,
+                0,
+                null,
+                chatActivity.getMessageChatSendParams(),
+                false
         );
 
         dismiss();
