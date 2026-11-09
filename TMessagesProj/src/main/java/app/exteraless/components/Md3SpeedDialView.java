@@ -19,10 +19,12 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
 import android.view.View;
+import android.view.ViewGroup;
 import android.view.ViewOutlineProvider;
 import android.view.inputmethod.EditorInfo;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -867,7 +869,7 @@ public class Md3SpeedDialView extends FrameLayout {
 
                 // Move Up button
                 ImageView upBtn = new ImageView(context);
-                upBtn.setImageResource(R.drawable.msg_arrow_up);
+                upBtn.setImageResource(R.drawable.baseline_keyboard_arrow_up_24);
                 upBtn.setColorFilter(index > 0 ? Theme.getColor(Theme.key_windowBackgroundWhiteBlueText) : Theme.multAlpha(textColor, 0.2f), PorterDuff.Mode.SRC_IN);
                 upBtn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                 upBtn.setPadding(dp(6), dp(6), dp(6), dp(6));
@@ -890,7 +892,7 @@ public class Md3SpeedDialView extends FrameLayout {
 
                 // Move Down button
                 ImageView downBtn = new ImageView(context);
-                downBtn.setImageResource(R.drawable.msg_arrow_down);
+                downBtn.setImageResource(R.drawable.baseline_keyboard_arrow_down_24);
                 downBtn.setColorFilter(index < orderedActions.size() - 1 ? Theme.getColor(Theme.key_windowBackgroundWhiteBlueText) : Theme.multAlpha(textColor, 0.2f), PorterDuff.Mode.SRC_IN);
                 downBtn.setScaleType(ImageView.ScaleType.CENTER_INSIDE);
                 downBtn.setPadding(dp(6), dp(6), dp(6), dp(6));

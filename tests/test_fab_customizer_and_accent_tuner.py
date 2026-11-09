@@ -114,8 +114,8 @@ def test_md3_speed_dial_view_input_dialogs_and_reordering():
     assert "FAB_ITEM_STYLE_CARD" in content
     assert "FAB_ITEM_STYLE_FILLED_TONAL" in content
     assert "FAB_ITEM_STYLE_OUTLINE" in content
-    assert "msg_arrow_up" in content
-    assert "msg_arrow_down" in content
+    assert "baseline_keyboard_arrow_up_24" in content
+    assert "baseline_keyboard_arrow_down_24" in content
 
     # CapsuleItemView styling
     assert "updateColors()" in content
