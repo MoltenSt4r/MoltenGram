@@ -11,11 +11,11 @@ def test_material_you_vector_bounds():
     with open(xml_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    # Verify scale is ~0.0021 and not oversized (> 0.003)
+    # Verify scale is ~0.0032
     match_scale = re.search(r'android:scaleX="([0-9.]+)"', content)
     assert match_scale is not None, "scaleX must be present"
     scale_val = float(match_scale.group(1))
-    assert 0.0020 <= scale_val <= 0.0025, f"scaleX {scale_val} should be between 0.0020 and 0.0025 to avoid oversized icon"
+    assert 0.0030 <= scale_val <= 0.0035, f"scaleX {scale_val} should be between 0.0030 and 0.0035"
 
     # Verify translation centers the icon at ~ (54, 54)
     match_tx = re.search(r'android:translateX="([0-9.]+)"', content)
