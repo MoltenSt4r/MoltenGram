@@ -57,6 +57,7 @@ public class WavySeekBar extends View {
     private ValueAnimator resetAnimator;
     private float resetProgress;
     private boolean animatingReset;
+    private boolean waveEnabled = true;
 
     public WavySeekBar(Context context) {
         super(context);
@@ -87,16 +88,7 @@ public class WavySeekBar extends View {
     }
 
     public void setWave(boolean wave) {
-        int current = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
-        if (wave) {
-            if (current == 0 || current == 2) {
-                app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle.setConfigInt(1);
-            }
-        } else {
-            if (current == 1 || current == 3) {
-                app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle.setConfigInt(0);
-            }
-        }
+        waveEnabled = wave;
         invalidate();
     }
 
@@ -298,7 +290,7 @@ public class WavySeekBar extends View {
         // 1: Wavy (Wavy track + round dot thumb)
         // 2: Slim (Thin track + no thumb)
         // 3: Squiggly (Wavy track + vertical bar thumb)
-        boolean isWavy = style == 1 || style == 3;
+        boolean isWavy = waveEnabled && (style == 1 || style == 3 || PlayerStyle.wavy());
         float targetAmp = (playing && isWavy) ? maxAmplitude : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.05f)) {

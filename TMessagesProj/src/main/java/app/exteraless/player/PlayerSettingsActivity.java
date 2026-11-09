@@ -158,11 +158,14 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerBackgroundStyle), options, which -> {
                 AppearanceConfig.playerBackgroundStyle.setConfigInt(which);
+                AppearanceConfig.playerBackground.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(bgStyleRow);
+                notifyPlayerChanged();
             });
         } else if (position == seekbarStyleRow) {
             new SeekbarStyleDialog(getContext(), which -> {
                 if (listAdapter != null) listAdapter.notifyItemChanged(seekbarStyleRow);
+                notifyPlayerChanged();
             }).show();
         } else if (position == colorStyleRow) {
             CharSequence[] options = {
@@ -171,7 +174,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerColorStyle), options, which -> {
                 AppearanceConfig.playerColorStyle.setConfigInt(which);
+                AppearanceConfig.playerColors.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(colorStyleRow);
+                notifyPlayerChanged();
             });
         } else if (position == coverShapeRow) {
             CharSequence[] options = {
@@ -186,16 +191,19 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 1) {
                     AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 2) {
                     AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 3) {
                     int currentShape = AppearanceConfig.playerCoverShape();
                     if (currentShape < 0) currentShape = 0;
@@ -204,6 +212,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         PlayerArt.clearTrackShapesCache();
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                         if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
+                        notifyPlayerChanged();
                     });
                 }
             });
@@ -221,21 +230,25 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 1) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 2) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 3) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                    notifyPlayerChanged();
                 } else if (which == 4) {
                     int currentShape = AppearanceConfig.playerMiniCoverShape();
                     if (currentShape < 0) currentShape = 0;
@@ -244,29 +257,36 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         PlayerArt.clearTrackShapesCache();
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                         if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
+                        notifyPlayerChanged();
                     });
                 }
             });
         } else if (position == swipeTrackRow) {
-            AppearanceConfig.playerSwipeTrack.setConfigBool(!AppearanceConfig.playerSwipeTrack());
+            boolean nextVal = !AppearanceConfig.playerSwipeTrack();
+            AppearanceConfig.playerSwipeTrack.setConfigBool(nextVal);
+            AppearanceConfig.playerCoverSwipe.setConfigBool(nextVal);
             if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(AppearanceConfig.playerSwipeTrack());
+                ((TextCheckCell) view).setChecked(nextVal);
             }
+            notifyPlayerChanged();
         } else if (position == cropCoverRow) {
             AppearanceConfig.playerCropCover.setConfigBool(!AppearanceConfig.playerCropCover());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerCropCover());
             }
+            notifyPlayerChanged();
         } else if (position == keepScreenOnRow) {
             AppearanceConfig.playerKeepScreenOn.setConfigBool(!AppearanceConfig.playerKeepScreenOn());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerKeepScreenOn());
             }
+            notifyPlayerChanged();
         } else if (position == lyricsExperimentalRow) {
             AppearanceConfig.playerLyricsExperimental.setConfigBool(!AppearanceConfig.playerLyricsExperimental());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsExperimental());
             }
+            notifyPlayerChanged();
         } else if (position == lyricsSourcesRow) {
             showLyricsSourcesDialog();
         } else if (position == lyricsPriorityRow) {
@@ -276,6 +296,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsTranslate());
             }
+            notifyPlayerChanged();
         } else if (position == lyricsAlignmentRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsAlignmentCenter),
@@ -284,12 +305,14 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             showSelector(getString(R.string.OEAppearancePlayerLyricsAlignment), options, which -> {
                 AppearanceConfig.playerLyricsAlignment.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsAlignmentRow);
+                notifyPlayerChanged();
             });
         } else if (position == lyricsAutoscrollRow) {
             AppearanceConfig.playerLyricsAutoScroll.setConfigBool(!AppearanceConfig.playerLyricsAutoScroll());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsAutoScroll());
             }
+            notifyPlayerChanged();
         } else if (position == lyricsTextSizeRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsTextSizeNormal),
@@ -299,12 +322,14 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             showSelector(getString(R.string.OEAppearancePlayerLyricsTextSize), options, which -> {
                 AppearanceConfig.playerLyricsTextSize.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsTextSizeRow);
+                notifyPlayerChanged();
             });
         } else if (position == crossfadeRow) {
             AppearanceConfig.playerCrossfade.setConfigBool(!AppearanceConfig.playerCrossfade());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerCrossfade());
             }
+            notifyPlayerChanged();
         } else if (position == crossfadeDurationRow) {
             showCrossfadeDurationDialog();
         } else if (position == playlistsRow) {
@@ -325,6 +350,13 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 FileLog.e(t);
             }
         }
+    }
+
+    private void notifyPlayerChanged() {
+        if (PlayerSheet.instance != null) {
+            PlayerSheet.instance.applyStyle(true);
+        }
+        PlayerMiniView.styleChanged();
     }
 
     private class ListAdapter extends BaseListAdapter {
@@ -860,6 +892,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (listAdapter != null) {
                 listAdapter.notifyItemChanged(crossfadeDurationRow);
             }
+            notifyPlayerChanged();
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());

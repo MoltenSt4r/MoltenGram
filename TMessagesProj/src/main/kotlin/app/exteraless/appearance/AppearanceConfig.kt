@@ -225,6 +225,22 @@ object AppearanceConfig {
         return md3FabItems.String()
     }
 
+    const val FAB_ITEM_STYLE_CAPSULE = 0
+    const val FAB_ITEM_STYLE_CARD = 1
+    const val FAB_ITEM_STYLE_FILLED_TONAL = 2
+    const val FAB_ITEM_STYLE_OUTLINE = 3
+
+    /** Стиль пунктов меню MD3 Speed-Dial FAB (0 = Капсула, 1 = Карточка, 2 = Акцентная заливка, 3 = Контур/Стекло). */
+    @JvmField
+    val md3FabItemStyle = addConfig("OEAppearanceMd3FabItemStyle", ConfigItem.configTypeInt, FAB_ITEM_STYLE_CAPSULE)
+
+    @JvmStatic
+    fun md3FabItemStyle(): Int {
+        ensureLoaded()
+        val s = md3FabItemStyle.Int()
+        return if (s in 0..3) s else FAB_ITEM_STYLE_CAPSULE
+    }
+
     /** Размер основной кнопки FAB в dp (48, 56, 64, 72). По умолчанию 56. */
     @JvmField
     val fabSize = addConfig("OEAppearanceFabSize", ConfigItem.configTypeInt, 56)

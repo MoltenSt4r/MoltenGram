@@ -37,6 +37,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapesActivity;
 import tw.nekomimi.nekogram.config.ConfigItem;
 
 @SuppressLint("ViewConstructor")
@@ -101,6 +102,15 @@ public class PlayerStyleEditor extends LinearLayout {
 
         // Section 0: Cover
         section = sections[0];
+        addHeader(R.string.OEVoiceChangerPresets);
+        addSegmented(new String[]{
+                getString(R.string.OEVoiceChangerPresetDefault), "Expressive", "Classic", "Minimal"
+        }, () -> -1, presetIndex -> {
+            PlayerStyle.applyPreset(presetIndex);
+            refresh();
+            changed();
+        });
+
         addSegmented(new String[]{
                 getString(R.string.OEPlayerCoverCard), getString(R.string.OEPlayerCoverWide),
                 getString(R.string.OEPlayerCoverFull), getString(R.string.OEPlayerCoverDisc)
@@ -109,18 +119,61 @@ public class PlayerStyleEditor extends LinearLayout {
                 () -> Math.round(PlayerStyle.coverSize() * 100), value -> AppearanceConfig.playerCoverSize.setConfigInt(value));
         radiusRow = addSlider(R.string.OEPlayerCoverRadius, 0, PlayerStyle.COVER_RADIUS_MAX, 2, "",
                 PlayerStyle::coverRadiusDp, value -> AppearanceConfig.playerCoverRadius.setConfigInt(value));
+
+        addHeader(R.string.OEAppearancePlayerCoverShape);
+        addSegmented(new String[]{
+                getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                getString(R.string.OEAppearancePlayerCoverShapeRandom),
+                getString(R.string.OEAppearancePlayerCoverShapeCustom)
+        }, () -> {
+            int shape = AppearanceConfig.playerCoverShape();
+            if (shape == AppearanceConfig.COVER_SHAPE_DISABLED) return 0;
+            if (shape == AppearanceConfig.COVER_SHAPE_CYCLE) return 1;
+            if (shape == AppearanceConfig.COVER_SHAPE_RANDOM) return 2;
+            return 3;
+        }, which -> {
+            if (which == 0) {
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                PlayerArt.clearTrackShapesCache();
+                changed();
+            } else if (which == 1) {
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                PlayerArt.clearTrackShapesCache();
+                changed();
+            } else if (which == 2) {
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
+                PlayerArt.clearTrackShapesCache();
+                changed();
+            } else if (which == 3) {
+                int currentShape = AppearanceConfig.playerCoverShape();
+                if (currentShape < 0) currentShape = 0;
+                Md3AvatarShapesActivity.openShapePicker(context, colors != null ? colors.provider(null) : null, getString(R.string.OEAppearancePlayerCoverShape), currentShape, shapeId -> {
+                    AppearanceConfig.playerCoverShape.setConfigInt(shapeId);
+                    PlayerArt.clearTrackShapesCache();
+                    changed();
+                });
+            }
+        });
+
         coverChips = addChips();
         spinRow = addChip(coverChips, R.string.OEPlayerDiscSpin, AppearanceConfig.playerDiscSpin);
-        swipeRow = addChip(coverChips, R.string.OEPlayerCoverSwipe, AppearanceConfig.playerCoverSwipe);
+        swipeRow = addChip(coverChips, R.string.OEAppearancePlayerSwipeTrack, AppearanceConfig.playerSwipeTrack);
         extendRow = addChip(coverChips, R.string.OEPlayerCoverExtend, AppearanceConfig.playerCoverExtend);
         addChip(coverChips, R.string.OEAppearancePlayerCropCover, AppearanceConfig.playerCropCover);
 
         addHeader(R.string.OEPlayerStyleColors);
         addSegmented(new String[]{getString(R.string.OEPlayerColorsCover), getString(R.string.OEPlayerColorsTheme)},
-                () -> PlayerStyle.themeColors() ? 1 : 0, value -> AppearanceConfig.playerColors.setConfigInt(value));
+                () -> PlayerStyle.themeColors() ? 1 : 0, value -> {
+                    AppearanceConfig.playerColorStyle.setConfigInt(value);
+                    AppearanceConfig.playerColors.setConfigInt(value);
+                });
         backgroundGroup = addSegmented(new String[]{
-                getString(R.string.OEPlayerBackgroundSolid), getString(R.string.OEPlayerBackgroundGradient), getString(R.string.OEPlayerBackgroundBlur)
-        }, PlayerStyle::background, value -> AppearanceConfig.playerBackground.setConfigInt(value));
+                getString(R.string.OEPlayerBackgroundSolid), getString(R.string.OEPlayerBackgroundBlur), getString(R.string.OEPlayerBackgroundGradient)
+        }, PlayerStyle::background, value -> {
+            AppearanceConfig.playerBackgroundStyle.setConfigInt(value);
+            AppearanceConfig.playerBackground.setConfigInt(value);
+        });
 
         // Section 1: Elements
         section = sections[1];
@@ -147,6 +200,13 @@ public class PlayerStyleEditor extends LinearLayout {
         section = blockCard[PlayerStyle.BLOCK_PROGRESS].body;
         ChipGroup progressChips = addChips();
         addChip(progressChips, R.string.OEPlayerShowWave, AppearanceConfig.playerWavy);
+        Chip seekbarStyleChip = new Chip(context, getString(R.string.OEAppearancePlayerSeekbarStyle), () -> false, v -> {
+            new SeekbarStyleDialog(getContext(), which -> {
+                changed();
+            }).show();
+        });
+        progressChips.addView(seekbarStyleChip);
+        parts.add(seekbarStyleChip);
 
         blockCard[PlayerStyle.BLOCK_CONTROLS] = new ElementCard(context, TARGET_CONTROLS, getString(R.string.OEPlayerBlockControls), null, true);
         section = blockCard[PlayerStyle.BLOCK_CONTROLS].body;
@@ -178,6 +238,27 @@ public class PlayerStyleEditor extends LinearLayout {
         addSegmented(new String[]{
                 getString(R.string.OEPlayerMiniCoverRounded), getString(R.string.OEPlayerMiniCoverRound), getString(R.string.OEPlayerMiniCoverHidden)
         }, PlayerStyle::miniCover, value -> AppearanceConfig.playerMiniCover.setConfigInt(value));
+        addInfo(R.string.OEAppearancePlayerMiniCoverShape);
+        addSegmented(new String[]{
+                getString(R.string.OEAppearancePlayerCoverShapeFollow),
+                getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                getString(R.string.OEAppearancePlayerCoverShapeRandom)
+        }, () -> {
+            int shape = AppearanceConfig.playerMiniCoverShape();
+            if (shape == AppearanceConfig.COVER_SHAPE_FOLLOW) return 0;
+            if (shape == AppearanceConfig.COVER_SHAPE_DISABLED) return 1;
+            if (shape == AppearanceConfig.COVER_SHAPE_CYCLE) return 2;
+            return 3;
+        }, which -> {
+            int val = (which == 0) ? AppearanceConfig.COVER_SHAPE_FOLLOW :
+                      (which == 1) ? AppearanceConfig.COVER_SHAPE_DISABLED :
+                      (which == 2) ? AppearanceConfig.COVER_SHAPE_CYCLE :
+                      AppearanceConfig.COVER_SHAPE_RANDOM;
+            AppearanceConfig.playerMiniCoverShape.setConfigInt(val);
+            PlayerArt.clearTrackShapesCache();
+            changed();
+        });
         addInfo(R.string.OEPlayerMiniShape);
         addSegmented(new String[]{
                 getString(R.string.OEPlayerMiniShapeRounded), getString(R.string.OEPlayerMiniShapePill), getString(R.string.OEPlayerMiniShapeSquare)
@@ -209,8 +290,9 @@ public class PlayerStyleEditor extends LinearLayout {
         addSlider(R.string.OEAppearancePlayerCrossfadeDuration, 1, 10, 1, "s",
                 AppearanceConfig::playerCrossfadeDuration,
                 value -> {
-                    AppearanceConfig.playerCrossfadeFadeOutDuration.setConfigInt(value * 1000);
-                    AppearanceConfig.playerCrossfadeFadeInDuration.setConfigInt(value * 1000);
+                    AppearanceConfig.playerCrossfadeFadeOutDuration.setConfigInt(value);
+                    AppearanceConfig.playerCrossfadeFadeInDuration.setConfigInt(value);
+                    AppearanceConfig.playerCrossfadeDuration.setConfigInt(value);
                 });
 
         addHeader(R.string.OEAppearancePlayerSleepTimer);
@@ -284,9 +366,12 @@ public class PlayerStyleEditor extends LinearLayout {
                 getString(R.string.OEAppearancePlayerLyricsAlignmentLeft)
         }, AppearanceConfig::playerLyricsAlignment, value -> AppearanceConfig.playerLyricsAlignment.setConfigInt(value));
 
-        addSlider(R.string.OEAppearancePlayerLyricsTextSize, 12, 32, 2, "sp",
-                AppearanceConfig::playerLyricsTextSize,
-                value -> AppearanceConfig.playerLyricsTextSize.setConfigInt(value));
+        addHeader(R.string.OEAppearancePlayerLyricsTextSize);
+        addSegmented(new String[]{
+                getString(R.string.OEAppearancePlayerLyricsTextSizeNormal),
+                getString(R.string.OEAppearancePlayerLyricsTextSizeLarge),
+                getString(R.string.OEAppearancePlayerLyricsTextSizeHuge)
+        }, AppearanceConfig::playerLyricsTextSize, value -> AppearanceConfig.playerLyricsTextSize.setConfigInt(value));
 
         addHeader(R.string.OEAppearancePlayerLyricsSources);
         ChipGroup providersChips = addChips();
@@ -298,6 +383,7 @@ public class PlayerStyleEditor extends LinearLayout {
         addChip(providersChips, R.string.OEAppearancePlayerLyricsProviderZemer, AppearanceConfig.playerLyricsZemer);
 
         ChipGroup lyricsBehaviorChips = addChips();
+        addChip(lyricsBehaviorChips, R.string.OEAppearancePlayerLyricsBlur, AppearanceConfig.playerLyricsBlur);
         addChip(lyricsBehaviorChips, R.string.OEAppearancePlayerLyricsAutoScroll, AppearanceConfig.playerLyricsAutoScroll);
         addChip(lyricsBehaviorChips, R.string.OEAppearancePlayerLyricsSplitRoles, AppearanceConfig.playerLyricsSplitRoles);
         addChip(lyricsBehaviorChips, R.string.OEAppearancePlayerLyricsTapToSeek, AppearanceConfig.playerLyricsTapToSeek);
@@ -515,6 +601,10 @@ public class PlayerStyleEditor extends LinearLayout {
     private View addChip(ChipGroup group, int labelRes, ConfigItem item) {
         Chip chip = new Chip(getContext(), getString(labelRes), item::Bool, value -> {
             item.setConfigBool(value);
+            if (item == AppearanceConfig.playerSwipeTrack || item == AppearanceConfig.playerCoverSwipe) {
+                AppearanceConfig.playerSwipeTrack.setConfigBool(value);
+                AppearanceConfig.playerCoverSwipe.setConfigBool(value);
+            }
             changed();
         });
         group.addView(chip);

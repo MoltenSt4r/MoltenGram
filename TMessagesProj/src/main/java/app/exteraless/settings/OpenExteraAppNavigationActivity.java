@@ -438,6 +438,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         int hexPreviewColor = isCustomHex ? currentColor : 0xFF6750A4;
         String hexSubtitle = isCustomHex ? String.format("#%06X", (0xFFFFFF & currentColor)) : "Ввод любого цвета";
         options.add(new Option(-9999, "Свой цвет (HEX)", hexSubtitle, hexPreviewColor, true));
+        options.add(new Option(-8888, "На базе акцентного (слайдеры)", "Смещение оттенка, яркость, насыщенность и контраст", defaultColor, false));
 
         final AlertDialog[] dialogRef = new AlertDialog[1];
 
@@ -487,7 +488,23 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
 
             row.setOnClickListener(v -> {
                 if (dialogRef[0] != null) dialogRef[0].dismiss();
-                if (opt.isHex) {
+                if (opt.value == -8888) {
+                    app.exteraless.appearance.AccentColorTunerBottomSheet sheet = new app.exteraless.appearance.AccentColorTunerBottomSheet(
+                            context,
+                            getResourceProvider(),
+                            item.Int(),
+                            false,
+                            newColor -> {
+                                item.setConfigInt(newColor);
+                                update();
+                                if (getParentLayout() != null) {
+                                    getParentLayout().rebuildFragments(0);
+                                }
+                            },
+                            null
+                    );
+                    sheet.show();
+                } else if (opt.isHex) {
                     showHexColorDialog(title, item);
                 } else {
                     item.setConfigInt(opt.value);

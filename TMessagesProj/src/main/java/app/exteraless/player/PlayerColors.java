@@ -156,7 +156,7 @@ public final class PlayerColors {
     }
 
     public int shadow() {
-        return dark ? 0xff000000 : ColorUtils.blendARGB(primary, Color.BLACK, 0.4f);
+        return dark ? ColorUtils.setAlphaComponent(primary, 0x90) : ColorUtils.blendARGB(primary, Color.BLACK, 0.4f);
     }
 
     public int ripple() {

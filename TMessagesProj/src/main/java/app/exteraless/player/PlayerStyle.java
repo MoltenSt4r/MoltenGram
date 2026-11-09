@@ -26,8 +26,8 @@ public final class PlayerStyle {
     public static final int COLORS_THEME = 1;
 
     public static final int BACKGROUND_SOLID = 0;
-    public static final int BACKGROUND_GRADIENT = 1;
-    public static final int BACKGROUND_BLUR = 2;
+    public static final int BACKGROUND_BLUR = 1;
+    public static final int BACKGROUND_GRADIENT = 2;
 
     public static final int MINI_COVER_ROUNDED = 0;
     public static final int MINI_COVER_ROUND = 1;
@@ -45,6 +45,11 @@ public final class PlayerStyle {
     public static final int COVER_SIZE_MIN = 60;
     public static final int COVER_SIZE_MAX = 100;
     public static final int COVER_RADIUS_MAX = 48;
+
+    public static final int PRESET_DEFAULT = 0;
+    public static final int PRESET_EXPRESSIVE = 1;
+    public static final int PRESET_CLASSIC = 2;
+    public static final int PRESET_MINIMAL = 3;
 
     private static final int[] DEFAULT_ORDER = {BLOCK_PROGRESS, BLOCK_CONTROLS, BLOCK_ACTIONS};
 
@@ -76,7 +81,7 @@ public final class PlayerStyle {
     }
 
     public static boolean coverSwipe() {
-        return item(AppearanceConfig.playerCoverSwipe).Bool();
+        return AppearanceConfig.playerSwipeTrack() || item(AppearanceConfig.playerCoverSwipe).Bool();
     }
 
     public static boolean coverExtend() {
@@ -157,7 +162,8 @@ public final class PlayerStyle {
     }
 
     public static boolean wavy() {
-        return item(AppearanceConfig.playerWavy).Bool();
+        int style = AppearanceConfig.playerSeekbarStyle();
+        return style == 1 || style == 3 || item(AppearanceConfig.playerWavy).Bool();
     }
 
     public static float controlsScale() {
@@ -172,12 +178,12 @@ public final class PlayerStyle {
     }
 
     public static boolean themeColors() {
-        return item(AppearanceConfig.playerColors).Int() == COLORS_THEME;
+        return AppearanceConfig.playerColorStyle() == COLORS_THEME || item(AppearanceConfig.playerColors).Int() == COLORS_THEME;
     }
 
     public static int background() {
-        int value = item(AppearanceConfig.playerBackground).Int();
-        return value < BACKGROUND_SOLID || value > BACKGROUND_BLUR ? BACKGROUND_SOLID : value;
+        int value = AppearanceConfig.playerBackgroundStyle();
+        return value < BACKGROUND_SOLID || value > BACKGROUND_GRADIENT ? BACKGROUND_SOLID : value;
     }
 
     private static int choice(ConfigItem item, int max) {
@@ -225,6 +231,60 @@ public final class PlayerStyle {
         return item(AppearanceConfig.playerMiniTop).Bool();
     }
 
+    public static void applyPreset(int preset) {
+        switch (preset) {
+            case PRESET_EXPRESSIVE:
+                AppearanceConfig.playerCoverStyle.setConfigInt(COVER_CARD);
+                AppearanceConfig.playerCoverSize.setConfigInt(100);
+                AppearanceConfig.playerCoverRadius.setConfigInt(28);
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+                AppearanceConfig.playerBackgroundStyle.setConfigInt(BACKGROUND_BLUR);
+                AppearanceConfig.playerBackground.setConfigInt(BACKGROUND_BLUR);
+                AppearanceConfig.playerColorStyle.setConfigInt(COLORS_COVER);
+                AppearanceConfig.playerColors.setConfigInt(COLORS_COVER);
+                AppearanceConfig.playerSeekbarStyle.setConfigInt(1);
+                AppearanceConfig.playerWavy.setConfigBool(true);
+                AppearanceConfig.playerActionsStyle.setConfigInt(ACTIONS_ISLAND);
+                AppearanceConfig.playerShowActions.setConfigBool(true);
+                AppearanceConfig.playerShowModes.setConfigBool(true);
+                AppearanceConfig.playerShowLike.setConfigBool(true);
+                break;
+            case PRESET_CLASSIC:
+                AppearanceConfig.playerCoverStyle.setConfigInt(COVER_CARD);
+                AppearanceConfig.playerCoverSize.setConfigInt(100);
+                AppearanceConfig.playerCoverRadius.setConfigInt(16);
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                AppearanceConfig.playerBackgroundStyle.setConfigInt(BACKGROUND_SOLID);
+                AppearanceConfig.playerBackground.setConfigInt(BACKGROUND_SOLID);
+                AppearanceConfig.playerColorStyle.setConfigInt(COLORS_THEME);
+                AppearanceConfig.playerColors.setConfigInt(COLORS_THEME);
+                AppearanceConfig.playerSeekbarStyle.setConfigInt(0);
+                AppearanceConfig.playerWavy.setConfigBool(false);
+                AppearanceConfig.playerActionsStyle.setConfigInt(ACTIONS_BUTTONS);
+                AppearanceConfig.playerShowActions.setConfigBool(true);
+                AppearanceConfig.playerShowModes.setConfigBool(true);
+                break;
+            case PRESET_MINIMAL:
+                AppearanceConfig.playerCoverStyle.setConfigInt(COVER_CARD);
+                AppearanceConfig.playerCoverSize.setConfigInt(85);
+                AppearanceConfig.playerCoverRadius.setConfigInt(20);
+                AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
+                AppearanceConfig.playerBackgroundStyle.setConfigInt(BACKGROUND_SOLID);
+                AppearanceConfig.playerBackground.setConfigInt(BACKGROUND_SOLID);
+                AppearanceConfig.playerColorStyle.setConfigInt(COLORS_COVER);
+                AppearanceConfig.playerColors.setConfigInt(COLORS_COVER);
+                AppearanceConfig.playerControlsSize.setConfigInt(0);
+                AppearanceConfig.playerShowActions.setConfigBool(false);
+                AppearanceConfig.playerShowModes.setConfigBool(true);
+                AppearanceConfig.playerShowLike.setConfigBool(true);
+                break;
+            default:
+                reset();
+                break;
+        }
+        PlayerArt.clearTrackShapesCache();
+    }
+
     public static void reset() {
         for (ConfigItem item : AppearanceConfig.playerStyleItems()) {
             switch (item.type) {
@@ -239,5 +299,17 @@ public final class PlayerStyle {
                     break;
             }
         }
+        AppearanceConfig.playerBackgroundStyle.setConfigInt(0);
+        AppearanceConfig.playerBackground.setConfigInt(0);
+        AppearanceConfig.playerSeekbarStyle.setConfigInt(0);
+        AppearanceConfig.playerColorStyle.setConfigInt(0);
+        AppearanceConfig.playerColors.setConfigInt(0);
+        AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
+        AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_FOLLOW);
+        AppearanceConfig.playerSwipeTrack.setConfigBool(true);
+        AppearanceConfig.playerCoverSwipe.setConfigBool(true);
+        AppearanceConfig.playerCropCover.setConfigBool(true);
+        AppearanceConfig.playerCrossfade.setConfigBool(false);
+        PlayerArt.clearTrackShapesCache();
     }
 }

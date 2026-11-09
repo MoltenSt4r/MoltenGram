@@ -735,6 +735,21 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
             customBtn.setOnClickListener(v -> showColorPickerBottomSheet(false));
             colorPaletteContainer.addView(customBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+
+            // Accent-based color tuner button (Hue shift, Lightness, Saturation, Contrast sliders)
+            FrameLayout tunerBtn = new FrameLayout(context);
+            GradientDrawable tunerBg = new GradientDrawable();
+            tunerBg.setShape(GradientDrawable.OVAL);
+            tunerBg.setColor(Theme.multAlpha(Theme.getColor(Theme.key_featuredStickers_addButton), 0.15f));
+            tunerBtn.setBackground(tunerBg);
+
+            ImageView tunerIcon = new ImageView(context);
+            tunerIcon.setImageResource(R.drawable.msg_theme);
+            tunerIcon.setColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN);
+            tunerBtn.addView(tunerIcon, LayoutHelper.createFrame(18, 18, Gravity.CENTER));
+
+            tunerBtn.setOnClickListener(v -> showAccentColorTuner(false));
+            colorPaletteContainer.addView(tunerBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
         }
 
         private void rebuildIconColorSwatches() {
@@ -843,6 +858,52 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
 
             customBtn.setOnClickListener(v -> showColorPickerBottomSheet(true));
             iconColorPaletteContainer.addView(customBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+
+            // Accent-based icon color tuner button (Hue shift, Lightness, Saturation, Contrast sliders)
+            FrameLayout tunerIconBtn = new FrameLayout(context);
+            GradientDrawable tunerIconBg = new GradientDrawable();
+            tunerIconBg.setShape(GradientDrawable.OVAL);
+            tunerIconBg.setColor(Theme.multAlpha(Theme.getColor(Theme.key_featuredStickers_addButton), 0.15f));
+            tunerIconBtn.setBackground(tunerIconBg);
+
+            ImageView tunerIconIv = new ImageView(context);
+            tunerIconIv.setImageResource(R.drawable.msg_theme);
+            tunerIconIv.setColorFilter(Theme.getColor(Theme.key_featuredStickers_addButton), PorterDuff.Mode.SRC_IN);
+            tunerIconBtn.addView(tunerIconIv, LayoutHelper.createFrame(18, 18, Gravity.CENTER));
+
+            tunerIconBtn.setOnClickListener(v -> showAccentColorTuner(true));
+            iconColorPaletteContainer.addView(tunerIconBtn, LayoutHelper.createLinear(36, 36, Gravity.CENTER_VERTICAL, 0, 0, 10, 0));
+        }
+
+        private void showAccentColorTuner(boolean forIcon) {
+            int curColor = forIcon ? getIconColorForCurrentMode() : getColorForCurrentMode();
+            AccentColorTunerBottomSheet sheet = new AccentColorTunerBottomSheet(
+                    getContext(),
+                    getResourceProvider(),
+                    curColor,
+                    forIcon,
+                    newColor -> {
+                        if (forIcon) {
+                            applyIconColorForCurrentMode(newColor);
+                            bigFabPreview.setIconColor(newColor, true);
+                            rebuildIconColorSwatches();
+                        } else {
+                            applyColorForCurrentMode(newColor);
+                            bigFabPreview.setColor(newColor, true);
+                            rebuildColorSwatches();
+                            rebuildIconColorSwatches();
+                        }
+                        notifyFabChanged();
+                    },
+                    liveColor -> {
+                        if (forIcon) {
+                            bigFabPreview.setIconColor(liveColor, false);
+                        } else {
+                            bigFabPreview.setColor(liveColor, false);
+                        }
+                    }
+            );
+            sheet.show();
         }
 
         private void showColorPickerBottomSheet(boolean forIcon) {

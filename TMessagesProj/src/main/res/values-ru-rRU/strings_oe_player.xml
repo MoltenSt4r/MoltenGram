@@ -227,4 +227,5 @@
     <string name="OEPlayerMiniPrevious">Назад</string>
     <string name="OEPlayerMiniNext">Вперёд</string>
     <string name="OEPlayerMiniClose">Закрыть</string>
+    <string name="OEPlayerPlaybackOrder">Порядок воспроизведения…</string>
 </resources>

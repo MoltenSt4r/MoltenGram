@@ -108,9 +108,14 @@ public class SeekbarStyleDialog extends Dialog {
 
             card.setOnClickListener(v -> {
                 AppearanceConfig.playerSeekbarStyle.setConfigInt(styleIndex);
+                AppearanceConfig.playerWavy.setConfigBool(styleIndex == 1 || styleIndex == 3);
                 if (onSelected != null) {
                     onSelected.run(styleIndex);
                 }
+                if (PlayerSheet.instance != null) {
+                    PlayerSheet.instance.applyStyle(true);
+                }
+                PlayerMiniView.styleChanged();
                 dismiss();
             });
 

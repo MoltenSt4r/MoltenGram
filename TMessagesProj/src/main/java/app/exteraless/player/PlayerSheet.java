@@ -97,6 +97,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final TextView headerTitle;
     private final CoverImage cover;
     private final LinearLayout titleRow;
+    private LinearLayout titles;
     private final TextView titleView;
     private final TextView artistView;
     private final MorphButton likeButton;
@@ -271,6 +272,61 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             }
 
             @Override
+            public boolean onInterceptTouchEvent(MotionEvent ev) {
+                if (editing && styleEditor != null && (editorPanel == null || ev.getY() < editorPanel.getTranslationY() + editorPanel.getTop())) {
+                    if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                        float x = ev.getX();
+                        float y = ev.getY();
+                        if (hitInRoot(cover, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_COVER);
+                            return true;
+                        } else if (hitInRoot(titleRow, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_TITLE);
+                            return true;
+                        } else if (hitInRoot(seekBar, x, y) || hitInRoot(timeRow, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_PROGRESS);
+                            return true;
+                        } else if (hitInRoot(controls, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_CONTROLS);
+                            return true;
+                        } else if (hitInRoot(group, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_ACTIONS);
+                            return true;
+                        }
+                    }
+                }
+                return super.onInterceptTouchEvent(ev);
+            }
+
+            @Override
+            public boolean onTouchEvent(MotionEvent ev) {
+                if (editing && styleEditor != null && (editorPanel == null || ev.getY() < editorPanel.getTranslationY() + editorPanel.getTop())) {
+                    if (ev.getActionMasked() == MotionEvent.ACTION_UP) {
+                        float x = ev.getX();
+                        float y = ev.getY();
+                        if (hitInRoot(cover, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_COVER);
+                            return true;
+                        } else if (hitInRoot(titleRow, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_TITLE);
+                            return true;
+                        } else if (hitInRoot(seekBar, x, y) || hitInRoot(timeRow, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_PROGRESS);
+                            return true;
+                        } else if (hitInRoot(controls, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_CONTROLS);
+                            return true;
+                        } else if (hitInRoot(group, x, y)) {
+                            styleEditor.focus(PlayerStyleEditor.TARGET_ACTIONS);
+                            return true;
+                        }
+                    }
+                    return true;
+                }
+                return super.onTouchEvent(ev);
+            }
+
+            @Override
             public void setTranslationY(float translationY) {
                 super.setTranslationY(translationY);
                 invalidate();
@@ -376,7 +432,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     outline.setAlpha(0f);
                     outline.setEmpty();
                 } else {
-                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(28));
+                    int r = cover.getRadius() > 0 ? cover.getRadius() : dp(PlayerStyle.coverRadiusDp());
+                    outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), r);
                 }
             }
         });
@@ -387,7 +444,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         titleRow = new LinearLayout(context);
         titleRow.setOrientation(LinearLayout.HORIZONTAL);
         titleRow.setGravity(Gravity.CENTER_VERTICAL);
-        LinearLayout titles = new LinearLayout(context);
+        titles = new LinearLayout(context);
         titles.setOrientation(LinearLayout.VERTICAL);
         titleView = new TextView(context);
         titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 26);
@@ -449,6 +506,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             public void onAction(int state) {
                 if (state == LyricsView.STATE_OFFER) {
                     AppearanceConfig.lrclibAllowed.setConfigBool(true);
+                    AppearanceConfig.playerLyricsLrcLib.setConfigBool(true);
                 }
                 fetchLyrics();
             }
@@ -592,6 +650,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
         applyColors(colors);
         bind(playing, false);
+        applyStyle(false);
     }
 
     private boolean hitInRoot(View view, float x, float y) {
@@ -630,6 +689,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         nc.addObserver(this, NotificationCenter.audioInfoLoaded);
         nc.addObserver(this, NotificationCenter.musicIdsLoaded);
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.messagePlayingSpeedChanged);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.reloadInterface);
         SleepTimer.getInstance().addListener(sleepListener);
         updateSleepButton();
         applySystemBars(true);
@@ -1146,6 +1206,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         detached = true;
+        if (discSpinAnimator != null) {
+            discSpinAnimator.cancel();
+            discSpinAnimator = null;
+        }
         if (cover != null) {
             cover.release();
         }
@@ -1169,6 +1233,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         nc.removeObserver(this, NotificationCenter.audioInfoLoaded);
         nc.removeObserver(this, NotificationCenter.musicIdsLoaded);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.messagePlayingSpeedChanged);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.reloadInterface);
         SleepTimer.getInstance().removeListener(sleepListener);
         if (colorAnimator != null) {
             colorAnimator.cancel();
@@ -1183,6 +1248,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.reloadInterface) {
+            applyStyle(false);
+            return;
+        }
         if (id == NotificationCenter.messagePlayingDidStart) {
             SleepTimer.getInstance().onTrackFinished();
             MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
@@ -1246,11 +1315,17 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         int shapeId = PlayerArt.getOrCycleShape(mo);
         cover.setShapeId(shapeId, animated && changed);
         smallCover.setShapeId(shapeId, animated && changed);
+        if (shapeId < 0) {
+            cover.setRadius(dp(PlayerStyle.coverRadiusDp()));
+        }
         cover.setMessage(mo);
         smallCover.setMessage(mo);
         if (changed) {
             seekBar.animateResetToZero();
             Integer seed = PlayerArt.cachedSeed(mo);
+            if (AppearanceConfig.playerColorStyle() == 1) {
+                seed = fallbackSeed;
+            }
             if (seed != null) {
                 animateColors(PlayerColors.fromSeed(seed, dark), animated);
             } else if (PlayerArt.fileCover(mo) == null && PlayerArt.fullLocation(mo) == null && PlayerArt.thumbLocation(mo) == null) {
@@ -1271,6 +1346,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     private void onSeed(MessageObject mo, int seed) {
         if (mo == current) {
+            if (AppearanceConfig.playerColorStyle() == 1) {
+                return;
+            }
             animateColors(PlayerColors.fromSeed(seed, dark), true);
         }
     }
@@ -1846,6 +1924,42 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
+    private ValueAnimator discSpinAnimator;
+    private float discRotation;
+
+    private void updateDiscSpin() {
+        boolean playing = !MediaController.getInstance().isMessagePaused();
+        boolean spin = playing && PlayerStyle.coverStyle() == PlayerStyle.COVER_DISC && PlayerStyle.discSpin();
+        if (spin) {
+            if (discSpinAnimator == null) {
+                discSpinAnimator = ValueAnimator.ofFloat(discRotation, discRotation + 360f);
+                discSpinAnimator.setDuration(12000);
+                discSpinAnimator.setInterpolator(new android.view.animation.LinearInterpolator());
+                discSpinAnimator.setRepeatCount(ValueAnimator.INFINITE);
+                discSpinAnimator.addUpdateListener(anim -> {
+                    discRotation = (float) anim.getAnimatedValue() % 360f;
+                    if (cover != null && !coverAnimating) {
+                        cover.setRotation(discRotation);
+                    }
+                });
+                discSpinAnimator.start();
+            } else if (!discSpinAnimator.isStarted()) {
+                discSpinAnimator.start();
+            }
+        } else {
+            if (discSpinAnimator != null) {
+                discSpinAnimator.cancel();
+                discSpinAnimator = null;
+            }
+            if (PlayerStyle.coverStyle() != PlayerStyle.COVER_DISC) {
+                discRotation = 0f;
+                if (cover != null && !coverAnimating) {
+                    cover.setRotation(0f);
+                }
+            }
+        }
+    }
+
     private void updatePlayState(boolean animated) {
         boolean playing = !MediaController.getInstance().isMessagePaused();
         controls.setPlaying(playing, animated);
@@ -1860,6 +1974,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 cover.setScaleY(scale);
             }
         }
+        updateDiscSpin();
     }
 
     private float displayProgress() {
@@ -2186,6 +2301,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     private void openClassic() {
         dismissImmediately();
+        AppearanceConfig.md3Player.setConfigBool(false);
         if (activity != null) {
             new AudioPlayerAlert(activity, resourcesProvider).show();
         }
@@ -2265,6 +2381,47 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             o.dismiss();
             PlayerActions.share(activity, mo);
         });
+
+        // 4) Playback order swipeback submenu
+        ItemOptions orderSub = o.makeSwipeback();
+        orderSub.add(R.drawable.ic_ab_back, getString(R.string.Back), o::closeSwipeback);
+        orderSub.addGap();
+        boolean isPlayOnce = SharedConfig.repeatMode == AudioPlayerAlert.PLAY_ONCE;
+        orderSub.addChecked(isPlayOnce, R.drawable.photo_timer, getString(R.string.PlayOnce), () -> {
+            SharedConfig.setRepeatMode(isPlayOnce ? 0 : AudioPlayerAlert.PLAY_ONCE);
+            updateModes(true);
+            o.dismiss();
+        });
+        boolean isRepeatSong = SharedConfig.repeatMode == 2;
+        orderSub.addChecked(isRepeatSong, R.drawable.player_new_repeatone, getString(R.string.RepeatSong), () -> {
+            SharedConfig.setRepeatMode(isRepeatSong ? 0 : 2);
+            updateModes(true);
+            o.dismiss();
+        });
+        boolean isRepeatList = SharedConfig.repeatMode == 1;
+        orderSub.addChecked(isRepeatList, R.drawable.player_new_repeatall, getString(R.string.RepeatList), () -> {
+            SharedConfig.setRepeatMode(isRepeatList ? 0 : 1);
+            updateModes(true);
+            o.dismiss();
+        });
+        boolean isShuffle = SharedConfig.shuffleMusic;
+        orderSub.addChecked(isShuffle, R.drawable.player_new_shuffle, getString(R.string.ShuffleList), () -> {
+            MediaController.getInstance().setPlaybackOrderType(isShuffle ? 0 : 2);
+            updateModes(true);
+            o.dismiss();
+        });
+        boolean isReverse = SharedConfig.playOrderReversed;
+        orderSub.addChecked(isReverse, R.drawable.player_new_order, getString(R.string.ReverseOrder), () -> {
+            MediaController.getInstance().setPlaybackOrderType(isReverse ? 0 : 1);
+            updateModes(true);
+            o.dismiss();
+        });
+        o.add(R.drawable.player_new_order, getString(R.string.OEPlayerPlaybackOrder), () -> o.openSwipeback(orderSub));
+        if (o.getLast() != null) {
+            o.getLast().setRightIcon(R.drawable.msg_arrowright);
+        }
+
+        // MoltenGram features
         o.addIf(mo.getId() > 0, R.drawable.msg_message, getString(R.string.ShowInChat), () -> {
             o.dismiss();
             dismissImmediately();
@@ -2274,7 +2431,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             o.dismiss();
             LocalPlaylistsController.getInstance().showPlaylistsDialog(activity, rp);
         });
-        o.addGap();
         o.add(R.drawable.baseline_volume_up_24, getString(R.string.OEAppearancePlayerEqualizer), () -> {
             o.dismiss();
             try {
@@ -2290,7 +2446,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 FileLog.e(t);
             }
         });
-        o.add(R.drawable.msg_theme_solar, getString(R.string.OEPlayerCustomize), () -> {
+        o.addGap();
+        o.add(R.drawable.msg_customize, getString(R.string.OEPlayerCustomize), () -> {
             o.dismiss();
             openEditor();
         });
@@ -2655,16 +2812,129 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
-    private void applyStyle(boolean animated) {
+    public void applyStyle(boolean animated) {
         if (styleEditor != null) {
             styleEditor.refresh();
         }
         if (seekBar != null) {
             seekBar.setWave(PlayerStyle.wavy());
+            seekBar.invalidate();
         }
-        if (cover != null && cover.getShapeId() < 0) {
-            cover.setRadius(dp(PlayerStyle.coverRadiusDp()));
+        if (cover != null) {
+            int style = PlayerStyle.coverStyle();
+            int shapeId = (style == PlayerStyle.COVER_DISC) ? -1 : PlayerArt.getOrCycleShape(current);
+            cover.setShapeId(shapeId, animated);
+            if (shapeId < 0) {
+                int r = (style == PlayerStyle.COVER_DISC) ? dp(1000) : dp(PlayerStyle.coverRadiusDp());
+                cover.setRadius(r);
+            }
+            cover.setCrop(AppearanceConfig.playerCropCover());
+            updateDiscSpin();
         }
+        if (smallCover != null) {
+            int shapeId = PlayerArt.getOrCycleShape(current);
+            smallCover.setShapeId(shapeId, animated);
+            if (shapeId < 0) {
+                smallCover.setRadius(dp(16));
+            }
+            smallCover.setCrop(AppearanceConfig.playerCropCover());
+        }
+        // Colors: Monet theme accent vs Album cover seed
+        int colorStyle = AppearanceConfig.playerColorStyle();
+        Integer seed = (colorStyle == 1) ? fallbackSeed : PlayerArt.cachedSeed(current);
+        if (seed == null) {
+            seed = fallbackSeed;
+        }
+        animateColors(PlayerColors.fromSeed(seed, dark), animated);
+
+        // Background: invalidate cached gradient/blurred art
+        lastGradientSeed = -1;
+        lastBlurredKey = null;
+        if (root != null) {
+            root.invalidate();
+        }
+
+        // Title alignment & size
+        boolean center = PlayerStyle.titleCentered();
+        int gravity = center ? Gravity.CENTER_HORIZONTAL : Gravity.LEFT;
+        if (titles != null) {
+            titles.setGravity(gravity);
+        }
+        if (titleView != null) {
+            titleView.setGravity(gravity);
+            int sizeIdx = PlayerStyle.titleSize();
+            titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, sizeIdx == 0 ? 20 : sizeIdx == 2 ? 28 : 24);
+        }
+        if (artistView != null) {
+            artistView.setGravity(gravity);
+            int sizeIdx = PlayerStyle.titleSize();
+            artistView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, sizeIdx == 0 ? 14 : sizeIdx == 2 ? 18 : 16);
+        }
+
+        // Elements visibility
+        if (likeButton != null) {
+            likeButton.setVisibility(PlayerStyle.showLike() ? View.VISIBLE : View.GONE);
+        }
+        if (controls != null) {
+            int modesVis = PlayerStyle.showModes() ? View.VISIBLE : View.INVISIBLE;
+            controls.shuffle.setVisibility(modesVis);
+            controls.repeat.setVisibility(modesVis);
+            float scale = PlayerStyle.controlsScale();
+            controls.setScaleX(scale);
+            controls.setScaleY(scale);
+        }
+        if (group != null) {
+            group.setVisibility(PlayerStyle.showActions() ? View.VISIBLE : View.GONE);
+            if (PlayerStyle.actionsIsland()) {
+                GradientDrawable islandBg = new GradientDrawable();
+                islandBg.setCornerRadius(dp(26));
+                islandBg.setColor(colors.surfaceContainer);
+                group.setBackground(islandBg);
+                group.setPadding(dp(6), dp(4), dp(6), dp(4));
+            } else {
+                group.setBackground(null);
+                group.setPadding(0, 0, 0, 0);
+            }
+        }
+        if (sourceView != null) {
+            sourceView.setVisibility(PlayerStyle.showSource() ? View.VISIBLE : View.GONE);
+        }
+
+        // Lyrics View
+        if (lyricsView != null) {
+            lyricsView.notifyLyricsChanged();
+        }
+        if (translateButton != null) {
+            translateButton.setVisibility(AppearanceConfig.playerLyricsTranslate() ? View.VISIBLE : View.GONE);
+        }
+        if (lyricsMode) {
+            try {
+                if (getWindow() != null && isShowing()) {
+                    if (AppearanceConfig.playerLyricsHideStatusBar()) {
+                        getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    } else {
+                        getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_FULLSCREEN);
+                    }
+                }
+            } catch (Throwable ignored) {}
+        }
+
+        // Keep screen on
+        if (activity != null && activity.getWindow() != null) {
+            if (AppearanceConfig.playerKeepScreenOn()) {
+                activity.getWindow().addFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            } else {
+                activity.getWindow().clearFlags(android.view.WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON);
+            }
+        }
+
+        // Request re-layout
+        if (layout != null) {
+            layout.requestLayout();
+        }
+
+        // Mini player & global interface sync
+        PlayerMiniView.styleChanged();
     }
 
     private class PlayerLayout extends ViewGroup {
@@ -2694,10 +2964,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             group.measure(exactW, MeasureSpec.makeMeasureSpec(dp(52), MeasureSpec.EXACTLY));
             titleRow.measure(exactW, MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
             bubble.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED), MeasureSpec.makeMeasureSpec(0, MeasureSpec.UNSPECIFIED));
-            int fixed = dp(56) + dp(6) + dp(40) + timeRow.getMeasuredHeight() + dp(12) + controls.getMeasuredHeight() + dp(52) + dp(28) + dp(16);
+            int fixed = dp(56) + dp(6) + dp(40) + timeRow.getMeasuredHeight() + dp(12) + controls.getMeasuredHeight() + (PlayerStyle.showActions() ? dp(52) + dp(28) : dp(16)) + dp(16);
             int available = height - top - bottom - fixed;
             int titleH = titleRow.getMeasuredHeight();
-            coverSize = Math.max(dp(96), Math.min(contentW, available - dp(16) - dp(26) - titleH));
+            int maxCover = Math.max(dp(96), Math.min(contentW, available - dp(16) - dp(26) - titleH));
+            coverSize = Math.round(maxCover * PlayerStyle.coverSize());
             stageHeight = dp(16) + coverSize + dp(26) + titleH;
             int coverSpec = MeasureSpec.makeMeasureSpec(coverSize, MeasureSpec.EXACTLY);
             cover.measure(coverSpec, coverSpec);
@@ -2717,21 +2988,49 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             header.layout(side - dp(12), y, side - dp(12) + header.getMeasuredWidth(), y + dp(56));
             y += dp(56);
             int stageTop = y;
+
+            boolean titleAbove = PlayerStyle.titleAbove();
             int coverLeft = (width - coverSize) / 2;
-            cover.layout(coverLeft, y + dp(16), coverLeft + coverSize, y + dp(16) + coverSize);
-            int titleTop = y + dp(16) + coverSize + dp(26);
-            titleRow.layout(side, titleTop, side + contentW, titleTop + titleRow.getMeasuredHeight());
+            int titleH = titleRow.getMeasuredHeight();
+
+            if (titleAbove) {
+                int titleTop = stageTop + dp(12);
+                titleRow.layout(side, titleTop, side + contentW, titleTop + titleH);
+                int coverTop = titleTop + titleH + dp(16);
+                cover.layout(coverLeft, coverTop, coverLeft + coverSize, coverTop + coverSize);
+            } else {
+                int coverTop = stageTop + dp(16);
+                cover.layout(coverLeft, coverTop, coverLeft + coverSize, coverTop + coverSize);
+                int titleTop = coverTop + coverSize + dp(26);
+                titleRow.layout(side, titleTop, side + contentW, titleTop + titleH);
+            }
             lyricsPanel.layout(side, stageTop, side + contentW, stageTop + stageHeight);
+
             y = stageTop + stageHeight + dp(6);
-            seekBar.layout(side, y, side + contentW, y + dp(40));
-            int bubbleTop = y - dp(36);
-            bubble.layout(side, bubbleTop, side + bubble.getMeasuredWidth(), bubbleTop + bubble.getMeasuredHeight());
-            y += dp(40);
-            timeRow.layout(side, y, side + contentW, y + timeRow.getMeasuredHeight());
-            y += timeRow.getMeasuredHeight() + dp(12);
-            controls.layout(side, y, side + contentW, y + controls.getMeasuredHeight());
-            int groupTop = height - bottom - dp(28) - dp(52);
-            group.layout(side, groupTop, side + contentW, groupTop + dp(52));
+
+            int[] order = PlayerStyle.order();
+            for (int i = 0; i < order.length; i++) {
+                int block = order[i];
+                if (block == PlayerStyle.BLOCK_PROGRESS) {
+                    seekBar.layout(side, y, side + contentW, y + dp(40));
+                    int bubbleTop = y - dp(36);
+                    bubble.layout(side, bubbleTop, side + bubble.getMeasuredWidth(), bubbleTop + bubble.getMeasuredHeight());
+                    y += dp(40);
+                    timeRow.layout(side, y, side + contentW, y + timeRow.getMeasuredHeight());
+                    y += timeRow.getMeasuredHeight() + dp(12);
+                } else if (block == PlayerStyle.BLOCK_CONTROLS) {
+                    controls.layout(side, y, side + contentW, y + controls.getMeasuredHeight());
+                    y += controls.getMeasuredHeight() + dp(12);
+                } else if (block == PlayerStyle.BLOCK_ACTIONS) {
+                    if (PlayerStyle.showActions() && group.getVisibility() != View.GONE) {
+                        int groupH = dp(52);
+                        int groupTop = (i == order.length - 1) ? Math.max(y, height - bottom - dp(28) - groupH) : y;
+                        group.layout(side, groupTop, side + contentW, groupTop + groupH);
+                        y = groupTop + groupH + dp(12);
+                    }
+                }
+            }
+
             if (seeking) {
                 layoutBubble();
             }

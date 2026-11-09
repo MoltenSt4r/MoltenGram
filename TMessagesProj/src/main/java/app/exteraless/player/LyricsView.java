@@ -261,6 +261,12 @@ public class LyricsView extends FrameLayout {
     }
 
     public void notifyLyricsChanged() {
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View child = list.getChildAt(i);
+            if (child instanceof LineView) {
+                ((LineView) child).resetLayout();
+            }
+        }
         adapter.notifyDataSetChanged();
     }
 
@@ -464,6 +470,17 @@ public class LyricsView extends FrameLayout {
         private int role = ROLE_FUTURE;
         private long lastFrame;
         private float blur = -1f;
+        private int lastTextSize = -1;
+        private int lastAlignment = -1;
+
+        void resetLayout() {
+            layout = null;
+            translationLayout = null;
+            layoutWidth = -1;
+            lastTextSize = -1;
+            lastAlignment = -1;
+            requestLayout();
+        }
 
         LineView(Context context) {
             super(context);
@@ -487,13 +504,18 @@ public class LyricsView extends FrameLayout {
             if (TextUtils.isEmpty(displayTranslation)) {
                 displayTranslation = null;
             }
-            if (!TextUtils.equals(text, displayText) || !TextUtils.equals(translationText, displayTranslation) || plain != isPlain || isBacking != backing) {
+            int currentTextSize = app.exteraless.appearance.AppearanceConfig.playerLyricsTextSize();
+            int currentAlignment = app.exteraless.appearance.AppearanceConfig.playerLyricsAlignment();
+            if (!TextUtils.equals(text, displayText) || !TextUtils.equals(translationText, displayTranslation) || plain != isPlain || isBacking != backing || lastTextSize != currentTextSize || lastAlignment != currentAlignment) {
+                lastTextSize = currentTextSize;
+                lastAlignment = currentAlignment;
                 text = displayText;
                 translationText = displayTranslation;
                 plain = isPlain;
                 isBacking = backing;
                 layout = null;
                 translationLayout = null;
+                layoutWidth = -1;
                 requestLayout();
             }
         }

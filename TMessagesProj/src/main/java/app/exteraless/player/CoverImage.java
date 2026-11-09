@@ -69,11 +69,21 @@ public class CoverImage extends FrameLayout {
         addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
+        imageView.setAspectFit(!AppearanceConfig.playerCropCover());
         imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
             if (set) {
                 onBitmap(imageReceiver.getBitmap());
             }
         });
+    }
+
+    public void setCrop(boolean crop) {
+        imageView.setAspectFit(!crop);
+        invalidate();
+    }
+
+    public int getRadius() {
+        return radius;
     }
 
     public void setShapeId(int shapeId) {
@@ -165,6 +175,7 @@ public class CoverImage extends FrameLayout {
             setRoundRadius(0);
             getImageReceiver().setRoundRadius(0);
         }
+        invalidateOutline();
         invalidate();
     }
 
@@ -256,7 +267,19 @@ public class CoverImage extends FrameLayout {
                 imageView.setImage(messageObject.messageOwner.message, null, null);
                 hasCover = true;
             } else {
-                imageView.setImageDrawable(null);
+                String cachedUrl = PlayerArtwork.cached(messageObject);
+                if (!TextUtils.isEmpty(cachedUrl)) {
+                    imageView.setImage(cachedUrl, null, null);
+                    hasCover = true;
+                } else {
+                    imageView.setImageDrawable(null);
+                    final MessageObject targetMo = messageObject;
+                    PlayerArtwork.fetch(messageObject, url -> {
+                        if (message == targetMo && !TextUtils.isEmpty(url)) {
+                            imageView.setImage(url, null, null);
+                        }
+                    });
+                }
             }
         }
     }

@@ -48,6 +48,14 @@ public class RingPlayButton extends View {
     private ValueAnimator resetAnimator;
     private float resetProgress;
     private boolean animatingReset;
+    private boolean showRing = true;
+
+    public void setShowRing(boolean show) {
+        if (showRing != show) {
+            showRing = show;
+            invalidate();
+        }
+    }
 
     public void animateResetToZero() {
         if (drawnProgress <= 0.02f) {
@@ -189,44 +197,46 @@ public class RingPlayButton extends View {
         drawnProgress = progress;
         float sweep = 360f * progress;
 
-        float strokeWidth = trackPaint.getStrokeWidth();
-        float visibleGap = dpf2(4.5f);
-        float gapDistance = visibleGap + strokeWidth;
-        float gapDeg = (float) Math.toDegrees(gapDistance / radius);
+        if (showRing) {
+            float strokeWidth = trackPaint.getStrokeWidth();
+            float visibleGap = dpf2(4.5f);
+            float gapDistance = visibleGap + strokeWidth;
+            float gapDeg = (float) Math.toDegrees(gapDistance / radius);
 
-        trackRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
-        if (sweep <= 1.5f) {
-            canvas.drawCircle(cx, cy, radius, trackPaint);
-        } else {
-            float inactiveStart = sweep + gapDeg;
-            float inactiveEnd = 360f - gapDeg;
-            float inactiveSweep = inactiveEnd - inactiveStart;
-            if (inactiveSweep > 2f) {
-                canvas.drawArc(trackRect, -90f + inactiveStart, inactiveSweep, false, trackPaint);
-            }
-        }
-        if (sweep > 1.5f) {
-            path.rewind();
-            boolean first = true;
-            for (float deg = 0; ; deg += 3f) {
-                boolean last = deg >= sweep;
-                float d = last ? sweep : deg;
-                double th = Math.toRadians(d - 90);
-                float r = radius + amplitude * (float) Math.sin(waves * Math.toRadians(d) - phase);
-                float x = cx + r * (float) Math.cos(th);
-                float y = cy + r * (float) Math.sin(th);
-                if (first) {
-                    path.moveTo(x, y);
-                    first = false;
-                } else {
-                    path.lineTo(x, y);
-                }
-                if (last) {
-                    break;
+            trackRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
+            if (sweep <= 1.5f) {
+                canvas.drawCircle(cx, cy, radius, trackPaint);
+            } else {
+                float inactiveStart = sweep + gapDeg;
+                float inactiveEnd = 360f - gapDeg;
+                float inactiveSweep = inactiveEnd - inactiveStart;
+                if (inactiveSweep > 2f) {
+                    canvas.drawArc(trackRect, -90f + inactiveStart, inactiveSweep, false, trackPaint);
                 }
             }
-            ringPaint.setColor(ringColor);
-            canvas.drawPath(path, ringPaint);
+            if (sweep > 1.5f) {
+                path.rewind();
+                boolean first = true;
+                for (float deg = 0; ; deg += 3f) {
+                    boolean last = deg >= sweep;
+                    float d = last ? sweep : deg;
+                    double th = Math.toRadians(d - 90);
+                    float r = radius + amplitude * (float) Math.sin(waves * Math.toRadians(d) - phase);
+                    float x = cx + r * (float) Math.cos(th);
+                    float y = cy + r * (float) Math.sin(th);
+                    if (first) {
+                        path.moveTo(x, y);
+                        first = false;
+                    } else {
+                        path.lineTo(x, y);
+                    }
+                    if (last) {
+                        break;
+                    }
+                }
+                ringPaint.setColor(ringColor);
+                canvas.drawPath(path, ringPaint);
+            }
         }
         float t = Math.max(0f, Math.min(1f, alt.value));
         drawIcon(canvas, playIcon, 1f - t, 1f - 0.4f * alt.value);
