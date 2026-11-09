@@ -684,6 +684,108 @@ object AppearanceConfig {
     val lrclibAllowed =
         addConfig("OEPlayerLrclibAllowed", ConfigItem.configTypeBool, false)
 
+    // ---- Стиль и визуальный редактор плеера (exteraless MD3) ----
+
+    @JvmField
+    val playerCoverStyle = addConfig("OEPlayerCoverStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerCoverSize = addConfig("OEPlayerCoverSize", ConfigItem.configTypeInt, 100)
+
+    @JvmField
+    val playerCoverRadius = addConfig("OEPlayerCoverRadius", ConfigItem.configTypeInt, 28)
+
+    @JvmField
+    val playerDiscSpin = addConfig("OEPlayerDiscSpin", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerCoverSwipe = addConfig("OEPlayerCoverSwipe", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerTitleAlign = addConfig("OEPlayerTitleAlign", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerTitleSize = addConfig("OEPlayerTitleSize", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerTitleAbove = addConfig("OEPlayerTitleAbove", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerOrder = addConfig("OEPlayerOrder", ConfigItem.configTypeString, "")
+
+    @JvmField
+    val playerShowActions = addConfig("OEPlayerShowActions", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowModes = addConfig("OEPlayerShowModes", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowLike = addConfig("OEPlayerShowLike", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowSource = addConfig("OEPlayerShowSource", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerWavy = addConfig("OEPlayerWavy", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerControlsSize = addConfig("OEPlayerControlsSize", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerActionsStyle = addConfig("OEPlayerActionsStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerColors = addConfig("OEPlayerColors", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerBackground = addConfig("OEPlayerBackground", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerCoverExtend = addConfig("OEPlayerCoverExtend", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniCover = addConfig("OEPlayerMiniCover", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniShape = addConfig("OEPlayerMiniShape", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniProgress = addConfig("OEPlayerMiniProgress", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniColors = addConfig("OEPlayerMiniColors", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerMiniCompact = addConfig("OEPlayerMiniCompact", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerMiniArtist = addConfig("OEPlayerMiniArtist", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniPrevious = addConfig("OEPlayerMiniPrevious", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerMiniNext = addConfig("OEPlayerMiniNext", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniClose = addConfig("OEPlayerMiniClose", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniTop = addConfig("OEPlayerMiniTop", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerStyleItems(): List<ConfigItem> {
+        ensureLoaded()
+        return listOf(
+            playerCoverStyle, playerCoverSize, playerCoverRadius, playerDiscSpin, playerCoverSwipe,
+            playerTitleAlign, playerTitleSize, playerTitleAbove, playerOrder, playerShowActions,
+            playerShowModes, playerShowLike, playerShowSource, playerWavy, playerControlsSize, playerActionsStyle,
+            playerColors, playerBackground, playerCoverExtend, playerMiniCover, playerMiniShape, playerMiniProgress,
+            playerMiniColors, playerMiniCompact, playerMiniArtist, playerMiniPrevious, playerMiniNext,
+            playerMiniClose
+        )
+    }
+
     // ---- Расширенные настройки плеера (MetroList / Material 3) ----
 
     /** Стиль фона плеера: 0 — Следовать теме / Цвет обложки, 1 — Размытая обложка, 2 — Градиент. */

@@ -170,13 +170,20 @@ def test_voice_changer_search_and_send_icon_branding():
     assert '"OEChats:voiceChanger", "OEVoiceChanger"' in content
     assert '"OEVoiceChanger:masterEnable", "OEVoiceChangerEnable"' in content
 
-    # Check root settings has Voice Changer
+    # Check tools settings has Voice Changer and root settings links to Tools
+    tools_settings = os.path.join(
+        REPO_ROOT, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraToolsActivity.java"
+    )
+    with open(tools_settings, "r", encoding="utf-8") as f:
+        t_content = f.read()
+    assert "voiceChangerRow" in t_content
+    assert "OpenExteraVoiceChangerActivity" in t_content
+
     root_settings = os.path.join(
         REPO_ROOT, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraSettingsActivity.java"
     )
     with open(root_settings, "r", encoding="utf-8") as f:
         r_content = f.read()
-    assert "voiceChangerRow" in r_content
-    assert "OpenExteraVoiceChangerActivity" in r_content
+    assert "OpenExteraToolsActivity" in r_content
 
 

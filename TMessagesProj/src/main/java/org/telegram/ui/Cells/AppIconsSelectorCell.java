@@ -376,6 +376,9 @@ public class AppIconsSelectorCell extends RecyclerListView implements Notificati
         @Override
         public void draw(Canvas canvas) {
             canvas.save();
+            if (path.isEmpty() && getWidth() > 0 && getHeight() > 0) {
+                updatePath();
+            }
             canvas.clipPath(path);
             int availW = getWidth() - getPaddingLeft() - getPaddingRight();
             int availH = getHeight() - getPaddingTop() - getPaddingBottom();

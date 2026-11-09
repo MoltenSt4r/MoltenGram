@@ -1305,6 +1305,8 @@ public class MoltenGramOtaManager {
             Context context = activity.getApplicationContext();
             Intent launchIntent = context.getPackageManager().getLaunchIntentForPackage(context.getPackageName());
             if (launchIntent != null) {
+                launchIntent.setAction(Intent.ACTION_MAIN);
+                launchIntent.setData(null);
                 launchIntent.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK | Intent.FLAG_ACTIVITY_CLEAR_TASK);
                 launchIntent.putExtra("from_app_update", true);
                 context.startActivity(launchIntent);

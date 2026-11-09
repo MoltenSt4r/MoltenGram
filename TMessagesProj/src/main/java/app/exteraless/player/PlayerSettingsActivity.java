@@ -58,6 +58,9 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
+    private int styleEditorRow;
+    private int styleEditorShadowRow;
+
     private int appearanceHeaderRow;
     private int bgStyleRow;
     private int seekbarStyleRow;
@@ -101,6 +104,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     protected void updateRows() {
         super.updateRows();
 
+        // Style Editor
+        styleEditorRow = addRow("styleEditor");
+        styleEditorShadowRow = addRow();
+
         // Appearance
         appearanceHeaderRow = addRow("appearanceHeader");
         bgStyleRow = addRow("bgStyle");
@@ -141,7 +148,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == bgStyleRow) {
+        if (position == styleEditorRow) {
+            PlayerSheet.openStyleEditor(this);
+        } else if (position == bgStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
                     getString(R.string.OEAppearancePlayerBackgroundStyleBlur),
@@ -338,11 +347,11 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
                     || position == crossfadeRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+            } else if (position == styleEditorRow || position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow) {
                 return TYPE_SETTINGS;
-            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
+            } else if (position == styleEditorShadowRow || position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
@@ -380,7 +389,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } else if (type == TYPE_SETTINGS) {
                 TextSettingsCell cell = (TextSettingsCell) holder.itemView;
                 cell.setIcon(0);
-                if (position == bgStyleRow) {
+                if (position == styleEditorRow) {
+                    cell.setTextAndValue(getString(R.string.OEPlayerCustomize), getString(R.string.OEPlayerStyleInfo), false);
+                } else if (position == bgStyleRow) {
                     int bgStyle = AppearanceConfig.playerBackgroundStyle();
                     String bgStyleName = bgStyle == 1 ? getString(R.string.OEAppearancePlayerBackgroundStyleBlur) : bgStyle == 2 ? getString(R.string.OEAppearancePlayerBackgroundStyleGradient) : getString(R.string.OEAppearancePlayerBackgroundStyleTheme);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerBackgroundStyle), bgStyleName, true);

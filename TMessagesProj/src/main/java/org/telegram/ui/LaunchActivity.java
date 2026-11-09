@@ -2234,13 +2234,20 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             } else if (path.startsWith("addemoji/")) {
                                                 emoji = path.replace("addemoji/", "");
                                             } else if (SettingsHelper.isDeepLink(path)) {
-                                                SettingsHelper.processDeepLink(this, data, fragment -> {
-                                                    AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
-                                                    if (AndroidUtilities.isTablet()) {
-                                                        actionBarLayout.showLastFragment();
-                                                        rightActionBarLayout.showLastFragment();
-                                                    }
-                                                }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                                if (!restore) {
+                                                    SettingsHelper.processDeepLink(this, data, fragment -> {
+                                                        AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
+                                                        if (AndroidUtilities.isTablet()) {
+                                                            actionBarLayout.showLastFragment();
+                                                            rightActionBarLayout.showLastFragment();
+                                                        }
+                                                    }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                                }
+                                                intent.setAction(null);
+                                                intent.setData(null);
+                                                try {
+                                                    setIntent(new Intent(Intent.ACTION_MAIN));
+                                                } catch (Throwable ignored) {}
                                                 pushOpened = true;
                                                 return pushOpened;
                                             } else if (path.startsWith("msg/") || path.startsWith("share/")) {
@@ -2766,13 +2773,20 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                                 || url.startsWith("tg://settings/exterams") || url.startsWith("tg:settings/exterams")) {
                                             String prefix = url.startsWith("tg://settings/") ? url.substring(14) : (url.startsWith("tg:settings/") ? url.substring(12) : url.substring(url.indexOf('/') + 1));
                                             data = Uri.parse("https://t.me/" + prefix);
-                                            SettingsHelper.processDeepLink(this, data, fragment -> {
-                                                AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
-                                                if (AndroidUtilities.isTablet()) {
-                                                    actionBarLayout.showLastFragment();
-                                                    rightActionBarLayout.showLastFragment();
-                                                }
-                                            }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                            if (!restore) {
+                                                SettingsHelper.processDeepLink(this, data, fragment -> {
+                                                    AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
+                                                    if (AndroidUtilities.isTablet()) {
+                                                        actionBarLayout.showLastFragment();
+                                                        rightActionBarLayout.showLastFragment();
+                                                    }
+                                                }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                            }
+                                            intent.setAction(null);
+                                            intent.setData(null);
+                                            try {
+                                                setIntent(new Intent(Intent.ACTION_MAIN));
+                                            } catch (Throwable ignored) {}
                                             pushOpened = true;
                                             return pushOpened;
                                         } else if (url.contains("themes") || url.contains("theme")) {
@@ -2859,13 +2873,20 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
                                             prefix = "moltengram" + prefix.substring(8);
                                         }
                                         data = Uri.parse("https://t.me/" + prefix);
-                                        SettingsHelper.processDeepLink(this, data, fragment -> {
-                                            AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
-                                            if (AndroidUtilities.isTablet()) {
-                                                actionBarLayout.showLastFragment();
-                                                rightActionBarLayout.showLastFragment();
-                                            }
-                                        }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                        if (!restore) {
+                                            SettingsHelper.processDeepLink(this, data, fragment -> {
+                                                AndroidUtilities.runOnUIThread(() -> presentFragment(fragment, false, false));
+                                                if (AndroidUtilities.isTablet()) {
+                                                    actionBarLayout.showLastFragment();
+                                                    rightActionBarLayout.showLastFragment();
+                                                }
+                                            }, () -> showBulletin(factory -> factory.createErrorBulletin(LocaleController.getString("UnknownNekoSettingsOption", R.string.UnknownNekoSettingsOption))));
+                                        }
+                                        intent.setAction(null);
+                                        intent.setData(null);
+                                        try {
+                                            setIntent(new Intent(Intent.ACTION_MAIN));
+                                        } catch (Throwable ignored) {}
                                         pushOpened = true;
                                         return pushOpened;
                                     } else if ((url.startsWith("tg:search") || url.startsWith("tg://search"))) {

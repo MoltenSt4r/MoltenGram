@@ -100,7 +100,7 @@ public class TextDetailSettingsCell extends FrameLayout {
         }
     }
 
-    private AppIconsSelectorCell.AdaptiveIconImageView rightLauncherIconView;
+    private ImageView rightLauncherIconView;
 
     private void updatePaddings(boolean hasLeftIcon, boolean hasRightIcon) {
         int left = hasLeftIcon ? AndroidUtilities.dp(50) : 0;
@@ -153,19 +153,11 @@ public class TextDetailSettingsCell extends FrameLayout {
             return;
         }
         if (rightLauncherIconView == null) {
-            rightLauncherIconView = new AppIconsSelectorCell.AdaptiveIconImageView(getContext());
+            rightLauncherIconView = new ImageView(getContext());
             addView(rightLauncherIconView, LayoutHelper.createFrame(36, 36, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 21, 0, 21, 0));
         }
         rightLauncherIconView.setVisibility(VISIBLE);
-        rightLauncherIconView.setImageResource(icon.background);
-        if (icon.foreground != 0) {
-            rightLauncherIconView.setForeground(icon.foreground);
-        } else {
-            rightLauncherIconView.setForeground(0);
-        }
-        rightLauncherIconView.setOuterPadding(AndroidUtilities.dp(3));
-        rightLauncherIconView.setBackgroundOuterPadding(AndroidUtilities.dp(20));
-        rightLauncherIconView.setAdaptiveIconMode(icon.group != org.telegram.ui.LauncherIconController.IconGroup.TELEGRAM);
+        rightLauncherIconView.setImageDrawable(org.telegram.ui.LauncherIconController.createIconPreviewDrawable(getContext(), icon, 36));
         updatePaddings(imageView.getVisibility() == VISIBLE, true);
     }
 

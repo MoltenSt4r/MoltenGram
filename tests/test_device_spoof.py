@@ -112,10 +112,17 @@ class TestUIIntegration:
         assert "DeviceSpoofActivity" in content
 
     def test_open_extera_settings_has_spoof_option(self):
-        with open(OPEN_EXTERA_SETTINGS, "r", encoding="utf-8") as f:
+        tools_settings = os.path.join(
+            REPO_ROOT, "TMessagesProj", "src", "main", "java", "app", "exteraless", "settings", "OpenExteraToolsActivity.java"
+        )
+        with open(tools_settings, "r", encoding="utf-8") as f:
             content = f.read()
         assert "deviceSpoofRow" in content
         assert "DeviceSpoofActivity" in content
+
+        with open(OPEN_EXTERA_SETTINGS, "r", encoding="utf-8") as f:
+            root_content = f.read()
+        assert "OpenExteraToolsActivity" in root_content
 
 
 class TestHardwareAwarenessPreserved:

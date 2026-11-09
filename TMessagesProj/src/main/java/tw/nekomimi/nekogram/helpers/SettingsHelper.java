@@ -37,6 +37,7 @@ import app.exteraless.settings.OpenExteraGeneralActivity;
 import app.exteraless.settings.OpenExteraGlyphActivity;
 import app.exteraless.settings.OpenExteraOtherActivity;
 import app.exteraless.settings.OpenExteraSettingsActivity;
+import app.exteraless.settings.OpenExteraToolsActivity;
 import app.exteraless.settings.OpenExteraUpdatesActivity;
 import app.exteraless.shizuku.ShizukuSettingsActivity;
 import app.exteraless.tor.TorSettingsActivity;
@@ -394,6 +395,12 @@ public class SettingsHelper {
                 case "other":
                     fragment = neko_fragment = new OpenExteraOtherActivity();
                     break;
+                case "tools":
+                case "exteraless_tools":
+                case "moltengram_tools":
+                case "exterams_tools":
+                    fragment = neko_fragment = new OpenExteraToolsActivity();
+                    break;
                 case "ayumoments":
                     fragment = neko_fragment = new OpenExteraAyuMomentsActivity();
                     break;
@@ -498,6 +505,12 @@ public class SettingsHelper {
                     break;
                 case "exteraless_other":
                     fragment = neko_fragment = new OpenExteraOtherActivity();
+                    break;
+                case "tools":
+                case "exteraless_tools":
+                case "moltengram_tools":
+                case "exterams_tools":
+                    fragment = neko_fragment = new OpenExteraToolsActivity();
                     break;
                 case "exteraless_ayumoments":
                     fragment = neko_fragment = new OpenExteraAyuMomentsActivity();
@@ -788,6 +801,7 @@ public class SettingsHelper {
         exteralessFragments.add(new OpenExteraGeneralActivity());
         exteralessFragments.add(new OpenExteraAppearanceActivity());
         exteralessFragments.add(new OpenExteraChatsActivity());
+        exteralessFragments.add(new OpenExteraToolsActivity());
         exteralessFragments.add(new app.exteraless.settings.OpenExteraVoiceChangerActivity());
         exteralessFragments.add(new OpenExteraOtherActivity());
         exteralessFragments.add(new OpenExteraAyuMomentsActivity());

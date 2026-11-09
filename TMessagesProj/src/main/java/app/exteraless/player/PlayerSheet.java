@@ -123,6 +123,19 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final MorphButton sleepButton;
     private final MorphButton queueButton;
 
+    private FrameLayout editorPanel;
+    private PlayerStyleEditor styleEditor;
+    private final GradientDrawable editorBackground = new GradientDrawable();
+    private final GradientDrawable editorDoneBackground = new GradientDrawable();
+    private TextView editorTitle;
+    private TextView editorReset;
+    private TextView editorDone;
+    private boolean editing;
+    private float editorFraction;
+    private float editScale = 1f;
+    private float editTop;
+    private ValueAnimator editorAnimator;
+
     private final SleepTimer.Listener sleepListener = new SleepTimer.Listener() {
         @Override
         public void onTimerTick(long remainingMs) {
@@ -625,6 +638,19 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         miniSource = source;
     }
 
+    public static void openStyleEditor(org.telegram.ui.ActionBar.BaseFragment fragment) {
+        if (fragment == null || fragment.getParentActivity() == null) {
+            return;
+        }
+        if (instance != null && !instance.isDismissed()) {
+            instance.openEditor();
+            return;
+        }
+        PlayerSheet sheet = new PlayerSheet(fragment.getParentActivity(), fragment.getResourceProvider());
+        fragment.showDialog(sheet);
+        sheet.root.post(sheet::openEditor);
+    }
+
     public void dismissImmediately() {
         skipMorph = true;
         try {
@@ -635,6 +661,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     @Override
     public void dismiss() {
         if (closing) {
+            return;
+        }
+        if (editing && !skipMorph && !isDismissed()) {
+            closeEditor();
             return;
         }
         if (!skipMorph && miniSource != null && !isDismissed()) {
@@ -2259,6 +2289,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 FileLog.e(t);
             }
         });
+        o.add(R.drawable.msg_customize_solar, getString(R.string.OEPlayerCustomize), () -> {
+            o.dismiss();
+            openEditor();
+        });
         o.add(R.drawable.msg_settings, getString(R.string.OEAppearancePlayerSettings), () -> {
             o.dismiss();
             dismissImmediately();
@@ -2416,6 +2450,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         playlistButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
         sleepButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         queueButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
+        bindEditorColors(c);
         applySystemBars(false);
     }
 
@@ -2441,6 +2476,193 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (Build.VERSION.SDK_INT >= 26) {
             AndroidUtilities.setLightStatusBar(container, lightStatus);
             AndroidUtilities.setLightNavigationBar(container, lightNav);
+        }
+    }
+
+    public void openEditor() {
+        if (editing || closing) {
+            return;
+        }
+        if (lyricsMode) {
+            setLyricsMode(false, false);
+        }
+        if (editorPanel == null) {
+            buildEditor();
+        } else {
+            styleEditor.refresh();
+        }
+        editing = true;
+        editorPanel.setVisibility(View.VISIBLE);
+        root.post(() -> {
+            measureEditor();
+            animateEditor(1f);
+        });
+    }
+
+    public void closeEditor() {
+        if (!editing) {
+            return;
+        }
+        editing = false;
+        animateEditor(0f);
+    }
+
+    private void animateEditor(float target) {
+        if (editorAnimator != null) {
+            editorAnimator.cancel();
+        }
+        editorAnimator = ValueAnimator.ofFloat(editorFraction, target);
+        editorAnimator.addUpdateListener(a -> setEditorFraction((float) a.getAnimatedValue()));
+        editorAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                editorAnimator = null;
+                setEditorFraction(target);
+                if (target == 0f && editorPanel != null) {
+                    editorPanel.setVisibility(View.GONE);
+                }
+            }
+        });
+        editorAnimator.setDuration(420);
+        editorAnimator.setInterpolator(EMPHASIZED);
+        editorAnimator.start();
+    }
+
+    private void measureEditor() {
+        if (editorPanel == null) {
+            return;
+        }
+        int width = root.getWidth();
+        int height = root.getHeight();
+        if (width == 0 || height == 0) {
+            return;
+        }
+        int top = getStatusBarHeight();
+        int panelHeight = Math.max(dp(320), Math.min(height - dp(240), Math.round(height * 0.5f)));
+        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) editorPanel.getLayoutParams();
+        if (lp.height != panelHeight) {
+            lp.height = panelHeight;
+            editorPanel.setLayoutParams(lp);
+        }
+        float previewHeight = height - panelHeight - top - dp(20);
+        editScale = Math.max(0.2f, Math.min(previewHeight / height, (width - dp(32)) / (float) width));
+        editTop = top + dp(8);
+    }
+
+    private void setEditorFraction(float f) {
+        editorFraction = f;
+        int width = root.getWidth();
+        float s = 1f + (editScale - 1f) * f;
+        if (morphProgress < 0f) {
+            layout.setPivotX(0);
+            layout.setPivotY(0);
+            layout.setScaleX(s);
+            layout.setScaleY(s);
+            layout.setTranslationX((width - width * s) / 2f);
+            layout.setTranslationY(editTop * f);
+        }
+        if (editorPanel != null) {
+            int h = editorPanel.getHeight() > 0 ? editorPanel.getHeight() : editorPanel.getLayoutParams().height;
+            editorPanel.setTranslationY(h * (1f - f));
+        }
+        root.invalidate();
+        layout.invalidate();
+    }
+
+    private void padEditorPanel() {
+        if (editorPanel != null) {
+            editorPanel.setPadding(super.getLeftInset(), 0, super.getRightInset(), 0);
+        }
+    }
+
+    private void buildEditor() {
+        Context context = getContext();
+        editorPanel = new FrameLayout(context);
+        editorPanel.setClickable(true);
+        float r = dp(28);
+        editorBackground.setCornerRadii(new float[]{r, r, r, r, 0, 0, 0, 0});
+        editorPanel.setBackground(editorBackground);
+
+        FrameLayout bar = new FrameLayout(context);
+        editorTitle = new TextView(context);
+        editorTitle.setText(getString(R.string.OEPlayerStyleTitle));
+        editorTitle.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
+        editorTitle.setTypeface(AndroidUtilities.bold());
+        editorTitle.setSingleLine(true);
+        editorTitle.setEllipsize(TextUtils.TruncateAt.END);
+        bar.addView(editorTitle, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 24, 0, 200, 0));
+
+        editorDone = new TextView(context);
+        editorDone.setText(getString(R.string.Done));
+        editorDone.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        editorDone.setTypeface(AndroidUtilities.bold());
+        editorDone.setGravity(Gravity.CENTER);
+        editorDone.setPadding(dp(18), 0, dp(18), 0);
+        editorDoneBackground.setCornerRadius(dp(20));
+        editorDone.setBackground(editorDoneBackground);
+        editorDone.setOnClickListener(v -> closeEditor());
+        bar.addView(editorDone, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 16, 0));
+
+        editorReset = new TextView(context);
+        editorReset.setText(getString(R.string.OEPlayerStyleReset));
+        editorReset.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        editorReset.setTypeface(AndroidUtilities.bold());
+        editorReset.setGravity(Gravity.CENTER);
+        editorReset.setPadding(dp(14), 0, dp(14), 0);
+        editorReset.setOnClickListener(v -> {
+            PlayerStyle.reset();
+            styleEditor.refresh();
+            applyStyle(true);
+        });
+        bar.addView(editorReset, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 40, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 112, 0));
+        editorPanel.addView(bar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 64, Gravity.TOP, 0, 4, 0, 0));
+
+        ScrollView scroll = new ScrollView(context) {
+            @Override
+            public boolean dispatchTouchEvent(MotionEvent ev) {
+                if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+                    container.requestDisallowInterceptTouchEvent(true);
+                }
+                return super.dispatchTouchEvent(ev);
+            }
+        };
+        scroll.setVerticalScrollBarEnabled(false);
+        scroll.setOverScrollMode(View.OVER_SCROLL_NEVER);
+        styleEditor = new PlayerStyleEditor(context, colors, () -> applyStyle(true));
+        scroll.addView(styleEditor, new ScrollView.LayoutParams(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        scroll.setClipToPadding(false);
+        scroll.setPadding(0, 0, 0, getBottomInset());
+        editorPanel.addView(scroll, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP, 0, 68, 0, 0));
+
+        root.addView(editorPanel, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 320, Gravity.BOTTOM));
+        padEditorPanel();
+        editorPanel.setTranslationY(dp(2000));
+        bindEditorColors(colors);
+    }
+
+    private void bindEditorColors(PlayerColors c) {
+        if (editorPanel == null || c == null) {
+            return;
+        }
+        editorBackground.setColor(c.surfaceContainer);
+        if (editorTitle != null) editorTitle.setTextColor(c.onSurface);
+        editorDoneBackground.setColor(c.primary);
+        if (editorDone != null) editorDone.setTextColor(c.onPrimary);
+        if (editorReset != null) {
+            editorReset.setTextColor(c.primary);
+            editorReset.setBackground(Theme.createSelectorDrawable(c.ripple(), Theme.RIPPLE_MASK_ROUNDRECT_6DP));
+        }
+    }
+
+    private void applyStyle(boolean animated) {
+        if (styleEditor != null) {
+            styleEditor.refresh();
+        }
+        if (seekBar != null) {
+            seekBar.setWave(PlayerStyle.wavy());
+        }
+        if (cover != null && cover.getShapeId() < 0) {
+            cover.setRadius(dp(PlayerStyle.coverRadiusDp()));
         }
     }
 

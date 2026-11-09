@@ -66,10 +66,9 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
     private static final int ETG_IMPORT_REQUEST_CODE = 22;
 
-    private int nagramHeaderRow;
-    private int nagramSettingsRow;
-    private int ayuMomentsRow;
-    private int nagramDividerRow;
+    private int updatesHeaderRow;
+    private int updatesRow;
+    private int updatesDividerRow;
 
     private int experimentalHeaderRow;
     private int localPremiumRow;
@@ -106,6 +105,9 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     public void onResume() {
         super.onResume();
         checkSensitiveContent();
+        if (updatesRow != -1 && listAdapter != null && listView != null && !listView.isComputingLayout()) {
+            listAdapter.notifyItemChanged(updatesRow);
+        }
     }
 
     @Override
@@ -118,10 +120,9 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     protected void updateRows() {
         super.updateRows();
 
-        nagramHeaderRow = addRow("nagramHeader");
-        nagramSettingsRow = -1;
-        ayuMomentsRow = addRow("ayuMoments");
-        nagramDividerRow = addRow();
+        updatesHeaderRow = addRow("updatesHeader");
+        updatesRow = addRow("updates");
+        updatesDividerRow = addRow();
 
         experimentalHeaderRow = addRow("experimentalHeader");
         localPremiumRow = addRow("localPremium");
@@ -180,20 +181,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == nagramSettingsRow) {
-            boolean enabled = GeneralConfig.showNagramSettings.toggleConfigBool();
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(enabled);
-            }
-            // Строка появляется и исчезает в общем списке настроек, а он уже
-            // построен и на свои уведомления её не пересобирает — поэтому
-            // пересобираем вьюхи стека целиком, как это делают остальные
-            // настройки, меняющие чужие экраны.
-            if (getParentLayout() != null) {
-                getParentLayout().rebuildAllFragmentViews(false, false);
-            }
-        } else if (position == ayuMomentsRow) {
-            presentFragment(new OpenExteraAyuMomentsActivity());
+        if (position == updatesRow) {
+            presentFragment(new OpenExteraUpdatesActivity());
         } else if (position == localPremiumRow) {
             toggleCheck(view, NekoConfig.localPremium);
             NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.mainUserInfoChanged);
@@ -480,8 +469,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
             switch (holder.getItemViewType()) {
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
-                    if (position == nagramHeaderRow) {
-                        cell.setText(getString(R.string.OEGeneralNagramHeader));
+                    if (position == updatesHeaderRow) {
+                        cell.setText(getString(R.string.OpenExteraUpdates));
                     } else if (position == experimentalHeaderRow) {
                         cell.setText(getString(R.string.Experimental));
                     }
@@ -520,9 +509,12 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_TEXT: {
                     TextCell cell = (TextCell) holder.itemView;
-                    if (position == ayuMomentsRow) {
+                    if (position == updatesRow) {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
-                        cell.setTextAndIcon(getString(R.string.OEGeneralAyuMoments), R.drawable.ayu_ghost, false);
+                        boolean hasUpd = app.exteraless.ota.MoltenGramOtaManager.getInstance().isUpdateAvailable();
+                        cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdates),
+                                hasUpd ? getString(R.string.OpenExteraUpdatesAvailable) : ("v" + org.telegram.messenger.BuildConfig.BUILD_VERSION_STRING),
+                                R.drawable.sync_outline_28, false);
                     } else if (position == exportEtgRow) {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndIcon(getString(R.string.OEGeneralExportEtgSettings), R.drawable.msg_shareout, true);
@@ -559,18 +551,18 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == nagramHeaderRow
+            if (position == updatesHeaderRow
                     || position == experimentalHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == nagramDividerRow || position == experimentalDividerRow
+            } else if (position == updatesDividerRow || position == experimentalDividerRow
                     || position == etgDividerRow) {
                 return TYPE_SHADOW;
             } else if (position == glyphDividerRow
                     || position == bottomDividerRow) {
                 return TYPE_INFO_PRIVACY;
-            } else if (position == exportEtgRow || position == importEtgRow
+            } else if (position == updatesRow || position == exportEtgRow || position == importEtgRow
                     || position == resetSettingsRow || position == deleteAccountRow
-                    || position == glyphRow || position == ayuMomentsRow) {
+                    || position == glyphRow) {
                 return TYPE_TEXT;
             }
             return TYPE_CHECK;
