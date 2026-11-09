@@ -45,9 +45,9 @@ def rawTimestamp = System.getenv('BUILD_TIMESTAMP') ?: getGitCommitTimestamp()
 def buildTimestamp = String.valueOf(Long.parseLong(rawTimestamp.toString().split('\\.')[0]))
 def verName = "${APP_VERSION_NAME}${shortCommit ? "-${shortCommit}" : ''}"
 def runNum = System.getenv('GITHUB_RUN_NUMBER')
-// Base offset of 4000 ensures all new Canary/Release builds have versionCode > 3257,
-// allowing seamless in-place updates over existing 12.10.6-beta15 (versionCode 3257) installs.
-def baseCode = 4000
+// Base offset of 20000 ensures all new Canary/Release builds have versionCode > 7112 (official APP_VERSION_CODE)
+// and all previous canary builds (3000-4147), preventing INSTALL_FAILED_VERSION_DOWNGRADE errors.
+def baseCode = 20000
 def verCode = (runNum && runNum.isInteger()) ? (baseCode + runNum.toInteger()) : baseCode
 
 def officialVer = APP_VERSION_NAME
