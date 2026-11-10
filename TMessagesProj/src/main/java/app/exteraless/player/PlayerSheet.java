@@ -39,6 +39,8 @@ import android.widget.LinearLayout;
 import android.widget.SeekBar;
 import android.widget.TextView;
 
+import java.io.File;
+
 import androidx.annotation.NonNull;
 import androidx.core.graphics.ColorUtils;
 
