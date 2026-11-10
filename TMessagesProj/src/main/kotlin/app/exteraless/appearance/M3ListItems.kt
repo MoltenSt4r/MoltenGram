@@ -32,7 +32,7 @@ object M3ListItems {
 
     @JvmStatic
     fun tonalForeground(top: Int, bottom: Int, dark: Boolean): Int {
-        return tone(top, bottom, 0.28f)
+        return tone(top, bottom, if (dark) 0.34f else 0.28f)
     }
 
     private fun tone(top: Int, bottom: Int, lightness: Float): Int {

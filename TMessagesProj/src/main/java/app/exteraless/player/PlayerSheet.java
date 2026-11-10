@@ -1986,8 +1986,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (PlayerArt.isPlaying(mo)) {
             info = MediaController.getInstance().getAudioInfo();
         }
-        if (info == null && mo.messageOwner != null) {
-            File localFile = null;
+        File localFile = null;
+        if (mo.messageOwner != null) {
             if (!TextUtils.isEmpty(mo.messageOwner.attachPath)) {
                 localFile = new File(mo.messageOwner.attachPath);
             }
@@ -1999,9 +1999,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     localFile = FileLoader.getInstance(mo.currentAccount).getPathToAttach(mo.getDocument(), true);
                 }
             }
-            if (localFile != null && localFile.exists()) {
-                info = AudioInfo.getAudioInfo(localFile);
-            }
+        }
+        if (info == null && localFile != null && localFile.exists()) {
+            info = AudioInfo.getAudioInfo(localFile);
         }
         if (info != null) {
             if (!TextUtils.isEmpty(info.getAlbum())) {
@@ -2018,7 +2018,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 }
             }
         }
-        return new OnlineLyrics.Query(artist, title, album, (int) Math.round(mo.getDuration()));
+        OnlineLyrics.Query q = new OnlineLyrics.Query(artist, title, album, (int) Math.round(mo.getDuration()));
+        if (localFile != null && localFile.exists()) {
+            q.filePath = localFile.getAbsolutePath();
+        }
+        return q;
     }
 
     private static boolean isGenericTrackTitle(String t) {

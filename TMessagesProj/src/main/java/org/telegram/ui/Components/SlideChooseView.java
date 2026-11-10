@@ -349,7 +349,7 @@ public class SlideChooseView extends View {
         }
         final float trackHeight = AndroidUtilities.dp(thicknessDp);
         final float thumbWidth = AndroidUtilities.dp(Math.max(3, Math.round(thicknessDp * 0.25f)));
-        final float thumbHeight = AndroidUtilities.dp(Math.max(20, Math.round(thicknessDp * 2.5f + 4)));
+        final float thumbHeight = Math.min(getMeasuredHeight(), AndroidUtilities.dp(Math.max(20, thicknessDp + 28)));
         final float gap = AndroidUtilities.dp(Math.max(2, Math.round(thicknessDp * 0.25f)));
         final float radius = trackHeight / 2f;
         final float thumbRadius = thumbWidth / 2f;

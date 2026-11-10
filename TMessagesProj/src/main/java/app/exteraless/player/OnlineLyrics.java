@@ -57,6 +57,8 @@ public final class OnlineLyrics {
         public final String title;
         public final String album;
         public final int duration;
+        /** Локальный файл трека для распознавания по отпечатку (SongRecognizer). */
+        public String filePath;
 
         public Query(String artist, String title, String album, int duration) {
             String a = clean(artist);
@@ -419,6 +421,19 @@ public final class OnlineLyrics {
 
     // SongRec audio recognition (powered by Shazam discovery engine)
     private static Found requestSongRec(Query q) {
+        if (!TextUtils.isEmpty(q.filePath) && new java.io.File(q.filePath).exists()) {
+            SongRecognizer.Result r = SongRecognizer.recognize(q.filePath);
+            if (r != null) {
+                Query rq = new Query(r.artist, r.title, null, q.duration);
+                Found f = null;
+                try { f = requestLrclib(rq); } catch (Exception ignore) { }
+                if (f == null) try { f = requestBetterLyrics(rq); } catch (Exception ignore) { }
+                if (f == null) try { f = requestKuGou(rq); } catch (Exception ignore) { }
+                if (f != null) {
+                    return f;
+                }
+            }
+        }
         return requestShazam(q);
     }
 

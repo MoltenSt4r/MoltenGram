@@ -905,7 +905,7 @@ object AppearanceConfig {
     fun sliderThickness(): Int {
         ensureLoaded()
         val v = sliderThickness.Int()
-        return if (v in 2..16) v else 8
+        return v.coerceIn(2, 24)
     }
 
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */

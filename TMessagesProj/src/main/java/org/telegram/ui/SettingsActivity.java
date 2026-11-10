@@ -1399,15 +1399,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         public static int getM3ItemForegroundColor(int itemId, int iconColorTop, int iconColorBottom, boolean dark, Theme.ResourcesProvider resourcesProvider) {
-            if (dark) {
-                int bg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
-                if (bg != 0) {
-                    return bg;
-                }
-                return 0xFF01201A;
-            } else {
-                return app.exteraless.appearance.M3ListItems.tonalForeground(iconColorTop, iconColorBottom, false);
-            }
+            // Цветной глиф того же оттенка, что и фон (как в exteraless), без чёрной заливки.
+            return app.exteraless.appearance.M3ListItems.tonalForeground(iconColorTop, iconColorBottom, dark);
         }
 
         public static void applyIconColors(
