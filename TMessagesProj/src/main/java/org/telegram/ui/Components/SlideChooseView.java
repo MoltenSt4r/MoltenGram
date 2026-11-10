@@ -219,7 +219,7 @@ public class SlideChooseView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(74), MeasureSpec.EXACTLY));
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(82), MeasureSpec.EXACTLY));
         circleSize = AndroidUtilities.dp(6);
         gapSize = AndroidUtilities.dp(2);
         sideSide = AndroidUtilities.dp(22);
@@ -413,8 +413,10 @@ public class SlideChooseView extends View {
         }
 
         // Draw discrete step dots
+        final float innerLeft = left + radius;
+        final float innerRight = right - radius;
         for (int a = 0; a < optionsStr.length; a++) {
-            final float tickCx = left + (right - left) * a / (float) (optionsStr.length - 1);
+            final float tickCx = innerLeft + (innerRight - innerLeft) * a / (float) (optionsStr.length - 1);
             if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
                 continue;
             }

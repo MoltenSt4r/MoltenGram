@@ -138,7 +138,7 @@ public class AltSeekbar extends FrameLayout {
             }
         });
         addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44,
-                Gravity.TOP, 6, 68, 6, 0));
+                Gravity.TOP, 16, 68, 16, 12));
 
         // Стартуем с min, а не с нуля: у exteraGram поле currentValue инициализировано нулём
         // и при min > 0 ползунок на миг уезжает за левый край. Реальное значение
@@ -253,6 +253,6 @@ public class AltSeekbar extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(
                 MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(dp(112), MeasureSpec.EXACTLY));
+                MeasureSpec.makeMeasureSpec(dp(126), MeasureSpec.EXACTLY));
     }
 }

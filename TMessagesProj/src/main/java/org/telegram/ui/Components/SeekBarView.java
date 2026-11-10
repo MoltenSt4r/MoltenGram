@@ -743,8 +743,10 @@ public class SeekBarView extends FrameLayout {
         }
 
         if (steps > 1) {
+            final float innerLeft = left + radius;
+            final float innerRight = right - radius;
             for (int a = 0; a < steps; a++) {
-                float tickCx = left + (right - left) * a / (float) (steps - 1);
+                float tickCx = innerLeft + (innerRight - innerLeft) * a / (float) (steps - 1);
                 if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
                     continue;
                 }

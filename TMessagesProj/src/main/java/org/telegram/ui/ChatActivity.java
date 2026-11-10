@@ -47553,7 +47553,7 @@ public class ChatActivity extends BaseFragment implements
             animationSettings.afterStartDescriptionsAddedRunnable = () -> {
                 setupChatTheme(chatTheme, newWallpaper, animated, true);
                 initServiceMessageColors(backgroundDrawable);
-                //updateBackground();
+                updateBackground();
                 if (contentView != null) {
                     contentView.invalidateBackground();
                 }
@@ -47727,6 +47727,9 @@ public class ChatActivity extends BaseFragment implements
                     initServiceMessageColors(backgroundDrawable);
                     updateServiceMessageColor(1f);
                 }
+            }
+            if (contentView != null) {
+                contentView.setBackgroundImage(getWallpaperDrawable(), isWallpaperMotion());
             }
         }
 
@@ -48131,13 +48134,12 @@ public class ChatActivity extends BaseFragment implements
         if (contentView == null || parentThemeDelegate != null) {
             return;
         }
-        if (themeDelegate.backgroundDrawable != null && contentView.getBackgroundImage() != null) {
-            return;
+        Drawable drawable = themeDelegate != null ? themeDelegate.getWallpaperDrawable() : null;
+        if (drawable == null) {
+            drawable = Theme.getCachedWallpaper();
         }
-        if (contentView.getBackgroundImage() == null || AndroidUtilities.isTablet()) {
-            final Drawable drawable = Theme.getCachedWallpaper();
-            contentView.setBackgroundImage(drawable, Theme.isWallpaperMotion());
-        }
+        boolean motion = themeDelegate != null ? themeDelegate.isWallpaperMotion() : Theme.isWallpaperMotion();
+        contentView.setBackgroundImage(drawable, motion);
     }
 
     private void updateBotHelpCellClick(BotHelpCell cell) {

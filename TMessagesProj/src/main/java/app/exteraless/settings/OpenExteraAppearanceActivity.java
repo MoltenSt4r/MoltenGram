@@ -257,14 +257,16 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         appearanceHeaderRow = addRow("appearanceHeader");
         useSystemFontsRow = addRow("useSystemFonts");
         ndotFontHeadersRow = addRow("ndotFontHeaders");
+        // Переключатели и слайдеры (вынесены из подменю MD3)
+        md3SwitchRow = addRow("md3Switch");
+        md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
+        md3SliderRow = addRow("md3Slider");
+        md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
+
         // Material Design 3 — сворачиваемая группа, как у exteraGram
         md3GroupRow = addRow("md3Styles");
         if (md3Expanded) {
             md3LoadingRow = addRow("md3Loading");
-            md3SliderRow = addRow("md3Slider");
-            md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
-            md3SwitchRow = addRow("md3Switch");
-            md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
             md3ListItemsRow = addRow("md3ListItems");
@@ -273,7 +275,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
-            md3LoadingRow = md3SliderRow = md3SliderThicknessRow = md3SwitchRow = md3SwitchExpressiveColorsRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
+            md3LoadingRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");

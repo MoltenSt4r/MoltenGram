@@ -130,7 +130,7 @@ public class SlideIntChooseView extends FrameLayout {
                 return buildAccessibilityDescription();
             }
         });
-        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38, Gravity.TOP | Gravity.FILL_HORIZONTAL, 6, 30, 6, 0));
+        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 42, Gravity.TOP | Gravity.FILL_HORIZONTAL, 16, 30, 16, 12));
     }
 
     private int value;
@@ -295,7 +295,7 @@ public class SlideIntChooseView extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(
             MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-            MeasureSpec.makeMeasureSpec(dp(75), MeasureSpec.EXACTLY)
+            MeasureSpec.makeMeasureSpec(dp(84), MeasureSpec.EXACTLY)
         );
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {

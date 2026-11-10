@@ -100,7 +100,7 @@ public class AvatarCornersSeekBar extends FrameLayout {
             public void onSeekBarPressed(boolean pressed) {
             }
         });
-        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38 + 6, Gravity.TOP, 6, 68, 6, 0));
+        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.TOP, 16, 68, 16, 12));
 
         FrameLayout valuesView = new FrameLayout(context);
 
@@ -199,7 +199,7 @@ public class AvatarCornersSeekBar extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(
                 MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(dp(112), MeasureSpec.EXACTLY)
+                MeasureSpec.makeMeasureSpec(dp(126), MeasureSpec.EXACTLY)
         );
     }
 }
