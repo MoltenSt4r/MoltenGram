@@ -343,13 +343,17 @@ public class SlideChooseView extends View {
      * оставлены на прежних местах.
      */
     private void drawMaterialSlider(Canvas canvas, float thumbCx, int cy) {
-        final float trackHeight = AndroidUtilities.dp(16);
-        final float thumbWidth = AndroidUtilities.dp(4);
-        final float thumbHeight = AndroidUtilities.dp(44);
-        final float gap = AndroidUtilities.dp(4);
+        int thicknessDp = app.exteraless.appearance.AppearanceConfig.sliderThickness();
+        if (thicknessDp <= 0) {
+            thicknessDp = 8;
+        }
+        final float trackHeight = AndroidUtilities.dp(thicknessDp);
+        final float thumbWidth = AndroidUtilities.dp(Math.max(3, Math.round(thicknessDp * 0.25f)));
+        final float thumbHeight = AndroidUtilities.dp(Math.max(20, Math.round(thicknessDp * 2.5f + 4)));
+        final float gap = AndroidUtilities.dp(Math.max(2, Math.round(thicknessDp * 0.25f)));
         final float radius = trackHeight / 2f;
         final float thumbRadius = thumbWidth / 2f;
-        final float tickRadius = AndroidUtilities.dp(2.5f);
+        final float tickRadius = AndroidUtilities.dp(Math.max(1.5f, Math.min(2.5f, thicknessDp * 0.16f)));
 
         final float left = sideSide + circleSize / 2f;
         final float right = getMeasuredWidth() - sideSide - circleSize / 2f;

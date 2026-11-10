@@ -1269,10 +1269,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                     avatarCornersPreviewCell.invalidate();
                                 }
                             },
-                            2, 16,
+                            2, 24,
                             "Толщина слайдеров",
                             "2 dp",
-                            "16 dp");
+                            "24 dp");
                     sliderThickness.setValueSuffix("dp");
                     sliderThickness.setValue(AppearanceConfig.sliderThickness());
                     sliderThickness.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));

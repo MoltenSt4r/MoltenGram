@@ -664,13 +664,14 @@ public class SeekBarView extends FrameLayout {
     }
 
     private void drawMd3Slider(Canvas canvas, int thumbX) {
-        final float trackHeight = AndroidUtilities.dp(16);
-        final float thumbWidth = AndroidUtilities.dp(4);
-        final float thumbHeight = AndroidUtilities.dp(44);
-        final float gap = AndroidUtilities.dp(4);
+        final int thicknessDp = getTrackHeightDp();
+        final float trackHeight = AndroidUtilities.dp(thicknessDp);
+        final float thumbWidth = AndroidUtilities.dp(Math.max(3, Math.round(thicknessDp * 0.25f)));
+        final float thumbHeight = AndroidUtilities.dp(Math.max(20, Math.round(thicknessDp * 2.5f + 4)));
+        final float gap = AndroidUtilities.dp(Math.max(2, Math.round(thicknessDp * 0.25f)));
         final float radius = trackHeight / 2f;
         final float thumbRadius = thumbWidth / 2f;
-        final float tickRadius = AndroidUtilities.dp(2.5f);
+        final float tickRadius = AndroidUtilities.dp(Math.max(1.5f, Math.min(2.5f, thicknessDp * 0.16f)));
 
         final float left = selectorWidth / 2f;
         final float right = getMeasuredWidth() - selectorWidth / 2f;
