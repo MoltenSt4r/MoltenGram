@@ -766,7 +766,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             builder.setItems(options, (dialog, which) -> {
                 int newStyle = which == 0 ? Switch.SWITCH_STYLE_EXPRESSIVE : (which == 1 ? Switch.SWITCH_STYLE_MD3 : Switch.SWITCH_STYLE_DEFAULT);
                 NaConfig.INSTANCE.getSwitchStyle().setConfigInt(newStyle);
-                rebuildAllAndSelf(view, isMd3(newStyle));
+                rebuildAllAndSelf(view, isMd3Switch(newStyle));
             });
             showDialog(builder.create());
             return;
@@ -1625,7 +1625,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == iosGroupRow || hideSettingsGroupRow == position) {
                 return TYPE_EXPANDABLE_SWITCH;
             } else if (position == md3LoadingRow || position == md3SliderRow
-                    || position == md3SwitchRow || position == md3ChatHeaderRow
+                    || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow
                     || position == md3PlayerRow || position == md3MiniPlayerRow
                     || (position == md3ChatInputRow && md3ChatInputRow != -1)
@@ -1640,7 +1640,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == customBubbleBgRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
-                    || position == chipFoldersRow || position == md3AvatarShapesRow) {
+                    || position == chipFoldersRow || position == md3AvatarShapesRow
+                    || position == md3SwitchRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
@@ -1754,11 +1755,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         return styleValue == STYLE_MD3;
     }
 
+    private static boolean isMd3Switch(int styleValue) {
+        return styleValue == STYLE_MD3 || styleValue == Switch.SWITCH_STYLE_EXPRESSIVE;
+    }
+
     private int md3SelectedCount() {
         int n = 0;
         if (AppearanceConfig.newLoadingStyle.Bool()) n++;
         if (isMd3(NaConfig.INSTANCE.getSliderStyle().Int())) n++;
-        if (isMd3(NaConfig.INSTANCE.getSwitchStyle().Int())) n++;
+        if (isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int())) n++;
         if (AppearanceConfig.newChatHeaderStyle.Bool()) n++;
         if (AppearanceConfig.newNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.m3ListItems.Bool()) n++;

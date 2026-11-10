@@ -517,6 +517,11 @@ def test_chat_quote_screenshot_appearance():
     assert "key_chat_outReactionButtonBackground" in content
     assert "key_chat_inReactionButtonBackground" in content
 
+    # Channel/chat sender lookup
+    assert "senderChat" in content
+    assert "isFirstFromSender" in content
+    assert "isLastFromSender" in content
+
 
 def test_switch_m3_appearance_and_text_cleanup():
     switch_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "Components", "Switch.java")
@@ -542,6 +547,10 @@ def test_switch_m3_appearance_and_text_cleanup():
     assert '"Material 3 (Exteraless)"' not in a_content
     assert '"Material 3"' in a_content
     assert '"Expressive (M3)"' in a_content
+    # Switch row mapped to TYPE_SETTINGS, not TYPE_ROUND_CHECK (no blank radio row)
+    assert "position == md3SwitchRow" in a_content
+    assert "isMd3Switch" in a_content
+    assert "|| position == md3SwitchRow) {\n                return TYPE_SETTINGS;" in a_content
 
     # Strings cleanup: OpenExteraInfo
     values_ru = os.path.join(TMESSAGES_RES, "values-ru-rRU", "strings_oe.xml")

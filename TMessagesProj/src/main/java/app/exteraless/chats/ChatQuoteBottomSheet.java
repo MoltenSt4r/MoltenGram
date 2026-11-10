@@ -254,9 +254,23 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         int messageCount = messages.size();
         for (int i = 0; i < messageCount; i++) {
             MessageObject mo = messages.get(i);
-            View bubble = createMessageBubble(mo, width);
+            boolean isFirstFromSender = true;
+            boolean isLastFromSender = true;
+            if (i > 0) {
+                MessageObject prevMo = messages.get(i - 1);
+                if (prevMo.isOutOwner() == mo.isOutOwner() && prevMo.getFromChatId() == mo.getFromChatId()) {
+                    isFirstFromSender = false;
+                }
+            }
+            if (i < messageCount - 1) {
+                MessageObject nextMo = messages.get(i + 1);
+                if (nextMo.isOutOwner() == mo.isOutOwner() && nextMo.getFromChatId() == mo.getFromChatId()) {
+                    isLastFromSender = false;
+                }
+            }
+            View bubble = createMessageBubble(mo, width, isFirstFromSender, isLastFromSender);
             LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
-            if (i > 0) lp.topMargin = dp(8);
+            if (i > 0) lp.topMargin = dp(isFirstFromSender ? 8 : 3);
             cardLayout.addView(bubble, lp);
         }
 
@@ -286,6 +300,10 @@ public class ChatQuoteBottomSheet extends BottomSheet {
     }
 
     private View createMessageBubble(MessageObject mo, int cardWidth) {
+        return createMessageBubble(mo, cardWidth, true, true);
+    }
+
+    private View createMessageBubble(MessageObject mo, int cardWidth, boolean isFirstFromSender, boolean isLastFromSender) {
         final boolean isOut = mo.isOutOwner();
         final int maxBubbleWidth = (int) (cardWidth * 0.78f);
 
@@ -294,29 +312,30 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         row.setGravity(isOut ? (Gravity.RIGHT | Gravity.CENTER_VERTICAL) : (Gravity.LEFT | Gravity.CENTER_VERTICAL));
 
         long fromId = mo.getFromChatId();
-        TLRPC.User senderUser = null;
-        if (fromId > 0) {
-            senderUser = MessagesController.getInstance(currentAccount).getUser(fromId);
-        }
+        TLRPC.User senderUser = (fromId > 0) ? MessagesController.getInstance(currentAccount).getUser(fromId) : null;
+        TLRPC.Chat senderChat = (fromId < 0) ? MessagesController.getInstance(currentAccount).getChat(-fromId) : null;
 
         if (!isOut && showSenders) {
-            BackupImageView avatarView = new BackupImageView(getContext());
-            avatarView.setRoundRadius(dp(18));
-            AvatarDrawable avatarDrawable = new AvatarDrawable();
-            if (senderUser != null) {
-                avatarDrawable.setInfo(senderUser);
-                avatarView.setForUserOrChat(senderUser, avatarDrawable);
-            } else {
-                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
-                if (chat != null) {
-                    avatarDrawable.setInfo(chat);
-                    avatarView.setForUserOrChat(chat, avatarDrawable);
+            if (isLastFromSender) {
+                BackupImageView avatarView = new BackupImageView(getContext());
+                avatarView.setRoundRadius(dp(18));
+                AvatarDrawable avatarDrawable = new AvatarDrawable();
+                if (senderUser != null) {
+                    avatarDrawable.setInfo(senderUser);
+                    avatarView.setForUserOrChat(senderUser, avatarDrawable);
+                } else if (senderChat != null) {
+                    avatarDrawable.setInfo(senderChat);
+                    avatarView.setForUserOrChat(senderChat, avatarDrawable);
                 } else {
                     avatarDrawable.setInfo(fromId, "U", null);
                     avatarView.setImageDrawable(avatarDrawable);
                 }
+                row.addView(avatarView, LayoutHelper.createLinear(36, 36, Gravity.BOTTOM, 0, 0, 6, 0));
+            } else {
+                View space = new View(getContext());
+                space.setVisibility(View.INVISIBLE);
+                row.addView(space, LayoutHelper.createLinear(36, 36, Gravity.BOTTOM, 0, 0, 6, 0));
             }
-            row.addView(avatarView, LayoutHelper.createLinear(36, 36, Gravity.BOTTOM, 0, 0, 6, 0));
         }
 
         LinearLayout bubbleWithReactions = new LinearLayout(getContext());
@@ -352,9 +371,16 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         bubbleBg.setColor(bubbleColor);
         bubbleCard.setBackground(bubbleBg);
 
-        if (!isOut && showSenders) {
+        if (!isOut && showSenders && isFirstFromSender) {
             TextView nameView = new TextView(getContext());
-            String name = (senderUser != null) ? UserObject.getUserName(senderUser) : "User";
+            String name;
+            if (senderUser != null) {
+                name = UserObject.getUserName(senderUser);
+            } else if (senderChat != null) {
+                name = senderChat.title;
+            } else {
+                name = "User";
+            }
             nameView.setText(name);
             nameView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             nameView.setTypeface(AndroidUtilities.bold());
@@ -362,6 +388,13 @@ public class ChatQuoteBottomSheet extends BottomSheet {
             if (senderUser != null && senderUser.color != null) {
                 try {
                     int colorId = Math.abs(UserObject.getColorId(senderUser)) % Theme.keys_avatar_nameInMessage.length;
+                    nameColor = Theme.getColor(Theme.keys_avatar_nameInMessage[colorId], resourcesProvider);
+                } catch (Exception e) {
+                    nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText, resourcesProvider);
+                }
+            } else if (senderChat != null) {
+                try {
+                    int colorId = (int) (Math.abs(fromId) % Theme.keys_avatar_nameInMessage.length);
                     nameColor = Theme.getColor(Theme.keys_avatar_nameInMessage[colorId], resourcesProvider);
                 } catch (Exception e) {
                     nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText, resourcesProvider);
@@ -605,7 +638,7 @@ public class ChatQuoteBottomSheet extends BottomSheet {
             bubbleWithReactions.addView(reactionsRow, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, isOut ? Gravity.RIGHT : Gravity.LEFT));
         }
 
-        row.addView(bubbleWithReactions, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, isOut ? Gravity.RIGHT : Gravity.LEFT));
+        row.addView(bubbleWithReactions, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM, 0, 0, 0, 0));
         return row;
     }
 
