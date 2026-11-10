@@ -191,8 +191,12 @@ public class NekoGeneralSettingsActivity extends BaseNekoXSettingsActivity {
     }, null));
     private final AbstractConfigCell switchStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("SwitchStyle", NaConfig.INSTANCE.getSwitchStyle(), new String[]{
             getString(R.string.Default),
-            getString(R.string.StyleModern),
-            getString(R.string.StyleMaterialDesign3)
+            "Material 3",
+            "Expressive (M3)"
+    }, new int[]{
+            org.telegram.ui.Components.Switch.SWITCH_STYLE_DEFAULT,
+            org.telegram.ui.Components.Switch.SWITCH_STYLE_MD3,
+            org.telegram.ui.Components.Switch.SWITCH_STYLE_EXPRESSIVE
     }, null));
     private final AbstractConfigCell sliderStyleRow = cellGroup.appendCell(new ConfigCellSelectBox("SliderStyle", NaConfig.INSTANCE.getSliderStyle(), new String[]{
             getString(R.string.Default),

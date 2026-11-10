@@ -240,6 +240,6 @@
     <string name="OEPlayerSeekbarThicknessThick">Толстая</string>
     <string name="OEPlayerMiniWavy">Волнистая линия</string>
     <string name="OEPlayerMiniWavyDesc">Анимировать прогресс волной снизу мини-плеера</string>
-    <string name="OEAppearancePlayerLyricsAudioRecognition">Распознавание трека (Shazam)</string>
+    <string name="OEAppearancePlayerLyricsAudioRecognition">Распознавание трека (SongRec)</string>
     <string name="OEAppearancePlayerLyricsAudioRecognitionDesc">Разбивать трек на части для распознавания и поиска текста</string>
 </resources>

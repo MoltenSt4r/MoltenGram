@@ -760,7 +760,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             builder.setTitle(getString(R.string.OEAppearanceSwitchStyle));
             CharSequence[] options = {
                     "Expressive (M3)",
-                    "Material 3 (Exteraless)",
+                    "Material 3",
                     getString(R.string.Default)
             };
             builder.setItems(options, (dialog, which) -> {
@@ -1483,7 +1483,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                 AppearanceConfig.chipFoldersEnabled.Bool() ? getString(R.string.NotificationsOn) : getString(R.string.NotificationsOff), true);
                     } else if (position == md3SwitchRow) {
                         int cur = NaConfig.INSTANCE.getSwitchStyle().Int();
-                        String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3 (Exteraless)" : getString(R.string.Default));
+                        String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3" : getString(R.string.Default));
                         cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
                     } else if (position == titleTextRow) {
                         CharSequence[] v = titleTextOptions();

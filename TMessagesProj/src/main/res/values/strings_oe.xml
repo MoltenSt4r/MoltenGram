@@ -2,7 +2,7 @@
 <!-- Строки фич, перенесённых из exteraGram. -->
 <resources>
     <string name="OpenExtera" translatable="false">MoltenGram</string>
-    <string name="OpenExteraInfo">Features ported from exteraGram</string>
+    <string name="OpenExteraInfo">Customize client to your liking</string>
 
 
     <string name="OpenExteraChats">Chats</string>

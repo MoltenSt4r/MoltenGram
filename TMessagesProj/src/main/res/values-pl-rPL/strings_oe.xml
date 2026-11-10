@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="OpenExteraInfo">Funkcje przeniesione z exteraGram</string>
+    <string name="OpenExteraInfo">Dostosuj klienta do swoich upodobań</string>
     <string name="OpenExteraChats">Czaty</string>
     <string name="AddCommaAfterMention">Dodaj przecinek po wzmiance</string>
     <string name="OpenExteraCategories">Kategorie</string>

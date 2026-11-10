@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <string name="OpenExteraInfo">Funciones portadas desde exteraGram</string>
+    <string name="OpenExteraInfo">Personaliza el cliente a tu gusto</string>
     <string name="OpenExteraChats">Chats</string>
     <string name="AddCommaAfterMention">Añadir coma tras la mención</string>
     <string name="OpenExteraCategories">Categorías</string>

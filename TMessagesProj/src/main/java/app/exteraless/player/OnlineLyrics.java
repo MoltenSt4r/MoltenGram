@@ -467,7 +467,7 @@ public final class OnlineLyrics {
                                 for (int j = 0; j < text.length(); j++) {
                                     plain.append(text.getString(j)).append("\n");
                                 }
-                                Lyrics directLyrics = Lyrics.parse(plain.toString().trim(), Lyrics.SOURCE_ONLINE, "Shazam");
+                                Lyrics directLyrics = Lyrics.parse(plain.toString().trim(), Lyrics.SOURCE_ONLINE, "SongRec");
                                 if (directLyrics != null) {
                                     return new Found(directLyrics);
                                 }

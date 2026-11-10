@@ -240,6 +240,6 @@
     <string name="OEPlayerSeekbarThicknessThick">Thick</string>
     <string name="OEPlayerMiniWavy">Wavy line</string>
     <string name="OEPlayerMiniWavyDesc">Animate progress as a wave at the bottom of the mini player</string>
-    <string name="OEAppearancePlayerLyricsAudioRecognition">Audio recognition (Shazam)</string>
+    <string name="OEAppearancePlayerLyricsAudioRecognition">Audio recognition (SongRec)</string>
     <string name="OEAppearancePlayerLyricsAudioRecognitionDesc">Split audio into segments to recognize track and find lyrics</string>
 </resources>

@@ -484,6 +484,93 @@ def test_online_lyrics_match_and_parallel_search():
     assert "public void layout(int l, int t, int r, int b)" not in c_content
 
 
+def test_chat_quote_screenshot_appearance():
+    sheet_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "chats", "ChatQuoteBottomSheet.java")
+    with open(sheet_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Outgoing vs Incoming alignment & colors
+    assert "mo.isOutOwner()" in content
+    assert "Theme.key_chat_outBubble" in content
+    assert "Theme.key_chat_inBubble" in content
+    assert "Theme.key_chat_messageTextOut" in content
+    assert "Theme.key_chat_messageTextIn" in content
+    assert "Theme.key_chat_outTimeText" in content
+
+    # Checkmark status for outgoing messages
+    assert "mo.isUnread()" in content
+    assert "deproko_baseline_check_single_24" in content
+    assert "deproko_baseline_check_double_24" in content
+
+    # Bubble sizing hugging content with maxBubbleWidth constraint
+    assert "maxBubbleWidth" in content
+    assert "cardWidth * 0.78f" in content
+
+    # Reply quote header
+    assert "mo.replyMessageObject" in content
+    assert "Theme.key_chat_outReplyLine" in content
+    assert "Theme.key_chat_inReplyLine" in content
+    assert "Theme.key_chat_outReplyNameText" in content
+
+    # Reactions pill chips under bubble
+    assert "reactions.results" in content
+    assert "key_chat_outReactionButtonBackground" in content
+    assert "key_chat_inReactionButtonBackground" in content
+
+
+def test_switch_m3_appearance_and_text_cleanup():
+    switch_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "Components", "Switch.java")
+    with open(switch_path, "r", encoding="utf-8") as f:
+        s_content = f.read()
+
+    # Both MD3 and Expressive use drawExteraSwitch
+    assert "switchStyle == SWITCH_STYLE_EXPRESSIVE || switchStyle == SWITCH_STYLE_MD3" in s_content
+    # Wide pill track (52x32dp)
+    assert "baseTrackW = dpf2(52f)" in s_content
+    assert "baseTrackH = dpf2(32f)" in s_content
+    # Thumb expands from 8dp to 12dp radius
+    assert "thumbOffR = dpf2(8f)" in s_content
+    assert "thumbOnR = dpf2(12f)" in s_content
+    # No cross inside knob in drawExteraSwitch
+    draw_extera = s_content[s_content.find("drawExteraSwitch(Canvas canvas, int switchStyle)"):s_content.find("private void drawCheckmark")]
+    assert "drawCross(" not in draw_extera
+
+    # Settings and selector cleanup
+    act_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(act_path, "r", encoding="utf-8") as f:
+        a_content = f.read()
+    assert '"Material 3 (Exteraless)"' not in a_content
+    assert '"Material 3"' in a_content
+    assert '"Expressive (M3)"' in a_content
+
+    # Strings cleanup: OpenExteraInfo
+    values_ru = os.path.join(TMESSAGES_RES, "values-ru-rRU", "strings_oe.xml")
+    with open(values_ru, "r", encoding="utf-8") as f:
+        ru_content = f.read()
+    assert "Фичи, перенесённые из exteraGram" not in ru_content
+    assert "Настройте клиент под себя" in ru_content
+
+    values_en = os.path.join(TMESSAGES_RES, "values", "strings_oe.xml")
+    with open(values_en, "r", encoding="utf-8") as f:
+        en_content = f.read()
+    assert "Features ported from exteraGram" not in en_content
+    assert "Customize client to your liking" in en_content
+
+    # Audio recognition in strings_oe_player.xml: SongRec
+    player_ru = os.path.join(TMESSAGES_RES, "values-ru-rRU", "strings_oe_player.xml")
+    with open(player_ru, "r", encoding="utf-8") as f:
+        p_ru = f.read()
+    assert "Распознавание трека (SongRec)" in p_ru
+    assert "Распознавание трека (Shazam)" not in p_ru
+
+    player_en = os.path.join(TMESSAGES_RES, "values", "strings_oe_player.xml")
+    with open(player_en, "r", encoding="utf-8") as f:
+        p_en = f.read()
+    assert "Audio recognition (SongRec)" in p_en
+    assert "Audio recognition (Shazam)" not in p_en
+
+
+
 
 
 

@@ -709,8 +709,8 @@ public class Switch extends View {
     }
 
     private void drawCustomSwitch(Canvas canvas, int switchStyle) {
-        if (switchStyle == SWITCH_STYLE_EXPRESSIVE) {
-            drawExteraSwitch(canvas);
+        if (switchStyle == SWITCH_STYLE_EXPRESSIVE || switchStyle == SWITCH_STYLE_MD3) {
+            drawExteraSwitch(canvas, switchStyle);
             return;
         }
         int width = dp(36);
@@ -837,7 +837,7 @@ public class Switch extends View {
                         if (needScale) {
                             canvasToDraw.restore();
                         }
-                    } else {
+                    } else if (!isMd3) {
                         drawCross(canvasToDraw, thumbTx, ty, iconColor, 1.0f - progress, 3);
                     }
                     int checkColor = Theme.getColor(trackCheckedFillKey, resourcesProvider);
@@ -888,7 +888,7 @@ public class Switch extends View {
      * - ON: Bright accent filled track (trackCheckedColorKey),
      *       24dp thumb (radius 12dp) with dark surface color and accent '✓' checkmark icon.
      */
-    private void drawExteraSwitch(Canvas canvas) {
+    private void drawExteraSwitch(Canvas canvas, int switchStyle) {
         final int measuredWidth = getMeasuredWidth();
         final int measuredHeight = getMeasuredHeight();
 
@@ -956,11 +956,17 @@ public class Switch extends View {
             canvas.drawRoundRect(rectF, trackRadius - inset, trackRadius - inset, googleBorderPaint);
         }
 
-        // Thumb metrics: 24dp diameter (12dp radius), 4dp margin from edges in 52dp track
-        final float thumbR = dpf2(12f) * scale;
-        final float margin = dpf2(4f) * scale;
-        final float thumbMinX = trackLeft + margin + thumbR;
-        final float thumbMaxX = trackRight - margin - thumbR;
+        // Thumb metrics:
+        // OFF: 16dp diameter (8dp radius) centered inside 32dp track height (margin 8dp)
+        // ON: 24dp diameter (12dp radius) - full height thumb leaving 4dp margin (expands when active)
+        final float thumbOffR = dpf2(8f) * scale;
+        final float thumbOnR = dpf2(12f) * scale;
+        final float thumbR = thumbOffR + (thumbOnR - thumbOffR) * pp;
+
+        final float marginOff = dpf2(8f) * scale;
+        final float marginOn = dpf2(4f) * scale;
+        final float thumbMinX = trackLeft + marginOff + thumbOffR;
+        final float thumbMaxX = trackRight - marginOn - thumbOnR;
         final float thumbX = thumbMinX + (thumbMaxX - thumbMinX) * pp;
         final float thumbY = midY;
 
@@ -982,11 +988,12 @@ public class Switch extends View {
         paint.setColor(currentThumbColor);
 
         // Subtle stretch during fast movement
-        final float stretch = dpf2(1.5f) * scale * (1f - Math.abs(pp * 2f - 1f));
+        final float stretch = dpf2(2.0f) * scale * (1f - Math.abs(pp * 2f - 1f));
         rectF.set(thumbX - thumbR - stretch, thumbY - thumbR, thumbX + thumbR + stretch, thumbY + thumbR);
         canvas.drawRoundRect(rectF, thumbR, thumbR, paint);
 
         // Icons inside thumb:
+        // NO 'x' cross icon inside the knob (matching M3 proportions without stock Telegram cross)
         if (iconDrawable != null && animatorIconVisibility.getFloatValue() > 0) {
             float factor = animatorIconVisibility.getFloatValue();
             int iconColor = lerpColor(surfaceBg, accentColor, pp);
@@ -994,14 +1001,8 @@ public class Switch extends View {
                 iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = iconColor, PorterDuff.Mode.MULTIPLY));
             }
             drawCenteredDrawable(canvas, iconDrawable, (int) thumbX, (int) thumbY, factor * 0.8f * scale, (int) (255 * factor));
-        } else {
-            // OFF icon: Cross '✕'
-            if (pp < 0.7f) {
-                float crossAlpha = Utilities.clamp01((0.7f - pp) / 0.7f);
-                int crossColor = surfaceBg;
-                drawCross(canvas, (int) thumbX, (int) thumbY, crossColor, crossAlpha, 3.6f * scale);
-            }
-            // ON icon: Checkmark '✓'
+        } else if (switchStyle == SWITCH_STYLE_EXPRESSIVE) {
+            // ON icon: Checkmark '✓' for Expressive M3 mode
             if (pp > 0.3f) {
                 float checkAlpha = Utilities.clamp01((pp - 0.3f) / 0.7f);
                 drawCheckmark(canvas, thumbX, thumbY, accentColor, checkAlpha, scale);
