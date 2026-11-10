@@ -312,8 +312,10 @@ public final class OnlineLyrics {
                             for (int j = 0; j < text.length(); j++) {
                                 plain.append(text.getString(j)).append("\n");
                             }
-                            Lyrics directLyrics = new Lyrics(plain.toString().trim(), null, false, false, "Shazam");
-                            return new Found(directLyrics);
+                            Lyrics directLyrics = Lyrics.parse(plain.toString().trim(), Lyrics.SOURCE_ONLINE, "Shazam");
+                            if (directLyrics != null) {
+                                return new Found(directLyrics);
+                            }
                         }
                     }
                 }
