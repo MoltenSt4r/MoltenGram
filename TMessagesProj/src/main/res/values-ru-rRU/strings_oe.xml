@@ -64,7 +64,6 @@
     <string name="OpenExteraCreditsSection">Благодарности</string>
     <string name="OpenExteraCreditsExteraless" translatable="false">@exteraless</string>
     <string name="OpenExteraCreditsNagramX" translatable="false">@NagramX</string>
-    <string name="OpenExteraCreditsMaterialgram" translatable="false">@materialgram</string>
     <string name="OEDownloadEmojiPacks">Загружать наборы эмодзи</string>
     <string name="OEChooseSubtitles">Выбрать субтитры</string>
     <string name="OEDisableSubtitles">Выключить субтитры</string>

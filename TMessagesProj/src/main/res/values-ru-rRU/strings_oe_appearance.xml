@@ -43,6 +43,7 @@
     <string name="OEAppearanceSwitchExpressiveColors">Выразительные цвета переключателя</string>
     <string name="OEAppearanceSwitchExpressiveColorsInfo">Пастельный контейнер для дорожки и насыщенный акцент для ползунка.</string>
     <string name="OEAppearanceSliderStyle">Слайдеры</string>
+    <string name="OEAppearanceSliderThickness">Толщина слайдеров</string>
 
     <string name="OEAppearanceBlur">Размытие</string>
     <string name="OEAppearanceForceBlur">Принудительное размытие</string>

@@ -219,7 +219,7 @@ public class SlideChooseView extends View {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(82), MeasureSpec.EXACTLY));
+        super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(92), MeasureSpec.EXACTLY));
         circleSize = AndroidUtilities.dp(6);
         gapSize = AndroidUtilities.dp(2);
         sideSide = AndroidUtilities.dp(22);
@@ -255,7 +255,7 @@ public class SlideChooseView extends View {
         final boolean material = canUseMaterialSlider();
         float selectedIndexAnimated = selectedIndexAnimatedHolder.set(selectedIndex);
         float movingAnimated = movingAnimatedHolder.set(moving ? 1 : 0);
-        int cy = getMeasuredHeight() / 2 + AndroidUtilities.dp(11);
+        int cy = getMeasuredHeight() / 2 + AndroidUtilities.dp(14);
 
         for (int a = 0; a < optionsStr.length; a++) {
             int cx = sideSide + (lineSize + gapSize * 2 + circleSize) * a + circleSize / 2;
@@ -295,11 +295,11 @@ public class SlideChooseView extends View {
             if (leftDrawables != null) {
                 canvas.save();
                 if (a == 0) {
-                    canvas.translate(AndroidUtilities.dp(12), AndroidUtilities.dp(15.5f));
+                    canvas.translate(AndroidUtilities.dp(12), AndroidUtilities.dp(7.5f));
                 } else if (a == optionsStr.length - 1) {
-                    canvas.translate(getMeasuredWidth() - size - AndroidUtilities.dp(22) - AndroidUtilities.dp(10), AndroidUtilities.dp(28) - AndroidUtilities.dp(12.5f));
+                    canvas.translate(getMeasuredWidth() - size - AndroidUtilities.dp(22) - AndroidUtilities.dp(10), AndroidUtilities.dp(20) - AndroidUtilities.dp(12.5f));
                 } else {
-                    canvas.translate(cx - size / 2 - AndroidUtilities.dp(10), AndroidUtilities.dp(28) - AndroidUtilities.dp(12.5f));
+                    canvas.translate(cx - size / 2 - AndroidUtilities.dp(10), AndroidUtilities.dp(20) - AndroidUtilities.dp(12.5f));
                 }
                 leftDrawables[a].setColorFilter(textPaint.getColor(), PorterDuff.Mode.MULTIPLY);
                 leftDrawables[a].draw(canvas);
@@ -309,11 +309,11 @@ public class SlideChooseView extends View {
             }
 
             if (a == 0) {
-                canvas.drawText(text, AndroidUtilities.dp(22), AndroidUtilities.dp(28), textPaint);
+                canvas.drawText(text, AndroidUtilities.dp(22), AndroidUtilities.dp(20), textPaint);
             } else if (a == optionsStr.length - 1) {
-                canvas.drawText(text, getMeasuredWidth() - size - AndroidUtilities.dp(22), AndroidUtilities.dp(28), textPaint);
+                canvas.drawText(text, getMeasuredWidth() - size - AndroidUtilities.dp(22), AndroidUtilities.dp(20), textPaint);
             } else {
-                canvas.drawText(text, cx - size / 2, AndroidUtilities.dp(28), textPaint);
+                canvas.drawText(text, cx - size / 2, AndroidUtilities.dp(20), textPaint);
             }
 
             if (leftDrawables != null) {
@@ -416,8 +416,11 @@ public class SlideChooseView extends View {
         final float innerLeft = left + radius;
         final float innerRight = right - radius;
         for (int a = 0; a < optionsStr.length; a++) {
+            if (a == 0 || a == optionsStr.length - 1) {
+                continue;
+            }
             final float tickCx = innerLeft + (innerRight - innerLeft) * a / (float) (optionsStr.length - 1);
-            if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
+            if (tickCx >= activeRight - AndroidUtilities.dp(3) && tickCx <= inactiveLeft + AndroidUtilities.dp(3)) {
                 continue;
             }
             if (tickCx < thumbCx) {

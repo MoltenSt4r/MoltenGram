@@ -746,8 +746,11 @@ public class SeekBarView extends FrameLayout {
             final float innerLeft = left + radius;
             final float innerRight = right - radius;
             for (int a = 0; a < steps; a++) {
+                if (a == 0 || a == steps - 1) {
+                    continue;
+                }
                 float tickCx = innerLeft + (innerRight - innerLeft) * a / (float) (steps - 1);
-                if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
+                if (tickCx >= activeRight - AndroidUtilities.dp(3) && tickCx <= inactiveLeft + AndroidUtilities.dp(3)) {
                     continue;
                 }
                 if (tickCx < thumbCx) {
@@ -757,13 +760,6 @@ public class SeekBarView extends FrameLayout {
                     innerPaint1.setColor(inactiveDotColor);
                     canvas.drawCircle(tickCx, cy, tickRadius, innerPaint1);
                 }
-            }
-        } else {
-            // Continuous slider: small tick dot at right end (like in M3 Expressive spec)
-            float endTickCx = right - radius;
-            if (endTickCx > inactiveLeft + AndroidUtilities.dp(2)) {
-                innerPaint1.setColor(inactiveDotColor);
-                canvas.drawCircle(endTickCx, cy, AndroidUtilities.dp(2f), innerPaint1);
             }
         }
 

@@ -1272,7 +1272,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                                 }
                             },
                             2, 24,
-                            "Толщина слайдеров",
+                            getString(R.string.OEAppearanceSliderThickness),
                             "2 dp",
                             "24 dp");
                     sliderThickness.setValueSuffix("dp");
@@ -1549,7 +1549,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == pillStackRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePillStack), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, true);
                     } else if (position == playerSettingsRow) {
-                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePlayerSettings), getString(R.string.OEAppearancePlayerAppearanceHeader), R.drawable.msg_filled_data_music, false);
+                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePlayerSettings), getString(R.string.OEAppearancePlayerAppearanceHeader), R.drawable.baseline_music_note_outline_24, false);
                     }
                     break;
                 }

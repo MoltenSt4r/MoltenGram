@@ -1047,4 +1047,19 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
     }
+
+    @Override
+    public String getSearchPrefix() {
+        return "OEPlayer";
+    }
+
+    @Override
+    public String getSearchTitle() {
+        return LocaleController.getString(R.string.OEAppearancePlayerSettings);
+    }
+
+    @Override
+    public int getSearchIcon() {
+        return R.drawable.baseline_music_note_outline_24;
+    }
 }

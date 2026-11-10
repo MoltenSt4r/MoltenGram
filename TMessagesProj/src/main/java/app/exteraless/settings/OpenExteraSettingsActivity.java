@@ -49,7 +49,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int creditsHeaderRow;
     private int creditsExteralessRow;
     private int creditsNagramXRow;
-    private int creditsMaterialgramRow;
     private int creditsDividerRow;
 
     @Override
@@ -75,7 +74,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         creditsHeaderRow = addRow("creditsHeader");
         creditsExteralessRow = addRow("creditsExteraless");
         creditsNagramXRow = addRow("creditsNagramX");
-        creditsMaterialgramRow = addRow("creditsMaterialgram");
         creditsDividerRow = addRow();
     }
 
@@ -210,8 +208,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             getMessagesController().openByUserName("exteraless", this, 1);
         } else if (position == creditsNagramXRow) {
             getMessagesController().openByUserName("NagramX", this, 1);
-        } else if (position == creditsMaterialgramRow) {
-            getMessagesController().openByUserName("materialgram", this, 1);
         }
     }
 
@@ -259,7 +255,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);
                     } else if (position == toolsRow) {
-                        cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.menu_premium_tools, true);
+                        cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.baseline_build_24, true);
                     } else if (position == otherRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraOther), R.drawable.msg_fave, false);
                     } else if (position == channelRow) {
@@ -273,10 +269,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                                 "@exteraless", R.drawable.msg_channel, true);
                     } else if (position == creditsNagramXRow) {
                         cell.setTextAndValueAndIcon("NagramX",
-                                "@NagramX", R.drawable.msg_channel, true);
-                    } else if (position == creditsMaterialgramRow) {
-                        cell.setTextAndValueAndIcon("materialgram",
-                                "@materialgram", R.drawable.msg_channel, false);
+                                "@NagramX", R.drawable.msg_channel, false);
                     }
                     // ВАЖНО: только после setTextAndIcon* — они сбрасывают imageLeft в 16dp.
                     // Метрики сняты с 12.9.0 (420 dpi): иконка 88px от края экрана, текст 219px,

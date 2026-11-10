@@ -2347,6 +2347,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
         o.add(R.drawable.msg_customize, getString(R.string.OEPlayerCustomize), () -> {
             o.dismiss();
+            dismissImmediately();
             if (activity != null) {
                 activity.presentFragment(new PlayerSettingsActivity());
             }
@@ -2366,13 +2367,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 }
             } catch (Throwable t) {
                 FileLog.e(t);
-            }
-        });
-        o.add(R.drawable.msg_settings, getString(R.string.OEAppearancePlayerSettings), () -> {
-            o.dismiss();
-            dismissImmediately();
-            if (activity != null) {
-                activity.presentFragment(new PlayerSettingsActivity());
             }
         });
         o.add(R.drawable.msg_filled_data_music, getString(R.string.OEPlayerClassic), () -> {

@@ -843,7 +843,7 @@ public class LiteModeSettingsActivity extends BaseFragment {
             });
             seekBarView.setProgress(LiteMode.getPowerSaverLevel() / 100F);
             seekBarView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO);
-            addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38 + 6, Gravity.TOP, 6, 68, 6, 0));
+            addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 38 + 6, Gravity.TOP, 6, 74, 6, 0));
 
             valuesView = new FrameLayout(context);
             valuesView.setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_NO_HIDE_DESCENDANTS);
@@ -887,7 +887,7 @@ public class LiteModeSettingsActivity extends BaseFragment {
             rightTextView.setText(LocaleController.getString(R.string.LiteBatteryEnabled));
             valuesView.addView(rightTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
 
-            addView(valuesView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 21, 52, 21, 0));
+            addView(valuesView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 21, 46, 21, 0));
 
             seekBarAccessibilityDelegate = new IntSeekBarAccessibilityDelegate() {
                 @Override
@@ -1064,7 +1064,7 @@ public class LiteModeSettingsActivity extends BaseFragment {
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             super.onMeasure(
                 MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(dp(112), MeasureSpec.EXACTLY)
+                MeasureSpec.makeMeasureSpec(dp(128), MeasureSpec.EXACTLY)
             );
         }
     }

@@ -57,6 +57,7 @@
     <string name="OEAppearanceSwitchExpressiveColors">Expressive switch colors</string>
     <string name="OEAppearanceSwitchExpressiveColorsInfo">Use a soft pastel container for track and rich accent for thumb.</string>
     <string name="OEAppearanceSliderStyle">Sliders</string>
+    <string name="OEAppearanceSliderThickness">Slider thickness</string>
 
     <!-- Blur &amp; Effects -->
     <string name="OEAppearanceBlur">Blur Options</string>

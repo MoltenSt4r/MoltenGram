@@ -11216,7 +11216,6 @@ public class ChatActivity extends BaseFragment implements
         actionModeViews.add(actionMode.addItemWithWidth(star, R.drawable.msg_fave, dp(54), LocaleController.getString(R.string.AddToFavorites)));
         actionModeViews.add(actionMode.addItemWithWidth(copy, R.drawable.msg_copy, dp(54), LocaleController.getString(R.string.Copy)));
         actionModeViews.add(actionMode.addItemWithWidth(combine_message, R.drawable.msg_replace, dp(54), LocaleController.getString(R.string.CombineMessage)));
-        actionModeViews.add(actionMode.addItemWithWidth(nkactionbarbtn_create_quote, R.drawable.msg_share_quote_solar, dp(54), LocaleController.getString(R.string.CreateQuote)));
         if (currentEncryptedChat == null && getDialogId() != UserObject.VERIFY && NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
             actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward_noquote, dp(54), LocaleController.getString(R.string.Forward)));
         }
@@ -11235,11 +11234,11 @@ public class ChatActivity extends BaseFragment implements
         actionModeViews.add(actionModeOtherItem = actionMode.addItemWithWidth(nkactionbarbtn_action_mode_other, R.drawable.ic_ab_other, dp(54), LocaleController.getString(R.string.MessageMenu)));
 
         if (currentEncryptedChat == null && !noforward) {
+            actionModeOtherItem.addSubItem(forward, R.drawable.msg_forward, LocaleController.getString(R.string.Forward));
             actionModeOtherItem.addSubItem(nkbtn_forward_noquote, R.drawable.msg_forward_noquote, LocaleController.getString(R.string.NoQuoteForward));
         }
         actionModeOtherItem.addSubItem(nkbtn_translate, LlmConfig.llmIsDefaultProvider() ? R.drawable.magic_stick_solar : R.drawable.ic_translate, LocaleController.getString(R.string.Translate));
         actionModeOtherItem.addSubItem(nkbtn_sharemessage, R.drawable.msg_shareout, LocaleController.getString(R.string.ShareMessages));
-        actionModeOtherItem.addSubItem(nkbtn_create_quote, R.drawable.msg_share_quote_solar, LocaleController.getString(R.string.CreateQuote));
         actionModeOtherItem.addSubItem(nkbtn_unpin, R.drawable.msg_unpin, LocaleController.getString(R.string.UnpinMessage));
         if (!noforward) {
             actionModeOtherItem.addSubItem(nkbtn_savemessage, R.drawable.menu_saved, LocaleController.getString(R.string.AddToSavedMessages));
@@ -11275,8 +11274,11 @@ public class ChatActivity extends BaseFragment implements
         if (actionModeOtherItem == null) {
             return;
         }
+        boolean noforward = currentChat != null && getMessagesController().isChatNoForwards(currentChat);
         boolean translate = NekoConfig.showTranslate.Bool()
                 || NaConfig.INSTANCE.getShowTranslateMessageLLM().Bool() && LlmConfig.llmIsDefaultProvider();
+        actionModeOtherItem.setSubItemVisibility(forward,
+                !noforward && currentEncryptedChat == null && chatMode != MODE_SCHEDULED);
         actionModeOtherItem.setSubItemVisibility(nkbtn_forward_noquote,
                 chatMode != MODE_SCHEDULED && NaConfig.INSTANCE.getShowNoQuoteForward().Bool());
         actionModeOtherItem.setSubItemVisibility(nkbtn_translate, translate);

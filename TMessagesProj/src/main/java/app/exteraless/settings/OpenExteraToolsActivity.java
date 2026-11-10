@@ -73,7 +73,7 @@ public class OpenExteraToolsActivity extends BaseNekoSettingsActivity {
 
     @Override
     public int getSearchIcon() {
-        return R.drawable.menu_premium_tools;
+        return R.drawable.baseline_build_24;
     }
 
     @Override
