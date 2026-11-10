@@ -566,10 +566,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             }
         });
 
-        likeButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.HEART, 20));
-        likeButton.setContentDescription(getString(R.string.AudioSaveToMyProfile));
-        likeButton.setOnClickListener(v -> toggleProfile());
-        bottomLikeButton = likeButton;
+        bottomLikeButton = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.HEART, 20));
+        bottomLikeButton.setContentDescription(getString(R.string.AudioSaveToMyProfile));
+        bottomLikeButton.setOnClickListener(v -> toggleProfile());
 
         group.addView(speedButton, LayoutHelper.createLinear(0, 52, 1f, 0, 0, 2, 0));
         group.addView(lyricsButton, LayoutHelper.createLinear(0, 52, 1f, 2, 0, 2, 0));
@@ -1297,6 +1296,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         boolean saved = PlayerActions.isSavedToProfile(mo);
         likeButton.setActive(saved, animated);
         likeButton.setRadius(dp(saved ? 14 : 24), animated);
+        if (bottomLikeButton != null) {
+            bottomLikeButton.setActive(saved, animated);
+            bottomLikeButton.setRadius(dp(saved ? 14 : 24), animated);
+            bottomLikeButton.setContentDescription(getString(saved ? R.string.ProfilePlaylistRemoveFromProfile : R.string.AudioSaveToMyProfile));
+        }
         heartIcon.setFillStroke(saved);
         likeButton.setContentDescription(getString(saved ? R.string.ProfilePlaylistRemoveFromProfile : R.string.AudioSaveToMyProfile));
     }
@@ -1313,6 +1317,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             boolean save = !PlayerActions.isSavedToProfile(mo);
             likeButton.setActive(save, true);
             likeButton.setRadius(dp(save ? 14 : 24), true);
+            if (bottomLikeButton != null) {
+                bottomLikeButton.setActive(save, true);
+                bottomLikeButton.setRadius(dp(save ? 14 : 24), true);
+            }
             heartIcon.setFillStroke(save);
             PlayerActions.saveToProfile(mo, save, error -> {
                 Theme.ResourcesProvider rp = colors.provider(resourcesProvider);
@@ -2477,7 +2485,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         sleepButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         queueButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
         shareButton.setColors(c.surfaceHigh, c.onSurface, c.surfaceHigh, c.onSurface);
-        likeButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
+        likeButton.setColors(0, c.onSurfaceVariant, c.primaryContainer, c.onPrimaryContainer);
+        bottomLikeButton.setColors(c.surfaceHigh, c.onSurface, c.primary, c.onPrimary);
         applySystemBars(false);
     }
 
@@ -2499,7 +2508,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             else if ("sleep".equals(act)) views.add(sleepButton);
             else if ("queue".equals(act)) views.add(queueButton);
             else if ("share".equals(act)) views.add(shareButton);
-            else if ("like".equals(act)) views.add(likeButton);
+            else if ("like".equals(act)) views.add(bottomLikeButton);
         }
         if (views.isEmpty()) {
             views.add(speedButton);
