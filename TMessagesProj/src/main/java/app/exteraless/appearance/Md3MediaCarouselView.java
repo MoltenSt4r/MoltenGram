@@ -172,14 +172,14 @@ public class Md3MediaCarouselView extends FrameLayout {
     }
 
     @Override
-    public void layout(int l, int t, int r, int b) {
+    protected void onLayout(boolean changed, int l, int t, int r, int b) {
         int w = r - l;
         int h = b - t;
         if (w > 0 && h > 0 && (getMeasuredWidth() != w || getMeasuredHeight() != h)) {
             measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
         }
         try {
-            super.layout(l, t, r, b);
+            super.onLayout(changed, l, t, r, b);
         } catch (Throwable e) {
             org.telegram.messenger.FileLog.e(e);
         }

@@ -23,7 +23,12 @@ import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
 import java.util.Locale;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.Future;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -41,8 +46,10 @@ public final class OnlineLyrics {
         if (a == null) return true;
         String s = a.trim().toLowerCase(Locale.ROOT);
         return s.isEmpty() || s.equals("unknown") || s.equals("<unknown>") || s.equals("unknown artist")
-                || s.equals("неизвестный исполнитель") || s.equals("telegram") || s.equals("audio")
-                || s.equals("artist") || s.startsWith("@") || s.startsWith("t.me/");
+                || s.equals("неизвестный исполнитель") || s.equals("неизвестный автор")
+                || s.equals("telegram") || s.equals("audio")
+                || s.equals("artist") || s.equals("track") || s.startsWith("@") || s.startsWith("t.me/")
+                || s.contains("t.me/") || s.contains("vk.com/");
     }
 
     public static final class Query {
@@ -59,12 +66,14 @@ public final class OnlineLyrics {
             String t = clean(title);
             if (t != null) {
                 t = AUDIO_EXT.matcher(t).replaceFirst("").trim();
+                t = CHANNEL_TAG.matcher(t).replaceAll("").trim();
+                t = QUALITY_TAG.matcher(t).replaceAll("").trim();
                 t = LEADING_TRACK.matcher(t).replaceFirst("").trim();
             }
-            if (TextUtils.isEmpty(a) && t != null) {
+            if (t != null) {
                 int dash = -1;
                 int dashLen = 3;
-                String[] seps = {" - ", " — ", " – ", " _ "};
+                String[] seps = {" - ", " — ", " – ", " _ ", " ~ "};
                 for (String sep : seps) {
                     int p = t.indexOf(sep);
                     if (p > 0) {
@@ -74,9 +83,20 @@ public final class OnlineLyrics {
                     }
                 }
                 if (dash > 0) {
-                    a = t.substring(0, dash).trim();
-                    t = t.substring(dash + dashLen).trim();
+                    String part1 = t.substring(0, dash).trim();
+                    String part2 = t.substring(dash + dashLen).trim();
+                    if (TextUtils.isEmpty(a)) {
+                        a = part1;
+                        t = part2;
+                    } else if (part1.equalsIgnoreCase(a) || a.toLowerCase(Locale.ROOT).contains(part1.toLowerCase(Locale.ROOT))) {
+                        t = part2;
+                    }
                 }
+            }
+            if (a != null) {
+                a = CHANNEL_TAG.matcher(a).replaceAll("").trim();
+                a = QUALITY_TAG.matcher(a).replaceAll("").trim();
+                a = BRACKETED_TAGS.matcher(a).replaceAll("").trim();
             }
             this.artist = isBogusArtist(a) ? null : normalize(a);
             this.title = normalize(t);
@@ -153,6 +173,76 @@ public final class OnlineLyrics {
         return cleaned.isEmpty() ? original : cleaned;
     }
 
+    public static boolean isMatch(String queryTitle, String queryArtist, int queryDuration,
+                                  String candTitle, String candArtist, int candDuration) {
+        if (TextUtils.isEmpty(candTitle)) {
+            return false;
+        }
+        String qNorm = simplifyForMatch(queryTitle);
+        String cNorm = simplifyForMatch(candTitle);
+        if (TextUtils.isEmpty(qNorm) || TextUtils.isEmpty(cNorm)) {
+            return false;
+        }
+
+        boolean titleMatches = qNorm.equals(cNorm) || qNorm.contains(cNorm) || cNorm.contains(qNorm);
+        if (!titleMatches) {
+            float sim = tokenSimilarity(qNorm, cNorm);
+            if (sim >= 0.65f) {
+                titleMatches = true;
+            }
+        }
+        if (!titleMatches) {
+            return false;
+        }
+
+        if (!TextUtils.isEmpty(queryArtist) && !TextUtils.isEmpty(candArtist)) {
+            String aNorm = simplifyForMatch(queryArtist);
+            String caNorm = simplifyForMatch(candArtist);
+            if (!TextUtils.isEmpty(aNorm) && !TextUtils.isEmpty(caNorm)) {
+                boolean artistMatches = aNorm.equals(caNorm) || aNorm.contains(caNorm) || caNorm.contains(aNorm);
+                if (!artistMatches) {
+                    float aSim = tokenSimilarity(aNorm, caNorm);
+                    if (aSim < 0.40f) {
+                        return false;
+                    }
+                }
+            }
+        }
+
+        if (queryDuration > 0 && candDuration > 0) {
+            int diff = Math.abs(queryDuration - candDuration);
+            if (diff > 12) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static String simplifyForMatch(String s) {
+        if (s == null) return "";
+        String clean = normalize(s);
+        if (clean == null) return "";
+        return clean.toLowerCase(Locale.ROOT).replaceAll("[^\\p{L}\\p{N}]+", " ").trim();
+    }
+
+    private static float tokenSimilarity(String s1, String s2) {
+        String[] w1 = s1.split("\\s+");
+        String[] w2 = s2.split("\\s+");
+        if (w1.length == 0 || w2.length == 0) return 0f;
+        int common = 0;
+        for (String a : w1) {
+            if (a.length() < 2) continue;
+            for (String b : w2) {
+                if (a.equals(b)) {
+                    common++;
+                    break;
+                }
+            }
+        }
+        int maxLen = Math.max(w1.length, w2.length);
+        return maxLen > 0 ? (float) common / maxLen : 0f;
+    }
+
     private static String stripDecorations(String s) {
         return normalize(s);
     }
@@ -183,6 +273,8 @@ public final class OnlineLyrics {
         });
     }
 
+    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+
     public static void fetch(Query query, Callback callback) {
         String key = query.key();
         Lyrics hit = memory.get(key);
@@ -196,11 +288,12 @@ public final class OnlineLyrics {
             if (result == null) {
                 boolean failed = false;
                 Found bestOnline = null;
+                Query currentQ = query;
 
-                // If artist is missing or unknown, prioritize Shazam audio recognition to identify track
-                if (TextUtils.isEmpty(query.artist) && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
+                // 1. If artist is missing or bogus, try Shazam recognition first to identify track & author
+                if (TextUtils.isEmpty(currentQ.artist) && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
                     try {
-                        Found shazamFound = requestShazam(query);
+                        Found shazamFound = requestShazam(currentQ);
                         if (shazamFound != null) {
                             bestOnline = shazamFound;
                         }
@@ -209,57 +302,86 @@ public final class OnlineLyrics {
                     }
                 }
 
+                // 2. Query enabled providers concurrently
                 if (bestOnline == null) {
                     String order = app.exteraless.appearance.AppearanceConfig.playerLyricsProviderOrder();
                     String[] providers = order.split(",");
-
+                    List<String> enabledProviders = new ArrayList<>();
                     for (String p : providers) {
                         String name = p.trim();
-                        try {
-                            Found found = null;
-                            if ("BetterLyrics".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsBetterLyrics()) {
-                                found = requestBetterLyrics(query);
-                            } else if ("LrcLib".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsLrcLib()) {
-                                found = requestLrclib(query);
-                            } else if ("KuGou".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsKuGou()) {
-                                found = requestKuGou(query);
-                            } else if ("Paxsenix".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsPaxsenix()) {
-                                found = requestPaxsenix(query);
-                            } else if ("LyricsPlus".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsLyricsPlus()) {
-                                found = requestLyricsPlus(query);
-                            } else if ("Zemer".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsZemer()) {
-                                found = requestZemer(query);
-                            }
+                        if ("BetterLyrics".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsBetterLyrics()) {
+                            enabledProviders.add("BetterLyrics");
+                        } else if ("LrcLib".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsLrcLib()) {
+                            enabledProviders.add("LrcLib");
+                        } else if ("Paxsenix".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsPaxsenix()) {
+                            enabledProviders.add("Paxsenix");
+                        } else if ("LyricsPlus".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsLyricsPlus()) {
+                            enabledProviders.add("LyricsPlus");
+                        } else if ("KuGou".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsKuGou()) {
+                            enabledProviders.add("KuGou");
+                        } else if ("Zemer".equalsIgnoreCase(name) && app.exteraless.appearance.AppearanceConfig.playerLyricsZemer()) {
+                            enabledProviders.add("Zemer");
+                        }
+                    }
 
-                            if (found != null && (found.lyrics.synced || found.lyrics.instrumental)) {
-                                bestOnline = found;
-                                break;
-                            } else if (found != null && bestOnline == null) {
-                                bestOnline = found;
+                    if (!enabledProviders.isEmpty()) {
+                        final Query qForTasks = currentQ;
+                        List<Future<Found>> futures = new ArrayList<>();
+                        for (String name : enabledProviders) {
+                            futures.add(executor.submit(() -> {
+                                try {
+                                    if ("BetterLyrics".equalsIgnoreCase(name)) return requestBetterLyrics(qForTasks);
+                                    if ("LrcLib".equalsIgnoreCase(name)) return requestLrclib(qForTasks);
+                                    if ("Paxsenix".equalsIgnoreCase(name)) return requestPaxsenix(qForTasks);
+                                    if ("LyricsPlus".equalsIgnoreCase(name)) return requestLyricsPlus(qForTasks);
+                                    if ("KuGou".equalsIgnoreCase(name)) return requestKuGou(qForTasks);
+                                    if ("Zemer".equalsIgnoreCase(name)) return requestZemer(qForTasks);
+                                } catch (Throwable t) {
+                                    FileLog.e(t);
+                                }
+                                return null;
+                            }));
+                        }
+
+                        // Pick highest-priority matching result respecting user order
+                        Found firstPlain = null;
+                        for (int i = 0; i < enabledProviders.size(); i++) {
+                            try {
+                                Found f = futures.get(i).get(3500, TimeUnit.MILLISECONDS);
+                                if (f != null && f.lyrics != null) {
+                                    if (f.lyrics.synced || f.lyrics.instrumental) {
+                                        bestOnline = f;
+                                        break;
+                                    } else if (firstPlain == null) {
+                                        firstPlain = f;
+                                    }
+                                }
+                            } catch (Throwable e) {
+                                failed = true;
                             }
-                        } catch (Throwable e) {
-                            FileLog.e(e);
-                            failed = true;
+                        }
+                        if (bestOnline == null && firstPlain != null) {
+                            bestOnline = firstPlain;
                         }
                     }
                 }
 
-                // If still nothing found and KuGou was not enabled, try KuGou fallback
-                if (bestOnline == null && !app.exteraless.appearance.AppearanceConfig.playerLyricsKuGou()) {
+                // 3. If still nothing found, try Shazam recognition if not yet done
+                if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
                     try {
-                        Found found = requestKuGou(query);
-                        if (found != null) {
-                            bestOnline = found;
+                        Found shazamFound = requestShazam(currentQ);
+                        if (shazamFound != null) {
+                            bestOnline = shazamFound;
                         }
                     } catch (Throwable e) {
                         FileLog.e(e);
                     }
                 }
 
-                // If no synced lyrics yet, try LrcMux fallback
+                // 4. If no synced lyrics, try LrcMux fallback
                 if (bestOnline == null || !bestOnline.lyrics.synced) {
                     try {
-                        Found fallback = requestLrcmux(query);
+                        Found fallback = requestLrcmux(currentQ);
                         if (fallback != null && (fallback.lyrics.synced || bestOnline == null)) {
                             if (bestOnline != null && fallback.lyrics.synced) {
                                 Lyrics punctuated = punctuate(fallback.lyrics, bestOnline.lyrics);
@@ -271,18 +393,6 @@ public final class OnlineLyrics {
                     } catch (Throwable e) {
                         FileLog.e(e);
                         failed = true;
-                    }
-                }
-
-                // If still nothing found, try lightweight Shazam audio recognition fallback
-                if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
-                    try {
-                        Found shazamFound = requestShazam(query);
-                        if (shazamFound != null) {
-                            bestOnline = shazamFound;
-                        }
-                    } catch (Throwable e) {
-                        FileLog.e(e);
                     }
                 }
 
@@ -320,7 +430,11 @@ public final class OnlineLyrics {
                 return null;
             }
             String urlStr = "https://amp.shazam.com/discovery/v5/en-US/US/android/-/search?query=" + enc(term);
-            String body = get(urlStr);
+            String body = get(urlStr, true);
+            if (body == null && !TextUtils.isEmpty(q.artist) && !term.equals(q.title)) {
+                urlStr = "https://amp.shazam.com/discovery/v5/en-US/US/android/-/search?query=" + enc(q.title);
+                body = get(urlStr, true);
+            }
             if (body == null) {
                 return null;
             }
@@ -329,46 +443,53 @@ public final class OnlineLyrics {
             if (tracks == null) return null;
             JSONArray hits = tracks.optJSONArray("hits");
             if (hits == null || hits.length() == 0) return null;
-            JSONObject firstHit = hits.getJSONObject(0);
-            JSONObject track = firstHit.optJSONObject("track");
-            if (track == null) return null;
 
-            String recognizedTitle = track.optString("title");
-            String recognizedArtist = track.optString("subtitle");
+            for (int h = 0; h < Math.min(hits.length(), 4); h++) {
+                JSONObject firstHit = hits.getJSONObject(h);
+                JSONObject track = firstHit.optJSONObject("track");
+                if (track == null) continue;
 
-            JSONArray sections = track.optJSONArray("sections");
-            if (sections != null) {
-                for (int i = 0; i < sections.length(); i++) {
-                    JSONObject sec = sections.getJSONObject(i);
-                    if ("LYRICS".equalsIgnoreCase(sec.optString("type"))) {
-                        JSONArray text = sec.optJSONArray("text");
-                        if (text != null && text.length() > 0) {
-                            StringBuilder plain = new StringBuilder();
-                            for (int j = 0; j < text.length(); j++) {
-                                plain.append(text.getString(j)).append("\n");
-                            }
-                            Lyrics directLyrics = Lyrics.parse(plain.toString().trim(), Lyrics.SOURCE_ONLINE, "Shazam");
-                            if (directLyrics != null) {
-                                return new Found(directLyrics);
+                String recognizedTitle = track.optString("title");
+                String recognizedArtist = track.optString("subtitle");
+
+                if (!isMatch(q.title, q.artist, q.duration, recognizedTitle, recognizedArtist, 0)) {
+                    continue;
+                }
+
+                JSONArray sections = track.optJSONArray("sections");
+                if (sections != null) {
+                    for (int i = 0; i < sections.length(); i++) {
+                        JSONObject sec = sections.getJSONObject(i);
+                        if ("LYRICS".equalsIgnoreCase(sec.optString("type"))) {
+                            JSONArray text = sec.optJSONArray("text");
+                            if (text != null && text.length() > 0) {
+                                StringBuilder plain = new StringBuilder();
+                                for (int j = 0; j < text.length(); j++) {
+                                    plain.append(text.getString(j)).append("\n");
+                                }
+                                Lyrics directLyrics = Lyrics.parse(plain.toString().trim(), Lyrics.SOURCE_ONLINE, "Shazam");
+                                if (directLyrics != null) {
+                                    return new Found(directLyrics);
+                                }
                             }
                         }
                     }
                 }
-            }
 
-            if (!TextUtils.isEmpty(recognizedTitle)) {
-                Query recognizedQuery = new Query(recognizedArtist, recognizedTitle, null, q.duration);
-                Found lrc = requestLrclib(recognizedQuery);
-                if (lrc != null) {
-                    return lrc;
-                }
-                Found better = requestBetterLyrics(recognizedQuery);
-                if (better != null) {
-                    return better;
-                }
-                Found kg = requestKuGou(recognizedQuery);
-                if (kg != null) {
-                    return kg;
+                if (!TextUtils.isEmpty(recognizedTitle)) {
+                    Query recognizedQuery = new Query(recognizedArtist, recognizedTitle, null, q.duration);
+                    if (app.exteraless.appearance.AppearanceConfig.playerLyricsLrcLib()) {
+                        Found lrc = requestLrclib(recognizedQuery);
+                        if (lrc != null) return lrc;
+                    }
+                    if (app.exteraless.appearance.AppearanceConfig.playerLyricsBetterLyrics()) {
+                        Found better = requestBetterLyrics(recognizedQuery);
+                        if (better != null) return better;
+                    }
+                    if (app.exteraless.appearance.AppearanceConfig.playerLyricsKuGou()) {
+                        Found kg = requestKuGou(recognizedQuery);
+                        if (kg != null) return kg;
+                    }
                 }
             }
         } catch (Throwable e) {
@@ -384,9 +505,15 @@ public final class OnlineLyrics {
                         .append("&track_name=").append(enc(q.title));
                 String body = get(url.toString());
                 if (body != null) {
-                    Found found = fromLrclib(new JSONObject(body));
-                    if (found != null) {
-                        return found;
+                    JSONObject obj = new JSONObject(body);
+                    String trackName = optString(obj, "trackName");
+                    String artistName = optString(obj, "artistName");
+                    int duration = (int) Math.round(obj.optDouble("duration", 0));
+                    if (isMatch(q.title, q.artist, q.duration, trackName, artistName, duration)) {
+                        Found found = fromLrclib(obj);
+                        if (found != null) {
+                            return found;
+                        }
                     }
                 }
             }
@@ -418,13 +545,20 @@ public final class OnlineLyrics {
             int bestScore = Integer.MIN_VALUE;
             for (int i = 0; i < arr.length(); i++) {
                 JSONObject o = arr.optJSONObject(i);
-                Found found = o == null ? null : fromLrclib(o);
+                if (o == null) continue;
+                String trackName = optString(o, "trackName");
+                String artistName = optString(o, "artistName");
+                int duration = (int) Math.round(o.optDouble("duration", 0));
+                if (!isMatch(q.title, q.artist, q.duration, trackName, artistName, duration)) {
+                    continue;
+                }
+                Found found = fromLrclib(o);
                 if (found == null) {
                     continue;
                 }
                 int score = found.lyrics.synced ? 40 : 0;
-                if (q.duration > 0 && o.has("duration")) {
-                    int diff = (int) Math.abs(Math.round(o.optDouble("duration", 0)) - q.duration);
+                if (q.duration > 0 && duration > 0) {
+                    int diff = Math.abs(duration - q.duration);
                     score -= diff <= MAX_DURATION_DIFF ? diff : 20 + Math.min(diff, 60);
                 }
                 if (score > bestScore) {
@@ -480,8 +614,13 @@ public final class OnlineLyrics {
                 if (song == null) continue;
                 String h = song.optString("hash", null);
                 if (TextUtils.isEmpty(h)) continue;
-                if (q.duration > 0 && song.has("duration")) {
-                    int d = song.optInt("duration", 0);
+                String songName = song.optString("songname", null);
+                String singer = song.optString("singername", null);
+                int d = song.optInt("duration", 0);
+                if (!isMatch(q.title, q.artist, q.duration, songName, singer, d)) {
+                    continue;
+                }
+                if (q.duration > 0 && d > 0) {
                     int diff = Math.abs(d - q.duration);
                     if (diff < bestDiff) {
                         bestDiff = diff;
@@ -592,6 +731,13 @@ public final class OnlineLyrics {
             if (first == null) {
                 return null;
             }
+            String trackName = first.optString("trackName", null);
+            String artistName = first.optString("artistName", null);
+            long millis = first.optLong("trackTimeMillis", 0);
+            int duration = (int) (millis / 1000);
+            if (!isMatch(q.title, q.artist, q.duration, trackName, artistName, duration)) {
+                return null;
+            }
             long trackId = first.optLong("trackId", 0);
             if (trackId == 0) {
                 String strId = first.optString("trackId", null);
@@ -653,8 +799,15 @@ public final class OnlineLyrics {
                 if (r == null) continue;
                 String lrcUrl = optString(r, "lyricsUrl");
                 if (TextUtils.isEmpty(lrcUrl)) continue;
-                if (q.duration > 0 && r.has("duration")) {
-                    int d = r.optInt("duration", 0);
+                String trackName = optString(r, "trackName");
+                if (trackName == null) trackName = optString(r, "title");
+                String artistName = optString(r, "artistName");
+                if (artistName == null) artistName = optString(r, "artist");
+                int d = r.optInt("duration", 0);
+                if (!isMatch(q.title, q.artist, q.duration, trackName, artistName, d)) {
+                    continue;
+                }
+                if (q.duration > 0 && d > 0) {
                     int diff = Math.abs(d - q.duration);
                     if (diff < bestDiff) {
                         bestDiff = diff;
@@ -696,6 +849,12 @@ public final class OnlineLyrics {
                 for (int i = 0; i < sources.length(); i++) {
                     JSONObject s = sources.optJSONObject(i);
                     if (s != null) {
+                        String trackName = optString(s, "title");
+                        String artistName = optString(s, "artist");
+                        int d = s.optInt("duration", 0);
+                        if (!TextUtils.isEmpty(trackName) && !isMatch(q.title, q.artist, q.duration, trackName, artistName, d)) {
+                            continue;
+                        }
                         String syncedLrc = optString(s, "syncedLrc");
                         if (syncedLrc != null) {
                             Lyrics lyrics = Lyrics.parse(syncedLrc, Lyrics.SOURCE_ONLINE, "Zemer");
@@ -789,6 +948,16 @@ public final class OnlineLyrics {
         JSONObject o = new JSONObject(body);
         JSONObject track = o.optJSONObject("track");
         JSONObject meta = o.optJSONObject("meta");
+        if (track != null) {
+            String trackName = optString(track, "title");
+            if (trackName == null) trackName = optString(track, "trackName");
+            String artistName = optString(track, "artist");
+            if (artistName == null) artistName = optString(track, "artistName");
+            int duration = track.optInt("duration", 0);
+            if (!isMatch(q.title, q.artist, q.duration, trackName, artistName, duration)) {
+                return null;
+            }
+        }
         if (q.duration > 0 && track != null) {
             int duration = track.optInt("duration", 0);
             if (duration > 0 && Math.abs(duration - q.duration) > MAX_FALLBACK_DURATION_DIFF) {
@@ -915,11 +1084,20 @@ public final class OnlineLyrics {
     }
 
     private static String get(String url) throws Exception {
+        return get(url, false);
+    }
+
+    private static String get(String url, boolean isShazam) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         try {
-            connection.setConnectTimeout(2_500);
-            connection.setReadTimeout(3_500);
-            connection.setRequestProperty("User-Agent", "exteraless/" + BuildVars.BUILD_VERSION_STRING + " (https://github.com/exteraless/exteraless)");
+            connection.setConnectTimeout(2_000);
+            connection.setReadTimeout(2_500);
+            if (isShazam) {
+                connection.setRequestProperty("User-Agent", "Shazam/13.4.0 (Android; 14; en-US)");
+                connection.setRequestProperty("X-Shazam-Platform", "Android");
+            } else {
+                connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36");
+            }
             connection.setRequestProperty("Accept", "application/json, text/plain, application/xml, */*");
             int code = connection.getResponseCode();
             if (code == 404 || code == 401 || code == 403 || code == 422 || code == 204) {

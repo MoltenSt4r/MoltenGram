@@ -1978,13 +1978,21 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
     private OnlineLyrics.Query query(MessageObject mo) {
         String album = null;
+        String artist = mo.getMusicAuthor(false);
+        String title = mo.getMusicTitle(false);
         if (PlayerArt.isPlaying(mo)) {
             AudioInfo info = MediaController.getInstance().getAudioInfo();
             if (info != null) {
                 album = info.getAlbum();
+                if (TextUtils.isEmpty(artist)) {
+                    artist = info.getArtist();
+                }
+                if (TextUtils.isEmpty(title)) {
+                    title = info.getTitle();
+                }
             }
         }
-        return new OnlineLyrics.Query(mo.getMusicAuthor(false), mo.getMusicTitle(false), album, (int) Math.round(mo.getDuration()));
+        return new OnlineLyrics.Query(artist, title, album, (int) Math.round(mo.getDuration()));
     }
 
     private long positionMs() {
@@ -2045,10 +2053,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         String key = currentKey;
         OnlineLyrics.Query q = query(mo);
         if (!q.valid()) {
-            lyricsView.showState(LyricsView.STATE_NOT_FOUND);
-            return;
-        }
-        if (OnlineLyrics.knownMissing(q)) {
             lyricsView.showState(LyricsView.STATE_NOT_FOUND);
             return;
         }

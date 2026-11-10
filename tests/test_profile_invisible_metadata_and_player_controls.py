@@ -465,6 +465,26 @@ def test_colored_text_helper_and_settings_icon_colors():
     assert "item.subtext = subtitle;" in sa_content
 
 
+def test_online_lyrics_match_and_parallel_search():
+    lyrics_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "OnlineLyrics.java")
+    with open(lyrics_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "isMatch" in content
+    assert "simplifyForMatch" in content
+    assert "tokenSimilarity" in content
+    assert "executor.submit" in content
+    assert "Shazam/13.4.0" in content
+    assert "X-Shazam-Platform" in content
+
+    # Verify Md3MediaCarouselView fixes compilation error
+    carousel_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "appearance", "Md3MediaCarouselView.java")
+    with open(carousel_path, "r", encoding="utf-8") as f:
+        c_content = f.read()
+    assert "protected void onLayout(boolean changed, int l, int t, int r, int b)" in c_content
+    assert "public void layout(int l, int t, int r, int b)" not in c_content
+
+
+
 
 
 
