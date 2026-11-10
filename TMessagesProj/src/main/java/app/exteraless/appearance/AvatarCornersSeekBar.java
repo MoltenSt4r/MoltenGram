@@ -100,7 +100,7 @@ public class AvatarCornersSeekBar extends FrameLayout {
             public void onSeekBarPressed(boolean pressed) {
             }
         });
-        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.TOP, 16, 68, 16, 12));
+        addView(seekBarView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.TOP, 16, 76, 16, 12));
 
         FrameLayout valuesView = new FrameLayout(context);
 
@@ -118,7 +118,7 @@ public class AvatarCornersSeekBar extends FrameLayout {
         rightTextView.setText(right);
         valuesView.addView(rightTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
 
-        addView(valuesView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 21, 52, 21, 0));
+        addView(valuesView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.FILL_HORIZONTAL, 21, 48, 21, 0));
     }
 
     private void updateValues() {
@@ -199,7 +199,7 @@ public class AvatarCornersSeekBar extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(
                 MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(dp(126), MeasureSpec.EXACTLY)
+                MeasureSpec.makeMeasureSpec(dp(134), MeasureSpec.EXACTLY)
         );
     }
 }

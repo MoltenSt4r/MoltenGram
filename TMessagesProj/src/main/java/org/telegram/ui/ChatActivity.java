@@ -47601,9 +47601,9 @@ public class ChatActivity extends BaseFragment implements
         }
 
         private void setupChatTheme(EmojiThemes chatTheme, TLRPC.WallPaper wallPaper, boolean withAnimation, boolean createNewResources) {
-            if (chatTheme != null && !AppearanceConfig.customThemes()) {
-                chatTheme = null;
-            }
+            // Перенос exteraGram 12.9.0:ChatActivity:12501: при выключенных
+            // индивидуальных темах чат остаётся в общей теме приложения.
+            if (!AppearanceConfig.customThemes()) return;
             if (parentThemeDelegate != null) return;
 
             this.chatTheme = chatTheme;

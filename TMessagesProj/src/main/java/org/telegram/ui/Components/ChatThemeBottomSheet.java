@@ -127,6 +127,7 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
     private FrameLayout chatAttachButton;
     private AnimatedTextView chatAttachButtonText;
     private boolean themesLoading;
+    private final boolean initialCustomThemes;
 
 
     public ChatThemeBottomSheet(final ChatActivity chatActivity, ChatActivity.ThemeDelegate themeDelegate) {
@@ -136,6 +137,7 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
         this.originalTheme = themeDelegate.getCurrentTheme();
         this.currentWallpaper = themeDelegate.getCurrentWallpaper();
         this.originalIsDark = Theme.getActiveTheme().isDark();
+        this.initialCustomThemes = app.exteraless.appearance.AppearanceConfig.customThemes();
         adapter = new Adapter(currentAccount, chatActivity.getDialogId(), themeDelegate, ThemeSmallPreviewView.TYPE_DEFAULT);
         setDimBehind(false);
         setCanDismissWithSwipe(false);
@@ -388,6 +390,9 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
         if (selectedItem.chatTheme.showAsDefaultStub) {
             themeDelegate.setCurrentTheme(null, wallpaper, true, forceDark);
         } else {
+            if (!app.exteraless.appearance.AppearanceConfig.customThemes()) {
+                app.exteraless.appearance.AppearanceConfig.customThemes.setConfigBool(true);
+            }
             themeDelegate.setCurrentTheme(selectedItem.chatTheme, wallpaper, true, forceDark);
         }
     }
@@ -603,6 +608,9 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
         super.dismiss();
         chatActivity.forceDisallowApplyWallpeper = false;
         if (!isApplyClicked) {
+            if (!initialCustomThemes) {
+                app.exteraless.appearance.AppearanceConfig.customThemes.setConfigBool(false);
+            }
             TLRPC.WallPaper wallpaper = themeDelegate.getCurrentWallpaper();
             if (wallpaper == null) {
                 wallpaper = currentWallpaper;
@@ -1039,6 +1047,7 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
             ChatThemeController.getInstance(currentAccount).setDialogTheme(chatActivity.getDialogId(), tlChatTheme, true);
             TLRPC.WallPaper wallpaper = hasChanges() ? null : themeDelegate.getCurrentWallpaper();
             if (!chatTheme.showAsDefaultStub) {
+                app.exteraless.appearance.AppearanceConfig.customThemes.setConfigBool(true);
                 themeDelegate.setCurrentTheme(chatTheme, wallpaper, true, originalIsDark);
             } else {
                 themeDelegate.setCurrentTheme(null, wallpaper, true, originalIsDark);

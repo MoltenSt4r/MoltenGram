@@ -489,12 +489,6 @@ public class LyricsView extends FrameLayout {
 
         void setText(String value, boolean isPlain, boolean backing, String translation) {
             String displayText = value;
-            if (app.exteraless.appearance.AppearanceConfig.playerLyricsRomanize() && !TextUtils.isEmpty(value) && !isPlain) {
-                String rom = RomanizeHelper.romanize(value);
-                if (!TextUtils.isEmpty(rom) && !rom.equals(value)) {
-                    displayText = value + "\n" + rom;
-                }
-            }
             if (backing && app.exteraless.appearance.AppearanceConfig.playerLyricsSplitRoles() && !TextUtils.isEmpty(displayText)) {
                 if (!displayText.startsWith("(") && !displayText.endsWith(")")) {
                     displayText = "(" + displayText + ")";
