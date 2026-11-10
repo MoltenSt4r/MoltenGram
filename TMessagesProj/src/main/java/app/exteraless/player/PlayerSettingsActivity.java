@@ -70,6 +70,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int cropCoverRow;
     private int keepScreenOnRow;
     private int actionButtonsRow;
+    private int seekbarStyleRow;
     private int seekbarWavyRow;
     private int seekbarThicknessRow;
     private int seekbarIndicatorRow;
@@ -121,9 +122,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
         actionButtonsRow = addRow("actionButtons");
-        seekbarWavyRow = addRow("seekbarWavy");
+        seekbarStyleRow = addRow("seekbarStyle");
         seekbarThicknessRow = addRow("seekbarThickness");
         seekbarIndicatorRow = addRow("seekbarIndicator");
+        seekbarWavyRow = addRow("seekbarWavy");
         appearanceShadowRow = addRow();
 
         // Lyrics
@@ -168,6 +170,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             });
         } else if (position == actionButtonsRow) {
             showActionButtonsDialog();
+        } else if (position == seekbarStyleRow) {
+            CharSequence[] options = {
+                    "Expressive (M3)",
+                    "Material 3 (Exteraless)"
+            };
+            showSelector("Стиль слайдера", options, which -> {
+                AppearanceConfig.playerSeekbarStyle.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarStyleRow);
+            });
         } else if (position == seekbarWavyRow) {
             boolean nextVal = !AppearanceConfig.playerWavy.Bool();
             AppearanceConfig.playerWavy.setConfigBool(nextVal);
@@ -386,7 +397,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
-                    || position == actionButtonsRow || position == seekbarIndicatorRow
+                    || position == actionButtonsRow || position == seekbarIndicatorRow || position == seekbarStyleRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow) {
                 return TYPE_SETTINGS;
@@ -413,7 +424,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (type == TYPE_SLIDER) {
                 if (position == seekbarThicknessRow) {
                     SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
-                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 14, val -> val + " dp");
+                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 16, val -> val + " dp");
+                    options.toString = (typ, val) -> typ == 0 ? ("Толщина слайдера: " + val + " dp") : (val + " dp");
+                    cell.setLabel("Толщина слайдера");
                     cell.set(AppearanceConfig.playerSeekbarThickness(), options, newValue -> {
                         AppearanceConfig.playerSeekbarThickness.setConfigInt(newValue);
                     });
@@ -475,6 +488,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         else if ("like".equals(a)) sb.append("В профиль");
                     }
                     cell.setTextAndValue("Кнопки панели действий", sb.toString(), true);
+                } else if (position == seekbarStyleRow) {
+                    int seekbarStyle = AppearanceConfig.playerSeekbarStyle();
+                    String seekbarStyleName = seekbarStyle == 1 ? "Material 3 (Exteraless)" : "Expressive (M3)";
+                    cell.setTextAndValue("Стиль слайдера", seekbarStyleName, true);
                 } else if (position == seekbarIndicatorRow) {
                     int ind = AppearanceConfig.playerSeekbarIndicator();
                     String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorBar) : ind == 2 ? "Скрыть" : getString(R.string.OEPlayerSeekbarIndicatorDot);

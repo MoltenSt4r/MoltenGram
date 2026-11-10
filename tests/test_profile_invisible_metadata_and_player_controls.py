@@ -369,4 +369,56 @@ def test_quote_bottom_sheet_and_chat_activity_compilation_safety():
     assert "android.os.Build.VERSION.SDK_INT" in player_content
 
 
+def test_image_receiver_oe_peer_accessors_and_locale_format_time():
+    img_receiver = os.path.join(TMESSAGES_JAVA, "org", "telegram", "messenger", "ImageReceiver.java")
+    with open(img_receiver, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "public long getOePeerId()" in content
+    assert "public int getOePeerType()" in content
+
+    locale_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "messenger", "LocaleController.java")
+    with open(locale_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "public static String formatTime(long date)" in content
+
+
+def test_player_seekbar_customization_and_indicator():
+    appearance_path = os.path.join(TMESSAGES_KOTLIN, "app", "exteraless", "appearance", "AppearanceConfig.kt")
+    with open(appearance_path, "r", encoding="utf-8") as f:
+        app_content = f.read()
+    assert "playerSeekbarStyle" in app_content
+    assert "playerSeekbarThickness" in app_content
+
+    wavy_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "WavySeekBar.java")
+    with open(wavy_path, "r", encoding="utf-8") as f:
+        wavy_content = f.read()
+    assert "playerSeekbarStyle()" in wavy_content
+    assert "playerSeekbarThickness()" in wavy_content
+
+    player_settings = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerSettingsActivity.java")
+    with open(player_settings, "r", encoding="utf-8") as f:
+        ps_content = f.read()
+    assert "seekbarStyleRow" in ps_content
+    assert "seekbarThicknessRow" in ps_content
+
+
+def test_local_chat_folder_tags():
+    tags_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "Components", "DialogCellTags.java")
+    with open(tags_path, "r", encoding="utf-8") as f:
+        content = f.read()
+    assert "if (!controller.folderTags)" in content
+
+    filter_create = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "FilterCreateActivity.java")
+    with open(filter_create, "r", encoding="utf-8") as f:
+        fc_content = f.read()
+    assert "local_filter_color_" in fc_content
+    assert "cell.setCloseAsLock(false);" in fc_content
+
+    storage_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "messenger", "MessagesStorage.java")
+    with open(storage_path, "r", encoding="utf-8") as f:
+        ms_content = f.read()
+    assert "local_filter_color_" in ms_content
+
+
+
 

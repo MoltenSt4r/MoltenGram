@@ -216,6 +216,9 @@ public class FilterCreateActivity extends BaseFragment {
         AnimatedEmojiDrawable.toggleAnimations(currentAccount, newFilterAnimations);
         newFilterFlags = filter.flags;
         newFilterColor = filter.color;
+        if (newFilterColor < 0) {
+            newFilterColor = MessagesController.getMainSettings(currentAccount).getInt("local_filter_color_" + filter.id, -1);
+        }
         newAlwaysShow = new ArrayList<>(filter.alwaysShow);
         if (alwaysShow != null) {
             newAlwaysShow.addAll(alwaysShow);
@@ -364,7 +367,7 @@ public class FilterCreateActivity extends BaseFragment {
             items.add(ItemInner.asShadow(LocaleController.getString(R.string.FilterExcludeInfo)));
         }
 
-        if (getMessagesController().folderTags || !getUserConfig().isPremium()) {
+        if (true) {
             items.add(new ItemInner(VIEW_TYPE_HEADER_COLOR_PREVIEW, false));
             items.add(new ItemInner(VIEW_TYPE_COLOR, false));
             items.add(ItemInner.asShadow(LocaleController.getString(R.string.FolderTagColorInfo)));
@@ -1069,6 +1072,11 @@ public class FilterCreateActivity extends BaseFragment {
         filter.emoticon = newFilterEmoticon;
         filter.entities = newFilterNameEntities;
         filter.color = newFilterColor;
+        if (newFilterColor >= 0) {
+            MessagesController.getMainSettings(fragment.getCurrentAccount()).edit().putInt("local_filter_color_" + filter.id, newFilterColor).apply();
+        } else {
+            MessagesController.getMainSettings(fragment.getCurrentAccount()).edit().remove("local_filter_color_" + filter.id).apply();
+        }
         filter.neverShow = newNeverShow;
         filter.alwaysShow = newAlwaysShow;
         filter.title_noanimate = newFilterNoanimate;
@@ -1124,7 +1132,7 @@ public class FilterCreateActivity extends BaseFragment {
             req.filter.flags |= ConnectionsManager.FileTypeVideo;
         }
         req.filter.title_noanimate = newFilterNoanimate;
-        if (newFilterColor < 0) {
+        if (newFilterColor < 0 || !fragment.getUserConfig().isPremium()) {
             req.filter.flags &=~ 134217728;
             req.filter.color = 0;
         } else {
@@ -1677,22 +1685,18 @@ public class FilterCreateActivity extends BaseFragment {
                 case VIEW_TYPE_HEADER_COLOR_PREVIEW: {
                     folderTagsHeader = (HeaderCellColorPreview) holder.itemView;
                     folderTagsHeader.setPreviewText(AnimatedEmojiSpan.cloneSpans(newFilterName, -1, folderTagsHeader.getPreviewTextPaint().getFontMetricsInt(), .5f), false);
-                    folderTagsHeader.setPreviewColor(!getUserConfig().isPremium() ? -1 : newFilterColor, false);
+                    folderTagsHeader.setPreviewColor(newFilterColor, false);
                     folderTagsHeader.setText(LocaleController.getString(R.string.FolderTagColor));
                     break;
                 }
                 case VIEW_TYPE_COLOR: {
                     PeerColorActivity.PeerColorGrid cell = (PeerColorActivity.PeerColorGrid) holder.itemView;
-                    cell.setCloseAsLock(!getUserConfig().isPremium());
-                    cell.setSelected(!getUserConfig().isPremium() ? -1 : newFilterColor, false);
+                    cell.setCloseAsLock(false);
+                    cell.setSelected(newFilterColor, false);
                     cell.setOnColorClick(color -> {
-                        if (!getUserConfig().isPremium()) {
-                            showDialog(new PremiumFeatureBottomSheet(FilterCreateActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_FOLDER_TAGS, true));
-                            return;
-                        }
                         cell.setSelected(newFilterColor = color, true);
                         if (folderTagsHeader != null) {
-                            folderTagsHeader.setPreviewColor(!getUserConfig().isPremium() ? -1 : newFilterColor, true);
+                            folderTagsHeader.setPreviewColor(newFilterColor, true);
                         }
                         checkDoneButton(true);
                     });

@@ -607,9 +607,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
         folderTagsPosition = items.size();
         showTagsRow = items.size();
         items.add(ItemInner.asCheck(LocaleController.getString(R.string.FolderShowTags)));
-        items.add(ItemInner.asShadow(!getUserConfig().isPremiumOrLocal() ? AndroidUtilities.replaceSingleTag(LocaleController.getString(R.string.FolderShowTagsInfoPremium), Theme.key_windowBackgroundWhiteBlueHeader, AndroidUtilities.REPLACING_TAG_TYPE_LINKBOLD, () -> {
-            presentFragment(new PremiumPreviewFragment("settings"));
-        }) : LocaleController.getString(R.string.FolderShowTagsInfo)));
+        items.add(ItemInner.asShadow(LocaleController.getString(R.string.FolderShowTagsInfo)));
 
         if (adapter != null) {
             if (animated) {
@@ -696,20 +694,19 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
                 return;
             }
             if (item.viewType == VIEW_TYPE_CHECK) {
-                if (!getUserConfig().isPremiumOrLocal()) {
-                    showDialog(new PremiumFeatureBottomSheet(this, PremiumPreviewFragment.PREMIUM_FEATURE_FOLDER_TAGS, true));
-                    return;
+                boolean newEnabled = !getMessagesController().folderTags;
+                getMessagesController().setFolderTags(newEnabled);
+                if (getUserConfig().isPremium()) {
+                    TLRPC.TL_messages_toggleDialogFilterTags req = new TLRPC.TL_messages_toggleDialogFilterTags();
+                    req.enabled = newEnabled;
+                    getConnectionsManager().sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                        if (req.enabled && !loadedColors) {
+                            loadingFiltersForColors = true;
+                            getMessagesController().loadRemoteFilters(true);
+                            loadedColors = true;
+                        }
+                    }));
                 }
-                TLRPC.TL_messages_toggleDialogFilterTags req = new TLRPC.TL_messages_toggleDialogFilterTags();
-                req.enabled = !getMessagesController().folderTags;
-                getMessagesController().setFolderTags(req.enabled);
-                getConnectionsManager().sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
-                    if (req.enabled && !loadedColors) {
-                        loadingFiltersForColors = true;
-                        getMessagesController().loadRemoteFilters(true);
-                        loadedColors = true;
-                    }
-                }));
                 ((TextCheckCell) view).setChecked(getMessagesController().folderTags);
                 adapter.notifyItemRangeChanged(filtersSectionStart, filtersSectionEnd - filtersSectionStart);
             } else if (item.viewType == VIEW_TYPE_FILTER) {
@@ -1096,7 +1093,7 @@ public class FiltersSetupActivity extends BaseFragment implements NotificationCe
                 case VIEW_TYPE_CHECK: {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     cell.setTextAndCheck(item.text, getMessagesController().folderTags, divider);
-                    cell.setCheckBoxIcon(!getUserConfig().isPremiumOrLocal() ? R.drawable.permission_locked : 0);
+                    cell.setCheckBoxIcon(0);
                     break;
                 }
                 case VIEW_TYPE_FILTER_SUGGESTION: {

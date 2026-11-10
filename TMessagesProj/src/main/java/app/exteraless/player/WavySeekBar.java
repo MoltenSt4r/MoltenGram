@@ -285,9 +285,11 @@ public class WavySeekBar extends View {
         float dt = lastFrame == 0 ? 0.016f : Math.min(0.05f, (now - lastFrame) / 1000f);
         lastFrame = now;
 
+        int seekbarStyle = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
         int indicator = app.exteraless.appearance.AppearanceConfig.playerSeekbarIndicator();
         int thickness = app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness();
-        boolean isWavy = waveEnabled && app.exteraless.appearance.AppearanceConfig.playerWavy.Bool();
+        boolean isMaterial3 = (seekbarStyle == 1);
+        boolean isWavy = !isMaterial3 && waveEnabled && app.exteraless.appearance.AppearanceConfig.playerWavy.Bool();
         float targetAmp = (playing && isWavy) ? maxAmplitude : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.05f)) {
@@ -359,12 +361,17 @@ public class WavySeekBar extends View {
         }
 
         // 3. Draw thumb indicator if not hidden
-        if (indicator == 0) {
-            canvas.drawCircle(x, cy, thumbRadius, fillPaint);
-        } else if (indicator == 1) {
-            float barH = Math.max(strokeW + dp(8), dp(18));
-            rect.set(x - thumbW / 2f, cy - barH / 2f, x + thumbW / 2f, cy + barH / 2f);
-            canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
+        if (indicator != 2) {
+            if (isMaterial3 || indicator == 1) {
+                float barH = Math.max(strokeW + dp(isMaterial3 ? 12 : 8), dp(isMaterial3 ? 24 : 18));
+                rect.set(x - thumbW / 2f, cy - barH / 2f, x + thumbW / 2f, cy + barH / 2f);
+                canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
+                if (isMaterial3) {
+                    canvas.drawCircle(stopX, cy, strokeW / 2f, fillPaint);
+                }
+            } else if (indicator == 0) {
+                canvas.drawCircle(x, cy, thumbRadius, fillPaint);
+            }
         }
 
         if (amplitude > 0f || targetAmp != amplitude) {

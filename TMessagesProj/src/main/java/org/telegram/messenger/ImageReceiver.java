@@ -2722,6 +2722,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     public long getPeerId() {
         return this.oePeerId;
     }
+
+    public long getOePeerId() {
+        return this.oePeerId;
+    }
     private float oeRadiusWidth;
     // openExtera: радиус посчитан вызывающим через AppearanceConfig.getAvatarCorners(сторона) —
     // масштабировать его второй раз нельзя. См. setAvatarCornersApplied.
@@ -2732,6 +2736,10 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
     }
 
     public int getPeerType() {
+        return this.oePeerType;
+    }
+
+    public int getOePeerType() {
         return this.oePeerType;
     }
 

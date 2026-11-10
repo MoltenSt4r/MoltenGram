@@ -2648,6 +2648,15 @@ public class LocaleController {
         return "LOC_ERR";
     }
 
+    public static String formatTime(long date) {
+        try {
+            return getInstance().getFormatterDay().format(new Date(date * 1000L));
+        } catch (Exception e) {
+            FileLog.e(e);
+            return "";
+        }
+    }
+
     public static String formatStatusExpireDateTime(long date) {
         try {
             date *= 1000;

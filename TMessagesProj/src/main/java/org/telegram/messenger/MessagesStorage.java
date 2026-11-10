@@ -2618,6 +2618,9 @@ public class MessagesStorage extends BaseController {
                     filter.name = filtersCursor.stringValue(4);
                     filter.emoticon = filtersCursor.stringValue(5);
                     filter.color = filtersCursor.intValue(6);
+                    if (filter.color < 0) {
+                        filter.color = MessagesController.getMainSettings(currentAccount).getInt("local_filter_color_" + filter.id, -1);
+                    }
                     filter.entities = new ArrayList<>();
                     NativeByteBuffer buff = filtersCursor.byteBufferValue(7);
                     if (buff != null) {
@@ -2702,6 +2705,9 @@ public class MessagesStorage extends BaseController {
                     state.bindString(5, filter.name);
                     state.bindNull(6);
                     state.bindInteger(7, filter.color);
+            if (filter.color >= 0) {
+                MessagesController.getMainSettings(currentAccount).edit().putInt("local_filter_color_" + filter.id, filter.color).apply();
+            }
                     final Vector<TLRPC.MessageEntity> entitiesVector = new Vector<>(TLRPC.MessageEntity::TLdeserialize);
                     final NativeByteBuffer entitiesBuffer = new NativeByteBuffer(entitiesVector.getObjectSize());
                     entitiesVector.serializeToStream(entitiesBuffer);
@@ -3234,6 +3240,9 @@ public class MessagesStorage extends BaseController {
                 state.bindNull(6);
             }
             state.bindInteger(7, filter.color);
+            if (filter.color >= 0) {
+                MessagesController.getMainSettings(currentAccount).edit().putInt("local_filter_color_" + filter.id, filter.color).apply();
+            }
             final Vector<TLRPC.MessageEntity> entitiesVector = new Vector<>(TLRPC.MessageEntity::TLdeserialize);
             entitiesVector.objects.addAll(filter.entities);
             final NativeByteBuffer entitiesBuffer = new NativeByteBuffer(entitiesVector.getObjectSize());
@@ -3389,7 +3398,15 @@ public class MessagesStorage extends BaseController {
                             changed = true;
                             filter.emoticon = newFilter.emoticon;
                         }
-                        final int color = (newFilter.flags & 134217728) != 0 ? newFilter.color : -1;
+                        final int remoteColor = (newFilter.flags & 134217728) != 0 ? newFilter.color : -1;
+                        final int color;
+                        if (remoteColor >= 0) {
+                            color = remoteColor;
+                        } else if (filter.color >= 0) {
+                            color = filter.color;
+                        } else {
+                            color = MessagesController.getMainSettings(currentAccount).getInt("local_filter_color_" + filter.id, -1);
+                        }
                         if (filter.color != color) {
                             filter.color = color;
                             changed = true;
@@ -3531,7 +3548,11 @@ public class MessagesStorage extends BaseController {
                         filter.emoticon = newFilter.emoticon;
                         filter.entities = newFilter.title.entities;
                         filter.title_noanimate = newFilter.title_noanimate;
-                        filter.color = (newFilter.flags & 134217728) != 0 ? newFilter.color : -1;
+                        int remoteColor = (newFilter.flags & 134217728) != 0 ? newFilter.color : -1;
+                        if (remoteColor < 0) {
+                            remoteColor = MessagesController.getMainSettings(currentAccount).getInt("local_filter_color_" + filter.id, -1);
+                        }
+                        filter.color = remoteColor;
                         filter.pendingUnreadCount = -1;
                         for (int c = 0; c < 2; c++) {
                             if (c == 0) {
