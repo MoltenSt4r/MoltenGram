@@ -53,6 +53,7 @@ import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ChatActivity;
 import org.telegram.ui.Components.AvatarDrawable;
+import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.ShareAlert;
@@ -296,14 +297,22 @@ public class ChatQuoteBottomSheet extends BottomSheet {
         }
 
         if (showSenders) {
-            ImageView avatarView = new ImageView(getContext());
+            BackupImageView avatarView = new BackupImageView(getContext());
+            avatarView.setRoundRadius(dp(18));
             AvatarDrawable avatarDrawable = new AvatarDrawable();
             if (senderUser != null) {
                 avatarDrawable.setInfo(senderUser);
+                avatarView.setForUserOrChat(senderUser, avatarDrawable);
             } else {
-                avatarDrawable.setInfo(fromId, "U", null);
+                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-fromId);
+                if (chat != null) {
+                    avatarDrawable.setInfo(chat);
+                    avatarView.setForUserOrChat(chat, avatarDrawable);
+                } else {
+                    avatarDrawable.setInfo(fromId, "U", null);
+                    avatarView.setImageDrawable(avatarDrawable);
+                }
             }
-            avatarView.setImageDrawable(avatarDrawable);
             row.addView(avatarView, LayoutHelper.createLinear(36, 36, Gravity.TOP, 0, 0, 8, 0));
         }
 
@@ -337,6 +346,73 @@ public class ChatQuoteBottomSheet extends BottomSheet {
             bubbleCard.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
         }
 
+        // Render photo / video / GIF thumbnail if available
+        File mediaFile = null;
+        if (mo.messageOwner != null && mo.messageOwner.media != null) {
+            mediaFile = FileLoader.getInstance(currentAccount).getPathToMessage(mo.messageOwner);
+            if (mediaFile != null && !mediaFile.exists()) {
+                mediaFile = null;
+            }
+            if (mediaFile == null && mo.photoThumbs != null && !mo.photoThumbs.isEmpty()) {
+                for (int t = mo.photoThumbs.size() - 1; t >= 0; t--) {
+                    TLRPC.PhotoSize ps = mo.photoThumbs.get(t);
+                    File thumb = FileLoader.getInstance(currentAccount).getPathToAttach(ps, true);
+                    if (thumb != null && thumb.exists()) {
+                        mediaFile = thumb;
+                        break;
+                    }
+                }
+            }
+            if (mediaFile == null && mo.getDocument() != null && mo.getDocument().thumbs != null && !mo.getDocument().thumbs.isEmpty()) {
+                for (int t = mo.getDocument().thumbs.size() - 1; t >= 0; t--) {
+                    TLRPC.PhotoSize ps = mo.getDocument().thumbs.get(t);
+                    File thumb = FileLoader.getInstance(currentAccount).getPathToAttach(ps, true);
+                    if (thumb != null && thumb.exists()) {
+                        mediaFile = thumb;
+                        break;
+                    }
+                }
+            }
+        }
+        if (mediaFile != null) {
+            try {
+                android.graphics.BitmapFactory.Options opts = new android.graphics.BitmapFactory.Options();
+                opts.inJustDecodeBounds = true;
+                android.graphics.BitmapFactory.decodeFile(mediaFile.getAbsolutePath(), opts);
+                if (opts.outWidth > 0 && opts.outHeight > 0) {
+                    int maxDim = dp(240);
+                    int sample = 1;
+                    while ((opts.outWidth / sample) > maxDim || (opts.outHeight / sample) > maxDim) {
+                        sample *= 2;
+                    }
+                    opts.inJustDecodeBounds = false;
+                    opts.inSampleSize = sample;
+                    Bitmap mediaBmp = android.graphics.BitmapFactory.decodeFile(mediaFile.getAbsolutePath(), opts);
+                    if (mediaBmp != null) {
+                        ImageView mediaView = new ImageView(getContext()) {
+                            private final RectF rf = new RectF();
+                            private final android.graphics.Path p = new android.graphics.Path();
+                            @Override
+                            protected void onDraw(Canvas canvas) {
+                                p.rewind();
+                                rf.set(0, 0, getWidth(), getHeight());
+                                p.addRoundRect(rf, dp(10), dp(10), android.graphics.Path.Direction.CW);
+                                canvas.clipPath(p);
+                                super.onDraw(canvas);
+                            }
+                        };
+                        mediaView.setScaleType(ImageView.ScaleType.CENTER_CROP);
+                        mediaView.setImageBitmap(mediaBmp);
+                        int viewH = Math.min(dp(200), (int) ((float) mediaBmp.getHeight() / mediaBmp.getWidth() * dp(240)));
+                        if (viewH < dp(80)) viewH = dp(140);
+                        bubbleCard.addView(mediaView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, viewH, 0, 4, 0, 4));
+                    }
+                }
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+        }
+
         CharSequence text = mo.messageText;
         if (TextUtils.isEmpty(text) && mo.caption != null) {
             text = mo.caption;
@@ -351,7 +427,7 @@ public class ChatQuoteBottomSheet extends BottomSheet {
 
         if (showTime) {
             TextView timeView = new TextView(getContext());
-            timeView.setText(LocaleController.formatDateChat(mo.messageOwner != null ? mo.messageOwner.date : 0));
+            timeView.setText(LocaleController.formatTime(mo.messageOwner != null ? mo.messageOwner.date : 0));
             timeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
             timeView.setTextColor(Theme.getColor(Theme.key_chat_inTimeText, resourcesProvider));
             timeView.setGravity(Gravity.RIGHT);
@@ -364,7 +440,13 @@ public class ChatQuoteBottomSheet extends BottomSheet {
 
     private File saveBitmapToFile(Bitmap bmp, boolean isWebp) {
         try {
-            File cacheDir = ApplicationLoader.applicationContext.getCacheDir();
+            File cacheDir = FileLoader.getDirectory(FileLoader.MEDIA_DIR_CACHE);
+            if (cacheDir != null && !cacheDir.exists()) {
+                cacheDir.mkdirs();
+            }
+            if (cacheDir == null) {
+                cacheDir = ApplicationLoader.applicationContext.getExternalCacheDir();
+            }
             String ext = isWebp ? ".webp" : ".png";
             File file = new File(cacheDir, "quote_" + System.currentTimeMillis() + ext);
             FileOutputStream fos = new FileOutputStream(file);

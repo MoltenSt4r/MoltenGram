@@ -7672,6 +7672,17 @@ public class MediaDataController extends BaseController {
                             if (sStart < 0 || sEnd <= sStart) {
                                 continue;
                             }
+                            boolean coveredByUrl = false;
+                            for (int i = 0; i < entities.size(); i++) {
+                                TLRPC.MessageEntity e = entities.get(i);
+                                if (e instanceof TLRPC.TL_messageEntityTextUrl && e.offset == sStart && e.length == (sEnd - sStart)) {
+                                    coveredByUrl = true;
+                                    break;
+                                }
+                            }
+                            if (coveredByUrl) {
+                                continue;
+                            }
                             if (!LinkedCustomEmoji.canSend(currentAccount)) {
                                 TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
                                 entity.offset = sStart;

@@ -317,12 +317,23 @@ public class WavySeekBar extends View {
 
         float thumbW = dragging ? dp(3.5f) : dp(5);
         float x = left + p * (right - left);
-        float gap = dp(4);
+        float visualGap = dp(4) + strokeW * 0.35f;
+        float capHalf = strokeW / 2f;
         float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
-        float waveEnd = (indicator == 2) ? x : (x - gap - thumbRadius);
+        float waveEnd = (indicator == 2) ? x : (x - thumbRadius - visualGap - capHalf);
+        float stopX = right - dp(1);
+        float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
         float lambda = dp(34);
         float step = dp(2);
 
+        // 1. Draw inactive background track first
+        if (indicator == 2) {
+            canvas.drawLine(left, cy, stopX, cy, trackPaint);
+        } else if (restX < stopX) {
+            canvas.drawLine(restX, cy, stopX, cy, trackPaint);
+        }
+
+        // 2. Draw active progress on top
         if (waveEnd > left) {
             if (amplitude > 0f && isWavy) {
                 path.rewind();
@@ -347,13 +358,7 @@ public class WavySeekBar extends View {
             }
         }
 
-        float stopX = right - dp(1);
-        float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + gap);
-        if (restX < stopX) {
-            canvas.drawLine(restX, cy, stopX, cy, trackPaint);
-        }
-
-        canvas.drawCircle(stopX, cy, strokeW / 2f, fillPaint);
+        // 3. Draw thumb indicator if not hidden
         if (indicator == 0) {
             canvas.drawCircle(x, cy, thumbRadius, fillPaint);
         } else if (indicator == 1) {

@@ -638,13 +638,24 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
             start = getSelectionStart();
             end = getSelectionEnd();
         }
+        String initial = "http://";
+        Editable curText = getText();
+        if (curText != null && start >= 0 && end <= curText.length() && start < end) {
+            URLSpanReplacement[] existing = curText.getSpans(start, end, URLSpanReplacement.class);
+            if (existing != null && existing.length > 0 && !TextUtils.isEmpty(existing[0].getURL())) {
+                initial = existing[0].getURL();
+            }
+        }
         showInputDialog(
             LocaleController.getString(R.string.CreateLink),
             LocaleController.getString(R.string.URL),
-            "http://",
+            initial,
             true,
             url -> {
                 Editable editable = getText();
+                if (editable == null) {
+                    return;
+                }
                 CharacterStyle[] spans = editable.getSpans(start, end, CharacterStyle.class);
                 if (spans != null && spans.length > 0) {
                     for (CharacterStyle oldSpan : spans) {
@@ -661,9 +672,11 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
                         }
                     }
                 }
-                try {
-                    editable.setSpan(createUrlSpan(app.exteraless.links.LinkCleaner.cleanUrlString(url).toString()), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                } catch (Exception ignore) {}
+                if (!TextUtils.isEmpty(url)) {
+                    try {
+                        editable.setSpan(createUrlSpan(app.exteraless.links.LinkCleaner.cleanUrlString(url).toString()), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    } catch (Exception ignore) {}
+                }
                 if (delegate != null) {
                     delegate.onSpansChanged();
                 }

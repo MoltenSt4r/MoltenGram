@@ -1141,7 +1141,13 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             if (r > 0) {
                 clipPath.rewind();
                 AndroidUtilities.rectTmp.set(inset, inset, thisWidth - inset, thisHeight - inset);
-                clipPath.addRoundRect(AndroidUtilities.rectTmp, r, r, Path.Direction.CW);
+                int md3ShapeId = app.exteraless.appearance.AppearanceConfig.getAvatarShape(imageReceiver.getOePeerType(), imageReceiver.getOePeerId());
+                if (md3ShapeId > 0 && (thisWidth - 2 * inset) > 0 && (thisHeight - 2 * inset) > 0) {
+                    Path shapePath = app.exteraless.appearance.Md3AvatarShapes.getShapePath(md3ShapeId, inset, inset, thisWidth - 2 * inset, thisHeight - 2 * inset);
+                    clipPath.set(shapePath);
+                } else {
+                    clipPath.addRoundRect(AndroidUtilities.rectTmp, r, r, Path.Direction.CW);
+                }
                 canvas.clipPath(clipPath);
             }
 
