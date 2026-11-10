@@ -326,7 +326,12 @@ public class ChatQuoteBottomSheet extends BottomSheet {
             nameView.setTypeface(AndroidUtilities.bold());
             int nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText, resourcesProvider);
             if (senderUser != null && senderUser.color != null) {
-                nameColor = Theme.getColor(Theme.keys_avatar_nameInMessage[UserObject.getColorId(senderUser)]);
+                try {
+                    int colorId = Math.abs(UserObject.getColorId(senderUser)) % Theme.keys_avatar_nameInMessage.length;
+                    nameColor = Theme.getColor(Theme.keys_avatar_nameInMessage[colorId], resourcesProvider);
+                } catch (Exception e) {
+                    nameColor = Theme.getColor(Theme.key_chat_inForwardedNameText, resourcesProvider);
+                }
             }
             nameView.setTextColor(nameColor != 0 ? nameColor : 0xFF50B4FF);
             bubbleCard.addView(nameView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));

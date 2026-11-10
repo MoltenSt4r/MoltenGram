@@ -7413,6 +7413,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         allowGifs = needGifs;
         if (emojiView != null) {
             emojiView.setAllow(allowStickers, allowGifs, true);
+            emojiView.allowLocalPremiumEmojis(LinkedCustomEmoji.canSend(currentAccount));
             emojiView.allowEmojisForNonPremium(LinkedCustomEmoji.canSend(currentAccount));
         }
         setEmojiButtonImage(false, !isPaused);
@@ -13422,8 +13423,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             @Override
             public boolean allowNonPremiumCustomEmoji() {
                 return !UserConfig.getInstance(currentAccount).isPremium()
-                    && (LinkedCustomEmoji.canSend(currentAccount) || NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool())
-                    && dialog_id != UserConfig.getInstance(currentAccount).getClientUserId();
+                    && (LinkedCustomEmoji.canSend(currentAccount) || NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool());
             }
 
             @Override
@@ -14404,6 +14404,10 @@ public class ChatActivityEnterView extends FrameLayout implements
             int previousHeight = 0;
             if (contentType == POPUP_CONTENT_EMOJI_KEYBOARD) {
                 attachEmojiView();
+                if (emojiView != null) {
+                    emojiView.allowLocalPremiumEmojis(LinkedCustomEmoji.canSend(currentAccount));
+                    emojiView.allowEmojisForNonPremium(LinkedCustomEmoji.canSend(currentAccount));
+                }
                 samePannelWasVisible = emojiViewVisible && emojiView.getVisibility() == View.VISIBLE;
                 emojiView.setVisibility(VISIBLE);
                 emojiViewVisible = true;

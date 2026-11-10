@@ -39,12 +39,13 @@ import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.CheckBoxCell;
+import org.telegram.ui.Cells.SlideIntChooseView;
 import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.Switch;
 
 import java.util.ArrayList;
@@ -60,54 +61,23 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
-    private int styleEditorRow;
-    private int styleEditorShadowRow;
-
     private int appearanceHeaderRow;
-    private int coverStyleRow;
-    private int discSpinRow;
-    private int coverExtendRow;
     private int bgStyleRow;
-    private int seekbarIndicatorRow;
-    private int seekbarThicknessRow;
-    private int wavySeekbarRow;
-    private int seekbarStyleRow;
     private int colorStyleRow;
     private int coverShapeRow;
     private int miniCoverShapeRow;
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
-    private int videoCoverRow;
-    private int appearanceShadowRow;
-
-    private int controlsHeaderRow;
-    private int controlsSizeRow;
-    private int titleAlignRow;
-    private int titleSizeRow;
-    private int titleAboveRow;
     private int actionButtonsRow;
-    private int showModesRow;
-    private int showActionsRow;
-    private int showLikeRow;
-    private int showSourceRow;
-    private int controlsShadowRow;
-
-    private int miniHeaderRow;
-    private int miniPreviewRow;
-    private int miniCoverRow;
-    private int miniShapeRow;
-    private int miniProgressRow;
-    private int miniColorsRow;
-    private int miniCompactRow;
-    private int miniArtistRow;
-    private int miniPreviousRow;
-    private int miniNextRow;
-    private int miniCloseRow;
-    private int miniShadowRow;
+    private int seekbarWavyRow;
+    private int seekbarThicknessRow;
+    private int seekbarIndicatorRow;
+    private int appearanceShadowRow;
 
     private int lyricsHeaderRow;
     private int lyricsPreviewRow;
+    private int lyricsAudioRecognitionRow;
     private int lyricsExperimentalRow;
     private int lyricsSourcesRow;
     private int lyricsPriorityRow;
@@ -118,6 +88,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsShadowRow;
 
     private int audioHeaderRow;
+    private int miniPreviewRow;
     private int pauseOnMuteRow;
     private int resumeOnBluetoothRow;
     private int crossfadeRow;
@@ -125,11 +96,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int playlistsRow;
     private int sleepTimerRow;
     private int audioShadowRow;
-
-    private PlayerMiniView miniPreview;
-    private TextView lyricsLine1;
-    private TextView lyricsLine2;
-    private TextView lyricsLine3;
 
     @Override
     protected String getKey() {
@@ -145,57 +111,24 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     protected void updateRows() {
         super.updateRows();
 
-        // Appearance (ExteraLess native style)
+        // Appearance
         appearanceHeaderRow = addRow("appearanceHeader");
+        bgStyleRow = addRow("bgStyle");
+        colorStyleRow = addRow("colorStyle");
         coverShapeRow = addRow("coverShape");
-        videoCoverRow = addRow("videoCover");
+        miniCoverShapeRow = addRow("miniCoverShape");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
-        bgStyleRow = addRow("bgStyle");
-        colorStyleRow = addRow("colorStyle");
-        seekbarIndicatorRow = addRow("seekbarIndicator");
-        seekbarThicknessRow = addRow("seekbarThickness");
-        wavySeekbarRow = addRow("wavySeekbar");
-        appearanceShadowRow = addRow();
-
-        styleEditorRow = -1;
-        styleEditorShadowRow = -1;
-        coverStyleRow = -1;
-        discSpinRow = -1;
-        coverExtendRow = -1;
-        miniCoverShapeRow = -1;
-
-        // Controls
-        controlsHeaderRow = addRow("controlsHeader");
-        controlsSizeRow = addRow("controlsSize");
-        titleAlignRow = addRow("titleAlign");
-        titleSizeRow = addRow("titleSize");
-        titleAboveRow = addRow("titleAbove");
         actionButtonsRow = addRow("actionButtons");
-        showModesRow = addRow("showModes");
-        showActionsRow = addRow("showActions");
-        showLikeRow = addRow("showLike");
-        showSourceRow = addRow("showSource");
-        controlsShadowRow = addRow();
-
-        // Mini Player
-        miniHeaderRow = addRow("miniHeader");
-        miniPreviewRow = addRow("miniPreview");
-        miniCoverRow = addRow("miniCover");
-        miniShapeRow = addRow("miniShape");
-        miniProgressRow = addRow("miniProgress");
-        miniColorsRow = addRow("miniColors");
-        miniCompactRow = -1;
-        miniArtistRow = addRow("miniArtist");
-        miniPreviousRow = addRow("miniPrevious");
-        miniNextRow = addRow("miniNext");
-        miniCloseRow = addRow("miniClose");
-        miniShadowRow = addRow();
+        seekbarWavyRow = addRow("seekbarWavy");
+        seekbarThicknessRow = addRow("seekbarThickness");
+        seekbarIndicatorRow = addRow("seekbarIndicator");
+        appearanceShadowRow = addRow();
 
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
-        lyricsPreviewRow = addRow("lyricsPreview");
+        lyricsAudioRecognitionRow = addRow("lyricsAudioRecognition");
         lyricsExperimentalRow = addRow("lyricsExperimental");
         lyricsSourcesRow = addRow("lyricsSources");
         lyricsPriorityRow = addRow("lyricsPriority");
@@ -223,222 +156,34 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == styleEditorRow) {
-            PlayerSheet.openStyleEditor(this);
-        } else if (position == coverStyleRow) {
+        if (position == bgStyleRow) {
             CharSequence[] options = {
-                    getString(R.string.OEPlayerCoverCard),
-                    getString(R.string.OEPlayerCoverWide),
-                    getString(R.string.OEPlayerCoverFull),
-                    getString(R.string.OEPlayerCoverDisc)
+                    getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
+                    getString(R.string.OEAppearancePlayerBackgroundStyleBlur),
+                    getString(R.string.OEAppearancePlayerBackgroundStyleGradient)
             };
-            showSelector(getString(R.string.OEPlayerStyleCover), options, which -> {
-                AppearanceConfig.playerCoverStyle.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(coverStyleRow);
-                notifyPlayerChanged();
+            showSelector(getString(R.string.OEAppearancePlayerBackgroundStyle), options, which -> {
+                AppearanceConfig.playerBackgroundStyle.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(bgStyleRow);
             });
-        } else if (position == discSpinRow) {
-            boolean nextVal = !AppearanceConfig.playerDiscSpin.Bool();
-            AppearanceConfig.playerDiscSpin.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == coverExtendRow) {
-            boolean nextVal = !AppearanceConfig.playerCoverExtend.Bool();
-            AppearanceConfig.playerCoverExtend.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == controlsSizeRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerControlsCompact),
-                    getString(R.string.OEPlayerControlsNormal),
-                    getString(R.string.OEPlayerControlsLarge)
-            };
-            showSelector(getString(R.string.OEPlayerBlockControls), options, which -> {
-                AppearanceConfig.playerControlsSize.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(controlsSizeRow);
-                notifyPlayerChanged();
-            });
-        } else if (position == titleAlignRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerAlignStart),
-                    getString(R.string.OEPlayerAlignCenter)
-            };
-            showSelector(getString(R.string.OEPlayerTitleAboveCover), options, which -> {
-                AppearanceConfig.playerTitleAlign.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(titleAlignRow);
-                notifyPlayerChanged();
-            });
-        } else if (position == titleSizeRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerSizeSmall),
-                    getString(R.string.OEPlayerSizeMedium),
-                    getString(R.string.OEPlayerSizeLarge)
-            };
-            showSelector(getString(R.string.OEPlayerTitleAboveCover), options, which -> {
-                AppearanceConfig.playerTitleSize.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(titleSizeRow);
-                notifyPlayerChanged();
-            });
-        } else if (position == titleAboveRow) {
-            boolean nextVal = !AppearanceConfig.playerTitleAbove.Bool();
-            AppearanceConfig.playerTitleAbove.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == wavySeekbarRow) {
+        } else if (position == actionButtonsRow) {
+            showActionButtonsDialog();
+        } else if (position == seekbarWavyRow) {
             boolean nextVal = !AppearanceConfig.playerWavy.Bool();
             AppearanceConfig.playerWavy.setConfigBool(nextVal);
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(nextVal);
             }
-            notifyPlayerChanged();
-        } else if (position == actionButtonsRow) {
-            showActionButtonsDialog();
         } else if (position == seekbarIndicatorRow) {
             CharSequence[] options = {
                     getString(R.string.OEPlayerSeekbarIndicatorDot),
-                    getString(R.string.OEPlayerSeekbarIndicatorBar)
+                    getString(R.string.OEPlayerSeekbarIndicatorBar),
+                    "Скрыть"
             };
             showSelector(getString(R.string.OEPlayerSeekbarIndicator), options, which -> {
                 AppearanceConfig.playerSeekbarIndicator.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(seekbarIndicatorRow);
-                notifyPlayerChanged();
             });
-        } else if (position == seekbarThicknessRow) {
-            showSeekbarThicknessDialog();
-        } else if (position == showModesRow) {
-            boolean nextVal = !AppearanceConfig.playerShowModes.Bool();
-            AppearanceConfig.playerShowModes.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == showActionsRow) {
-            boolean nextVal = !AppearanceConfig.playerShowActions.Bool();
-            AppearanceConfig.playerShowActions.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == showLikeRow) {
-            boolean nextVal = !AppearanceConfig.playerShowLike.Bool();
-            AppearanceConfig.playerShowLike.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == showSourceRow) {
-            boolean nextVal = !AppearanceConfig.playerShowSource.Bool();
-            AppearanceConfig.playerShowSource.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
-        } else if (position == miniCoverRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerMiniCoverRounded),
-                    getString(R.string.OEPlayerMiniCoverRound),
-                    getString(R.string.OEPlayerMiniCoverHidden)
-            };
-            showSelector(getString(R.string.OEPlayerStyleCover), options, which -> {
-                AppearanceConfig.playerMiniCover.setConfigInt(which);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(miniCoverRow);
-                    if (miniPreviewRow >= 0) listAdapter.notifyItemChanged(miniPreviewRow);
-                }
-                if (miniPreview != null) miniPreview.applyStyle();
-                notifyPlayerChanged();
-            });
-        } else if (position == miniShapeRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerMiniShapeRounded),
-                    getString(R.string.OEPlayerMiniShapePill),
-                    getString(R.string.OEPlayerMiniShapeSquare)
-            };
-            showSelector(getString(R.string.OEPlayerMiniShape), options, which -> {
-                AppearanceConfig.playerMiniShape.setConfigInt(which);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(miniShapeRow);
-                    if (miniPreviewRow >= 0) listAdapter.notifyItemChanged(miniPreviewRow);
-                }
-                if (miniPreview != null) miniPreview.applyStyle();
-                notifyPlayerChanged();
-            });
-        } else if (position == miniProgressRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerMiniProgressRing),
-                    getString(R.string.OEPlayerMiniProgressLine),
-                    getString(R.string.OEPlayerMiniProgressNone)
-            };
-            showSelector(getString(R.string.OEPlayerMiniProgress), options, which -> {
-                int val = (which == 0) ? PlayerStyle.MINI_PROGRESS_RING : (which == 1) ? PlayerStyle.MINI_PROGRESS_LINE : PlayerStyle.MINI_PROGRESS_NONE;
-                AppearanceConfig.playerMiniProgress.setConfigInt(val);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(miniProgressRow);
-                    if (miniPreviewRow >= 0) listAdapter.notifyItemChanged(miniPreviewRow);
-                }
-                if (miniPreview != null) miniPreview.applyStyle();
-                notifyPlayerChanged();
-            });
-        } else if (position == miniColorsRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEPlayerColorsCover),
-                    getString(R.string.OEPlayerColorsTheme)
-            };
-            showSelector(getString(R.string.OEPlayerMiniColors), options, which -> {
-                AppearanceConfig.playerMiniColors.setConfigInt(which);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(miniColorsRow);
-                    if (miniPreviewRow >= 0) listAdapter.notifyItemChanged(miniPreviewRow);
-                }
-                if (miniPreview != null) miniPreview.applyStyle();
-                notifyPlayerChanged();
-            });
-        } else if (position == miniCompactRow) {
-            boolean nextVal = !AppearanceConfig.playerMiniCompact.Bool();
-            AppearanceConfig.playerMiniCompact.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            if (miniPreview != null) miniPreview.applyStyle();
-            notifyPlayerChanged();
-        } else if (position == miniArtistRow) {
-            boolean nextVal = !AppearanceConfig.playerMiniArtist.Bool();
-            AppearanceConfig.playerMiniArtist.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            if (miniPreview != null) miniPreview.applyStyle();
-            notifyPlayerChanged();
-        } else if (position == miniPreviousRow) {
-            boolean nextVal = !AppearanceConfig.playerMiniPrevious.Bool();
-            AppearanceConfig.playerMiniPrevious.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            if (miniPreview != null) miniPreview.applyStyle();
-            notifyPlayerChanged();
-        } else if (position == miniNextRow) {
-            boolean nextVal = !AppearanceConfig.playerMiniNext.Bool();
-            AppearanceConfig.playerMiniNext.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            if (miniPreview != null) miniPreview.applyStyle();
-            notifyPlayerChanged();
-        } else if (position == miniCloseRow) {
-            boolean nextVal = !AppearanceConfig.playerMiniClose.Bool();
-            AppearanceConfig.playerMiniClose.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            if (miniPreview != null) miniPreview.applyStyle();
-            notifyPlayerChanged();
         } else if (position == pauseOnMuteRow) {
             boolean nextVal = !AppearanceConfig.playerPauseOnMute();
             AppearanceConfig.playerPauseOnMute.setConfigBool(nextVal);
@@ -451,23 +196,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(nextVal);
             }
-        } else if (position == bgStyleRow) {
-            CharSequence[] options = {
-                    getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
-                    getString(R.string.OEAppearancePlayerBackgroundStyleBlur),
-                    getString(R.string.OEAppearancePlayerBackgroundStyleGradient)
-            };
-            showSelector(getString(R.string.OEAppearancePlayerBackgroundStyle), options, which -> {
-                AppearanceConfig.playerBackgroundStyle.setConfigInt(which);
-                AppearanceConfig.playerBackground.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(bgStyleRow);
-                notifyPlayerChanged();
-            });
-        } else if (position == seekbarStyleRow) {
-            new SeekbarStyleDialog(getContext(), which -> {
-                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarStyleRow);
-                notifyPlayerChanged();
-            }).show();
+        } else if (position == lyricsAudioRecognitionRow) {
+            boolean nextVal = !AppearanceConfig.playerLyricsAudioRecognition();
+            AppearanceConfig.playerLyricsAudioRecognition.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
         } else if (position == colorStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerColorStyleCover),
@@ -475,9 +209,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerColorStyle), options, which -> {
                 AppearanceConfig.playerColorStyle.setConfigInt(which);
-                AppearanceConfig.playerColors.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(colorStyleRow);
-                notifyPlayerChanged();
             });
         } else if (position == coverShapeRow) {
             CharSequence[] options = {
@@ -492,19 +224,16 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 1) {
                     AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 2) {
                     AppearanceConfig.playerCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 3) {
                     int currentShape = AppearanceConfig.playerCoverShape();
                     if (currentShape < 0) currentShape = 0;
@@ -513,7 +242,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         PlayerArt.clearTrackShapesCache();
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                         if (listAdapter != null) listAdapter.notifyItemChanged(coverShapeRow);
-                        notifyPlayerChanged();
                     });
                 }
             });
@@ -531,25 +259,21 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 1) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_DISABLED);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 2) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_CYCLE);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 3) {
                     AppearanceConfig.playerMiniCoverShape.setConfigInt(AppearanceConfig.COVER_SHAPE_RANDOM);
                     PlayerArt.clearTrackShapesCache();
                     NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                     if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
-                    notifyPlayerChanged();
                 } else if (which == 4) {
                     int currentShape = AppearanceConfig.playerMiniCoverShape();
                     if (currentShape < 0) currentShape = 0;
@@ -558,43 +282,29 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         PlayerArt.clearTrackShapesCache();
                         NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.audioInfoLoaded);
                         if (listAdapter != null) listAdapter.notifyItemChanged(miniCoverShapeRow);
-                        notifyPlayerChanged();
                     });
                 }
             });
         } else if (position == swipeTrackRow) {
-            boolean nextVal = !AppearanceConfig.playerSwipeTrack();
-            AppearanceConfig.playerSwipeTrack.setConfigBool(nextVal);
-            AppearanceConfig.playerCoverSwipe.setConfigBool(nextVal);
+            AppearanceConfig.playerSwipeTrack.setConfigBool(!AppearanceConfig.playerSwipeTrack());
             if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
+                ((TextCheckCell) view).setChecked(AppearanceConfig.playerSwipeTrack());
             }
-            notifyPlayerChanged();
         } else if (position == cropCoverRow) {
             AppearanceConfig.playerCropCover.setConfigBool(!AppearanceConfig.playerCropCover());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerCropCover());
             }
-            notifyPlayerChanged();
-        } else if (position == videoCoverRow) {
-            boolean nextVal = !AppearanceConfig.playerVideoCover();
-            AppearanceConfig.playerVideoCover.setConfigBool(nextVal);
-            if (view instanceof TextCheckCell) {
-                ((TextCheckCell) view).setChecked(nextVal);
-            }
-            notifyPlayerChanged();
         } else if (position == keepScreenOnRow) {
             AppearanceConfig.playerKeepScreenOn.setConfigBool(!AppearanceConfig.playerKeepScreenOn());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerKeepScreenOn());
             }
-            notifyPlayerChanged();
         } else if (position == lyricsExperimentalRow) {
             AppearanceConfig.playerLyricsExperimental.setConfigBool(!AppearanceConfig.playerLyricsExperimental());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsExperimental());
             }
-            notifyPlayerChanged();
         } else if (position == lyricsSourcesRow) {
             showLyricsSourcesDialog();
         } else if (position == lyricsPriorityRow) {
@@ -604,7 +314,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsTranslate());
             }
-            notifyPlayerChanged();
         } else if (position == lyricsAlignmentRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsAlignmentCenter),
@@ -612,18 +321,13 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerLyricsAlignment), options, which -> {
                 AppearanceConfig.playerLyricsAlignment.setConfigInt(which);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(lyricsAlignmentRow);
-                    if (lyricsPreviewRow >= 0) listAdapter.notifyItemChanged(lyricsPreviewRow);
-                }
-                notifyPlayerChanged();
+                if (listAdapter != null) listAdapter.notifyItemChanged(lyricsAlignmentRow);
             });
         } else if (position == lyricsAutoscrollRow) {
             AppearanceConfig.playerLyricsAutoScroll.setConfigBool(!AppearanceConfig.playerLyricsAutoScroll());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsAutoScroll());
             }
-            notifyPlayerChanged();
         } else if (position == lyricsTextSizeRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsTextSizeNormal),
@@ -632,18 +336,13 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerLyricsTextSize), options, which -> {
                 AppearanceConfig.playerLyricsTextSize.setConfigInt(which);
-                if (listAdapter != null) {
-                    listAdapter.notifyItemChanged(lyricsTextSizeRow);
-                    if (lyricsPreviewRow >= 0) listAdapter.notifyItemChanged(lyricsPreviewRow);
-                }
-                notifyPlayerChanged();
+                if (listAdapter != null) listAdapter.notifyItemChanged(lyricsTextSizeRow);
             });
         } else if (position == crossfadeRow) {
             AppearanceConfig.playerCrossfade.setConfigBool(!AppearanceConfig.playerCrossfade());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerCrossfade());
             }
-            notifyPlayerChanged();
         } else if (position == crossfadeDurationRow) {
             showCrossfadeDurationDialog();
         } else if (position == playlistsRow) {
@@ -653,20 +352,20 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         }
     }
 
-    private void notifyPlayerChanged() {
-        if (PlayerSheet.instance != null) {
-            PlayerSheet.instance.applyStyle(true);
-        }
-        PlayerMiniView.styleChanged();
-    }
+    private static final int TYPE_SLIDER = 101;
 
     private class ListAdapter extends BaseListAdapter {
 
-        private static final int TYPE_MINI_PREVIEW = 101;
-        private static final int TYPE_LYRICS_PREVIEW = 102;
-
         public ListAdapter(Context context) {
             super(context);
+        }
+
+        @Override
+        protected boolean isSectionContent(int viewType) {
+            if (viewType == TYPE_SLIDER) {
+                return true;
+            }
+            return super.isSectionContent(viewType);
         }
 
         @Override
@@ -677,34 +376,21 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == miniPreviewRow) {
-                return TYPE_MINI_PREVIEW;
-            } else if (position == lyricsPreviewRow) {
-                return TYPE_LYRICS_PREVIEW;
-            } else if (position == appearanceHeaderRow || position == controlsHeaderRow || position == miniHeaderRow
-                    || position == lyricsHeaderRow || position == audioHeaderRow) {
+            if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
-            } else if (position == swipeTrackRow || position == videoCoverRow || position == cropCoverRow || position == keepScreenOnRow
-                    || position == discSpinRow || position == coverExtendRow || position == titleAboveRow
-                    || position == wavySeekbarRow || position == showModesRow || position == showActionsRow
-                    || position == showLikeRow || position == showSourceRow || position == miniCompactRow
-                    || position == miniArtistRow || position == miniPreviousRow || position == miniNextRow
-                    || position == miniCloseRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow
-                    || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
-                    || position == crossfadeRow) {
+            } else if (position == seekbarThicknessRow) {
+                return TYPE_SLIDER;
+            } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
+                    || position == seekbarWavyRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow
+                    || position == lyricsAudioRecognitionRow || position == lyricsExperimentalRow
+                    || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
-            } else if (position == styleEditorRow || position == coverStyleRow || position == bgStyleRow
-                    || position == seekbarStyleRow || position == seekbarIndicatorRow || position == seekbarThicknessRow
-                    || position == colorStyleRow || position == coverShapeRow
-                    || position == miniCoverShapeRow || position == controlsSizeRow || position == titleAlignRow
-                    || position == titleSizeRow || position == actionButtonsRow || position == miniCoverRow
-                    || position == miniShapeRow || position == miniProgressRow || position == miniColorsRow
+            } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+                    || position == actionButtonsRow || position == seekbarIndicatorRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow
-                    || position == sleepTimerRow) {
+                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow) {
                 return TYPE_SETTINGS;
-            } else if (position == styleEditorShadowRow || position == appearanceShadowRow || position == controlsShadowRow
-                    || position == miniShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
+            } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
                 return TYPE_SHADOW;
             }
             return TYPE_SETTINGS;
@@ -713,47 +399,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         @NonNull
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
-            if (viewType == TYPE_MINI_PREVIEW) {
-                FrameLayout container = new FrameLayout(mContext);
-                container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                container.setPadding(dp(16), dp(8), dp(16), dp(12));
-                miniPreview = PlayerMiniView.preview(mContext);
-                container.addView(miniPreview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, PlayerMiniView.HEIGHT_DP + 16));
-                return new RecyclerListView.Holder(container);
-            } else if (viewType == TYPE_LYRICS_PREVIEW) {
-                LinearLayout container = new LinearLayout(mContext);
-                container.setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-                container.setOrientation(LinearLayout.VERTICAL);
-                container.setPadding(dp(16), dp(8), dp(16), dp(12));
-
-                LinearLayout previewCard = new LinearLayout(mContext);
-                previewCard.setOrientation(LinearLayout.VERTICAL);
-                previewCard.setPadding(dp(16), dp(14), dp(16), dp(14));
-                GradientDrawable previewBg = new GradientDrawable();
-                previewBg.setCornerRadius(dp(16));
-                previewBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
-                previewCard.setBackground(previewBg);
-
-                lyricsLine1 = new TextView(mContext);
-                lyricsLine1.setText("Never gonna give you up");
-                lyricsLine1.setAlpha(0.5f);
-                lyricsLine1.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-                previewCard.addView(lyricsLine1, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
-
-                lyricsLine2 = new TextView(mContext);
-                lyricsLine2.setText("Never gonna let you down");
-                lyricsLine2.setTypeface(AndroidUtilities.bold());
-                lyricsLine2.setTextColor(Theme.getColor(Theme.key_featuredStickers_addButton));
-                previewCard.addView(lyricsLine2, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
-
-                lyricsLine3 = new TextView(mContext);
-                lyricsLine3.setText("Never gonna run around and desert you");
-                lyricsLine3.setAlpha(0.5f);
-                lyricsLine3.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-                previewCard.addView(lyricsLine3, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-
-                container.addView(previewCard, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-                return new RecyclerListView.Holder(container);
+            if (viewType == TYPE_SLIDER) {
+                SlideIntChooseView cell = new SlideIntChooseView(mContext, getResourceProvider());
+                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(cell);
             }
             return super.onCreateViewHolder(parent, viewType);
         }
@@ -761,32 +410,18 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             int type = holder.getItemViewType();
-            if (type == TYPE_MINI_PREVIEW) {
-                if (miniPreview != null) {
-                    miniPreview.applyStyle();
-                }
-            } else if (type == TYPE_LYRICS_PREVIEW) {
-                if (lyricsLine1 != null && lyricsLine2 != null && lyricsLine3 != null) {
-                    int align = AppearanceConfig.playerLyricsAlignment();
-                    int gravity = (align == 0) ? Gravity.CENTER_HORIZONTAL : Gravity.START;
-                    lyricsLine1.setGravity(gravity);
-                    lyricsLine2.setGravity(gravity);
-                    lyricsLine3.setGravity(gravity);
-
-                    int sizeIdx = AppearanceConfig.playerLyricsTextSize();
-                    float baseSize = sizeIdx == 0 ? 14f : sizeIdx == 2 ? 20f : 17f;
-                    lyricsLine1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, baseSize);
-                    lyricsLine2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, baseSize + 2f);
-                    lyricsLine3.setTextSize(TypedValue.COMPLEX_UNIT_DIP, baseSize);
+            if (type == TYPE_SLIDER) {
+                if (position == seekbarThicknessRow) {
+                    SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
+                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 14, val -> val + " dp");
+                    cell.set(AppearanceConfig.playerSeekbarThickness(), options, newValue -> {
+                        AppearanceConfig.playerSeekbarThickness.setConfigInt(newValue);
+                    });
                 }
             } else if (type == TYPE_HEADER) {
                 HeaderCell cell = (HeaderCell) holder.itemView;
                 if (position == appearanceHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerAppearanceHeader));
-                } else if (position == controlsHeaderRow) {
-                    cell.setText(getString(R.string.OEPlayerBlockControls));
-                } else if (position == miniHeaderRow) {
-                    cell.setText(getString(R.string.OEPlayerStyleMini));
                 } else if (position == lyricsHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerLyricsHeader));
                 } else if (position == audioHeaderRow) {
@@ -796,118 +431,54 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 TextCheckCell cell = (TextCheckCell) holder.itemView;
                 if (position == swipeTrackRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerSwipeTrack), AppearanceConfig.playerSwipeTrack(), true);
-                } else if (position == videoCoverRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerVideoCover), AppearanceConfig.playerVideoCover(), true);
                 } else if (position == cropCoverRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
                 } else if (position == keepScreenOnRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), true);
-                } else if (position == discSpinRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerDiscSpin), AppearanceConfig.playerDiscSpin.Bool(), true);
-                } else if (position == coverExtendRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerCoverExtend), AppearanceConfig.playerCoverExtend.Bool(), false);
-                } else if (position == titleAboveRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerTitleAboveCover), AppearanceConfig.playerTitleAbove.Bool(), true);
-                } else if (position == wavySeekbarRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerShowWave), AppearanceConfig.playerWavy.Bool(), true);
-                } else if (position == showModesRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerShowModes), AppearanceConfig.playerShowModes.Bool(), true);
-                } else if (position == showActionsRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerShowActions), AppearanceConfig.playerShowActions.Bool(), true);
-                } else if (position == showLikeRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerShowLike), AppearanceConfig.playerShowLike.Bool(), true);
-                } else if (position == showSourceRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerShowSource), AppearanceConfig.playerShowSource.Bool(), false);
-                } else if (position == miniCompactRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniCompact), AppearanceConfig.playerMiniCompact.Bool(), true);
-                } else if (position == miniArtistRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniArtist), AppearanceConfig.playerMiniArtist.Bool(), true);
-                } else if (position == miniPreviousRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniPrevious), AppearanceConfig.playerMiniPrevious.Bool(), true);
-                } else if (position == miniNextRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniNext), AppearanceConfig.playerMiniNext.Bool(), true);
-                } else if (position == miniCloseRow) {
-                    cell.setTextAndCheck(getString(R.string.OEPlayerMiniClose), AppearanceConfig.playerMiniClose.Bool(), false);
+                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
+                } else if (position == seekbarWavyRow) {
+                    cell.setTextAndCheck("Волнистая линия прогресса", AppearanceConfig.playerWavy.Bool(), true);
                 } else if (position == pauseOnMuteRow) {
                     cell.setTextAndCheck("Пауза при отключении звука", AppearanceConfig.playerPauseOnMute(), true);
                 } else if (position == resumeOnBluetoothRow) {
                     cell.setTextAndCheck("Возобновлять при подключении Bluetooth", AppearanceConfig.playerResumeOnBluetooth(), true);
+                } else if (position == lyricsAudioRecognitionRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsAudioRecognition), getString(R.string.OEAppearancePlayerLyricsAudioRecognitionDesc), AppearanceConfig.playerLyricsAudioRecognition(), true, true);
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
                 } else if (position == lyricsTranslateRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsTranslate), getString(R.string.OEAppearancePlayerLyricsTranslateDesc), AppearanceConfig.playerLyricsTranslate(), true, true);
                 } else if (position == lyricsAutoscrollRow) {
-                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), false);
+                    cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsAutoScroll), AppearanceConfig.playerLyricsAutoScroll(), true);
                 } else if (position == crossfadeRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerCrossfade), getString(R.string.OEAppearancePlayerCrossfadeDesc), AppearanceConfig.playerCrossfade(), true, true);
                 }
             } else if (type == TYPE_SETTINGS) {
                 TextSettingsCell cell = (TextSettingsCell) holder.itemView;
                 cell.setIcon(0);
-                if (position == styleEditorRow) {
-                    cell.setTextAndValue(getString(R.string.OEPlayerCustomize), getString(R.string.OEPlayerStyleInfo), false);
-                } else if (position == coverStyleRow) {
-                    int cStyle = AppearanceConfig.playerCoverStyle.Int();
-                    String cName = cStyle == 1 ? getString(R.string.OEPlayerCoverWide) : cStyle == 2 ? getString(R.string.OEPlayerCoverFull) : cStyle == 3 ? getString(R.string.OEPlayerCoverDisc) : getString(R.string.OEPlayerCoverCard);
-                    cell.setTextAndValue(getString(R.string.OEPlayerStyleCover), cName, true);
-                } else if (position == controlsSizeRow) {
-                    int cSize = AppearanceConfig.playerControlsSize.Int();
-                    String sName = cSize == 0 ? getString(R.string.OEPlayerControlsCompact) : cSize == 2 ? getString(R.string.OEPlayerControlsLarge) : getString(R.string.OEPlayerControlsNormal);
-                    cell.setTextAndValue(getString(R.string.OEPlayerBlockControls), sName, true);
-                } else if (position == titleAlignRow) {
-                    int tAlign = AppearanceConfig.playerTitleAlign.Int();
-                    String aName = tAlign == 1 ? getString(R.string.OEPlayerAlignCenter) : getString(R.string.OEPlayerAlignStart);
-                    cell.setTextAndValue("Выравнивание заголовка", aName, true);
-                } else if (position == titleSizeRow) {
-                    int tSize = AppearanceConfig.playerTitleSize.Int();
-                    String szName = tSize == 0 ? getString(R.string.OEPlayerSizeSmall) : tSize == 2 ? getString(R.string.OEPlayerSizeLarge) : getString(R.string.OEPlayerSizeMedium);
-                    cell.setTextAndValue("Размер заголовка", szName, true);
-                } else if (position == actionButtonsRow) {
-                    java.util.List<String> list = PlayerStyle.actionButtons();
-                    StringBuilder sb = new StringBuilder();
-                    for (int i = 0; i < list.size(); i++) {
-                        if (i > 0) sb.append(", ");
-                        String a = list.get(i);
-                        if (PlayerStyle.ACTION_SPEED.equals(a)) sb.append(getString(R.string.OEPlayerSpeed));
-                        else if (PlayerStyle.ACTION_LYRICS.equals(a)) sb.append(getString(R.string.OEPlayerLyrics));
-                        else if (PlayerStyle.ACTION_PLAYLIST.equals(a)) sb.append(getString(R.string.AudioAddToPlaylist));
-                        else if (PlayerStyle.ACTION_SLEEP.equals(a)) sb.append(getString(R.string.OEAppearancePlayerSleepTimer));
-                        else if (PlayerStyle.ACTION_QUEUE.equals(a)) sb.append(getString(R.string.OEPlayerQueue));
-                        else if (PlayerStyle.ACTION_SHARE.equals(a)) sb.append(getString(R.string.Forward));
-                        else if (PlayerStyle.ACTION_LIKE.equals(a)) sb.append(getString(R.string.AudioSaveToMyProfile));
-                    }
-                    cell.setTextAndValue(getString(R.string.OEPlayerActionButtons), sb.toString(), true);
-                } else if (position == seekbarIndicatorRow) {
-                    int ind = AppearanceConfig.playerSeekbarIndicator();
-                    String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorBar) : getString(R.string.OEPlayerSeekbarIndicatorDot);
-                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarIndicator), indName, true);
-                } else if (position == seekbarThicknessRow) {
-                    int th = AppearanceConfig.playerSeekbarThickness();
-                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarThickness), th + " dp", true);
-                } else if (position == miniCoverRow) {
-                    int mCover = AppearanceConfig.playerMiniCover.Int();
-                    String mcName = mCover == 1 ? getString(R.string.OEPlayerMiniCoverRound) : mCover == 2 ? getString(R.string.OEPlayerMiniCoverHidden) : getString(R.string.OEPlayerMiniCoverRounded);
-                    cell.setTextAndValue("Обложка мини-плеера", mcName, true);
-                } else if (position == miniShapeRow) {
-                    int mShape = AppearanceConfig.playerMiniShape.Int();
-                    String msName = mShape == 1 ? getString(R.string.OEPlayerMiniShapePill) : mShape == 2 ? getString(R.string.OEPlayerMiniShapeSquare) : getString(R.string.OEPlayerMiniShapeRounded);
-                    cell.setTextAndValue(getString(R.string.OEPlayerMiniShape), msName, true);
-                } else if (position == miniProgressRow) {
-                    int mProg = AppearanceConfig.playerMiniProgress.Int();
-                    String mpName = mProg == 1 ? getString(R.string.OEPlayerMiniProgressLine) : (mProg == 3 || mProg == 2) ? getString(R.string.OEPlayerMiniProgressNone) : getString(R.string.OEPlayerMiniProgressRing);
-                    cell.setTextAndValue(getString(R.string.OEPlayerMiniProgress), mpName, true);
-                } else if (position == miniColorsRow) {
-                    int mColors = AppearanceConfig.playerMiniColors.Int();
-                    String mcName = mColors == 0 ? getString(R.string.OEPlayerColorsCover) : getString(R.string.OEPlayerColorsTheme);
-                    cell.setTextAndValue(getString(R.string.OEPlayerMiniColors), mcName, true);
-                } else if (position == bgStyleRow) {
+                if (position == bgStyleRow) {
                     int bgStyle = AppearanceConfig.playerBackgroundStyle();
                     String bgStyleName = bgStyle == 1 ? getString(R.string.OEAppearancePlayerBackgroundStyleBlur) : bgStyle == 2 ? getString(R.string.OEAppearancePlayerBackgroundStyleGradient) : getString(R.string.OEAppearancePlayerBackgroundStyleTheme);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerBackgroundStyle), bgStyleName, true);
-                } else if (position == seekbarStyleRow) {
-                    int seekbarStyle = AppearanceConfig.playerSeekbarStyle();
-                    String seekbarName = seekbarStyle == 0 ? getString(R.string.OEAppearancePlayerSeekbarDefault) : seekbarStyle == 1 ? getString(R.string.OEAppearancePlayerSeekbarWavy) : seekbarStyle == 2 ? getString(R.string.OEAppearancePlayerSeekbarSlim) : getString(R.string.OEAppearancePlayerSeekbarSquiggly);
-                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerSeekbarStyle), seekbarName, true);
+                } else if (position == actionButtonsRow) {
+                    String active = AppearanceConfig.playerActionButtons();
+                    String[] parts = (active != null && !active.isEmpty()) ? active.split(",") : new String[]{"speed", "lyrics", "playlist", "sleep", "queue"};
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < parts.length; i++) {
+                        if (i > 0) sb.append(", ");
+                        String a = parts[i].trim();
+                        if ("speed".equals(a)) sb.append("Скорость");
+                        else if ("lyrics".equals(a)) sb.append("Текст");
+                        else if ("playlist".equals(a)) sb.append("Плейлист");
+                        else if ("sleep".equals(a)) sb.append("Таймер");
+                        else if ("queue".equals(a)) sb.append("Очередь");
+                        else if ("share".equals(a)) sb.append("Поделиться");
+                        else if ("like".equals(a)) sb.append("В профиль");
+                    }
+                    cell.setTextAndValue("Кнопки панели действий", sb.toString(), true);
+                } else if (position == seekbarIndicatorRow) {
+                    int ind = AppearanceConfig.playerSeekbarIndicator();
+                    String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorBar) : ind == 2 ? "Скрыть" : getString(R.string.OEPlayerSeekbarIndicatorDot);
+                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarIndicator), indName, true);
                 } else if (position == colorStyleRow) {
                     int colorStyle = AppearanceConfig.playerColorStyle();
                     String colorName = colorStyle == 1 ? getString(R.string.OEAppearancePlayerColorStyleTheme) : getString(R.string.OEAppearancePlayerColorStyleCover);
@@ -970,85 +541,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 }
             }
         }
-    }
-
-    private void showActionButtonsDialog() {
-        if (getParentActivity() == null) return;
-        final String[] keys = new String[]{
-                PlayerStyle.ACTION_SPEED,
-                PlayerStyle.ACTION_LYRICS,
-                PlayerStyle.ACTION_PLAYLIST,
-                PlayerStyle.ACTION_SLEEP,
-                PlayerStyle.ACTION_QUEUE,
-                PlayerStyle.ACTION_SHARE,
-                PlayerStyle.ACTION_LIKE
-        };
-        CharSequence[] items = new CharSequence[]{
-                getString(R.string.OEPlayerSpeed),
-                getString(R.string.OEPlayerLyrics),
-                getString(R.string.AudioAddToPlaylist),
-                getString(R.string.OEAppearancePlayerSleepTimer),
-                getString(R.string.OEPlayerQueue),
-                getString(R.string.Forward),
-                getString(R.string.AudioSaveToMyProfile)
-        };
-        boolean[] checked = new boolean[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            checked[i] = PlayerStyle.isActionEnabled(keys[i]);
-        }
-
-        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
-        builder.setTitle(getString(R.string.OEPlayerActionButtons));
-
-        ScrollView scrollView = new ScrollView(getParentActivity());
-        LinearLayout container = new LinearLayout(getParentActivity());
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(4), 0, dp(4));
-        scrollView.addView(container);
-
-        CheckBoxCell[] cells = new CheckBoxCell[keys.length];
-        for (int i = 0; i < keys.length; i++) {
-            final int index = i;
-            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, getResourceProvider());
-            cell.setBackground(Theme.getSelectorDrawable(false));
-            cell.setText(items[i], "", checked[i], false);
-            cell.setOnClickListener(v -> {
-                boolean next = !cells[index].isChecked();
-                if (!next) {
-                    int count = 0;
-                    for (int j = 0; j < cells.length; j++) {
-                        if (j == index ? next : cells[j].isChecked()) count++;
-                    }
-                    if (count < 2) {
-                        AndroidUtilities.shakeView(cells[index]);
-                        BulletinFactory.of(this).createSimpleBulletin(R.raw.info, getString(R.string.OEPlayerActionButtonsMin)).show();
-                        return;
-                    }
-                }
-                cells[index].setChecked(next, true);
-                checked[index] = next;
-            });
-            cells[i] = cell;
-            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
-        }
-
-        builder.setView(scrollView);
-        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
-            StringBuilder sb = new StringBuilder();
-            for (int i = 0; i < keys.length; i++) {
-                if (checked[i]) {
-                    if (sb.length() > 0) sb.append(",");
-                    sb.append(keys[i]);
-                }
-            }
-            AppearanceConfig.playerActionButtons.setConfigString(sb.toString());
-            if (listAdapter != null) {
-                listAdapter.notifyItemChanged(actionButtonsRow);
-            }
-            notifyPlayerChanged();
-        });
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        showDialog(builder.create());
     }
 
     private void showLyricsSourcesDialog() {
@@ -1348,79 +840,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         dialog.show();
     }
 
-    private void showSeekbarThicknessDialog() {
-        if (getContext() == null) return;
-        android.app.Dialog dialog = new android.app.Dialog(getContext());
-        dialog.requestWindowFeature(Window.FEATURE_NO_TITLE);
-
-        LinearLayout root = new LinearLayout(getContext());
-        root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(20), dp(20), dp(16));
-
-        GradientDrawable bg = new GradientDrawable();
-        bg.setCornerRadius(dp(24));
-        bg.setColor(Theme.getColor(Theme.key_dialogBackground));
-        root.setBackground(bg);
-
-        TextView title = new TextView(getContext());
-        title.setText(getString(R.string.OEPlayerSeekbarThickness));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 20);
-        title.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
-        root.addView(title);
-
-        int current = AppearanceConfig.playerSeekbarThickness();
-        if (current <= 0) current = 4;
-        final int[] val = new int[]{current};
-
-        TextView valueText = new TextView(getContext());
-        valueText.setText(val[0] + " dp");
-        valueText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-        valueText.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
-        valueText.setPadding(0, dp(12), 0, dp(12));
-        root.addView(valueText);
-
-        android.widget.SeekBar seekBar = new android.widget.SeekBar(getContext());
-        seekBar.setMax(24);
-        if (android.os.Build.VERSION.SDK_INT >= 26) {
-            seekBar.setMin(1);
-        }
-        seekBar.setProgress(Math.max(1, Math.min(24, val[0])));
-        seekBar.setOnSeekBarChangeListener(new android.widget.SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(android.widget.SeekBar bar, int progress, boolean fromUser) {
-                val[0] = Math.max(1, progress);
-                valueText.setText(val[0] + " dp");
-            }
-            @Override public void onStartTrackingTouch(android.widget.SeekBar bar) {}
-            @Override public void onStopTrackingTouch(android.widget.SeekBar bar) {}
-        });
-        root.addView(seekBar, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        TextView doneBtn = new TextView(getContext());
-        doneBtn.setText(getString(R.string.Done));
-        doneBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-        doneBtn.setTypeface(AndroidUtilities.bold());
-        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-        doneBtn.setTextColor(accent != 0 ? accent : 0xff00d2b4);
-        doneBtn.setGravity(Gravity.RIGHT);
-        doneBtn.setPadding(dp(16), dp(16), dp(8), dp(4));
-        doneBtn.setOnClickListener(v -> {
-            AppearanceConfig.playerSeekbarThickness.setConfigInt(val[0]);
-            dialog.dismiss();
-            if (listAdapter != null) listAdapter.notifyItemChanged(seekbarThicknessRow);
-            notifyPlayerChanged();
-        });
-        root.addView(doneBtn, new LinearLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
-
-        dialog.setContentView(root);
-        if (dialog.getWindow() != null) {
-            dialog.getWindow().setBackgroundDrawable(new ColorDrawable(Color.TRANSPARENT));
-            int dialogWidth = Math.min(AndroidUtilities.displaySize.x - dp(32), dp(350));
-            dialog.getWindow().setLayout(dialogWidth, ViewGroup.LayoutParams.WRAP_CONTENT);
-        }
-        dialog.show();
-    }
-
     private void showSelector(String title, CharSequence[] options, Utilities.Callback<Integer> onSelected) {
         if (getContext() == null) return;
         AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), getResourceProvider());
@@ -1435,6 +854,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private void showCrossfadeDurationDialog() {
         if (getParentActivity() == null) {
             return;
+        }
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            // Android 5.0+ MD3 container
         }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
         builder.setTitle(getString(R.string.OEAppearancePlayerCrossfadeDuration));
@@ -1533,7 +955,81 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (listAdapter != null) {
                 listAdapter.notifyItemChanged(crossfadeDurationRow);
             }
-            notifyPlayerChanged();
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private void showActionButtonsDialog() {
+        if (getParentActivity() == null) return;
+        final String[] keys = new String[]{
+                "speed",
+                "lyrics",
+                "playlist",
+                "sleep",
+                "queue",
+                "share",
+                "like"
+        };
+        CharSequence[] items = new CharSequence[]{
+                "Скорость",
+                "Текст песни",
+                "Добавить в плейлист",
+                "Таймер сна",
+                "Очередь (Далее)",
+                "Поделиться",
+                "Сохранить в профиль"
+        };
+        String currentActions = AppearanceConfig.playerActionButtons();
+        boolean[] checked = new boolean[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            checked[i] = currentActions.contains(keys[i]);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        builder.setTitle("Кнопки панели действий");
+
+        ScrollView scrollView = new ScrollView(getParentActivity());
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(4), 0, dp(4));
+        scrollView.addView(container);
+
+        CheckBoxCell[] cells = new CheckBoxCell[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final int index = i;
+            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, getResourceProvider());
+            cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setText(items[i], "", checked[i], false);
+            cell.setOnClickListener(v -> {
+                boolean next = !cells[index].isChecked();
+                if (!next) {
+                    int count = 0;
+                    for (int j = 0; j < cells.length; j++) {
+                        if (j == index ? next : cells[j].isChecked()) count++;
+                    }
+                    if (count < 1) {
+                        BulletinFactory.of(PlayerSettingsActivity.this).createSimpleBulletin(R.raw.info, getString(R.string.OEPlayerActionButtonsMin)).show();
+                        return;
+                    }
+                }
+                cells[index].setChecked(next, true);
+            });
+            cells[i] = cell;
+            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+        }
+
+        builder.setView(scrollView);
+        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < keys.length; i++) {
+                if (cells[i].isChecked()) {
+                    if (sb.length() > 0) sb.append(",");
+                    sb.append(keys[i]);
+                }
+            }
+            AppearanceConfig.playerActionButtons.setConfigString(sb.toString());
+            if (listAdapter != null) listAdapter.notifyItemChanged(actionButtonsRow);
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());

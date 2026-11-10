@@ -148,7 +148,7 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        float userScale = PlayerStyle.controlsScale();
+        float userScale = 1.0f;
         float baseNeeded = dp(340);
         float available = width - dp(24);
         if (available > 0) {

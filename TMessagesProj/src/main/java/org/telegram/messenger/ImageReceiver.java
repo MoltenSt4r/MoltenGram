@@ -1098,6 +1098,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
         if (bitmap instanceof org.telegram.ui.Components.AvatarDrawable) {
             org.telegram.ui.Components.AvatarDrawable ad = (org.telegram.ui.Components.AvatarDrawable) bitmap;
             oeIsAvatar = true;
+            oePeerId = ad.peerId;
             if (ad.getAvatarType() == org.telegram.ui.Components.AvatarDrawable.AVATAR_TYPE_SAVED
                     || ad.getAvatarType() == org.telegram.ui.Components.AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
                 oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
@@ -2145,6 +2146,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
             if (oeIsAvatar) {
                 if (staticThumbDrawable instanceof AvatarDrawable) {
                     AvatarDrawable ad = (AvatarDrawable) staticThumbDrawable;
+                    oePeerId = ad.peerId;
                     if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
                         oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
                         ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
@@ -2153,6 +2155,7 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                     }
                 } else if (drawable instanceof AvatarDrawable) {
                     AvatarDrawable ad = (AvatarDrawable) drawable;
+                    oePeerId = ad.peerId;
                     if (ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_SAVED || ad.getAvatarType() == AvatarDrawable.AVATAR_TYPE_MY_NOTES) {
                         oePeerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
                         ad.peerType = app.exteraless.appearance.Md3AvatarShapes.PEER_TYPE_SELF;
@@ -2160,12 +2163,6 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                         ad.peerType = oePeerType;
                     }
                 }
-            }
-
-            boolean md3Clip = oeIsAvatar && canvas != null && app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId) > 0;
-            if (md3Clip) {
-                canvas.save();
-                canvas.clipPath(app.exteraless.appearance.Md3AvatarShapes.getShapePath(app.exteraless.appearance.AppearanceConfig.getAvatarShape(oePeerType, oePeerId), imageX, imageY, imageW, imageH));
             }
 
             if (drawable != null) {
@@ -2263,9 +2260,6 @@ public class ImageReceiver implements NotificationCenter.NotificationCenterDeleg
                 checkAlphaAnimation(animationNotReady, backgroundThreadDrawHolder);
             }
 
-            if (md3Clip) {
-                canvas.restore();
-            }
 
             if (drawable == null && animationNotReady && !drawInBackground) {
                 invalidate();

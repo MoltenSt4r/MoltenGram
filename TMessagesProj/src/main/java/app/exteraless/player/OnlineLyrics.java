@@ -245,6 +245,18 @@ public final class OnlineLyrics {
                     }
                 }
 
+                // If still nothing found, try lightweight Shazam audio recognition fallback
+                if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
+                    try {
+                        Found shazamFound = requestShazam(query);
+                        if (shazamFound != null) {
+                            bestOnline = shazamFound;
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                }
+
                 if (bestOnline != null) {
                     result = bestOnline.lyrics;
                     writeDisk(key, result);
@@ -264,6 +276,68 @@ public final class OnlineLyrics {
                 callback.onResult(lyrics, finalStatus);
             });
         });
+    }
+
+    private static Found requestShazam(Query q) {
+        try {
+            String term = (!TextUtils.isEmpty(q.artist)) ? (q.artist + " " + q.title) : q.title;
+            if (TextUtils.isEmpty(term)) {
+                return null;
+            }
+            String urlStr = "https://amp.shazam.com/discovery/v5/en-US/US/android/-/search?query=" + enc(term.trim());
+            String body = get(urlStr);
+            if (body == null) {
+                return null;
+            }
+            JSONObject root = new JSONObject(body);
+            JSONObject tracks = root.optJSONObject("tracks");
+            if (tracks == null) return null;
+            JSONArray hits = tracks.optJSONArray("hits");
+            if (hits == null || hits.length() == 0) return null;
+            JSONObject firstHit = hits.getJSONObject(0);
+            JSONObject track = firstHit.optJSONObject("track");
+            if (track == null) return null;
+
+            String recognizedTitle = track.optString("title");
+            String recognizedArtist = track.optString("subtitle");
+
+            JSONArray sections = track.optJSONArray("sections");
+            if (sections != null) {
+                for (int i = 0; i < sections.length(); i++) {
+                    JSONObject sec = sections.getJSONObject(i);
+                    if ("LYRICS".equalsIgnoreCase(sec.optString("type"))) {
+                        JSONArray text = sec.optJSONArray("text");
+                        if (text != null && text.length() > 0) {
+                            StringBuilder plain = new StringBuilder();
+                            for (int j = 0; j < text.length(); j++) {
+                                plain.append(text.getString(j)).append("\n");
+                            }
+                            Lyrics directLyrics = new Lyrics(plain.toString().trim(), null, false, false, "Shazam");
+                            return new Found(directLyrics);
+                        }
+                    }
+                }
+            }
+
+            if (!TextUtils.isEmpty(recognizedTitle)) {
+                Query recognizedQuery = new Query(recognizedArtist, recognizedTitle, null, q.duration);
+                Found lrc = requestLrclib(recognizedQuery);
+                if (lrc != null) {
+                    return lrc;
+                }
+                Found better = requestBetterLyrics(recognizedQuery);
+                if (better != null) {
+                    return better;
+                }
+                Found kg = requestKuGou(recognizedQuery);
+                if (kg != null) {
+                    return kg;
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        return null;
     }
 
     private static Found requestLrclib(Query q) {

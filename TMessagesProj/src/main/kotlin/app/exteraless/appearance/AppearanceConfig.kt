@@ -881,11 +881,7 @@ object AppearanceConfig {
     fun playerSeekbarThickness(): Int {
         ensureLoaded()
         val v = playerSeekbarThickness.Int()
-        return if (v <= 2) {
-            if (v == 0) 2 else if (v == 2) 8 else 4
-        } else {
-            v
-        }
+        return if (v in 2..16) v else 4
     }
 
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */
@@ -1459,17 +1455,21 @@ object AppearanceConfig {
     @JvmOverloads
     fun getAvatarShape(peerType: Int, peerId: Long = 0L): Int {
         ensureLoaded()
-        if (avatarShapesById.Bool() && peerId != 0L) {
-            val absId = Math.abs(peerId)
-            return (absId % 28L).toInt() + 1
-        }
-        return when (peerType) {
+        val typeShape = when (peerType) {
             Md3AvatarShapes.PEER_TYPE_BOT -> avatarShapeBots.Int()
             Md3AvatarShapes.PEER_TYPE_GROUP -> avatarShapeGroups.Int()
             Md3AvatarShapes.PEER_TYPE_CHANNEL -> avatarShapeChannels.Int()
             Md3AvatarShapes.PEER_TYPE_SELF -> avatarShapeSelf.Int()
             else -> avatarShapeUsers.Int()
         }
+        if (typeShape != 0) {
+            return typeShape
+        }
+        if (avatarShapesById.Bool() && peerId != 0L && peerType != Md3AvatarShapes.PEER_TYPE_SELF) {
+            val absId = Math.abs(peerId)
+            return (absId % (Md3AvatarShapes.SHAPES_COUNT - 1).toLong()).toInt() + 1
+        }
+        return 0
     }
 
     @JvmStatic

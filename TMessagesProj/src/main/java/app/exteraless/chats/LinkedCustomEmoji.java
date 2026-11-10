@@ -23,8 +23,15 @@ public final class LinkedCustomEmoji {
     private LinkedCustomEmoji() {
     }
 
+    public static boolean canSend() {
+        return canSend(UserConfig.selectedAccount);
+    }
+
     public static boolean canSend(int account) {
-        return NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()
+        if (account < 0 || account >= UserConfig.MAX_ACCOUNT_COUNT) {
+            account = UserConfig.selectedAccount;
+        }
+        return (NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool() || NekoConfig.localPremium.Bool())
                 && !UserConfig.getInstance(account).isPremium();
     }
 
@@ -52,14 +59,20 @@ public final class LinkedCustomEmoji {
             }
             long documentId;
             try {
-                documentId = Long.parseLong(entity.url.substring(PREFIX.length()));
-            } catch (NumberFormatException e) {
+                String idStr = entity.url.substring(PREFIX.length()).trim();
+                int end = 0;
+                while (end < idStr.length() && Character.isDigit(idStr.charAt(end))) {
+                    end++;
+                }
+                if (end == 0) {
+                    continue;
+                }
+                documentId = Long.parseLong(idStr.substring(0, end));
+            } catch (Exception e) {
                 FileLog.e(e);
                 continue;
             }
-            int[] emojiOnly = new int[1];
-            ArrayList<Emoji.EmojiSpanRange> emojis = Emoji.parseEmojis(text.subSequence(entity.offset, entity.offset + entity.length).toString(), emojiOnly);
-            if (documentId == 0 || emojiOnly[0] <= 0 || emojis.size() != 1) {
+            if (documentId <= 0) {
                 continue;
             }
             TLRPC.TL_messageEntityCustomEmoji emoji = new TLRPC.TL_messageEntityCustomEmoji();
@@ -83,7 +96,7 @@ public final class LinkedCustomEmoji {
     }
 
     public static void replaceForSend(int account, long dialogId, List<TLRPC.MessageEntity> entities) {
-        if (entities == null || entities.isEmpty() || !canSend(account) || dialogId == UserConfig.getInstance(account).getClientUserId()) {
+        if (entities == null || entities.isEmpty() || !canSend(account)) {
             return;
         }
         HashSet<Long> groupEmoji = null;

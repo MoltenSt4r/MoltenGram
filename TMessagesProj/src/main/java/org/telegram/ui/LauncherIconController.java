@@ -153,7 +153,7 @@ public class LauncherIconController {
         MOLTENGRAM_YINYANG("MoltenGramYinYangIcon", R.drawable.moltengram_yinyang_icon_background,
                 0, R.string.AppIconMoltenGramYinYang, IconGroup.MOLTENGRAM, "@moltenst4r", "Harmonious yin-yang balance", 0xFFFFFFFF),
         MOLTENGRAM_RAGE("MoltenGramRageIcon", R.drawable.moltengram_rage_icon_background,
-                0, R.string.AppIconMoltenGramRage, IconGroup.MOLTENGRAM, "@moltenst4r", "Fiery crimson plane on dark textured concrete", 0xFFD32F2F),
+                0, R.string.AppIconMoltenGramRage, IconGroup.MOLTENGRAM, "@moltenst4r", "Fiery crimson plane on dark textured concrete", 0xFFD32F2F, false),
 
         // Telegram
         TELEGRAM("TelegramIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconTelegramOriginal, IconGroup.TELEGRAM, "@telegram", "The classic paper plane", 0xFF143854),

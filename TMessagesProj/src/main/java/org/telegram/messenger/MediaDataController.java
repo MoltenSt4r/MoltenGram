@@ -7667,18 +7667,23 @@ public class MediaDataController extends BaseController {
                     AnimatedEmojiSpan span = animatedEmojiSpans[b];
                     if (span != null) {
                         try {
-                            if (getUserConfig().isPremium() || !xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()) {
+                            int start = spannable.getSpanStart(span);
+                            int end = Math.min(spannable.getSpanEnd(span), message[0].length());
+                            if (start < 0 || end <= start) {
+                                continue;
+                            }
+                            if (!LinkedCustomEmoji.canSend(currentAccount)) {
                                 TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
-                                entity.offset = spannable.getSpanStart(span);
-                                entity.length = Math.min(spannable.getSpanEnd(span), message[0].length()) - entity.offset;
+                                entity.offset = start;
+                                entity.length = end - start;
                                 entity.document_id = span.getDocumentId();
                                 entity.document = span.document;
                                 entities.add(entity);
                             } else {
                                 TLRPC.TL_messageEntityTextUrl entity = new TLRPC.TL_messageEntityTextUrl();
-                                entity.offset = spannable.getSpanStart(span);
-                                entity.length = Math.min(spannable.getSpanEnd(span), message[0].length()) - entity.offset;
-                                entity.url = "tg://emoji?id=" + span.getDocumentId();
+                                entity.offset = start;
+                                entity.length = end - start;
+                                entity.url = LinkedCustomEmoji.PREFIX + span.getDocumentId();
                                 entities.add(entity);
                             }
                         } catch (Exception e) {

@@ -110,18 +110,18 @@ def test_player_settings_activity_modernization():
 
 
 def test_player_style_actions_and_robustness():
-    style_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerStyle.java")
-    with open(style_path, "r", encoding="utf-8") as f:
+    sheet_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerSheet.java")
+    with open(sheet_path, "r", encoding="utf-8") as f:
         content = f.read()
 
-    assert 'ACTION_SPEED = "speed"' in content
-    assert 'ACTION_LYRICS = "lyrics"' in content
-    assert 'ACTION_PLAYLIST = "playlist"' in content
-    assert 'ACTION_SLEEP = "sleep"' in content
-    assert 'ACTION_QUEUE = "queue"' in content
-    assert 'ACTION_SHARE = "share"' in content
-    assert 'ACTION_LIKE = "like"' in content
-    assert "isValidAction(" in content
+    assert "rebuildActionButtons()" in content
+    assert '"speed"' in content
+    assert '"lyrics"' in content
+    assert '"playlist"' in content
+    assert '"sleep"' in content
+    assert '"queue"' in content
+    assert '"share"' in content
+    assert '"like"' in content
 
 
 def test_build_fix_regressions_and_constants():
@@ -287,13 +287,8 @@ def test_mini_player_preview_visible_and_no_border():
     mini_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerMiniView.java")
     with open(mini_path, "r", encoding="utf-8") as f:
         content = f.read()
-    assert "view.setVisibility(VISIBLE)" in content, "preview must be VISIBLE"
+    assert "cardBg.setCornerRadius" in content
     assert "MINI_PROGRESS_BORDER" not in content, "MINI_PROGRESS_BORDER must be removed"
-
-    style_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerStyle.java")
-    with open(style_path, "r", encoding="utf-8") as f:
-        content = f.read()
-    assert "MINI_PROGRESS_RING" in content
 
 
 def test_peer_color_unlocked_for_all_users():

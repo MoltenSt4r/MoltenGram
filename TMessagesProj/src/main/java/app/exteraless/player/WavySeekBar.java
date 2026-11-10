@@ -287,7 +287,7 @@ public class WavySeekBar extends View {
 
         int indicator = app.exteraless.appearance.AppearanceConfig.playerSeekbarIndicator();
         int thickness = app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness();
-        boolean isWavy = waveEnabled && (PlayerStyle.wavy() || app.exteraless.appearance.AppearanceConfig.playerWavy.Bool());
+        boolean isWavy = waveEnabled && app.exteraless.appearance.AppearanceConfig.playerWavy.Bool();
         float targetAmp = (playing && isWavy) ? maxAmplitude : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.05f)) {
@@ -297,19 +297,7 @@ public class WavySeekBar extends View {
             phase = (phase + 6f * dt) % TAU;
         }
 
-        float strokeW;
-        switch (thickness) {
-            case 0:
-                strokeW = dp(2.5f);
-                break;
-            case 2:
-                strokeW = dp(8f);
-                break;
-            case 1:
-            default:
-                strokeW = dp(4f);
-                break;
-        }
+        float strokeW = dp(Math.max(2, thickness));
         wavePaint.setStrokeWidth(strokeW);
         trackPaint.setStrokeWidth(strokeW);
 
@@ -330,8 +318,8 @@ public class WavySeekBar extends View {
         float thumbW = dragging ? dp(3.5f) : dp(5);
         float x = left + p * (right - left);
         float gap = dp(4);
-        float thumbRadius = (indicator == 0) ? dp(6.5f) : (thumbW / 2f);
-        float waveEnd = x - gap - thumbRadius;
+        float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
+        float waveEnd = (indicator == 2) ? x : (x - gap - thumbRadius);
         float lambda = dp(34);
         float step = dp(2);
 
@@ -360,15 +348,15 @@ public class WavySeekBar extends View {
         }
 
         float stopX = right - dp(1);
-        float restX = Math.min(stopX, x + thumbRadius + gap);
+        float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + gap);
         if (restX < stopX) {
             canvas.drawLine(restX, cy, stopX, cy, trackPaint);
         }
 
         canvas.drawCircle(stopX, cy, strokeW / 2f, fillPaint);
         if (indicator == 0) {
-            canvas.drawCircle(x, cy, dp(6.5f), fillPaint);
-        } else {
+            canvas.drawCircle(x, cy, thumbRadius, fillPaint);
+        } else if (indicator == 1) {
             float barH = Math.max(strokeW + dp(8), dp(18));
             rect.set(x - thumbW / 2f, cy - barH / 2f, x + thumbW / 2f, cy + barH / 2f);
             canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
