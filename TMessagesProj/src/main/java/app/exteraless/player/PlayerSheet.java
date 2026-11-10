@@ -123,7 +123,6 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private final MorphButton sleepButton;
     private final MorphButton queueButton;
     private final MorphButton shareButton;
-    private final MorphButton likeButton;
     private final MorphButton bottomLikeButton;
     private final View titleLeftSpacer = null;
 
@@ -2265,35 +2264,32 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         orderSub.add(R.drawable.round_repeat_one_24, getString(R.string.RepeatSong), () -> {
             o.dismiss();
             SharedConfig.setRepeatMode(2);
-            SharedConfig.toggleShuffleMusic(false);
-            MediaController.getInstance().toggleShuffleMusic(false);
-            controls.updateState();
+            MediaController.getInstance().setPlaybackOrderType(0);
+            updateModes(true);
         });
         orderSub.add(R.drawable.round_repeat_24, getString(R.string.RepeatList), () -> {
             o.dismiss();
             SharedConfig.setRepeatMode(1);
-            SharedConfig.toggleShuffleMusic(false);
-            MediaController.getInstance().toggleShuffleMusic(false);
-            controls.updateState();
+            MediaController.getInstance().setPlaybackOrderType(0);
+            updateModes(true);
         });
         orderSub.add(R.drawable.round_shuffle_24, getString(R.string.ShuffleList), () -> {
             o.dismiss();
             SharedConfig.setRepeatMode(0);
-            SharedConfig.toggleShuffleMusic(true);
-            MediaController.getInstance().toggleShuffleMusic(true);
-            controls.updateState();
+            MediaController.getInstance().setPlaybackOrderType(2);
+            updateModes(true);
         });
         orderSub.add(R.drawable.player_new_repeat_reverse, getString(R.string.ReverseOrder), () -> {
             o.dismiss();
-            SharedConfig.togglePlayOrderReversed();
-            controls.updateState();
+            SharedConfig.setRepeatMode(0);
+            MediaController.getInstance().setPlaybackOrderType(1);
+            updateModes(true);
         });
         orderSub.add(R.drawable.player_new_repeat_off, getString(R.string.PlayOnce), () -> {
             o.dismiss();
-            SharedConfig.setRepeatMode(0);
-            SharedConfig.toggleShuffleMusic(false);
-            MediaController.getInstance().toggleShuffleMusic(false);
-            controls.updateState();
+            SharedConfig.setRepeatMode(3);
+            MediaController.getInstance().setPlaybackOrderType(0);
+            updateModes(true);
         });
         o.add(R.drawable.round_repeat_24, getString(R.string.OEPlayerPlaybackOrder), () -> o.openSwipeback(orderSub));
         if (o.getLast() != null) {

@@ -7667,22 +7667,22 @@ public class MediaDataController extends BaseController {
                     AnimatedEmojiSpan span = animatedEmojiSpans[b];
                     if (span != null) {
                         try {
-                            int start = spannable.getSpanStart(span);
-                            int end = Math.min(spannable.getSpanEnd(span), message[0].length());
-                            if (start < 0 || end <= start) {
+                            int sStart = spannable.getSpanStart(span);
+                            int sEnd = Math.min(spannable.getSpanEnd(span), message[0].length());
+                            if (sStart < 0 || sEnd <= sStart) {
                                 continue;
                             }
                             if (!LinkedCustomEmoji.canSend(currentAccount)) {
                                 TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
-                                entity.offset = start;
-                                entity.length = end - start;
+                                entity.offset = sStart;
+                                entity.length = sEnd - sStart;
                                 entity.document_id = span.getDocumentId();
                                 entity.document = span.document;
                                 entities.add(entity);
                             } else {
                                 TLRPC.TL_messageEntityTextUrl entity = new TLRPC.TL_messageEntityTextUrl();
-                                entity.offset = start;
-                                entity.length = end - start;
+                                entity.offset = sStart;
+                                entity.length = sEnd - sStart;
                                 entity.url = LinkedCustomEmoji.PREFIX + span.getDocumentId();
                                 entities.add(entity);
                             }
