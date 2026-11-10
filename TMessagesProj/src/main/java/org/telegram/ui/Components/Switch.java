@@ -58,6 +58,7 @@ public class Switch extends View {
     public static final int SWITCH_STYLE_DEFAULT = 0;
     public static final int SWITCH_STYLE_MODERN = 1;
     public static final int SWITCH_STYLE_MD3 = 2;
+    public static final int SWITCH_STYLE_EXPRESSIVE = 3;
     private int separateTrackColorKey = -1;
     private int lastCheckColor = Integer.MIN_VALUE;
     private final Paint googleBorderPaint;
@@ -194,7 +195,8 @@ public class Switch extends View {
 
     /** Новый (exteraGram) стиль тумблера — тот же слот, что рисует {@code drawExteraSwitch}. */
     private static boolean isExteraSwitchStyle() {
-        return NaConfig.INSTANCE.getSwitchStyle().Int() == SWITCH_STYLE_MD3;
+        int s = NaConfig.INSTANCE.getSwitchStyle().Int();
+        return s == SWITCH_STYLE_MD3 || s == SWITCH_STYLE_EXPRESSIVE;
     }
 
     /**
@@ -707,10 +709,7 @@ public class Switch extends View {
     }
 
     private void drawCustomSwitch(Canvas canvas, int switchStyle) {
-        // exteraGram "new switch" look reversed from exteraGram 12.9.0 onDraw (exteraSwitch.smali).
-        // We reuse the MD3 slot (SWITCH_STYLE_MD3 == 2, the current default) to render it 1:1:
-        // a fully-filled capsule track (no border, no icon) with a solid round thumb.
-        if (switchStyle == SWITCH_STYLE_MD3) {
+        if (switchStyle == SWITCH_STYLE_EXPRESSIVE) {
             drawExteraSwitch(canvas);
             return;
         }

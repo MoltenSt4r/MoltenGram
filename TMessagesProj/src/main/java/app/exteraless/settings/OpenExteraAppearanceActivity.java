@@ -33,6 +33,7 @@ import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.ui.Components.Switch;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.MainTabsLayout;
 
@@ -81,6 +82,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_GLASS_REFRACTION_SLIDER = 108;
     /** Слайдер толщины обводки и бликов стеклянных сообщений */
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
+    private static final int TYPE_SLIDER_THICKNESS = 110;
     private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
@@ -130,6 +132,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3GroupRow;
     private int md3LoadingRow;
     private int md3SliderRow;
+    private int md3SliderThicknessRow;
     private int md3SwitchRow;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
@@ -258,6 +261,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (md3Expanded) {
             md3LoadingRow = addRow("md3Loading");
             md3SliderRow = addRow("md3Slider");
+            md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
             md3SwitchRow = addRow("md3Switch");
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
@@ -267,7 +271,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
-            md3LoadingRow = md3SliderRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
+            md3LoadingRow = md3SliderRow = md3SliderThicknessRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
@@ -752,9 +756,19 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildAllAndSelf(view, isMd3(NaConfig.INSTANCE.getSliderStyle().Int()));
             return;
         } else if (position == md3SwitchRow) {
-            NaConfig.INSTANCE.getSwitchStyle().setConfigInt(
-                    isMd3(NaConfig.INSTANCE.getSwitchStyle().Int()) ? 0 : STYLE_MD3);
-            rebuildAllAndSelf(view, isMd3(NaConfig.INSTANCE.getSwitchStyle().Int()));
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(getString(R.string.OEAppearanceSwitchStyle));
+            CharSequence[] options = {
+                    "Expressive (M3)",
+                    "Material 3 (Exteraless)",
+                    getString(R.string.Default)
+            };
+            builder.setItems(options, (dialog, which) -> {
+                int newStyle = which == 0 ? Switch.SWITCH_STYLE_EXPRESSIVE : (which == 1 ? Switch.SWITCH_STYLE_MD3 : Switch.SWITCH_STYLE_DEFAULT);
+                NaConfig.INSTANCE.getSwitchStyle().setConfigInt(newStyle);
+                rebuildAllAndSelf(view, isMd3(newStyle));
+            });
+            showDialog(builder.create());
             return;
         } else if (position == md3ChatHeaderRow) {
             AppearanceConfig.newChatHeaderStyle.setConfigBool(!AppearanceConfig.newChatHeaderStyle.Bool());
@@ -1242,6 +1256,23 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     sliderStroke.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = sliderStroke;
                     break;
+                case TYPE_SLIDER_THICKNESS:
+                    AvatarCornersSeekBar sliderThickness = new AvatarCornersSeekBar(mContext,
+                            val -> {
+                                AppearanceConfig.sliderThickness.setConfigInt(val);
+                                if (avatarCornersPreviewCell != null) {
+                                    avatarCornersPreviewCell.invalidate();
+                                }
+                            },
+                            2, 16,
+                            "Толщина слайдеров",
+                            "2 dp",
+                            "16 dp");
+                    sliderThickness.setValueSuffix("dp");
+                    sliderThickness.setValue(AppearanceConfig.sliderThickness());
+                    sliderThickness.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderThickness;
+                    break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1366,9 +1397,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3SliderRow) {
                         cell.setText(getString(R.string.OEAppearanceSliderStyle), "",
                                 isMd3(NaConfig.INSTANCE.getSliderStyle().Int()), true, true);
-                    } else if (position == md3SwitchRow) {
-                        cell.setText(getString(R.string.OEAppearanceSwitchStyle), "",
-                                isMd3(NaConfig.INSTANCE.getSwitchStyle().Int()), true, true);
                     } else if (position == md3ChatHeaderRow) {
                         cell.setText(getString(R.string.OEAppearanceNewChatHeaderStyle), "",
                                 AppearanceConfig.newChatHeaderStyle.Bool(), true, true);
@@ -1453,6 +1481,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == chipFoldersRow) {
                         cell.setTextAndValue(getString(R.string.OEAppearanceChipFolders),
                                 AppearanceConfig.chipFoldersEnabled.Bool() ? getString(R.string.NotificationsOn) : getString(R.string.NotificationsOff), true);
+                    } else if (position == md3SwitchRow) {
+                        int cur = NaConfig.INSTANCE.getSwitchStyle().Int();
+                        String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3 (Exteraless)" : getString(R.string.Default));
+                        cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
                     } else if (position == titleTextRow) {
                         CharSequence[] v = titleTextOptions();
                         int titleText = clamp(AppearanceConfig.titleText.Int(), v.length);
@@ -1484,6 +1516,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 case TYPE_GLASS_STROKE_SLIDER: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
                     slider.setValue(AppearanceConfig.glassMessagesStrokeWidth.Int());
+                    break;
+                }
+                case TYPE_SLIDER_THICKNESS: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.sliderThickness());
                     break;
                 }
                 case TYPE_DETAIL_SETTINGS: {
@@ -1568,6 +1605,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_GLASS_REFRACTION_SLIDER;
             } else if (position == glassMessagesStrokeRow) {
                 return TYPE_GLASS_STROKE_SLIDER;
+            } else if (position == md3SliderThicknessRow) {
+                return TYPE_SLIDER_THICKNESS;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow

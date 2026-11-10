@@ -29588,6 +29588,11 @@ public class ChatActivity extends BaseFragment implements
                 if (includeLinks) menu.add(R.id.menu_groupbolditalic, R.id.menu_link, order.getAndIncrement(), getString(R.string.CreateLink));
             }
         });
+        addActions.put("color", () -> {
+            SpannableStringBuilder s = new SpannableStringBuilder("Цвет");
+            s.setSpan(new ForegroundColorSpan(0xFFE91E63), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            menu.add(R.id.menu_groupbolditalic, R.id.menu_color, order.getAndIncrement(), s);
+        });
         addActions.put("mention", () -> {
             if (NaConfig.INSTANCE.getShowTextCreateMention().Bool()) {
                 menu.add(R.id.menu_groupbolditalic, R.id.menu_mention, order.getAndIncrement(), getString(R.string.CreateMention));
@@ -29611,7 +29616,7 @@ public class ChatActivity extends BaseFragment implements
                 Runnable r = addActions.get(k);
                 if (r != null) r.run();
             }
-            for (String k : new String[]{"translate","bold","italic","mono","code","strike","underline","quote","spoiler","link","mention","date","regular"}){
+            for (String k : new String[]{"translate","bold","italic","mono","code","strike","underline","quote","spoiler","link","color","mention","date","regular"}){
                 if (!orderStr.contains(k)){
                     Runnable r = addActions.get(k);
                     if (r != null) r.run();
@@ -29628,6 +29633,7 @@ public class ChatActivity extends BaseFragment implements
             addActions.get("quote").run();
             addActions.get("spoiler").run();
             addActions.get("link").run();
+            addActions.get("color").run();
             addActions.get("mention").run();
             addActions.get("date").run();
             addActions.get("regular").run();

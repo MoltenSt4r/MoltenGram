@@ -806,6 +806,7 @@ object AppearanceConfig {
     @JvmField
     val playerMiniClose = addConfig("OEPlayerMiniClose", ConfigItem.configTypeBool, true)
 
+    /** Волнистая линия прогресса в мини-плеере: по умолчанию true. */
     @JvmField
     val playerMiniWavy = addConfig("OEPlayerMiniWavy", ConfigItem.configTypeBool, true)
 
@@ -882,6 +883,18 @@ object AppearanceConfig {
         ensureLoaded()
         val v = playerSeekbarThickness.Int()
         return if (v in 2..16) v else 4
+    }
+
+
+    /** Толщина слайдеров MD3 (SeekBarView): по умолчанию 8 dp. */
+    @JvmField
+    val sliderThickness = addConfig("OEAppearanceSliderThickness", ConfigItem.configTypeInt, 8)
+
+    @JvmStatic
+    fun sliderThickness(): Int {
+        ensureLoaded()
+        val v = sliderThickness.Int()
+        return if (v in 2..16) v else 8
     }
 
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */

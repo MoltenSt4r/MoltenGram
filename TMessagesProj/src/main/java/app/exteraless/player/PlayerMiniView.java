@@ -86,7 +86,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             }
         });
         card.setClipToOutline(true);
-        card.setElevation(dp(6));
+        card.setElevation(dp(3));
         card.setOnClickListener(v -> Md3Player.open(fragment, this));
         card.setContentDescription(getString(R.string.OEPlayerOpen));
         addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, HEIGHT_DP, Gravity.BOTTOM, 12, 0, 12, 12));
@@ -356,8 +356,9 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         colors = c;
         cardBg.setColor(c.primaryContainer);
         if (Build.VERSION.SDK_INT >= 28) {
-            card.setOutlineSpotShadowColor(c.shadow());
-            card.setOutlineAmbientShadowColor(c.shadow());
+            int neutralShadow = 0x22000000;
+            card.setOutlineSpotShadowColor(neutralShadow);
+            card.setOutlineAmbientShadowColor(neutralShadow);
         }
         cover.setColors(c.secondaryContainer, c.onSecondaryContainer);
         titleView.setTextColor(c.onPrimaryContainer);

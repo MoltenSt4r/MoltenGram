@@ -2517,15 +2517,14 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         for (int i = 0; i < views.size(); i++) {
             View v = views.get(i);
-            int leftMargin = (i == 0) ? 0 : dp(2);
-            int rightMargin = (i == views.size() - 1) ? 0 : dp(2);
+            int leftMargin = (i == 0) ? 0 : dp(3);
             if (v instanceof MorphButton) {
                 MorphButton mb = (MorphButton) v;
                 int leftR = (i == 0) ? dp(26) : dp(8);
                 int rightR = (i == views.size() - 1) ? dp(26) : dp(8);
                 mb.setRadius(leftR, rightR, false);
             }
-            group.addView(v, LayoutHelper.createLinear(0, 52, 1f, leftMargin, 0, rightMargin, 0));
+            group.addView(v, LayoutHelper.createLinear(0, 52, 1f, leftMargin, 0, 0, 0));
         }
     }
 

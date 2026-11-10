@@ -398,8 +398,14 @@ def test_player_seekbar_customization_and_indicator():
     player_settings = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "player", "PlayerSettingsActivity.java")
     with open(player_settings, "r", encoding="utf-8") as f:
         ps_content = f.read()
-    assert "seekbarStyleRow" in ps_content
     assert "seekbarThicknessRow" in ps_content
+    assert "miniPlayerWavyRow" in ps_content
+
+    app_act = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "settings", "OpenExteraAppearanceActivity.java")
+    with open(app_act, "r", encoding="utf-8") as f:
+        app_act_content = f.read()
+    assert "md3SwitchRow" in app_act_content
+    assert "md3SliderThicknessRow" in app_act_content
 
 
 def test_local_chat_folder_tags():
@@ -418,6 +424,46 @@ def test_local_chat_folder_tags():
     with open(storage_path, "r", encoding="utf-8") as f:
         ms_content = f.read()
     assert "local_filter_color_" in ms_content
+
+
+def test_colored_text_helper_and_settings_icon_colors():
+    colored_helper_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "chats", "ColoredTextHelper.java")
+    assert os.path.exists(colored_helper_path)
+    with open(colored_helper_path, "r", encoding="utf-8") as f:
+        ch_content = f.read()
+    assert "PREFIX = \"tg://color\"" in ch_content
+    assert "isColorUrl" in ch_content
+    assert "applyColorSpan" in ch_content
+    assert "showColorPickerDialog" in ch_content
+
+    edit_caption = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "Components", "EditTextCaption.java")
+    with open(edit_caption, "r", encoding="utf-8") as f:
+        ec_content = f.read()
+    assert "makeSelectedColor" in ec_content
+    assert "menu_color" in ec_content
+
+    msg_obj = os.path.join(TMESSAGES_JAVA, "org", "telegram", "messenger", "MessageObject.java")
+    with open(msg_obj, "r", encoding="utf-8") as f:
+        mo_content = f.read()
+    assert "isColorUrl" in mo_content
+    assert "applyColorSpan" in mo_content
+
+    # M3 List items and settings item colors
+    m3_path = os.path.join(TMESSAGES_KOTLIN, "app", "exteraless", "appearance", "M3ListItems.kt")
+    with open(m3_path, "r", encoding="utf-8") as f:
+        m3_content = f.read()
+    assert "tonalBackground" in m3_content
+    assert "0.82f" in m3_content
+    assert "tonalForeground" in m3_content
+    assert "0.28f" in m3_content
+
+    settings_act = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "SettingsActivity.java")
+    with open(settings_act, "r", encoding="utf-8") as f:
+        sa_content = f.read()
+    assert "0xFF993C38" in sa_content
+    assert "exterams_icon_tile" in sa_content
+    assert "item.subtext = subtitle;" in sa_content
+
 
 
 

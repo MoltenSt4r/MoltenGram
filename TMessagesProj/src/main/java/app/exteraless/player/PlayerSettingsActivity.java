@@ -70,8 +70,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int cropCoverRow;
     private int keepScreenOnRow;
     private int actionButtonsRow;
-    private int seekbarStyleRow;
     private int seekbarWavyRow;
+    private int miniPlayerWavyRow;
     private int seekbarThicknessRow;
     private int seekbarIndicatorRow;
     private int appearanceShadowRow;
@@ -122,10 +122,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
         actionButtonsRow = addRow("actionButtons");
-        seekbarStyleRow = addRow("seekbarStyle");
+        seekbarWavyRow = addRow("seekbarWavy");
+        miniPlayerWavyRow = addRow("miniPlayerWavy");
         seekbarThicknessRow = addRow("seekbarThickness");
         seekbarIndicatorRow = addRow("seekbarIndicator");
-        seekbarWavyRow = addRow("seekbarWavy");
         appearanceShadowRow = addRow();
 
         // Lyrics
@@ -170,18 +170,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             });
         } else if (position == actionButtonsRow) {
             showActionButtonsDialog();
-        } else if (position == seekbarStyleRow) {
-            CharSequence[] options = {
-                    "Expressive (M3)",
-                    "Material 3 (Exteraless)"
-            };
-            showSelector("Стиль слайдера", options, which -> {
-                AppearanceConfig.playerSeekbarStyle.setConfigInt(which);
-                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarStyleRow);
-            });
         } else if (position == seekbarWavyRow) {
             boolean nextVal = !AppearanceConfig.playerWavy.Bool();
             AppearanceConfig.playerWavy.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == miniPlayerWavyRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniWavy();
+            AppearanceConfig.playerMiniWavy.setConfigBool(nextVal);
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(nextVal);
             }
@@ -392,12 +389,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } else if (position == seekbarThicknessRow) {
                 return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
-                    || position == seekbarWavyRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow
+                    || position == seekbarWavyRow || position == miniPlayerWavyRow || position == pauseOnMuteRow || position == resumeOnBluetoothRow
                     || position == lyricsAudioRecognitionRow || position == lyricsExperimentalRow
                     || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
-                    || position == actionButtonsRow || position == seekbarIndicatorRow || position == seekbarStyleRow
+                    || position == actionButtonsRow || position == seekbarIndicatorRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow) {
                 return TYPE_SETTINGS;
@@ -425,8 +422,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 if (position == seekbarThicknessRow) {
                     SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
                     SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 16, val -> val + " dp");
-                    options.toString = (typ, val) -> typ == 0 ? ("Толщина слайдера: " + val + " dp") : (val + " dp");
-                    cell.setLabel("Толщина слайдера");
+                    options.toString = (typ, val) -> typ == 0 ? ("Толщина линии прогресса: " + val + " dp") : (val + " dp");
+                    cell.setLabel("Толщина линии прогресса");
                     cell.set(AppearanceConfig.playerSeekbarThickness(), options, newValue -> {
                         AppearanceConfig.playerSeekbarThickness.setConfigInt(newValue);
                     });
@@ -450,6 +447,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
                 } else if (position == seekbarWavyRow) {
                     cell.setTextAndCheck("Волнистая линия прогресса", AppearanceConfig.playerWavy.Bool(), true);
+                } else if (position == miniPlayerWavyRow) {
+                    cell.setTextAndCheck("Волнистая линия в мини-плеере", AppearanceConfig.playerMiniWavy(), true);
                 } else if (position == pauseOnMuteRow) {
                     cell.setTextAndCheck("Пауза при отключении звука", AppearanceConfig.playerPauseOnMute(), true);
                 } else if (position == resumeOnBluetoothRow) {
@@ -488,10 +487,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                         else if ("like".equals(a)) sb.append("В профиль");
                     }
                     cell.setTextAndValue("Кнопки панели действий", sb.toString(), true);
-                } else if (position == seekbarStyleRow) {
-                    int seekbarStyle = AppearanceConfig.playerSeekbarStyle();
-                    String seekbarStyleName = seekbarStyle == 1 ? "Material 3 (Exteraless)" : "Expressive (M3)";
-                    cell.setTextAndValue("Стиль слайдера", seekbarStyleName, true);
                 } else if (position == seekbarIndicatorRow) {
                     int ind = AppearanceConfig.playerSeekbarIndicator();
                     String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorBar) : ind == 2 ? "Скрыть" : getString(R.string.OEPlayerSeekbarIndicatorDot);
@@ -1009,14 +1004,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         ScrollView scrollView = new ScrollView(getParentActivity());
         LinearLayout container = new LinearLayout(getParentActivity());
         container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(0, dp(4), 0, dp(4));
+        container.setPadding(0, dp(8), 0, dp(8));
         scrollView.addView(container);
 
         CheckBoxCell[] cells = new CheckBoxCell[keys.length];
         for (int i = 0; i < keys.length; i++) {
             final int index = i;
-            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), CheckBoxCell.TYPE_CHECK_BOX_DEFAULT, getResourceProvider());
+            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), 1, getResourceProvider());
             cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setPadding(dp(12), 0, dp(12), 0);
             cell.setText(items[i], "", checked[i], false);
             cell.setOnClickListener(v -> {
                 boolean next = !cells[index].isChecked();
@@ -1033,7 +1029,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 cells[index].setChecked(next, true);
             });
             cells[i] = cell;
-            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 48));
+            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50, 0, 2, 0, 2));
         }
 
         builder.setView(scrollView);

@@ -8572,9 +8572,13 @@ public class MessageObject {
                 }
                 spannable.setSpan(new URLSpanNoUnderline("tel:" + tel, run), run.start, run.end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             } else if (run.urlEntity instanceof TLRPC.TL_messageEntityTextUrl) {
+                url = run.urlEntity.url;
+                if (app.exteraless.chats.ColoredTextHelper.isColorUrl(url)) {
+                    app.exteraless.chats.ColoredTextHelper.applyColorSpan(spannable, url, run.urlEntity.offset);
+                    continue;
+                }
                 if (linksCount >= MediaDataController.MAX_LINKS_COUNT) continue;
                 linksCount++;
-                url = run.urlEntity.url;
                 if (url != null) {
                     url = url.replaceAll("∕|⁄|%E2%81%84|%E2%88%95", "/");
                 }

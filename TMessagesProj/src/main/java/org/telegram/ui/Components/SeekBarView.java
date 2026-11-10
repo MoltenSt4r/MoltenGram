@@ -515,6 +515,10 @@ public class SeekBarView extends FrameLayout {
 
     private int effectiveStyle = SLIDER_STYLE_DEFAULT;
 
+    private int getTrackHeightDp() {
+        return app.exteraless.appearance.AppearanceConfig.sliderThickness();
+    }
+
     private void updateModernState() {
         int style = getEffectiveSliderStyle();
         if (style == SLIDER_STYLE_MD3 && !canUseMaterialSlider()) {
@@ -525,7 +529,7 @@ public class SeekBarView extends FrameLayout {
         isModern &= (timestamps == null || timestamps.isEmpty());
 
         if (!hasCustomLineWidthValue || style != SLIDER_STYLE_DEFAULT) {
-            lineWidthDp = style == SLIDER_STYLE_MODERN ? 17 : (style == SLIDER_STYLE_MD3 ? MD3_TRACK_HEIGHT_DP : 3);
+            lineWidthDp = style == SLIDER_STYLE_MODERN ? 17 : (style == SLIDER_STYLE_MD3 ? getTrackHeightDp() : 3);
         }
 
         if (isModern && style == SLIDER_STYLE_MD3) {
@@ -644,11 +648,12 @@ public class SeekBarView extends FrameLayout {
         } else if (needCustomDraw() == SLIDER_STYLE_MD3) {
             // геометрия по exteraGram: дорожка 8dp, торцы скруглены наполовину (4dp),
             // внутренние углы у ползунка 2dp, зазор 6dp, ползунок 3x24dp
-            float radius = AndroidUtilities.dp(MD3_TRACK_HEIGHT_DP / 2f);
+            int trackH = getTrackHeightDp();
+            float radius = AndroidUtilities.dp(trackH / 2f);
             float radius2 = AndroidUtilities.dp(MD3_TRACK_INSIDE_CORNER_DP);
             float indicatorRadius = thumbSize / 2f;
             float padding = AndroidUtilities.dp(MD3_THUMB_TRACK_GAP_DP);
-            float thumbOverflow = AndroidUtilities.dp((MD3_THUMB_HEIGHT_DP - MD3_TRACK_HEIGHT_DP) / 2f);
+            float thumbOverflow = AndroidUtilities.dp(Math.max(0, MD3_THUMB_HEIGHT_DP - trackH) / 2f);
 
             rect.set(left, top, thumbX + selectorWidth / 2f - padding, bottom);
             if (rect.left < rect.right) {

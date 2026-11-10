@@ -143,7 +143,17 @@ public class Md3MediaCarouselView extends FrameLayout {
                 }
                 return super.onTouchEvent(e);
             }
+
+            @Override
+            protected void onLayout(boolean changed, int l, int t, int r, int b) {
+                try {
+                    super.onLayout(changed, l, t, r, b);
+                } catch (Throwable e) {
+                    org.telegram.messenger.FileLog.e(e);
+                }
+            }
         };
+        recyclerView.setItemAnimator(null);
         recyclerView.setClipToPadding(false);
         recyclerView.setClipChildren(false);
 
@@ -159,6 +169,20 @@ public class Md3MediaCarouselView extends FrameLayout {
         recyclerView.setAdapter(adapter);
 
         addView(recyclerView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+    }
+
+    @Override
+    public void layout(int l, int t, int r, int b) {
+        int w = r - l;
+        int h = b - t;
+        if (w > 0 && h > 0 && (getMeasuredWidth() != w || getMeasuredHeight() != h)) {
+            measure(MeasureSpec.makeMeasureSpec(w, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(h, MeasureSpec.EXACTLY));
+        }
+        try {
+            super.layout(l, t, r, b);
+        } catch (Throwable e) {
+            org.telegram.messenger.FileLog.e(e);
+        }
     }
 
     @Override
@@ -221,7 +245,13 @@ public class Md3MediaCarouselView extends FrameLayout {
             }
             updateCarouselStrategy();
             adapter.notifyDataSetChanged();
-            recyclerView.scrollToPosition(0);
+            post(() -> {
+                try {
+                    if (recyclerView != null) {
+                        recyclerView.scrollToPosition(0);
+                    }
+                } catch (Throwable ignore) {}
+            });
             if (isAttachedToWindow()) {
                 attachFileObservers();
             }

@@ -687,6 +687,52 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         );
     }
 
+    public void makeSelectedColor() {
+        final int start;
+        final int end;
+        if (selectionStart >= 0 && selectionEnd >= 0) {
+            start = selectionStart;
+            end = selectionEnd;
+            selectionStart = selectionEnd = -1;
+        } else {
+            start = getSelectionStart();
+            end = getSelectionEnd();
+        }
+        if (start < 0 || end <= start) {
+            return;
+        }
+        Editable curText = getText();
+        if (curText == null || curText.length() < end) {
+            return;
+        }
+        final int len = end - start;
+        int initialColor = 0xFFE91E63;
+        android.text.style.ForegroundColorSpan[] existingSpans = curText.getSpans(start, end, android.text.style.ForegroundColorSpan.class);
+        if (existingSpans != null && existingSpans.length > 0) {
+            initialColor = existingSpans[0].getForegroundColor();
+        }
+        app.exteraless.chats.ColoredTextHelper.showColorPickerDialog(getContext(), resourcesProvider, initialColor, color -> {
+            Editable editable = getText();
+            if (editable == null || start < 0 || end > editable.length() || start >= end) {
+                return;
+            }
+            android.text.style.ForegroundColorSpan[] spans = editable.getSpans(start, end, android.text.style.ForegroundColorSpan.class);
+            if (spans != null) {
+                for (android.text.style.ForegroundColorSpan oldSpan : spans) {
+                    editable.removeSpan(oldSpan);
+                }
+            }
+            String hex = String.format("%06X", (0xFFFFFF & color));
+            editable.insert(start, "\u200B");
+            String colorUrl = app.exteraless.chats.ColoredTextHelper.PREFIX + "?c=" + hex + "&len=" + len;
+            editable.setSpan(createUrlSpan(colorUrl), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            editable.setSpan(new android.text.style.ForegroundColorSpan(color), start + 1, start + 1 + len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (delegate != null) {
+                delegate.onSpansChanged();
+            }
+        });
+    }
+
     public interface InputDialogCallback {
         void run(String value);
     }
@@ -1146,6 +1192,9 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
             return true;
         } else if (itemId == R.id.menu_date) {
             makeSelectedDate();
+            return true;
+        } else if (itemId == R.id.menu_color) {
+            makeSelectedColor();
             return true;
         } else if (itemId == R.id.menu_translate) {
             translateSelected();

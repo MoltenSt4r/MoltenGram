@@ -772,8 +772,8 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         if (app.exteraless.general.GeneralConfig.showNagramSettings()) {
             items.add(SettingCell.Factory.of(100, 0xFF3CCFFF, 0xFF007AFF, R.drawable.filled_profile_settings, getString(R.string.NekoSettings)));
         }
-        // Знак MoltenGram в настройках с фирменным изумрудно-зелёным цветом
-        items.add(SettingCell.Factory.of(-1, 0xFF1E713B, 0xFF1E713B, R.drawable.exterams_icon_tile, getString(R.string.OpenExteraPreferences), getString(R.string.OpenExteraInfo)));
+        // Знак MoltenGram с цветами как на фото (0xFF993C38) вместо зелёного, с родной иконкой exterams_icon_tile
+        items.add(SettingCell.Factory.of(-1, 0xFF993C38, 0xFF993C38, R.drawable.exterams_icon_tile, getString(R.string.OpenExteraPreferences), getString(R.string.OpenExteraInfo)));
         items.add(UItem.asShadow(null));
 
         items.add(SettingCell.Factory.of(1, IconBackgroundColors.BLUE.top, IconBackgroundColors.BLUE.bottom, R.drawable.settings_account, getString(R.string.SettingsAccount), getString(R.string.SettingsAccountInfo)));
@@ -1490,10 +1490,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
                 item.id = id;
                 item.iconResId = icon;
                 item.text = title;
-                // Подпись намеренно отбрасывается — так же, как в exteraGram 12.9.0
-                // (SettingsActivity.java:539-560: subtext не присваивается вовсе).
-                // Из-за этого twoLines остаётся false и строка меряется в dp(50), а не dp(60).
-                // Параметр оставлен в сигнатуре, чтобы не трогать 11 мест вызова.
+                item.subtext = subtitle;
                 item.textValue = value;
                 item.longValue = ((long) iconColorBottom << 32) | (iconColorTop & 0xFFFFFFFFL);
                 return item;

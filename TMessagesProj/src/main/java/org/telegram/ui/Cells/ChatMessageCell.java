@@ -14926,7 +14926,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             int cy = (int) photoImage.getImageY();
             int cw = (int) photoImage.getImageWidth();
             int ch = (int) photoImage.getImageHeight();
-            md3MediaCarouselView.layout(cx, cy, cx + cw, cy + ch);
+            if (cw > 0 && ch > 0) {
+                try {
+                    md3MediaCarouselView.layout(cx, cy, cx + cw, cy + ch);
+                } catch (Throwable e) {
+                    org.telegram.messenger.FileLog.e(e);
+                }
+            }
         }
     }
 

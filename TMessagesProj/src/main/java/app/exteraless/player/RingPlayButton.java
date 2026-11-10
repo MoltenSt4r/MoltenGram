@@ -181,7 +181,8 @@ public class RingPlayButton extends View {
         float dt = lastFrame == 0 ? 0.016f : Math.min(0.05f, (now - lastFrame) / 1000f);
         lastFrame = now;
         boolean animating = alt.step(dt);
-        float targetAmp = playing && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
+        boolean wavy = app.exteraless.appearance.AppearanceConfig.playerMiniWavy();
+        float targetAmp = playing && wavy && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.03f)) {
             amplitude = targetAmp;
@@ -215,27 +216,31 @@ public class RingPlayButton extends View {
                 }
             }
             if (sweep > 1.5f) {
-                path.rewind();
-                boolean first = true;
-                for (float deg = 0; ; deg += 3f) {
-                    boolean last = deg >= sweep;
-                    float d = last ? sweep : deg;
-                    double th = Math.toRadians(d - 90);
-                    float r = radius + amplitude * (float) Math.sin(waves * Math.toRadians(d) - phase);
-                    float x = cx + r * (float) Math.cos(th);
-                    float y = cy + r * (float) Math.sin(th);
-                    if (first) {
-                        path.moveTo(x, y);
-                        first = false;
-                    } else {
-                        path.lineTo(x, y);
-                    }
-                    if (last) {
-                        break;
-                    }
-                }
                 ringPaint.setColor(ringColor);
-                canvas.drawPath(path, ringPaint);
+                if (amplitude > 0.01f) {
+                    path.rewind();
+                    boolean first = true;
+                    for (float deg = 0; ; deg += 3f) {
+                        boolean last = deg >= sweep;
+                        float d = last ? sweep : deg;
+                        double th = Math.toRadians(d - 90);
+                        float r = radius + amplitude * (float) Math.sin(waves * Math.toRadians(d) - phase);
+                        float x = cx + r * (float) Math.cos(th);
+                        float y = cy + r * (float) Math.sin(th);
+                        if (first) {
+                            path.moveTo(x, y);
+                            first = false;
+                        } else {
+                            path.lineTo(x, y);
+                        }
+                        if (last) {
+                            break;
+                        }
+                    }
+                    canvas.drawPath(path, ringPaint);
+                } else {
+                    canvas.drawArc(trackRect, -90f, sweep, false, ringPaint);
+                }
             }
         }
         float t = Math.max(0f, Math.min(1f, alt.value));
