@@ -1980,19 +1980,50 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         String album = null;
         String artist = mo.getMusicAuthor(false);
         String title = mo.getMusicTitle(false);
+        AudioInfo info = null;
         if (PlayerArt.isPlaying(mo)) {
-            AudioInfo info = MediaController.getInstance().getAudioInfo();
-            if (info != null) {
+            info = MediaController.getInstance().getAudioInfo();
+        }
+        if (info == null && mo.messageOwner != null) {
+            File localFile = null;
+            if (!TextUtils.isEmpty(mo.messageOwner.attachPath)) {
+                localFile = new File(mo.messageOwner.attachPath);
+            }
+            if (localFile == null || !localFile.exists()) {
+                localFile = FileLoader.getInstance(mo.currentAccount).getPathToMessage(mo.messageOwner);
+            }
+            if (localFile == null || !localFile.exists()) {
+                if (mo.getDocument() != null) {
+                    localFile = FileLoader.getInstance(mo.currentAccount).getPathToAttach(mo.getDocument(), true);
+                }
+            }
+            if (localFile != null && localFile.exists()) {
+                info = AudioInfo.getAudioInfo(localFile);
+            }
+        }
+        if (info != null) {
+            if (!TextUtils.isEmpty(info.getAlbum())) {
                 album = info.getAlbum();
-                if (TextUtils.isEmpty(artist)) {
+            }
+            if (!TextUtils.isEmpty(info.getArtist())) {
+                if (TextUtils.isEmpty(artist) || OnlineLyrics.isBogusArtist(artist) || !OnlineLyrics.isBogusArtist(info.getArtist())) {
                     artist = info.getArtist();
                 }
-                if (TextUtils.isEmpty(title)) {
+            }
+            if (!TextUtils.isEmpty(info.getTitle())) {
+                if (TextUtils.isEmpty(title) || isGenericTrackTitle(title)) {
                     title = info.getTitle();
                 }
             }
         }
         return new OnlineLyrics.Query(artist, title, album, (int) Math.round(mo.getDuration()));
+    }
+
+    private static boolean isGenericTrackTitle(String t) {
+        if (t == null) return true;
+        String s = t.trim().toLowerCase(java.util.Locale.ROOT);
+        return s.endsWith(".mp3") || s.endsWith(".m4a") || s.endsWith(".flac") || s.endsWith(".ogg") || s.endsWith(".opus")
+                || s.matches("^track[\\s_-]*\\d+$") || s.matches("^audio[\\s_-]*\\d+$") || s.matches("^sound[\\s_-]*\\d+$");
     }
 
     private long positionMs() {

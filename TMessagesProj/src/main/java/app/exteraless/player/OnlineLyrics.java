@@ -42,7 +42,7 @@ public final class OnlineLyrics {
         void onResult(Lyrics lyrics, int status);
     }
 
-    private static boolean isBogusArtist(String a) {
+    public static boolean isBogusArtist(String a) {
         if (a == null) return true;
         String s = a.trim().toLowerCase(Locale.ROOT);
         return s.isEmpty() || s.equals("unknown") || s.equals("<unknown>") || s.equals("unknown artist")
@@ -290,12 +290,12 @@ public final class OnlineLyrics {
                 Found bestOnline = null;
                 Query currentQ = query;
 
-                // 1. If artist is missing or bogus, try Shazam recognition first to identify track & author
+                // 1. If artist is missing or bogus, try SongRec recognition first to identify track & author
                 if (TextUtils.isEmpty(currentQ.artist) && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
                     try {
-                        Found shazamFound = requestShazam(currentQ);
-                        if (shazamFound != null) {
-                            bestOnline = shazamFound;
+                        Found songrecFound = requestSongRec(currentQ);
+                        if (songrecFound != null) {
+                            bestOnline = songrecFound;
                         }
                     } catch (Throwable e) {
                         FileLog.e(e);
@@ -366,12 +366,12 @@ public final class OnlineLyrics {
                     }
                 }
 
-                // 3. If still nothing found, try Shazam recognition if not yet done
+                // 3. If still nothing found, try SongRec recognition if not yet done
                 if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsAudioRecognition()) {
                     try {
-                        Found shazamFound = requestShazam(currentQ);
-                        if (shazamFound != null) {
-                            bestOnline = shazamFound;
+                        Found songrecFound = requestSongRec(currentQ);
+                        if (songrecFound != null) {
+                            bestOnline = songrecFound;
                         }
                     } catch (Throwable e) {
                         FileLog.e(e);
@@ -417,6 +417,11 @@ public final class OnlineLyrics {
         });
     }
 
+    // SongRec audio recognition (powered by Shazam discovery engine)
+    private static Found requestSongRec(Query q) {
+        return requestShazam(q);
+    }
+
     private static Found requestShazam(Query q) {
         try {
             String term = (!TextUtils.isEmpty(q.artist)) ? (q.artist + " " + q.title) : q.title;
@@ -452,8 +457,12 @@ public final class OnlineLyrics {
                 String recognizedTitle = track.optString("title");
                 String recognizedArtist = track.optString("subtitle");
 
-                if (!isMatch(q.title, q.artist, q.duration, recognizedTitle, recognizedArtist, 0)) {
-                    continue;
+                // Only require strict match when both title and artist are given in query.
+                // If query is missing artist or looks like a file name, trust the top SongRec recognition hit!
+                if (!TextUtils.isEmpty(q.artist)) {
+                    if (!isMatch(q.title, q.artist, q.duration, recognizedTitle, recognizedArtist, 0)) {
+                        continue;
+                    }
                 }
 
                 JSONArray sections = track.optJSONArray("sections");
@@ -1087,13 +1096,14 @@ public final class OnlineLyrics {
         return get(url, false);
     }
 
-    private static String get(String url, boolean isShazam) throws Exception {
+    private static String get(String url, boolean isSongRec) throws Exception {
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         try {
             connection.setConnectTimeout(2_000);
             connection.setReadTimeout(2_500);
-            if (isShazam) {
-                connection.setRequestProperty("User-Agent", "Shazam/13.4.0 (Android; 14; en-US)");
+            if (isSongRec) {
+                // SongRec identification engine (Shazam protocol)
+                connection.setRequestProperty("User-Agent", "Shazam/13.4.0 (SongRec Android; 14; en-US)");
                 connection.setRequestProperty("X-Shazam-Platform", "Android");
             } else {
                 connection.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 14; Mobile) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Mobile Safari/537.36");

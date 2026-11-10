@@ -929,16 +929,42 @@ public class Switch extends View {
 
         int outlineColor = processColor(Theme.getColor(trackColorKey, resourcesProvider));
         int accentColor = processColor(Theme.getColor(trackCheckedFillKey, resourcesProvider));
-
-        // Surface / container color
+        boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : !Theme.isCurrentThemeDay();
         int surfaceBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+
+        int activeTrackColor = accentColor;
+        int activeThumbColor = surfaceBg;
+        int checkColor = accentColor;
+
+        if (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors()) {
+            float[] hsl = new float[3];
+            androidx.core.graphics.ColorUtils.colorToHSL(accentColor, hsl);
+            if (isDark) {
+                // Dark theme: soft luminous pastel container for track, deep rich accent for thumb
+                float[] trackHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.95f), 0.84f};
+                activeTrackColor = androidx.core.graphics.ColorUtils.HSLToColor(trackHsl);
+
+                float[] thumbHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 1.0f), 0.20f};
+                activeThumbColor = androidx.core.graphics.ColorUtils.HSLToColor(thumbHsl);
+                checkColor = activeTrackColor;
+            } else {
+                // Light theme: soft pastel tonal container for track, saturated primary for thumb
+                float[] trackHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.65f), 0.88f};
+                activeTrackColor = androidx.core.graphics.ColorUtils.HSLToColor(trackHsl);
+
+                float[] thumbHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 1.0f), 0.35f};
+                activeThumbColor = androidx.core.graphics.ColorUtils.HSLToColor(thumbHsl);
+                checkColor = 0xFFFFFFFF;
+            }
+        }
+
         int trackOffFill = processColor(Theme.blendOver(
                 surfaceBg,
                 Theme.multAlpha(outlineColor, Theme.isCurrentThemeDay() ? 0.08f : 0.20f)
         ));
 
         // Track fill
-        int currentTrackColor = lerpColor(trackOffFill, accentColor, pp);
+        int currentTrackColor = lerpColor(trackOffFill, activeTrackColor, pp);
         paint.setStyle(Paint.Style.FILL);
         paint.setColor(currentTrackColor);
         rectF.set(trackLeft, trackTop, trackRight, trackBottom);
@@ -979,9 +1005,9 @@ public class Switch extends View {
 
         // Thumb colors:
         // OFF: outline / muted color
-        // ON: surface / background color (dark surface in dark theme, white in light theme)
+        // ON: activeThumbColor (deep rich accent in expressive mode, surfaceBg in standard)
         int thumbOffColor = outlineColor;
-        int thumbOnColor = surfaceBg;
+        int thumbOnColor = activeThumbColor;
         int currentThumbColor = lerpColor(thumbOffColor, thumbOnColor, pp);
 
         paint.setStyle(Paint.Style.FILL);
@@ -996,7 +1022,7 @@ public class Switch extends View {
         // NO 'x' cross icon inside the knob (matching M3 proportions without stock Telegram cross)
         if (iconDrawable != null && animatorIconVisibility.getFloatValue() > 0) {
             float factor = animatorIconVisibility.getFloatValue();
-            int iconColor = lerpColor(surfaceBg, accentColor, pp);
+            int iconColor = lerpColor(surfaceBg, checkColor, pp);
             if (lastIconColor != iconColor) {
                 iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = iconColor, PorterDuff.Mode.MULTIPLY));
             }
@@ -1005,7 +1031,7 @@ public class Switch extends View {
             // ON icon: Checkmark '✓' for Expressive M3 mode
             if (pp > 0.3f) {
                 float checkAlpha = Utilities.clamp01((pp - 0.3f) / 0.7f);
-                drawCheckmark(canvas, thumbX, thumbY, accentColor, checkAlpha, scale);
+                drawCheckmark(canvas, thumbX, thumbY, checkColor, checkAlpha, scale);
             }
         }
 

@@ -134,6 +134,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3SliderRow;
     private int md3SliderThicknessRow;
     private int md3SwitchRow;
+    private int md3SwitchExpressiveColorsRow;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
@@ -263,6 +264,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3SliderRow = addRow("md3Slider");
             md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
             md3SwitchRow = addRow("md3Switch");
+            md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
             md3ListItemsRow = addRow("md3ListItems");
@@ -271,7 +273,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
-            md3LoadingRow = md3SliderRow = md3SliderThicknessRow = md3SwitchRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
+            md3LoadingRow = md3SliderRow = md3SliderThicknessRow = md3SwitchRow = md3SwitchExpressiveColorsRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
@@ -1093,6 +1095,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             item = AppearanceConfig.gooeyAvatarAnimation;
         } else if (position == customThemesRow) {
             item = AppearanceConfig.customThemes;
+        } else if (position == md3SwitchExpressiveColorsRow) {
+            item = AppearanceConfig.switchExpressiveColors;
+            rebuild = true;
         } else if (position == separateHeadersRow) {
             item = AppearanceConfig.separateHeaders;
         } else if (position == disableAvatarBlurRow) {
@@ -1324,6 +1329,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceGooeyAvatar), AppearanceConfig.gooeyAvatarAnimation.Bool(), true);
                     } else if (position == customThemesRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceCustomThemes), AppearanceConfig.customThemes.Bool(), false);
+                    } else if (position == md3SwitchExpressiveColorsRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceSwitchExpressiveColors), getString(R.string.OEAppearanceSwitchExpressiveColorsInfo), AppearanceConfig.switchExpressiveColors(), true, true);
                     } else if (position == separateHeadersRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSeparateHeaders), AppearanceConfig.separateHeaders.Bool(), true);
                     } else if (position == glassMessageMenuRow) {

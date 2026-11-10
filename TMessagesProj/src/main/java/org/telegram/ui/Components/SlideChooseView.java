@@ -242,7 +242,10 @@ public class SlideChooseView extends View {
      * У NagramX вместо булева флага три стиля (NaConfig.sliderStyle), MD3 — второй.
      */
     private boolean canUseMaterialSlider() {
-        return NaConfig.INSTANCE.getSliderStyle().Int() == SeekBarView.SLIDER_STYLE_MD3
+        int sliderStyle = NaConfig.INSTANCE.getSliderStyle().Int();
+        boolean m3 = sliderStyle == SeekBarView.SLIDER_STYLE_MD3
+                || (sliderStyle == 0 && (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || app.exteraless.appearance.AppearanceConfig.m3ListItems()));
+        return m3
                 && optionsStr != null && optionsStr.length > 1
                 && dashedFrom < 0 && minIndex <= 0;
     }
@@ -340,13 +343,13 @@ public class SlideChooseView extends View {
      * оставлены на прежних местах.
      */
     private void drawMaterialSlider(Canvas canvas, float thumbCx, int cy) {
-        final float trackHeight = AndroidUtilities.dp(8);
-        final float thumbWidth = AndroidUtilities.dp(3);
-        final float thumbHeight = AndroidUtilities.dp(24);
-        final float gap = AndroidUtilities.dp(6);
-        final float insideCorner = AndroidUtilities.dp(2);
+        final float trackHeight = AndroidUtilities.dp(16);
+        final float thumbWidth = AndroidUtilities.dp(4);
+        final float thumbHeight = AndroidUtilities.dp(44);
+        final float gap = AndroidUtilities.dp(4);
         final float radius = trackHeight / 2f;
-        final float tickRadius = AndroidUtilities.dp(2);
+        final float thumbRadius = thumbWidth / 2f;
+        final float tickRadius = AndroidUtilities.dp(2.5f);
 
         final float left = sideSide + circleSize / 2f;
         final float right = getMeasuredWidth() - sideSide - circleSize / 2f;
@@ -355,47 +358,74 @@ public class SlideChooseView extends View {
         final float activeRight = thumbCx - thumbWidth / 2f - gap;
         final float inactiveLeft = thumbCx + thumbWidth / 2f + gap;
 
-        if (materialPath == null) {
-            materialPath = new Path();
-        }
         if (materialRect == null) {
             materialRect = new RectF();
         }
 
-        paint.setColor(getThemedColor(Theme.key_switchTrackChecked));
+        int accent = getThemedColor(Theme.key_switchTrackChecked);
+        boolean isDark = !Theme.isCurrentThemeDay();
+
+        int activeColor, inactiveColor, thumbColor, activeDotColor, inactiveDotColor;
+        if (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || NaConfig.INSTANCE.getSliderStyle().Int() == SeekBarView.SLIDER_STYLE_MD3) {
+            float[] hsl = new float[3];
+            androidx.core.graphics.ColorUtils.colorToHSL(accent, hsl);
+            if (isDark) {
+                float[] actHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.95f), 0.84f};
+                activeColor = androidx.core.graphics.ColorUtils.HSLToColor(actHsl);
+                float[] inactHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.65f), 0.22f};
+                inactiveColor = androidx.core.graphics.ColorUtils.HSLToColor(inactHsl);
+                thumbColor = activeColor;
+                activeDotColor = inactiveColor;
+                inactiveDotColor = activeColor;
+            } else {
+                float[] actHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 1.0f), 0.38f};
+                activeColor = androidx.core.graphics.ColorUtils.HSLToColor(actHsl);
+                float[] inactHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.55f), 0.88f};
+                inactiveColor = androidx.core.graphics.ColorUtils.HSLToColor(inactHsl);
+                thumbColor = activeColor;
+                activeDotColor = inactiveColor;
+                inactiveDotColor = activeColor;
+            }
+        } else {
+            activeColor = accent;
+            inactiveColor = getThemedColor(Theme.key_switchTrack);
+            thumbColor = accent;
+            activeDotColor = getThemedColor(Theme.key_windowBackgroundWhite);
+            inactiveDotColor = getThemedColor(Theme.key_windowBackgroundWhite);
+        }
+
+        // Draw active track (left pill)
         if (activeRight > left) {
+            paint.setColor(activeColor);
             materialRect.set(left, top, activeRight, bottom);
-            if (materialRect.width() < radius + insideCorner) {
-                canvas.drawRoundRect(materialRect, insideCorner, insideCorner, paint);
-            } else {
-                updateMaterialPath(materialRect, radius, insideCorner);
-                canvas.drawPath(materialPath, paint);
-            }
+            canvas.drawRoundRect(materialRect, radius, radius, paint);
         }
 
-        paint.setColor(getThemedColor(Theme.key_switchTrack));
+        // Draw inactive track (right pill)
         if (inactiveLeft < right) {
+            paint.setColor(inactiveColor);
             materialRect.set(inactiveLeft, top, right, bottom);
-            if (materialRect.width() < radius + insideCorner) {
-                canvas.drawRoundRect(materialRect, insideCorner, insideCorner, paint);
-            } else {
-                updateMaterialPath(materialRect, insideCorner, radius);
-                canvas.drawPath(materialPath, paint);
-            }
+            canvas.drawRoundRect(materialRect, radius, radius, paint);
         }
 
-        paint.setColor(getThemedColor(Theme.key_windowBackgroundWhite));
+        // Draw discrete step dots
         for (int a = 0; a < optionsStr.length; a++) {
             final float tickCx = left + (right - left) * a / (float) (optionsStr.length - 1);
-            if (tickCx > activeRight && tickCx < inactiveLeft) {
+            if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
                 continue;
+            }
+            if (tickCx < thumbCx) {
+                paint.setColor(activeDotColor);
+            } else {
+                paint.setColor(inactiveDotColor);
             }
             canvas.drawCircle(tickCx, cy, tickRadius, paint);
         }
 
-        paint.setColor(getThemedColor(Theme.key_switchTrackChecked));
+        // Draw vertical thumb bar (handle)
+        paint.setColor(thumbColor);
         materialRect.set(thumbCx - thumbWidth / 2f, cy - thumbHeight / 2f, thumbCx + thumbWidth / 2f, cy + thumbHeight / 2f);
-        canvas.drawRoundRect(materialRect, thumbWidth / 2f, thumbWidth / 2f, paint);
+        canvas.drawRoundRect(materialRect, thumbRadius, thumbRadius, paint);
     }
 
     private void updateMaterialPath(RectF rect, float radiusLeft, float radiusRight) {

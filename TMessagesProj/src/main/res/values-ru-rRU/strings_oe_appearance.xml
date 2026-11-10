@@ -40,6 +40,8 @@
     <string name="OEAppearanceNdotFontHeadersInfo">Использовать точечный шрифт Nothing Ndot для названий заголовков, окон, плеера и в настройках</string>
     <string name="OEAppearanceUseSystemEmoji">Системные эмодзи</string>
     <string name="OEAppearanceSwitchStyle">Переключатели</string>
+    <string name="OEAppearanceSwitchExpressiveColors">Выразительные цвета переключателя</string>
+    <string name="OEAppearanceSwitchExpressiveColorsInfo">Пастельный контейнер для дорожки и насыщенный акцент для ползунка.</string>
     <string name="OEAppearanceSliderStyle">Слайдеры</string>
 
     <string name="OEAppearanceBlur">Размытие</string>

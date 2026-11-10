@@ -483,6 +483,9 @@ public class SeekBarView extends FrameLayout {
             return previewingState;
         }
         int configStyle = NaConfig.INSTANCE.getSliderStyle().Int();
+        if (configStyle == 0 && (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || app.exteraless.appearance.AppearanceConfig.m3ListItems())) {
+            configStyle = SLIDER_STYLE_MD3;
+        }
         if (sliderStyleOverride != -1 && configStyle == SLIDER_STYLE_MD3) {
             return sliderStyleOverride;
         }
@@ -554,6 +557,12 @@ public class SeekBarView extends FrameLayout {
         int thumbX = this.thumbX;
 
         updateModernState();
+
+        if (needCustomDraw() == SLIDER_STYLE_MD3) {
+            drawMd3Slider(canvas, thumbX);
+            drawTimestampLabel(canvas);
+            return;
+        }
 
         if (!twoSided && separatorsCount > 1) {
             //float step = (getMeasuredWidth() - selectorWidth) / ((float) separatorsCount - 1f);
@@ -645,57 +654,120 @@ public class SeekBarView extends FrameLayout {
             } else {
                 canvas.drawCircle(thumbX + selectorWidth / 2, y + thumbSize / 2, currentRadius, outerPaint1);
             }
-        } else if (needCustomDraw() == SLIDER_STYLE_MD3) {
-            // геометрия по exteraGram: дорожка 8dp, торцы скруглены наполовину (4dp),
-            // внутренние углы у ползунка 2dp, зазор 6dp, ползунок 3x24dp
-            int trackH = getTrackHeightDp();
-            float radius = AndroidUtilities.dp(trackH / 2f);
-            float radius2 = AndroidUtilities.dp(MD3_TRACK_INSIDE_CORNER_DP);
-            float indicatorRadius = thumbSize / 2f;
-            float padding = AndroidUtilities.dp(MD3_THUMB_TRACK_GAP_DP);
-            float thumbOverflow = AndroidUtilities.dp(Math.max(0, MD3_THUMB_HEIGHT_DP - trackH) / 2f);
-
-            rect.set(left, top, thumbX + selectorWidth / 2f - padding, bottom);
-            if (rect.left < rect.right) {
-                if (rect.right - rect.left < radius + radius2) {
-                    canvas.drawRoundRect(rect, radius2, radius2, outerPaint1);
-                } else {
-                    updatePath(path, rect, radius, radius2);
-                    canvas.drawPath(path, outerPaint1);
-                }
-            }
-
-            rect.set(thumbX + selectorWidth / 2f + thumbSize + padding, top, right, bottom);
-            if (rect.left < rect.right) {
-                if (rect.right - rect.left < radius + radius2) {
-                    canvas.drawRoundRect(rect, radius2, radius2, innerPaint1);
-                } else {
-                    updatePath(path, rect, radius2, radius);
-                    canvas.drawPath(path, innerPaint1);
-                }
-            }
-
-            // left, top, right, bottom, rx, ry
-            rect.set(thumbX + selectorWidth / 2f, top - thumbOverflow, thumbX + selectorWidth / 2f + thumbSize, bottom + thumbOverflow);
-            canvas.drawRoundRect(rect, indicatorRadius, indicatorRadius, outerPaint1);
         }
-
-        /*if (transitionProgress < 1f) {
-            final float oldCircleProgress = 1f - Easings.easeInQuad.getInterpolation(Math.min(1f, transitionProgress * 3f));
-            final float newCircleProgress = Easings.easeOutQuad.getInterpolation(transitionProgress);
-            if (oldCircleProgress > 0f) {
-                canvas.drawCircle(transitionThumbX + selectorWidth / 2, y + thumbSize / 2, currentRadius * oldCircleProgress, outerPaint1);
-            }
-            canvas.drawCircle(thumbX + selectorWidth / 2, y + thumbSize / 2, currentRadius * newCircleProgress, outerPaint1);
-        } else {
-            canvas.drawCircle(thumbX + selectorWidth / 2, y + thumbSize / 2, currentRadius, outerPaint1);
-        }*/
 
         drawTimestampLabel(canvas);
 
         if (needInvalidate) {
             postInvalidateOnAnimation();
         }
+    }
+
+    private void drawMd3Slider(Canvas canvas, int thumbX) {
+        final float trackHeight = AndroidUtilities.dp(16);
+        final float thumbWidth = AndroidUtilities.dp(4);
+        final float thumbHeight = AndroidUtilities.dp(44);
+        final float gap = AndroidUtilities.dp(4);
+        final float radius = trackHeight / 2f;
+        final float thumbRadius = thumbWidth / 2f;
+        final float tickRadius = AndroidUtilities.dp(2.5f);
+
+        final float left = selectorWidth / 2f;
+        final float right = getMeasuredWidth() - selectorWidth / 2f;
+        final float cy = getMeasuredHeight() / 2f;
+        final float top = cy - trackHeight / 2f;
+        final float bottom = cy + trackHeight / 2f;
+
+        float thumbCx = thumbX + selectorWidth / 2f;
+        thumbCx = Math.max(left, Math.min(right, thumbCx));
+
+        final float activeRight = thumbCx - thumbWidth / 2f - gap;
+        final float inactiveLeft = thumbCx + thumbWidth / 2f + gap;
+
+        int accent = hasCustomInnerColor ? customInnerColor : Theme.getColor(Theme.key_switchTrackChecked, resourcesProvider);
+        if (accent == 0) {
+            accent = Theme.getColor(Theme.key_player_progress, resourcesProvider);
+        }
+        boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : !Theme.isCurrentThemeDay();
+
+        int activeColor, inactiveColor, thumbColor, activeDotColor, inactiveDotColor;
+        if (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || NaConfig.INSTANCE.getSliderStyle().Int() == SLIDER_STYLE_MD3) {
+            float[] hsl = new float[3];
+            androidx.core.graphics.ColorUtils.colorToHSL(accent, hsl);
+            if (isDark) {
+                float[] actHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.95f), 0.84f};
+                activeColor = androidx.core.graphics.ColorUtils.HSLToColor(actHsl);
+                float[] inactHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.65f), 0.22f};
+                inactiveColor = androidx.core.graphics.ColorUtils.HSLToColor(inactHsl);
+                thumbColor = activeColor;
+                activeDotColor = inactiveColor;
+                inactiveDotColor = activeColor;
+            } else {
+                float[] actHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 1.0f), 0.38f};
+                activeColor = androidx.core.graphics.ColorUtils.HSLToColor(actHsl);
+                float[] inactHsl = new float[]{hsl[0], Math.min(1f, hsl[1] * 0.55f), 0.88f};
+                inactiveColor = androidx.core.graphics.ColorUtils.HSLToColor(inactHsl);
+                thumbColor = activeColor;
+                activeDotColor = inactiveColor;
+                inactiveDotColor = activeColor;
+            }
+        } else {
+            activeColor = accent;
+            inactiveColor = getInnerTrackColor();
+            thumbColor = accent;
+            activeDotColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+            inactiveDotColor = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        }
+
+        // Active track (left pill)
+        if (activeRight > left) {
+            outerPaint1.setColor(activeColor);
+            rect.set(left, top, activeRight, bottom);
+            canvas.drawRoundRect(rect, radius, radius, outerPaint1);
+        }
+
+        // Inactive track (right pill)
+        if (inactiveLeft < right) {
+            innerPaint1.setColor(inactiveColor);
+            rect.set(inactiveLeft, top, right, bottom);
+            canvas.drawRoundRect(rect, radius, radius, innerPaint1);
+        }
+
+        // Discrete step dots or continuous end tick
+        int steps = 0;
+        if (delegate != null && delegate.needVisuallyDivideSteps() && delegate.getStepsCount() > 1) {
+            steps = delegate.getStepsCount();
+        } else if (separatorsCount > 1) {
+            steps = separatorsCount;
+        }
+
+        if (steps > 1) {
+            for (int a = 0; a < steps; a++) {
+                float tickCx = left + (right - left) * a / (float) (steps - 1);
+                if (tickCx >= activeRight - AndroidUtilities.dp(1) && tickCx <= inactiveLeft + AndroidUtilities.dp(1)) {
+                    continue;
+                }
+                if (tickCx < thumbCx) {
+                    outerPaint1.setColor(activeDotColor);
+                    canvas.drawCircle(tickCx, cy, tickRadius, outerPaint1);
+                } else {
+                    innerPaint1.setColor(inactiveDotColor);
+                    canvas.drawCircle(tickCx, cy, tickRadius, innerPaint1);
+                }
+            }
+        } else {
+            // Continuous slider: small tick dot at right end (like in M3 Expressive spec)
+            float endTickCx = right - radius;
+            if (endTickCx > inactiveLeft + AndroidUtilities.dp(2)) {
+                innerPaint1.setColor(inactiveDotColor);
+                canvas.drawCircle(endTickCx, cy, AndroidUtilities.dp(2f), innerPaint1);
+            }
+        }
+
+        // Draw vertical thumb bar (handle)
+        outerPaint1.setColor(thumbColor);
+        rect.set(thumbCx - thumbWidth / 2f, cy - thumbHeight / 2f, thumbCx + thumbWidth / 2f, cy + thumbHeight / 2f);
+        canvas.drawRoundRect(rect, thumbRadius, thumbRadius, outerPaint1);
     }
 
     private void updatePath(Path path, RectF rect, float radius, float radius2) {

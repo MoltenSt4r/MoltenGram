@@ -387,6 +387,17 @@ object AppearanceConfig {
         return customThemes.Bool()
     }
 
+    /** Выразительные цвета Material 3 переключателя (пастельная дорожка, насыщенный ползунок). */
+    @JvmField
+    val switchExpressiveColors =
+        addConfig("OEAppearanceSwitchExpressiveColors", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun switchExpressiveColors(): Boolean {
+        ensureLoaded()
+        return switchExpressiveColors.Bool()
+    }
+
     /** Шрифт Ndot для названий заголовков, окон, плеера и настроек. */
     @JvmField
     val ndotFontHeaders =

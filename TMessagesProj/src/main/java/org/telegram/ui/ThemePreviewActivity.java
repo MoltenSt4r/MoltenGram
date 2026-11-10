@@ -2752,6 +2752,7 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                             NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, fullChat, 0, false, false);
                         }
                     }
+                    ChatThemeController.getInstance(currentAccount).saveChatWallpaper(dialogId, tlwallPaper);
                 } else {
                     ChatThemeController.getInstance(currentAccount).setWallpaperToPeer(dialogId, null, wallpaperInfo, serverWallpaper, () -> {
 

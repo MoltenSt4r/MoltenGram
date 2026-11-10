@@ -45,7 +45,6 @@ public class ChatsHelper extends BaseController {
     public static final int LEFT_BUTTON_DIRECT_SHARE = 3;
     public static final int LEFT_BUTTON_SELECT_BETWEEN = 4;
     public static final int LEFT_BUTTON_NOCAPTION = 5;
-    public static final int LEFT_BUTTON_QUOTE = 6;
     private static final ChatsHelper[] Instance = new ChatsHelper[UserConfig.MAX_ACCOUNT_COUNT];
     public ChatActivity.ThemeDelegate themeDelegate;
 
@@ -74,7 +73,7 @@ public class ChatsHelper extends BaseController {
             return LEFT_BUTTON_REPLY;
         }
         return switch (action) {
-            case LEFT_BUTTON_REPLY, LEFT_BUTTON_SAVE_MESSAGE, LEFT_BUTTON_DIRECT_SHARE, LEFT_BUTTON_NOCAPTION, LEFT_BUTTON_QUOTE -> action;
+            case LEFT_BUTTON_REPLY, LEFT_BUTTON_SAVE_MESSAGE, LEFT_BUTTON_DIRECT_SHARE, LEFT_BUTTON_NOCAPTION -> action;
             default -> LEFT_BUTTON_NOQUOTE;
         };
     }
@@ -96,7 +95,6 @@ public class ChatsHelper extends BaseController {
             case LEFT_BUTTON_DIRECT_SHARE -> getString(R.string.ShareMessages);
             case LEFT_BUTTON_SELECT_BETWEEN -> getString(R.string.Select);
             case LEFT_BUTTON_NOCAPTION -> getString(R.string.NoCaptionForwardShort);
-            case LEFT_BUTTON_QUOTE -> getString(R.string.CreateQuote);
             default -> getString(R.string.NoQuoteForwardShort);
         };
     }
@@ -110,7 +108,6 @@ public class ChatsHelper extends BaseController {
             case LEFT_BUTTON_SAVE_MESSAGE -> R.drawable.msg_saved;
             case LEFT_BUTTON_DIRECT_SHARE -> R.drawable.msg_share;
             case LEFT_BUTTON_SELECT_BETWEEN -> R.drawable.ic_select_between;
-            case LEFT_BUTTON_QUOTE -> R.drawable.msg_share_quote_solar;
             default -> R.drawable.input_reply;
         };
     }
@@ -157,12 +154,6 @@ public class ChatsHelper extends BaseController {
                 }
                 chatActivity.openForward(false);
                 break;
-            case LEFT_BUTTON_QUOTE:
-                ArrayList<MessageObject> quoteList = chatActivity.getSelectedMessages();
-                if (!quoteList.isEmpty()) {
-                    new app.exteraless.chats.ChatQuoteBottomSheet(chatActivity, quoteList).show();
-                }
-                break;
             case LEFT_BUTTON_NOQUOTE:
             default:
                 ChatActivity.noForwardQuote = true;
@@ -197,9 +188,6 @@ public class ChatsHelper extends BaseController {
 
         configStringKeys.add(getString(R.string.NoQuoteForward));
         configValues.add(LEFT_BUTTON_NOQUOTE);
-
-        configStringKeys.add(getString(R.string.CreateQuote));
-        configValues.add(LEFT_BUTTON_QUOTE);
 
         PopupHelper.show(configStringKeys, getString(R.string.LeftBottomButtonAction), configValues.indexOf(NaConfig.INSTANCE.getLeftBottomButton().Int()), chatActivity.getContext(), i -> {
             NaConfig.INSTANCE.getLeftBottomButton().setConfigInt(configValues.get(i));

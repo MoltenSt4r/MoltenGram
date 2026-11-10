@@ -54,6 +54,8 @@
     <string name="OEAppearanceNdotFontHeadersInfo">Use Nothing Ndot dot-matrix font for header titles, windows, player, and in settings</string>
     <string name="OEAppearanceUseSystemEmoji">Use System Emoji</string>
     <string name="OEAppearanceSwitchStyle">Switches</string>
+    <string name="OEAppearanceSwitchExpressiveColors">Expressive switch colors</string>
+    <string name="OEAppearanceSwitchExpressiveColorsInfo">Use a soft pastel container for track and rich accent for thumb.</string>
     <string name="OEAppearanceSliderStyle">Sliders</string>
 
     <!-- Blur &amp; Effects -->

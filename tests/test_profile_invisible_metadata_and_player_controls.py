@@ -330,24 +330,8 @@ def test_new_brand_launcher_icons_exist():
 
 def test_quote_bottom_sheet_and_chat_activity_compilation_safety():
     sheet_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "chats", "ChatQuoteBottomSheet.java")
-    with open(sheet_path, "r", encoding="utf-8") as f:
-        sheet_content = f.read()
-
-    # Valid drawables used
-    assert "R.drawable.msg_openprofile" in sheet_content
-    assert "R.drawable.msg_contacts_time" in sheet_content
-    assert "R.drawable.msg_sendfile" in sheet_content
-    assert "R.drawable.msg_user" not in sheet_content
-    assert "R.drawable.msg_history" not in sheet_content
-    assert "R.drawable.msg_document" not in sheet_content
-
-    # Wallpaper safely retrieved
-    assert "Theme.getCachedWallpaperNonBlocking" in sheet_content
-
-    # Correct static SendMessagesHelper calls
-    assert "SendMessagesHelper.prepareSendingPhoto(" in sheet_content
-    assert "chatActivity.getAccountInstance()" in sheet_content
-    assert "SendMessagesHelper.prepareSendingDocument(" in sheet_content
+    # Quote feature removed per user request
+    assert not os.path.exists(sheet_path)
 
     # ChatActivity getSelectedMessages is public
     chat_path = os.path.join(TMESSAGES_JAVA, "org", "telegram", "ui", "ChatActivity.java")
@@ -486,41 +470,8 @@ def test_online_lyrics_match_and_parallel_search():
 
 def test_chat_quote_screenshot_appearance():
     sheet_path = os.path.join(TMESSAGES_JAVA, "app", "exteraless", "chats", "ChatQuoteBottomSheet.java")
-    with open(sheet_path, "r", encoding="utf-8") as f:
-        content = f.read()
-
-    # Outgoing vs Incoming alignment & colors
-    assert "mo.isOutOwner()" in content
-    assert "Theme.key_chat_outBubble" in content
-    assert "Theme.key_chat_inBubble" in content
-    assert "Theme.key_chat_messageTextOut" in content
-    assert "Theme.key_chat_messageTextIn" in content
-    assert "Theme.key_chat_outTimeText" in content
-
-    # Checkmark status for outgoing messages
-    assert "mo.isUnread()" in content
-    assert "deproko_baseline_check_single_24" in content
-    assert "deproko_baseline_check_double_24" in content
-
-    # Bubble sizing hugging content with maxBubbleWidth constraint
-    assert "maxBubbleWidth" in content
-    assert "cardWidth * 0.78f" in content
-
-    # Reply quote header
-    assert "mo.replyMessageObject" in content
-    assert "Theme.key_chat_outReplyLine" in content
-    assert "Theme.key_chat_inReplyLine" in content
-    assert "Theme.key_chat_outReplyNameText" in content
-
-    # Reactions pill chips under bubble
-    assert "reactions.results" in content
-    assert "key_chat_outReactionButtonBackground" in content
-    assert "key_chat_inReactionButtonBackground" in content
-
-    # Channel/chat sender lookup
-    assert "senderChat" in content
-    assert "isFirstFromSender" in content
-    assert "isLastFromSender" in content
+    # Quote feature removed per user request
+    assert not os.path.exists(sheet_path)
 
 
 def test_switch_m3_appearance_and_text_cleanup():

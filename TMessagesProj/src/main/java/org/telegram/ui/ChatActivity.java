@@ -47601,9 +47601,9 @@ public class ChatActivity extends BaseFragment implements
         }
 
         private void setupChatTheme(EmojiThemes chatTheme, TLRPC.WallPaper wallPaper, boolean withAnimation, boolean createNewResources) {
-            // Перенос exteraGram 12.9.0:ChatActivity:12501: при выключенных
-            // индивидуальных темах чат остаётся в общей теме приложения.
-            if (!AppearanceConfig.customThemes()) return;
+            if (chatTheme != null && !AppearanceConfig.customThemes()) {
+                chatTheme = null;
+            }
             if (parentThemeDelegate != null) return;
 
             this.chatTheme = chatTheme;
@@ -48329,11 +48329,6 @@ public class ChatActivity extends BaseFragment implements
             clearSelectionMode();
         } else if (id == nkactionbarbtn_selectBetween) {
             performSelectBetweenMessages();
-        } else if (id == nkbtn_create_quote || id == nkactionbarbtn_create_quote) {
-            ArrayList<MessageObject> quoteMessages = getSelectedMessages();
-            if (!quoteMessages.isEmpty()) {
-                new app.exteraless.chats.ChatQuoteBottomSheet(ChatActivity.this, quoteMessages).show();
-            }
         } else if (id == nkheaderbtn_zibi) {
             getMessageHelper().createDeleteHistoryAlert(ChatActivity.this, currentChat, forumTopic, mergeDialogId, themeDelegate);
         } else if (id == nkbtn_clearDeleted) {
