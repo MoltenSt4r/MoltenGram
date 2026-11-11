@@ -57,6 +57,10 @@ public class RingPlayButton extends View {
         }
     }
 
+    public void setRingVisible(boolean visible) {
+        setShowRing(visible);
+    }
+
     public void animateResetToZero() {
         if (drawnProgress <= 0.02f) {
             drawnProgress = 0f;

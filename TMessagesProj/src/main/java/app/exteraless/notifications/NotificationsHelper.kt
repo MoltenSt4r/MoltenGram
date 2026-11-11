@@ -83,6 +83,14 @@ object NotificationsHelper {
     }
 
     @JvmStatic
+    fun isSummaryPosted(summaryId: Int): Boolean = try {
+        val manager = ApplicationLoader.applicationContext.getSystemService(Context.NOTIFICATION_SERVICE) as NotificationManager
+        manager.activeNotifications.any { it.id == summaryId && it.tag == null }
+    } catch (e: Exception) {
+        false
+    }
+
+    @JvmStatic
     fun saveWearNotificationIds(account: Int, ids: LongSparseArray<Int>) {
         val key = getWearIdsKey(account)
         val stored = (0 until ids.size()).joinToString(",") { "${ids.keyAt(it)}:${ids.valueAt(it)}" }

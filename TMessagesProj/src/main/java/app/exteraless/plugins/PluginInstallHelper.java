@@ -330,11 +330,30 @@ public final class PluginInstallHelper {
             Plugin plugin, Map<String, List<String>> capabilities) {
         final boolean obfuscated = PluginCapabilityScan.isObfuscated(capabilities);
         if (!capabilities.isEmpty() && !obfuscated) {
-            return capabilities;
+            Map<String, List<String>> offered = new LinkedHashMap<>(capabilities);
+            List<String> extra = new ArrayList<>();
+            if (plugin != null && plugin.permissionsDeclared) {
+                extra.addAll(PluginPermissions.getRequested(plugin));
+            }
+            List<String> stored = plugin != null ? PluginPermissions.getStored(plugin.id) : null;
+            if (stored != null) {
+                extra.addAll(stored);
+            }
+            for (String permission : PluginPermissions.sanitize(extra)) {
+                if (!PluginPermissions.UI.equals(permission) && !offered.containsKey(permission)) {
+                    offered.put(permission, PluginCapabilityScan.evidenceOf(capabilities, permission));
+                }
+            }
+            return offered;
         }
-        List<String> fallback = !obfuscated && plugin != null && plugin.permissionsDeclared
+        List<String> fallback = new ArrayList<>(!obfuscated && plugin != null && plugin.permissionsDeclared
                 ? PluginPermissions.getRequested(plugin)
-                : PluginPermissions.REQUESTABLE;
+                : PluginPermissions.REQUESTABLE);
+        List<String> stored = plugin != null ? PluginPermissions.getStored(plugin.id) : null;
+        if (stored != null) {
+            fallback.addAll(stored);
+            fallback.remove(PluginPermissions.UI);
+        }
         Map<String, List<String>> offered = new LinkedHashMap<>();
         for (String permission : PluginPermissions.sanitize(fallback)) {
             offered.put(permission, PluginCapabilityScan.evidenceOf(capabilities, permission));

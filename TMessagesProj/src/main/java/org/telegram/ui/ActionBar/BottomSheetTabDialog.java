@@ -51,17 +51,7 @@ public class BottomSheetTabDialog extends Dialog {
         this.sheet = sheet;
         this.sheetView = sheet.getWindowView();
 
-        navigationBar = new View(getContext()) {
-            @Override
-            protected void dispatchDraw(@NonNull Canvas canvas) {
-                canvas.drawRect(0,0,getWidth(),getHeight(),navigationBarPaint);
-            }
-            @Override
-            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.navigationBarHeight);
-                setTranslationY(AndroidUtilities.navigationBarHeight);
-            }
-        };
+        navigationBar = new NavigationBarView(getContext());
         navigationBarPaint.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
 
         setContentView(windowView = new WindowView(sheetView), new ViewGroup.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
@@ -88,9 +78,8 @@ public class BottomSheetTabDialog extends Dialog {
         params.flags &= ~WindowManager.LayoutParams.FLAG_DIM_BEHIND;
         params.softInputMode = WindowManager.LayoutParams.SOFT_INPUT_ADJUST_RESIZE;
         params.height = ViewGroup.LayoutParams.MATCH_PARENT;
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            params.layoutInDisplayCutoutMode = WindowManager.LayoutParams.LAYOUT_IN_DISPLAY_CUTOUT_MODE_SHORT_EDGES;
-        }
+        // same as the activity window: SHORT_EDGES keeps the window out of a cutout on a long edge (e.g. top in landscape), so it ends up below the status bar
+        AndroidUtilities.applyEdgeToEdgeLayoutParams(params);
         window.setAttributes(params);
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
@@ -112,13 +101,47 @@ public class BottomSheetTabDialog extends Dialog {
         }
     }
 
+    private class NavigationBarView extends View implements Theme.Colorable {
+        public NavigationBarView(android.content.Context context) {
+            super(context);
+        }
+        @Override
+        protected void dispatchDraw(@NonNull Canvas canvas) {
+            canvas.drawRect(0,0,getWidth(),getHeight(),navigationBarPaint);
+        }
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            setMeasuredDimension(MeasureSpec.getSize(widthMeasureSpec), AndroidUtilities.navigationBarHeight);
+            setTranslationY(AndroidUtilities.navigationBarHeight);
+        }
+        @Override
+        public void updateColors() {
+            try {
+                if (sheet == null) {
+                    return;
+                }
+                final int color = sheet.getNavigationBarColor(Theme.getColor(Theme.key_windowBackgroundGray));
+                if (navigationBarPaint.getColor() != color) {
+                    navigationBarPaint.setColor(color);
+                    invalidate();
+                    AndroidUtilities.setNavigationBarColor(BottomSheetTabDialog.this, color);
+                    AndroidUtilities.setLightNavigationBar(BottomSheetTabDialog.this, AndroidUtilities.computePerceivedBrightness(color) >= .721f);
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
+    }
+
     public void updateNavigationBarColor() {
         final int color = sheet.getNavigationBarColor(Theme.getColor(Theme.key_windowBackgroundGray));
         navigationBarPaint.setColor(color);
         navigationBar.invalidate();
         AndroidUtilities.setNavigationBarColor(this, color);
         AndroidUtilities.setLightNavigationBar(this, AndroidUtilities.computePerceivedBrightness(color) >= .721f);
-        LaunchActivity.instance.checkSystemBarColors(true, true, true);
+        if (LaunchActivity.instance != null) {
+            LaunchActivity.instance.checkSystemBarColors(true, true, true);
+        }
     }
 
     public static class WindowView extends FrameLayout implements BottomSheetTabsOverlay.SheetView {

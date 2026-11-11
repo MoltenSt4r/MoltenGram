@@ -198,7 +198,7 @@ public class MessageHelper extends BaseController {
         SQLiteCursor cursor = null;
         NativeByteBuffer data = null;
         try {
-            boolean ignoreBlocked = NekoConfig.ignoreBlocked.Bool();
+            boolean ignoreBlocked = AyuFilter.shouldHideSenders();
             long currentUserId = UserConfig.getInstance(currentAccount).clientUserId;
             HashMap<Long, HashMap<Long, TLRPC.Message>> replyMessageCache = ignoreBlocked ? new HashMap<>() : null;
             String query = ignoreBlocked
@@ -1039,10 +1039,10 @@ public class MessageHelper extends BaseController {
     }
 
     public boolean isBlockedUser(long senderId) {
-        if (!NekoConfig.ignoreBlocked.Bool()) {
-            return false;
+        if (NekoConfig.ignoreBlocked.Bool() && getMessagesController().blockePeers.indexOfKey(senderId) >= 0) {
+            return true;
         }
-        return getMessagesController().blockePeers.indexOfKey(senderId) >= 0 || AyuFilter.isCustomFilteredPeer(senderId);
+        return AyuFilter.isCustomFilteredPeer(senderId);
     }
 
     public boolean isBlockedOrFiltered(TLRPC.Message message) {

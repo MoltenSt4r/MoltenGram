@@ -1,4 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
 <resources>
-    <item name="ic_foreground_solid" type="drawable">@drawable/icon_plane</item>
+    <item name="ic_foreground_solid" type="drawable">@drawable/exteraless_icon_tile</item>
 </resources>

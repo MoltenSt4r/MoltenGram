@@ -21,6 +21,7 @@
     <string name="PluginsInstallReadError">No se pudo leer el archivo seleccionado.</string>
     <string name="PluginsCrashedTitle">El plugin ha fallado</string>
     <string name="PluginsCrashedMessage">El plugin %1$s se desactivó tras un fallo.</string>
+    <string name="PluginsAutoSafeMode">La app se cerró varias veces seguidas justo después de abrirse, así que los plugins se desactivaron (modo seguro). Cuando quieras, desactiva el modo seguro en Plugins.</string>
     <string name="PluginsMenuOpenSettings">Abrir ajustes</string>
     <string name="PluginsMenuReload">Recargar</string>
     <string name="PluginsMenuCopyId">Copiar ID</string>
@@ -199,4 +200,15 @@ Código:
     <string name="PluginOverlayOpen">Abrir ajustes</string>
     <string name="PluginsSafeModeEnabledNow">Modo seguro activado: todos los plugins están desactivados.</string>
     <string name="PluginsSafeModeDisabledNow">Modo seguro desactivado: cargando los plugins.</string>
+<string name="PluginActivityExport">Exportar registro</string>
+<string name="OEPluginLinkEngineDisabled">Activa el **motor de plugins** para abrir los ajustes de **%1$s**.</string>
+<string name="OEPluginLinkNotFound">El plugin **%1$s** no está instalado.</string>
+<string name="OEPluginLinkNoSettings">**%1$s** no tiene ajustes.</string>
+<string name="PluginsExportAll">Exportar plugins</string>
+<string name="PluginsImportAll">Importar plugins</string>
+<string name="PluginsImportConfirm">¿Instalar %1$d plugins de la copia de seguridad y restaurar sus ajustes? Los permisos no se restauran: concédelos de nuevo donde haga falta.</string>
+<string name="PluginsImportDone">Plugins importados: %1$d de %2$d</string>
+<string name="PluginsImportInvalid">Este archivo no es una copia de seguridad de plugins</string>
+<string name="PluginsRetryHooks">Reintentar hooks</string>
+<string name="PluginsHooksBrokenInfo">La app se cerró dos veces al iniciar el motor de hooks, así que los hooks de los plugins se desactivaron. Toca para reintentarlo; se aplica tras reiniciar.</string>
 </resources>

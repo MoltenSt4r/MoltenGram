@@ -2,6 +2,7 @@ package app.exteraless.plugins;
 
 import android.content.Context;
 import android.content.SharedPreferences;
+import android.text.TextUtils;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -10,8 +11,10 @@ import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -56,6 +59,10 @@ import app.exteraless.debug.PluginToggleTrace;
 public class PluginsController extends com.exteragram.messenger.plugins.PluginsController {
 
     private static volatile PluginsController instance;
+
+    public static PluginsController peekInstance() {
+        return instance;
+    }
 
     public static PluginsController getInstance() {
         if (instance == null) {
@@ -142,6 +149,17 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (crashed != null) {
             FileLog.e("PluginsController: disabled crashed plugin " + crashed);
         }
+        if (watchdog.consumeEarlyCrashLoop() && !isSafeMode()) {
+            preferences.edit()
+                    .putBoolean(PluginsConstants.KEY_SAFE_MODE, true)
+                    .putBoolean(PluginsConstants.KEY_SAFE_MODE_AUTO, true)
+                    .apply();
+            FileLog.e("PluginsController: repeated crashes right after launch, starting in safe mode");
+        }
+        if (!isSafeMode() && hasEnabledPlugin()) {
+            app.exteraless.plugins.xposed.XposedHooks.ensureReady();
+        }
+        watchdog.scheduleEarlyCrashReset();
         // Планировщик детекта зависаний живёт столько же, сколько движок.
         watchdog.start();
         PythonPluginsEngine.getInstance().ensureStarted(appContext, ok -> {
@@ -151,6 +169,16 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 executeOnAppEvent(PluginsConstants.EVENT_APP_START);
             }
         });
+    }
+
+    private boolean hasEnabledPlugin() {
+        for (java.util.Map.Entry<String, ?> entry : preferences.getAll().entrySet()) {
+            if (entry.getKey().startsWith(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX)
+                    && Boolean.TRUE.equals(entry.getValue())) {
+                return true;
+            }
+        }
+        return false;
     }
 
     public PluginsWatchdog getWatchdog() {
@@ -714,12 +742,49 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             FileLog.d("PluginsController: safe mode, no plugins loaded");
             return;
         }
-        List<Plugin> snapshot = getPluginsSnapshot();
+        List<Plugin> snapshot = loadOrder(getPluginsSnapshot());
         for (Plugin p : snapshot) {
             if (p.enabled && !p.loaded && p.loadError == null) {
                 loadPluginInternal(p);
             }
         }
+    }
+
+    private static List<Plugin> loadOrder(List<Plugin> snapshot) {
+        List<Plugin> ranked = new ArrayList<>(snapshot);
+        ranked.sort(Comparator.comparingInt(p -> isStructuredPlugin(p) ? 0 : 1));
+        Map<String, Plugin> byId = new HashMap<>();
+        for (Plugin p : ranked) {
+            if (p.id != null) {
+                byId.put(p.id, p);
+            }
+        }
+        java.util.LinkedHashSet<Plugin> ordered = new java.util.LinkedHashSet<>();
+        for (Plugin p : ranked) {
+            addAfterRequired(p, byId, ordered, new HashSet<>());
+        }
+        return new ArrayList<>(ordered);
+    }
+
+    private static void addAfterRequired(Plugin p, Map<String, Plugin> byId, Set<Plugin> ordered,
+                                         Set<Plugin> visiting) {
+        if (ordered.contains(p) || !visiting.add(p)) {
+            return;
+        }
+        if (p.requires != null) {
+            for (String dependency : p.requires.keySet()) {
+                Plugin required = byId.get(dependency);
+                if (required != null) {
+                    addAfterRequired(required, byId, ordered, visiting);
+                }
+            }
+        }
+        ordered.add(p);
+    }
+
+    private static boolean isStructuredPlugin(Plugin p) {
+        String path = p.path == null ? "" : p.path.toLowerCase(Locale.ROOT);
+        return path.endsWith(PluginsConstants.PLUGIN_EXT_ELYX) || path.endsWith(PluginsConstants.PLUGIN_EXT_EAF);
     }
 
     /**
@@ -843,11 +908,16 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
 
     public void setPluginEnabled(String id, boolean enabled, Utilities.Callback<String> callback) {
         final PluginToggleTrace trace = PluginToggleTrace.start(id, enabled);
+        final Plugin requested = id == null ? null : getPlugin(id);
         PythonPluginsEngine.getInstance().runOnEngine(() -> {
             trace.enterEngine();
             boolean ok;
             try {
-                ok = setPluginEnabled(id, enabled);
+                if (!enabled && requested != null && getPlugin(id) == null) {
+                    ok = disableDetached(requested);
+                } else {
+                    ok = setPluginEnabled(id, enabled);
+                }
             } finally {
                 trace.leaveEngine();
             }
@@ -860,6 +930,36 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 trace.finish(ok);
             }
         });
+    }
+
+    private boolean disableDetached(Plugin p) {
+        preferences.edit().putBoolean(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX + p.id, false).apply();
+        p.enabled = false;
+        if (p.loaded && PythonPluginsEngine.getInstance().isStarted()) {
+            unregisterPluginHooks(p.id);
+            PythonPluginsEngine.getInstance().unload(p);
+        }
+        return true;
+    }
+
+    private Plugin restoreDetached(String id) {
+        String path = knownPaths.get(id);
+        if (path == null || !new File(path).isFile()) {
+            return null;
+        }
+        Plugin fresh = readPluginMetadata(new File(path));
+        if (fresh == null || !id.equals(fresh.id)) {
+            return null;
+        }
+        fresh.enabled = preferences.getBoolean(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX + id, true);
+        synchronized (this) {
+            Plugin raced = plugins.get(id);
+            if (raced != null) {
+                return raced;
+            }
+            plugins.put(id, fresh);
+            return fresh;
+        }
     }
 
     public void rescanPlugins(Runnable onDone) {
@@ -884,8 +984,14 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (PluginSinkGate.refuseForeign(id, "reloadPlugin")) {
             return;
         }
+        if (id == null || !PythonPluginsEngine.getInstance().isStarted()) {
+            return;
+        }
         Plugin p = getPlugin(id);
-        if (p == null || !PythonPluginsEngine.getInstance().isStarted()) {
+        if (p == null) {
+            p = restoreDetached(id);
+        }
+        if (p == null) {
             return;
         }
         if (p.loaded) {
@@ -1028,6 +1134,12 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 if (existing != null && existing.loaded) {
                     unregisterPluginHooks(id);
                     engine.unload(existing);
+                }
+                for (String otherExt : PLUGIN_FILE_EXTS) {
+                    File stale = new File(getPluginsDir(), id + otherExt);
+                    if (!otherExt.equals(ext) && stale.isFile() && !stale.delete()) {
+                        FileLog.w("PluginsController: failed to remove " + stale.getName());
+                    }
                 }
                 Plugin p = readPluginMetadata(dest);
                 if (p == null) {
@@ -1281,6 +1393,47 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
 
     public static void openPluginSettings(String pluginId) {
         openPluginSettings(pluginId, null);
+    }
+
+    public static String settingsLink(String pluginId, String linkAlias) {
+        String link = "https://t.me/exteraSettings?p=" + android.net.Uri.encode(pluginId);
+        return TextUtils.isEmpty(linkAlias) ? link : link + "&s=" + android.net.Uri.encode(linkAlias);
+    }
+
+    public static boolean isSettingsLink(String path, android.net.Uri data) {
+        return path != null && data != null
+                && ("exterasettings".equalsIgnoreCase(path) || "exteraless".equalsIgnoreCase(path))
+                && !TextUtils.isEmpty(data.getQueryParameter("p"));
+    }
+
+    public static void openSettingsLink(android.net.Uri data) {
+        String pluginId = data.getQueryParameter("p");
+        String linkAlias = data.getQueryParameter("s");
+        AndroidUtilities.runOnUIThread(() -> {
+            BaseFragment fragment = LaunchActivity.getSafeLastFragment();
+            if (fragment == null) {
+                return;
+            }
+            PluginsController controller = getInstance();
+            if (!controller.isEngineEnabled()) {
+                org.telegram.ui.Components.BulletinFactory.of(fragment).createSimpleBulletin(R.raw.error,
+                        AndroidUtilities.replaceTags(LocaleController.formatString(R.string.OEPluginLinkEngineDisabled, pluginId)),
+                        LocaleController.getString(R.string.Enable), () -> fragment.presentFragment(new app.exteraless.plugins.ui.PluginsActivity())).show();
+                return;
+            }
+            Plugin plugin = controller.getPlugin(pluginId);
+            if (plugin == null) {
+                org.telegram.ui.Components.BulletinFactory.of(fragment).createSimpleBulletin(R.raw.error,
+                        AndroidUtilities.replaceTags(LocaleController.formatString(R.string.OEPluginLinkNotFound, pluginId))).show();
+                return;
+            }
+            if (!controller.hasPluginSettings(pluginId)) {
+                org.telegram.ui.Components.BulletinFactory.of(fragment).createSimpleBulletin(R.raw.error,
+                        AndroidUtilities.replaceTags(LocaleController.formatString(R.string.OEPluginLinkNoSettings, plugin.getDisplayName()))).show();
+                return;
+            }
+            PythonPluginsEngine.getInstance().openPluginSettings(plugin, fragment, TextUtils.isEmpty(linkAlias) ? null : linkAlias);
+        });
     }
 
     public static void openPluginSettings(String pluginId, String targetSetting) {
@@ -2133,7 +2286,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
                 }
             }
         }
-        if (target == null || target.onClick == null) {
+        if (target == null || target.onClick == null || org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
             return;
         }
         PluginsWatchdog wd = getWatchdog();

@@ -4,6 +4,7 @@ import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
 
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.tgnet.NativeByteBuffer;
 import org.telegram.tgnet.TLObject;
 
@@ -18,6 +19,25 @@ import java.util.List;
 import java.util.zip.CRC32;
 
 public class TlUtils {
+
+    public static void validateEntities(ArrayList<TLRPC.MessageEntity> entities, String text) {
+        if (entities == null || entities.isEmpty() || ApplicationLoader.isAndroidTestEnvironment()) {
+            return;
+        }
+
+        int textLength = text != null ? text.length() : 0;
+        for (int i = 0; i < entities.size(); i++) {
+            TLRPC.MessageEntity entity = entities.get(i);
+            if (entity == null
+                    || entity.offset < 0
+                    || entity.offset > textLength
+                    || entity.length <= 0
+                    || entity.length > textLength - entity.offset) {
+                entities.clear();
+                return;
+            }
+        }
+    }
 
     public static TLRPC.InputPeer getInputPeerFromSendMessageRequest(TLObject request) {
         if (request instanceof TLRPC.TL_messages_sendMessage) {
@@ -203,9 +223,14 @@ public class TlUtils {
         if (newGroupCall instanceof TLRPC.TL_groupCall && oldGroupCall instanceof TLRPC.TL_groupCall) {
             final TLRPC.TL_groupCall tlNew = (TLRPC.TL_groupCall) newGroupCall;
 
+            final TLRPC.TL_groupCall tlOld = (TLRPC.TL_groupCall) oldGroupCall;
+            // updateGroupCall pushes may come without stream_dc_id: the stream DC of a call does
+            // not change, and without it the stream parts are requested from DC 0 and never answered
+            if ((tlNew.flags & 16) == 0 && (tlOld.flags & 16) != 0 && tlNew.id == tlOld.id) {
+                tlNew.stream_dc_id = tlOld.stream_dc_id;
+                tlNew.flags |= 16;
+            }
             if (tlNew.min) {
-                final TLRPC.TL_groupCall tlOld = (TLRPC.TL_groupCall) oldGroupCall;
-
                 tlNew.can_change_join_muted = tlOld.can_change_join_muted;
                 tlNew.can_start_video = tlOld.can_start_video;
                 tlNew.creator = tlOld.creator;

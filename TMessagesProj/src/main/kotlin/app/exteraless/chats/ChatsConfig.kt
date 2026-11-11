@@ -266,12 +266,21 @@ object ChatsConfig {
     @JvmField
     val removeMessageTail = addConfig("OEChatsRemoveMessageTail", ConfigItem.configTypeBool, true)
 
+    @JvmField
+    val unreadCapsule = addConfig("OEChatsUnreadCapsule", ConfigItem.configTypeBool, false)
+
     /** Показывать результаты опроса до голосования (только UI). */
     @JvmField
     val showResultsBeforeVoting = addConfig("OEChatsShowResultsBeforeVoting", ConfigItem.configTypeBool, false)
 
     @JvmField
     val hideChannelSearchButton = addConfig("OEChatsHideChannelSearchButton", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val hideCallButton = addConfig("OEChatsHideCallButton", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val hideMoneyButton = addConfig("OEChatsHideMoneyButton", ConfigItem.configTypeBool, false)
 
     @JvmField
     val translateInSheet = addConfig("OEChatsTranslateInSheet", ConfigItem.configTypeBool, false)

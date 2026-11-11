@@ -50,4 +50,10 @@
     <string name="OEAiDetails">Szczegóły</string>
     <string name="OEAiDisableTools">Wyłącz narzędzia</string>
     <string name="OEAiDisableToolsInfo">Sprawdzanie wtyczki wysyła kod jednym żądaniem, jak wcześniej: tylko pierwsze 48 KB, bez dekodowania osadzonych danych</string>
+    <string name="OEAiTelegramHeader">AI Telegrama</string>
+    <string name="OEAiReplaceEditor">Edytor AI</string>
+    <string name="OEAiReplaceEditorInfo">Tłumaczenie, zmiana stylu i korekta wersji roboczych</string>
+    <string name="OEAiReplaceSummaries">Podsumowania</string>
+    <string name="OEAiReplaceSummariesInfo">Podsumowywanie długich wiadomości i postów</string>
+    <string name="OEAiTelegramInfo">Wybrane funkcje korzystają z Twojej usługi AI zamiast serwerów Telegrama, bez limitów Premium.</string>
 </resources>

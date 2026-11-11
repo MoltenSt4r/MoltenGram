@@ -52,13 +52,22 @@ import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 import xyz.nextalone.nagram.NaConfig;
 
-public class Switch extends View {
+public class Switch extends View implements Theme.Colorable {
+
+    @Override
+    public void updateColors() {
+        colorSet = 0; // the ripple color is re-read from the theme on the next press
+    }
     private final BoolAnimator animatorIconVisibility = new BoolAnimator(this, CubicBezierInterpolator.EASE_OUT_QUINT, 380L, true);
 
     public static final int SWITCH_STYLE_DEFAULT = 0;
     public static final int SWITCH_STYLE_MODERN = 1;
     public static final int SWITCH_STYLE_MD3 = 2;
     public static final int SWITCH_STYLE_EXPRESSIVE = 3;
+    public static final int SWITCH_STYLE_M3 = SWITCH_STYLE_EXPRESSIVE;
+    private final BoolAnimator animatorPressed = new BoolAnimator(this, new CubicBezierInterpolator(0.2, 0, 0, 1), 100L);
+    private final float[] iconLines = new float[8];
+    private Paint outlinePaint;
     private int separateTrackColorKey = -1;
     private int lastCheckColor = Integer.MIN_VALUE;
     private final Paint googleBorderPaint;
@@ -199,6 +208,10 @@ public class Switch extends View {
         return s == SWITCH_STYLE_MD3 || s == SWITCH_STYLE_EXPRESSIVE;
     }
 
+    private static boolean isMaterial3SwitchStyle() {
+        return NaConfig.INSTANCE.getSwitchStyle().Int() == SWITCH_STYLE_M3;
+    }
+
     /**
      * Запас вокруг тумблера для overlay-битмапов: капсула нового стиля вылезает
      * за measuredWidth/Height (exteraGram: {@code Switch.getOverlayPadding()} = dp(5)).
@@ -259,10 +272,10 @@ public class Switch extends View {
                 new int[]{0}
             );
             rippleDrawable = new BaseCell.RippleDrawableSafe(colorStateList, null, maskDrawable);
-            if (Build.VERSION.SDK_INT >= 23) {
-                rippleDrawable.setRadius(AndroidUtilities.dp(18));
-            }
             rippleDrawable.setCallback(this);
+        }
+        if (Build.VERSION.SDK_INT >= 23) {
+            rippleDrawable.setRadius(isMaterial3SwitchStyle() ? app.exteraless.appearance.Material3SwitchHelper.stateLayerRadius() : AndroidUtilities.dp(18));
         }
         if (isChecked && colorSet != 2 || !isChecked && colorSet != 1) {
             int color = Theme.getColor(isChecked ? Theme.key_switchTrackBlueSelectorChecked : Theme.key_switchTrackBlueSelector, resourcesProvider);
@@ -278,6 +291,7 @@ public class Switch extends View {
             rippleDrawable.setHotspot(isChecked ? 0 : AndroidUtilities.dp(100), AndroidUtilities.dp(18));
         }
         rippleDrawable.setState(value ? pressedState : StateSet.NOTHING);
+        animatorPressed.setValue(value && isMaterial3SwitchStyle(), attachedToWindow);
         invalidate();
     }
 
@@ -299,6 +313,16 @@ public class Switch extends View {
 
     private void animateToCheckedState(boolean newCheckedState) {
         cancelCheckAnimator();
+        if (isMaterial3SwitchStyle()) {
+            checkSpringAnimator = new SpringAnimation(this, PROGRESS_PROPERTY)
+                    .setSpring(new SpringForce(newCheckedState ? 1f : 0f)
+                            .setDampingRatio(0.65f)
+                            .setStiffness(510f))
+                    .setMinimumVisibleChange(0.001f)
+                    .setStartValue(progress);
+            checkSpringAnimator.start();
+            return;
+        }
         if (isExteraSwitchStyle()) {
             // exteraGram: SpringForce(target).setDampingRatio(0.9f).setStiffness(1400f), minimumVisibleChange 0.001f
             checkSpringAnimator = new SpringAnimation(this, PROGRESS_PROPERTY)
@@ -713,6 +737,10 @@ public class Switch extends View {
             drawExteraSwitch(canvas, switchStyle);
             return;
         }
+        if (switchStyle == SWITCH_STYLE_M3) {
+            drawMaterial3Switch(canvas);
+            return;
+        }
         int width = dp(36);
         int x = (getMeasuredWidth() - width) / 2;
         float y = (getMeasuredHeight() - dpf2(14)) / 2;
@@ -1063,6 +1091,123 @@ public class Switch extends View {
         paint2.setStrokeJoin(oldJoin);
         paint2.setStrokeWidth(oldStrokeWidth);
         paint2.setAlpha(oldAlpha);
+
+    private void drawMaterial3Switch(Canvas canvas) {
+        final int width = getMeasuredWidth();
+        final int height = getMeasuredHeight();
+        final int pad = getOverlayPadding();
+        final int stateLayer = app.exteraless.appearance.Material3SwitchHelper.stateLayerRadius();
+        final int alphaSave = overrideAlpha < 1f
+                ? canvas.saveLayerAlpha(-stateLayer, -stateLayer, width + stateLayer, height + stateLayer, (int) (255 * Utilities.clamp01(overrideAlpha)))
+                : -1;
+        if (outlinePaint == null) {
+            outlinePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            outlinePaint.setStyle(Paint.Style.STROKE);
+        }
+        final float cx = app.exteraless.appearance.Material3SwitchHelper.thumbCenterX(width, progress);
+        final float cy = height / 2f;
+        final int trackOff = processColor(app.exteraless.appearance.Material3SwitchHelper.unselectedTrackColor(trackColorKey, resourcesProvider));
+        final int trackOn = processColor(Theme.getColor(trackCheckedColorKey, resourcesProvider));
+        final int thumbOff = processColor(app.exteraless.appearance.Material3SwitchHelper.unselectedThumbColor(trackColorKey, resourcesProvider));
+        final int thumbOn = processColor(app.exteraless.appearance.Material3SwitchHelper.selectedThumbColor(thumbCheckedColorKey, resourcesProvider));
+
+        for (int a = 0; a < 2; a++) {
+            if (a == 1 && overrideColorProgress == 0) {
+                continue;
+            }
+            final Canvas target = a == 0 ? canvas : overlayCanvas[0];
+            final int offset = a == 0 ? 0 : pad;
+            if (a == 1) {
+                overlayBitmap[0].eraseColor(0);
+                paint.setColor(0xff000000);
+                overlayMaskCanvas.drawRect(pad, pad, overlayMaskBitmap.getWidth() - pad, overlayMaskBitmap.getHeight() - pad, paint);
+                overlayMaskCanvas.drawCircle(overlayCx - getX() + pad, overlayCy - getY() + pad, overlayRad, overlayEraserPaint);
+            }
+            final float colorProgress = Utilities.clamp01(getLayerColorProgress(a));
+            if (a == 0 && iconDrawable != null && lastIconColor != (isChecked ? trackOn : trackOff)) {
+                iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = (isChecked ? trackOn : trackOff), PorterDuff.Mode.MULTIPLY));
+            }
+            final int trackColor = lerpColor(trackOff, trackOn, colorProgress);
+            paint.setColor(trackColor);
+            paint2.setColor(trackColor);
+            app.exteraless.appearance.Material3SwitchHelper.setTrackBounds(rectF, width, height);
+            rectF.offset(offset, offset);
+            final float trackRadius = rectF.height() / 2f;
+            target.drawRoundRect(rectF, trackRadius, trackRadius, paint);
+            final float outlineAlpha = 1f - colorProgress;
+            if (outlineAlpha > 0f) {
+                final float stroke = app.exteraless.appearance.Material3SwitchHelper.trackOutlineWidth();
+                outlinePaint.setColor(Theme.multAlpha(thumbOff, outlineAlpha));
+                outlinePaint.setStrokeWidth(stroke);
+                rectF.inset(stroke / 2f, stroke / 2f);
+                target.drawRoundRect(rectF, trackRadius - stroke / 2f, trackRadius - stroke / 2f, outlinePaint);
+            }
+            if (a == 0 && rippleDrawable != null) {
+                rippleDrawable.setBounds((int) cx - stateLayer, (int) cy - stateLayer, (int) cx + stateLayer, (int) cy + stateLayer);
+                rippleDrawable.draw(target);
+            } else if (a == 1) {
+                target.drawBitmap(overlayMaskBitmap, -pad, -pad, overlayMaskPaint);
+            }
+        }
+        if (overrideColorProgress != 0) {
+            canvas.drawBitmap(overlayBitmap[0], -pad, -pad, null);
+        }
+
+        for (int a = 0; a < 2; a++) {
+            if (a == 1 && overrideColorProgress == 0) {
+                continue;
+            }
+            final Canvas target = a == 0 ? canvas : overlayCanvas[1];
+            final int offset = a == 0 ? 0 : pad;
+            if (a == 1) {
+                overlayBitmap[1].eraseColor(0);
+            }
+            final float colorProgress = Utilities.clamp01(getLayerColorProgress(a));
+            paint.setColor(lerpColor(thumbOff, thumbOn, colorProgress));
+            final float iconFactor = drawIconType == 1 || drawIconType == 2 || iconAnimator != null
+                    ? 1f
+                    : (iconDrawable != null ? animatorIconVisibility.getFloatValue() : 0f);
+            app.exteraless.appearance.Material3SwitchHelper.setThumbBounds(rectF, cx + offset, cy + offset, progress, isChecked, iconFactor, animatorPressed.getFloatValue());
+            final float thumbRadius = rectF.height() / 2f;
+            target.drawRoundRect(rectF, thumbRadius, thumbRadius, paint);
+            if (a == 0) {
+                if (iconDrawable != null) {
+                    final float visibility = animatorIconVisibility.getFloatValue();
+                    if (visibility > 0f) {
+                        final int iconWidth = iconDrawable.getIntrinsicWidth();
+                        final int iconHeight = iconDrawable.getIntrinsicHeight();
+                        final float scale = visibility * app.exteraless.appearance.Material3SwitchHelper.thumbIconScale(iconWidth, iconHeight);
+                        canvas.save();
+                        canvas.translate(cx - iconWidth / 2f, cy - iconHeight / 2f);
+                        canvas.scale(scale, scale, iconWidth / 2f, iconHeight / 2f);
+                        iconDrawable.setBounds(0, 0, iconWidth, iconHeight);
+                        iconDrawable.draw(canvas);
+                        canvas.restore();
+                    }
+                } else if (drawIconType == 1) {
+                    paint2.setStrokeWidth(app.exteraless.appearance.Material3SwitchHelper.iconStrokeWidth());
+                    app.exteraless.appearance.Material3SwitchHelper.setCheckIconLines(iconLines, cx, cy, progress);
+                    target.drawLines(iconLines, paint2);
+                } else if (drawIconType == 2 || iconAnimator != null) {
+                    paint2.setAlpha((int) (255 * (1f - iconProgress)));
+                    paint2.setStrokeWidth(app.exteraless.appearance.Material3SwitchHelper.iconStrokeWidth());
+                    target.drawLine(cx, cy, cx, cy - app.exteraless.appearance.Material3SwitchHelper.clockHandLength(true), paint2);
+                    target.save();
+                    target.rotate(-90f * iconProgress, cx, cy);
+                    target.drawLine(cx, cy, cx + app.exteraless.appearance.Material3SwitchHelper.clockHandLength(false), cy, paint2);
+                    target.restore();
+                }
+            }
+            if (a == 1) {
+                target.drawBitmap(overlayMaskBitmap, -pad, -pad, overlayMaskPaint);
+            }
+        }
+        if (overrideColorProgress != 0) {
+            canvas.drawBitmap(overlayBitmap[1], -pad, -pad, null);
+        }
+        if (alphaSave != -1) {
+            canvas.restoreToCount(alphaSave);
+        }
     }
 
     private float getLayerColorProgress(int layer) {

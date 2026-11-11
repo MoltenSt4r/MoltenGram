@@ -26,46 +26,78 @@
     <string name="QrWifiPasswordCopied">Password copied</string>
     <string name="QrWifiUnknownNetwork">Network name is missing from the code</string>
     <string name="QrLoginHint">This code logs into an account. Use Settings → Devices → Link Desktop Device — that screen checks the code and protects your account.</string>
-    <string name="AppIconsMoltenGram" translatable="false">MoltenGram Icons</string>
-    <string name="AppIconsExteraMS" translatable="false">MoltenGram Icons</string>
-    <string name="AppIconsTelegram" translatable="false">Telegram Icons</string>
-    <string name="AppIconMoltenGramDefault">Material You</string>
-    <string name="AppIconMoltenGramClassic">Classic</string>
-    <string name="AppIconMoltenGramProton">Proton</string>
-    <string name="AppIconMoltenGramSad">Sad</string>
-    <string name="AppIconMoltenGramSchizophrenia">Schizophrenia</string>
-    <string name="AppIconMoltenGramBurning">Burning</string>
-    <string name="AppIconMoltenGramAnotherChance">Another Chance</string>
-    <string name="AppIconMoltenGramDotted">Dotted</string>
-    <string name="AppIconMoltenGramCinema">Cinema</string>
-    <string name="AppIconMoltenGramSunrise">Sunrise</string>
-    <string name="AppIconMoltenGramStar">Star</string>
-    <string name="AppIconMoltenGramCoffee">Coffee</string>
-    <string name="AppIconMoltenGramGlacier">Glacier</string>
-    <string name="AppIconMoltenGramGoogle">Google style</string>
-    <string name="AppIconMoltenGramBeer">Beer</string>
-    <string name="AppIconMoltenGramMagma">Magma</string>
-    <string name="AppIconMoltenGramStillLife">Still Life</string>
-    <string name="AppIconMoltenGramToxic">Toxic</string>
-    <string name="AppIconMoltenGramCoral">Coral</string>
-    <string name="AppIconMoltenGramOnyx">Onyx</string>
-    <string name="AppIconMoltenGramCandy">Candy</string>
-    <string name="AppIconMoltenGramExteraGram">ExteraGram</string>
-    <string name="AppIconMoltenGramNothing">Nothing OS</string>
-    <string name="AppIconMoltenGramPizza">Pizza</string>
-    <string name="AppIconMoltenGramYinYang">Yin-Yang</string>
-    <string name="AppIconMoltenGramRage">Rage</string>
-    <string name="CreateQuote">Create quote</string>
-    <string name="QuoteSent">Quote sent</string>
-    <string name="QuoteCopied">Quote copied to clipboard</string>
-    <string name="QuoteSticker">Sticker</string>
-    <string name="QuoteFile">File</string>
-    <string name="AppIconsSelect">Select</string>
-    <string name="AppIconsKeep">Keep this one</string>
-    <string name="OpenExteraPreferences">MoltenGram Preferences</string>
-    <string name="OpenExteraCreditsSection">Credits</string>
-    <string name="OpenExteraCreditsExteraless" translatable="false">@exteraless</string>
-    <string name="OpenExteraCreditsNagramX" translatable="false">@NagramX</string>
+<string name="AppIconsMoltenGram" translatable="false">MoltenGram Icons</string>
+<string name="AppIconsExteraMS" translatable="false">MoltenGram Icons</string>
+<string name="AppIconsTelegram" translatable="false">Telegram Icons</string>
+<string name="AppIconMoltenGramDefault">Material You</string>
+<string name="AppIconMoltenGramClassic">Classic</string>
+<string name="AppIconMoltenGramProton">Proton</string>
+<string name="AppIconMoltenGramSad">Sad</string>
+<string name="AppIconMoltenGramSchizophrenia">Schizophrenia</string>
+<string name="AppIconMoltenGramBurning">Burning</string>
+<string name="AppIconMoltenGramAnotherChance">Another Chance</string>
+<string name="AppIconMoltenGramDotted">Dotted</string>
+<string name="AppIconMoltenGramCinema">Cinema</string>
+<string name="AppIconMoltenGramSunrise">Sunrise</string>
+<string name="AppIconMoltenGramStar">Star</string>
+<string name="AppIconMoltenGramCoffee">Coffee</string>
+<string name="AppIconMoltenGramGlacier">Glacier</string>
+<string name="AppIconMoltenGramGoogle">Google style</string>
+<string name="AppIconMoltenGramBeer">Beer</string>
+<string name="AppIconMoltenGramMagma">Magma</string>
+<string name="AppIconMoltenGramStillLife">Still Life</string>
+<string name="AppIconMoltenGramToxic">Toxic</string>
+<string name="AppIconMoltenGramCoral">Coral</string>
+<string name="AppIconMoltenGramOnyx">Onyx</string>
+<string name="AppIconMoltenGramCandy">Candy</string>
+<string name="AppIconMoltenGramExteraGram">ExteraGram</string>
+<string name="AppIconMoltenGramNothing">Nothing OS</string>
+<string name="AppIconMoltenGramPizza">Pizza</string>
+<string name="AppIconMoltenGramYinYang">Yin-Yang</string>
+<string name="AppIconMoltenGramRage">Rage</string>
+<string name="CreateQuote">Create quote</string>
+<string name="QuoteSent">Quote sent</string>
+<string name="QuoteCopied">Quote copied to clipboard</string>
+<string name="QuoteSticker">Sticker</string>
+<string name="QuoteFile">File</string>
+<string name="AppIconsSelect">Select</string>
+<string name="AppIconsKeep">Keep this one</string>
+<string name="OpenExteraPreferences">MoltenGram Preferences</string>
+<string name="OpenExteraCreditsSection">Credits</string>
+<string name="OpenExteraCreditsExteraless" translatable="false">@exteraless</string>
+<string name="OpenExteraCreditsNagramX" translatable="false">@NagramX</string>
+<string name="QrLoginConfirm">This code signs a new device into your account. Allow only if you are logging in on your own device.</string>
+<string name="AppIconExteraless" translatable="false">exteraless</string>
+<string name="AppIconBlueprint" translatable="false">Blueprint</string>
+<string name="AppIconRed" translatable="false">Red</string>
+<string name="AppIconNya" translatable="false">Nya</string>
+<string name="AppIconAyu" translatable="false">Ayu</string>
+<string name="AppIconQuack" translatable="false">Quack</string>
+<string name="AppIconGo" translatable="false">Go</string>
+<string name="AppIconHand" translatable="false">Hand</string>
+<string name="AppIconMono" translatable="false">Mono</string>
+<string name="AppIconNothing" translatable="false">Nothing</string>
+<string name="AppIconPlus" translatable="false">Plus</string>
+<string name="AppIconInfoExteraless"><!-- сюда подпись --></string>
+<string name="AppIconInfoBlueprint"><!-- сюда подпись --></string>
+<string name="AppIconInfoRed"><!-- сюда подпись --></string>
+<string name="AppIconInfoNya"><!-- сюда подпись --></string>
+<string name="AppIconInfoAyu"><!-- сюда подпись --></string>
+<string name="AppIconInfoQuack"><!-- сюда подпись --></string>
+<string name="AppIconInfoGo"><!-- сюда подпись --></string>
+<string name="AppIconInfoHand"><!-- сюда подпись --></string>
+<string name="AppIconInfoMono"><!-- сюда подпись --></string>
+<string name="AppIconInfoNothing"><!-- сюда подпись --></string>
+<string name="AppIconInfoPlus"><!-- сюда подпись --></string>
+<string name="AppIconInfoTelegram"><!-- сюда подпись --></string>
+<string name="AppIconInfoVintage"><!-- сюда подпись --></string>
+<string name="AppIconInfoAqua"><!-- сюда подпись --></string>
+<string name="AppIconInfoPremium"><!-- сюда подпись --></string>
+<string name="AppIconInfoTurbo"><!-- сюда подпись --></string>
+<string name="AppIconInfoNox"><!-- сюда подпись --></string>
+<string name="OpenExteraDesignSection">Design</string>
+<string name="OpenExteraDesigner">Icons and design</string>
+<string name="OpenExteraDesignStudio">Design studio</string>
     <string name="OEDownloadEmojiPacks">Download emoji packs</string>
 
     <string name="OESubtitles">Subtitles</string>
@@ -81,7 +113,6 @@
     <string name="ProxyDisableOnVpn" translatable="false">VPN</string>
     <string name="ProxyDisableOnMobileData">Mobile data</string>
     <string name="ProxyDisableOnWiFi" translatable="false">Wi-Fi</string>
-    <string name="OENowPlayingScrobbling">Scrobbling now</string>
     <string name="MainTabsHideCallsSettings">Hide Calls tab</string>
     <string name="MainTabsHideProfile">Hide Profile tab</string>
     <string name="OEBotWebViewUpdate">Update WebView</string>
@@ -122,106 +153,98 @@
     <string name="OEProfileJoinedChannel">You subscribed to **%1$s** on %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** was created on %2$s</string>
     <string name="OEProfileJoinDateUnknown">Join date is unavailable</string>
-
-    <!-- OpenCLIP Multimodal Search -->
-    <string name="OpenClipSettingsTitle">OpenCLIP Settings</string>
-    <string name="OpenClipSettingsSubtitle">Semantic search by meaning and photo</string>
-    <string name="OpenClipMasterSwitch">Enable OpenCLIP search</string>
-    <string name="OpenClipMasterSwitchInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
-    <string name="OpenClipEnable">Enable OpenCLIP search</string>
-    <string name="OpenClipEnableInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
-    <string name="OpenClipModelHeader">Neural Model</string>
-    <string name="OpenClipModelInfo">MobileCLIP-S0 (INT8, ~30 MB) quantized on-device model.</string>
-    <string name="OpenClipModelName">MobileCLIP-S0 (INT8, ~30 MB)</string>
-    <string name="OpenClipStatusNotInstalled">Not installed</string>
-    <string name="OpenClipStatusDownloading">Downloading: %d%%</string>
-    <string name="OpenClipStatusReady">Ready</string>
-    <string name="OpenClipModelStatusNotInstalled">Not installed</string>
-    <string name="OpenClipModelStatusDownloading">Downloading: %d%%</string>
-    <string name="OpenClipModelStatusReady">Ready</string>
-    <string name="OpenClipDownloadModel">Download model</string>
-    <string name="OpenClipDeleteModel">Delete model</string>
-    <string name="OpenClipDeleteConfirm">Are you sure you want to delete the downloaded OpenCLIP model?</string>
-    <string name="OpenClipThresholdTitle">Similarity Threshold</string>
-    <string name="OpenClipThresholdHeader">Similarity Threshold</string>
-    <string name="OpenClipThresholdBroad">Broad (0.35)</string>
-    <string name="OpenClipThresholdStrict">Strict (0.80)</string>
-    <string name="OpenClipThresholdInfo">Determines minimum similarity threshold. Lower threshold finds more associations, higher finds exact matches.</string>
-    <string name="OpenClipAutoIndexHeader">Auto-Indexing</string>
-    <string name="OpenClipAutoIndexPhotos">Auto-index photos</string>
-    <string name="OpenClipAutoIndexPhotosInfo">Index photos locally in background when viewed or downloaded.</string>
-    <string name="OpenClipAutoIndexText">Auto-index messages</string>
-    <string name="OpenClipAutoIndexTextInfo">Index text messages locally in background for semantic search.</string>
-    <string name="OpenClipFindSimilar">Find similar photos / messages</string>
-    <string name="OpenClipSearchInChat">Search in this chat</string>
-    <string name="OpenClipSearchGlobal">Search in all chats</string>
-    <string name="OpenClipSemanticSearch">Semantic Search</string>
-    <string name="OpenClipSearchByPhoto">Search by photo</string>
-    <string name="OpenClipModelRequired">OpenCLIP model (~30 MB) must be downloaded for semantic search.</string>
-    <string name="OpenClipSearchNoResults">No similar messages or photos found.</string>
-    <string name="OpenClipSearching">Searching semantically…</string>
-    <string name="OpenClipChooseChats">Index selected chats &amp; channels…</string>
-    <string name="OpenClipChooseChatsSubtitle">Tap to select chats to pre-index</string>
-    <string name="OpenClipChooseChatsInfo">Pre-index messages and downloaded photos in selected chats for instant semantic search.</string>
-    <string name="OpenClipIndexingProgress">Indexing chats…</string>
-    <string name="OpenClipIndexingFinished">Indexing finished! %d items indexed.</string>
-    <string name="OpenClipIndexAllChats">Index all chats</string>
-    <string name="OpenClipIndexAllChatsSubtitle">Index messages and photos across all dialogs</string>
-    <string name="OpenClipAutoIndexEnabled">Enable automatic indexing</string>
-    <string name="OpenClipAutoIndexEnabledDesc">Automatically analyze and index messages and photos in the background</string>
-
-    <!-- Semantic Search Results Plurals -->
-    <string name="FoundMessages_one">%1$d message found</string>
-    <string name="FoundMessages_two">%1$d messages found</string>
-    <string name="FoundMessages_few">%1$d messages found</string>
-    <string name="FoundMessages_many">%1$d messages found</string>
-    <string name="FoundMessages_other">%1$d messages found</string>
-
-    <!-- Device Spoofing -->
-    <string name="DeviceSpoofing">Device Spoofing</string>
-    <string name="DeviceSpoofingDescription">Spoof device model and OS version sent to Telegram MTProto servers without Root or Shizuku.</string>
-    <string name="DeviceSpoofingEnabled">Enable Device Spoofing</string>
-    <string name="DeviceSpoofingCurrent">Current Parameters</string>
-    <string name="DeviceSpoofingMoltenStarGroup">MoltenStar</string>
-    <string name="DeviceSpoofingNothingGroup">Nothing Lineup</string>
-    <string name="DeviceSpoofingPixelGroup">Google Pixel Lineup</string>
-    <string name="DeviceSpoofingCustomGroup">Custom Presets</string>
-    <string name="DeviceSpoofingAddCustom">Add Custom Preset</string>
-    <string name="DeviceSpoofingCustomTitle">Preset Title</string>
-    <string name="DeviceSpoofingCustomManufacturer">Manufacturer</string>
-    <string name="DeviceSpoofingCustomModel">Model</string>
-    <string name="DeviceSpoofingCustomSdk">System / SDK Version (e.g. SDK 35)</string>
-    <string name="DeviceSpoofingNothingNotice">Local device features (including Nothing Glyph interface and hardware checks) evaluate the actual hardware and remain fully operational. Telegram servers receive the selected spoofed parameters.</string>
-    <string name="DeviceSpoofingDelete">Delete Preset</string>
-    <string name="DeviceSpoofingDeleteConfirm">Are you sure you want to delete this preset?</string>
-
-    <!-- Voice Changer -->
-    <string name="OEVoiceChanger">Voice Changer</string>
-    <string name="OEVoiceChangerSubtitle">Built-in voice message audio effects</string>
-    <string name="OEVoiceChangerEnable">Enable Voice Changer</string>
-    <string name="OEVoiceChangerEnableInfo">Applies selected audio effects to all voice and video notes</string>
-    <string name="OEVoiceChangerPresets">Presets</string>
-    <string name="OEVoiceChangerEffects">Audio Effects</string>
-    <string name="OEVoiceChangerPresetSelect">Select Preset</string>
-    <string name="OEVoiceChangerPresetDefault">Default (Off)</string>
-    <string name="OEVoiceChangerPresetGlitch">PC Freeze (Glitch)</string>
-    <string name="OEVoiceChangerPresetBitcrush">8-Bit Bitcrush</string>
-    <string name="OEVoiceChangerPresetDemon">Deep Demon</string>
-    <string name="OEVoiceChangerPresetChipmunk">Chipmunk</string>
-    <string name="OEVoiceChangerPresetEcho">Echo Chamber</string>
-    <string name="OEVoiceChangerPresetWalkie">Walkie-Talkie Lo-Fi</string>
-    <string name="OEVoiceChangerPresetCustom">Custom</string>
-    <string name="OEVoiceChangerPitch">Pitch (Тональность)</string>
-    <string name="OEVoiceChangerFreqCrush">Freqcrush (Частота)</string>
-    <string name="OEVoiceChangerBitCrush">Bitcrush (Разрядность)</string>
-    <string name="OEVoiceChangerEchoDelay">Echo Delay (Задержка)</string>
-    <string name="OEVoiceChangerEchoFeedback">Echo Strength (Сила)</string>
-    <string name="OEVoiceChangerGlitchRate">Glitch Frequency (Сбои ПК)</string>
-    <string name="OEVoiceChangerGlitchRateInfo">Random audio stutter effect like PC freezing or overheating</string>
-    <string name="OEVoiceChangerGlitchRepeats">Glitch Repeats (Повторы)</string>
-    <string name="OEVoiceChangerTestAudio">Test Audio</string>
-    <string name="OEVoiceChangerRecordTest">Record 3s Test</string>
-    <string name="OEVoiceChangerStopTest">Stop &amp; Play</string>
-    <string name="OEVoiceChangerOff">Off</string>
+<string name="OpenClipSettingsTitle">OpenCLIP Settings</string>
+<string name="OpenClipSettingsSubtitle">Semantic search by meaning and photo</string>
+<string name="OpenClipMasterSwitch">Enable OpenCLIP search</string>
+<string name="OpenClipMasterSwitchInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
+<string name="OpenClipEnable">Enable OpenCLIP search</string>
+<string name="OpenClipEnableInfo">Allows finding messages and photos by semantic meaning using an on-device neural network.</string>
+<string name="OpenClipModelHeader">Neural Model</string>
+<string name="OpenClipModelInfo">MobileCLIP-S0 (INT8, ~30 MB) quantized on-device model.</string>
+<string name="OpenClipModelName">MobileCLIP-S0 (INT8, ~30 MB)</string>
+<string name="OpenClipStatusNotInstalled">Not installed</string>
+<string name="OpenClipStatusDownloading">Downloading: %d%%</string>
+<string name="OpenClipStatusReady">Ready</string>
+<string name="OpenClipModelStatusNotInstalled">Not installed</string>
+<string name="OpenClipModelStatusDownloading">Downloading: %d%%</string>
+<string name="OpenClipModelStatusReady">Ready</string>
+<string name="OpenClipDownloadModel">Download model</string>
+<string name="OpenClipDeleteModel">Delete model</string>
+<string name="OpenClipDeleteConfirm">Are you sure you want to delete the downloaded OpenCLIP model?</string>
+<string name="OpenClipThresholdTitle">Similarity Threshold</string>
+<string name="OpenClipThresholdHeader">Similarity Threshold</string>
+<string name="OpenClipThresholdBroad">Broad (0.35)</string>
+<string name="OpenClipThresholdStrict">Strict (0.80)</string>
+<string name="OpenClipThresholdInfo">Determines minimum similarity threshold. Lower threshold finds more associations, higher finds exact matches.</string>
+<string name="OpenClipAutoIndexHeader">Auto-Indexing</string>
+<string name="OpenClipAutoIndexPhotos">Auto-index photos</string>
+<string name="OpenClipAutoIndexPhotosInfo">Index photos locally in background when viewed or downloaded.</string>
+<string name="OpenClipAutoIndexText">Auto-index messages</string>
+<string name="OpenClipAutoIndexTextInfo">Index text messages locally in background for semantic search.</string>
+<string name="OpenClipFindSimilar">Find similar photos / messages</string>
+<string name="OpenClipSearchInChat">Search in this chat</string>
+<string name="OpenClipSearchGlobal">Search in all chats</string>
+<string name="OpenClipSemanticSearch">Semantic Search</string>
+<string name="OpenClipSearchByPhoto">Search by photo</string>
+<string name="OpenClipModelRequired">OpenCLIP model (~30 MB) must be downloaded for semantic search.</string>
+<string name="OpenClipSearchNoResults">No similar messages or photos found.</string>
+<string name="OpenClipSearching">Searching semantically…</string>
+<string name="OpenClipChooseChats">Index selected chats &amp; channels…</string>
+<string name="OpenClipChooseChatsSubtitle">Tap to select chats to pre-index</string>
+<string name="OpenClipChooseChatsInfo">Pre-index messages and downloaded photos in selected chats for instant semantic search.</string>
+<string name="OpenClipIndexingProgress">Indexing chats…</string>
+<string name="OpenClipIndexingFinished">Indexing finished! %d items indexed.</string>
+<string name="OpenClipIndexAllChats">Index all chats</string>
+<string name="OpenClipIndexAllChatsSubtitle">Index messages and photos across all dialogs</string>
+<string name="OpenClipAutoIndexEnabled">Enable automatic indexing</string>
+<string name="OpenClipAutoIndexEnabledDesc">Automatically analyze and index messages and photos in the background</string>
+<string name="FoundMessages_one">%1$d message found</string>
+<string name="FoundMessages_two">%1$d messages found</string>
+<string name="FoundMessages_few">%1$d messages found</string>
+<string name="FoundMessages_many">%1$d messages found</string>
+<string name="FoundMessages_other">%1$d messages found</string>
+<string name="DeviceSpoofing">Device Spoofing</string>
+<string name="DeviceSpoofingDescription">Spoof device model and OS version sent to Telegram MTProto servers without Root or Shizuku.</string>
+<string name="DeviceSpoofingEnabled">Enable Device Spoofing</string>
+<string name="DeviceSpoofingCurrent">Current Parameters</string>
+<string name="DeviceSpoofingMoltenStarGroup">MoltenStar</string>
+<string name="DeviceSpoofingNothingGroup">Nothing Lineup</string>
+<string name="DeviceSpoofingPixelGroup">Google Pixel Lineup</string>
+<string name="DeviceSpoofingCustomGroup">Custom Presets</string>
+<string name="DeviceSpoofingAddCustom">Add Custom Preset</string>
+<string name="DeviceSpoofingCustomTitle">Preset Title</string>
+<string name="DeviceSpoofingCustomManufacturer">Manufacturer</string>
+<string name="DeviceSpoofingCustomModel">Model</string>
+<string name="DeviceSpoofingCustomSdk">System / SDK Version (e.g. SDK 35)</string>
+<string name="DeviceSpoofingNothingNotice">Local device features (including Nothing Glyph interface and hardware checks) evaluate the actual hardware and remain fully operational. Telegram servers receive the selected spoofed parameters.</string>
+<string name="DeviceSpoofingDelete">Delete Preset</string>
+<string name="DeviceSpoofingDeleteConfirm">Are you sure you want to delete this preset?</string>
+<string name="OEVoiceChanger">Voice Changer</string>
+<string name="OEVoiceChangerSubtitle">Built-in voice message audio effects</string>
+<string name="OEVoiceChangerEnable">Enable Voice Changer</string>
+<string name="OEVoiceChangerEnableInfo">Applies selected audio effects to all voice and video notes</string>
+<string name="OEVoiceChangerPresets">Presets</string>
+<string name="OEVoiceChangerEffects">Audio Effects</string>
+<string name="OEVoiceChangerPresetSelect">Select Preset</string>
+<string name="OEVoiceChangerPresetDefault">Default (Off)</string>
+<string name="OEVoiceChangerPresetGlitch">PC Freeze (Glitch)</string>
+<string name="OEVoiceChangerPresetBitcrush">8-Bit Bitcrush</string>
+<string name="OEVoiceChangerPresetDemon">Deep Demon</string>
+<string name="OEVoiceChangerPresetChipmunk">Chipmunk</string>
+<string name="OEVoiceChangerPresetEcho">Echo Chamber</string>
+<string name="OEVoiceChangerPresetWalkie">Walkie-Talkie Lo-Fi</string>
+<string name="OEVoiceChangerPresetCustom">Custom</string>
+<string name="OEVoiceChangerPitch">Pitch (Тональность)</string>
+<string name="OEVoiceChangerFreqCrush">Freqcrush (Частота)</string>
+<string name="OEVoiceChangerBitCrush">Bitcrush (Разрядность)</string>
+<string name="OEVoiceChangerEchoDelay">Echo Delay (Задержка)</string>
+<string name="OEVoiceChangerEchoFeedback">Echo Strength (Сила)</string>
+<string name="OEVoiceChangerGlitchRate">Glitch Frequency (Сбои ПК)</string>
+<string name="OEVoiceChangerGlitchRateInfo">Random audio stutter effect like PC freezing or overheating</string>
+<string name="OEVoiceChangerGlitchRepeats">Glitch Repeats (Повторы)</string>
+<string name="OEVoiceChangerTestAudio">Test Audio</string>
+<string name="OEVoiceChangerRecordTest">Record 3s Test</string>
+<string name="OEVoiceChangerStopTest">Stop &amp; Play</string>
+<string name="OEVoiceChangerOff">Off</string>
 </resources>
 

@@ -512,11 +512,19 @@ public class AyuFilter {
     }
 
     public static boolean isBlockedChannel(long dialogId) {
-        return NekoConfig.ignoreBlocked.Bool() && getBlockedChannels().contains(dialogId);
+        return getBlockedChannels().contains(dialogId);
     }
 
     public static boolean isCustomFilteredPeer(long peerId) {
-        return NekoConfig.ignoreBlocked.Bool() && peerId > 0L && getCustomFilteredUsers().contains(peerId);
+        return peerId > 0L && getCustomFilteredUsers().contains(peerId);
+    }
+
+    public static boolean hasShadowBans() {
+        return !getBlockedChannels().isEmpty() || !getCustomFilteredUsers().isEmpty();
+    }
+
+    public static boolean shouldHideSenders() {
+        return NekoConfig.ignoreBlocked.Bool() || hasShadowBans();
     }
 
     public static void blockPeer(long dialogId) {

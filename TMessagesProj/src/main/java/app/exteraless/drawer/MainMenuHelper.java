@@ -3,6 +3,7 @@ package app.exteraless.drawer;
 import android.app.Activity;
 import android.content.SharedPreferences;
 import android.os.Bundle;
+import android.os.Process;
 import android.text.TextUtils;
 import android.view.View;
 
@@ -43,7 +44,9 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.ProfileActivity;
 import org.telegram.ui.SettingsActivity;
 import app.exteraless.plugins.ui.PluginsActivity;
+import app.exteraless.settings.OpenExteraSettingsActivity;
 
+import org.telegram.ui.Wallet.WalletActivity;
 import org.telegram.ui.WebAppDisclaimerAlert;
 import org.telegram.ui.bots.BotWebViewSheet;
 import org.telegram.ui.web.SearchEngine;
@@ -328,8 +331,39 @@ public final class MainMenuHelper {
             case RECENT_CHATS:
                 return new MenuItemInfo(R.drawable.menu_recent, LocaleController.getString(R.string.RecentChats),
                         () -> showRecentChats(fragment, currentAccount), null);
+            case WALLET:
+                if (!isWalletAvailable(currentAccount)) {
+                    return null;
+                }
+                return new MenuItemInfo(R.drawable.ic_gram, LocaleController.getString(R.string.WalletTitle),
+                        () -> fragment.presentFragment(new WalletActivity()), null);
+            case EXTERALESS_SETTINGS:
+                return new MenuItemInfo(R.drawable.exteraless_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences),
+                        () -> fragment.presentFragment(new OpenExteraSettingsActivity()), null);
+            case KILL_APP:
+                return new MenuItemInfo(R.drawable.msg_leave, LocaleController.getString(R.string.OEKillApp),
+                        () -> killApplication(fragment), null);
             default:
                 return null;
+        }
+    }
+
+    private static void killApplication(BaseFragment fragment) {
+        final Activity activity = fragment.getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        AndroidUtilities.runOnUIThread(() -> {
+            activity.finishAndRemoveTask();
+            Process.killProcess(Process.myPid());
+        }, 200);
+    }
+
+    public static boolean isWalletAvailable(int currentAccount) {
+        try {
+            return MessagesController.getInstance(currentAccount).config.walletAvailable.get();
+        } catch (Exception e) {
+            return false;
         }
     }
 
@@ -450,6 +484,11 @@ public final class MainMenuHelper {
             case QR -> new MenuItemInfo(R.drawable.msg_qrcode, LocaleController.getString(R.string.AuthAnotherClient), null, null);
             case GHOST_MODE -> new MenuItemInfo(R.drawable.ayu_ghost, ghostModeTitle(), null, null);
             case RECENT_CHATS -> new MenuItemInfo(R.drawable.menu_recent, LocaleController.getString(R.string.RecentChats), null, null);
+            case WALLET -> isWalletAvailable(UserConfig.selectedAccount)
+                    ? new MenuItemInfo(R.drawable.ic_gram, LocaleController.getString(R.string.WalletTitle), null, null)
+                    : null;
+            case EXTERALESS_SETTINGS -> new MenuItemInfo(R.drawable.exteraless_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences), null, null);
+            case KILL_APP -> new MenuItemInfo(R.drawable.msg_leave, LocaleController.getString(R.string.OEKillApp), null, null);
             default -> null;
         };
     }

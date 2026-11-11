@@ -73,6 +73,7 @@ import org.telegram.messenger.utils.tlutils.TLKeyboardHelper;
 import org.telegram.messenger.utils.tlutils.TlUtils;
 import org.telegram.messenger.voip.VoIPGroupNotification;
 import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 import org.telegram.tgnet.tl.TL_keyboard;
@@ -84,6 +85,7 @@ import org.telegram.ui.Components.spoilers.SpoilerEffect;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PopupNotificationActivity;
 import org.telegram.ui.Stories.recorder.StoryEntry;
+import org.telegram.ui.Wallet.GramWallet;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -112,7 +114,7 @@ public class NotificationsController extends BaseController implements Notificat
     public static final String EXTRA_VOICE_REPLY = "extra_voice_reply";
     public static String OTHER_NOTIFICATIONS_CHANNEL = null;
 
-    private static final DispatchQueue notificationsQueue = new DispatchQueue("notificationsQueue");
+    private static final DispatchQueue2 notificationsQueue = new DispatchQueue2("notificationsQueue");
     private final ArrayList<MessageObject> pushMessages = new ArrayList<>();
     private final ArrayList<MessageObject> delayedPushMessages = new ArrayList<>();
     private final LongSparseArray<SparseArray<MessageObject>> pushMessagesDict = new LongSparseArray<>();
@@ -125,6 +127,7 @@ public class NotificationsController extends BaseController implements Notificat
     private final LongSparseArray<Integer> lastWearNotifiedMessageId = new LongSparseArray<>();
     private final LongSparseArray<Integer> pushDialogsOverrideMention = new LongSparseArray<>();
     private final HashSet<String> pendingVoiceLoads = new HashSet<>();
+    private final HashSet<String> pendingAvatarLoads = new HashSet<>();
     public final ArrayList<MessageObject> popupMessages = new ArrayList<>();
     public ArrayList<MessageObject> popupReplyMessages = new ArrayList<>();
     private final HashSet<Long> openedInBubbleDialogs = new HashSet<>();
@@ -260,6 +263,7 @@ public class NotificationsController extends BaseController implements Notificat
 
         AndroidUtilities.runOnUIThread(() -> {
             getNotificationCenter().addObserver(this, NotificationCenter.fileLoaded);
+            getNotificationCenter().addObserver(this, NotificationCenter.fileLoadFailed);
         });
     }
 
@@ -289,8 +293,17 @@ public class NotificationsController extends BaseController implements Notificat
             OTHER_NOTIFICATIONS_CHANNEL = "Other" + Utilities.random.nextLong();
             preferences.edit().putString("OtherKey", OTHER_NOTIFICATIONS_CHANNEL).commit();
         }
+        final String channelName = LocaleController.getString(R.string.InternalNotificationsSystemSetting);
+        if (notificationChannel != null && !TextUtils.equals(notificationChannel.getName(), channelName)) {
+            notificationChannel.setName(channelName);
+            try {
+                systemNotificationManager.createNotificationChannel(notificationChannel);
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
         if (notificationChannel == null) {
-            notificationChannel = new NotificationChannel(OTHER_NOTIFICATIONS_CHANNEL, "Internal notifications", NotificationManager.IMPORTANCE_DEFAULT);
+            notificationChannel = new NotificationChannel(OTHER_NOTIFICATIONS_CHANNEL, channelName, NotificationManager.IMPORTANCE_DEFAULT);
             notificationChannel.enableLights(false);
             notificationChannel.enableVibration(false);
             notificationChannel.setSound(null, null);
@@ -376,11 +389,64 @@ public class NotificationsController extends BaseController implements Notificat
         }
     }
 
+    // Wallet requests are local notifications, never synthetic chat messages or stored FCM messages.
+    public void showTonConnectNotification(String dapp, long time) {
+        notificationsQueue.postRunnable(() -> {
+            if (!getUserConfig().isClientActivated()
+                    || !SharedConfig.showNotificationsForAllAccounts && currentAccount != UserConfig.selectedAccount) {
+                return;
+            }
+            try {
+                String channelId = "wallet_tonconnect_" + currentAccount;
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                    systemNotificationManager.createNotificationChannel(new NotificationChannel(
+                            channelId, "TON Connect", NotificationManager.IMPORTANCE_DEFAULT));
+                }
+                boolean hidePreview = AndroidUtilities.needShowPasscode() || SharedConfig.isWaitingForPasscodeEnter
+                        || !getAccountInstance().getNotificationsSettings().getBoolean("EnablePreviewAll", true);
+                String message = TextUtils.isEmpty(dapp) || hidePreview
+                        ? LocaleController.getString(R.string.NotificationWalletTonConnectRequest)
+                        : LocaleController.formatString(R.string.NotificationWalletTonConnectRequestDapp, dapp);
+                Intent intent = new Intent(ApplicationLoader.applicationContext, LaunchActivity.class);
+                intent.setAction(Intent.ACTION_VIEW);
+                intent.setData(Uri.parse("tg://resolve?domain=sendgrams"));
+                intent.putExtra("currentAccount", currentAccount);
+                intent.addFlags(Intent.FLAG_ACTIVITY_CLEAR_TOP);
+                PendingIntent contentIntent = PendingIntent.getActivity(ApplicationLoader.applicationContext,
+                        currentAccount, intent, PendingIntent.FLAG_UPDATE_CURRENT | PendingIntent.FLAG_IMMUTABLE);
+                NotificationCompat.Builder builder = new NotificationCompat.Builder(ApplicationLoader.applicationContext, channelId)
+                        .setSmallIcon(R.drawable.notification)
+                        .setContentTitle(LocaleController.getString(R.string.AppName))
+                        .setContentText(message)
+                        .setStyle(new NotificationCompat.BigTextStyle().bigText(message))
+                        .setCategory(NotificationCompat.CATEGORY_EVENT)
+                        .setVisibility(NotificationCompat.VISIBILITY_PRIVATE)
+                        .setWhen(time)
+                        .setAutoCancel(true)
+                        .setContentIntent(contentIntent);
+                notificationManager.notify("wallet_tonconnect", currentAccount, builder.build());
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        });
+    }
+
+    private String getGramTransferNotification(MessageObject messageObject, String name) {
+        TLRPC.TL_messageActionGramTransfer action = (TLRPC.TL_messageActionGramTransfer) messageObject.messageOwner.action;
+        boolean unknown = UserObject.isService(messageObject.getDialogId());
+        boolean comment = !action.comment_encrypted && !TextUtils.isEmpty(action.comment);
+        int stringId = unknown
+                ? (comment ? R.string.NotificationGramTransferUnknownComment : R.string.NotificationGramTransferUnknown)
+                : (comment ? R.string.NotificationGramTransferComment : R.string.NotificationGramTransfer);
+        return LocaleController.formatString(stringId, name, GramWallet.formatGramsWithUnit(action.amount), action.comment);
+    }
+
     public void cleanup() {
         popupMessages.clear();
         popupReplyMessages.clear();
         channelGroupsCreated = false;
         notificationsQueue.postRunnable(() -> {
+            notificationManager.cancel("wallet_tonconnect", currentAccount);
             openedDialogId = 0;
             openedTopicId = 0;
             total_unread_count = 0;
@@ -1092,7 +1158,7 @@ public class NotificationsController extends BaseController implements Notificat
                     }
                     continue;
                 }
-                if (NekoConfig.ignoreBlocked.Bool() && (getMessagesController().blockePeers.indexOfKey(messageObject.getFromChatId()) >= 0 || AyuFilter.isCustomFilteredPeer(messageObject.getFromChatId()))) {
+                if (NekoConfig.ignoreBlocked.Bool() && getMessagesController().blockePeers.indexOfKey(messageObject.getFromChatId()) >= 0 || AyuFilter.isCustomFilteredPeer(messageObject.getFromChatId())) {
                     continue;
                 }
                 if (AyuFilter.isBlockedChannel(messageObject.getFromChatId())) {
@@ -1949,7 +2015,9 @@ public class NotificationsController extends BaseController implements Notificat
             if (dialogPreviewEnabled && (chat_id == 0 && fromId != 0 && preferences.getBoolean("EnablePreviewAll", true) || chat_id != 0 && (!isChannel && preferences.getBoolean("EnablePreviewGroup", true) || isChannel && preferences.getBoolean("EnablePreviewChannel", true)))) {
                 if (messageObject.messageOwner instanceof TLRPC.TL_messageService) {
                     userName[0] = null;
-                    if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetSameChatWallPaper) {
+                    if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionGramTransfer) {
+                        return getGramTransferNotification(messageObject, name);
+                    } else if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetSameChatWallPaper) {
                         return LocaleController.getString(R.string.WallpaperSameNotification);
                     } else if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetChatWallPaper) {
                         return LocaleController.getString(R.string.WallpaperNotification);
@@ -2431,6 +2499,12 @@ public class NotificationsController extends BaseController implements Notificat
                         }
                     } else if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaToDo) {
                         return LocaleController.getString(R.string.Todo);
+                    } else if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaWidget) {
+                        // The caption, or "Widget" for a widget sent without one.
+                        if (TextUtils.isEmpty(messageObject.messageOwner.message)) {
+                            return LocaleController.getString(R.string.AttachWidget);
+                        }
+                        return replaceSpoilers(messageObject);
                     } else if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaGiveaway) {
                         return LocaleController.getString(R.string.BoostingGiveaway);
                     } else if (messageObject.messageOwner.media instanceof TLRPC.TL_messageMediaGiveawayResults) {
@@ -2613,7 +2687,9 @@ public class NotificationsController extends BaseController implements Notificat
             if (chatId == 0 && fromId != 0) {
                 if (dialogPreviewEnabled && preferences.getBoolean("EnablePreviewAll", true)) {
                     if (messageObject.messageOwner instanceof TLRPC.TL_messageService) {
-                        if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionChangeCreator ||
+                        if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionGramTransfer) {
+                            msg = getGramTransferNotification(messageObject, name);
+                        } else if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionChangeCreator ||
                             messageObject.messageOwner.action instanceof TLRPC.TL_messageActionNewCreatorPending) {
                             msg = messageObject.messageText.toString();
                         } else if (messageObject.messageOwner.action instanceof TLRPC.TL_messageActionSetSameChatWallPaper) {
@@ -3345,8 +3421,14 @@ public class NotificationsController extends BaseController implements Notificat
             notificationsQueue.postRunnable(() -> {
                 if (pendingVoiceLoads.remove(path)) {
                     showOrUpdateNotification(true);
+                } else if (pendingAvatarLoads.remove(path)) {
+                    NotificationsHelper.clearPostedSignatures(currentAccount);
+                    showOrUpdateNotification(false);
                 }
             });
+        } else if (id == NotificationCenter.fileLoadFailed) {
+            String path = (String) args[0];
+            notificationsQueue.postRunnable(() -> pendingAvatarLoads.remove(path));
         }
     }
 
@@ -4751,7 +4833,7 @@ public class NotificationsController extends BaseController implements Notificat
                     mBuilder.setLargeIcon(img.getBitmap());
                 } else {
                     try {
-                        File file = getFileLoader().getPathToAttach(photoPath, true);
+                        File file = getAvatarFile(photoPath, chat != null ? chat : user);
                         if (file.exists()) {
                             float scaleFactor = 160.0f / AndroidUtilities.dp(50);
                             BitmapFactory.Options options = new BitmapFactory.Options();
@@ -4955,6 +5037,7 @@ public class NotificationsController extends BaseController implements Notificat
         if (Build.VERSION.SDK_INT >= 26) {
             notificationBuilder.setChannelId(validateChannelId(lastDialogId, lastTopicId, chatName, vibrationPattern, ledColor, sound, importance, isDefault, isInApp, isSilent, chatType));
         }
+        notificationBuilder.setOnlyAlertOnce(isSilent);
         Notification mainNotification = notificationBuilder.build();
         if (Build.VERSION.SDK_INT <= 19) {
             notificationManager.notify(notificationId, mainNotification);
@@ -5238,7 +5321,7 @@ public class NotificationsController extends BaseController implements Notificat
             }
 
             if (photoPath != null) {
-                avatarFile = getFileLoader().getPathToAttach(photoPath, true);
+                avatarFile = getAvatarFile(photoPath, dialogId == UserObject.VERIFY && lastMessageObject != null && lastMessageObject.getForwardedFromId() != null ? getMessagesController().getUserOrChat(lastMessageObject.getForwardedFromId()) : chat != null ? chat : user);
                 if (Build.VERSION.SDK_INT < 28) {
                     BitmapDrawable img = ImageLoader.getInstance().getImageFromMemory(photoPath, null, "50_50");
                     if (img != null) {
@@ -5330,7 +5413,7 @@ public class NotificationsController extends BaseController implements Notificat
                 try {
                     if (sender != null && sender.photo != null && sender.photo.photo_small != null && sender.photo.photo_small.volume_id != 0 && sender.photo.photo_small.local_id != 0) {
                         Person.Builder personBuilder = new Person.Builder().setName(LocaleController.getString(R.string.FromYou));
-                        File avatar = getFileLoader().getPathToAttach(sender.photo.photo_small, true);
+                        File avatar = getAvatarFile(sender.photo.photo_small, sender);
                         loadRoundAvatar(getUserConfig().getClientUserId(), avatar, personBuilder);
                         selfPerson = personBuilder.build();
                         personCache.put(selfUserId, selfPerson);
@@ -5402,7 +5485,7 @@ public class NotificationsController extends BaseController implements Notificat
                         FileLog.d("showExtraNotifications: ["+dialogId+"] continue; topic id is not equal: topicId=" + topicId + " messageTopicId=" + messageTopicId + "; selfId=" + getUserConfig().getClientUserId());
                         continue;
                     }
-                    if (NekoConfig.ignoreBlocked.Bool() && (getMessagesController().blockePeers.indexOfKey(messageObject.getFromChatId()) >= 0 || AyuFilter.isCustomFilteredPeer(messageObject.getFromChatId()))) {
+                    if (NekoConfig.ignoreBlocked.Bool() && getMessagesController().blockePeers.indexOfKey(messageObject.getFromChatId()) >= 0 || AyuFilter.isCustomFilteredPeer(messageObject.getFromChatId())) {
                         continue;
                     }
                     if (AyuFilter.isBlockedChannel(messageObject.getFromChatId())) {
@@ -5489,19 +5572,19 @@ public class NotificationsController extends BaseController implements Notificat
                                     }
                                 }
                                 if (sender != null && sender.photo != null && sender.photo.photo_small != null && sender.photo.photo_small.volume_id != 0 && sender.photo.photo_small.local_id != 0) {
-                                    avatar = getFileLoader().getPathToAttach(sender.photo.photo_small, true);
+                                    avatar = getAvatarFile(sender.photo.photo_small, sender);
                                 }
                             }
                             if (avatar == null && dialogId == UserObject.VERIFY && messageObject.getForwardedFromId() != null) {
                                 if (uid >= 0) {
                                     TLRPC.User sender = getMessagesController().getUser(uid);
                                     if (sender != null && sender.photo != null && sender.photo.photo_small != null && sender.photo.photo_small.volume_id != 0 && sender.photo.photo_small.local_id != 0) {
-                                        avatar = getFileLoader().getPathToAttach(sender.photo.photo_small, true);
+                                        avatar = getAvatarFile(sender.photo.photo_small, sender);
                                     }
                                 } else {
                                     TLRPC.Chat sender = getMessagesController().getChat(-uid);
                                     if (sender != null && sender.photo != null && sender.photo.photo_small != null && sender.photo.photo_small.volume_id != 0 && sender.photo.photo_small.local_id != 0) {
-                                        avatar = getFileLoader().getPathToAttach(sender.photo.photo_small, true);
+                                        avatar = getAvatarFile(sender.photo.photo_small, sender);
                                     }
                                 }
                             }
@@ -5738,6 +5821,7 @@ public class NotificationsController extends BaseController implements Notificat
                     .setContentIntent(contentIntent)
                     .extend(wearableExtender)
                     .setSortKey(String.valueOf(Long.MAX_VALUE - date))
+                    .setOnlyAlertOnce(isSilent || dialogId != lastDialogId || topicId != lastTopicId)
                     .setCategory(NotificationCompat.CATEGORY_MESSAGE);
 
             try {
@@ -5941,7 +6025,7 @@ public class NotificationsController extends BaseController implements Notificat
             if (user1 != null) {
                 username = UserObject.getUserName(user1);
                 if (user1 != null && user1.photo != null && user1.photo.photo_small != null && user1.photo.photo_small.volume_id != 0 && user1.photo.photo_small.local_id != 0) {
-                    File file = getFileLoader().getPathToAttach(user1.photo.photo_small, true);
+                    File file = getAvatarFile(user1.photo.photo_small, user1);
                     if (!file.exists()) {
                         file = null;
                         if (user1.photo.photo_big != null) {
@@ -5974,6 +6058,18 @@ public class NotificationsController extends BaseController implements Notificat
             avatars.clear();
         }
         return new Pair<>(storiesCount, hidden);
+    }
+
+    // the system evicts cache files oldest-download-first (noatime), regardless of recent use
+    private File getAvatarFile(TLRPC.FileLocation location, TLObject owner) {
+        File file = getFileLoader().getPathToAttach(location, true);
+        if (!file.exists()) {
+            ImageLocation imageLocation = ImageLocation.getForUserOrChat(currentAccount, owner, ImageLocation.TYPE_SMALL);
+            if (imageLocation != null && pendingAvatarLoads.add(FileLoader.getAttachFileName(location))) {
+                getFileLoader().loadFile(imageLocation, owner, "jpg", FileLoader.PRIORITY_HIGH, 1);
+            }
+        }
+        return file;
     }
 
     public static Person.Builder loadRoundAvatar(long dialogId, File avatar, Person.Builder personBuilder) {

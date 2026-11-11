@@ -19,7 +19,8 @@
     <string name="QrWifiPasswordCopied">Contraseña copiada</string>
     <string name="QrWifiUnknownNetwork">El código no incluye el nombre de la red</string>
     <string name="QrLoginHint">Este código inicia sesión en una cuenta. Usa Ajustes → Dispositivos → Vincular dispositivo de escritorio: esa pantalla comprueba el código y protege tu cuenta.</string>
-    <string name="OpenExteraPreferences">Ajustes de MoltenGram</string>
+<string name="OpenExteraPreferences">Ajustes de MoltenGram</string>
+<string name="QrLoginConfirm">Este código inicia sesión en tu cuenta desde un nuevo dispositivo. Permítelo solo si eres tú quien inicia sesión en tu propio dispositivo.</string>
     <string name="OpenExteraDesignSection">Diseño</string>
     <string name="OpenExteraDesigner">Iconos y diseño</string>
     <string name="OpenExteraDesignStudio">Estudio de diseño</string>
@@ -35,7 +36,6 @@
     <string name="ProxyDisableNever">Nunca</string>
     <string name="ProxyDisableAlways">Siempre</string>
     <string name="ProxyDisableOnMobileData">Datos móviles</string>
-    <string name="OENowPlayingScrobbling">Scrobbling en curso</string>
     <string name="MainTabsHideCallsSettings">Ocultar pestaña Llamadas</string>
     <string name="MainTabsHideProfile">Ocultar pestaña de perfil</string>
     <string name="OEBotWebViewUpdate">Actualizar WebView</string>
@@ -51,4 +51,6 @@
     <string name="OEProfileJoinedChannel">Te suscribiste a **%1$s** el %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** se creó el %2$s</string>
     <string name="OEProfileJoinDateUnknown">La fecha de unión no está disponible</string>
+<string name="AppIconsSelect">Seleccionar</string>
+<string name="AppIconsKeep">Quedarme con este</string>
 </resources>

@@ -77,7 +77,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
         requestWindowFeature(Window.FEATURE_NO_TITLE);
         setTheme(R.style.Theme_TMessages);
         getWindow().setBackgroundDrawable(new ActivityWindowEmptyBackgroundDrawable());
-        if (false && !SharedConfig.passcodeHash.isEmpty() && !SharedConfig.allowScreenCapture) {
+        if (!SharedConfig.passcodeHash.isEmpty() && !SharedConfig.allowScreenCapture) {
             try {
                 getWindow().setFlags(WindowManager.LayoutParams.FLAG_SECURE, WindowManager.LayoutParams.FLAG_SECURE);
                 AndroidUtilities.logFlagSecure();
@@ -453,7 +453,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
     }
 
     public void needLayout() {
-        if (AndroidUtilities.isTablet()) {
+        if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
             RelativeLayout.LayoutParams relativeLayoutParams = (RelativeLayout.LayoutParams) layersActionBarLayout.getView().getLayoutParams();
             relativeLayoutParams.leftMargin = (AndroidUtilities.displaySize.x - relativeLayoutParams.width) / 2;
             int y = AndroidUtilities.statusBarHeight;
@@ -509,7 +509,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
     protected void onPause() {
         super.onPause();
         actionBarLayout.onPause();
-        if (AndroidUtilities.isTablet()) {
+        if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
             layersActionBarLayout.onPause();
         }
         ApplicationLoader.externalInterfacePaused = true;
@@ -529,19 +529,19 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
     protected void onResume() {
         super.onResume();
         actionBarLayout.onResume();
-        if (AndroidUtilities.isTablet()) {
+        if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
             layersActionBarLayout.onResume();
         }
         ApplicationLoader.externalInterfacePaused = false;
         onPasscodeResume();
         if (passcodeView.getVisibility() != View.VISIBLE) {
             actionBarLayout.onResume();
-            if (AndroidUtilities.isTablet()) {
+            if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
                 layersActionBarLayout.onResume();
             }
         } else {
             actionBarLayout.dismissDialogs();
-            if (AndroidUtilities.isTablet()) {
+            if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
                 layersActionBarLayout.dismissDialogs();
             }
             passcodeView.onResume();
@@ -614,7 +614,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
         }
         if (PhotoViewer.getInstance().isVisible()) {
             PhotoViewer.getInstance().closePhoto(true, false);
-        } else if (AndroidUtilities.isTablet()) {
+        } else if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
             if (layersActionBarLayout.getView().getVisibility() == View.VISIBLE) {
                 layersActionBarLayout.onBackPressed();
             } else {
@@ -629,7 +629,7 @@ public class ExternalActionActivity extends Activity implements INavigationLayou
     public void onLowMemory() {
         super.onLowMemory();
         actionBarLayout.onLowMemory();
-        if (AndroidUtilities.isTablet()) {
+        if (AndroidUtilities.isTablet() && layersActionBarLayout != null) {
             layersActionBarLayout.onLowMemory();
         }
     }

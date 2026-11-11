@@ -155,7 +155,7 @@ public:
             grease[a] = (uint8_t) ((grease[a] & 0xf0) + 0x0A);
         }
         for (size_t i = 1; i < MAX_GREASE; i += 2) {
-            if (grease[i] == grease[i + 1]) {
+            if (grease[i] == grease[i - 1]) {
                 grease[i] ^= 0x10;
             }
         }

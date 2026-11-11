@@ -12,7 +12,7 @@ import tw.nekomimi.nekogram.helpers.MessageHelper;
 public class AccountInstance {
 
     private int currentAccount;
-    private static volatile AccountInstance[] Instance = new AccountInstance[UserConfig.MAX_ACCOUNT_COUNT];
+    private static volatile AccountInstance[] Instance = new AccountInstance[UserConfig.MAX_INSTANCE_COUNT];
     public static AccountInstance getInstance(int num) {
         AccountInstance localInstance = Instance[num];
         if (localInstance == null) {

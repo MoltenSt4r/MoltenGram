@@ -24,6 +24,10 @@ import java.util.Set;
 import app.exteraless.ai.ui.AiSettingsActivity;
 import app.exteraless.appearance.ChipFoldersSettingsActivity;
 import app.exteraless.chats.TextAnimationSettingsActivity;
+import app.exteraless.icons.IconPacksActivity;
+import app.exteraless.pillstack.pills.weather.WeatherSettingsActivity;
+import app.exteraless.settings.OpenExteraCloudActivity;
+import app.exteraless.settings.OpenExteraGlyphActivity;
 import app.exteraless.pillstack.PillStackSettingsActivity;
 import app.exteraless.player.PlayerSettingsActivity;
 import app.exteraless.plugins.ui.PluginStoreSettingsActivity;
@@ -63,7 +67,9 @@ public class SettingsHelper {
     private static final Map<String, String> MOVED_ROWS = new HashMap<>();
 
     static {
-        SEARCH_TITLE_ALIASES.put("OEGeneral:lastfm", "OEGeneralLastFm");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyAlwaysAsk", "OEBotPrivacyAlwaysAsk");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyEnabled", "OEBotPrivacyEnabled");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyAccount", "OEBotPrivacyAccount");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuGhost", "GhostMode");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuDisableAll", "OEGeneralAyuMomentsDisableAll");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuClearDatabase", "ClearMessageDatabase");
@@ -171,6 +177,7 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("MainTabsHideContacts", "navigation");
         NAGRAM_ROWS.put("MainTabsHideCallsSettings", "navigation");
         NAGRAM_ROWS.put("MainTabsHideProfile", "navigation");
+        NAGRAM_ROWS.put("AlwaysShowDownloadIcon", "navigation");
         NAGRAM_ROWS.put("DisableSystemAccount", "privacy");
         NAGRAM_ROWS.put("PerformanceClass", "powersaving");
         NAGRAM_ROWS.put("VideoPlayerDecoder", "chats");
@@ -546,6 +553,15 @@ public class SettingsHelper {
                     break;
                 case "pillstack":
                     fragment = neko_fragment = new PillStackSettingsActivity();
+                    break;
+                case "pillstackweather":
+                    fragment = neko_fragment = new WeatherSettingsActivity();
+                    break;
+                case "iconpacks":
+                    fragment = neko_fragment = new IconPacksActivity();
+                    break;
+                case "exteraless_ai":
+                    fragment = neko_fragment = new AiSettingsActivity();
                     break;
                 case "ota_updates":
                 case "updates":

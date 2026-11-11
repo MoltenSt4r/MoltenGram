@@ -186,7 +186,7 @@ public final class FilesControllerJava {
         if (!PluginsController.getInstance().isEngineEnabled()) {
             return false;
         }
-        if (!passesFilters(handler, fileNameOf(args))) {
+        if (!passesFilters(handler, fileNameOf(args)) || org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
             return false;
         }
         PluginsWatchdog watchdog = PluginsController.getInstance().getWatchdog();

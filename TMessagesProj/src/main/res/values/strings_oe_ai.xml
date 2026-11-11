@@ -50,4 +50,10 @@
     <string name="OEAiDetails">Details</string>
     <string name="OEAiDisableTools">Disable tools</string>
     <string name="OEAiDisableToolsInfo">Plugin review sends the code in one request, as before: only the first 48 KB, embedded data is not decoded</string>
+    <string name="OEAiTelegramHeader">Telegram AI</string>
+    <string name="OEAiReplaceEditor">AI Editor</string>
+    <string name="OEAiReplaceEditorInfo">Translate, restyle and proofread drafts</string>
+    <string name="OEAiReplaceSummaries">Summaries</string>
+    <string name="OEAiReplaceSummariesInfo">Summarize long messages and posts</string>
+    <string name="OEAiTelegramInfo">Selected features use your AI service instead of Telegram servers, without Premium limits.</string>
 </resources>

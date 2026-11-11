@@ -11,6 +11,7 @@ import android.graphics.Outline;
 import android.net.Uri;
 import android.provider.Settings;
 import android.text.TextUtils;
+import android.util.Base64;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
@@ -28,10 +29,13 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.R;
 import org.telegram.messenger.browser.Browser;
+import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
+import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -52,8 +56,6 @@ import java.util.HashMap;
  *       через предложения сети и всё равно упирается в системный диалог, а на
  *       разных прошивках ведёт себя по-разному — обещать «подключено» было бы
  *       враньём.</li>
- *   <li>Вход по QR (tg://login) мы не обрабатываем: аккаунтом занимается штатный
- *       экран Telegram, и подменять его своим листом рискованно.</li>
  * </ul>
  */
 public class QRCodeSheet extends BottomSheet {
@@ -62,6 +64,7 @@ public class QRCodeSheet extends BottomSheet {
     private static final int TYPE_WIFI = 1;
     private static final int TYPE_TEXT = 2;
     private static final int TYPE_LOGIN = 3;
+    private static final String LOGIN_TOKEN_PREFIX = "tg://login?token=";
 
     private final BaseFragment fragment;
     private final String content;
@@ -144,13 +147,24 @@ public class QRCodeSheet extends BottomSheet {
                 root.addView(copyPassword, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
             }
         } else if (type == TYPE_LOGIN) {
+            final boolean hasToken = this.content.startsWith(LOGIN_TOKEN_PREFIX);
             TextView hint = new TextView(context);
             hint.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
             hint.setTextColor(Theme.getColor(Theme.key_dialogTextGray2));
             hint.setGravity(Gravity.CENTER);
-            hint.setText(getString(R.string.QrLoginHint));
+            hint.setText(getString(hasToken ? R.string.QrLoginConfirm : R.string.QrLoginHint));
             root.addView(hint, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT,
                     21, 0, 21, 12));
+            if (hasToken) {
+                TextCell allow = new TextCell(context);
+                allow.setTextAndIcon(getString(R.string.Allow), R.drawable.msg2_devices, true);
+                allow.setColors(Theme.key_windowBackgroundWhiteBlueText4, Theme.key_windowBackgroundWhiteBlueText4);
+                allow.setOnClickListener(v -> {
+                    dismiss();
+                    acceptLoginToken();
+                });
+                root.addView(allow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
+            }
         }
 
         TextCell copyCell = new TextCell(context);
@@ -260,6 +274,32 @@ public class QRCodeSheet extends BottomSheet {
             FileLog.e(e);
         }
         dismiss();
+    }
+
+    private void acceptLoginToken() {
+        final TLRPC.TL_auth_acceptLoginToken req = new TLRPC.TL_auth_acceptLoginToken();
+        try {
+            String code = content.substring(LOGIN_TOKEN_PREFIX.length()).replace('/', '_').replace('+', '-');
+            req.token = Base64.decode(code, Base64.URL_SAFE);
+        } catch (Exception e) {
+            FileLog.e(e);
+            showLoginError(getString(R.string.ErrorOccurred));
+            return;
+        }
+        ConnectionsManager.getInstance(fragment.getCurrentAccount()).sendRequest(req, (response, error) -> AndroidUtilities.runOnUIThread(() -> {
+            if (response instanceof TLRPC.TL_authorization) {
+                BulletinFactory.of(fragment).createSimpleBulletin(R.raw.contact_check,
+                        getString(R.string.AuthAnotherClientOk), ((TLRPC.TL_authorization) response).app_name).show();
+            } else if (error != null) {
+                showLoginError("AUTH_TOKEN_EXCEPTION".equals(error.text)
+                        ? getString(R.string.AccountAlreadyLoggedIn)
+                        : getString(R.string.ErrorOccurred) + "\n" + error.text);
+            }
+        }));
+    }
+
+    private void showLoginError(String text) {
+        AlertsCreator.showSimpleAlert(fragment, getString(R.string.AuthAnotherClient), text);
     }
 
     private void openWifiSettings(Context context) {

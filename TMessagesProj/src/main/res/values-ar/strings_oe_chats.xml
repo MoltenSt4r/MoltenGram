@@ -50,11 +50,13 @@
     <string name="OEChatsTapToSwitchRecord">النقر للتبديل بين الصوت والفيديو</string>
     <string name="OEChatsKeepAttachButton">إبقاء زر الإرفاق أثناء الكتابة</string>
     <string name="OEChatsRemoveMessageTail">إزالة ذيل الرسالة</string>
+    <string name="OEChatsUnreadCapsule">شارة مدمجة للرسائل غير المقروءة</string>
     <string name="OEChatsReplaceEditedWithIcon">استبدال «%1$s» بأيقونة</string>
     <string name="OEChatsShowOnlineStatus">إظهار مؤشر الاتصال</string>
     <string name="OEChatsHideShareButton">إخفاء زر «%1$s» الجانبي</string>
     <string name="OEChatsHideGiftButton">إخفاء زر الهدايا في القنوات</string>
     <string name="OEChatsHideSearchButton">إخفاء زر البحث في القنوات</string>
+    <string name="OEChatsHideMoneyButton">إخفاء «%1$s» في قائمة المرفقات</string>
     <string name="OEChatsShowResultsBeforeVoting">إظهار النتائج قبل التصويت</string>
     <string name="OEChatsShowResultsBeforeVotingInfo">ستكون نتائج الاستطلاعات العامة مرئية دون الإدلاء بصوت.</string>
     <string name="OEChatsHideReactions">إخفاء التفاعلات</string>
@@ -156,4 +158,6 @@
     <string name="OEChatsMenusHeader">القوائم</string>
     <string name="OEChatsPlaybackHeader">التشغيل</string>
     <string name="OEChatsVoiceHeader">الرسائل الصوتية</string>
+    <string name="OEDoubleTapSaveToDevice">حفظ على الجهاز</string>
+    <string name="OESendAfterSlowMode">إرسال بعد انتهاء الوضع البطيء</string>
 </resources>

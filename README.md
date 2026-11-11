@@ -79,7 +79,7 @@
     </td>
     <td width="33%" align="center">
       <b>⚡ Upstream ядро</b><br>
-      <code>Telegram v12.10.6</code><br>
+      <code>Telegram v13.2.1</code><br>
       <sub>Свежая кодовая база и протоколы</sub>
     </td>
   </tr>
@@ -219,7 +219,7 @@
       Современный интерфейс воспроизведения треков, локальный менеджер плейлистов с импортом/экспортом <code>.mplaylist</code>/M3U8 и многоисточниковые караоке-тексты.
     </td>
     <td width="50%" valign="top">
-      <h4>⚡ Upstream Telegram v12.10.6</h4>
+      <h4>⚡ Upstream Telegram v13.2.1</h4>
       Обновленный движок Telegram со всеми последними патчами безопасности, быстрой работой и актуальными фичами платформы.
     </td>
   </tr>
@@ -367,7 +367,7 @@ It pairs a refined **Material 3 Expressive** aesthetic with the warm coral/terra
     </td>
     <td width="33%" align="center">
       <b>⚡ Upstream Engine</b><br>
-      <code>Telegram v12.10.6</code><br>
+      <code>Telegram v13.2.1</code><br>
       <sub>Latest upstream security &amp; protocol updates</sub>
     </td>
   </tr>

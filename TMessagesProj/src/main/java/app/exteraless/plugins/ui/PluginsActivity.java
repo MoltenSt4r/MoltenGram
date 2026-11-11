@@ -48,6 +48,7 @@ import app.exteraless.plugins.PluginsWatchdog;
 import app.exteraless.plugins.ui.components.PluginCell;
 import app.exteraless.plugins.ui.components.PluginCellDelegate;
 import app.exteraless.plugins.ui.components.PluginPermissionsDelegate;
+import app.exteraless.plugins.ui.components.PluginSettingsLinkDelegate;
 
 /**
  * Экран «Plugins». Порт
@@ -69,10 +70,14 @@ public class PluginsActivity extends BaseFragment {
     private static final int MENU_EXPORT_LOGS = 3;
     private static final int MENU_CLEAR_LOGS = 4;
     private static final int MENU_CHECK_UPDATES = 5;
+    private static final int MENU_EXPORT_PLUGINS = 6;
+    private static final int MENU_IMPORT_PLUGINS = 7;
+    private static final int REQUEST_CODE_IMPORT_PLUGINS = 9801;
 
     private static final int ID_ENGINE_TOGGLE = -1;
 
     private static final int REQUEST_CODE_PICK_PLUGIN = 9781;
+    private static final int REQUEST_CODE_IMPORT_PLUGINS = 9782;
 
     private UniversalRecyclerView listView;
     private final List<Plugin> plugins = new ArrayList<>();
@@ -101,6 +106,17 @@ public class PluginsActivity extends BaseFragment {
                     PluginStoreActivity store = new PluginStoreActivity();
                     store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
                     presentFragment(store);
+                } else if (id == MENU_EXPORT_LOGS) {
+                    exportPluginLogs();
+                } else if (id == MENU_EXPORT_PLUGINS) {
+                    exportPlugins();
+                } else if (id == MENU_IMPORT_PLUGINS) {
+                    openImportPicker();
+                } else if (id == MENU_CLEAR_LOGS) {
+                    app.exteraless.plugins.PluginLog.clear();
+                    BulletinFactory.of(PluginsActivity.this)
+                            .createSimpleBulletin(R.raw.done, getString(R.string.PluginsLogsCleared))
+                            .show();
                 }
             }
         });
@@ -126,6 +142,12 @@ public class PluginsActivity extends BaseFragment {
         actionBar.createMenu().addItem(MENU_CHECK_UPDATES, R.drawable.msg_retry);
         actionBar.createMenu().addItem(MENU_STORE, R.drawable.menu_shop);
         actionBar.createMenu().addItem(MENU_INFO, R.drawable.msg_info);
+        org.telegram.ui.ActionBar.ActionBarMenuItem other =
+                actionBar.createMenu().addItem(MENU_OTHER, R.drawable.ic_ab_other);
+        other.addSubItem(MENU_EXPORT_PLUGINS, R.drawable.msg_shareout, getString(R.string.PluginsExportAll));
+        other.addSubItem(MENU_IMPORT_PLUGINS, R.drawable.msg_download, getString(R.string.PluginsImportAll));
+        other.addSubItem(MENU_EXPORT_LOGS, R.drawable.msg_share, getString(R.string.PluginsExportLogs));
+        other.addSubItem(MENU_CLEAR_LOGS, R.drawable.msg_delete, getString(R.string.PluginsClearLogs));
 
         FrameLayout contentView = new FrameLayout(context);
         contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -193,6 +215,95 @@ public class PluginsActivity extends BaseFragment {
         return filtered;
     }
 
+    private void exportPlugins() {
+        final android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            final File file = app.exteraless.plugins.PluginsBackup.export();
+            AndroidUtilities.runOnUIThread(() -> {
+                if (file == null) {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsNotFound)).show();
+                    return;
+                }
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(activity, file);
+            });
+        });
+    }
+
+    private void openImportPicker() {
+        try {
+            Intent intent = new Intent(Intent.ACTION_OPEN_DOCUMENT);
+            intent.addCategory(Intent.CATEGORY_OPENABLE);
+            intent.setType("*/*");
+            startActivityForResult(intent, REQUEST_CODE_IMPORT_PLUGINS);
+        } catch (Exception e) {
+            FileLog.e("PluginsActivity: no document picker", e);
+        }
+    }
+
+    private void importPluginsFromUri(Uri uri) {
+        Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        File archive = new File(activity.getCacheDir(), "plugins_backup.zip");
+        try (InputStream in = activity.getContentResolver().openInputStream(uri);
+             FileOutputStream out = new FileOutputStream(archive)) {
+            byte[] buffer = new byte[8192];
+            int read;
+            while (in != null && (read = in.read(buffer)) > 0) {
+                out.write(buffer, 0, read);
+            }
+        } catch (Exception e) {
+            FileLog.e("PluginsActivity: cannot read backup", e);
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsImportInvalid)).show();
+            return;
+        }
+        List<app.exteraless.plugins.PluginsBackup.Entry> entries = app.exteraless.plugins.PluginsBackup.read(archive);
+        if (entries == null || entries.isEmpty()) {
+            BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsImportInvalid)).show();
+            return;
+        }
+        StringBuilder names = new StringBuilder();
+        for (int i = 0; i < entries.size() && i < 12; i++) {
+            names.append("\n• ").append(entries.get(i).name);
+        }
+        if (entries.size() > 12) {
+            names.append("\n…");
+        }
+        showDialog(new AlertDialog.Builder(activity)
+                .setTitle(getString(R.string.PluginsImportAll))
+                .setMessage(LocaleController.formatString(R.string.PluginsImportConfirm, entries.size()) + "\n" + names)
+                .setPositiveButton(getString(R.string.Import), (d, w) -> app.exteraless.plugins.PluginsBackup.importAll(archive, entries, (imported, total) -> {
+                    archive.delete();
+                    refreshPlugins(false);
+                    updateRows();
+                    BulletinFactory.of(this).createSimpleBulletin(imported > 0 ? R.raw.contact_check : R.raw.error,
+                            LocaleController.formatString(R.string.PluginsImportDone, imported, total)).show();
+                }))
+                .setNegativeButton(getString(R.string.Cancel), null)
+                .create());
+    }
+
+    private void exportPluginLogs() {
+        final android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            final File file = app.exteraless.plugins.PluginLog.export();
+            AndroidUtilities.runOnUIThread(() -> {
+                if (file == null) {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    return;
+                }
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(activity, file);
+            });
+        });
+    }
+
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         PluginsController controller = PluginsController.getInstance();
         boolean engineEnabled = controller.isEngineEnabled();
@@ -251,7 +362,7 @@ public class PluginsActivity extends BaseFragment {
      * Кнопки под описанием плагина. Раньше всё это жило в меню по долгому
      * нажатию: пункт, о существовании которого нельзя догадаться.
      */
-    private final class PluginRowDelegate implements PluginCellDelegate, PluginPermissionsDelegate {
+    private final class PluginRowDelegate implements PluginCellDelegate, PluginPermissionsDelegate, PluginSettingsLinkDelegate {
 
         private final Plugin plugin;
 
@@ -287,6 +398,14 @@ public class PluginsActivity extends BaseFragment {
         @Override
         public void openPluginSettings() {
             PythonPluginsEngine.getInstance().openPluginSettings(plugin, PluginsActivity.this);
+        }
+
+        @Override
+        public void copyPluginSettingsLink() {
+            AndroidUtilities.addToClipboard(PluginsController.settingsLink(plugin.id, null));
+            if (AndroidUtilities.shouldShowClipboardToast()) {
+                org.telegram.ui.Components.BulletinFactory.of(PluginsActivity.this).createCopyLinkBulletin().show();
+            }
         }
 
         @Override
@@ -589,6 +708,12 @@ public class PluginsActivity extends BaseFragment {
 
     @Override
     public void onActivityResultFragment(int requestCode, int resultCode, Intent data) {
+        if (requestCode == REQUEST_CODE_IMPORT_PLUGINS) {
+            if (resultCode == Activity.RESULT_OK && data != null && data.getData() != null) {
+                importPluginsFromUri(data.getData());
+            }
+            return;
+        }
         if (requestCode != REQUEST_CODE_PICK_PLUGIN || resultCode != Activity.RESULT_OK
                 || data == null || data.getData() == null) {
             return;
@@ -671,6 +796,13 @@ public class PluginsActivity extends BaseFragment {
         super.onResume();
         // Однократное уведомление о плагине, отключённом watchdog'ом после падений.
         PluginsWatchdog watchdog = PluginsController.getInstance().getWatchdog();
+        if (watchdog != null && getParentActivity() != null && watchdog.consumeAutoSafeMode()) {
+            showDialog(new AlertDialog.Builder(getParentActivity())
+                    .setTitle(getString(R.string.PluginsSafeMode))
+                    .setMessage(getString(R.string.PluginsAutoSafeMode))
+                    .setPositiveButton(getString(R.string.OK), null)
+                    .create());
+        }
         String crashed = watchdog != null ? watchdog.consumeCrashedPlugin() : null;
         if (crashed != null && getParentActivity() != null) {
             showDialog(new AlertDialog.Builder(getParentActivity())

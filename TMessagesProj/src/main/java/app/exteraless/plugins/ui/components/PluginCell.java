@@ -8,6 +8,7 @@ import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.animation.OvershootInterpolator;
 import android.widget.FrameLayout;
 import android.widget.ImageView;
@@ -266,6 +267,14 @@ public class PluginCell extends FrameLayout implements NotificationCenter.Notifi
         actions.addView(permissionsButton, LayoutHelper.createLinear(40, 40, Gravity.LEFT, 0, 0, 8, 0));
         settingsButton = createButton(context, R.drawable.msg_settings, false,
                 v -> callDelegate(ACTION_SETTINGS));
+        settingsButton.setOnLongClickListener(v -> {
+            if (!(delegate instanceof PluginSettingsLinkDelegate) || pluginId == null) {
+                return false;
+            }
+            ((PluginSettingsLinkDelegate) delegate).copyPluginSettingsLink();
+            return true;
+        });
+        settingsButton.setOnTouchListener(new LongPressTouch());
         settingsButton.setVisibility(GONE);
         actions.addView(settingsButton, LayoutHelper.createLinear(40, 40, Gravity.LEFT, 0, 0, 8, 0));
 
@@ -341,6 +350,40 @@ public class PluginCell extends FrameLayout implements NotificationCenter.Notifi
         button.setOnClickListener(listener);
         button.setOnTouchListener(PluginCell::animateTouch);
         return button;
+    }
+
+    private static final class LongPressTouch implements OnTouchListener {
+
+        private Runnable pending;
+        private boolean longPressed;
+
+        @Override
+        public boolean onTouch(View view, MotionEvent event) {
+            int action = event.getAction();
+            if (action == MotionEvent.ACTION_DOWN) {
+                longPressed = false;
+                pending = () -> {
+                    pending = null;
+                    if (view.isPressed() && view.performLongClick()) {
+                        longPressed = true;
+                        view.setPressed(false);
+                        view.animate().scaleX(1f).scaleY(1f).setDuration(350)
+                                .setInterpolator(new OvershootInterpolator(1.5f)).start();
+                    }
+                };
+                view.postDelayed(pending, ViewConfiguration.getLongPressTimeout());
+            } else if (action == MotionEvent.ACTION_UP || action == MotionEvent.ACTION_CANCEL) {
+                if (pending != null) {
+                    view.removeCallbacks(pending);
+                    pending = null;
+                }
+                if (longPressed) {
+                    longPressed = false;
+                    return true;
+                }
+            }
+            return animateTouch(view, event);
+        }
     }
 
     private static boolean animateTouch(View view, MotionEvent event) {

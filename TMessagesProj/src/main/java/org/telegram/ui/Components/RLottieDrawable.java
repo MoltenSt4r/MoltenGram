@@ -37,6 +37,7 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.DispatchQueue;
 import org.telegram.messenger.DispatchQueuePoolBackground;
+import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.ResLottieMeta;
@@ -516,7 +517,7 @@ public class RLottieDrawable extends BitmapDrawable implements Animatable, Bitma
             nativePtr = RLottieNative.createFromFile(file.getAbsolutePath(), json, w, h, metaData, precache, args.colorReplacement, shouldLimitFps, fitzModifier, layerColors);
             if (nativePtr == null) {
                 FileLog.d("RLottieDrawable nativePtr == 0 " + file.getAbsolutePath() + " remove file");
-                file.delete();
+                deleteBrokenCacheFile(file);
             }
             if (shouldLimitFps && metaData[1] < 60) {
                 shouldLimitFps = false;
@@ -1222,7 +1223,7 @@ public class RLottieDrawable extends BitmapDrawable implements Animatable, Bitma
         generateCacheNative = RLottieNative.createFromFile(args.file != null ? args.file.toString() : null, args.json, width, height, createdForFirstFrame ? metaData : null, false, args.colorReplacement, false, args.fitzModifier, layerColors);
         generateCacheFramePointer = 0;
         if (generateCacheNative == null && file != null) {
-            file.delete();
+            deleteBrokenCacheFile(file);
         }
     }
 
@@ -1242,12 +1243,7 @@ public class RLottieDrawable extends BitmapDrawable implements Animatable, Bitma
         int framesPerUpdates = shouldLimitFps ? 2 : 1;
         int result = generateCacheNative.getFrame(generateCacheFramePointer, bitmap, true);
         if (result == -5) {
-            try {
-                Thread.sleep(100);
-            } catch (InterruptedException e) {
-                e.printStackTrace();
-            }
-            return getNextFrame(bitmap);
+            return -1;
         }
         generateCacheFramePointer += framesPerUpdates;
         return 1;
@@ -1368,6 +1364,21 @@ public class RLottieDrawable extends BitmapDrawable implements Animatable, Bitma
                 Choreographer60FpsContent.getInstance().removeFrameCallback(mUiThreadChoreographerCallback);
                 // Log.i("CHOREOGRAPHER_DEBUG", "- LottieDrawable " + activeChoreographersCount);
             }
+        }
+    }
+
+    private static void deleteBrokenCacheFile(File file) {
+        try {
+            String path = file.getCanonicalPath();
+            for (int type : new int[]{FileLoader.MEDIA_DIR_CACHE, FileLoader.MEDIA_DIR_DOCUMENT, FileLoader.MEDIA_DIR_IMAGE}) {
+                File dir = FileLoader.getDirectory(type);
+                if (dir != null && path.startsWith(dir.getCanonicalPath() + File.separator)) {
+                    file.delete();
+                    return;
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
         }
     }
 }

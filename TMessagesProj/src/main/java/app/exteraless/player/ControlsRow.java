@@ -19,6 +19,8 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     private boolean shuffleOn;
     private boolean repeatOn;
     private float scale = 1f;
+    private float userScale = 1f;
+    private boolean modesVisible = true;
     private long lastFrame;
     private boolean ticking;
     private final Runnable tick = this::tick;
@@ -31,6 +33,8 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         play.setAltIcon(PlayerIcon.fill(PlayerIcon.PAUSE, 36));
         next = new MorphButton(context, PlayerIcon.fill(PlayerIcon.NEXT, 28));
         repeat = new MorphButton(context, PlayerIcon.stroke(PlayerIcon.REPEAT, 22));
+        shuffle.setAltIcon(PlayerIcon.stroke(PlayerIcon.REVERSE, 22));
+        repeat.setAltIcon(PlayerIcon.stroke(PlayerIcon.ONCE, 22));
         buttons = new MorphButton[]{shuffle, prev, play, next, repeat};
         float[] widths = {48, 64, 88, 64, 48};
         float[] heights = {48, 64, 88, 64, 48};
@@ -53,17 +57,30 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         return false;
     }
 
+    public void setStyle(float userScale, boolean modesVisible) {
+        if (this.userScale == userScale && this.modesVisible == modesVisible) {
+            return;
+        }
+        this.userScale = userScale;
+        this.modesVisible = modesVisible;
+        shuffle.setVisibility(modesVisible ? VISIBLE : GONE);
+        repeat.setVisibility(modesVisible ? VISIBLE : GONE);
+        requestLayout();
+    }
+
     public void setPlaying(boolean value, boolean animated) {
         playing = value;
         play.setAlt(value, animated);
         updateTargets(animated);
     }
 
-    public void setModes(boolean shuffleActive, boolean repeatActive, boolean repeatOne, boolean animated) {
-        shuffleOn = shuffleActive;
-        repeatOn = repeatActive;
-        shuffle.setActive(shuffleActive, animated);
-        repeat.setActive(repeatActive, animated);
+    public void setModes(boolean shuffleActive, boolean reversed, boolean repeatActive, boolean repeatOne, boolean playOnce, boolean animated) {
+        shuffleOn = shuffleActive || reversed;
+        repeatOn = repeatActive || playOnce;
+        shuffle.setAlt(reversed, animated);
+        shuffle.setActive(shuffleOn, animated);
+        repeat.setAlt(playOnce, animated);
+        repeat.setActive(repeatOn, animated);
         repeat.setBadge(repeatOne ? "1" : null, animated);
         updateTargets(animated);
     }
@@ -177,13 +194,30 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
 
     private void layoutButtons(int width, int height) {
         float total = 0;
+        int count = 0;
         for (MorphButton button : buttons) {
+            if (button.getVisibility() == GONE) {
+                continue;
+            }
             total += button.getMeasuredWidth();
+            count++;
         }
-        float gap = Math.max(0, (width - total) / (buttons.length - 1f));
+        float gap;
+        float x;
+        if (modesVisible) {
+            gap = (width - total) / Math.max(1f, count - 1f);
+            x = 0;
+        } else {
+            gap = Math.min(dp(28) * scale, (width - total) / Math.max(1f, count - 1f));
+            x = (width - total - gap * (count - 1)) / 2f;
+        }
+        gap = Math.max(0, (width - total) / (buttons.length - 1f));
         float startX = Math.max(0, (width - (total + gap * (buttons.length - 1))) / 2f);
-        float x = startX;
+        x = startX;
         for (MorphButton button : buttons) {
+            if (button.getVisibility() == GONE) {
+                continue;
+            }
             int w = button.getMeasuredWidth();
             int h = button.getMeasuredHeight();
             int left = Math.round(x);

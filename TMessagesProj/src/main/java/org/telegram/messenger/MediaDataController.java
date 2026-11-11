@@ -91,6 +91,8 @@ import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.PremiumPreviewFragment;
 import org.telegram.messenger.utils.tlutils.AmountUtils;
 import org.telegram.ui.Stories.StoriesStorage;
+import org.telegram.ui.Wallet.WalletEngine2;
+import org.telegram.utils.code.highlight.CodeHighlighting;
 
 import java.io.File;
 import java.util.ArrayList;
@@ -112,7 +114,9 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.filters.AyuFilter;
 import tw.nekomimi.nekogram.helpers.EntitiesHelper;
+import tw.nekomimi.nekogram.helpers.MessageHelper;
 import xyz.nextalone.nagram.NaConfig;
 
 import app.exteraless.chats.LinkedCustomEmoji;
@@ -933,6 +937,70 @@ public class MediaDataController extends BaseController {
         return recentStickers[type];
     }
 
+    public void importFaveStickers(ArrayList<TLRPC.Document> documents) {
+        if (documents == null || documents.isEmpty()) {
+            return;
+        }
+        getMessagesStorage().getStorageQueue().postRunnable(() -> {
+            final ArrayList<TLRPC.Document> added = new ArrayList<>();
+            SQLiteDatabase database = getMessagesStorage().getDatabase();
+            try {
+                HashSet<String> known = new HashSet<>();
+                int date = Integer.MAX_VALUE;
+                SQLiteCursor cursor = database.queryFinalized("SELECT id, date FROM web_recent_v3 WHERE type = 5");
+                while (cursor.next()) {
+                    known.add(cursor.stringValue(0));
+                    date = Math.min(date, cursor.intValue(1));
+                }
+                cursor.dispose();
+                date = date == Integer.MAX_VALUE ? documents.size() : date - 1;
+                database.beginTransaction();
+                SQLitePreparedStatement state = database.executeFast("REPLACE INTO web_recent_v3 VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?, ?)");
+                for (TLRPC.Document document : documents) {
+                    if (!(document instanceof TLRPC.TL_document) || !known.add("" + document.id)) {
+                        continue;
+                    }
+                    state.requery();
+                    state.bindString(1, "" + document.id);
+                    state.bindInteger(2, 5);
+                    state.bindString(3, "");
+                    state.bindString(4, "");
+                    state.bindString(5, "");
+                    state.bindInteger(6, 0);
+                    state.bindInteger(7, 0);
+                    state.bindInteger(8, 0);
+                    state.bindInteger(9, date--);
+                    NativeByteBuffer data = new NativeByteBuffer(document.getObjectSize());
+                    document.serializeToStream(data);
+                    state.bindByteBuffer(10, data);
+                    state.step();
+                    data.reuse();
+                    added.add(document);
+                }
+                state.dispose();
+                database.commitTransaction();
+            } catch (Exception e) {
+                FileLog.e(e);
+                database.commitTransaction();
+            }
+            if (added.isEmpty()) {
+                return;
+            }
+            AndroidUtilities.runOnUIThread(() -> {
+                HashSet<Long> present = new HashSet<>();
+                for (TLRPC.Document document : recentStickers[TYPE_FAVE]) {
+                    present.add(document.id);
+                }
+                for (TLRPC.Document document : added) {
+                    if (present.add(document.id)) {
+                        recentStickers[TYPE_FAVE].add(document);
+                    }
+                }
+                getNotificationCenter().postNotificationName(NotificationCenter.recentDocumentsDidLoad, false, TYPE_FAVE);
+            });
+        });
+    }
+
     public boolean isStickerInFavorites(TLRPC.Document document) {
         if (document == null) {
             return false;
@@ -944,6 +1012,24 @@ public class MediaDataController extends BaseController {
             }
         }
         return false;
+    }
+
+    public TLRPC.InputStickerSet getFaveStickerSet(long documentId) {
+        if (!NekoConfig.unlimitedFavedStickers.Bool()) {
+            return null;
+        }
+        try {
+            ArrayList<TLRPC.Document> documents = new ArrayList<>(recentStickers[TYPE_FAVE]);
+            for (int a = 0, N = documents.size(); a < N; a++) {
+                TLRPC.Document document = documents.get(a);
+                if (document != null && document.id == documentId) {
+                    return MessageObject.getInputStickerSet(document);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return null;
     }
 
     public void clearRecentStickers() {
@@ -991,26 +1077,22 @@ public class MediaDataController extends BaseController {
                 boolean replace = !NekoConfig.unlimitedFavedStickers.Bool() && recentStickers[type].size() > (getUserConfig().isPremium() ? 10 : getMessagesController().maxFaveStickersCount);
                 NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.showBulletin, Bulletin.TYPE_STICKER, document, replace ? StickerSetBulletinLayout.TYPE_REPLACED_TO_FAVORITES : StickerSetBulletinLayout.TYPE_ADDED_TO_FAVORITES);
             }
-            if (!NekoConfig.unlimitedFavedStickers.Bool()) {
-                TLRPC.TL_messages_faveSticker req = new TLRPC.TL_messages_faveSticker();
-                req.id = new TLRPC.TL_inputDocument();
-                req.id.id = document.id;
-                req.id.access_hash = document.access_hash;
-                req.id.file_reference = document.file_reference;
-                if (req.id.file_reference == null) {
-                    req.id.file_reference = new byte[0];
-                }
-                req.unfave = remove;
-                getConnectionsManager().sendRequest(req, (response, error) -> {
-                    if (error != null && FileRefController.isFileRefError(error.text) && parentObject != null) {
-                        getFileRefController().requestReference(parentObject, req);
-                    } else {
-                        AndroidUtilities.runOnUIThread(() -> getMediaDataController().loadRecents(MediaDataController.TYPE_FAVE, false, false, true));
-                    }
-                });
-            } else {
-                AndroidUtilities.runOnUIThread(() -> getMediaDataController().loadRecents(MediaDataController.TYPE_FAVE, false, true, false));
+            TLRPC.TL_messages_faveSticker req = new TLRPC.TL_messages_faveSticker();
+            req.id = new TLRPC.TL_inputDocument();
+            req.id.id = document.id;
+            req.id.access_hash = document.access_hash;
+            req.id.file_reference = document.file_reference;
+            if (req.id.file_reference == null) {
+                req.id.file_reference = new byte[0];
             }
+            req.unfave = remove;
+            getConnectionsManager().sendRequest(req, (response, error) -> {
+                if (error != null && FileRefController.isFileRefError(error.text) && parentObject != null) {
+                    getFileRefController().requestReference(parentObject, req);
+                } else {
+                    AndroidUtilities.runOnUIThread(() -> getMediaDataController().loadRecents(MediaDataController.TYPE_FAVE, false, false, true));
+                }
+            });
             maxCount = NekoConfig.unlimitedFavedStickers.Bool() ? Integer.MAX_VALUE : getUserConfig().isPremium() ? 10 : getMessagesController().maxFaveStickersCount;
         } else {
             if (type == TYPE_IMAGE && remove) {
@@ -2257,6 +2339,31 @@ public class MediaDataController extends BaseController {
                     }
                 } catch (Exception e) {
                     FileLog.e(e);
+                }
+            });
+        } else if (date == 0) {
+            AndroidUtilities.runOnUIThread(() -> {
+                SharedPreferences.Editor editor = MessagesController.getEmojiSettings(currentAccount).edit();
+                if (gif) {
+                    loadingRecentGifs = false;
+                    recentGifsLoaded = true;
+                    editor.putLong("lastGifLoadTime", System.currentTimeMillis()).apply();
+                } else {
+                    loadingRecentStickers[type] = false;
+                    recentStickersLoaded[type] = true;
+                    if (type == TYPE_IMAGE) {
+                        editor.putLong("lastStickersLoadTime", System.currentTimeMillis()).apply();
+                    } else if (type == TYPE_MASK) {
+                        editor.putLong("lastStickersLoadTimeMask", System.currentTimeMillis()).apply();
+                    } else if (type == TYPE_GREETINGS) {
+                        editor.putLong("lastStickersLoadTimeGreet", System.currentTimeMillis()).apply();
+                    } else if (type == TYPE_EMOJIPACKS) {
+                        editor.putLong("lastStickersLoadTimeEmojiPacks", System.currentTimeMillis()).apply();
+                    } else if (type == TYPE_PREMIUM_STICKERS) {
+                        editor.putLong("lastStickersLoadTimePremiumStickers", System.currentTimeMillis()).apply();
+                    } else {
+                        editor.putLong("lastStickersLoadTimeFavs", System.currentTimeMillis()).apply();
+                    }
                 }
             });
         }
@@ -3754,6 +3861,10 @@ public class MediaDataController extends BaseController {
     private boolean loadingMoreSearchMessages;
     private boolean loadingSearchLocal;
     private boolean loadedPredirectedSearchLocal;
+    private final int[] searchHiddenCount = new int[]{0, 0};
+    private final int[] searchRawOffsetId = new int[]{0, 0};
+    private int searchNextOffsetId;
+    private int searchSkippedPages;
 
     public void removeMessageFromResults(int id) {
         for (int i = 0; i < searchResultMessages.size(); ++i) {
@@ -3952,6 +4063,8 @@ public class MediaDataController extends BaseController {
 
     public void searchMessagesInChat(String query, long dialogId, long mergeDialogId, int guid, int direction, long replyMessageId, boolean internal, TLRPC.User user, TLRPC.Chat chat, boolean jumpToMessage, ReactionsLayoutInBubble.VisibleReaction reaction, TLRPC.MessagesFilter filter) {
         int max_id = 0;
+        int nextOffsetId = searchNextOffsetId;
+        searchNextOffsetId = 0;
         long queryWithDialog = dialogId;
         boolean firstQuery = !internal;
         if (reqId != 0) {
@@ -3985,10 +4098,12 @@ public class MediaDataController extends BaseController {
                     query = lastSearchQuery;
                     MessageObject messageObject = searchResultMessages.get(searchResultMessages.size() - 1);
                     if (messageObject.getDialogId() == dialogId && !messagesSearchEndReached[0]) {
-                        max_id = messageObject.getId();
+                        max_id = searchRawOffsetId[0] != 0 ? searchRawOffsetId[0] : messageObject.getId();
                         queryWithDialog = dialogId;
                     } else {
-                        if (messageObject.getDialogId() == mergeDialogId) {
+                        if (searchRawOffsetId[1] != 0) {
+                            max_id = searchRawOffsetId[1];
+                        } else if (messageObject.getDialogId() == mergeDialogId) {
                             max_id = messageObject.getId();
                         }
                         queryWithDialog = mergeDialogId;
@@ -4015,6 +4130,9 @@ public class MediaDataController extends BaseController {
         } else if (firstQuery) {
             messagesSearchEndReached[0] = messagesSearchEndReached[1] = false;
             messagesSearchCount[0] = messagesSearchCount[1] = 0;
+            searchHiddenCount[0] = searchHiddenCount[1] = 0;
+            searchRawOffsetId[0] = searchRawOffsetId[1] = 0;
+            searchSkippedPages = 0;
             searchResultMessages.clear();
             searchLocalResultMessages.clear();
             searchServerResultMessagesMap[0].clear();
@@ -4044,7 +4162,7 @@ public class MediaDataController extends BaseController {
                     req.flags |= 1;
                 }
                 if (replyMessageId != 0) {
-                    if (dialogId == getUserConfig().getClientUserId() || getMessagesStorage().isMonoForum(queryWithDialog)) {
+                    if (dialogId == getUserConfig().getClientUserId() || getMessagesController().isMonoForum(queryWithDialog)) {
                         req.saved_peer_id = getMessagesController().getInputPeer(replyMessageId);
                         req.flags |= 4;
                     } else {
@@ -4094,7 +4212,7 @@ public class MediaDataController extends BaseController {
         lastReaction = reaction;
         req.limit = 21;
         req.q = query != null ? query : "";
-        req.offset_id = max_id;
+        req.offset_id = max_id != 0 ? max_id : nextOffsetId;
         if (user != null) {
             req.from_id = MessagesController.getInputPeer(user);
             req.flags |= 1;
@@ -4130,7 +4248,7 @@ public class MediaDataController extends BaseController {
             }, true);
         }
         if (lastReplyMessageId != 0) {
-            if (queryWithDialog == getUserConfig().getClientUserId() || getMessagesStorage().isMonoForum(queryWithDialog)) {
+            if (queryWithDialog == getUserConfig().getClientUserId() || getMessagesController().isMonoForum(queryWithDialog)) {
                 req.saved_peer_id = getMessagesController().getInputPeer(lastReplyMessageId);
                 req.flags |= 4;
             } else {
@@ -4187,19 +4305,38 @@ public class MediaDataController extends BaseController {
                                 searchServerResultMessagesMap[0].clear();
                                 searchServerResultMessagesMap[1].clear();
                                 messagesSearchCount[0] = 0;
+                                searchHiddenCount[0] = 0;
+                                searchRawOffsetId[0] = 0;
                                 getNotificationCenter().postNotificationName(NotificationCenter.chatSearchResultsLoading, guid);
                             }
+                            int index = queryWithDialogFinal == dialogId ? 0 : 1;
+                            boolean hideSenders = user == null && chat == null && AyuFilter.shouldHideSenders() && ChatObject.isMegagroup(getMessagesController().getChat(-dialogId));
                             boolean added = false;
+                            int hidden = 0;
                             int N = Math.min(res.messages.size(), req.limit - 1);
                             for (int a = 0; a < N; a++) {
-                                added = true;
                                 MessageObject messageObject = messageObjects.get(a);
+                                if (hideSenders) {
+                                    searchRawOffsetId[index] = messageObject.getId();
+                                    long fromId = messageObject.getFromChatId();
+                                    if (MessageHelper.getInstance(currentAccount).isBlockedUser(fromId) || AyuFilter.isBlockedChannel(fromId)) {
+                                        hidden++;
+                                        continue;
+                                    }
+                                }
+                                added = true;
                                 searchServerResultMessages.add(messageObject);
-                                searchServerResultMessagesMap[queryWithDialogFinal == dialogId ? 0 : 1].put(messageObject.getId(), messageObject);
+                                searchServerResultMessagesMap[index].put(messageObject.getId(), messageObject);
                             }
+                            searchHiddenCount[index] += hidden;
                             updateSearchResults();
-                            messagesSearchEndReached[queryWithDialogFinal == dialogId ? 0 : 1] = res.messages.size() < req.limit;
-                            messagesSearchCount[queryWithDialogFinal == dialogId ? 0 : 1] = res instanceof TLRPC.TL_messages_messagesSlice || res instanceof TLRPC.TL_messages_channelMessages ? res.count : res.messages.size();
+                            messagesSearchEndReached[index] = res.messages.size() < req.limit;
+                            messagesSearchCount[index] = (res instanceof TLRPC.TL_messages_messagesSlice || res instanceof TLRPC.TL_messages_channelMessages ? res.count : res.messages.size()) - searchHiddenCount[index];
+                            if (!added && hidden > 0 && !messagesSearchEndReached[index] && searchSkippedPages++ < 10) {
+                                searchNextOffsetId = searchRawOffsetId[index];
+                                searchMessagesInChat(lastSearchQuery, dialogId, mergeDialogId, guid, 0, replyMessageId, true, user, chat, jumpToMessage, lastReaction, lastSearchFilter);
+                                return;
+                            }
                             if (searchServerResultMessages.isEmpty()) {
                                 getNotificationCenter().postNotificationName(NotificationCenter.chatSearchResultsAvailable, guid, 0, getMask(), (long) 0, 0, 0, jumpToMessage);
                             } else {
@@ -5057,7 +5194,7 @@ public class MediaDataController extends BaseController {
         });
     }
 
-    public void loadMusic(long dialogId, long maxId, long minId) {
+    public void loadMusic(long dialogId, long topicId, long maxId, long minId) {
         getMessagesStorage().getStorageQueue().postRunnable(() -> {
             ArrayList<MessageObject> arrayListBegin = new ArrayList<>();
             ArrayList<MessageObject> arrayListEnd = new ArrayList<>();
@@ -5065,7 +5202,9 @@ public class MediaDataController extends BaseController {
                 for (int a = 0; a < 2; a++) {
                     ArrayList<MessageObject> arrayList = a == 0 ? arrayListBegin : arrayListEnd;
                     SQLiteCursor cursor;
-                    if (a == 0) {
+                    if (topicId != 0) {
+                        cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT data, mid FROM media_topics WHERE uid = %d AND topic_id = %d AND mid %s %d AND type = %d ORDER BY date DESC, mid DESC LIMIT 1000", dialogId, topicId, a == 0 ? "<" : ">", a == 0 ? maxId : minId, MEDIA_MUSIC));
+                    } else if (a == 0) {
                         if (!DialogObject.isEncryptedDialog(dialogId)) {
                             cursor = getMessagesStorage().getDatabase().queryFinalized(String.format(Locale.US, "SELECT data, mid FROM media_v4 WHERE uid = %d AND mid < %d AND type = %d ORDER BY date DESC, mid DESC LIMIT 1000", dialogId, maxId, MEDIA_MUSIC));
                         } else {
@@ -5097,7 +5236,7 @@ public class MediaDataController extends BaseController {
             } catch (Exception e) {
                 FileLog.e(e);
             }
-            AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.musicDidLoad, dialogId, arrayListBegin, arrayListEnd));
+            AndroidUtilities.runOnUIThread(() -> getNotificationCenter().postNotificationName(NotificationCenter.musicDidLoad, dialogId, arrayListBegin, arrayListEnd, topicId));
         });
     }
     //---------------- MEDIA END ----------------
@@ -7817,6 +7956,7 @@ public class MediaDataController extends BaseController {
 
         CharSequence cs = message[0];
         if (entities == null) entities = new ArrayList<>();
+        addTonAddressEntities(cs, entities);
         if (NaConfig.INSTANCE.getMarkdownParser().Int() == NekoConfig.MARKDOWN_PARSER_NEKO) return entities;
         if (parseMarkdown) {
             cs = parsePattern(cs, BOLD_PATTERN, entities, obj -> new TLRPC.TL_messageEntityBold());
@@ -7910,9 +8050,11 @@ public class MediaDataController extends BaseController {
     private CharSequence parsePattern(CharSequence cs, Pattern pattern, ArrayList<TLRPC.MessageEntity> entities, GenericProvider<Void, TLRPC.MessageEntity> entityProvider) {
         Matcher m = pattern.matcher(cs);
         int offset = 0;
-        while (m.find()) {
+        int from = 0;
+        while (from <= m.regionEnd() && m.find(from)) {
             String gr = m.group(1);
             boolean allowEntity = true;
+            TLRPC.MessageEntity trimUrl = null;
             if (cs instanceof Spannable) {
                 // check if it is inside a link: do not convert __ ** to styles inside links
                 URLSpan[] spansUrl = ((Spannable) cs).getSpans(m.start() - offset, m.end() - offset, URLSpan.class);
@@ -7921,13 +8063,29 @@ public class MediaDataController extends BaseController {
                 }
             }
             if (allowEntity) {
-                // check if it is inside a code block: do not convert __ ** || to styles inside code
+                // check if it is inside a code block, link or ton address: do not convert __ ** || to styles inside them
                 for (int i = 0; i < entities.size(); ++i) {
                     final TLRPC.MessageEntity entity = entities.get(i);
                     if (entity instanceof TLRPC.TL_messageEntityPre || entity instanceof TLRPC.TL_messageEntityCode) {
                         if (AndroidUtilities.intersect1d(m.start() - offset, m.end() - offset, entity.offset, entity.offset + entity.length)) {
                             allowEntity = false;
                             break;
+                        }
+                    } else if (entity instanceof TLRPC.TL_messageEntityUrl || entity instanceof TLRPC.TL_messageEntityTonAddress) {
+                        // styling around a link is fine, but its markers must not be a part of it
+                        final int end = entity.offset + entity.length;
+                        if (AndroidUtilities.intersect1d(m.start() - offset, m.start(1) - offset, entity.offset, end)) {
+                            allowEntity = false;
+                            break;
+                        }
+                        if (AndroidUtilities.intersect1d(m.end(1) - offset, m.end() - offset, entity.offset, end)) {
+                            // url linkifier may swallow a trailing closing marker (e.g. "__https://a.com/b__"), cut it off the link
+                            if (entity instanceof TLRPC.TL_messageEntityUrl && end == m.end() - offset && m.end(1) - offset > entity.offset) {
+                                trimUrl = entity;
+                            } else {
+                                allowEntity = false;
+                                break;
+                            }
                         }
                     }
                 }
@@ -7941,12 +8099,63 @@ public class MediaDataController extends BaseController {
                 entity.length = gr.length();
 
                 removeOffset4After(entity.offset, entity.offset + entity.length, entities);
+                if (trimUrl != null) {
+                    trimUrl.length -= m.end() - m.end(1);
+                    final String marker = m.group().substring(m.end(1) - m.start());
+                    if (trimUrl.url != null && trimUrl.url.endsWith(marker)) {
+                        trimUrl.url = trimUrl.url.substring(0, trimUrl.url.length() - marker.length());
+                    }
+                }
                 entities.add(entity);
-            }
 
-            offset += m.end() - m.start() - gr.length();
+                offset += m.end() - m.start() - gr.length();
+                from = m.end();
+            } else {
+                // markers are kept as is, retry right after the opening one so a valid pair after a link still matches
+                from = m.start() + 1;
+            }
         }
         return cs;
+    }
+
+    private static boolean isMarkdownProtectedEntity(TLRPC.MessageEntity entity) {
+        return (
+            entity instanceof TLRPC.TL_messageEntityPre ||
+            entity instanceof TLRPC.TL_messageEntityCode ||
+            entity instanceof TLRPC.TL_messageEntityUrl ||
+            entity instanceof TLRPC.TL_messageEntityTonAddress
+        );
+    }
+
+    private static final Pattern TON_ADDRESS_PATTERN = Pattern.compile("(?<![A-Za-z0-9_+/=:-])(?:-?[0-9]{1,10}:[0-9a-fA-F]{64}|[A-Za-z0-9_+/-]{48})(?![A-Za-z0-9_+/=:-])");
+
+    private static void addTonAddressEntities(CharSequence cs, ArrayList<TLRPC.MessageEntity> entities) {
+        if (cs == null || cs.length() < 48) return;
+        final Matcher m = TON_ADDRESS_PATTERN.matcher(cs);
+        while (m.find()) {
+            final int start = m.start(), end = m.end();
+            boolean intersects = false;
+            for (int i = 0; i < entities.size(); ++i) {
+                final TLRPC.MessageEntity e = entities.get(i);
+                if (AndroidUtilities.intersect1d(start, end, e.offset, e.offset + e.length) && (isMarkdownProtectedEntity(e) || e instanceof TLRPC.TL_messageEntityTextUrl)) {
+                    intersects = true;
+                    break;
+                }
+            }
+            if (intersects) continue;
+            boolean valid;
+            try {
+                valid = WalletEngine2.isValidAddress(m.group());
+            } catch (Throwable t) {
+                FileLog.e(t);
+                valid = false;
+            }
+            if (!valid) continue;
+            final TLRPC.TL_messageEntityTonAddress entity = new TLRPC.TL_messageEntityTonAddress();
+            entity.offset = start;
+            entity.length = end - start;
+            entities.add(entity);
+        }
     }
 
     private static void removeOffset4After(int start, int end, ArrayList<TLRPC.MessageEntity> entities) {
@@ -8061,16 +8270,24 @@ public class MediaDataController extends BaseController {
             draftMessage.flags |= 16;
             draftMessage.reply_to.reply_to_msg_id = replyToMessage.id;
             if (quote != null) {
-                draftMessage.reply_to.quote_text = quote.getText();
-                if (draftMessage.reply_to.quote_text != null) {
-                    draftMessage.reply_to.flags |= 4;
-                    draftMessage.reply_to.flags |= 16;
-                    draftMessage.reply_to.quote_offset = quote.start;
-                }
-                draftMessage.reply_to.quote_entities = quote.getEntities();
-                if (draftMessage.reply_to.quote_entities != null && !draftMessage.reply_to.quote_entities.isEmpty()) {
-                    draftMessage.reply_to.quote_entities = new ArrayList<>(draftMessage.reply_to.quote_entities);
-                    draftMessage.reply_to.flags |= 8;
+                if (quote.isRich) {
+                    if (quote.rich != null && !quote.rich.isEmpty()) {
+                        draftMessage.reply_to.quote_rich = new ArrayList<>(quote.rich);
+                        draftMessage.reply_to.flags |= 16;
+                        draftMessage.reply_to.quote_offset = quote.getQuoteOffset();
+                    }
+                } else {
+                    draftMessage.reply_to.quote_text = quote.getText();
+                    if (draftMessage.reply_to.quote_text != null) {
+                        draftMessage.reply_to.flags |= 4;
+                        draftMessage.reply_to.flags |= 16;
+                        draftMessage.reply_to.quote_offset = quote.start;
+                    }
+                    draftMessage.reply_to.quote_entities = quote.getEntities();
+                    if (draftMessage.reply_to.quote_entities != null && !draftMessage.reply_to.quote_entities.isEmpty()) {
+                        draftMessage.reply_to.quote_entities = new ArrayList<>(draftMessage.reply_to.quote_entities);
+                        draftMessage.reply_to.flags |= 8;
+                    }
                 }
                 if (quote.message != null && quote.message.messageOwner != null) {
                     TLRPC.Peer peer2 = getMessagesController().getPeer(dialogId);
@@ -8242,6 +8459,9 @@ public class MediaDataController extends BaseController {
             if (!TextUtils.equals(a.quote_text, b.quote_text)) {
                 return false;
             }
+            if ((a.quote_rich != null || b.quote_rich != null) && !RichQuote.equals(a.quote_rich, b.quote_rich)) {
+                return false;
+            }
             return a.reply_to_msg_id == b.reply_to_msg_id;
         }
         if (a instanceof TLRPC.TL_inputReplyToStory) {
@@ -8269,13 +8489,21 @@ public class MediaDataController extends BaseController {
                 inputReplyTo.flags |= 1;
                 inputReplyTo.top_msg_id = reply_to.reply_to_top_id;
             }
-            if ((reply_to.flags & 64) != 0) {
-                inputReplyTo.flags |= 4;
-                inputReplyTo.quote_text = reply_to.quote_text;
-            }
-            if ((reply_to.flags & 128) != 0) {
-                inputReplyTo.flags |= 8;
-                inputReplyTo.quote_entities = reply_to.quote_entities;
+            if (reply_to.quote_rich != null) {
+                inputReplyTo.quote_rich = reply_to.quote_rich;
+                if ((reply_to.flags & 1024) != 0) {
+                    inputReplyTo.flags |= 16;
+                    inputReplyTo.quote_offset = reply_to.quote_offset;
+                }
+            } else {
+                if ((reply_to.flags & 64) != 0) {
+                    inputReplyTo.flags |= 4;
+                    inputReplyTo.quote_text = reply_to.quote_text;
+                }
+                if ((reply_to.flags & 128) != 0) {
+                    inputReplyTo.flags |= 8;
+                    inputReplyTo.quote_entities = reply_to.quote_entities;
+                }
             }
             return inputReplyTo;
         }

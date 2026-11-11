@@ -66,6 +66,8 @@ public final class EtgBackup {
     private static final int RECENT_STICKERS_DEFAULT = 20;
     private static final int RECENT_STICKERS_MAX = 200;
 
+    private static final long MAX_BACKUP_BYTES = 32L * 1024 * 1024;
+
     private static List<Entry> entries;
 
     private EtgBackup() {
@@ -191,6 +193,9 @@ public final class EtgBackup {
     // ---- Чтение файла ----
 
     private static String readAndDecrypt(File file) throws Exception {
+        if (file.length() > MAX_BACKUP_BYTES) {
+            return null;
+        }
         StringBuilder builder = new StringBuilder();
         try (BufferedReader reader = new BufferedReader(new FileReader(file))) {
             String line;
@@ -484,8 +489,8 @@ public final class EtgBackup {
                 () -> new JsonPrimitive(NaConfig.INSTANCE.getSliderStyle().Int() == 2),
                 value -> NaConfig.INSTANCE.getSliderStyle().setConfigInt(value.getAsBoolean() ? 2 : 0)));
         list.add(new Entry(SECTION_EXTERA, "newSwitchStyle", KIND_BOOL, 0, 0, null,
-                () -> new JsonPrimitive(NaConfig.INSTANCE.getSwitchStyle().Int() == 2),
-                value -> NaConfig.INSTANCE.getSwitchStyle().setConfigInt(value.getAsBoolean() ? 2 : 0)));
+                () -> new JsonPrimitive(NaConfig.INSTANCE.getSwitchStyle().Int() >= 2),
+                value -> NaConfig.INSTANCE.getSwitchStyle().setConfigInt(value.getAsBoolean() ? 3 : 0)));
 
         // Разделители: 0 скрыт, 1 линия, 2 сегменты. Ноль дублируется в рабочий ключ NagramX.
         list.add(new Entry(SECTION_EXTERA, "dividerStyle", KIND_INT, 0, 2, null,

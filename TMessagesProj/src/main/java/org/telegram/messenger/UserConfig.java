@@ -19,6 +19,7 @@ import org.telegram.tgnet.SerializedData;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_account;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 
 import tw.nekomimi.nekogram.NekoConfig;
@@ -29,6 +30,7 @@ public class UserConfig extends BaseController {
     public static int selectedAccount;
     public final static int MAX_ACCOUNT_DEFAULT_COUNT = 10;
     public final static int MAX_ACCOUNT_COUNT = 10;
+    public final static int MAX_INSTANCE_COUNT = 16;
 
     private final Object sync = new Object();
     private volatile boolean configLoaded;
@@ -87,7 +89,7 @@ public class UserConfig extends BaseController {
     LongSparseArray<SaveToGallerySettingsHelper.DialogException> groupsSaveGalleryExceptions;
 
 
-    private static volatile UserConfig[] Instance = new UserConfig[UserConfig.MAX_ACCOUNT_COUNT];
+    private static volatile UserConfig[] Instance = new UserConfig[UserConfig.MAX_INSTANCE_COUNT];
     public static UserConfig getInstance(int num) {
         UserConfig localInstance = Instance[num];
         if (localInstance == null) {
@@ -602,6 +604,17 @@ public class UserConfig extends BaseController {
 
     public Long getEmojiStatus() {
         return UserObject.getEmojiStatusDocumentId(currentUser);
+    }
+
+    public static ArrayList<Long> getLoggedInAccountIds() {
+        ArrayList<Long> ids = new ArrayList<>();
+        for (int account = 0; account < UserConfig.MAX_ACCOUNT_COUNT; account++) {
+            UserConfig config = UserConfig.getInstance(account);
+            if (config.isClientActivated()) {
+                ids.add(config.getClientUserId());
+            }
+        }
+        return ids;
     }
 
 

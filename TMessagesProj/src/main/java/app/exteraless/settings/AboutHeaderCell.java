@@ -35,8 +35,12 @@ import org.telegram.ui.Components.LayoutHelper;
  */
 public class AboutHeaderCell extends LinearLayout {
 
+    /** Цвет подложки иконки приложения, как R.color.ic_background в exteraGram. */
+    public static final int LOGO_BACKGROUND = 0xFFE83030;
+
     /** Путь формы логотипа. Считается один раз, сбрасывается при смене режима. */
     private Path shapePath;
+    private final ImageView logo;
 
     private Path shapePath() {
         if (shapePath == null) {
@@ -50,7 +54,7 @@ public class AboutHeaderCell extends LinearLayout {
         setOrientation(VERTICAL);
         setGravity(Gravity.CENTER);
 
-        ImageView logo = new ImageView(context) {
+        logo = new ImageView(context) {
             @Override
             public void draw(Canvas canvas) {
                 canvas.save();
@@ -94,8 +98,12 @@ public class AboutHeaderCell extends LinearLayout {
                 Gravity.TOP | Gravity.CENTER_HORIZONTAL, 60, 2, 60, 28));
     }
 
+    public void setOnLogoClickListener(OnClickListener listener) {
+        logo.setOnClickListener(listener);
+    }
+
     /** "12.9.2 (1258)" — версия плюс versionCode из PackageInfo, как в оригинале. */
-    private static String buildVersionString() {
+    public static String buildVersionString() {
         StringBuilder sb = new StringBuilder();
         if (!TextUtils.isEmpty(BuildVars.BUILD_CODENAME)) {
             sb.append(BuildVars.BUILD_CODENAME).append(" · ");

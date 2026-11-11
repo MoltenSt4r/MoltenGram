@@ -21,6 +21,7 @@
     <string name="PluginsInstallReadError">Nie udało się odczytać wybranego pliku.</string>
     <string name="PluginsCrashedTitle">Wtyczka uległa awarii</string>
     <string name="PluginsCrashedMessage">Wtyczka %1$s została wyłączona po awarii.</string>
+    <string name="PluginsAutoSafeMode">Aplikacja kilka razy z rzędu zawiesiła się zaraz po uruchomieniu, więc wtyczki zostały wyłączone (tryb bezpieczny). Gdy będziesz gotowy, wyłącz tryb bezpieczny w sekcji Wtyczki.</string>
     <string name="PluginsMenuOpenSettings">Otwórz ustawienia</string>
     <string name="PluginsMenuReload">Załaduj ponownie</string>
     <string name="PluginsMenuCopyId">Kopiuj ID</string>
@@ -199,4 +200,15 @@ Wtyczka: %1$s
     <string name="PluginOverlayOpen">Otwórz ustawienia</string>
     <string name="PluginsSafeModeEnabledNow">Tryb awaryjny włączony, wszystkie wtyczki są wyłączone.</string>
     <string name="PluginsSafeModeDisabledNow">Tryb awaryjny wyłączony, wtyczki się ładują.</string>
+<string name="PluginActivityExport">Eksportuj dziennik</string>
+<string name="OEPluginLinkEngineDisabled">Włącz **silnik wtyczek**, aby otworzyć ustawienia **%1$s**.</string>
+<string name="OEPluginLinkNotFound">Wtyczka **%1$s** nie jest zainstalowana.</string>
+<string name="OEPluginLinkNoSettings">**%1$s** nie ma ustawień.</string>
+<string name="PluginsExportAll">Eksportuj wtyczki</string>
+<string name="PluginsImportAll">Importuj wtyczki</string>
+<string name="PluginsImportConfirm">Zainstalować wtyczki z kopii zapasowej (%1$d) i przywrócić ich ustawienia? Uprawnienia nie są przenoszone: nadaj je ponownie, gdzie trzeba.</string>
+<string name="PluginsImportDone">Zaimportowano wtyczki: %1$d z %2$d</string>
+<string name="PluginsImportInvalid">Ten plik nie jest kopią zapasową wtyczek</string>
+<string name="PluginsRetryHooks">Ponów hooki</string>
+<string name="PluginsHooksBrokenInfo">Aplikacja dwukrotnie się zamknęła podczas uruchamiania silnika hooków, więc hooki wtyczek zostały wyłączone. Dotknij, aby spróbować ponownie — zadziała po ponownym uruchomieniu.</string>
 </resources>

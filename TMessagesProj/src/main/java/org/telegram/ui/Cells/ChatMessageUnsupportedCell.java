@@ -12,6 +12,7 @@ import android.view.View;
 import androidx.annotation.NonNull;
 
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.UnsupportedBlockDrawable;
@@ -59,11 +60,20 @@ public class ChatMessageUnsupportedCell extends View implements Theme.Colorable 
     }
 
     private ChatMessageCell.ChatMessageCellDelegate delegate;
+    private MessageObject messageObject;
     private float mViewTop;
     private int mParentH;
 
     public void setDelegate(ChatMessageCell.ChatMessageCellDelegate delegate) {
         this.delegate = delegate;
+    }
+
+    public void setMessageObject(MessageObject messageObject) {
+        this.messageObject = messageObject;
+    }
+
+    public MessageObject getMessageObject() {
+        return messageObject;
     }
 
     public void setVisiblePart(float viewTop, int parentH) {

@@ -13,6 +13,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PorterDuff;
+import android.graphics.drawable.Drawable;
 import android.view.Gravity;
 import android.view.View;
 import android.widget.FrameLayout;
@@ -28,7 +29,7 @@ import org.telegram.messenger.utils.ViewOutlineProviderImpl;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceColor;
+import org.telegram.utils.glass.source.GlassSourceColor;
 
 import java.util.ArrayList;
 
@@ -36,7 +37,7 @@ import me.vkryl.android.animator.BoolAnimator;
 import me.vkryl.android.animator.FactorAnimator;
 
 @SuppressLint("ViewConstructor")
-public class FragmentFloatingButton extends FrameLayout implements FactorAnimator.Target {
+public class FragmentFloatingButton extends FrameLayout implements FactorAnimator.Target, Theme.Colorable {
     private final int ANIMATOR_ID_BUTTON_VISIBLE = 0;
     private final int ANIMATOR_ID_PROGRESS_VISIBLE = 1;
 
@@ -119,8 +120,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                     return isDark() ? 0x04FFFFFF : 0x20000000;
                 }
             };
-            iBlur3SourceColor = new BlurredBackgroundSourceColor();
-            iBlur3Background = iBlur3SourceColor.createDrawable();
+            iBlur3SourceColor = new GlassSourceColor();
+            iBlur3Background = new BlurredBackgroundDrawable(iBlur3SourceColor);
             iBlur3Background.setColorProvider(iBlur3ColorProviderTabs);
             iBlur3Background.setStrokeWidth(dpf2(0.4f), dpf2(0.4f));
             iBlur3Background.setRadius(dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18));
@@ -171,11 +172,21 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         imageView.setImageResource(drawable);
     }
 
-    private BlurredBackgroundSourceColor iBlur3SourceColor;
+    private GlassSourceColor iBlur3SourceColor;
     private BlurredBackgroundDrawable iBlur3Background;
     private BlurredBackgroundColorProviderThemed iBlur3ColorProviderTabs;
 
+    private Drawable themedBackground;
+    private int themedIconColor;
+    private boolean themedIconColorSet;
+    private int themedBackgroundColor, themedBackgroundPressedColor;
+
+    @Override
     public void updateColors() {
+        if (imageView == null || progressView == null) {
+            return;
+        }
+        final boolean recolorBackground = themedBackground != null && getBackground() == themedBackground;
         if (isSubButton) {
             int customBgCode = app.exteraless.appearance.AppearanceConfig.subFabColor();
             int defBg = Theme.getColor(Theme.key_windowBackgroundWhite);
@@ -194,9 +205,15 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 int pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
                 setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, customBg, pressedColor));
             } else {
-                iBlur3SourceColor.setColor(defBg);
-                iBlur3ColorProviderTabs.updateColors();
-                iBlur3Background.updateColors();
+                if (iBlur3SourceColor != null) {
+                    iBlur3SourceColor.setColor(defBg);
+                }
+                if (iBlur3ColorProviderTabs != null) {
+                    iBlur3ColorProviderTabs.updateColors();
+                }
+                if (iBlur3Background != null) {
+                    iBlur3Background.updateColors();
+                }
                 invalidate();
 
                 int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);

@@ -59,15 +59,30 @@ public class ShaderSet {
         "   gl_FragColor = texture2D(texture, varTexcoord.st, 0.0);" +
         "   gl_FragColor.rgb *= gl_FragColor.a;" +
         "}";
+    private static final String PAINT_UNPREMULTIPLY_FSH =
+        "precision highp float;" +
+        "varying vec2 varTexcoord;" +
+        "uniform sampler2D texture;" +
+        "void main (void) {" +
+        "   vec4 color = texture2D(texture, varTexcoord.st, 0.0);" +
+        "   gl_FragColor = color.a > 0.0 ? vec4(color.rgb / color.a, color.a) : vec4(0.0);" +
+        "}";
+    // The editable texture holds absolute alpha, not a mask relative to the PNG's alpha.
+    // Android uploads premultiplied RGB, so change its alpha exactly once.
+    private static final String MASKING_COLOR_FSH =
+        "vec4 maskColor(vec4 original, float editedAlpha, float preview) {" +
+        "   float alpha = mix(min(editedAlpha, original.a), original.a, preview);" +
+        "   return original.a > 0.0 ? vec4(original.rgb * (alpha / original.a), alpha) : vec4(0.0);" +
+        "}";
     private static final String PAINT_MASKING_BLIT_FSH =
         "precision highp float;" +
         "varying vec2 varTexcoord;" +
         "uniform sampler2D texture;" +
         "uniform sampler2D mask;" +
         "uniform float preview;" +
-        "void main (void) {" +
-        "   gl_FragColor = texture2D(texture, varTexcoord.st, 0.0) * (preview + (1.0 - preview) * texture2D(mask, varTexcoord.st, 0.0).a);" +
-        "   gl_FragColor.rgb *= gl_FragColor.a;" +
+        MASKING_COLOR_FSH +
+        "void main(void) {" +
+        "   gl_FragColor = maskColor(texture2D(texture, varTexcoord.st), texture2D(mask, varTexcoord.st).a, preview);" +
         "}";
     private static final String PAINT_BLITWITHMASK_FSH =
         "precision highp float;" +
@@ -91,12 +106,13 @@ public class ShaderSet {
         "uniform sampler2D mask;" +
         "uniform vec4 color;" +
         "uniform float preview;" +
-        "void main (void) {" +
-        "   vec4 dst = texture2D(texture, varTexcoord.st, 0.0);" +
-        "   float srcAlpha = color.a * texture2D(mask, varTexcoord.st, 0.0).a;" +
-        "   float outAlpha = srcAlpha + dst.a * (1.0 - srcAlpha);" +
-        "   gl_FragColor = texture2D(otexture, varTexcoord.st, 0.0) * (preview + (1.0 - preview) * outAlpha);" +
-        "   gl_FragColor.rgb *= gl_FragColor.a;" +
+        MASKING_COLOR_FSH +
+        "void main(void) {" +
+        "   vec4 original = texture2D(otexture, varTexcoord.st);" +
+        "   float dstAlpha = min(texture2D(texture, varTexcoord.st).a, original.a);" +
+        "   float srcAlpha = color.a * texture2D(mask, varTexcoord.st).a;" +
+        "   float outAlpha = mix(dstAlpha, original.a, srcAlpha);" +
+        "   gl_FragColor = maskColor(original, outAlpha, preview);" +
         "}";
     private static final String PAINT_COMPOSITEWITHMASK_FSH =
         "precision highp float;" +
@@ -192,12 +208,11 @@ public class ShaderSet {
         "uniform sampler2D mask;" +
         "uniform vec4 color;" +
         "uniform float preview;" +
-        "void main (void) {" +
-        "   vec4 dst = texture2D(texture, varTexcoord.st, 0.0);" +
-        "   float srcAlpha = color.a * texture2D(mask, varTexcoord.st, 0.0).a;" +
-        "   float outAlpha = dst.a * (1. - srcAlpha);" +
-        "   gl_FragColor = texture2D(otexture, varTexcoord.st, 0.0) * (preview + (1.0 - preview) * outAlpha);" +
-        "   gl_FragColor.rgb *= gl_FragColor.a;" +
+        MASKING_COLOR_FSH +
+        "void main(void) {" +
+        "   float dstAlpha = texture2D(texture, varTexcoord.st).a;" +
+        "   float srcAlpha = color.a * texture2D(mask, varTexcoord.st).a;" +
+        "   gl_FragColor = maskColor(texture2D(otexture, varTexcoord.st), dstAlpha * (1.0 - srcAlpha), preview);" +
         "}";
 //
 //
@@ -400,6 +415,13 @@ public class ShaderSet {
 
         shader = new HashMap<>();
         shader.put(VERTEX, PAINT_BLIT_VSH);
+        shader.put(FRAGMENT, PAINT_UNPREMULTIPLY_FSH);
+        shader.put(ATTRIBUTES, new String[]{"inPosition", "inTexcoord"});
+        shader.put(UNIFORMS, new String[]{"mvpMatrix", "texture"});
+        result.put("unpremultiply", Collections.unmodifiableMap(shader));
+
+        shader = new HashMap<>();
+        shader.put(VERTEX, PAINT_BLIT_VSH);
         shader.put(FRAGMENT, PAINT_MASKING_BLIT_FSH);
         shader.put(ATTRIBUTES, new String[]{"inPosition", "inTexcoord"});
         shader.put(UNIFORMS, new String[]{"mvpMatrix", "texture", "mask", "alpha", "preview"});
@@ -418,6 +440,7 @@ public class ShaderSet {
         shader.put(ATTRIBUTES, new String[]{"inPosition", "inTexcoord"});
         shader.put(UNIFORMS, new String[]{"mvpMatrix", "otexture", "texture", "mask", "color", "preview"});
         result.put("blitWithMask_masking", Collections.unmodifiableMap(shader));
+        result.put("compositeWithMask_masking", Collections.unmodifiableMap(shader));
 
         shader = new HashMap<>();
         shader.put(VERTEX, PAINT_BLIT_VSH);
@@ -484,6 +507,7 @@ public class ShaderSet {
         shader.put(ATTRIBUTES, new String[]{"inPosition", "inTexcoord"});
         shader.put(UNIFORMS, new String[]{"mvpMatrix", "texture", "otexture", "preview", "mask", "color"});
         result.put("blitWithMaskEraser_masking", Collections.unmodifiableMap(shader));
+        result.put("compositeWithMaskEraser_masking", Collections.unmodifiableMap(shader));
 
         shader = new HashMap<>();
         shader.put(VERTEX, PAINT_BLIT_VSH);

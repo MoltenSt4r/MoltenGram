@@ -39,8 +39,8 @@ class SettingsController:
         if PythonBridge is not None:
             try:
                 raw = PythonBridge.exportSettings(self._plugin_id)
-                data = json.loads(raw) if raw else {}
-                return data if isinstance(data, dict) else {}
+                from plugin_settings import decode_values
+                return decode_values(raw) if raw else {}
             except Exception:
                 return {}
         return dict(_local_store.get(self._plugin_id, {}))
@@ -54,9 +54,11 @@ class SettingsController:
             if raw is None:
                 return default
             try:
-                return json.loads(raw)
+                value = json.loads(raw)
             except (ValueError, TypeError):
                 return default
+            from plugin_settings import coerce_value
+            return coerce_value(value, default)
         return _local_store.get(self._plugin_id, {}).get(key, default)
 
     def get(self, key: str, default: Any = None) -> Any:

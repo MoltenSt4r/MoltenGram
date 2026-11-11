@@ -214,7 +214,7 @@ public class AyuGhostUtils {
     }
 
     private static void handleReadAfterSend(TLObject object) {
-        if (NekoConfig.markReadAfterSend.Bool() && !NekoConfig.sendReadMessagePackets.Bool()) {
+        if (NekoConfig.markReadAfterSend.Bool() && !NekoConfig.sendReadMessagePackets.Bool() && isMessageSendRequest(object)) {
             TLRPC.InputPeer peer = extractPeerFromSendObject(object);
 
             if (peer != null) {
@@ -232,7 +232,7 @@ public class AyuGhostUtils {
     }
 
     private static RequestDelegate handleOfflineAfterSend(TLObject object, RequestDelegate onCompleteOrig) {
-        if (NekoConfig.sendOfflinePacketAfterOnline.Bool() && isMessageSendRequest(object)) {
+        if (NekoConfig.sendOfflinePacketAfterOnline.Bool() && isOnlineRequest(object)) {
             TLRPC.InputPeer peer = extractPeerFromSendObject(object);
             if (peer != null && AyuGhostPreferences.getGhostModeTypingExclusion(getDialogId(peer))) {
                 return onCompleteOrig;
@@ -304,6 +304,14 @@ public class AyuGhostUtils {
             return ((TLRPC.TL_messages_sendMedia) object).peer;
         } else if (object instanceof TLRPC.TL_messages_sendMultiMedia) {
             return ((TLRPC.TL_messages_sendMultiMedia) object).peer;
+        } else if (object instanceof TLRPC.TL_messages_forwardMessages) {
+            return ((TLRPC.TL_messages_forwardMessages) object).to_peer;
+        } else if (object instanceof TLRPC.TL_messages_sendInlineBotResult) {
+            return ((TLRPC.TL_messages_sendInlineBotResult) object).peer;
+        } else if (object instanceof TLRPC.TL_messages_sendScheduledMessages) {
+            return ((TLRPC.TL_messages_sendScheduledMessages) object).peer;
+        } else if (object instanceof TLRPC.TL_messages_editMessage) {
+            return ((TLRPC.TL_messages_editMessage) object).peer;
         }
         return null;
     }
@@ -326,7 +334,19 @@ public class AyuGhostUtils {
     private static boolean isMessageSendRequest(TLObject object) {
         return object instanceof TLRPC.TL_messages_sendMessage ||
                 object instanceof TLRPC.TL_messages_sendMedia ||
-                object instanceof TLRPC.TL_messages_sendMultiMedia;
+                object instanceof TLRPC.TL_messages_sendMultiMedia ||
+                object instanceof TLRPC.TL_messages_forwardMessages ||
+                object instanceof TLRPC.TL_messages_sendInlineBotResult ||
+                object instanceof TLRPC.TL_messages_sendScheduledMessages;
+    }
+
+    private static boolean isOnlineRequest(TLObject object) {
+        return isMessageSendRequest(object) ||
+                object instanceof TLRPC.TL_messages_editMessage ||
+                object instanceof TLRPC.TL_messages_sendEncrypted ||
+                object instanceof TLRPC.TL_messages_sendEncryptedFile ||
+                object instanceof TLRPC.TL_messages_sendEncryptedMultiMedia ||
+                object instanceof TLRPC.TL_messages_sendEncryptedService;
     }
 
     public record InterceptResult(boolean blockRequest, RequestDelegate effectiveOnComplete) {

@@ -79,6 +79,7 @@ public class PluginsInfoActivity extends BaseFragment {
     private static final int ID_BACKUP_RESTORE = 13;
     private static final int ID_PLUGIN_STORE = 14;
     private static final int ID_CUSTOM_COMMANDS = 15;
+    private static final int ID_RETRY_HOOKS = 20;
 
     private static final int REQUEST_CODE_PICK_BACKUP = 9782;
     private static final int REQUEST_CODE_PICK_SDK = 9783;
@@ -121,6 +122,10 @@ public class PluginsInfoActivity extends BaseFragment {
         boolean engineOn = controller.isEngineEnabled();
         boolean safeMode = controller.isSafeMode();
 
+        if (app.exteraless.plugins.xposed.XposedHooks.isNativeHooksBroken()) {
+            items.add(UItem.asButton(ID_RETRY_HOOKS, R.drawable.msg_retry, getString(R.string.PluginsRetryHooks)).red());
+            items.add(UItem.asShadow(getString(R.string.PluginsHooksBrokenInfo)));
+        }
         items.add(UItem.asHeader(getString(R.string.Settings)));
         items.add(PluginUiItem.check(ID_DEVELOPER_MODE,
                         getString(R.string.PluginsDeveloperMode),
@@ -237,6 +242,11 @@ public class PluginsInfoActivity extends BaseFragment {
         } else if (item.id == ID_BACKUP_RESTORE) {
             openBackupPicker();
             return;
+        } else if (item.id == ID_RETRY_HOOKS) {
+            app.exteraless.plugins.xposed.XposedHooks.resetNativeHooksBroken();
+            BulletinFactory.of(this)
+                    .createSimpleBulletin(R.raw.contact_check, getString(R.string.RestartRequired))
+                    .show();
         } else if (item.id == ID_INSTALL_FROM_FILE) {
             PluginsActivity.openPluginPicker(this);
             return;

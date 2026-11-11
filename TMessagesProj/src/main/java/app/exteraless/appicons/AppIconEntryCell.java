@@ -97,6 +97,7 @@ public class AppIconEntryCell extends FrameLayout implements NotificationCenter.
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        // список отдаёт ячейке ширину по содержимому, а строка нужна на всю карточку
         super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
                 MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(64), MeasureSpec.EXACTLY));
     }

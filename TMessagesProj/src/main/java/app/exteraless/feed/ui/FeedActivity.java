@@ -33,7 +33,7 @@ import org.telegram.ui.Components.Bulletin;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.ChatAvatarContainer;
 import org.telegram.ui.Components.LayoutHelper;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceRenderNode;
+import org.telegram.utils.glass.source.GlassSourceRenderNode;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.ui.MainTabsActivity;
 
@@ -224,7 +224,7 @@ public class FeedActivity extends BaseFragment implements NotificationCenter.Not
 
     private WindowInsetsCompat extendInsetsByTabsHeight(WindowInsetsCompat windowInsets) {
         lastWindowInsets = windowInsets;
-        final int tabsHeight = AndroidUtilities.dp(MainTabsUiHelper.getTabsViewHeightDp());
+        final int tabsHeight = AndroidUtilities.dp(MainTabsUiHelper.getTabsViewHeightDp()) + miniPlayerPadding;
         if (tabsHeight == 0) {
             return windowInsets;
         }
@@ -249,6 +249,19 @@ public class FeedActivity extends BaseFragment implements NotificationCenter.Not
 
     private static Insets extendBottom(Insets insets, int extra) {
         return Insets.of(insets.left, insets.top, insets.right, insets.bottom + extra);
+    }
+
+    private int miniPlayerPadding;
+
+    @Override
+    public void setMiniPlayerInset(float inset, int padding) {
+        if (miniPlayerPadding == padding) {
+            return;
+        }
+        miniPlayerPadding = padding;
+        if (fragmentView != null && lastWindowInsets != null) {
+            ViewCompat.dispatchApplyWindowInsets(fragmentView, lastWindowInsets);
+        }
     }
 
     private void applyFloatingWindowLayout() {
@@ -597,7 +610,7 @@ public class FeedActivity extends BaseFragment implements NotificationCenter.Not
     }
 
     @Override
-    public BlurredBackgroundSourceRenderNode getGlassSource() {
+    public GlassSourceRenderNode getGlassSource() {
         if (chatContainer == null || chatContainer.chatActivity == null) {
             return null;
         }

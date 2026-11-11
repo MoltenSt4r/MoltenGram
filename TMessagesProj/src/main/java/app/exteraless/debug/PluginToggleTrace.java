@@ -6,6 +6,7 @@ import android.os.Looper;
 
 import org.json.JSONObject;
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.FileLog;
 
 import java.io.File;
@@ -35,6 +36,7 @@ public final class PluginToggleTrace {
     private static final String FILE_NAME = "plugin-toggles.txt";
 
     private static final ThreadLocal<PluginToggleTrace> CURRENT = new ThreadLocal<>();
+    private static final PluginToggleTrace OFF = new PluginToggleTrace(null, false);
     private static final ArrayDeque<String> records = new ArrayDeque<>();
     private static Handler watcher;
 
@@ -57,6 +59,9 @@ public final class PluginToggleTrace {
     }
 
     public static PluginToggleTrace start(String pluginId, boolean enabling) {
+        if (!BuildConfig.DEBUG_TOOLS) {
+            return OFF;
+        }
         final PluginToggleTrace trace = new PluginToggleTrace(pluginId, enabling);
         watcher().postDelayed(() -> {
             if (!trace.done) {
@@ -71,27 +76,42 @@ public final class PluginToggleTrace {
     }
 
     public synchronized void mark(String label) {
+        if (this == OFF) {
+            return;
+        }
         labels.add(label);
         times.add(System.nanoTime());
     }
 
     public void enterEngine() {
+        if (this == OFF) {
+            return;
+        }
         engineThread = Thread.currentThread();
         CURRENT.set(this);
         mark("engine");
     }
 
     public void leaveEngine() {
+        if (this == OFF) {
+            return;
+        }
         CURRENT.remove();
         mark("engine done");
     }
 
     public void beforePython() {
+        if (this == OFF) {
+            return;
+        }
         pythonCallNanos = System.nanoTime();
         mark("java → python");
     }
 
     public void afterPython(String result) {
+        if (this == OFF) {
+            return;
+        }
         mark("python → java");
         if (result == null) {
             return;
@@ -120,6 +140,9 @@ public final class PluginToggleTrace {
     }
 
     public void finish(boolean ok) {
+        if (this == OFF) {
+            return;
+        }
         mark("ui");
         done = true;
         final String record = format(ok);
@@ -136,6 +159,9 @@ public final class PluginToggleTrace {
     }
 
     public static File getLog() {
+        if (!BuildConfig.DEBUG_TOOLS) {
+            return null;
+        }
         final File file = new File(AndroidUtilities.getLogsDir(), FILE_NAME);
         return file.exists() ? file : null;
     }

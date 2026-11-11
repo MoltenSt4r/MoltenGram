@@ -59,10 +59,44 @@ public final class XposedHooks {
         return ensureInitialized();
     }
 
+    public static boolean isReady() {
+        return initAttempted && initOk;
+    }
+
+    public static int activeHookCount() {
+        return UNHOOKS.size();
+    }
     public static boolean isNativeHooksBroken() {
         SharedPreferences preferences = PluginsController.getInstance().getPreferences();
         return preferences != null
                 && preferences.getBoolean(PluginsConstants.KEY_NATIVE_HOOKS_BROKEN, false);
+    }
+
+    public static void resetNativeHooksBroken() {
+        if (app.exteraless.plugins.PluginSinkGate.refuseFromPlugin("resetNativeHooksBroken", false)) {
+            return;
+        }
+        SharedPreferences preferences = PluginsController.getInstance().getPreferences();
+        if (preferences != null) {
+            preferences.edit()
+                    .remove(PluginsConstants.KEY_NATIVE_HOOKS_BROKEN)
+                    .remove(PluginsConstants.KEY_NATIVE_HOOKS_BROKEN_STAMP)
+                    .remove(PluginsConstants.KEY_NATIVE_HOOKS_STRIKES)
+                    .remove(PluginsConstants.KEY_NATIVE_HOOKS_PENDING)
+                    .commit();
+        }
+    }
+
+    private static final Set<String> UNAVAILABLE_NOTED = ConcurrentHashMap.newKeySet();
+
+    private static void noteUnavailable(String pluginId) {
+        if (pluginId == null || !UNAVAILABLE_NOTED.add(pluginId)) {
+            return;
+        }
+        app.exteraless.plugins.PluginLog.append(pluginId, "E", isNativeHooksBroken()
+                ? "hooks are off: the app crashed twice while starting the hook engine; "
+                + "turn them back on in Plugins > Plugins Engine > Retry hooks and restart the app"
+                : "hooks are unavailable: the hook engine failed to start, see the app log");
     }
 
     private static boolean ensureInitialized() {
@@ -147,14 +181,40 @@ public final class XposedHooks {
 
     // ---------- регистрация хуков ----------
 
+    private static final String[] DENIED_HOOK_PREFIXES = {
+            "org.telegram.ui.Wallet.",
+            "org.telegram.tgnet.tl.TL_wallet",
+            "org.telegram.tgnet.tl.TL_toncenter",
+            "java.security.KeyStore",
+            "android.security.keystore",
+    };
+
+    private static boolean deniedTarget(String pluginId, Class<?> clazz) {
+        if (clazz == null) {
+            return false;
+        }
+        final String name = clazz.getName();
+        for (String prefix : DENIED_HOOK_PREFIXES) {
+            if (name.startsWith(prefix)) {
+                FileLog.e("XposedHooks: plugin " + pluginId + " may not hook " + name);
+                return true;
+            }
+        }
+        return false;
+    }
+
     public static String hookMethod(String pluginId, Object member, PyObject handler,
                                     int priority, String filtersJson) {
         if (!ensureInitialized()) {
+            noteUnavailable(pluginId);
             return null;
         }
         if (pluginId == null || handler == null || !(member instanceof Member)) {
             FileLog.e("XposedHooks.hookMethod: bad arguments (pluginId=" + pluginId
                     + ", member=" + member + ", handler=" + handler + ")");
+            return null;
+        }
+        if (deniedTarget(pluginId, ((Member) member).getDeclaringClass())) {
             return null;
         }
         try {
@@ -171,12 +231,16 @@ public final class XposedHooks {
     public static String hookAllMethods(String pluginId, Object clazz, String methodName,
                                         PyObject handler, int priority, String filtersJson) {
         if (!ensureInitialized()) {
+            noteUnavailable(pluginId);
             return "[]";
         }
         if (pluginId == null || handler == null || !(clazz instanceof Class)
                 || methodName == null || methodName.isEmpty()) {
             FileLog.e("XposedHooks.hookAllMethods: bad arguments (pluginId=" + pluginId
                     + ", clazz=" + clazz + ", methodName=" + methodName + ")");
+            return "[]";
+        }
+        if (deniedTarget(pluginId, (Class<?>) clazz)) {
             return "[]";
         }
         try {
@@ -216,11 +280,15 @@ public final class XposedHooks {
     public static String hookAllConstructors(String pluginId, Object clazz, PyObject handler,
                                              int priority, String filtersJson) {
         if (!ensureInitialized()) {
+            noteUnavailable(pluginId);
             return "[]";
         }
         if (pluginId == null || handler == null || !(clazz instanceof Class)) {
             FileLog.e("XposedHooks.hookAllConstructors: bad arguments (pluginId=" + pluginId
                     + ", clazz=" + clazz + ")");
+            return "[]";
+        }
+        if (deniedTarget(pluginId, (Class<?>) clazz)) {
             return "[]";
         }
         try {
@@ -444,6 +512,10 @@ public final class XposedHooks {
      */
     static PyResult callPython(String pluginId, PyObject handler, String attr,
                                XC_MethodHook.MethodHookParam param) {
+        if (org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
+            return PyResult.ERROR;
+        }
+        app.exteraless.plugins.PythonThreadState.onCall();
         PluginsWatchdog watchdog = watchdog();
         boolean entered = false;
         String previousRuntime = app.exteraless.plugins.PluginRuntime.enter(pluginId);
@@ -454,8 +526,8 @@ public final class XposedHooks {
             }
             PyObject bridge = hookBridge();
             return PyResult.of(bridge != null
-                    ? bridge.callAttr("dispatch_hook", handler, attr, param)
-                    : handler.callAttr(attr, param));
+                    ? (attr != null ? bridge.callAttr("dispatch_hook", handler, attr, param) : bridge.callAttr("dispatch_hook", handler, param))
+                    : (attr != null ? handler.callAttr(attr, param) : handler.__call__(param)));
         } catch (Throwable t) {
             reportError(pluginId, t);
             return PyResult.ERROR;
@@ -467,6 +539,13 @@ public final class XposedHooks {
                 } catch (Throwable ignored) {
                 }
             }
+        }
+    }
+
+    static PyResult callPython(String pluginId, PyObject callable,
+                               XC_MethodHook.MethodHookParam param, HookStats stats) {
+        return callPython(pluginId, callable, null, param);
+    }
         }
     }
 }

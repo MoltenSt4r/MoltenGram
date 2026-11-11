@@ -588,7 +588,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
         final ValueAnimator animator = ValueAnimator.ofFloat(getDrawerOffset(), targetOffset);
         standardAnimator = animator;
         animator.setDuration(getAnimationDuration(targetOffset, fast));
-        animator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        animator.setInterpolator(fast ? CubicBezierInterpolator.EASE_OUT_QUINT : CubicBezierInterpolator.Emphasized);
         animator.addUpdateListener(a -> setDrawerOffset((float) a.getAnimatedValue()));
         animator.addListener(new AnimatorListenerAdapter() {
             private boolean canceled;
@@ -630,7 +630,7 @@ public class DrawerContainer extends FrameLayout implements NotificationCenter.N
 
     private long getAnimationDuration(float target, boolean fast) {
         if (!fast) {
-            return 300L;
+            return 400L;
         }
         float distance = getDrawerOffset();
         if (target > distance) {

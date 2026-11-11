@@ -19,7 +19,8 @@
     <string name="QrWifiPasswordCopied">Skopiowano hasło</string>
     <string name="QrWifiUnknownNetwork">W kodzie brakuje nazwy sieci</string>
     <string name="QrLoginHint">Ten kod loguje do konta. Skorzystaj z Ustawienia → Urządzenia → Podłącz komputer — tamten ekran weryfikuje kod i chroni Twoje konto.</string>
-    <string name="OpenExteraPreferences">Ustawienia MoltenGram</string>
+<string name="OpenExteraPreferences">Ustawienia MoltenGram</string>
+<string name="QrLoginConfirm">Ten kod loguje nowe urządzenie do Twojego konta. Zezwól tylko wtedy, gdy sam logujesz się na własnym urządzeniu.</string>
     <string name="OpenExteraDesignSection">Projekt graficzny</string>
     <string name="OpenExteraDesigner">Ikony i projekt graficzny</string>
     <string name="OpenExteraDesignStudio">Studio projektowe</string>
@@ -35,7 +36,6 @@
     <string name="ProxyDisableNever">Nigdy</string>
     <string name="ProxyDisableAlways">Zawsze</string>
     <string name="ProxyDisableOnMobileData">Dane komórkowe</string>
-    <string name="OENowPlayingScrobbling">Trwa scrobblowanie</string>
     <string name="MainTabsHideCallsSettings">Ukryj kartę Połączenia</string>
     <string name="MainTabsHideProfile">Ukryj kartę profilu</string>
     <string name="OEBotWebViewUpdate">Zaktualizuj WebView</string>
@@ -51,4 +51,6 @@
     <string name="OEProfileJoinedChannel">Zasubskrybowano **%1$s** %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** utworzono %2$s</string>
     <string name="OEProfileJoinDateUnknown">Data dołączenia jest niedostępna</string>
+<string name="AppIconsSelect">Wybierz</string>
+<string name="AppIconsKeep">Zostaw tę</string>
 </resources>

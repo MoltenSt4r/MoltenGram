@@ -62,15 +62,6 @@
     <string name="OEGeneralAyuMomentsDisableAll">关闭所有 AyuMoments 功能</string>
     <string name="OELastActivityFormatted">最后活跃于 %1$s</string>
     <string name="OELastActivityDateFormatted">最后活跃于 %1$s</string>
-    <string name="OEGeneralLastFm">Last.fm</string>
-    <string name="OEGeneralLastFmHint">用户名</string>
-    <string name="OEGeneralLastFmNotSet">未设置</string>
-    <string name="OEGeneralLastFmApplied">资料音乐已更新</string>
-    <string name="OEGeneralLastFmNoMusic">请先设置资料音乐</string>
-    <string name="OEGeneralLastFmFailed">无法更新资料音乐</string>
-    <string name="OEGeneralLastFmNoFile">无法下载该曲目</string>
-    <string name="OEGeneralLastFmNoUpload">上传超时</string>
-    <string name="OEGeneralLastFmAbout">此功能基于资料音乐实现：它会把你的 Last.fm 用户名以隐藏字节写入你最新的资料曲目中。设置用户名后，该曲目会带着改动重新上传。\n\n关闭此功能后，曲目会恢复原样。</string>
     <string name="OEGeneralNotificationsHeader">通知</string>
     <string name="OEGeneralPushStatus">推送状态</string>
     <string name="OEGeneralPushStatusBlocked">被系统阻止</string>
@@ -125,4 +116,21 @@
     <string name="OEAyuDatabaseImportFailed">无法导入此文件</string>
     <string name="OEAyuRegexReversed">反向</string>
     <string name="OEAyuRegexReversedInfo">隐藏与表达式不匹配的消息</string>
+<string name="OEUpdaterChecking">正在检查更新…</string>
+<string name="OEUpdaterLatest">已是最新版本</string>
+<string name="OEUpdaterAvailable">版本 %1$s 可用</string>
+<string name="OEUpdaterFailedInfo">请检查网络连接后重试</string>
+<string name="OEUpdaterCheckedJustNow">刚刚检查过</string>
+<string name="OEUpdaterCheckedAt">检查于 %1$s</string>
+<string name="OEUpdaterCheckAgain">再次检查</string>
+<string name="OEUpdaterChannel">自动检查</string>
+<string name="OEUpdaterChannelOff">关闭</string>
+<string name="OEUpdaterChannelStable">正式版</string>
+<string name="OEUpdaterChannelBeta">测试版</string>
+<string name="OEUpdaterChannelOffInfo">仅在点击图标时检查更新。</string>
+<string name="OEUpdaterChannelStableInfo">每 6 小时检查 GitHub 上的新版本。</string>
+<string name="OEUpdaterChannelBetaInfo">还会提供 GitHub 上的预发布版本。</string>
+<string name="OEUpdaterAllReleases">GitHub 上的所有版本</string>
+<string name="OELiteFollowSystemSaver">跟随系统省电模式</string>
+<string name="OELiteFollowSystemSaverInfo">开启系统省电模式时，自动开启省电模式。</string>
 </resources>

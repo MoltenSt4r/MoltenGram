@@ -8,6 +8,8 @@
 
 package org.telegram.ui.Cells;
 
+import app.exteraless.chats.ChatsConfig;
+import org.telegram.messenger.FileLog;
 import android.content.Context;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
@@ -19,15 +21,18 @@ import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.R;
+import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 
-public class ChatUnreadCell extends FrameLayout {
+public class ChatUnreadCell extends FrameLayout implements Theme.Colorable {
 
     private TextView textView;
     private ImageView imageView;
     private FrameLayout backgroundLayout;
     private Theme.ResourcesProvider resourcesProvider;
+    private boolean capsule;
 
     public ChatUnreadCell(Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
@@ -35,7 +40,7 @@ public class ChatUnreadCell extends FrameLayout {
 
         backgroundLayout = new FrameLayout(context);
         backgroundLayout.setBackgroundResource(R.drawable.newmsg_divider);
-        backgroundLayout.getBackground().setColorFilter(new PorterDuffColorFilter(getColor(Theme.key_chat_unreadMessagesStartBackground), PorterDuff.Mode.MULTIPLY));
+        ThemeBind.drawableColorFilter(backgroundLayout, backgroundLayout.getBackground(), Theme.key_chat_unreadMessagesStartBackground, resourcesProvider, PorterDuff.Mode.MULTIPLY);
         addView(backgroundLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 27, Gravity.LEFT | Gravity.TOP, 0, 7, 0, 0));
 
         imageView = new ImageView(context);
@@ -47,12 +52,32 @@ public class ChatUnreadCell extends FrameLayout {
         textView = new TextView(context);
         textView.setPadding(0, 0, 0, AndroidUtilities.dp(1));
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        textView.setTextColor(getColor(Theme.key_chat_unreadMessagesStartText));
+        ThemeBind.textColor(textView, Theme.isCompactMode(resourcesProvider) ? Theme.key_chat_compact_actionText : Theme.key_chat_unreadMessagesStartText, resourcesProvider);
         textView.setTypeface(AndroidUtilities.bold());
         addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 32, 0, 32, 0));
+
+        if (Theme.isCompactMode(resourcesProvider)) {
+            // compact mode: a flat strip like compact action cells, no divider shadow and arrow
+            ThemeBind.fillBackground(backgroundLayout, Theme.createRoundRectDrawable(0, getColor(Theme.key_chat_compact_actionBackground)), ThemeBind.of(Theme.key_chat_compact_actionBackground), resourcesProvider);
+            imageView.setVisibility(GONE);
+        }
+        applyStyle();
+    }
+
+    private void applyStyle() {
+        capsule = ChatsConfig.unreadCapsule.Bool();
+        backgroundLayout.setVisibility(capsule ? GONE : VISIBLE);
+        if (capsule) {
+            textView.setBackground(Theme.createRoundRectDrawable(AndroidUtilities.dp(50), getColor(Theme.key_chat_unreadMessagesStartBackground)));
+            textView.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+        } else {
+            textView.setBackground(null);
+            textView.setPadding(0, 0, 0, AndroidUtilities.dp(1));
+        }
     }
 
     public void setText(String text) {
+        applyStyle();
         textView.setText(text);
     }
 
@@ -70,11 +95,28 @@ public class ChatUnreadCell extends FrameLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-        super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(40), MeasureSpec.EXACTLY));
+        super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(capsule ? 46 : 40), MeasureSpec.EXACTLY));
     }
 
     private int getColor(int key) {
         Integer color = resourcesProvider != null ? resourcesProvider.getColor(key) : null;
         return color != null ? color : Theme.getColor(key);
+    }
+
+    private int themedArrowColor;
+
+    @Override
+    public void updateColors() {
+        try {
+            final int arrowColor = getColor(Theme.key_chat_unreadMessagesStartArrowIcon);
+            if (imageView != null && arrowColor != themedArrowColor) {
+                themedArrowColor = arrowColor;
+                imageView.setColorFilter(new PorterDuffColorFilter(arrowColor, PorterDuff.Mode.MULTIPLY));
+            }
+            invalidate();
+    
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
     }
 }

@@ -122,4 +122,9 @@
     <string name="OEProfileMusicUseOfficialInfo">عرض المقطع تحت الصورة الرمزية كما في التطبيق الرسمي؟</string>
     <string name="OEProfileMusicUseCard">بطاقة</string>
     <string name="OEProfileMusicUseCardInfo">عرض المقطع كبطاقة أسفل ترويسة الملف الشخصي؟</string>
+<string name="OEAppearanceHiding">إخفاء العناصر</string>
+<string name="OEAppearanceHidingInfo">القصص والأزرار وعلامات التبويب وميزات الذكاء الاصطناعي</string>
+<string name="OEAppearanceHidingInChats">في المحادثات</string>
+<string name="OEAppearanceHidingAiPremium">الذكاء الاصطناعي و Premium</string>
+<string name="OEKillApp">إغلاق التطبيق</string>
 </resources>

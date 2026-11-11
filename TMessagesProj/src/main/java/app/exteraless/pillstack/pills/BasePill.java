@@ -19,6 +19,7 @@ import androidx.annotation.NonNull;
 
 import org.telegram.messenger.LocaleController;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LoadingDrawable;
 
@@ -123,6 +124,25 @@ public abstract class BasePill extends FrameLayout {
                             .setDuration(300)
                             .setInterpolator((TimeInterpolator) CubicBezierInterpolator.EASE_OUT_QUINT));
         }
+    }
+
+    private boolean shrinkPending;
+
+    protected void shrinkAfterTextChange(AnimatedTextView view) {
+        view.setOnWidthUpdatedListener(() -> {
+            if (shrinkPending || !view.isLaidOut()) {
+                return;
+            }
+            int target = view.getPaddingLeft() + (int) Math.ceil(view.getDrawable().getWidth()) + view.getPaddingRight();
+            if (target < view.getMeasuredWidth()) {
+                shrinkPending = true;
+                view.post(() -> {
+                    shrinkPending = false;
+                    animateSizeChange();
+                    view.requestLayout();
+                });
+            }
+        });
     }
 
     public void setLoadingTargetView(View view) {

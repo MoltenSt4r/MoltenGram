@@ -73,7 +73,7 @@ public class LruCache<T> {
         return null;
     }
 
-    public void moveToFront(String key) {
+    public synchronized void moveToFront(String key) {
         T value = map.remove(key);
         if (value != null) {
             map.put(key, value);
@@ -193,7 +193,7 @@ public class LruCache<T> {
         return previous;
     }
     
-    public boolean contains(String key){
+    public synchronized boolean contains(String key){
     	return map.containsKey(key);
     }
 

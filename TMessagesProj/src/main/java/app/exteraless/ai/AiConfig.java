@@ -9,6 +9,7 @@ import com.google.gson.reflect.TypeToken;
 
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.UserConfig;
 
 import java.util.ArrayList;
 import java.util.Objects;
@@ -36,6 +37,8 @@ public final class AiConfig {
     private static final String KEY_SELECTED_SERVICE_ID = "selectedServiceId";
     private static final String KEY_SELECTED_SERVICE_HASH = "selectedService";
     private static final String KEY_SELECTED_ROLE = "selectedRole";
+    private static final String KEY_REPLACE_TELEGRAM_EDITOR = "replaceTelegramEditor";
+    private static final String KEY_REPLACE_TELEGRAM_SUMMARIES = "replaceTelegramSummaries";
 
     private static final Gson GSON = new Gson();
 
@@ -97,6 +100,22 @@ public final class AiConfig {
 
     public static void setInsertAsQuote(boolean value) {
         getEditor().putBoolean(KEY_INSERT_AS_QUOTE, value).apply();
+    }
+
+    public static boolean getReplaceTelegramEditor(int account) {
+        return getPreferences().getBoolean(KEY_REPLACE_TELEGRAM_EDITOR, !UserConfig.getInstance(account).isPremium());
+    }
+
+    public static void setReplaceTelegramEditor(boolean value) {
+        getEditor().putBoolean(KEY_REPLACE_TELEGRAM_EDITOR, value).apply();
+    }
+
+    public static boolean getReplaceTelegramSummaries(int account) {
+        return getPreferences().getBoolean(KEY_REPLACE_TELEGRAM_SUMMARIES, !UserConfig.getInstance(account).isPremium());
+    }
+
+    public static void setReplaceTelegramSummaries(boolean value) {
+        getEditor().putBoolean(KEY_REPLACE_TELEGRAM_SUMMARIES, value).apply();
     }
 
     public static String getSelectedServiceId() {
