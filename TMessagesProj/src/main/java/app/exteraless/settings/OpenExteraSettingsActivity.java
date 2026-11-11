@@ -255,7 +255,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);
                     } else if (position == toolsRow) {
-                        cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.baseline_build_24, true);
+                        cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.baseline_build_outline_24, true);
                     } else if (position == otherRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraOther), R.drawable.msg_fave, false);
                     } else if (position == channelRow) {

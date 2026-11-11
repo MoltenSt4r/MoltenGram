@@ -224,11 +224,8 @@
     <string name="OEChatsMessageAnimPop">Всплывание (Pop)</string>
 
     <string name="OECustomEmojiStatus">Кастомные эмодзи-статусы</string>
-    <string name="OECustomEmojiStatusInfo">Установка и отображение эмодзи-статусов без Telegram Premium через невидимый код в описании (Bio).</string>
-    <string name="OECleanBioDisplay">Скрывать код в описании</string>
-    <string name="OECleanBioDisplayInfo">Убирать невидимые символы статуса при просмотре профилей.</string>
-    <string name="OESetEmojiStatus">Выбрать эмодзи-статус</string>
-    <string name="OESetEmojiStatusInfo">Выбрать анимированный или кастомный эмодзи для отображения рядом с вашим именем.</string>
+    <string name="OEFreeProfileAppearance">Оформление без премиума</string>
+    <string name="OEFreeNameColor">Цветной текст</string>
     <string name="FeedHideChannelAvatars">Скрыть аватарки каналов</string>
     <string name="FeedHideChannelAvatarsInfo">Не показывать аватарки каналов рядом с публикациями в ленте.</string>
     <string name="OEAppearanceHideSettingsAccounts">Скрыть вкладку «Аккаунты»</string>

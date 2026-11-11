@@ -1,5 +1,6 @@
 package app.exteraless.chats
 
+import app.exteraless.OpenExteraConfig
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.MessagesController
 import org.telegram.messenger.NotificationCenter
@@ -174,13 +175,13 @@ object ProfileInvisibleMetadata {
 
     private fun applyMetaToUser(user: TLRPC.User, meta: Metadata?) {
         if (meta == null || meta.isEmpty) return
-        if (meta.emojiStatusDocId > 0L && user.emoji_status == null) {
+        if (OpenExteraConfig.customEmojiStatus() && meta.emojiStatusDocId > 0L && user.emoji_status == null) {
             val status = TLRPC.TL_emojiStatus()
             status.document_id = meta.emojiStatusDocId
             user.emoji_status = status
             user.flags2 = user.flags2 or 1
         }
-        if (meta.nameColorId >= 0 && user.color == null) {
+        if (OpenExteraConfig.freeNameColor() && meta.nameColorId >= 0 && user.color == null) {
             val peerColor = TLRPC.TL_peerColor()
             peerColor.flags = 1
             peerColor.color = meta.nameColorId
@@ -190,7 +191,7 @@ object ProfileInvisibleMetadata {
             }
             user.color = peerColor
         }
-        if (meta.profileColorId >= 0 && user.profile_color == null) {
+        if (OpenExteraConfig.freeProfileAppearance() && meta.profileColorId >= 0 && user.profile_color == null) {
             val peerColor = TLRPC.TL_peerColor()
             peerColor.flags = 1
             peerColor.color = meta.profileColorId
@@ -209,30 +210,35 @@ object ProfileInvisibleMetadata {
 
     @JvmStatic
     fun getEmojiStatusDocumentId(user: TLRPC.User?): Long? {
+        if (!OpenExteraConfig.customEmojiStatus()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.emojiStatusDocId > 0L) meta.emojiStatusDocId else null
     }
 
     @JvmStatic
     fun getNameColorId(user: TLRPC.User?): Int? {
+        if (!OpenExteraConfig.freeNameColor()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameColorId >= 0) meta.nameColorId else null
     }
 
     @JvmStatic
     fun getNameEmojiId(user: TLRPC.User?): Long? {
+        if (!OpenExteraConfig.freeNameColor()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameEmojiId > 0L) meta.nameEmojiId else null
     }
 
     @JvmStatic
     fun getProfileColorId(user: TLRPC.User?): Int? {
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.profileColorId >= 0) meta.profileColorId else null
     }
 
     @JvmStatic
     fun getProfileEmojiId(user: TLRPC.User?): Long? {
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.profileEmojiId > 0L) meta.profileEmojiId else null
     }
