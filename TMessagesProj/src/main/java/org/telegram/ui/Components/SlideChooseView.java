@@ -415,12 +415,13 @@ public class SlideChooseView extends View {
         // Draw discrete step dots
         final float innerLeft = left + radius;
         final float innerRight = right - radius;
+        final float hideDistance = thumbWidth / 2f + gap + tickRadius + AndroidUtilities.dp(3);
         for (int a = 0; a < optionsStr.length; a++) {
-            if (a == 0 || a == optionsStr.length - 1) {
-                continue;
-            }
             final float tickCx = innerLeft + (innerRight - innerLeft) * a / (float) (optionsStr.length - 1);
-            if (tickCx >= activeRight - AndroidUtilities.dp(3) && tickCx <= inactiveLeft + AndroidUtilities.dp(3)) {
+            if (Math.abs(tickCx - thumbCx) <= hideDistance
+                    || (tickCx >= activeRight - AndroidUtilities.dp(3) && tickCx <= inactiveLeft + AndroidUtilities.dp(3))
+                    || (a == 0 && thumbCx <= innerLeft + AndroidUtilities.dp(4))
+                    || (a == optionsStr.length - 1 && thumbCx >= innerRight - AndroidUtilities.dp(4))) {
                 continue;
             }
             if (tickCx < thumbCx) {
