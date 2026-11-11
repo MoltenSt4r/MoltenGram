@@ -575,6 +575,8 @@ public class ChatActivity extends BaseFragment implements
     private final @NonNull GlassSourceWrapped navbarContentSourceWallpaper;
     private @NonNull BlurredBackgroundDrawableViewFactory navbarContentDrawableFactory;
 
+    private final GlassEngine glassEngine = new GlassEngine();
+
     private Dialog closeChatDialog;
     private boolean showCloseChatDialogLater;
     private FrameLayout progressView;
@@ -53943,4 +53945,5 @@ public class ChatActivity extends BaseFragment implements
         keys.add(Theme.key_actionBarDefaultTitle);
         keys.add(Theme.key_actionBarDefaultIcon);
     }
+}
 }

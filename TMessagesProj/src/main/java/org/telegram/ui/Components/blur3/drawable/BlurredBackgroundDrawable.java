@@ -109,6 +109,23 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         return this;
     }
 
+    private int outsetX, outsetY;
+
+    /** How far the glass extends beyond its bounds, e.g. for the blur that bleeds out of a menu. */
+    public BlurredBackgroundDrawable setOutset(int dx, int dy) {
+        this.outsetX = dx;
+        this.outsetY = dy;
+        return this;
+    }
+
+    public int getOutsetX() {
+        return outsetX;
+    }
+
+    public int getOutsetY() {
+        return outsetY;
+    }
+
     public BlurredBackgroundDrawable setPadding(int padding) {
         if (boundProps.padding != padding) {
             boundProps.padding = padding;

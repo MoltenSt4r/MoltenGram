@@ -1782,6 +1782,7 @@ public class Bulletin {
         private SparseLongArray newMessagesByIds;
         private final BaseFragment fragment;
         private final int messagesCount;
+        private int savedMessagesForwardedAccount = -1;
 
         public LottieLayoutWithReactions(BaseFragment fragment, int messagesCount) {
             super(fragment.getContext(), fragment.getResourceProvider());
@@ -1898,7 +1899,10 @@ public class Bulletin {
         @Override
         protected void onDetachedFromWindow() {
             super.onDetachedFromWindow();
-            NotificationCenter.getInstance(UserConfig.selectedAccount).removeObserver(this, NotificationCenter.savedMessagesForwarded);
+            if (savedMessagesForwardedAccount >= 0) {
+                NotificationCenter.getInstance(savedMessagesForwardedAccount).removeObserver(this, NotificationCenter.savedMessagesForwarded);
+                savedMessagesForwardedAccount = -1;
+            }
         }
 
         public void hideReactionsDialog() {

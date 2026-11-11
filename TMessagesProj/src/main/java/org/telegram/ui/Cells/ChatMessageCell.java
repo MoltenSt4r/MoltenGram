@@ -1629,6 +1629,126 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private final Path glassBubblePath = new Path();
     private final Path glassStrokePath = new Path();
     private final RectF glassBubbleRect = new RectF();
+    private final RectF glassRectF = new RectF();
+    private final float[] glassRadii = new float[8];
+    private final Paint glassBitmapPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+    private final Paint glassTintPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint glassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Matrix glassShaderMatrix = new Matrix();
+    private Bitmap lastGlassShaderBitmap;
+    private BitmapShader cachedGlassBitmapShader;
+
+    private static Bitmap cachedCustomBubbleBgBitmap;
+    private static String cachedCustomBubbleBgPath;
+    private static BitmapShader cachedCustomBubbleBgShader;
+    private static final Matrix customBubbleBgMatrix = new Matrix();
+    private static final Paint customBubbleBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG);
+
+    public static void invalidateCustomBubbleBgCache() {
+        cachedCustomBubbleBgBitmap = null;
+        cachedCustomBubbleBgPath = null;
+        cachedCustomBubbleBgShader = null;
+    }
+
+    private static Bitmap getCustomBubbleBgBitmap() {
+        String path = app.exteraless.appearance.AppearanceConfig.customMessageBubbleBg();
+        if (TextUtils.isEmpty(path)) {
+            return null;
+        }
+        if (path.equals(cachedCustomBubbleBgPath) && cachedCustomBubbleBgBitmap != null && !cachedCustomBubbleBgBitmap.isRecycled()) {
+            return cachedCustomBubbleBgBitmap;
+        }
+        try {
+            java.io.File file = new java.io.File(path);
+            if (!file.exists()) {
+                return null;
+            }
+            Bitmap bmp = android.graphics.BitmapFactory.decodeFile(path);
+            if (bmp != null) {
+                cachedCustomBubbleBgPath = path;
+                cachedCustomBubbleBgBitmap = bmp;
+                cachedCustomBubbleBgShader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                customBubbleBgPaint.setShader(cachedCustomBubbleBgShader);
+                return bmp;
+            }
+        } catch (Throwable ignored) {
+        }
+        return null;
+    }
+
+    public boolean drawCustomBubbleBgOverlay(Canvas canvas, Rect bounds, float alphaInternal) {
+        if (bounds == null || bounds.isEmpty()) {
+            return false;
+        }
+        return drawCustomBubbleBgOverlay(canvas, bounds.left, bounds.top, bounds.right, bounds.bottom, drawPinnedTop, drawPinnedBottom, alphaInternal);
+    }
+
+    public boolean drawCustomBubbleBgOverlay(Canvas canvas, int left, int top, int right, int bottom, boolean pinnedTop, boolean pinnedBottom, float alphaInternal) {
+        if (currentMessageObject == null || currentMessageObject.shouldDrawWithoutBackground() || currentMessageObject.isAnyKindOfSticker()) {
+            return false;
+        }
+        Bitmap bmp = getCustomBubbleBgBitmap();
+        if (bmp == null || bmp.isRecycled() || cachedCustomBubbleBgShader == null) {
+            return false;
+        }
+        int alphaInt = Math.max(0, Math.min(255, Math.round(255f * alphaInternal)));
+        if (alphaInt == 0) {
+            return false;
+        }
+        Path clipPath = null;
+        if (currentBackgroundDrawable != null) {
+            clipPath = currentBackgroundDrawable.makePath(backgroundCacheParams);
+        }
+        boolean isOut = currentMessageObject.isOutOwner();
+        boolean isTextType = currentBackgroundDrawable != null
+                ? currentBackgroundDrawable.getCurrentType() == MessageDrawable.TYPE_TEXT
+                : (!mediaBackground && !pinnedBottom);
+        int pad = AndroidUtilities.dp(2);
+        int tailPad = isTextType ? AndroidUtilities.dp(8) : pad;
+        float bLeft = left + (isOut ? pad : tailPad);
+        float bRight = right - (isOut ? tailPad : pad);
+        float bTop = top + pad;
+        float bBottom = bottom - pad;
+        if (bRight <= bLeft || bBottom <= bTop) {
+            return false;
+        }
+        if (clipPath == null) {
+            float rad = AndroidUtilities.dp(SharedConfig.bubbleRadius);
+            float nearRad = AndroidUtilities.dp(Math.min(6, SharedConfig.bubbleRadius));
+            float maxRad = Math.max(1f, Math.min((bBottom - bTop) * 0.5f, (bRight - bLeft) * 0.5f));
+            if (rad > maxRad) rad = maxRad;
+            if (nearRad > maxRad) nearRad = maxRad;
+            boolean botButtons = hasInlineBotButtons();
+            glassRadii[0] = glassRadii[1] = isOut ? rad : (pinnedTop ? nearRad : rad);
+            glassRadii[2] = glassRadii[3] = isOut ? (pinnedTop ? nearRad : rad) : rad;
+            glassRadii[4] = glassRadii[5] = isOut ? ((pinnedBottom || botButtons) ? nearRad : rad) : (botButtons ? nearRad : rad);
+            glassRadii[6] = glassRadii[7] = isOut ? (botButtons ? nearRad : rad) : ((pinnedBottom || botButtons) ? nearRad : rad);
+            glassRectF.set(bLeft, bTop, bRight, bBottom);
+            glassBubblePath.rewind();
+            glassBubblePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
+            clipPath = glassBubblePath;
+        }
+        float bw = bRight - bLeft;
+        float bh = bBottom - bTop;
+        float scale = Math.max(bw / Math.max(1f, (float) bmp.getWidth()), bh / Math.max(1f, (float) bmp.getHeight()));
+        float dx = bLeft + (bw - bmp.getWidth() * scale) * 0.5f;
+        float dy = bTop + (bh - bmp.getHeight() * scale) * 0.5f;
+        customBubbleBgMatrix.reset();
+        customBubbleBgMatrix.postScale(scale, scale);
+        customBubbleBgMatrix.postTranslate(dx, dy);
+        cachedCustomBubbleBgShader.setLocalMatrix(customBubbleBgMatrix);
+        customBubbleBgPaint.setStyle(Paint.Style.FILL);
+        customBubbleBgPaint.setAlpha(alphaInt);
+        canvas.drawPath(clipPath, customBubbleBgPaint);
+
+        boolean dark = isDark();
+        int tintAlpha = Math.round((dark ? 0x4C : 0x30) * alphaInternal);
+        glassTintPaint.setStyle(Paint.Style.FILL);
+        glassTintPaint.setColor(ColorUtils.setAlphaComponent(dark ? 0xFF141418 : 0xFFFFFFFF, Math.max(0, Math.min(255, tintAlpha))));
+        canvas.drawPath(clipPath, glassTintPaint);
+        return true;
+    }
+
     public void setWallpaperBlurSource(GlassSource source) {
         this.wallpaperBlurSource = source;
     }

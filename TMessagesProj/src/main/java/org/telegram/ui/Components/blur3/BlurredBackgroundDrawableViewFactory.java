@@ -7,6 +7,7 @@ import androidx.annotation.Nullable;
 
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProvider;
+import org.telegram.utils.glass.GlassEngine;
 import org.telegram.utils.glass.source.GlassSource;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 
@@ -57,10 +58,26 @@ public class BlurredBackgroundDrawableViewFactory {
         this.parent = parent;
     }
 
+    /** Registers every drawable this factory makes with the glass engine, so that it is captured. */
+    public void setGlassEngine(GlassEngine engine) {
+        this.engine = engine;
+    }
+
+    public void setOutset(int outset) {
+        setOutset(outset, outset);
+    }
+
+    public void setOutset(int dx, int dy) {
+        outsetX = dx;
+        outsetY = dy;
+    }
+
     private @Nullable ReferenceList<BlurredBackgroundDrawable> linkedDrawables;
     private @Nullable ReferenceList<View> linkedViews;
     private @Nullable ViewPositionWatcher viewPositionWatcher;
     private @Nullable ViewGroup parent;
+    private @Nullable GlassEngine engine;
+    private int outsetX, outsetY;
 
     public void setLinkedViewsRef(@Nullable ReferenceList<View> linkedViews) {
         this.linkedViews = linkedViews;
@@ -154,9 +171,16 @@ public class BlurredBackgroundDrawableViewFactory {
         }
 
         drawable.setColorProvider(provider);
+        if (outsetX != 0 || outsetY != 0) {
+            drawable.setOutset(outsetX, outsetY);
+        }
 
         if (linkedViews != null && view != null) {
             linkedViews.add(view);
+        }
+
+        if (engine != null && view != null) {
+            engine.registerDrawable(view, drawable);
         }
 
         if (viewPositionWatcher != null && parent != null && view != null) {

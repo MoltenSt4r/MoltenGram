@@ -279,6 +279,8 @@ public abstract class BaseFragment {
         this.fragmentView = fragmentView;
     }
 
+    protected final GlassEngine glassEngine = new GlassEngine();
+
     public View performCreateView(Context context) {
         if (!BuildConfig.DEBUG) {
             return createView(context);
