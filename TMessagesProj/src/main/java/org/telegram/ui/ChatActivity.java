@@ -48124,7 +48124,7 @@ public class ChatActivity extends BaseFragment implements
 
     public class ThemeDelegate implements Theme.ResourcesProvider, ChatActionCell.ThemeDelegate, MessagePreviewView.ResourcesDelegate {
 
-        public org.telegram.ui.Components.blur3.source.BlurredBackgroundSource getWallpaperBlurSource() {
+        public org.telegram.utils.glass.source.GlassSource getWallpaperBlurSource() {
             return navbarContentSourceWallpaper;
         }
 

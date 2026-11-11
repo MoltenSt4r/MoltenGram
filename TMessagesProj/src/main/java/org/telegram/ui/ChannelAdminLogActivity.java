@@ -101,6 +101,7 @@ import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.UserObject;
 import org.telegram.messenger.Utilities;
 import org.telegram.messenger.browser.Browser;
+import org.telegram.messenger.utils.OnPostDrawView;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.Vector;
@@ -166,8 +167,10 @@ import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.List;
 
 import me.vkryl.core.BitwiseUtils;
+import me.vkryl.core.reference.ReferenceList;
 
 import kotlin.Unit;
 import tw.nekomimi.nekogram.ui.BottomBuilder;

@@ -105,9 +105,9 @@ import androidx.core.math.MathUtils;
 import android.graphics.BitmapShader;
 import android.graphics.Matrix;
 import org.telegram.ui.Components.blur3.GlassOutlineStyle;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSource;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceBitmap;
-import org.telegram.ui.Components.blur3.source.BlurredBackgroundSourceWrapped;
+import org.telegram.utils.glass.source.GlassSource;
+import org.telegram.utils.glass.source.GlassSourceBitmap;
+import org.telegram.utils.glass.source.GlassSourceWrapped;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
@@ -1625,11 +1625,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public MessageDrawable currentBackgroundDrawable;
     MessageDrawable currentBackgroundSelectedDrawable;
     int backgroundDrawableLeft;
-    private BlurredBackgroundSource wallpaperBlurSource;
+    private GlassSource wallpaperBlurSource;
     private final Path glassBubblePath = new Path();
     private final Path glassStrokePath = new Path();
     private final RectF glassBubbleRect = new RectF();
-    public void setWallpaperBlurSource(BlurredBackgroundSource source) {
+    public void setWallpaperBlurSource(GlassSource source) {
         this.wallpaperBlurSource = source;
     }
     private int backgroundDrawableRight;
@@ -1748,7 +1748,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private static final int SIDE_BUTTON_SPONSORED_CLOSE = 4;
     private static final int SIDE_BUTTON_SPONSORED_MORE = 5;
     float sideStartX, sideStartY;
-    private final app.exteraless.chats.StickerTime.Row stickerTimeRow = new app.exteraless.chats.StickerTime.Row();
     private float stickerTimeOffsetX;
     private float summarizeButtonX, summarizeButtonY;
 
@@ -2143,7 +2142,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     public void setResourcesProvider(Theme.ResourcesProvider resourcesProvider) {
         this.resourcesProvider = resourcesProvider;
         if (resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
-            BlurredBackgroundSource src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
+            GlassSource src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
             if (src != null) {
                 setWallpaperBlurSource(src);
             }
@@ -20085,19 +20084,19 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 && !currentMessageObject.isAnyKindOfSticker();
     }
 
-    private BlurredBackgroundSourceBitmap resolveWallpaperBitmapSource() {
-        BlurredBackgroundSource src = this.wallpaperBlurSource;
+    private GlassSourceBitmap resolveWallpaperBitmapSource() {
+        GlassSource src = this.wallpaperBlurSource;
         if (src == null && resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
             src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
             this.wallpaperBlurSource = src;
         }
         int depth = 0;
-        while (src instanceof BlurredBackgroundSourceWrapped && depth < 6) {
-            src = ((BlurredBackgroundSourceWrapped) src).getSource();
+        while (src instanceof GlassSourceWrapped && depth < 6) {
+            src = ((GlassSourceWrapped) src).getSource();
             depth++;
         }
-        if (src instanceof BlurredBackgroundSourceBitmap) {
-            return (BlurredBackgroundSourceBitmap) src;
+        if (src instanceof GlassSourceBitmap) {
+            return (GlassSourceBitmap) src;
         }
         return null;
     }
@@ -20192,7 +20191,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 pHeight = AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920;
             }
             Bitmap customBubbleBmp = getCustomBubbleBgBitmap();
-            BlurredBackgroundSourceBitmap bitmapSource = customBubbleBmp != null ? null : resolveWallpaperBitmapSource();
+            GlassSourceBitmap bitmapSource = customBubbleBmp != null ? null : resolveWallpaperBitmapSource();
             if (customBubbleBmp != null && !customBubbleBmp.isRecycled()) {
                 if (lastGlassShaderBitmap != customBubbleBmp || cachedGlassBitmapShader == null) {
                     lastGlassShaderBitmap = customBubbleBmp;

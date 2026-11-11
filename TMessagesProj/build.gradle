@@ -4,6 +4,7 @@ import org.gradle.internal.os.OperatingSystem
 plugins {
     id 'com.android.application'
     id 'com.google.gms.google-services'
+    id 'com.google.firebase.crashlytics'
     id 'com.chaquo.python'
     id 'org.telegram.lottie-meta'
     id 'idea'
@@ -371,6 +372,7 @@ dependencies {
     api platform('com.google.firebase:firebase-bom:34.19.0')
     implementation 'com.google.firebase:firebase-messaging'
     implementation 'com.google.firebase:firebase-pnv'
+    implementation 'com.google.firebase:firebase-crashlytics'
     implementation 'com.google.android.gms:play-services-cast-framework:22.3.1'
     implementation 'com.google.android.gms:play-services-maps:20.0.0'
     implementation 'com.google.android.gms:play-services-auth:21.6.0'
