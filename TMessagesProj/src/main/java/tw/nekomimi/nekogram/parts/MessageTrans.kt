@@ -231,7 +231,7 @@ fun ChatActivity.translateMessagesWithMessages(messages: List<MessageObject>) =
 fun ChatActivity.translateMessages(
     targetLocale: Locale = NekoConfig.translateToLang.String().code2Locale,
     provider: Int = 0,
-    messages: List<MessageObject> = messageForTranslate?.let { listOf(it) }
+    messages: List<MessageObject> = getMessageForTranslate()?.let { listOf(it) }
         ?: selectedObjectGroup?.messages
         ?: emptyList()
 ) {

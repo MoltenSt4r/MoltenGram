@@ -546,6 +546,4 @@ public final class XposedHooks {
                                XC_MethodHook.MethodHookParam param, HookStats stats) {
         return callPython(pluginId, callable, null, param);
     }
-        }
-    }
 }

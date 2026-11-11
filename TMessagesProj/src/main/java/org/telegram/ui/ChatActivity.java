@@ -49375,6 +49375,7 @@ public class ChatActivity extends BaseFragment implements
                 });
             }
         });
+    }
 
     private void addRemoveDeletedQuoteOption(MessageObject message, ArrayList<Integer> icons, ArrayList<CharSequence> items, ArrayList<Integer> options) {
         MessageObject target = selectedObjectToEditCaption != null ? selectedObjectToEditCaption : message;

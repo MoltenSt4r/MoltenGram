@@ -1388,25 +1388,6 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         }
         if (miniPlayerPadding != padding) {
             miniPlayerPadding = padding;
-            if (listView != null) {
-                checkUi_listViewPadding();
-            }
-        }
-    }
-
-    private float miniPlayerInset;
-    private int miniPlayerPadding;
-
-    @Override
-    public void setMiniPlayerInset(float inset, int padding) {
-        if (miniPlayerInset != inset) {
-            miniPlayerInset = inset;
-            if (floatingButton != null) {
-                checkUi_floatingButtonPosition();
-            }
-        }
-        if (miniPlayerPadding != padding) {
-            miniPlayerPadding = padding;
             if (listView != null && actionBar != null) {
                 checkUi_listViewPadding();
             }

@@ -1545,24 +1545,6 @@ public class FolderBottomSheet extends BottomSheetWithRecyclerListView {
         }
     }
 
-    private static boolean canOpenChat(TLRPC.Chat chat) {
-        return !TextUtils.isEmpty(ChatObject.getPublicUsername(chat)) || !ChatObject.isNotInChat(chat);
-    }
-
-    private void openChat(TLRPC.Chat chat) {
-        final BaseFragment fragment = getBaseFragment();
-        dismiss();
-        if (fragment == null) {
-            return;
-        }
-        final String username = ChatObject.getPublicUsername(chat);
-        if (!TextUtils.isEmpty(username)) {
-            fragment.getMessagesController().openByUserName(username, fragment, 1);
-        } else {
-            fragment.getMessagesController().openChatOrProfileWith(null, chat, fragment, 1, false);
-        }
-    }
-
     private void updateHeaderCell(boolean animated) {
         if (headerCell == null) {
             return;

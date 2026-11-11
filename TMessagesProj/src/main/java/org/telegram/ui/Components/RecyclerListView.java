@@ -3307,22 +3307,11 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                     capture.capture(canvas, position);
                 }
             }
-            for (int i = 0, N = getChildCount(); i < N; i++) {
-                final View child = getChildAt(i);
+            captureChildren(canvas, position, drawingTime);
+        }
+    }
 
     protected void captureChildren(Canvas canvas, RectF position, long drawingTime) {
-        for (int a = 0, N = getItemDecorationCount(); a < N; a++) {
-            ItemDecoration itemDecoration = getItemDecorationAt(a);
-            if (itemDecoration instanceof IBlur3Capture) {
-                if ((itemDecoration == sectionsItemDecoration || itemDecoration == bitmapSectionsItemDecoration) && !canCaptureSectionsDecorator) {
-                    continue;
-                }
-
-                ignoreClipChild = true;
-                drawChild(canvas, child, drawingTime);
-                ignoreClipChild = false;
-            }
-        }
         for (int i = 0, N = getChildCount(); i < N; i++) {
             final View child = getChildAt(i);
 

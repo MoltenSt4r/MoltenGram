@@ -1091,6 +1091,7 @@ public class Switch extends View implements Theme.Colorable {
         paint2.setStrokeJoin(oldJoin);
         paint2.setStrokeWidth(oldStrokeWidth);
         paint2.setAlpha(oldAlpha);
+    }
 
     private void drawMaterial3Switch(Canvas canvas) {
         final int width = getMeasuredWidth();

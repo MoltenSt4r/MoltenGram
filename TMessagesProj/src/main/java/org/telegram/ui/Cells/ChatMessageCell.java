@@ -9818,17 +9818,21 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         if (isMediaCarouselMessage()) {
                             if (messageObject.isWideChannelPost()) {
                                 backgroundWidth = getWideChannelPostBackgroundWidth(messageObject, false);
-                            }
-                            photoHeight = AndroidUtilities.dp(220);
-                            mediaBackground = false;
-                        } else if (isCompactAlbum()) {
-                            layoutCompactAlbumItem(h, dWidth);
-                            photoWidth = backgroundWidth = compactAlbumWidth;
-                            photoHeight = compactAlbumHeight;
-                        }
-                        if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
-                            widthForCaption += photoWidth - dp(15);
-                        }
+                                photoWidth = WideChannelPostLayout.mediaContentWidth(backgroundWidth, false);
+                            } else {
+                                int maxAllowed = getParentWidth() - (isChat ? dp(56) : dp(24));
+                                int availableWidth;
+                                if (currentMessagesGroup != null && currentMessagesGroup.messages != null && currentMessagesGroup.messages.size() == 2) {
+                                    int preferredWidth = Math.min((int) (AndroidUtilities.displaySize.x * 0.72f), AndroidUtilities.dp(290));
+                                    availableWidth = maxAllowed > 0 ? Math.min(maxAllowed, preferredWidth) : preferredWidth;
+                                } else {
+                                    availableWidth = Math.min(maxAllowed, (int) (AndroidUtilities.displaySize.x * 0.88f));
+                                }
+                                if (availableWidth <= 0) {
+                                    availableWidth = AndroidUtilities.dp(300);
+                                }
+                                backgroundWidth = availableWidth;
+                                photoWidth = backgroundWidth - dp(20);
                             }
                             photoHeight = AndroidUtilities.dp(220);
                             mediaBackground = false;
@@ -9848,6 +9852,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                                         }
                                     }
                                 }
+                            }
+                        } else if (isCompactAlbum()) {
+                            layoutCompactAlbumItem(h, dWidth);
+                            photoWidth = backgroundWidth = compactAlbumWidth;
+                            photoHeight = compactAlbumHeight;
+                            if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
+                                widthForCaption += photoWidth - dp(15);
                             }
                         } else {
                             if (currentPosition == null || (currentPosition.flags & captionFlag()) != 0) {
@@ -10320,7 +10331,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     if (!isCompactAlbum()) {
                         photoWidth += getAdditionalWidthForPosition(currentPosition);
                     }
-                }
                     if ((currentPosition.flags & MessageObject.POSITION_FLAG_TOP) == 0) {
                         photoHeight += dp(4);
                         additionalTop -= dp(4);
@@ -10626,7 +10636,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 totalHeight = 0;
             } else if (drawCommentButton) {
                 totalHeight += getCommentButtonHeight();
-            }
                 createSelectorDrawable(1);
             }
             if (hasFactCheck() && currentPosition != null) {
@@ -22710,6 +22719,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 // The widget's bottom corner under the time follows the bubble's (RichWidgetBlock#cornerRadii).
                 r = Math.min(dp(8), SharedConfig.bubbleRadius > 2 ? dp(SharedConfig.bubbleRadius - 2) : dp(SharedConfig.bubbleRadius));
                 bigRadius = SharedConfig.bubbleRadius >= 10;
+            }
             // Форма стикера «как сообщение»: плашка времени берёт радиус у самой
             // картинки, иначе она остаётся круглой на скруглённом по-пузырю
             // стикере.
