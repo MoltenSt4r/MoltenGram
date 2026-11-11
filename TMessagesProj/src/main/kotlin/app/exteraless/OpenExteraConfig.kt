@@ -69,13 +69,13 @@ object OpenExteraConfig {
     @JvmField
     val customEmojiStatus = addConfig("OECustomEmojiStatus", ConfigItem.configTypeBool, true)
 
-    /** Оформление профиля без Telegram Premium (цвет профиля и фоновый эмодзи) */
+    /** Оформление профиля без Telegram Premium (цвет профиля, цвет имени и эмодзи из метаданных) */
     @JvmField
     val freeProfileAppearance = addConfig("OEFreeProfileAppearance", ConfigItem.configTypeBool, true)
 
-    /** Цветной текст и имя без Telegram Premium (цвет имени, цитат и реплаев) */
+    /** Отображать цветной текст в сообщениях (разметка tg://color) */
     @JvmField
-    val freeNameColor = addConfig("OEFreeNameColor", ConfigItem.configTypeBool, true)
+    val coloredText = addConfig("OEColoredText", ConfigItem.configTypeBool, true)
 
     /** Скрывать невидимый код эмодзи-статуса при отображении описания (Bio) */
     @JvmField
@@ -90,7 +90,7 @@ object OpenExteraConfig {
     fun freeProfileAppearance(): Boolean = freeProfileAppearance.Bool()
 
     @JvmStatic
-    fun freeNameColor(): Boolean = freeNameColor.Bool()
+    fun coloredText(): Boolean = coloredText.Bool()
 
     @JvmStatic
     fun cleanBioDisplay(): Boolean = cleanBioDisplay.Bool()

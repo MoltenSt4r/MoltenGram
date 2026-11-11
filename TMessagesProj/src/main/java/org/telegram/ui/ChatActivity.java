@@ -29591,9 +29591,11 @@ public class ChatActivity extends BaseFragment implements
             }
         });
         addActions.put("color", () -> {
-            SpannableStringBuilder s = new SpannableStringBuilder("Цвет");
-            s.setSpan(new ForegroundColorSpan(0xFFE91E63), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            menu.add(R.id.menu_groupbolditalic, R.id.menu_color, order.getAndIncrement(), s);
+            if (app.exteraless.OpenExteraConfig.coloredText()) {
+                SpannableStringBuilder s = new SpannableStringBuilder("Цвет");
+                s.setSpan(new ForegroundColorSpan(0xFFE91E63), 0, s.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                menu.add(R.id.menu_groupbolditalic, R.id.menu_color, order.getAndIncrement(), s);
+            }
         });
         addActions.put("mention", () -> {
             if (NaConfig.INSTANCE.getShowTextCreateMention().Bool()) {

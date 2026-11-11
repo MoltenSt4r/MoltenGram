@@ -228,7 +228,7 @@
 
     <string name="OECustomEmojiStatus">Custom Emoji Statuses</string>
     <string name="OEFreeProfileAppearance">Profile Styling without Premium</string>
-    <string name="OEFreeNameColor">Colored Name and Text</string>
+    <string name="OEColoredText">Colored Text</string>
     <string name="FeedHideChannelAvatars">Hide channel avatars</string>
     <string name="FeedHideChannelAvatarsInfo">Do not display channel avatars next to posts in the feed.</string>
     <string name="OEAppearanceHideSettingsAccounts">Hide Accounts tab</string>

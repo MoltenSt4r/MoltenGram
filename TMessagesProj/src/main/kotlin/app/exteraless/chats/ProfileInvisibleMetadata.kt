@@ -181,7 +181,7 @@ object ProfileInvisibleMetadata {
             user.emoji_status = status
             user.flags2 = user.flags2 or 1
         }
-        if (OpenExteraConfig.freeNameColor() && meta.nameColorId >= 0 && user.color == null) {
+        if (OpenExteraConfig.freeProfileAppearance() && meta.nameColorId >= 0 && user.color == null) {
             val peerColor = TLRPC.TL_peerColor()
             peerColor.flags = 1
             peerColor.color = meta.nameColorId
@@ -217,14 +217,14 @@ object ProfileInvisibleMetadata {
 
     @JvmStatic
     fun getNameColorId(user: TLRPC.User?): Int? {
-        if (!OpenExteraConfig.freeNameColor()) return null
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameColorId >= 0) meta.nameColorId else null
     }
 
     @JvmStatic
     fun getNameEmojiId(user: TLRPC.User?): Long? {
-        if (!OpenExteraConfig.freeNameColor()) return null
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameEmojiId > 0L) meta.nameEmojiId else null
     }
