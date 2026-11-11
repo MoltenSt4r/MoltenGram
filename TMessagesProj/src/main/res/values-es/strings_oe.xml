@@ -51,6 +51,4 @@
     <string name="OEProfileJoinedChannel">Te suscribiste a **%1$s** el %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** se creó el %2$s</string>
     <string name="OEProfileJoinDateUnknown">La fecha de unión no está disponible</string>
-<string name="AppIconsSelect">Seleccionar</string>
-<string name="AppIconsKeep">Quedarme con este</string>
 </resources>

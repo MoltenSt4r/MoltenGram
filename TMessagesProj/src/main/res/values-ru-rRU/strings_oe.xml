@@ -219,7 +219,5 @@
 <string name="OEVoiceChangerRecordTest">Записать 3 сек теста</string>
 <string name="OEVoiceChangerStopTest">Остановить и слушать</string>
 <string name="OEVoiceChangerOff">Выкл</string>
-<string name="AppIconsSelect">Выбрать</string>
-<string name="AppIconsKeep">Оставить эту</string>
 </resources>
 

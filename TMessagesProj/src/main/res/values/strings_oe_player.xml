@@ -211,16 +211,8 @@
 <string name="OEPlayerMiniCoverHidden">Hidden</string>
 <string name="OEPlayerMiniShape">Body shape</string>
 <string name="OEPlayerStyleButtons">Buttons</string>
-<string name="OEPlayerStyleColors">Colors and background</string>
-<string name="OEPlayerColorsCover">From cover</string>
-<string name="OEPlayerColorsTheme">From theme</string>
-<string name="OEPlayerBackgroundSolid">Solid</string>
-<string name="OEPlayerBackgroundGradient">Gradient</string>
-<string name="OEPlayerBackgroundBlur">Blur</string>
-<string name="OEPlayerStyleReset">Reset</string>
 <string name="OEPlayerPreviewTitle">Track title</string>
 <string name="OEPlayerPreviewArtist">Artist</string>
-<string name="OEPlayerStyleMini">Mini player</string>
     <string name="OEPlayerMiniShapeRounded">Rounded</string>
     <string name="OEPlayerMiniShapePill">Pill</string>
     <string name="OEPlayerMiniShapeSquare">Square</string>
@@ -235,7 +227,6 @@
 <string name="OEPlayerMiniPrevious">Previous</string>
 <string name="OEPlayerMiniNext">Next</string>
 <string name="OEPlayerMiniClose">Close</string>
-<string name="OEPlayerPlaybackOrder">Playback order…</string>
 <string name="OEPlayerActionButtons">Action buttons</string>
 <string name="OEPlayerActionButtonsMin">Select at least 2 buttons</string>
 <string name="OEPlayerSeekbarIndicator">Position indicator</string>
@@ -249,11 +240,5 @@
 <string name="OEPlayerMiniWavyDesc">Animate progress as a wave at the bottom of the mini player</string>
 <string name="OEAppearancePlayerLyricsAudioRecognition">Audio recognition (SongRec)</string>
 <string name="OEAppearancePlayerLyricsAudioRecognitionDesc">Split audio into segments to recognize track and find lyrics</string>
-<string name="OEPlayerMiniMoveHint">On the Chats tab, long-press the mini player and drag it up under the search or back down</string>
-<string name="OEPlayerStyleElements">Elements</string>
-<string name="OEPlayerActionsButtons">Buttons</string>
-<string name="OEPlayerActionsIsland">Island</string>
-<string name="OEPlayerEditorTapHint">Tap a part of the player above to open its settings</string>
-<string name="OEPlayerBlockActions">Actions</string>
 <string name="OEPlayerDragToReorder">Drag to reorder</string>
 </resources>

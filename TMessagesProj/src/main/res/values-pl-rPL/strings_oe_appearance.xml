@@ -172,7 +172,6 @@
 <string name="OEProfileMusicUseOfficialInfo">Pokazywać utwór pod awatarem, jak w oficjalnej aplikacji?</string>
 <string name="OEProfileMusicUseCard">Karta</string>
 <string name="OEProfileMusicUseCardInfo">Pokazywać utwór jako kartę pod nagłówkiem profilu?</string>
-<string name="OEAppearanceHiding">Ukrywanie elementów</string>
 <string name="OEAppearanceHidingInfo">Relacje, przyciski, karty i funkcje AI</string>
 <string name="OEAppearanceHidingInChats">W czatach</string>
 <string name="OEAppearanceHidingAiPremium">AI i Premium</string>

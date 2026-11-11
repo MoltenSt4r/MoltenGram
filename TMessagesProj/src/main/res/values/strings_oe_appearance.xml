@@ -233,7 +233,6 @@
 <string name="OEProfileMusicUseOfficialInfo">Show the track under the avatar, like in the official app?</string>
 <string name="OEProfileMusicUseCard">Card</string>
 <string name="OEProfileMusicUseCardInfo">Show the track as a card below the profile header?</string>
-<string name="OEAppearanceHiding">Hide Elements</string>
 <string name="OEAppearanceHidingInfo">Stories, buttons, tabs and AI features</string>
 <string name="OEAppearanceHidingInChats">In Chats</string>
 <string name="OEAppearanceHidingAiPremium">AI and Premium</string>

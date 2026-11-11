@@ -224,7 +224,6 @@
 <string name="OEProfileMusicUseOfficialInfo">Показывать трек под аватаркой, как в официальном клиенте?</string>
 <string name="OEProfileMusicUseCard">Карточкой</string>
 <string name="OEProfileMusicUseCardInfo">Показывать трек карточкой под шапкой профиля?</string>
-<string name="OEAppearanceHiding">Скрытие элементов</string>
 <string name="OEAppearanceHidingInfo">Истории, кнопки, вкладки и AI-функции</string>
 <string name="OEAppearanceHidingInChats">В чатах</string>
 <string name="OEAppearanceHidingAiPremium">AI и Premium</string>

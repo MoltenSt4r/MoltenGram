@@ -224,7 +224,6 @@
 <string name="OEPlayerMiniPrevious">Назад</string>
 <string name="OEPlayerMiniNext">Вперёд</string>
 <string name="OEPlayerMiniClose">Закрыть</string>
-<string name="OEPlayerPlaybackOrder">Порядок воспроизведения…</string>
 <string name="OEPlayerActionButtons">Кнопки действий</string>
 <string name="OEPlayerActionButtonsMin">Выберите минимум 2 кнопки</string>
 <string name="OEPlayerSeekbarIndicator">Индикатор позиции</string>
@@ -239,10 +238,7 @@
 <string name="OEAppearancePlayerLyricsAudioRecognition">Распознавание трека (SongRec)</string>
 <string name="OEAppearancePlayerLyricsAudioRecognitionDesc">Разбивать трек на части для распознавания и поиска текста</string>
 <string name="OEPlayerStyleButtons">Кнопки</string>
-<string name="OEPlayerStyleReset">Сбросить</string>
 <string name="OEPlayerPreviewTitle">Название трека</string>
 <string name="OEPlayerPreviewArtist">Исполнитель</string>
-<string name="OEPlayerStyleMini">Мини-плеер</string>
-<string name="OEPlayerStyleElements">Элементы</string>
 <string name="OEPlayerDragToReorder">Перетащите, чтобы изменить порядок</string>
 </resources>

@@ -38402,7 +38402,7 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public boolean canSelectStories() {
-        if (!getMessagesController().storiesEnabled()) {
+        if (!getMessagesController().storiesEnabled() && NaConfig.INSTANCE.getDisableStories().Bool()) {
             return false;
         }
         if (forwardingMessage != null) {
@@ -44161,7 +44161,7 @@ public class ChatActivity extends BaseFragment implements
                     arrayList = new ArrayList<>();
                     arrayList.add(messageObject);
                 }
-                final boolean includeStory = getMessagesController().storiesEnabled() && StoryEntry.canRepostMessage(messageObject);
+                final boolean includeStory = (getMessagesController().storiesEnabled() || !NaConfig.INSTANCE.getDisableStories().Bool()) && StoryEntry.canRepostMessage(messageObject);
                 showDialog(new ShareAlert(getContext(), ChatActivity.this, arrayList, null, null, ChatObject.isChannel(currentChat), null, null, false, false, includeStory, null, themeDelegate) {
                     { includeStoryFromMessage = includeStory; }
                     @Override
@@ -51915,7 +51915,7 @@ public class ChatActivity extends BaseFragment implements
                         options.add(OPTION_FORWARD);
                         icons.add(NaConfig.INSTANCE.getShowNoQuoteForward().Bool() ? R.drawable.msg_forward : R.drawable.msg_forward_noquote);
                     }
-                    if (getMessagesController().storiesEnabled() && StoryEntry.canRepostMessage(selectedObject)) {
+                    if ((getMessagesController().storiesEnabled() || !NaConfig.INSTANCE.getDisableStories().Bool()) && StoryEntry.canRepostMessage(selectedObject)) {
                         items.add(LocaleController.getString(R.string.RepostToStory));
                         options.add(OPTION_REPOST_STORY);
                         icons.add(R.drawable.msg_stories_add);

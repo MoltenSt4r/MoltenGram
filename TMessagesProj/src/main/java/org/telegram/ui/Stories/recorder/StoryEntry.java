@@ -785,14 +785,18 @@ public class StoryEntry {
         }
         long dialogId = messageObject.getDialogId();
         TLRPC.Chat chat = MessagesController.getInstance(messageObject.currentAccount).getChat(-dialogId);
+        if (chat == null && dialogId < 0) {
+            chat = MessagesController.getInstance(messageObject.currentAccount).getChat(messageObject.getChatId());
+        }
         if (chat != null && chat.noforwards) {
             return false;
         }
-        if (dialogId >= 0 || !ChatObject.isChannelAndNotMegaGroup(chat)) {
-            if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.from_id != null && (messageObject.messageOwner.fwd_from.flags & 4) != 0) {
+        boolean isChannel = (chat != null && ChatObject.isChannelAndNotMegaGroup(chat)) || (messageObject.messageOwner != null && messageObject.messageOwner.post);
+        if (!isChannel) {
+            if (messageObject.messageOwner != null && messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.from_id != null) {
                 dialogId = DialogObject.getPeerDialogId(messageObject.messageOwner.fwd_from.from_id);
                 chat = MessagesController.getInstance(messageObject.currentAccount).getChat(-dialogId);
-                if (dialogId >= 0 || chat != null && chat.noforwards || !ChatObject.isChannelAndNotMegaGroup(chat) || !ChatObject.isPublic(chat)) {
+                if (dialogId >= 0 || (chat != null && chat.noforwards) || (chat != null && !ChatObject.isChannelAndNotMegaGroup(chat)) || (chat != null && !ChatObject.isPublic(chat))) {
                     return false;
                 }
                 return true;
@@ -807,11 +811,15 @@ public class StoryEntry {
         TLRPC.Peer peer = messageObject.messageOwner.peer_id;
         long dialogId = DialogObject.getPeerDialogId(peer);
         TLRPC.Chat chat = MessagesController.getInstance(messageObject.currentAccount).getChat(-dialogId);
-        if (chat != null && chat.noforwards || !ChatObject.isChannelAndNotMegaGroup(chat)) {
-            if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.from_id != null && (messageObject.messageOwner.fwd_from.flags & 4) != 0) {
+        if (chat == null && dialogId < 0) {
+            chat = MessagesController.getInstance(messageObject.currentAccount).getChat(messageObject.getChatId());
+        }
+        boolean isChannel = (chat != null && ChatObject.isChannelAndNotMegaGroup(chat)) || (messageObject.messageOwner != null && messageObject.messageOwner.post);
+        if (!isChannel || (chat != null && chat.noforwards)) {
+            if (messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.from_id != null) {
                 dialogId = DialogObject.getPeerDialogId(messageObject.messageOwner.fwd_from.from_id);
                 chat = MessagesController.getInstance(messageObject.currentAccount).getChat(-dialogId);
-                if (dialogId >= 0 || chat != null && chat.noforwards || !ChatObject.isChannelAndNotMegaGroup(chat)) {
+                if (dialogId >= 0 || (chat != null && chat.noforwards) || (chat != null && !ChatObject.isChannelAndNotMegaGroup(chat))) {
                     return null; // no repost
                 } else {
                     return true; // repost of forward
@@ -836,7 +844,7 @@ public class StoryEntry {
         Boolean useForward = useForwardForRepost(messageObject);
         if (useForward == null) return 0;
         if (useForward) {
-            return messageObject.messageOwner.fwd_from.channel_post;
+            return messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.channel_post != 0 ? messageObject.messageOwner.fwd_from.channel_post : messageObject.getId();
         } else {
             return messageObject.getId();
         }

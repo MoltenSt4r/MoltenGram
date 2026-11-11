@@ -51,6 +51,4 @@
     <string name="OEProfileJoinedChannel">你于 %2$s 订阅 **%1$s**</string>
     <string name="OEProfileChatCreated">**%1$s** 创建于 %2$s</string>
     <string name="OEProfileJoinDateUnknown">无法获取加入日期</string>
-<string name="AppIconsSelect">选择</string>
-<string name="AppIconsKeep">就用这个</string>
 </resources>

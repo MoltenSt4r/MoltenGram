@@ -4856,7 +4856,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             viewPage.dialogsAdapter.setRecyclerListView(viewPage.listView);
             viewPage.dialogsAdapter.setForceShowEmptyCell(afterSignup);
             if (viewPage.dialogsType == DIALOGS_TYPE_FORWARD) {
-                viewPage.dialogsAdapter.setAllowForwardAsStories(getMessagesController().storiesEnabled() && delegate != null && delegate.canSelectStories());
+                viewPage.dialogsAdapter.setAllowForwardAsStories((getMessagesController().storiesEnabled() || !NaConfig.INSTANCE.getDisableStories().Bool()) && delegate != null && delegate.canSelectStories());
             }
 
             if (AndroidUtilities.isTablet() && openedDialogId.dialogId != 0) {

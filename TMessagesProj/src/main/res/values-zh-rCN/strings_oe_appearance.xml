@@ -172,7 +172,6 @@
 <string name="OEProfileMusicUseOfficialInfo">像官方客户端一样在头像下方显示曲目？</string>
 <string name="OEProfileMusicUseCard">卡片</string>
 <string name="OEProfileMusicUseCardInfo">在资料页顶部下方以卡片形式显示曲目？</string>
-<string name="OEAppearanceHiding">隐藏元素</string>
 <string name="OEAppearanceHidingInfo">动态、按钮、标签页和 AI 功能</string>
 <string name="OEAppearanceHidingInChats">对话中</string>
 <string name="OEAppearanceHidingAiPremium">AI 和 Premium</string>

@@ -51,6 +51,4 @@
     <string name="OEProfileJoinedChannel">Zasubskrybowano **%1$s** %2$s</string>
     <string name="OEProfileChatCreated">**%1$s** utworzono %2$s</string>
     <string name="OEProfileJoinDateUnknown">Data dołączenia jest niedostępna</string>
-<string name="AppIconsSelect">Wybierz</string>
-<string name="AppIconsKeep">Zostaw tę</string>
 </resources>

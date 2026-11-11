@@ -172,7 +172,6 @@
 <string name="OEProfileMusicUseOfficialInfo">¿Mostrar la pista debajo del avatar, como en la app oficial?</string>
 <string name="OEProfileMusicUseCard">Tarjeta</string>
 <string name="OEProfileMusicUseCardInfo">¿Mostrar la pista como una tarjeta debajo del encabezado del perfil?</string>
-<string name="OEAppearanceHiding">Ocultar elementos</string>
 <string name="OEAppearanceHidingInfo">Historias, botones, pestañas y funciones de IA</string>
 <string name="OEAppearanceHidingInChats">En los chats</string>
 <string name="OEAppearanceHidingAiPremium">IA y Premium</string>
