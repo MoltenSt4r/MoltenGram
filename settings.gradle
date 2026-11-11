@@ -29,6 +29,7 @@ dependencyResolutionManagement {
 rootProject.name = "MoltenGram"
 include ':TMessagesProj'
 
+gradle.ext.androidxMediaSettingsDir = file("TMessagesProj_Modules/media").canonicalPath
 gradle.ext.androidxMediaModulePrefix = 'TMessagesProj_Modules:media3:media-'
 apply from: file("TMessagesProj_Modules/media/core_settings.gradle")
 project(':TMessagesProj_Modules:media3:media-lib-common-ktx').projectDir = file("TMessagesProj_Modules/media3/common-ktx")
