@@ -53946,5 +53946,3 @@ public class ChatActivity extends BaseFragment implements
         keys.add(Theme.key_actionBarDefaultIcon);
     }
 }
-}
-// Build trigger
