@@ -4635,7 +4635,7 @@ public class EmojiView extends FrameLayout implements
     }
 
     private void invalidateBlurCaptures() {
-        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS | GlassEngine.FLAG_INVALIDATED_CONTENT);
+        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS);
     }
 
     private void invalidateBlurCaptures(int flags) {

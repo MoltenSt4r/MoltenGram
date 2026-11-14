@@ -234,7 +234,7 @@ public class UpdateSheet extends BottomSheet {
             builder.setSpan(new URLSpanNoUnderline(url), start, start + label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             shift += (end - start) - label.length();
         }
-        applyMarker(builder, "`", new TypefaceSpan(AndroidUtilities.mono()));
+        applyMarker(builder, "`", new TypefaceSpan(Typeface.MONOSPACE));
         applyMarker(builder, "**", null);
         return builder;
     }
@@ -259,7 +259,7 @@ public class UpdateSheet extends BottomSheet {
             }
             from = spanEnd;
             if (span != null) {
-                span = new TypefaceSpan(AndroidUtilities.mono());
+                span = new TypefaceSpan(Typeface.MONOSPACE);
             }
         }
     }
