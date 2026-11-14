@@ -985,6 +985,28 @@ object AppearanceConfig {
         return if (c in 0..4) c else QR_COLOR_MONET_PRIMARY
     }
 
+    @JvmField
+    val md3QrTopRightShape =
+        addConfig("OEAppearanceMd3QrTopRightShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_CLOVER_4)
+
+    @JvmStatic
+    fun md3QrTopRightShape(): Int {
+        ensureLoaded()
+        val s = md3QrTopRightShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_CLOVER_4
+    }
+
+    @JvmField
+    val md3QrBottomLeftShape =
+        addConfig("OEAppearanceMd3QrBottomLeftShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_BURST)
+
+    @JvmStatic
+    fun md3QrBottomLeftShape(): Int {
+        ensureLoaded()
+        val s = md3QrBottomLeftShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_BURST
+    }
+
     @JvmStatic
     fun getMd3QrColor(): Int {
         if (!md3QrCode()) return 0

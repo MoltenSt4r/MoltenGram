@@ -255,5 +255,7 @@
 <string name="OEAppearanceMd3QrColorMonetTertiary">Monet Tertiary</string>
 <string name="OEAppearanceMd3QrColorThemeAccent">Theme Accent</string>
 <string name="OEAppearanceMd3QrColorSceneDefault">Scene Default</string>
+<string name="OEAppearanceMd3QrTopRightShape">Top-Right MD3 Shape</string>
+<string name="OEAppearanceMd3QrBottomLeftShape">Bottom-Left MD3 Shape</string>
 <string name="OEAppearanceStandardEmoji">System &amp; Standard Emoji</string>
 </resources>

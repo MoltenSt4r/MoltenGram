@@ -148,6 +148,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3QrShareRow;
     private int freeQrPremiumRow;
     private int md3QrCodeRow;
+    private int md3QrTopRightShapeRow;
+    private int md3QrBottomLeftShapeRow;
     private int md3QrShapeRow;
     private int md3QrPixelShapeRow;
     private int md3QrColorSourceRow;
@@ -267,16 +269,17 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         appearanceHeaderRow = addRow("appearanceHeader");
         useSystemFontsRow = addRow("useSystemFonts");
         ndotFontHeadersRow = addRow("ndotFontHeaders");
-        // Переключатели и слайдеры (вынесены из подменю MD3)
+        // Переключатели
         md3SwitchRow = addRow("md3Switch");
         md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
-        md3SliderRow = addRow("md3Slider");
+        // Регуляция толщины слайдеров снаружи
         md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
 
         // Material Design 3 — сворачиваемая группа, как у exteraGram
         md3GroupRow = addRow("md3Styles");
         if (md3Expanded) {
             md3LoadingRow = addRow("md3Loading");
+            md3SliderRow = addRow("md3Slider");
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
             md3ListItemsRow = addRow("md3ListItems");
@@ -285,7 +288,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
-            md3LoadingRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
+            md3LoadingRow = md3SliderRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
@@ -304,6 +307,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         md3QrShareRow = addRow("md3QrShare");
         freeQrPremiumRow = addRow("freeQrPremium");
         md3QrCodeRow = addRow("md3QrCode");
+        md3QrTopRightShapeRow = AppearanceConfig.md3QrCode() ? addRow("md3QrTopRightShape") : -1;
+        md3QrBottomLeftShapeRow = AppearanceConfig.md3QrCode() ? addRow("md3QrBottomLeftShape") : -1;
         md3QrShapeRow = md3QrPixelShapeRow = md3QrColorSourceRow = -1;
         qrDividerRow = addRow();
 
@@ -863,6 +868,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildRowsAndNotify();
             rebuildAllAndSelf(view, AppearanceConfig.md3QrCode.Bool());
             return;
+        } else if (position == md3QrTopRightShapeRow) {
+            LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+            boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
+            CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
+            showSelector(position, getString(R.string.OEAppearanceMd3QrTopRightShape), shapeNames, AppearanceConfig.md3QrTopRightShape, null);
+            return;
+        } else if (position == md3QrBottomLeftShapeRow) {
+            LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+            boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
+            CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
+            showSelector(position, getString(R.string.OEAppearanceMd3QrBottomLeftShape), shapeNames, AppearanceConfig.md3QrBottomLeftShape, null);
+            return;
         } else if (position == md3QrShapeRow) {
             LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
             boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
@@ -1216,6 +1233,17 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         }
         if (rebuild) {
             rebuildAll();
+            rebuildRowsAndNotify();
+            if (position == md3SwitchExpressiveColorsRow) {
+                if (listView != null) {
+                    for (int i = 0; i < listView.getChildCount(); i++) {
+                        listView.getChildAt(i).invalidate();
+                    }
+                }
+                if (parentLayout != null) {
+                    parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                }
+            }
         }
         if (restart) {
             showRestartHint();
@@ -1419,7 +1447,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == customThemesRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceCustomThemes), AppearanceConfig.customThemes.Bool(), false);
                     } else if (position == md3SwitchExpressiveColorsRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceSwitchExpressiveColors), getString(R.string.OEAppearanceSwitchExpressiveColorsInfo), AppearanceConfig.switchExpressiveColors(), true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceSwitchExpressiveColors), AppearanceConfig.switchExpressiveColors(), true);
                     } else if (position == separateHeadersRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSeparateHeaders), AppearanceConfig.separateHeaders.Bool(), true);
                     } else if (position == glassMessageMenuRow) {
@@ -1590,6 +1618,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int cur = NaConfig.INSTANCE.getSwitchStyle().Int();
                         String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3" : getString(R.string.Default));
                         cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
+                    } else if (position == md3QrTopRightShapeRow) {
+                        LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+                        boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
+                        CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
+                        int shapeIndex = clamp(AppearanceConfig.md3QrTopRightShape(), shapeNames.length);
+                        cell.setTextAndValue(getString(R.string.OEAppearanceMd3QrTopRightShape), shapeNames[shapeIndex], true);
+                    } else if (position == md3QrBottomLeftShapeRow) {
+                        LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+                        boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
+                        CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
+                        int shapeIndex = clamp(AppearanceConfig.md3QrBottomLeftShape(), shapeNames.length);
+                        cell.setTextAndValue(getString(R.string.OEAppearanceMd3QrBottomLeftShape), shapeNames[shapeIndex], true);
                     } else if (position == md3QrShapeRow) {
                         LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
                         boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
@@ -1775,7 +1815,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == chipFoldersRow || position == md3AvatarShapesRow
                     || position == md3SwitchRow || position == md3QrShapeRow
                     || position == md3QrPixelShapeRow
-                    || position == md3QrColorSourceRow) {
+                    || position == md3QrColorSourceRow
+                    || position == md3QrTopRightShapeRow
+                    || position == md3QrBottomLeftShapeRow) {
                 return TYPE_SETTINGS;
             }
             return TYPE_CHECK;
@@ -1880,8 +1922,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
-    /** Сколько стилей MD3 включено. Счётчик «N/13» рядом с шевроном. */
-    private static final int MD3_STYLE_COUNT = 13;
+    /** Сколько стилей MD3 включено. Счётчик «N/8» рядом с шевроном. */
+    private static final int MD3_STYLE_COUNT = 8;
     /** Значение селектора NagramX, соответствующее Material Design 3. */
     private static final int STYLE_MD3 = 2;
 
@@ -1897,14 +1939,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         int n = 0;
         if (AppearanceConfig.newLoadingStyle.Bool()) n++;
         if (isMd3(NaConfig.INSTANCE.getSliderStyle().Int())) n++;
-        if (isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int())) n++;
         if (AppearanceConfig.newChatHeaderStyle.Bool()) n++;
         if (AppearanceConfig.newNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.m3ListItems.Bool()) n++;
         if (AppearanceConfig.md3Player.Bool()) n++;
         if (AppearanceConfig.md3MiniPlayer.Bool()) n++;
         if (AppearanceConfig.mediaGroupCarousel.Bool()) n++;
-        if (AppearanceConfig.md3FabSpeedDial()) n++;
         return n;
     }
 
@@ -1956,7 +1996,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private void toggleAllMd3Styles() {
         boolean enable = md3SelectedCount() == 0;
         NaConfig.INSTANCE.getSliderStyle().setConfigInt(enable ? STYLE_MD3 : 0);
-        NaConfig.INSTANCE.getSwitchStyle().setConfigInt(enable ? STYLE_MD3 : 0);
         AppearanceConfig.newLoadingStyle.setConfigBool(enable);
         AppearanceConfig.newChatHeaderStyle.setConfigBool(enable);
         AppearanceConfig.newNavigationBarStyle.setConfigBool(enable);
@@ -1964,7 +2003,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AppearanceConfig.md3Player.setConfigBool(enable);
         AppearanceConfig.md3MiniPlayer.setConfigBool(enable);
         AppearanceConfig.mediaGroupCarousel.setConfigBool(enable);
-        AppearanceConfig.md3FabSpeedDial.setConfigBool(enable);
         onM3ListItemsChanged();
         if (enable) {
             AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);

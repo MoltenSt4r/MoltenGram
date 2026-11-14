@@ -246,5 +246,7 @@
 <string name="OEAppearanceMd3QrColorMonetTertiary">Monet Tertiary (третичный)</string>
 <string name="OEAppearanceMd3QrColorThemeAccent">Акцент текущей темы</string>
 <string name="OEAppearanceMd3QrColorSceneDefault">По умолчанию из темы QR</string>
+<string name="OEAppearanceMd3QrTopRightShape">Фигура сверху справа</string>
+<string name="OEAppearanceMd3QrBottomLeftShape">Фигура снизу слева</string>
 <string name="OEAppearanceStandardEmoji">Системные и стандартные эмодзи</string>
 </resources>

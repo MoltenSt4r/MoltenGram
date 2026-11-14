@@ -502,9 +502,6 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
             return previewingState;
         }
         int configStyle = NaConfig.INSTANCE.getSliderStyle().Int();
-        if (configStyle == 0 && (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || app.exteraless.appearance.AppearanceConfig.m3ListItems())) {
-            configStyle = SLIDER_STYLE_MD3;
-        }
         if (sliderStyleOverride != -1 && configStyle == SLIDER_STYLE_MD3) {
             return sliderStyleOverride;
         }

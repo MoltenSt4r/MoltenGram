@@ -243,8 +243,7 @@ public class SlideChooseView extends View {
      */
     private boolean canUseMaterialSlider() {
         int sliderStyle = NaConfig.INSTANCE.getSliderStyle().Int();
-        boolean m3 = sliderStyle == SeekBarView.SLIDER_STYLE_MD3
-                || (sliderStyle == 0 && (app.exteraless.appearance.AppearanceConfig.switchExpressiveColors() || app.exteraless.appearance.AppearanceConfig.m3ListItems()));
+        boolean m3 = sliderStyle == SeekBarView.SLIDER_STYLE_MD3;
         return m3
                 && optionsStr != null && optionsStr.length > 1
                 && dashedFrom < 0 && minIndex <= 0;

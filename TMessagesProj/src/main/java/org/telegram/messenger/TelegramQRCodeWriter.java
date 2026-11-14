@@ -225,10 +225,22 @@ public final class TelegramQRCodeWriter {
             } else {
                 rCenter = ((sideQuadSize - 2) * multiple) / 4.0f;
             }
-            Arrays.fill(radii, rCenter);
-            rect.setColor(color1);
-            rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
-            rect.draw(canvas);
+            if (isMd3) {
+                int shapeId = (a == 1) ? AppearanceConfig.md3QrTopRightShape() : ((a == 2) ? AppearanceConfig.md3QrBottomLeftShape() : Md3AvatarShapes.SHAPE_COOKIE_4);
+                float fSize = (sideQuadSize - 4) * multiple;
+                Path finderShape = Md3AvatarShapes.INSTANCE.getShapePath(shapeId, fSize, fSize);
+                canvas.save();
+                canvas.translate(x + multiple * 2, y + multiple * 2);
+                Paint fp = new Paint(Paint.ANTI_ALIAS_FLAG);
+                fp.setColor(color1);
+                canvas.drawPath(finderShape, fp);
+                canvas.restore();
+            } else {
+                Arrays.fill(radii, rCenter);
+                rect.setColor(color1);
+                rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
+                rect.draw(canvas);
+            }
         }
         float r = multiple / 2.0f;
         RectF sqRectF = new RectF();
@@ -237,12 +249,16 @@ public final class TelegramQRCodeWriter {
         float modulePad1 = multiple * 0.08f;
         float moduleSize1 = multiple - modulePad1 * 2f;
         Path[] md3ShapesList1 = null;
+        Path trShape1 = null;
+        Path blShape1 = null;
         if (isMd3) {
             Path md3Cookie = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_COOKIE_4, moduleSize1, moduleSize1);
             Path md3Clover = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CLOVER_4, moduleSize1, moduleSize1);
             Path md3Diamond = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_DIAMOND, moduleSize1, moduleSize1);
             Path md3Square = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_SQUARE, moduleSize1, moduleSize1);
             Path md3Circle = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CIRCLE, moduleSize1, moduleSize1);
+            trShape1 = Md3AvatarShapes.INSTANCE.getShapePath(AppearanceConfig.md3QrTopRightShape(), moduleSize1, moduleSize1);
+            blShape1 = Md3AvatarShapes.INSTANCE.getShapePath(AppearanceConfig.md3QrBottomLeftShape(), moduleSize1, moduleSize1);
             md3ShapesList1 = new Path[]{md3Cookie, md3Clover, md3Diamond, md3Square, md3Circle};
         }
         Paint md3Paint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -252,9 +268,16 @@ public final class TelegramQRCodeWriter {
                 if (has(x, y)) {
                     if (isMd3 && md3ShapesList1 != null) {
                         int cIdx = Math.abs((x * 37 + y * 19 + (x ^ y) * 13)) % md3Colors.length;
-                        int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList1.length;
+                        Path shape;
+                        if (x >= inputWidth / 2 && y < inputHeight / 2 && trShape1 != null) {
+                            shape = trShape1;
+                        } else if (x < inputWidth / 2 && y >= inputHeight / 2 && blShape1 != null) {
+                            shape = blShape1;
+                        } else {
+                            int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList1.length;
+                            shape = md3ShapesList1[sIdx];
+                        }
                         md3Paint1.setColor(md3Colors[cIdx]);
-                        Path shape = md3ShapesList1[sIdx];
                         canvas.save();
                         canvas.translate(outputX + modulePad1, outputY + modulePad1);
                         canvas.drawPath(shape, md3Paint1);
@@ -336,7 +359,10 @@ public final class TelegramQRCodeWriter {
             float cr = imageSize / 2f;
             canvas.drawCircle(cx, cy, cr, centerPaint);
             try {
-                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_monochrome);
+                if (icon == null) {
+                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_foreground);
+                }
                 if (icon != null) {
                     icon = icon.mutate();
                     icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
@@ -558,10 +584,22 @@ public final class TelegramQRCodeWriter {
             } else {
                 rCenter = ((sideQuadSize - 2) * multiple) / 4.0f * radiusFactor;
             }
-            Arrays.fill(radii, rCenter);
-            rect.setColor(color);
-            rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
-            rect.draw(canvas);
+            if (isMd3) {
+                int shapeId = (a == 1) ? AppearanceConfig.md3QrTopRightShape() : ((a == 2) ? AppearanceConfig.md3QrBottomLeftShape() : Md3AvatarShapes.SHAPE_COOKIE_4);
+                float fSize = (sideQuadSize - 4) * multiple;
+                Path finderShape = Md3AvatarShapes.INSTANCE.getShapePath(shapeId, fSize, fSize);
+                canvas.save();
+                canvas.translate(x + multiple * 2, y + multiple * 2);
+                Paint fp = new Paint(Paint.ANTI_ALIAS_FLAG);
+                fp.setColor(color);
+                canvas.drawPath(finderShape, fp);
+                canvas.restore();
+            } else {
+                Arrays.fill(radii, rCenter);
+                rect.setColor(color);
+                rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
+                rect.draw(canvas);
+            }
         }
         float r = multiple / 2.0f * radiusFactor;
         Path pathHelper = new Path();
@@ -569,12 +607,16 @@ public final class TelegramQRCodeWriter {
         float modulePad2 = multiple * 0.08f;
         float moduleSize2 = multiple - modulePad2 * 2f;
         Path[] md3ShapesList2 = null;
+        Path trShape2 = null;
+        Path blShape2 = null;
         if (isMd3) {
             Path md3Cookie = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_COOKIE_4, moduleSize2, moduleSize2);
             Path md3Clover = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CLOVER_4, moduleSize2, moduleSize2);
             Path md3Diamond = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_DIAMOND, moduleSize2, moduleSize2);
             Path md3Square = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_SQUARE, moduleSize2, moduleSize2);
             Path md3Circle = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CIRCLE, moduleSize2, moduleSize2);
+            trShape2 = Md3AvatarShapes.INSTANCE.getShapePath(AppearanceConfig.md3QrTopRightShape(), moduleSize2, moduleSize2);
+            blShape2 = Md3AvatarShapes.INSTANCE.getShapePath(AppearanceConfig.md3QrBottomLeftShape(), moduleSize2, moduleSize2);
             md3ShapesList2 = new Path[]{md3Cookie, md3Clover, md3Diamond, md3Square, md3Circle};
         }
         Paint md3Paint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
@@ -584,9 +626,16 @@ public final class TelegramQRCodeWriter {
                 if (has(x, y)) {
                     if (isMd3 && md3ShapesList2 != null) {
                         int cIdx = Math.abs((x * 37 + y * 19 + (x ^ y) * 13)) % md3Colors.length;
-                        int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList2.length;
+                        Path shape;
+                        if (x >= inputWidth / 2 && y < inputHeight / 2 && trShape2 != null) {
+                            shape = trShape2;
+                        } else if (x < inputWidth / 2 && y >= inputHeight / 2 && blShape2 != null) {
+                            shape = blShape2;
+                        } else {
+                            int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList2.length;
+                            shape = md3ShapesList2[sIdx];
+                        }
                         md3Paint2.setColor(md3Colors[cIdx]);
-                        Path shape = md3ShapesList2[sIdx];
                         canvas.save();
                         canvas.translate(outputX + modulePad2, outputY + modulePad2);
                         canvas.drawPath(shape, md3Paint2);
@@ -668,7 +717,10 @@ public final class TelegramQRCodeWriter {
             float cr = imageSize / 2f;
             canvas.drawCircle(cx, cy, cr, centerPaint);
             try {
-                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_monochrome);
+                if (icon == null) {
+                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_foreground);
+                }
                 if (icon != null) {
                     icon = icon.mutate();
                     icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));

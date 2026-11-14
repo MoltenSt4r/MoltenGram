@@ -264,6 +264,7 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
         }
         textPaint.setTypeface(typeface);
         textPaint.setTextSize(fontSize);
+        textPaint.setColor(Color.WHITE);
         var fm = textPaint.getFontMetricsInt();
         var textHeight = fm.descent - fm.ascent;
         var baseline = y + (emojiSize - textHeight) / 2f - fm.ascent;

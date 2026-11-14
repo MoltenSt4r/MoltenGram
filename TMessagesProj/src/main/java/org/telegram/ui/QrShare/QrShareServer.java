@@ -439,7 +439,27 @@ final class QrShareServer implements NotificationCenter.NotificationCenterDelega
         final MessagesController controller = MessagesController.getInstance(account);
         if (link.peerId > 0) {
             final TLRPC.UserFull full = controller.getUserFull(link.peerId);
-            return full != null ? themeOf(full.share_theme) : null;
+            TLRPC.ShareTheme theme = full != null ? themeOf(full.share_theme) : null;
+            if (theme == null || theme instanceof TLRPC.TL_shareThemeDefault) {
+                TLRPC.User user = controller.getUser(link.peerId);
+                kotlin.Pair<Integer, Long> p = app.exteraless.chats.ProfileInvisibleMetadata.getQrThemeForUser(user);
+                if (p != null) {
+                    TLRPC.TL_shareThemeEmojiBackdrop t = new TLRPC.TL_shareThemeEmojiBackdrop();
+                    if (p.getFirst() >= 0) {
+                        t.flags |= 1;
+                        t.backdrop_id = p.getFirst();
+                    }
+                    if (p.getSecond() > 0L) {
+                        t.flags |= 2;
+                        t.emojis = new ArrayList<>();
+                        TLRPC.TL_reactionCustomEmoji r = new TLRPC.TL_reactionCustomEmoji();
+                        r.document_id = p.getSecond();
+                        t.emojis.add(r);
+                    }
+                    return t;
+                }
+            }
+            return theme;
         }
         final TLRPC.ChatFull full = controller.getChatFull(-link.peerId);
         return full != null ? themeOf(full.share_theme) : null;
@@ -608,6 +628,23 @@ final class QrShareServer implements NotificationCenter.NotificationCenterDelega
         local.theme = loadedTheme;
         localThemes(account).put(link.peerId, local);
         putFullTheme(loadedTheme);
+        if (app.exteraless.appearance.AppearanceConfig.freeQrPremium() && link.self) {
+            int bdId = -1;
+            long emId = 0L;
+            if (theme instanceof TLRPC.TL_shareThemeEmojiBackdrop) {
+                TLRPC.TL_shareThemeEmojiBackdrop t = (TLRPC.TL_shareThemeEmojiBackdrop) theme;
+                if ((t.flags & 1) != 0) bdId = t.backdrop_id;
+                if ((t.flags & 2) != 0 && t.emojis != null && !t.emojis.isEmpty()) {
+                    for (TLRPC.Reaction r : t.emojis) {
+                        if (r instanceof TLRPC.TL_reactionCustomEmoji) {
+                            emId = ((TLRPC.TL_reactionCustomEmoji) r).document_id;
+                            break;
+                        }
+                    }
+                }
+            }
+            app.exteraless.chats.ProfileInvisibleMetadata.updateSelfQrTheme(account, bdId, emId, null);
+        }
         pendingTheme = theme;
         AndroidUtilities.cancelRunOnUIThread(saveTheme);
         AndroidUtilities.runOnUIThread(saveTheme, THEME_SAVE_DELAY);
@@ -668,7 +705,7 @@ final class QrShareServer implements NotificationCenter.NotificationCenterDelega
                 themeRequestId = 0;
             }
             if (sent != null && localThemes(account).get(peerId) == sent) {
-                if (err == null) {
+                if (err == null || app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
                     sent.savedAt = SystemClock.elapsedRealtime();
                 } else {
                     localThemes(account).remove(peerId); // not saved: the server's full is right
@@ -676,7 +713,7 @@ final class QrShareServer implements NotificationCenter.NotificationCenterDelega
             }
             if (err != null) {
                 FileLog.e("QrShare: setShareTheme " + err.text);
-                if (!released) {
+                if (!released && !app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
                     view.showError(err.text);
                 }
             }

@@ -1304,16 +1304,16 @@ public class QrShareView extends View {
     private Drawable emojiDrawable(String e) {
         Drawable d = emojiCache.get(e);
         if (d == null) {
-            if (Emoji.isSelectedCustomPack()) {
-                final String text = emojiTextOf.containsKey(normKey(e)) ? emojiTextOf.get(normKey(e)) : e;
-                d = new EmojiFontDrawable(text);
-                emojiCache.put(e, d);
-            } else {
-                d = Emoji.getEmojiDrawable(e);
-                if (d == null)
-                    d = Emoji.getEmojiDrawable(e.replace("\uFE0F", "")); // ❤️ / ☀️ are stored without the variation selector
-                if (d != null) emojiCache.put(e, d);
+            String fixed = Emoji.fixEmoji(e);
+            d = Emoji.getEmojiDrawable(fixed);
+            if (d == null) d = Emoji.getEmojiDrawable(e);
+            if (d == null) d = Emoji.getEmojiDrawable(e.replace("\uFE0F", ""));
+            if (d == null) d = Emoji.getEmojiDrawable(e + "\uFE0F");
+            if (d == null) {
+                final String text = emojiTextOf.containsKey(normKey(e)) ? emojiTextOf.get(normKey(e)) : fixed;
+                d = new EmojiFontDrawable(text != null ? text : e);
             }
+            if (d != null) emojiCache.put(e, d);
         }
         return d;
     }
@@ -3957,7 +3957,10 @@ public class QrShareView extends View {
             fill.setColor(centerBg);
             c.drawCircle(lcx, lcy, lr, fill);
             try {
-                Drawable moltenLogo = d(R.drawable.splash_icon);
+                Drawable moltenLogo = d(R.drawable.moltenstar_icon_monochrome);
+                if (moltenLogo == null) {
+                    moltenLogo = d(R.drawable.moltenstar_icon_foreground);
+                }
                 if (moltenLogo != null) {
                     moltenLogo.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
                     int lpad = (int) (lr * 0.28f);

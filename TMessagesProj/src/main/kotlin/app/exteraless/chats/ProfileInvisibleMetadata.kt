@@ -25,10 +25,12 @@ object ProfileInvisibleMetadata {
         var nameColorId: Int = -1,
         var nameEmojiId: Long = 0L,
         var profileColorId: Int = -1,
-        var profileEmojiId: Long = 0L
+        var profileEmojiId: Long = 0L,
+        var qrBackdropId: Int = -1,
+        var qrEmojiId: Long = 0L
     ) {
         val isEmpty: Boolean
-            get() = emojiStatusDocId <= 0L && nameColorId < 0 && nameEmojiId <= 0L && profileColorId < 0 && profileEmojiId <= 0L
+            get() = emojiStatusDocId <= 0L && nameColorId < 0 && nameEmojiId <= 0L && profileColorId < 0 && profileEmojiId <= 0L && qrBackdropId < 0 && qrEmojiId <= 0L
     }
 
     // Framing markers using invisible characters (ZWJ + Word Joiner)
@@ -41,12 +43,14 @@ object ProfileInvisibleMetadata {
     const val KEY_NAME_EMOJI = '\u206C'
     const val KEY_PROFILE_COLOR = '\u206D'
     const val KEY_PROFILE_EMOJI = '\u206E'
+    const val KEY_QR_BACKDROP = '\u2062'
+    const val KEY_QR_EMOJI = '\u2063'
 
     // Delimiter between fields (Zero Width Space)
     const val DELIMITER = '\u200B'
 
     private val TAG_REGEX = Regex(
-        Regex.escape(START_TAG) + "([\\uFE00-\\uFE0F\\u200B\\u206A-\\u206E]+?)" + Regex.escape(END_TAG)
+        Regex.escape(START_TAG) + "([\\uFE00-\\uFE0F\\u200B\\u2061-\\u206E]+?)" + Regex.escape(END_TAG)
     )
 
     private val userMetaCache = ConcurrentHashMap<Long, Pair<String?, Metadata?>>()
@@ -109,6 +113,12 @@ object ProfileInvisibleMetadata {
         if (meta.profileEmojiId > 0L) {
             parts.add("" + KEY_PROFILE_EMOJI + encodeNumber(meta.profileEmojiId))
         }
+        if (meta.qrBackdropId >= 0) {
+            parts.add("" + KEY_QR_BACKDROP + encodeNumber(meta.qrBackdropId.toLong() + 1L))
+        }
+        if (meta.qrEmojiId > 0L) {
+            parts.add("" + KEY_QR_EMOJI + encodeNumber(meta.qrEmojiId))
+        }
         if (parts.isEmpty()) return ""
 
         val payload = StringBuilder()
@@ -138,6 +148,8 @@ object ProfileInvisibleMetadata {
                 KEY_NAME_EMOJI -> meta.nameEmojiId = num
                 KEY_PROFILE_COLOR -> meta.profileColorId = (num - 1L).toInt()
                 KEY_PROFILE_EMOJI -> meta.profileEmojiId = num
+                KEY_QR_BACKDROP -> meta.qrBackdropId = (num - 1L).toInt()
+                KEY_QR_EMOJI -> meta.qrEmojiId = num
             }
         }
         return if (meta.isEmpty) null else meta
@@ -273,6 +285,31 @@ object ProfileInvisibleMetadata {
         currentMeta.emojiStatusDocId = documentId
 
         saveSelfMetadata(account, user, currentMeta, callback)
+    }
+
+    @JvmStatic
+    fun updateSelfQrTheme(
+        account: Int,
+        backdropId: Int,
+        emojiId: Long,
+        callback: ((Boolean) -> Unit)? = null
+    ) {
+        val user = UserConfig.getInstance(account).currentUser ?: return
+        val currentMeta = decode(user.last_name) ?: Metadata()
+        currentMeta.qrBackdropId = backdropId
+        currentMeta.qrEmojiId = emojiId
+
+        saveSelfMetadata(account, user, currentMeta, callback)
+    }
+
+    @JvmStatic
+    fun getQrThemeForUser(user: TLRPC.User?): Pair<Int, Long>? {
+        if (user == null) return null
+        val meta = getMetadata(user) ?: return null
+        if (meta.qrBackdropId >= 0 || meta.qrEmojiId > 0L) {
+            return Pair(meta.qrBackdropId, meta.qrEmojiId)
+        }
+        return null
     }
 
     private fun saveSelfMetadata(
