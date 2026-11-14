@@ -40,6 +40,7 @@ import android.view.animation.AnimationUtils;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -3956,9 +3957,8 @@ public class QrShareView extends View {
             fill.setColor(centerBg);
             c.drawCircle(lcx, lcy, lr, fill);
             try {
-                Drawable moltenLogo = ContextCompat.getDrawable(getContext(), R.drawable.splash_icon);
+                Drawable moltenLogo = d(R.drawable.splash_icon);
                 if (moltenLogo != null) {
-                    moltenLogo = moltenLogo.mutate();
                     moltenLogo.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
                     int lpad = (int) (lr * 0.28f);
                     moltenLogo.setBounds((int) (lcx - lr + lpad), (int) (lcy - lr + lpad), (int) (lcx + lr - lpad), (int) (lcy + lr - lpad));
