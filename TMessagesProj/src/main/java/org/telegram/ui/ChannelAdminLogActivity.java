@@ -157,6 +157,9 @@ import org.telegram.utils.glass.source.GlassSource;
 import org.telegram.utils.glass.source.GlassSourceBitmap;
 import org.telegram.utils.glass.source.GlassSourceRenderNode;
 import org.telegram.utils.glass.source.GlassSourceWrapped;
+import org.telegram.utils.glass.positions.GlassPositionsArray;
+import org.telegram.utils.glass.positions.GlassPositionsMerger;
+import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.ui.Components.chat.WallpaperBitmapProvider;
 import org.telegram.ui.Components.chat.layouts.ChatActivityChannelButtonsLayout;
 import org.telegram.ui.Components.chat.layouts.ChatActivityFadeView;
@@ -4250,88 +4253,13 @@ public class ChannelAdminLogActivity extends BaseFragment implements Notificatio
             return;
         }
 
-        if (BitwiseUtils.hasFlag(flags, BLUR_INVALIDATE_FLAG_CLIP)) {
-        //    invalidateClipRectForBackgroundAndChatList();
+        if (BitwiseUtils.hasFlag(flags, GlassEngine.FLAG_INVALIDATED_POSITIONS)) {
+            GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
+            glassPositionsArray.clip(0, chatListView.getY(), contentView.getWidth(), chatListView.getY() + chatListView.getHeight());
+            scrollableViewNoiseSuppressor.setupRenderNodes(glassPositionsArray);
         }
 
-        if (BitwiseUtils.hasFlag(flags, BLUR_INVALIDATE_FLAG_POSITIONS)) {
-            glassDrawablesPositionsCount = getMergedVisibleBlurredPositions(glassDrawablesPositionsMerged);
-            scrollableViewNoiseSuppressor.setupRenderNodes(glassDrawablesPositionsMerged, glassDrawablesPositionsCount);
-        }
-
-        //if (BitwiseUtils.hasFlag(flags, BLUR_INVALIDATE_FLAG_POSITIONS | BLUR_INVALIDATE_FLAG_SCROLL)) {
-        final boolean hasChanges = scrollableViewNoiseSuppressor.invalidateResultRenderNodes(contentView::drawList, contentView.getWidth(), contentView.getHeight());
-        if (hasChanges) {
-            if (glassBackgroundSourceRenderNode != null) {
-                glassBackgroundSourceRenderNode.invalidateDisplayListForDrawables();
-            }
-            if (glassBackgroundSourceFrostedRenderNode != null) {
-                glassBackgroundSourceFrostedRenderNode.invalidateDisplayListForDrawables();
-            }
-            if (actionBar != null) {
-                actionBar.invalidate();
-            }
-            invalidateAllGlassAttachedViews();
-        }
-
-        //}
-    }
-
-    private int getMergedVisibleBlurredPositions(List<RectF> positions) {
-        final int positionsCount = getVisibleBlurredPositions(glassDrawablesPositions);
-        final int mergedPositionsCount = RectFMergeBounding.mergeOverlapping(glassDrawablesPositions, positionsCount, positions);
-        final int maxX = contentView.getMeasuredWidth();
-        for (int a = 0; a < mergedPositionsCount; a++) {
-            final RectF position = positions.get(a);
-            position.left = androidx.core.math.MathUtils.clamp(position.left, 0, maxX);
-            position.top = Math.max(chatListView.getY(), position.top);
-            position.right = androidx.core.math.MathUtils.clamp(position.right, 0, maxX);
-            position.bottom = Math.min(chatListView.getY() + chatListView.getMeasuredHeight(), position.bottom);
-            /*if (drawDebug) {
-                ((Canvas) null).drawRect(position, Theme.DEBUG_GREEN_STROKE);
-            }*/
-        }
-
-        return mergedPositionsCount;
-    }
-
-    private int getVisibleBlurredPositions(List<RectF> positions) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            int count = 0;
-
-            if (glassBackgroundSourceFrostedRenderNode != null) {
-                final int blurAlpha = ChatActivity.ACTION_BAR_BLUR_ALPHA;
-                if (blurAlpha < 255) {
-                    final RectF rectf;
-                    if (positions.isEmpty()) {
-                        positions.add(rectf = new RectF());
-                    } else {
-                        rectf = positions.get(0);
-                    }
-
-                    rectf.set(0, 0, contentView.getMeasuredWidth(), chatListView.getPaddingTop() + chatListView.getY());
-                    rectf.inset(0, -dp(45));
-                    count += 1;
-                }
-
-                count += glassBackgroundSourceFrostedRenderNode.getVisiblePositions(positions, count, dp(48));
-            }
-
-            if (glassBackgroundSourceRenderNode != null) {
-                count += glassBackgroundSourceRenderNode.getVisiblePositions(positions, count, dp(8));
-            }
-
-            return count;
-        } else {
-            return 0;
-        }
-    }
-
-    private void invalidateAllGlassAttachedViews() {
-        contentView.invalidate();
-        for (View v: glassAttachedViews) {
-            v.invalidate();
-        }
+        scrollableViewNoiseSuppressor.invalidateResultRenderNodes(contentView::drawList, contentView.getWidth(), contentView.getHeight());
     }
 
 

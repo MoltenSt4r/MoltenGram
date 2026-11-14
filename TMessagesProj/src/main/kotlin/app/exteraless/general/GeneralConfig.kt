@@ -30,6 +30,15 @@ object GeneralConfig {
     fun getPreferences(): SharedPreferences = NekoConfig.getPreferences()
 
     @JvmField
+    val lastfmNick = addConfig("OEGeneralLastFmNick", ConfigItem.configTypeString, "")
+
+    @JvmField
+    val lastfmExplained = addConfig("OEGeneralLastFmExplained", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun lastfmNick(): String = lastfmNick.String() ?: ""
+
+    @JvmField
     val botPrivacyEnabled = addConfig("OEGeneralBotPrivacyEnabled", ConfigItem.configTypeBool, false)
 
     @JvmField

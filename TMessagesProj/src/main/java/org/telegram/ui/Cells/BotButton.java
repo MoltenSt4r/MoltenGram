@@ -50,6 +50,7 @@ class BotButton {
     public float progressAlpha;
     public long lastUpdateTime;
     public boolean isInviteButton;
+    public boolean isWebAppLink;
     public boolean isLocked;
 
     private final Path path = new Path();

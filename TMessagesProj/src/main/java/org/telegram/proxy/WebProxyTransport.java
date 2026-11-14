@@ -483,6 +483,17 @@ public final class WebProxyTransport implements ForegroundDetector.Listener {
         view.loadUrl(bridgeUrl);
     }
 
+    private boolean isCurrentBridgeDocument(WebView view) {
+        if (view == null) return false;
+        String currentUrl = view.getUrl();
+        if (currentUrl == null) return false;
+        try {
+            return isBridgeNavigation(Uri.parse(currentUrl));
+        } catch (Exception e) {
+            return false;
+        }
+    }
+
     private void failWebView(WebView source) {
         if (source == webView) {
             failCarrier();

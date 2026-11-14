@@ -77,7 +77,6 @@ public class BlurredBackgroundDrawableViewFactory {
     private @Nullable ViewPositionWatcher viewPositionWatcher;
     private @Nullable ViewGroup parent;
     private @Nullable GlassEngine engine;
-    private int outsetX, outsetY;
 
     public void setLinkedViewsRef(@Nullable ReferenceList<View> linkedViews) {
         this.linkedViews = linkedViews;

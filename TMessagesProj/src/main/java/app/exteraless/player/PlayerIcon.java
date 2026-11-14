@@ -22,7 +22,9 @@ public class PlayerIcon extends Drawable {
     public static final String MORE = circle(12, 5, 1.8f) + circle(12, 12, 1.8f) + circle(12, 19, 1.8f);
     public static final String HEART = "M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z";
     public static final String SHUFFLE = "M16 4h4v4M4 20L20 4M20 16v4h-4M14.5 14.5L20 20M4 4l5 5";
+    public static final String REVERSE = "M4 4h4v4M20 20L4 4M4 16v4h4M9.5 9.5L4 4M20 20l-5-5";
     public static final String REPEAT = "M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4";
+    public static final String ONCE = "M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4M12 7v5l3 3";
     public static final String PREV = roundRect(5, 5.5f, 2.6f, 13, 1.2f) + "M19 6.6v10.8a1 1 0 0 1-1.55.84l-8.1-5.4a1 1 0 0 1 0-1.68l8.1-5.4A1 1 0 0 1 19 6.6z";
     public static final String NEXT = roundRect(16.4f, 5.5f, 2.6f, 13, 1.2f) + "M5 6.6v10.8a1 1 0 0 0 1.55.84l8.1-5.4a1 1 0 0 0 0-1.68l-8.1-5.4A1 1 0 0 0 5 6.6z";
     public static final String PLAY = "M8 5.8v12.4a1 1 0 0 0 1.54.84l9.6-6.2a1 1 0 0 0 0-1.68l-9.6-6.2A1 1 0 0 0 8 5.8z";

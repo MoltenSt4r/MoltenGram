@@ -74,6 +74,10 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         updateTargets(animated);
     }
 
+    public void setModes(boolean shuffleActive, boolean repeatActive, boolean repeatOne, boolean animated) {
+        setModes(shuffleActive, false, repeatActive, repeatOne, false, animated);
+    }
+
     public void setModes(boolean shuffleActive, boolean reversed, boolean repeatActive, boolean repeatOne, boolean playOnce, boolean animated) {
         shuffleOn = shuffleActive || reversed;
         repeatOn = repeatActive || playOnce;

@@ -74,6 +74,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
     private final ButtonWithCounterView button;
     private final LinearLayout headerView;
     private final LinearLayout bottomContainer;
+    private final Delegate delegate;
     private ImageView openIn;
 
     public PluginInstallBottomSheet(Activity activity, File file,
@@ -81,6 +82,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
                                     Plugin plugin,
                                     Map<String, List<String>> capabilities, Delegate delegate) {
         super(activity, false);
+        this.delegate = delegate;
         this.params = params;
         this.plugin = plugin;
         setApplyBottomPadding(false);
@@ -222,12 +224,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
         final boolean update = plugin != null && !TextUtils.isEmpty(plugin.id)
                 && app.exteraless.plugins.PluginsController.getInstance().getPlugin(plugin.id) != null;
         button.setText(getString(update ? R.string.PluginsUpdateAction : R.string.PluginsInstallAction), false);
-        button.setOnClickListener(v -> {
-            dismiss();
-            if (delegate != null) {
-                delegate.onInstall(checkedPermissions(), enableAfterInstall);
-            }
-        });
+        button.setOnClickListener(v -> performInstall());
         bottomContainer = new LinearLayout(context);
         bottomContainer.setOrientation(LinearLayout.VERTICAL);
         content.addView(bottomContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
@@ -444,6 +441,14 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
             checkBox.setChecked(enableAfterInstall, true);
         });
         return row;
+    }
+
+    @Override
+    protected void performInstall() {
+        dismiss();
+        if (delegate != null) {
+            delegate.onInstall(checkedPermissions(), enableAfterInstall);
+        }
     }
 
     private List<String> checkedPermissions() {

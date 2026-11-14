@@ -154,6 +154,7 @@ import org.telegram.ui.Components.emojiview.FoundStickerPacksHeaderCell;
 import org.telegram.ui.Components.inset.InAppKeyboardInsetView;
 import org.telegram.ui.ContentPreviewViewer;
 import org.telegram.ui.StickersActivity;
+import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.utils.glass.GlassEngine;
 import org.telegram.utils.glass.positions.GlassPositionsArray;
 
@@ -1619,6 +1620,7 @@ public class EmojiView extends FrameLayout implements
 
     private boolean glassDesign;
 
+    private final GlassEngine glassEngine = new GlassEngine();
     private final DownscaleScrollableNoiseSuppressor scrollableViewNoiseSuppressor;
     private final IBlur3Capture blurCaptureMethod;
     private final GlassSourceRenderNode blurredBackgroundSourceRenderNode;
@@ -4630,6 +4632,10 @@ public class EmojiView extends FrameLayout implements
 
         updateBottomTabContainerPosition();
         super.dispatchDraw(canvas);
+    }
+
+    private void invalidateBlurCaptures() {
+        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS | GlassEngine.FLAG_INVALIDATED_CONTENT);
     }
 
     private void invalidateBlurCaptures(int flags) {

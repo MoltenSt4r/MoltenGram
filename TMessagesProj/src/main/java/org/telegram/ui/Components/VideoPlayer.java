@@ -1623,7 +1623,7 @@ public class VideoPlayer implements Player.Listener, VideoListener, AnalyticsLis
     }
 
     public void setPlaybackSpeed(float speed, boolean pitch) {
-        setPlaybackSpeed(speed, pitch ? speed : 1.0f);
+        setPlaybackParameters(speed, pitch ? speed : 1.0f);
     }
 
     public float getPlaybackSpeed() {

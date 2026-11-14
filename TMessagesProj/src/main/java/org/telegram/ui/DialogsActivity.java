@@ -8,6 +8,8 @@
 
 package org.telegram.ui;
 
+import org.telegram.ui.Components.blur3.capture.IBlur3Hash;
+
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.components.TranslateBeforeSendWrapper;
 import app.exteraless.drawer.DrawerContainer;

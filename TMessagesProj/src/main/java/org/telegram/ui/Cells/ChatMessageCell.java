@@ -25229,6 +25229,30 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return AndroidUtilities.displaySize.x;
     }
 
+    private int mapGlassOutColorKey(int key) {
+        if (key == Theme.key_chat_messageTextOut) return Theme.key_chat_messageTextIn;
+        if (key == Theme.key_chat_messageLinkOut) return Theme.key_chat_messageLinkIn;
+        if (key == Theme.key_chat_outTimeText) return Theme.key_chat_inTimeText;
+        if (key == Theme.key_chat_outTimeSelectedText) return Theme.key_chat_inTimeSelectedText;
+        if (key == Theme.key_chat_outReplyLine) return Theme.key_chat_inReplyLine;
+        if (key == Theme.key_chat_outReplyNameText) return Theme.key_chat_inReplyNameText;
+        if (key == Theme.key_chat_outReplyMessageText) return Theme.key_chat_inReplyMessageText;
+        if (key == Theme.key_chat_outReplyMediaMessageText) return Theme.key_chat_inReplyMediaMessageText;
+        if (key == Theme.key_chat_outReplyMediaMessageSelectedText) return Theme.key_chat_inReplyMediaMessageSelectedText;
+        if (key == Theme.key_chat_outPreviewLine) return Theme.key_chat_inPreviewLine;
+        if (key == Theme.key_chat_outPreviewInstantText) return Theme.key_chat_inPreviewInstantText;
+        if (key == Theme.key_chat_outForwardedNameText) return Theme.key_chat_inForwardedNameText;
+        if (key == Theme.key_chat_outViaBotNameText) return Theme.key_chat_inViaBotNameText;
+        if (key == Theme.key_chat_outViews) return Theme.key_chat_inViews;
+        if (key == Theme.key_chat_outAdminText) return Theme.key_chat_inAdminText;
+        if (key == Theme.key_chat_outAdminSelectedText) return Theme.key_chat_inAdminSelectedText;
+        if (key == Theme.key_chat_outAudioTitleText) return Theme.key_chat_inAudioTitleText;
+        if (key == Theme.key_chat_outAudioPerformerText) return Theme.key_chat_inAudioPerformerText;
+        if (key == Theme.key_chat_outAudioDurationText) return Theme.key_chat_inAudioDurationText;
+        if (key == Theme.key_chat_outCodeBackground) return Theme.key_chat_inCodeBackground;
+        return key;
+    }
+
     public int getThemedColor(int key) {
         if (app.exteraless.appearance.AppearanceConfig.glassMessages()
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()) {

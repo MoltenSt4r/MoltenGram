@@ -119,7 +119,7 @@ public class ButtonSpan extends ReplacementSpan {
                 final ButtonSpan span = spans[i];
                 layout.getSelectionPath(spanned.getSpanStart(span), spanned.getSpanEnd(span), buttonPath);
                 buttonPath.computeBounds(buttonBounds, true);
-                if (buttonBounds.contains(scrolledX, y)) {
+                if (buttonBounds.contains(x, y)) {
                     return span;
                 }
             }

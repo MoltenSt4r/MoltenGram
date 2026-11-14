@@ -58,6 +58,10 @@ public final class RLottieNative {
      * @param fitzModifier     Fitzpatrick skin-tone modifier (0 = none)
      * @return a new instance, or {@code null} if the native layer failed
      */
+    public static RLottieNative createFromFile(String path) {
+        return createFromFile(path, null, 0, 0, false, null, false, 0);
+    }
+
     public static RLottieNative createFromFile(
             String path,
             String json,

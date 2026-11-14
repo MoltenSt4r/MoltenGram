@@ -601,6 +601,7 @@ public class ChatActivity extends BaseFragment implements
     private ActionBarMenu.LazyItem attachItem;
     private ActionBarMenuItem.Item savedChatsItem, savedChatsGap;
     private ActionBarMenuItem headerItem;
+    private ActionBarMenu.LazyItem editTextItem;
     protected ActionBarMenuItem searchItem;
     protected ActionBarMenuItem topicCreateItem;
     private ActionBarMenuItem topicsPanelItem;
@@ -1890,6 +1891,19 @@ public class ChatActivity extends BaseFragment implements
     private final static int attach_gallery = 1;
     private final static int attach_video = 2;
 
+    private final static int text_bold = 50;
+    private final static int text_italic = 51;
+    private final static int text_mono = 52;
+    private final static int text_link = 53;
+    private final static int text_regular = 54;
+    private final static int text_strike = 55;
+    private final static int text_underline = 56;
+    private final static int text_spoiler = 57;
+    private final static int text_quote = 58;
+    private final static int text_date = 74;
+    private final static int text_mention = 157;
+    private final static int text_transalte = 158;
+    private final static int text_code = 159;
 
     private final static int view_as_topics = 59;
 

@@ -527,7 +527,7 @@ public final class XposedHooks {
             PyObject bridge = hookBridge();
             return PyResult.of(bridge != null
                     ? (attr != null ? bridge.callAttr("dispatch_hook", handler, attr, param) : bridge.callAttr("dispatch_hook", handler, param))
-                    : (attr != null ? handler.callAttr(attr, param) : handler.__call__(param)));
+                    : (attr != null ? handler.callAttr(attr, param) : handler.call(param)));
         } catch (Throwable t) {
             reportError(pluginId, t);
             return PyResult.ERROR;

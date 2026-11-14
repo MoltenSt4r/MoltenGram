@@ -212,6 +212,32 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         offsetListener = listener;
     }
 
+    public static PlayerMiniView preview(Context context) {
+        return new PlayerMiniView(context, null, null);
+    }
+
+    public static void styleChanged() {
+    }
+
+    public void applyStyle(boolean animated) {
+        checkThemeColors();
+    }
+
+    public void setTopState(float anchor, float zone, float shift, float visibility) {
+    }
+
+    public float getVisibleOffset(boolean chats) {
+        return getVisibleOffset();
+    }
+
+    public int getTargetOffset(boolean chats) {
+        return getTargetOffset();
+    }
+
+    public int getTargetTopOffset(boolean chats) {
+        return 0;
+    }
+
     public float getVisibleOffset() {
         return (dp(HEIGHT_DP) + dp(8)) * showProgress * hostFactor;
     }
