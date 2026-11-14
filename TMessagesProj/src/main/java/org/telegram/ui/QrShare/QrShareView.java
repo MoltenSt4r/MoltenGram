@@ -3957,13 +3957,14 @@ public class QrShareView extends View {
             fill.setColor(centerBg);
             c.drawCircle(lcx, lcy, lr, fill);
             try {
-                Drawable moltenLogo = d(R.drawable.moltenstar_icon_monochrome);
+                Drawable moltenLogo = d(R.drawable.splash_icon);
                 if (moltenLogo == null) {
-                    moltenLogo = d(R.drawable.moltenstar_icon_foreground);
+                    moltenLogo = d(R.drawable.moltengram_icon_foreground);
                 }
                 if (moltenLogo != null) {
-                    moltenLogo.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
-                    int lpad = (int) (lr * 0.28f);
+                    moltenLogo = moltenLogo.mutate();
+                    moltenLogo.setColorFilter(new PorterDuffColorFilter(AppearanceConfig.contrastOnAccent(centerBg), PorterDuff.Mode.SRC_IN));
+                    int lpad = (int) (lr * 0.25f);
                     moltenLogo.setBounds((int) (lcx - lr + lpad), (int) (lcy - lr + lpad), (int) (lcx + lr - lpad), (int) (lcy + lr - lpad));
                     moltenLogo.draw(c);
                 }
@@ -5372,7 +5373,7 @@ public class QrShareView extends View {
             c.scale(es, es, scanRect.centerX(), scanRect.centerY());
             if (md3) {
                 int btnBg = Theme.getColor(Theme.key_featuredStickers_addButton);
-                int fgColor = AndroidUtilities.computePerceivedBrightness(btnBg) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
+                int fgColor = AppearanceConfig.contrastOnAccent(btnBg);
                 fill.setColor(btnBg);
                 fill.setAlpha(255);
                 c.drawRoundRect(scanRect, dp(20), dp(20), fill);
@@ -5453,7 +5454,7 @@ public class QrShareView extends View {
             c.scale(bs * shareScale, bs * shareScale, shareRect.centerX(), cy);
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-                int fgColor = AndroidUtilities.computePerceivedBrightness(btnColor) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
+                int fgColor = AppearanceConfig.contrastOnAccent(btnColor);
                 fill.setColor(btnColor);
                 fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(shareRect, dp(20), dp(20), fill);
@@ -5472,7 +5473,7 @@ public class QrShareView extends View {
             c.scale(bs * mscale, bs * mscale, saveRect.centerX(), cy);
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
-                int fgColor = AndroidUtilities.computePerceivedBrightness(btnColor) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
+                int fgColor = AppearanceConfig.contrastOnAccent(btnColor);
                 fill.setColor(btnColor);
                 fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(saveRect, dp(20), dp(20), fill);

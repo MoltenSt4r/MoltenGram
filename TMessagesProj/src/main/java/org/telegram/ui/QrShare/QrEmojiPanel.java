@@ -1037,7 +1037,7 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
                 if (icon != null && AppearanceConfig.md3QrShare()) {
                     boolean isSel = tabs != null && tabs.selected == tabIndex;
                     int accentBg = Theme.getColor(Theme.key_featuredStickers_addButton);
-                    int onAccent = AndroidUtilities.computePerceivedBrightness(accentBg) > 0.55f ? 0xFF1C1B1F : 0xFFFFFFFF;
+                    int onAccent = AppearanceConfig.contrastOnAccent(accentBg);
                     int tintColor = isSel ? onAccent : Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), 0.65f);
                     icon.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
                 }

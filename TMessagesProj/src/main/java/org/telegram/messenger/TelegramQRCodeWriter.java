@@ -359,14 +359,14 @@ public final class TelegramQRCodeWriter {
             float cr = imageSize / 2f;
             canvas.drawCircle(cx, cy, cr, centerPaint);
             try {
-                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_monochrome);
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
                 if (icon == null) {
-                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_foreground);
+                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltengram_icon_foreground);
                 }
                 if (icon != null) {
                     icon = icon.mutate();
-                    icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
-                    int pad = (int) (cr * 0.28f);
+                    icon.setColorFilter(new PorterDuffColorFilter(app.exteraless.appearance.AppearanceConfig.contrastOnAccent(color1), PorterDuff.Mode.SRC_IN));
+                    int pad = (int) (cr * 0.25f);
                     icon.setBounds((int) (cx - cr + pad), (int) (cy - cr + pad), (int) (cx + cr - pad), (int) (cy + cr - pad));
                     icon.draw(canvas);
                 }
@@ -717,14 +717,14 @@ public final class TelegramQRCodeWriter {
             float cr = imageSize / 2f;
             canvas.drawCircle(cx, cy, cr, centerPaint);
             try {
-                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_monochrome);
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
                 if (icon == null) {
-                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltenstar_icon_foreground);
+                    icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.moltengram_icon_foreground);
                 }
                 if (icon != null) {
                     icon = icon.mutate();
-                    icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
-                    int pad = (int) (cr * 0.28f);
+                    icon.setColorFilter(new PorterDuffColorFilter(app.exteraless.appearance.AppearanceConfig.contrastOnAccent(color), PorterDuff.Mode.SRC_IN));
+                    int pad = (int) (cr * 0.25f);
                     icon.setBounds((int) (cx - cr + pad), (int) (cy - cr + pad), (int) (cx + cr - pad), (int) (cy + cr - pad));
                     icon.draw(canvas);
                 }

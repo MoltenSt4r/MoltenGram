@@ -1523,34 +1523,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
 
         public static int getM3ItemBackgroundColor(int itemId, int iconColorTop, int iconColorBottom, boolean dark) {
-            switch (itemId) {
-                case -1: // exteraless preferences
-                    return dark ? 0xFFE8B8B8 : 0xFFFFD8D6;
-                case 1: // Account
-                    return dark ? 0xFFA0D0EC : 0xFFCCE5FF;
-                case 2: // Chat settings
-                    return dark ? 0xFFF4D8AC : 0xFFFFECC2;
-                case 101: // Stickers and emoji
-                    return dark ? 0xFFF8CCA8 : 0xFFFFDBCF;
-                case 3: // Privacy and security
-                    return dark ? 0xFFB8E8B8 : 0xFFCEF5D1;
-                case 5: // Notifications
-                    return dark ? 0xFFF4ACB0 : 0xFFFFDAD9;
-                case 6: // Data and storage
-                    return dark ? 0xFFACC0F8 : 0xFFD8E2FF;
-                case 7: // Chat folders
-                    return dark ? 0xFFA8D8F8 : 0xFFD0ECFF;
-                case 8: // Devices
-                    return dark ? 0xFFB0E0F0 : 0xFFC9F0FF;
-                case 9: // Power saving
-                    return dark ? 0xFFF8CCAC : 0xFFFFE0B2;
-                case 10: // Language
-                    return dark ? 0xFFD4ACE8 : 0xFFF2DAFF;
-                case 100: // NekoSettings
-                    return dark ? 0xFF9ED0E8 : 0xFFD0ECFF;
-                default:
-                    return app.exteraless.appearance.M3ListItems.tonalBackground(iconColorTop, iconColorBottom, dark);
-            }
+            return app.exteraless.appearance.M3ListItems.tonalBackground(iconColorTop, iconColorBottom, dark);
         }
 
         public static int getM3ItemForegroundColor(int itemId, int iconColorTop, int iconColorBottom, boolean dark, Theme.ResourcesProvider resourcesProvider) {

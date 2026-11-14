@@ -1,6 +1,7 @@
 package app.exteraless.appearance
 
 import android.content.SharedPreferences
+import com.google.android.material.color.utilities.Hct
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader
 import org.telegram.messenger.FileLog
@@ -1931,6 +1932,14 @@ object AppearanceConfig {
         }
         NaConfig.customTitleUserName.setConfigBool(false)
         preferences.edit().putBoolean(TITLE_TEXT_MIGRATED, true).apply()
+    }
+
+    /** Возвращает тёмный или светлый контраст в оттенке фона (HCT tone 18 / 96). */
+    @JvmStatic
+    fun contrastOnAccent(bgColor: Int): Int {
+        val hct = Hct.fromInt(bgColor)
+        hct.tone = if (AndroidUtilities.computePerceivedBrightness(bgColor) > 0.55f) 18.0 else 96.0
+        return hct.toInt()
     }
 
     /** Сбрасывает настройки экрана Appearance к значениям по умолчанию. */

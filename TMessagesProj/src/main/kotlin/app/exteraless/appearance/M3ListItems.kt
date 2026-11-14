@@ -38,7 +38,9 @@ object M3ListItems {
     private fun tone(top: Int, bottom: Int, lightness: Float): Int {
         val hsl = FloatArray(3)
         ColorUtils.colorToHSL(ColorUtils.blendARGB(top, bottom, 0.5f), hsl)
-        hsl[1] = hsl[1].coerceIn(0.55f, 1f)
+        if ((top != 0 || bottom != 0) && hsl[1] >= 0.05f) {
+            hsl[1] = hsl[1].coerceIn(0.55f, 1f)
+        }
         hsl[2] = lightness
         return ColorUtils.HSLToColor(hsl)
     }
