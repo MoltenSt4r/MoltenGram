@@ -304,13 +304,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         md3QrShareRow = addRow("md3QrShare");
         freeQrPremiumRow = addRow("freeQrPremium");
         md3QrCodeRow = addRow("md3QrCode");
-        if (AppearanceConfig.md3QrCode.Bool()) {
-            md3QrShapeRow = addRow("md3QrShape");
-            md3QrPixelShapeRow = addRow("md3QrPixelShape");
-            md3QrColorSourceRow = addRow("md3QrColorSource");
-        } else {
-            md3QrShapeRow = md3QrPixelShapeRow = md3QrColorSourceRow = -1;
-        }
+        md3QrShapeRow = md3QrPixelShapeRow = md3QrColorSourceRow = -1;
         qrDividerRow = addRow();
 
         sectionsHeaderRow = addRow("sectionsHeader");

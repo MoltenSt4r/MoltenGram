@@ -390,7 +390,11 @@ public final class QrCodeLayer {
             progress = Math.max(progress, introProgress(now - introAt));
             if (progress >= 1f) {introRunning = false;}
         } else if (progress < 1f) progress = Math.min(1f, (now - swapStart) / (float) ms);
-        maskPaint.setColorFilter(filter);
+        if (app.exteraless.appearance.AppearanceConfig.md3QrCode()) {
+            maskPaint.setColorFilter(null);
+        } else {
+            maskPaint.setColorFilter(filter);
+        }
         cardCx = left + size / 2f;
         cardCy = top + size / 2f;
         codeSize = size;
@@ -424,6 +428,9 @@ public final class QrCodeLayer {
         final float scale = size / c.size;
         if (all) {
             dst.set(left, top, left + size, top + size);
+            if (app.exteraless.appearance.AppearanceConfig.md3QrCode()) {
+                maskPaint.setColorFilter(null);
+            }
             canvas.drawBitmap(c.mask, c.maskSrc, dst, maskPaint);
         }
     }
@@ -437,6 +444,12 @@ public final class QrCodeLayer {
      * Settled modules use the exact shared grid corners (no seams); only modules inside the front band scale.
      */
     private void drawSwap(Canvas canvas, float left, float top, float size) {
+        if (app.exteraless.appearance.AppearanceConfig.md3QrCode()) {
+            dst.set(left, top, left + size, top + size);
+            maskPaint.setColorFilter(null);
+            canvas.drawBitmap(current.mask, current.maskSrc, dst, maskPaint);
+            return;
+        }
         final Code o = previous, c = current;
         prepareHalftone(o);
         prepareHalftone(c);
@@ -564,6 +577,20 @@ public final class QrCodeLayer {
 
     /** Modules pop in as a wave from the logo outwards; finder squares assemble whole, a little earlier; p 0..1. */
     private void drawAssemble(Canvas canvas, Code c, float left, float top, float size, float p) {
+        if (app.exteraless.appearance.AppearanceConfig.md3QrCode()) {
+            dst.set(left, top, left + size, top + size);
+            maskPaint.setColorFilter(null);
+            if (p < 1f) {
+                float sc = pop(p);
+                canvas.save();
+                canvas.scale(sc, sc, left + size / 2f, top + size / 2f);
+                canvas.drawBitmap(c.mask, c.maskSrc, dst, maskPaint);
+                canvas.restore();
+            } else {
+                canvas.drawBitmap(c.mask, c.maskSrc, dst, maskPaint);
+            }
+            return;
+        }
         if (mode == MODE_ASSEMBLE) {
             drawVariant(canvas, c, left, top, size, p);
             return;

@@ -476,7 +476,7 @@ public class QrShareView extends View {
         chipText.setCallback(this);
         chipText.setGravity(Gravity.LEFT);
 
-        scene = colorScene(DEFAULT_COLOR);
+        scene = colorScene(AppearanceConfig.md3QrCode() ? MONET_COLOR : DEFAULT_COLOR);
         rimLightColor = rimLightFor(scene.edge);
         if (baseLink != null) {
             rebuildCodes();
@@ -642,6 +642,7 @@ public class QrShareView extends View {
         return ColorUtils.LABToColor(lab[0], lab[1], lab[2]);
     }
 
+    static final int MONET_COLOR = 0;
     private static int[] DEEP_CENTER, DEEP_EDGE, DEEP_QR;
 
     private static void buildDeep() {
@@ -651,19 +652,41 @@ public class QrShareView extends View {
         DEEP_EDGE = new int[n];
         DEEP_QR = new int[n];
         for (int i = 0; i < n; i++) {
-            DEEP_CENTER[i] = deepen(Backdrops.CENTER[i], false);
-            DEEP_EDGE[i] = deepen(Backdrops.EDGE[i], true);
-            DEEP_QR[i] = contrastMatchedQr(DEEP_CENTER[i], DEEP_EDGE[i]);
+            if (i == MONET_COLOR) {
+                int c1 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
+                if (c1 == 0) c1 = 0xFF1C1B1F;
+                int c2 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
+                if (c2 == 0) c2 = 0xFF141218;
+                DEEP_CENTER[i] = c1;
+                DEEP_EDGE[i] = c2;
+                int qrC = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
+                if (qrC == 0) qrC = Theme.getColor(Theme.key_featuredStickers_addButton);
+                DEEP_QR[i] = qrC;
+            } else {
+                DEEP_CENTER[i] = deepen(Backdrops.CENTER[i], false);
+                DEEP_EDGE[i] = deepen(Backdrops.EDGE[i], true);
+                DEEP_QR[i] = contrastMatchedQr(DEEP_CENTER[i], DEEP_EDGE[i]);
+            }
         }
     }
 
     private static int deepCenter(int i) {
+        if (i == MONET_COLOR) {
+            int c = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
+            if (c == 0) c = 0xFF1C1B1F;
+            return c;
+        }
         if (i == TUNED_COLOR) return DEFAULT_TOP;
         buildDeep();
         return DEEP_CENTER[i];
     }
 
     private static int deepEdge(int i) {
+        if (i == MONET_COLOR) {
+            int c = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
+            if (c == 0) c = 0xFF141218;
+            return c;
+        }
         if (i == TUNED_COLOR) return DEFAULT_BOTTOM;
         buildDeep();
         return DEEP_EDGE[i];
@@ -691,6 +714,20 @@ public class QrShareView extends View {
         final Scene s = new Scene();
         s.type = SCENE_COLOR;
         s.index = i;
+        if (i == MONET_COLOR) {
+            int c1 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
+            if (c1 == 0) c1 = 0xFF1C1B1F;
+            int c2 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
+            if (c2 == 0) c2 = 0xFF141218;
+            s.center = c1;
+            s.edge = c2;
+            s.qr = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
+            if (s.qr == 0) s.qr = Theme.getColor(Theme.key_featuredStickers_addButton);
+            s.pattern = 0;
+            s.vertical = true;
+            buildShaders(s);
+            return s;
+        }
         if (i == TUNED_COLOR) {
             // Neon Blue: sky blue on top, a deeper saturated blue at the bottom
             s.center = DEFAULT_TOP;
@@ -1756,6 +1793,9 @@ public class QrShareView extends View {
 
     private void restoreFee(String message) {
         if (!free) return;
+        if (app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
+            message = null;
+        }
         // the collapse starts from the free chip's width as it is now, frozen: the label's own text animation must
         // not move the right edge while the pill shrinks back to the fee
         restoreFreeW = dp(CHIP_PAD_L) + dp(STAR_DP) + dp(STAR_GAP) + chipText.getCurrentWidth() + dp(11);
@@ -1824,6 +1864,9 @@ public class QrShareView extends View {
 
     /** The free code could not be made: the fee comes back with the error. */
     public void cancelFree(String error) {
+        if (app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
+            return;
+        }
         if (free) {
             restoreFee(error != null ? org.telegram.messenger.LocaleController.getString(R.string.ErrorOccurred) : null);
         } else if (error != null) {
@@ -1833,6 +1876,9 @@ public class QrShareView extends View {
 
     /** A request failed: a generic error (the server's code is in the log). */
     public void showError(String error) {
+        if (app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
+            return;
+        }
         showToast(R.drawable.msg_warning, org.telegram.messenger.LocaleController.getString(R.string.ErrorOccurred));
     }
 
@@ -1942,7 +1988,12 @@ public class QrShareView extends View {
 
     private float cardW() {return getWidth() * 0.745f;}
 
-    private float cardH() {return cardW() * lerp(1.07f, 1f, tempK);} // temporary link: no username line, a square card
+    private float cardH() {
+        if (AppearanceConfig.md3QrCode()) {
+            return cardW();
+        }
+        return cardW() * lerp(1.07f, 1f, tempK);
+    } // temporary link: no username line, a square card
 
     // ---- temporary link (no public username and the phone hidden): the code leads to a contact token, valid for
     // minutes and replaced by the server when it expires (see QrShareServer); a square card without the caption
@@ -3867,7 +3918,9 @@ public class QrShareView extends View {
         rect.set(left, top, left + cw, top + ch);
         final boolean md3 = AppearanceConfig.md3QrShare();
         final boolean md3Code = AppearanceConfig.md3QrCode();
-        if (md3) {
+        if (md3Code) {
+            cardPaint.setColor(Color.WHITE);
+        } else if (md3) {
             cardPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         } else {
             cardPaint.setColor(Color.WHITE);
@@ -3877,8 +3930,7 @@ public class QrShareView extends View {
         final float cardRadius = md3 ? dp(28) : dp(30);
         Path shapePath = null;
         if (md3Code) {
-            final int shapeId = AppearanceConfig.md3QrShape();
-            shapePath = Md3AvatarShapes.getShapePath(shapeId, left, top, cw, ch);
+            shapePath = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_COOKIE_4, left, top, cw, ch);
         }
         if (shapePath != null) {
             c.drawPath(shapePath, cardPaint);
@@ -3893,50 +3945,67 @@ public class QrShareView extends View {
         }
         qr.setCardBounds(left, top, left + cw, top + ch);
         final int color = qrColor();
-        final float qs = cw * 0.70f, ql = left + (cw - qs) / 2f, qt = top + lerp(cw * 0.12f, (cw - qs) / 2f, tempK); // centred in the square
+        final float qs = cw * 0.70f, ql = left + (cw - qs) / 2f, qt = md3Code ? (top + (ch - qs) / 2f) : (top + lerp(cw * 0.12f, (cw - qs) / 2f, tempK)); // centred in the square
         qr.setColor(color);
         qr.draw(c, ql, qt, qs);
-        // logo: a qr-coloured circle with the white flying plane on top, as on the stock QR screen
+        // logo: MoltenGram logo in MD3 mode, or stock plane on the stock QR screen
         final float lr = qr.logoSize(qs) / 2f, lcx = ql + qs / 2f, lcy = qt + qs / 2f;
-        final float bp = qr.buildProgress();
-        final float lp = 1f; // logo: part of the card (scales with it)
-        final float ls = elemScale(lp);
-        if (lp > 0.004f) {
-            c.save();
-            c.scale(ls, ls, lcx, lcy);
-            if (lp < 1f) c.saveLayerAlpha(lcx - lr - 2, lcy - lr - 2, lcx + lr + 2, lcy + lr + 2, (int) (255 * lp));
-            fill.setColor(color);
+        if (md3Code) {
+            int centerBg = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
+            if (centerBg == 0) centerBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+            fill.setColor(centerBg);
             c.drawCircle(lcx, lcy, lr, fill);
-            // the plane flies in from the circle's bottom-left (0.55 r), 0.5 → 1, clipped to the circle; lands by ~400 ms
-            final long be = qr.buildElapsedMs();
-            final float pu = sharing || be == Long.MAX_VALUE ? 1f : be < 0 ? 0f : Utilities.clamp01(be / 500f);
-            final float pe = pu >= 1f ? 1f : 1f - (float) Math.pow(1f - pu, 3) + 0.015f * (float) Math.sin(Math.PI * pu) * pu; // ≤ 2% settle
-            if (pe > 0.004f) {
-                c.save();
-                logoClip.rewind();
-                logoClip.addCircle(lcx, lcy, lr, Path.Direction.CW);
-                c.clipPath(logoClip);
-                final float off = (1f - Math.min(1f, pe)) * lr * 0.55f, psc = 0.5f + 0.5f * pe;
-                c.translate(-off, off);
-                c.scale(psc, psc, lcx, lcy);
-                if (sharing && logoOptimal != null) {
-                    // a shared image takes the plane's best frame, not the one the animation is at
-                    rect3.set(lcx - lr, lcy - lr, lcx + lr, lcy + lr);
-                    c.drawBitmap(logoOptimal, null, rect3, logoOptimalPaint);
-                } else {
-                    logo.setAlpha((int) (255 * Utilities.clamp01(pu * 2f)));
-                    logo.setBounds((int) (lcx - lr), (int) (lcy - lr), (int) (lcx + lr), (int) (lcy + lr));
-                    logo.draw(c);
-                    logo.setAlpha(255);
+            try {
+                Drawable moltenLogo = ContextCompat.getDrawable(getContext(), R.drawable.splash_icon);
+                if (moltenLogo != null) {
+                    moltenLogo = moltenLogo.mutate();
+                    moltenLogo.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+                    int lpad = (int) (lr * 0.28f);
+                    moltenLogo.setBounds((int) (lcx - lr + lpad), (int) (lcy - lr + lpad), (int) (lcx + lr - lpad), (int) (lcy + lr - lpad));
+                    moltenLogo.draw(c);
                 }
+            } catch (Exception ignore) {}
+        } else {
+            final float bp = qr.buildProgress();
+            final float lp = 1f; // logo: part of the card (scales with it)
+            final float ls = elemScale(lp);
+            if (lp > 0.004f) {
+                c.save();
+                c.scale(ls, ls, lcx, lcy);
+                if (lp < 1f) c.saveLayerAlpha(lcx - lr - 2, lcy - lr - 2, lcx + lr + 2, lcy + lr + 2, (int) (255 * lp));
+                fill.setColor(color);
+                c.drawCircle(lcx, lcy, lr, fill);
+                // the plane flies in from the circle's bottom-left (0.55 r), 0.5 → 1, clipped to the circle; lands by ~400 ms
+                final long be = qr.buildElapsedMs();
+                final float pu = sharing || be == Long.MAX_VALUE ? 1f : be < 0 ? 0f : Utilities.clamp01(be / 500f);
+                final float pe = pu >= 1f ? 1f : 1f - (float) Math.pow(1f - pu, 3) + 0.015f * (float) Math.sin(Math.PI * pu) * pu; // ≤ 2% settle
+                if (pe > 0.004f) {
+                    c.save();
+                    logoClip.rewind();
+                    logoClip.addCircle(lcx, lcy, lr, Path.Direction.CW);
+                    c.clipPath(logoClip);
+                    final float off = (1f - Math.min(1f, pe)) * lr * 0.55f, psc = 0.5f + 0.5f * pe;
+                    c.translate(-off, off);
+                    c.scale(psc, psc, lcx, lcy);
+                    if (sharing && logoOptimal != null) {
+                        // a shared image takes the plane's best frame, not the one the animation is at
+                        rect3.set(lcx - lr, lcy - lr, lcx + lr, lcy + lr);
+                        c.drawBitmap(logoOptimal, null, rect3, logoOptimalPaint);
+                    } else {
+                        logo.setAlpha((int) (255 * Utilities.clamp01(pu * 2f)));
+                        logo.setBounds((int) (lcx - lr), (int) (lcy - lr), (int) (lcx + lr), (int) (lcy + lr));
+                        logo.draw(c);
+                        logo.setAlpha(255);
+                    }
+                    c.restore();
+                }
+                if (lp < 1f) c.restore();
                 c.restore();
             }
-            if (lp < 1f) c.restore();
-            c.restore();
         }
         // username: stock layout (condensed bold, "@" glyph drawable, 30/25/19dp until it fits)
         final StaticLayout name = nameLayout((int) cw);
-        if (name != null) {
+        if (name != null && !md3Code) {
             nameTextPaint.setColor(color);
             nameAt.setColorFilter(tint(color));
             final float textH = (nameTextPaint.descent() - nameTextPaint.ascent()) * name.getLineCount();
@@ -3972,6 +4041,18 @@ public class QrShareView extends View {
             if (burst) emitNameBurst(nx, ny);
         }
         c.restore();
+        if (md3Code && name != null) {
+            nameTextPaint.setColor(Color.WHITE);
+            if (nameAt != null) {
+                nameAt.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+            }
+            final float nx = left + (cw - name.getWidth()) / 2f;
+            final float ny = top + ch + dp(14);
+            c.save();
+            c.translate(nx, ny);
+            name.draw(c);
+            c.restore();
+        }
         // drawn over the card in its own transform like the code's particles (no clip: they rise over the QR and off it)
         if (!sharing && nbN > 0) drawNameBurst(c, color);
     }
@@ -5259,7 +5340,7 @@ public class QrShareView extends View {
         if (md3) {
             int btnBg = Theme.getColor(Theme.key_windowBackgroundWhite);
             fill.setColor(btnBg);
-            fill.setAlpha(235);
+            fill.setAlpha(255);
             c.drawRoundRect(closeRect, dp(20), dp(20), fill);
             drawRipple(c, RP_CLOSE, closeRect, light);
             icClose.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
@@ -5289,7 +5370,7 @@ public class QrShareView extends View {
             if (md3) {
                 int btnBg = Theme.getColor(Theme.key_featuredStickers_addButton);
                 fill.setColor(btnBg);
-                fill.setAlpha(240);
+                fill.setAlpha(255);
                 c.drawRoundRect(scanRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SCAN, scanRect, light);
                 icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), Color.WHITE, 1f);
@@ -5369,7 +5450,7 @@ public class QrShareView extends View {
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
                 fill.setColor(btnColor);
-                fill.setAlpha((int) (230 * a));
+                fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(shareRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SHARE, shareRect, light);
                 icon(c, icShare, shareRect.centerX(), cy, dp(22), Color.WHITE, a);
@@ -5387,7 +5468,7 @@ public class QrShareView extends View {
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
                 fill.setColor(btnColor);
-                fill.setAlpha((int) (230 * a));
+                fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(saveRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SAVE, saveRect, light);
                 icon(c, icDownload, saveRect.centerX(), cy, dp(24), Color.WHITE, a);
@@ -5407,7 +5488,7 @@ public class QrShareView extends View {
         if (md3Share) {
             int tabBgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
             fill.setColor(tabBgColor);
-            fill.setAlpha((int) (220 * ma));
+            fill.setAlpha((int) (255 * ma));
             c.drawRoundRect(tabsRect, dp(20), dp(20), fill);
         } else {
             glassButton = true;

@@ -37,11 +37,17 @@ import com.google.zxing.qrcode.encoder.ByteMatrix;
 import com.google.zxing.qrcode.encoder.Encoder;
 import com.google.zxing.qrcode.encoder.QRCode;
 
+import androidx.core.content.ContextCompat;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
+import org.telegram.ui.ActionBar.Theme;
+import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 /**
  * This object renders a QR Code as a BitMatrix 2D array of greyscale values.
@@ -136,7 +142,25 @@ public final class TelegramQRCodeWriter {
         imageSize = imageBloks * multiple - 24;
         int imageX = (size - imageSize) / 2;
 
-        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        final boolean isMd3 = AppearanceConfig.md3QrCode();
+        int[] md3Colors = null;
+        int color1 = 0xff000000;
+        if (isMd3) {
+            int c1 = MonetHelper.getColor("a1_600");
+            if (c1 == 0) c1 = Theme.getColor(Theme.key_featuredStickers_addButton);
+            int c2 = MonetHelper.getColor("a2_600");
+            if (c2 == 0) c2 = Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader);
+            int c3 = MonetHelper.getColor("a3_600");
+            if (c3 == 0) c3 = MonetHelper.getColor("a1_400");
+            if (c3 == 0) c3 = c1;
+            c1 |= 0xFF000000;
+            c2 |= 0xFF000000;
+            c3 |= 0xFF000000;
+            md3Colors = new int[]{c1, c2, c3};
+            color1 = c1;
+            blackPaint.setColor(c1);
+        }
+        int qrShape = isMd3 ? AppearanceConfig.QR_SHAPE_SQUIRCLE : (AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED);
         float sideQuadPx = sideQuadSize * multiple;
 
         for (int a = 0; a < 3; a++) {
@@ -166,7 +190,7 @@ public final class TelegramQRCodeWriter {
             }
             Arrays.fill(radii, r);
 
-            rect.setColor(0xff000000);
+            rect.setColor(color1);
             rect.setBounds(x, y, x + sideQuadSize * multiple, y + sideQuadSize * multiple);
             rect.draw(canvas);
 
@@ -202,7 +226,7 @@ public final class TelegramQRCodeWriter {
                 rCenter = ((sideQuadSize - 2) * multiple) / 4.0f;
             }
             Arrays.fill(radii, rCenter);
-            rect.setColor(0xff000000);
+            rect.setColor(color1);
             rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
             rect.draw(canvas);
         }
@@ -210,10 +234,32 @@ public final class TelegramQRCodeWriter {
         RectF sqRectF = new RectF();
         Path pathHelper = new Path();
 
+        float modulePad1 = multiple * 0.08f;
+        float moduleSize1 = multiple - modulePad1 * 2f;
+        Path[] md3ShapesList1 = null;
+        if (isMd3) {
+            Path md3Cookie = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_COOKIE_4, moduleSize1, moduleSize1);
+            Path md3Clover = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CLOVER_4, moduleSize1, moduleSize1);
+            Path md3Diamond = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_DIAMOND, moduleSize1, moduleSize1);
+            Path md3Square = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_SQUARE, moduleSize1, moduleSize1);
+            Path md3Circle = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CIRCLE, moduleSize1, moduleSize1);
+            md3ShapesList1 = new Path[]{md3Cookie, md3Clover, md3Diamond, md3Square, md3Circle};
+        }
+        Paint md3Paint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         for (int y = 0, outputY = padding; y < inputHeight; y++, outputY += multiple) {
             for (int x = 0, outputX = padding; x < inputWidth; x++, outputX += multiple) {
                 if (has(x, y)) {
-                    if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                    if (isMd3 && md3ShapesList1 != null) {
+                        int cIdx = Math.abs((x * 37 + y * 19 + (x ^ y) * 13)) % md3Colors.length;
+                        int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList1.length;
+                        md3Paint1.setColor(md3Colors[cIdx]);
+                        Path shape = md3ShapesList1[sIdx];
+                        canvas.save();
+                        canvas.translate(outputX + modulePad1, outputY + modulePad1);
+                        canvas.drawPath(shape, md3Paint1);
+                        canvas.restore();
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
                         canvas.drawCircle(outputX + multiple / 2.0f, outputY + multiple / 2.0f, multiple * 0.44f, blackPaint);
                     } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
                         float pad = multiple * 0.06f;
@@ -282,7 +328,24 @@ public final class TelegramQRCodeWriter {
             }
         }
 
-        if (centerDrawable != null) {
+        if (isMd3) {
+            Paint centerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            centerPaint.setColor(color1);
+            float cx = imageX + imageSize / 2f;
+            float cy = imageX + imageSize / 2f;
+            float cr = imageSize / 2f;
+            canvas.drawCircle(cx, cy, cr, centerPaint);
+            try {
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
+                if (icon != null) {
+                    icon = icon.mutate();
+                    icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+                    int pad = (int) (cr * 0.28f);
+                    icon.setBounds((int) (cx - cr + pad), (int) (cy - cr + pad), (int) (cx + cr - pad), (int) (cy + cr - pad));
+                    icon.draw(canvas);
+                }
+            } catch (Exception ignore) {}
+        } else if (centerDrawable != null) {
             centerDrawable.setBounds(imageX, imageX, imageX + imageSize, imageX + imageSize);
             centerDrawable.draw(canvas);
         } else if (iconF != null) {
@@ -388,7 +451,25 @@ public final class TelegramQRCodeWriter {
         boolean isTransparentBackground = Color.alpha(backgroundColor) == 0;
         Path clipPath = new Path();
         RectF rectF = new RectF();
-        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        final boolean isMd3 = AppearanceConfig.md3QrCode();
+        int[] md3Colors = null;
+        if (isMd3) {
+            int c1 = MonetHelper.getColor("a1_600");
+            if (c1 == 0) c1 = Theme.getColor(Theme.key_featuredStickers_addButton);
+            int c2 = MonetHelper.getColor("a2_600");
+            if (c2 == 0) c2 = Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader);
+            int c3 = MonetHelper.getColor("a3_600");
+            if (c3 == 0) c3 = MonetHelper.getColor("a1_400");
+            if (c3 == 0) c3 = c1;
+            c1 |= 0xFF000000;
+            c2 |= 0xFF000000;
+            c3 |= 0xFF000000;
+            md3Colors = new int[]{c1, c2, c3};
+            color = c1;
+            blackPaint.setColor(c1);
+            rect.setColor(c1);
+        }
+        int qrShape = isMd3 ? AppearanceConfig.QR_SHAPE_SQUIRCLE : (AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED);
         float sideQuadPx = sideQuadSize * multiple;
 
         for (int a = 0; a < 3; a++) {
@@ -485,10 +566,32 @@ public final class TelegramQRCodeWriter {
         float r = multiple / 2.0f * radiusFactor;
         Path pathHelper = new Path();
 
+        float modulePad2 = multiple * 0.08f;
+        float moduleSize2 = multiple - modulePad2 * 2f;
+        Path[] md3ShapesList2 = null;
+        if (isMd3) {
+            Path md3Cookie = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_COOKIE_4, moduleSize2, moduleSize2);
+            Path md3Clover = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CLOVER_4, moduleSize2, moduleSize2);
+            Path md3Diamond = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_DIAMOND, moduleSize2, moduleSize2);
+            Path md3Square = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_SQUARE, moduleSize2, moduleSize2);
+            Path md3Circle = Md3AvatarShapes.INSTANCE.getShapePath(Md3AvatarShapes.SHAPE_CIRCLE, moduleSize2, moduleSize2);
+            md3ShapesList2 = new Path[]{md3Cookie, md3Clover, md3Diamond, md3Square, md3Circle};
+        }
+        Paint md3Paint2 = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         for (int y = 0, outputY = padding; y < inputHeight; y++, outputY += multiple) {
             for (int x = 0, outputX = padding; x < inputWidth; x++, outputX += multiple) {
                 if (has(x, y)) {
-                    if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                    if (isMd3 && md3ShapesList2 != null) {
+                        int cIdx = Math.abs((x * 37 + y * 19 + (x ^ y) * 13)) % md3Colors.length;
+                        int sIdx = Math.abs((x * 17 + y * 31 + (x * y) * 7)) % md3ShapesList2.length;
+                        md3Paint2.setColor(md3Colors[cIdx]);
+                        Path shape = md3ShapesList2[sIdx];
+                        canvas.save();
+                        canvas.translate(outputX + modulePad2, outputY + modulePad2);
+                        canvas.drawPath(shape, md3Paint2);
+                        canvas.restore();
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
                         canvas.drawCircle(outputX + multiple / 2.0f, outputY + multiple / 2.0f, multiple * 0.44f, blackPaint);
                     } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
                         float pad = multiple * 0.06f;
@@ -557,9 +660,31 @@ public final class TelegramQRCodeWriter {
             }
         }
 
-        Bitmap icon = SvgHelper.getBitmap(readRes(R.raw.qr_logo), imageSize, imageSize, false);
-        canvas.drawBitmap(icon, imageX, imageX, null);
-        icon.recycle();
+        if (isMd3) {
+            Paint centerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            centerPaint.setColor(color);
+            float cx = imageX + imageSize / 2f;
+            float cy = imageX + imageSize / 2f;
+            float cr = imageSize / 2f;
+            canvas.drawCircle(cx, cy, cr, centerPaint);
+            try {
+                Drawable icon = ContextCompat.getDrawable(ApplicationLoader.applicationContext, R.drawable.splash_icon);
+                if (icon != null) {
+                    icon = icon.mutate();
+                    icon.setColorFilter(new PorterDuffColorFilter(Color.WHITE, PorterDuff.Mode.SRC_IN));
+                    int pad = (int) (cr * 0.28f);
+                    icon.setBounds((int) (cx - cr + pad), (int) (cy - cr + pad), (int) (cx + cr - pad), (int) (cy + cr - pad));
+                    icon.draw(canvas);
+                }
+            } catch (Exception ignore) {}
+        } else if (centerDrawable != null) {
+            centerDrawable.setBounds(imageX, imageX, imageX + imageSize, imageX + imageSize);
+            centerDrawable.draw(canvas);
+        } else {
+            Bitmap icon = SvgHelper.getBitmap(readRes(R.raw.qr_logo), imageSize, imageSize, false);
+            canvas.drawBitmap(icon, imageX, imageX, null);
+            icon.recycle();
+        }
 
         canvas.setBitmap(null);
 

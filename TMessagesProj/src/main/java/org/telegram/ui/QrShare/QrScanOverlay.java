@@ -347,8 +347,10 @@ public final class QrScanOverlay extends FrameLayout {
         cornerPaint.setStyle(Paint.Style.STROKE);
         cornerPaint.setStrokeCap(Paint.Cap.ROUND);
         cornerPaint.setStrokeJoin(Paint.Join.ROUND);
-        cornerPaint.setColor(0xFFFFFFFF);
-        cornerPaint.setStrokeWidth(dp(4));
+        int cornerColor = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+        if (cornerColor == 0) cornerColor = 0xFFFFFFFF;
+        cornerPaint.setColor(cornerColor);
+        cornerPaint.setStrokeWidth(dp(5));
         foundPaint.setStyle(Paint.Style.STROKE);
         foundPaint.setStrokeCap(Paint.Cap.ROUND);
         foundPaint.setStrokeJoin(Paint.Join.ROUND);
@@ -780,19 +782,25 @@ public final class QrScanOverlay extends FrameLayout {
         canvas.save();
         canvas.scale(scale, scale, rect.centerX(), rect.centerY());
         final float radius = rect.height() / 2f;
-        drawGlassBody(canvas, rect, radius, alpha, true);
+        int btnBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhite);
+        fill.setColor(btnBg);
+        fill.setAlpha((int) (255 * alpha));
+        canvas.drawRoundRect(rect, radius, radius, fill);
         if (icon == flashIcon && torchK > 0f) {
-            // the torch is on: the glass fills up white
-            fill.setColor(0xFFFFFFFF);
-            fill.setAlpha((int) (0x66 * torchK * alpha));
+            int activeBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+            fill.setColor(activeBg);
+            fill.setAlpha((int) (255 * torchK * alpha));
             canvas.drawRoundRect(rect, radius, radius, fill);
         }
         if (icon != null) {
             final int size = dp(28);
             icon.setBounds((int) (rect.centerX() - size / 2f), (int) (rect.centerY() - size / 2f), (int) (rect.centerX() + size / 2f), (int) (rect.centerY() + size / 2f));
+            int iconColor = (icon == flashIcon && torchK > 0.5f) ? Color.WHITE : org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText);
+            icon.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN));
             icon.setAlpha((int) (255 * alpha));
             icon.draw(canvas);
         } else {
+            closeIcon.setColor(org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText));
             closeIcon.setAlpha((int) (255 * alpha));
             canvas.save();
             canvas.translate(rect.centerX() - closeIcon.getIntrinsicWidth() / 2f, rect.centerY() - closeIcon.getIntrinsicHeight() / 2f);
