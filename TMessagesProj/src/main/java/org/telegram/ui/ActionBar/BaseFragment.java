@@ -283,7 +283,7 @@ public abstract class BaseFragment {
 
     public View performCreateView(Context context) {
         if (!BuildConfig.DEBUG) {
-            return createView(context);
+            return performCreateViewImpl(context);
         }
 
         final String className = getClass().getSimpleName();
@@ -291,7 +291,7 @@ public abstract class BaseFragment {
         final String sectionName = TextUtils.isEmpty(className) ? sectionNameBase : (sectionNameBase + className);
         Trace.beginSection(sectionName);
         try {
-            return createView(context);
+            return performCreateViewImpl(context);
         } finally {
             Trace.endSection();
         }

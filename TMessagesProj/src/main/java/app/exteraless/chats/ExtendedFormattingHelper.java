@@ -58,7 +58,7 @@ public class ExtendedFormattingHelper {
         return url != null && url.startsWith(PREFIX);
     }
 
-    public static void applyFormattingSpan(Spannable spannable, String url, int offset, TextStyleSpan.TextStyleRun run) {
+    public static void applyFormattingSpan(Spannable spannable, String url, int start, int end, TextStyleSpan.TextStyleRun run) {
         if (!app.exteraless.OpenExteraConfig.extendedFormatting()) {
             return;
         }
@@ -72,19 +72,39 @@ public class ExtendedFormattingHelper {
                 return;
             }
             int len = parseLen(uri);
-            int spanStart = offset;
-            if (offset >= 0 && offset < spannable.length() && spannable.charAt(offset) == '\u200B') {
-                spanStart = offset + 1;
+            int safeStart = Math.max(0, Math.min(start, spannable.length()));
+            int safeEnd = Math.max(safeStart, Math.min(end, spannable.length()));
+
+            if ("table".equals(type)) {
+                int tableStart = safeStart;
+                int tableEnd = safeEnd;
+                if (safeEnd - safeStart <= 3) {
+                    if (safeStart < safeEnd) {
+                        spannable.setSpan(new ZeroHeightSpan(), safeStart, safeEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    }
+                    tableStart = safeEnd;
+                    if (tableStart < spannable.length() && spannable.charAt(tableStart) == '\n') {
+                        tableStart++;
+                    }
+                    tableEnd = resolveSpanEnd(spannable, tableStart, len);
+                }
+                if (tableStart < tableEnd && tableStart < spannable.length()) {
+                    applyTableSpans(spannable, tableStart, tableEnd);
+                }
+                return;
             }
-            int spanEnd = resolveSpanEnd(spannable, spanStart, len);
+
+            int spanStart = safeStart;
+            int spanEnd = safeEnd;
+            if (safeEnd - safeStart <= 1 && safeStart < spannable.length() && spannable.charAt(safeStart) == '\u200B') {
+                spanStart = safeStart + 1;
+                spanEnd = resolveSpanEnd(spannable, spanStart, len);
+            }
             if (spanStart >= spanEnd || spanStart >= spannable.length()) {
                 return;
             }
 
             switch (type) {
-                case "table":
-                    applyTableSpans(spannable, spanStart, spanEnd);
-                    break;
                 case "media":
                     applyMediaSpan(spannable, uri, spanStart, spanEnd, run);
                     break;
@@ -712,8 +732,9 @@ public class ExtendedFormattingHelper {
                     }
                 }
             }
-            String out = fallback.toString();
-            callback.insert(out, PREFIX + "?t=table&len=" + out.length(), true);
+            String body = fallback.toString();
+            String out = "📊\n" + body;
+            callback.insert(out, PREFIX + "?t=table&len=" + body.length(), true);
         });
         builder.setNegativeButton("Отмена", null);
         builder.show();

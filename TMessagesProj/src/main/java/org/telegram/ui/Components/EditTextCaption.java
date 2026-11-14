@@ -759,13 +759,17 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
             int insertPos = Math.min(safeStart, editable.length());
             int removeEnd = Math.min(safeEnd, editable.length());
             if (replaceSelection && removeEnd > insertPos) {
-                editable.replace(insertPos, removeEnd, "\u200B" + text);
+                editable.replace(insertPos, removeEnd, text);
             } else {
-                editable.insert(insertPos, "\u200B" + text);
+                editable.insert(insertPos, text);
             }
-            editable.setSpan(createUrlSpan(fmtUrl), insertPos, insertPos + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            app.exteraless.chats.ExtendedFormattingHelper.applyFormattingSpan(editable, fmtUrl, insertPos, null);
-            setSelection(Math.min(editable.length(), insertPos + 1 + text.length()));
+            int urlEnd = insertPos + text.length();
+            if (fmtUrl.contains("t=table") && text.startsWith("📊\n")) {
+                urlEnd = insertPos + 2;
+            }
+            editable.setSpan(createUrlSpan(fmtUrl), insertPos, urlEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            app.exteraless.chats.ExtendedFormattingHelper.applyFormattingSpan(editable, fmtUrl, insertPos, urlEnd, null);
+            setSelection(Math.min(editable.length(), insertPos + text.length()));
             if (delegate != null) {
                 delegate.onSpansChanged();
             }
