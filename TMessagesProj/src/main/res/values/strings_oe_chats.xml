@@ -231,6 +231,8 @@
 <string name="OECustomEmojiStatus">Custom Emoji Statuses</string>
 <string name="OEFreeProfileAppearance">Profile Styling without Premium</string>
 <string name="OEColoredText">Colored Text</string>
+<string name="OEExtendedFormatting">Extended Formatting</string>
+<string name="OEExtendedFormattingInfo">Tables, inline media cards, headings, highlights and checklists visible to MoltenGram users with clean text fallback for others.</string>
 <string name="FeedHideChannelAvatars">Hide channel avatars</string>
 <string name="FeedHideChannelAvatarsInfo">Do not display channel avatars next to posts in the feed.</string>
 <string name="OEAppearanceHideSettingsAccounts">Hide Accounts tab</string>

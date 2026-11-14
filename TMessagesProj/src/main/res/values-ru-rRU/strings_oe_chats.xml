@@ -228,6 +228,8 @@
 <string name="OECustomEmojiStatus">Кастомные эмодзи-статусы</string>
 <string name="OEFreeProfileAppearance">Оформление без премиума</string>
 <string name="OEColoredText">Цветной текст</string>
+<string name="OEExtendedFormatting">Расширенное форматирование</string>
+<string name="OEExtendedFormattingInfo">Таблицы, медиа-карточки, заголовки, маркеры и чек-листы для пользователей MoltenGram без каши у обычных пользователей.</string>
 <string name="FeedHideChannelAvatars">Скрыть аватарки каналов</string>
 <string name="FeedHideChannelAvatarsInfo">Не показывать аватарки каналов рядом с публикациями в ленте.</string>
 <string name="OEAppearanceHideSettingsAccounts">Скрыть вкладку «Аккаунты»</string>

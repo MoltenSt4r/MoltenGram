@@ -77,6 +77,10 @@ object OpenExteraConfig {
     @JvmField
     val coloredText = addConfig("OEColoredText", ConfigItem.configTypeBool, true)
 
+    /** Расширенное форматирование сообщений (таблицы, медиа-карточки, заголовки, маркеры через tg://fmt) */
+    @JvmField
+    val extendedFormatting = addConfig("OEExtendedFormatting", ConfigItem.configTypeBool, true)
+
     /** Скрывать невидимый код эмодзи-статуса при отображении описания (Bio) */
     @JvmField
     val cleanBioDisplay = addConfig("OECleanBioDisplay", ConfigItem.configTypeBool, true)
@@ -91,6 +95,9 @@ object OpenExteraConfig {
 
     @JvmStatic
     fun coloredText(): Boolean = coloredText.Bool()
+
+    @JvmStatic
+    fun extendedFormatting(): Boolean = extendedFormatting.Bool()
 
     @JvmStatic
     fun cleanBioDisplay(): Boolean = cleanBioDisplay.Bool()

@@ -30623,6 +30623,11 @@ public class ChatActivity extends BaseFragment implements
                 menu.add(R.id.menu_groupbolditalic, R.id.menu_color, order.getAndIncrement(), s);
             }
         });
+        addActions.put("ext_fmt", () -> {
+            if (app.exteraless.OpenExteraConfig.extendedFormatting()) {
+                menu.add(R.id.menu_groupbolditalic, R.id.menu_extended_formatting, order.getAndIncrement(), "Формат+");
+            }
+        });
         addActions.put("mention", () -> {
             if (NaConfig.INSTANCE.getShowTextCreateMention().Bool()) {
                 menu.add(R.id.menu_groupbolditalic, R.id.menu_mention, order.getAndIncrement(), getString(R.string.CreateMention));
@@ -30646,7 +30651,7 @@ public class ChatActivity extends BaseFragment implements
                 Runnable r = addActions.get(k);
                 if (r != null) r.run();
             }
-            for (String k : new String[]{"translate","bold","italic","mono","code","strike","underline","quote","spoiler","link","color","mention","date","regular"}){
+            for (String k : new String[]{"translate","bold","italic","mono","code","strike","underline","quote","spoiler","link","color","ext_fmt","mention","date","regular"}){
                 if (!orderStr.contains(k)){
                     Runnable r = addActions.get(k);
                     if (r != null) r.run();
@@ -30664,6 +30669,7 @@ public class ChatActivity extends BaseFragment implements
             addActions.get("spoiler").run();
             addActions.get("link").run();
             addActions.get("color").run();
+            addActions.get("ext_fmt").run();
             addActions.get("mention").run();
             addActions.get("date").run();
             addActions.get("regular").run();

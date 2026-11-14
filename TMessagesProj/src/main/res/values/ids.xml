@@ -15,6 +15,7 @@
     <item name="menu_delete" type="id"/>
     <item name="menu_translate" type="id"/>
     <item name="menu_color" type="id"/>
+    <item name="menu_extended_formatting" type="id"/>
     <item name="parent_tag" type="id"/>
     <item name="object_tag" type="id"/>
     <item name="transparent_tag" type="id"/>

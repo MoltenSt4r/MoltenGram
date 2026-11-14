@@ -896,7 +896,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
 
             actionModeTitle = new AnimatedTextView(getContext(), true, true, true);
             actionModeTitle.setTextSize(dp(18));
-            actionModeTitle.setTypeface(AndroidUtilities.bold());
+            actionModeTitle.setTypeface(AndroidUtilities.headerTypeface());
             actionModeTitle.setTextColor(itemsActionModeColor);
             actionModeTitle.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
             actionModeTitle.setEllipsizeByGradient(true);
@@ -1539,7 +1539,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             }
             final SimpleTextView view = new SimpleTextView(getContext());
             view.setGravity(Gravity.CENTER);
-            view.setTypeface(AndroidUtilities.bold());
+            view.setTypeface(AndroidUtilities.headerTypeface());
             view.setTextSize(17);
             view.setTextColor(titleColor);
             view.setEmojiColor(titleColor);

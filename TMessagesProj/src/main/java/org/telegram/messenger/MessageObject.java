@@ -8861,6 +8861,10 @@ public class MessageObject {
                     app.exteraless.chats.ColoredTextHelper.applyColorSpan(spannable, url, run.urlEntity.offset);
                     continue;
                 }
+                if (app.exteraless.chats.ExtendedFormattingHelper.isExtendedFmtUrl(url)) {
+                    app.exteraless.chats.ExtendedFormattingHelper.applyFormattingSpan(spannable, url, run.urlEntity.offset, run);
+                    continue;
+                }
                 if (linksCount >= MediaDataController.MAX_LINKS_COUNT) continue;
                 linksCount++;
                 if (url != null) {
