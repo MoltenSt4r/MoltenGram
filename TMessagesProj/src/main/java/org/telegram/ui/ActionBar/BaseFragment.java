@@ -315,7 +315,7 @@ public abstract class BaseFragment {
             }
 
             if (useFadeDrawableForActionBar() && header != null) {
-                header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
+                ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
             }
             BaseFragmentSimpleGlass.setListViewParams(listViewForSimpleGlass, mSystemInsets.top, mSystemInsets.bottom, ActionBar.getCurrentActionBarHeight(), 0);
 

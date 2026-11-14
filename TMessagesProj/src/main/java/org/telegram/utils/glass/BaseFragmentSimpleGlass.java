@@ -262,8 +262,7 @@ public class BaseFragmentSimpleGlass {
         contentView.addView(header, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
-            simpleActionBar.setExtraHeight(dp(6));
-            simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            simpleActionBar.setExtraHeight(0);
             simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;

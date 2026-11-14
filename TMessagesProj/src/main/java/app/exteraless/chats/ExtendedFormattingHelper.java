@@ -52,10 +52,11 @@ import java.util.List;
  */
 public class ExtendedFormattingHelper {
 
-    public static final String PREFIX = "tg://fmt";
+    public static final String PREFIX = "https://t.me/moltengram_fmt";
+    public static final String LEGACY_PREFIX = "tg://fmt";
 
     public static boolean isExtendedFmtUrl(String url) {
-        return url != null && url.startsWith(PREFIX);
+        return url != null && (url.startsWith(PREFIX) || url.startsWith(LEGACY_PREFIX));
     }
 
     public static void applyFormattingSpan(Spannable spannable, String url, int start, int end, TextStyleSpan.TextStyleRun run) {
