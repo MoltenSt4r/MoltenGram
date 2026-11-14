@@ -27,11 +27,11 @@ import org.telegram.ui.LaunchActivity;
 import java.util.ArrayList;
 import java.util.Locale;
 
-import app.exteraless.appearance.AppRestartHelper;
 import app.exteraless.glass.LiquidGlassConfig;
 import app.exteraless.glass.SolegramGlass;
 import app.exteraless.glass.SolegramGlassPreview;
 import app.exteraless.glass.SolegramLiveGlass;
+import tw.nekomimi.nekogram.helpers.AppRestartHelper;
 
 /**
  * Liquid Glass settings screen ported from Solegram and adapted for MoltenGram.
