@@ -854,7 +854,7 @@ public final class SolegramLiveGlass implements GlassSource, org.telegram.ui.Com
         }
         // white is what a custom panel leaves as "its colour" (ActionBarPopupWindowLayout): the theme's menu colour then
         final BlurredBackgroundProvider provider = color == 0 || color == Color.WHITE || color == Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider)
-            ? BlurredBackgroundProviderImpl.solegramMenu(resourcesProvider, false) // follows the theme
+            ? panel(resourcesProvider, (r, dark) -> SolegramGlass.menuFill(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), dark), true)
             : panel(resourcesProvider, (r, dark) -> SolegramGlass.menuFill(color, dark), true);
         final SolegramLiveGlass glass = create(owner, provider, recipe, host);
         if (glass != null) {

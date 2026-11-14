@@ -4,6 +4,7 @@ import android.content.SharedPreferences;
 import android.os.Build;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LiteMode;
 import org.telegram.messenger.SharedConfig;
@@ -153,8 +154,8 @@ public final class LiquidGlassConfig {
 
     public static void notifyChanged() {
         version++;
-        Theme.reloadAllResources();
-        GlassOutlineStyle.notifyChanged();
+        Theme.reloadAllResources(ApplicationLoader.applicationContext);
+        GlassOutlineStyle.dispatchChange();
         GlassEngine.bumpGeneration();
     }
 

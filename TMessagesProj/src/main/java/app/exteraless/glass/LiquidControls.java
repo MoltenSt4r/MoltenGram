@@ -77,6 +77,10 @@ public final class LiquidControls {
             active = false;
         }
 
+        public boolean isActive() {
+            return active;
+        }
+
         public boolean step(float dt) {
             if (!active) {
                 return false;
