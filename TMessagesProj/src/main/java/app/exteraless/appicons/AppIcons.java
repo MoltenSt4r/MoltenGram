@@ -102,7 +102,7 @@ public final class AppIcons {
                 return icon;
             }
         }
-        return LauncherIcon.MOLTENGRAM;
+        return LauncherIcon.MOLTENGRAM_CLASSIC;
     }
 
     public static void apply(LauncherIcon icon) {

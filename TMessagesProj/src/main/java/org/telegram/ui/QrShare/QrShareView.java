@@ -5372,12 +5372,13 @@ public class QrShareView extends View {
             c.scale(es, es, scanRect.centerX(), scanRect.centerY());
             if (md3) {
                 int btnBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+                int fgColor = AndroidUtilities.computePerceivedBrightness(btnBg) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
                 fill.setColor(btnBg);
                 fill.setAlpha(255);
                 c.drawRoundRect(scanRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SCAN, scanRect, light);
-                icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), Color.WHITE, 1f);
-                scanText.setColor(Color.WHITE);
+                icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), fgColor, 1f);
+                scanText.setColor(fgColor);
                 final Paint.FontMetrics fm = scanText.getFontMetrics();
                 c.drawText(scanLabel, scanRect.left + dp(12) + dp(20) + dp(6), cy - (fm.ascent + fm.descent) / 2f, scanText);
             } else {
@@ -5452,11 +5453,12 @@ public class QrShareView extends View {
             c.scale(bs * shareScale, bs * shareScale, shareRect.centerX(), cy);
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                int fgColor = AndroidUtilities.computePerceivedBrightness(btnColor) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
                 fill.setColor(btnColor);
                 fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(shareRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SHARE, shareRect, light);
-                icon(c, icShare, shareRect.centerX(), cy, dp(22), Color.WHITE, a);
+                icon(c, icShare, shareRect.centerX(), cy, dp(22), fgColor, a);
             } else {
                 glassButton = true;
                 drawGlass(c, shareRect, dp(20), light, a);
@@ -5470,11 +5472,12 @@ public class QrShareView extends View {
             c.scale(bs * mscale, bs * mscale, saveRect.centerX(), cy);
             if (md3Share) {
                 int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                int fgColor = AndroidUtilities.computePerceivedBrightness(btnColor) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
                 fill.setColor(btnColor);
                 fill.setAlpha((int) (255 * a));
                 c.drawRoundRect(saveRect, dp(20), dp(20), fill);
                 drawRipple(c, RP_SAVE, saveRect, light);
-                icon(c, icDownload, saveRect.centerX(), cy, dp(24), Color.WHITE, a);
+                icon(c, icDownload, saveRect.centerX(), cy, dp(24), fgColor, a);
             } else {
                 glassButton = true;
                 drawGlass(c, saveRect, dp(20), light, a);

@@ -580,7 +580,9 @@ public class ChatEditActivity extends BaseFragment implements ImageUpdater.Image
                 setMeasuredDimension(widthSize, heightSize);
                 heightSize -= getPaddingTop();
 
-                measureChildWithMargins(simpleActionBar, widthMeasureSpec, 0, heightMeasureSpec, 0);
+                if (simpleActionBar != null && simpleActionBar.getLayoutParams() instanceof MarginLayoutParams) {
+                    measureChildWithMargins(simpleActionBar, widthMeasureSpec, 0, heightMeasureSpec, 0);
+                }
 
                 int keyboardSize = measureKeyboardHeight();
                 if (keyboardSize > dp(20)) {

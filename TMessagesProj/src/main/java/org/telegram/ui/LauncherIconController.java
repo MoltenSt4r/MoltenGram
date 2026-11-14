@@ -44,7 +44,7 @@ public class LauncherIconController {
             } catch (Exception ignored) {}
         }
         if (!hasEnabled) {
-            setIcon(LauncherIcon.MOLTENGRAM);
+            setIcon(LauncherIcon.MOLTENGRAM_CLASSIC);
         }
     }
 
@@ -53,7 +53,7 @@ public class LauncherIconController {
         if (ctx == null) return false;
         int i = ctx.getPackageManager().getComponentEnabledSetting(icon.getComponentName(ctx));
         return i == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.MOLTENGRAM;
+                || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.MOLTENGRAM_CLASSIC;
     }
 
     public static void setIcon(LauncherIcon icon) {
@@ -78,7 +78,7 @@ public class LauncherIconController {
                 return icon;
             }
         }
-        return LauncherIcon.MOLTENGRAM;
+        return LauncherIcon.MOLTENGRAM_CLASSIC;
     }
 
     public static android.graphics.drawable.Drawable createIconPreviewDrawable(Context context, LauncherIcon icon, int sizeDp) {
@@ -101,11 +101,11 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        // MoltenGram (15 curated styles)
-        MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
-                R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF7E1D0A),
+        // MoltenGram (Classic first and default)
         MOLTENGRAM_CLASSIC("MoltenGramClassicIcon", R.drawable.moltengram_icon_background,
                 0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature molten terracotta flame", 0xFF7E1D0A),
+        MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
+                R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF7E1D0A),
         MOLTENGRAM_PROTON("MoltenGramProtonIcon", R.drawable.moltengram_proton_icon_background,
                 0, R.string.AppIconMoltenGramProton, IconGroup.MOLTENGRAM, "@moltenst4r", "Proton cyber aesthetics", 0xFF6D4AFF),
         MOLTENGRAM_SAD("MoltenGramSadIcon", R.drawable.moltengram_sad_icon_background,

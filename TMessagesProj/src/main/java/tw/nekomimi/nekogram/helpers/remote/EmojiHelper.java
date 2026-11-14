@@ -256,6 +256,10 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
     }
 
     public static void drawEmojiFont(Canvas canvas, int x, int y, Typeface typeface, String emoji, int emojiSize) {
+        if (emoji == null || emoji.isEmpty()) {
+            return;
+        }
+        String fixed = Emoji.fixEmoji(emoji);
         int fontSize = (int) (emojiSize * 0.85f);
         if (textPaint == null) {
             textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
@@ -265,11 +269,17 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
         textPaint.setTypeface(typeface);
         textPaint.setTextSize(fontSize);
         textPaint.setColor(0xFFFFFFFF);
+        if (typeface != null && !textPaint.hasGlyph(fixed)) {
+            textPaint.setTypeface(Typeface.DEFAULT);
+            if (!textPaint.hasGlyph(fixed)) {
+                textPaint.setTypeface(typeface);
+            }
+        }
         var fm = textPaint.getFontMetricsInt();
         var textHeight = fm.descent - fm.ascent;
         var baseline = y + (emojiSize - textHeight) / 2f - fm.ascent;
         var centerX = x + emojiSize / 2f;
-        canvas.drawText(emoji, centerX, baseline, textPaint);
+        canvas.drawText(fixed, centerX, baseline, textPaint);
     }
 
     public Long getEmojiSize() {

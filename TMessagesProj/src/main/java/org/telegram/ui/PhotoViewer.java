@@ -8886,7 +8886,7 @@ public class PhotoViewer implements NotificationCenter.NotificationCenterDelegat
                 link = "https://" + MessagesController.getInstance(currentAccount).linkPrefix + "/" + username + "/" + msg.getId();
             }
         }
-        final boolean includeStory = messages != null && !messages.isEmpty() && StoryEntry.canRepostMessage(messages.get(0)) && MessagesController.getInstance(currentAccount).storiesEnabled();
+        final boolean includeStory = app.exteraless.chats.ChatsConfig.showRepostToStory() && messages != null && !messages.isEmpty() && StoryEntry.canRepostMessage(messages.get(0)) && (MessagesController.getInstance(currentAccount).storiesEnabled() || !xyz.nextalone.nagram.NaConfig.INSTANCE.getDisableStories().Bool());
         ShareAlert alert = new ShareAlert(parentActivity, parentChatActivity, messages, null, null, false, link, null, false, true, includeStory, videoTimestamp, null) {
             { includeStoryFromMessage = includeStory; }
             @Override

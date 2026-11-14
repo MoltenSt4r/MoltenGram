@@ -795,7 +795,9 @@ public final class QrScanOverlay extends FrameLayout {
         if (icon != null) {
             final int size = dp(28);
             icon.setBounds((int) (rect.centerX() - size / 2f), (int) (rect.centerY() - size / 2f), (int) (rect.centerX() + size / 2f), (int) (rect.centerY() + size / 2f));
-            int iconColor = (icon == flashIcon && torchK > 0.5f) ? Color.WHITE : org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText);
+            int activeBg = org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton);
+            int activeFg = org.telegram.messenger.AndroidUtilities.computePerceivedBrightness(activeBg) > 0.55f ? 0xFF1C1B1F : Color.WHITE;
+            int iconColor = (icon == flashIcon && torchK > 0.5f) ? activeFg : org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlackText);
             icon.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN));
             icon.setAlpha((int) (255 * alpha));
             icon.draw(canvas);

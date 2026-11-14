@@ -13,9 +13,8 @@
         <item name="android:colorControlActivated">@android:color/system_accent1_200</item>
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <item name="android:windowSplashScreenAnimationDuration">@integer/splash_screen_duration</item>
-        <item name="android:windowSplashScreenBackground">@color/moltengram_adaptive_background</item>
+        <item name="android:windowSplashScreenBackground">#1f2732</item>
     </style>
     <style name="ActionBar.Transparent.TMessages.Start" parent="android:style/Widget.Material.Light.ActionBar">
         <item name="android:background">#ff232d3a</item>

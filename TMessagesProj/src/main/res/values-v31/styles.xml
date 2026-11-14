@@ -30,9 +30,8 @@
         <item name="android:navigationBarColor">#000000</item>
         <item name="android:textViewStyle">@style/MyTextViewStyle</item>
         <item name="android:forceDarkAllowed">false</item>
-        <item name="android:windowSplashScreenAnimatedIcon">@drawable/splash_icon</item>
         <item name="android:windowSplashScreenAnimationDuration">@integer/splash_screen_duration</item>
-        <item name="android:windowSplashScreenBackground">@color/moltengram_adaptive_background</item>
+        <item name="android:windowSplashScreenBackground">@android:color/white</item>
     </style>
 
     <style name="Theme.TMessages" parent="Theme.AppCompat.Light">

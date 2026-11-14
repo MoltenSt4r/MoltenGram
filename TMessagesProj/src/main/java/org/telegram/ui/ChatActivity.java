@@ -38418,6 +38418,9 @@ public class ChatActivity extends BaseFragment implements
 
     @Override
     public boolean canSelectStories() {
+        if (!ChatsConfig.showRepostToStory()) {
+            return false;
+        }
         if (!getMessagesController().storiesEnabled() && NaConfig.INSTANCE.getDisableStories().Bool()) {
             return false;
         }

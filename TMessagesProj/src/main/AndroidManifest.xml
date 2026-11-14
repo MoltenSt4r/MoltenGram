@@ -120,14 +120,14 @@
         android:restoreAnyVersion="true"
         android:backupAgent=".BackupAgent"
         android:hardwareAccelerated="true"
-        android:icon="@mipmap/ic_launcher_moltengram"
+        android:icon="@mipmap/ic_launcher_moltengram_classic"
         android:extractNativeLibs="true"
         android:label="@string/NagramX"
         android:largeHeap="true"
         android:theme="@style/Theme.TMessages.Start"
         android:manageSpaceActivity="org.telegram.ui.ExternalActionActivity"
         android:networkSecurityConfig="@xml/network_security_config"
-        android:roundIcon="@mipmap/ic_launcher_moltengram_round"
+        android:roundIcon="@mipmap/ic_launcher_moltengram_classic_round"
         android:supportsRtl="false"
         android:requestLegacyExternalStorage="true"
         android:hasFragileUserData="true"
@@ -139,13 +139,13 @@
     >
         <!-- usesCleartextTraffic for browser supporting opening http:// links -->
 
-        <!-- Единственный включённый по умолчанию alias: MoltenGramIcon -->
+        <!-- Единственный включённый по умолчанию alias: MoltenGramClassicIcon -->
         <activity-alias
             android:enabled="true"
-            android:name="org.telegram.messenger.MoltenGramIcon"
+            android:name="org.telegram.messenger.MoltenGramClassicIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_moltengram"
-            android:roundIcon="@mipmap/ic_launcher_moltengram_round"
+            android:icon="@mipmap/ic_launcher_moltengram_classic"
+            android:roundIcon="@mipmap/ic_launcher_moltengram_classic_round"
             android:exported="true">
 
             <intent-filter>
@@ -158,10 +158,10 @@
 
         <activity-alias
             android:enabled="false"
-            android:name="org.telegram.messenger.MoltenGramClassicIcon"
+            android:name="org.telegram.messenger.MoltenGramIcon"
             android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_moltengram_classic"
-            android:roundIcon="@mipmap/ic_launcher_moltengram_classic_round"
+            android:icon="@mipmap/ic_launcher_moltengram"
+            android:roundIcon="@mipmap/ic_launcher_moltengram_round"
             android:exported="true">
 
             <intent-filter>

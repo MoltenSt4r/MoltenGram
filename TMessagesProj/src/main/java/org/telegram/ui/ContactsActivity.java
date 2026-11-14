@@ -402,7 +402,9 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
         fragmentView = contentView = new SizeNotifierFrameLayout(context) {
             @Override
             protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                measureChildWithMargins(simpleActionBar, widthMeasureSpec, 0, heightMeasureSpec, 0);
+                if (simpleActionBar != null && simpleActionBar.getLayoutParams() instanceof MarginLayoutParams) {
+                    measureChildWithMargins(simpleActionBar, widthMeasureSpec, 0, heightMeasureSpec, 0);
+                }
                 ((MarginLayoutParams) emptyView.getLayoutParams()).topMargin = simpleActionBar.getMeasuredHeight();
                 super.onMeasure(widthMeasureSpec, heightMeasureSpec);
             }

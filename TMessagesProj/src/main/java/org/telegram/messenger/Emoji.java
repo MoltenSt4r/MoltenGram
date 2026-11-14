@@ -302,8 +302,10 @@ public class Emoji {
                     ch = emoji.charAt(a + 1);
                     if (ch == 0xDE2F || ch == 0xDC04 || ch == 0xDE1A || ch == 0xDD7F ||
                             ch == 0xDFF3 || ch == 0xDF2B || ch == 0xDC41 || ch == 0xDD75 || ch == 0xDFCC || ch == 0xDFCB) {
-                        emoji = emoji.substring(0, a + 2) + "\uFE0F" + emoji.substring(a + 2);
-                        length++;
+                        if (a + 2 >= length || emoji.charAt(a + 2) != 0xFE0F) {
+                            emoji = emoji.substring(0, a + 2) + "\uFE0F" + emoji.substring(a + 2);
+                            length++;
+                        }
                         a += 2;
                     } else {
                         a++;
@@ -315,9 +317,11 @@ public class Emoji {
                 return emoji;
             } else if (ch >= 0x0023 && ch <= 0x3299) {
                 if (EmojiData.emojiToFE0FMap.containsKey(ch)) {
-                    emoji = emoji.substring(0, a + 1) + "\uFE0F" + emoji.substring(a + 1);
-                    length++;
-                    a++;
+                    if (a + 1 >= length || emoji.charAt(a + 1) != 0xFE0F) {
+                        emoji = emoji.substring(0, a + 1) + "\uFE0F" + emoji.substring(a + 1);
+                        length++;
+                        a++;
+                    }
                 }
             }
         }
