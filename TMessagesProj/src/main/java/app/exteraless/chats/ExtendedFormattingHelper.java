@@ -37,10 +37,10 @@ import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
-import org.telegram.messenger.MessageObject;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.TextStyleSpan;
 import org.telegram.ui.Components.URLSpanNoUnderline;
 
 import java.util.ArrayList;
@@ -58,7 +58,7 @@ public class ExtendedFormattingHelper {
         return url != null && url.startsWith(PREFIX);
     }
 
-    public static void applyFormattingSpan(Spannable spannable, String url, int offset, MessageObject.TextLayoutBlock run) {
+    public static void applyFormattingSpan(Spannable spannable, String url, int offset, TextStyleSpan.TextStyleRun run) {
         if (!app.exteraless.OpenExteraConfig.extendedFormatting()) {
             return;
         }
@@ -165,7 +165,7 @@ public class ExtendedFormattingHelper {
         }
     }
 
-    private static void applyMediaSpan(Spannable spannable, Uri uri, int spanStart, int spanEnd, MessageObject.TextLayoutBlock run) {
+    private static void applyMediaSpan(Spannable spannable, Uri uri, int spanStart, int spanEnd, TextStyleSpan.TextStyleRun run) {
         String kind = uri.getQueryParameter("k");
         if (TextUtils.isEmpty(kind)) kind = "img";
         String mediaUrl = uri.getQueryParameter("u");
