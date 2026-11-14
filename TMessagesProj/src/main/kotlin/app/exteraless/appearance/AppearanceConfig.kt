@@ -487,7 +487,7 @@ object AppearanceConfig {
     /** Стеклянные полупрозрачные сообщения (матовое стекло по глобальному стилю размытия) */
     @JvmField
     val glassMessages =
-        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, true)
+        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, false)
 
     /** Прозрачность / матовость стеклянных сообщений (5%..85%) */
     @JvmField
@@ -570,7 +570,7 @@ object AppearanceConfig {
     /** 3D-эффект цилиндрического скролла списков и чатов */
     @JvmField
     val chat3dScroll =
-        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, true)
+        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
 
     /** Сила 3D-эффекта наклона (legacy-индекс для обратной совместимости) */
     @JvmField

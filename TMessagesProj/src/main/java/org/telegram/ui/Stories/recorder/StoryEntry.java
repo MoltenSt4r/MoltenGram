@@ -777,7 +777,8 @@ public class StoryEntry {
         if (messageObject == null || messageObject.isSponsored()) {
             return false;
         }
-        if (messageObject.messageOwner != null && messageObject.messageOwner.noforwards) {
+        boolean allowCustomRepost = app.exteraless.chats.ChatsConfig.showRepostToStory();
+        if (!allowCustomRepost && messageObject.messageOwner != null && messageObject.messageOwner.noforwards) {
             return false;
         }
         if (messageObject.type == MessageObject.TYPE_POLL || messageObject.type == MessageObject.TYPE_CONTACT) {
@@ -788,7 +789,7 @@ public class StoryEntry {
         if (chat == null && dialogId < 0) {
             chat = MessagesController.getInstance(messageObject.currentAccount).getChat(messageObject.getChatId());
         }
-        if (chat != null && chat.noforwards) {
+        if (!allowCustomRepost && chat != null && chat.noforwards) {
             return false;
         }
         boolean isChannel = (chat != null && ChatObject.isChannelAndNotMegaGroup(chat)) || (messageObject.messageOwner != null && messageObject.messageOwner.post);
@@ -796,7 +797,7 @@ public class StoryEntry {
             if (messageObject.messageOwner != null && messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.from_id != null) {
                 dialogId = DialogObject.getPeerDialogId(messageObject.messageOwner.fwd_from.from_id);
                 chat = MessagesController.getInstance(messageObject.currentAccount).getChat(-dialogId);
-                if (dialogId >= 0 || (chat != null && chat.noforwards) || (chat != null && !ChatObject.isChannelAndNotMegaGroup(chat)) || (chat != null && !ChatObject.isPublic(chat))) {
+                if (dialogId >= 0 || (!allowCustomRepost && ((chat != null && chat.noforwards) || (chat != null && !ChatObject.isPublic(chat)))) || (chat != null && !ChatObject.isChannelAndNotMegaGroup(chat))) {
                     return false;
                 }
                 return true;
@@ -824,6 +825,9 @@ public class StoryEntry {
                 } else {
                     return true; // repost of forward
                 }
+            }
+            if (isChannel && app.exteraless.chats.ChatsConfig.showRepostToStory()) {
+                return false;
             }
             return null; // no repost
         }

@@ -92,6 +92,7 @@
     <string name="OEChatsMenuHistory">Message History</string>
     <string name="OEChatsMenuReport">Report</string>
     <string name="OEChatsMenuDetails">Details</string>
+    <string name="OEChatsMenuRepostStory">Repost to Story</string>
     <string name="OEChatsSeamlessSwitching">Seamless Switching</string>
     <string name="OEChatsExtendedSettings">Extended Settings</string>
     <string name="OEChatsRememberLastUsedCamera">Remember Last Used Camera</string>

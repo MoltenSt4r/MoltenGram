@@ -89,6 +89,7 @@
     <string name="OEChatsMenuHistory">История сообщения</string>
     <string name="OEChatsMenuReport">Пожаловаться</string>
     <string name="OEChatsMenuDetails">Подробности</string>
+    <string name="OEChatsMenuRepostStory">Отправить в историю</string>
     <string name="OEChatsSeamlessSwitching">Бесшовное переключение</string>
     <string name="OEChatsExtendedSettings">Расширенные настройки</string>
     <string name="OEChatsRememberLastUsedCamera">Запоминать последнюю камеру</string>

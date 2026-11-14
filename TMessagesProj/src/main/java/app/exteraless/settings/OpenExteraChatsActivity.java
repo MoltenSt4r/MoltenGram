@@ -238,6 +238,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int menuTranslateRow;
     private int menuTranslateLlmRow;
     private int menuShareRow;
+    private int menuRepostStoryRow;
     private int menuHideRow;
     private int menuAdminActionsRow;
     private int menuPermissionsRow;
@@ -492,6 +493,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             menuTranslateRow = addRow();
             menuTranslateLlmRow = addRow();
             menuShareRow = addRow();
+            menuRepostStoryRow = addRow();
             menuHideRow = addRow();
             menuReportRow = addRow();
             menuAdminActionsRow = addRow();
@@ -502,7 +504,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             menuCopyPhotoRow = menuCopyAsStickerRow = menuAddToStickersRow = menuAddToFavoritesRow = -1;
             menuNoQuoteForwardRow = menuSetReminderRow = menuSaveRow = menuBookmarkRow = -1;
             menuRepeatRow = menuRepeatAsCopyRow = menuClearRow = menuHistoryRow = -1;
-            menuTranslateRow = menuTranslateLlmRow = menuShareRow = menuHideRow = -1;
+            menuTranslateRow = menuTranslateLlmRow = menuShareRow = menuRepostStoryRow = menuHideRow = -1;
             menuReportRow = menuAdminActionsRow = menuPermissionsRow = menuDetailsRow = -1;
         }
         mediaViewerMenuGroupRow = addRow("mediaViewerMenu");
@@ -1798,7 +1800,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 || position == menuNoQuoteForwardRow || position == menuSetReminderRow
                 || position == menuBookmarkRow || position == menuRepeatAsCopyRow
                 || position == menuTranslateRow || position == menuTranslateLlmRow
-                || position == menuShareRow || position == menuHideRow
+                || position == menuShareRow || position == menuRepostStoryRow || position == menuHideRow
                 || position == menuAdminActionsRow || position == menuPermissionsRow) {
             return messageMenuGroupRow;
         } else if (position == chatMenuAdminsRow || position == chatMenuRecentActionsRow
@@ -1936,6 +1938,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == menuTranslateRow) return NekoConfig.showTranslate;
         if (position == menuTranslateLlmRow) return NaConfig.INSTANCE.getShowTranslateMessageLLM();
         if (position == menuShareRow) return NekoConfig.showShareMessages;
+        if (position == menuRepostStoryRow) return ChatsConfig.showRepostToStory;
         if (position == menuHideRow) return NekoConfig.showMessageHide;
         if (position == menuAdminActionsRow) return NekoConfig.showAdminActions;
         if (position == menuPermissionsRow) return NekoConfig.showChangePermissions;
@@ -2444,6 +2447,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setText(getString(R.string.TranslateMessageLLM), "", NaConfig.INSTANCE.getShowTranslateMessageLLM().Bool(), true, true);
             } else if (position == menuShareRow) {
                 cell.setText(getString(R.string.ShareMessages), "", NekoConfig.showShareMessages.Bool(), true, true);
+            } else if (position == menuRepostStoryRow) {
+                cell.setText(getString(R.string.OEChatsMenuRepostStory), "", ChatsConfig.showRepostToStory.Bool(), true, true);
             } else if (position == menuHideRow) {
                 cell.setText(getString(R.string.Hide), "", NekoConfig.showMessageHide.Bool(), true, true);
             } else if (position == menuAdminActionsRow) {

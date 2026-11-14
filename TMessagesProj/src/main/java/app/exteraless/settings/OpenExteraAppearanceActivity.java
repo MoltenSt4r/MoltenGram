@@ -749,15 +749,20 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildAllAndSelf(view, AppearanceConfig.newLoadingStyle.Bool());
             return;
         } else if (position == md3SliderRow) {
-            // Стиль слайдера читается в SeekBarView.getEffectiveSliderStyle() на каждой отрисовке,
-            // стиль переключателя — в Switch на каждой; перезапуск не нужен, хватает пересборки
-            // вьюх — так же делает NekoGeneralSettingsActivity.
             NaConfig.INSTANCE.getSliderStyle().setConfigInt(
                     isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? 0 : STYLE_MD3);
-            if (avatarCornersPreviewCell != null) {
-                avatarCornersPreviewCell.invalidate();
+            rebuildRowsAndNotify();
+            if (listView != null && listView.getLayoutManager() != null) {
+                android.os.Parcelable state = listView.getLayoutManager().onSaveInstanceState();
+                if (parentLayout != null) {
+                    parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                }
+                if (listView != null && listView.getLayoutManager() != null && state != null) {
+                    listView.getLayoutManager().onRestoreInstanceState(state);
+                }
+            } else if (parentLayout != null) {
+                parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
             }
-            rebuildAllAndSelf(view, isMd3(NaConfig.INSTANCE.getSliderStyle().Int()));
             return;
         } else if (position == md3SwitchRow) {
             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
@@ -770,7 +775,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             builder.setItems(options, (dialog, which) -> {
                 int newStyle = which == 0 ? Switch.SWITCH_STYLE_EXPRESSIVE : (which == 1 ? Switch.SWITCH_STYLE_MD3 : Switch.SWITCH_STYLE_DEFAULT);
                 NaConfig.INSTANCE.getSwitchStyle().setConfigInt(newStyle);
-                rebuildAllAndSelf(view, isMd3Switch(newStyle));
+                rebuildRowsAndNotify();
+                if (listView != null && listView.getLayoutManager() != null) {
+                    android.os.Parcelable state = listView.getLayoutManager().onSaveInstanceState();
+                    if (parentLayout != null) {
+                        parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                    }
+                    if (listView != null && listView.getLayoutManager() != null && state != null) {
+                        listView.getLayoutManager().onRestoreInstanceState(state);
+                    }
+                } else if (parentLayout != null) {
+                    parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                }
             });
             showDialog(builder.create());
             return;
@@ -1267,8 +1283,20 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     AvatarCornersSeekBar sliderThickness = new AvatarCornersSeekBar(mContext,
                             val -> {
                                 AppearanceConfig.sliderThickness.setConfigInt(val);
+                                if (listView != null) {
+                                    for (int i = 0; i < listView.getChildCount(); i++) {
+                                        View child = listView.getChildAt(i);
+                                        if (child instanceof AvatarCornersSeekBar) {
+                                            ((AvatarCornersSeekBar) child).seekBarView.invalidate();
+                                        }
+                                        child.invalidate();
+                                    }
+                                }
                                 if (avatarCornersPreviewCell != null) {
                                     avatarCornersPreviewCell.invalidate();
+                                }
+                                if (parentLayout != null) {
+                                    parentLayout.rebuildAllFragmentViews(false, false);
                                 }
                             },
                             2, 24,
@@ -1854,6 +1882,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // Перезапуск не нужен: все восемь стилей читаются при отрисовке или при создании вьюх.
         rebuildAll();
         rebuildRowsAndNotify();
+        if (parentLayout != null) {
+            parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+        }
     }
 
     private static int clamp(int value, int size) {

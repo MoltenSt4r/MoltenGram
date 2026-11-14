@@ -258,6 +258,9 @@ object ChatsConfig {
     @JvmField
     val showFeedInChatMenu = addConfig("OEChatsShowFeedInChatMenu", ConfigItem.configTypeBool, true)
 
+    @JvmField
+    val showRepostToStory = addConfig("OEChatsMenuRepostStory", ConfigItem.configTypeBool, true)
+
     /** Результаты вычислений: показывать результат после «=» и вставлять его пробелом. */
     @JvmField
     val mathResults = addConfig("OEChatsMathResults", ConfigItem.configTypeBool, true)
@@ -400,6 +403,12 @@ object ChatsConfig {
     fun showFeedInChatMenu(): Boolean {
         ensureLoaded()
         return showFeedInChatMenu.Bool()
+    }
+
+    @JvmStatic
+    fun showRepostToStory(): Boolean {
+        ensureLoaded()
+        return showRepostToStory.Bool()
     }
 
     @JvmStatic

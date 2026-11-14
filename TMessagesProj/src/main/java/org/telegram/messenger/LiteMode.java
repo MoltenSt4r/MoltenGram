@@ -80,7 +80,6 @@ public class LiteMode {
         FLAG_CHAT_BACKGROUND |
         FLAG_CHAT_FORUM_TWOCOLUMN |
         FLAG_CHAT_SPOILER |
-        FLAG_CHAT_BLUR |
         FLAG_CHAT_SCALE |
         FLAG_CHAT_THANOS |
         FLAG_CALLS_ANIMATIONS |
@@ -272,27 +271,37 @@ public class LiteMode {
         }
 
         final SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-        if (!preferences.contains("lite_mode6")) {
-            if (preferences.contains("lite_mode5")) {
+        if (!preferences.contains("lite_mode7")) {
+            if (preferences.contains("lite_mode6")) {
+                defaultValue = preferences.getInt("lite_mode6", defaultValue);
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
+            } else if (preferences.contains("lite_mode5")) {
                 defaultValue = preferences.getInt("lite_mode5", defaultValue);
-                defaultValue &=~ FLAG_LIQUID_GLASS;
-                preferences.edit().putInt("lite_mode6", defaultValue).apply();
+                defaultValue &= ~FLAG_LIQUID_GLASS;
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode4")) {
                 defaultValue = preferences.getInt("lite_mode4", defaultValue);
-                preferences.edit().putInt("lite_mode5", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode3")) {
                 defaultValue = preferences.getInt("lite_mode3", defaultValue);
                 defaultValue |= FLAG_PARTICLES;
-                preferences.edit().putInt("lite_mode5", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode2")) {
                 defaultValue = preferences.getInt("lite_mode2", defaultValue);
                 defaultValue |= FLAG_CHAT_THANOS;
-                preferences.edit().putInt("lite_mode3", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode")) {
                 defaultValue = preferences.getInt("lite_mode", defaultValue);
                 if (defaultValue == 4095) {
                     defaultValue = PRESET_HIGH;
                 }
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else {
                 if (preferences.contains("light_mode")) {
                     boolean prevLiteModeEnabled = (preferences.getInt("light_mode", SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_LOW ? 1 : 0) & 1) > 0;
@@ -328,7 +337,7 @@ public class LiteMode {
                     }
                 }
                 if (preferences.contains("chatBlur")) {
-                    boolean chatBlur = preferences.getBoolean("chatBlur", true);
+                    boolean chatBlur = preferences.getBoolean("chatBlur", false);
                     if (chatBlur) {
                         defaultValue |= FLAG_CHAT_BLUR;
                     } else {
@@ -339,7 +348,7 @@ public class LiteMode {
         }
 
         int prevValue = value;
-        value = preferences.getInt("lite_mode6", defaultValue);
+        value = preferences.getInt("lite_mode7", defaultValue);
         if (loaded) {
             onFlagsUpdate(prevValue, value);
         }
@@ -352,7 +361,7 @@ public class LiteMode {
     }
 
     public static void savePreference() {
-        MessagesController.getGlobalMainSettings().edit().putInt("lite_mode6", value).putInt("lite_mode_battery_level", powerSaverLevel).putBoolean("lite_mode_follow_system", followSystemSaver).apply();
+        MessagesController.getGlobalMainSettings().edit().putInt("lite_mode7", value).putInt("lite_mode_battery_level", powerSaverLevel).putBoolean("lite_mode_follow_system", followSystemSaver).apply();
     }
 
     public static boolean isFollowSystemPowerSaver() {
