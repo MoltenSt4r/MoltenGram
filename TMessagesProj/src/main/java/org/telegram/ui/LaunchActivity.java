@@ -462,6 +462,21 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
             if (intent != null && intent.getAction() != null) {
                 if (Intent.ACTION_SEND.equals(intent.getAction()) || Intent.ACTION_SEND_MULTIPLE.equals(intent.getAction())) {
                     super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= 31) {
+            try {
+                getSplashScreen().setOnExitAnimationListener(splashScreenView -> {
+                    int themeBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+                    if (themeBg != 0) {
+                        splashScreenView.setBackgroundColor(themeBg);
+                    }
+                    splashScreenView.animate()
+                            .alpha(0f)
+                            .setDuration(180)
+                            .withEndAction(splashScreenView::remove)
+                            .start();
+                });
+            } catch (Throwable ignore) {}
+        }
                     finish();
                     return;
                 } else if (Intent.ACTION_VIEW.equals(intent.getAction())) {
@@ -489,6 +504,21 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         flagSecureReason.attach();
 
         super.onCreate(savedInstanceState);
+        if (Build.VERSION.SDK_INT >= 31) {
+            try {
+                getSplashScreen().setOnExitAnimationListener(splashScreenView -> {
+                    int themeBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+                    if (themeBg != 0) {
+                        splashScreenView.setBackgroundColor(themeBg);
+                    }
+                    splashScreenView.animate()
+                            .alpha(0f)
+                            .setDuration(180)
+                            .withEndAction(splashScreenView::remove)
+                            .start();
+                });
+            } catch (Throwable ignore) {}
+        }
         if (Build.VERSION.SDK_INT >= 24) {
             AndroidUtilities.isInMultiwindow = isInMultiWindowMode();
         }

@@ -1,14 +1,18 @@
 package app.exteraless.appearance
 
 import android.content.SharedPreferences
+import android.os.Build
 import com.google.android.material.color.utilities.Hct
+import com.google.android.material.color.utilities.SchemeTonalSpot
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader
 import org.telegram.messenger.FileLog
+import org.telegram.ui.ActionBar.Theme
 import org.telegram.ui.Components.blur3.GlassOutlineStyle
 import tw.nekomimi.nekogram.NekoConfig
 import tw.nekomimi.nekogram.NekoXConfig
 import tw.nekomimi.nekogram.config.ConfigItem
+import tw.nekomimi.nekogram.helpers.MonetHelper
 import xyz.nextalone.nagram.NaConfig
 
 /**
@@ -1940,6 +1944,44 @@ object AppearanceConfig {
         val hct = Hct.fromInt(bgColor)
         hct.tone = if (AndroidUtilities.computePerceivedBrightness(bgColor) > 0.55f) 18.0 else 96.0
         return hct.toInt()
+    }
+
+    /** Возвращает цвет из Monet (если активна Monet-тема) либо из текущей активной темы через SchemeTonalSpot. */
+    @JvmStatic
+    fun resolveThemeToken(token: String, defaultColor: Int): Int {
+        val activeTheme = Theme.getActiveTheme()
+        if (Build.VERSION.SDK_INT >= 31 && activeTheme != null && activeTheme.isMonet()) {
+            val mc = MonetHelper.getColorOrNull(token)
+            if (mc != null && mc != 0) return mc
+        }
+        var seed = Theme.getColor(Theme.key_featuredStickers_addButton)
+        if (seed == 0) seed = Theme.getColor(Theme.key_chats_actionBackground)
+        if (seed == 0) seed = if (defaultColor != 0) defaultColor else 0xFF4285F4.toInt()
+        val scheme = SchemeTonalSpot(Hct.fromInt(seed), Theme.isCurrentThemeDark(), 0.0)
+        return when (token) {
+            "primary" -> scheme.primary
+            "on_primary" -> scheme.onPrimary
+            "primary_container" -> scheme.primaryContainer
+            "on_primary_container" -> scheme.onPrimaryContainer
+            "secondary" -> scheme.secondary
+            "on_secondary" -> scheme.onSecondary
+            "secondary_container" -> scheme.secondaryContainer
+            "on_secondary_container" -> scheme.onSecondaryContainer
+            "tertiary" -> scheme.tertiary
+            "on_tertiary" -> scheme.onTertiary
+            "tertiary_container" -> scheme.tertiaryContainer
+            "on_tertiary_container" -> scheme.onTertiaryContainer
+            "surface_container_high" -> scheme.surfaceContainerHigh
+            "surface" -> scheme.surface
+            "on_surface" -> scheme.onSurface
+            "a1_600" -> seed
+            "a1_400" -> { val h = Hct.fromInt(seed); h.tone = 60.0; h.toInt() }
+            "a1_800" -> { val h = Hct.fromInt(seed); h.tone = 24.0; h.toInt() }
+            "a1_900" -> { val h = Hct.fromInt(seed); h.tone = 14.0; h.toInt() }
+            "a2_600" -> scheme.secondary
+            "a3_600" -> scheme.tertiary
+            else -> if (defaultColor != 0) defaultColor else seed
+        }
     }
 
     /** Сбрасывает настройки экрана Appearance к значениям по умолчанию. */

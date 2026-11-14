@@ -80,35 +80,20 @@ public final class UIUtil {
         switch (code) {
             case FAB_COLOR_DEFAULT:
                 return defaultColor;
-            case FAB_COLOR_MONET_PRIMARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_PRIMARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary_container");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_SECONDARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_SECONDARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary_container");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_TERTIARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_TERTIARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary_container");
-                return c != null ? c : defaultColor;
-            }
-            case FAB_COLOR_MONET_SURFACE: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("surface_container_high");
-                if (c == null) c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("surface");
-                return c != null ? c : defaultColor;
-            }
+            case FAB_COLOR_MONET_PRIMARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("primary", defaultColor);
+            case FAB_COLOR_MONET_PRIMARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("primary_container", defaultColor);
+            case FAB_COLOR_MONET_SECONDARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("secondary", defaultColor);
+            case FAB_COLOR_MONET_SECONDARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("secondary_container", defaultColor);
+            case FAB_COLOR_MONET_TERTIARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("tertiary", defaultColor);
+            case FAB_COLOR_MONET_TERTIARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("tertiary_container", defaultColor);
+            case FAB_COLOR_MONET_SURFACE:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("surface_container_high", defaultColor);
             default:
                 return code;
         }
@@ -119,34 +104,20 @@ public final class UIUtil {
             return resolveFabColor(iconColCode, defaultIconColor);
         }
         switch (bgColCode) {
-            case FAB_COLOR_MONET_PRIMARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_primary");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_PRIMARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_primary_container");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_SECONDARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_secondary");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_SECONDARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_secondary_container");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_TERTIARY: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_tertiary");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_TERTIARY_CONTAINER: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_tertiary_container");
-                return c != null ? c : defaultIconColor;
-            }
-            case FAB_COLOR_MONET_SURFACE: {
-                Integer c = tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("on_surface");
-                return c != null ? c : defaultIconColor;
-            }
+            case FAB_COLOR_MONET_PRIMARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_primary", defaultIconColor);
+            case FAB_COLOR_MONET_PRIMARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_primary_container", defaultIconColor);
+            case FAB_COLOR_MONET_SECONDARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_secondary", defaultIconColor);
+            case FAB_COLOR_MONET_SECONDARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_secondary_container", defaultIconColor);
+            case FAB_COLOR_MONET_TERTIARY:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_tertiary", defaultIconColor);
+            case FAB_COLOR_MONET_TERTIARY_CONTAINER:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_tertiary_container", defaultIconColor);
+            case FAB_COLOR_MONET_SURFACE:
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_surface", defaultIconColor);
             case FAB_COLOR_DEFAULT: {
                 if (defaultIconColor != 0) {
                     return defaultIconColor;

@@ -146,13 +146,9 @@ public final class TelegramQRCodeWriter {
         int[] md3Colors = null;
         int color1 = 0xff000000;
         if (isMd3) {
-            int c1 = MonetHelper.getColor("a1_600");
-            if (c1 == 0) c1 = Theme.getColor(Theme.key_featuredStickers_addButton);
-            int c2 = MonetHelper.getColor("a2_600");
-            if (c2 == 0) c2 = Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader);
-            int c3 = MonetHelper.getColor("a3_600");
-            if (c3 == 0) c3 = MonetHelper.getColor("a1_400");
-            if (c3 == 0) c3 = c1;
+            int c1 = AppearanceConfig.resolveThemeToken("a1_600", Theme.getColor(Theme.key_featuredStickers_addButton));
+            int c2 = AppearanceConfig.resolveThemeToken("a2_600", Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
+            int c3 = AppearanceConfig.resolveThemeToken("a3_600", c1);
             c1 |= 0xFF000000;
             c2 |= 0xFF000000;
             c3 |= 0xFF000000;
@@ -480,13 +476,9 @@ public final class TelegramQRCodeWriter {
         final boolean isMd3 = AppearanceConfig.md3QrCode();
         int[] md3Colors = null;
         if (isMd3) {
-            int c1 = MonetHelper.getColor("a1_600");
-            if (c1 == 0) c1 = Theme.getColor(Theme.key_featuredStickers_addButton);
-            int c2 = MonetHelper.getColor("a2_600");
-            if (c2 == 0) c2 = Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader);
-            int c3 = MonetHelper.getColor("a3_600");
-            if (c3 == 0) c3 = MonetHelper.getColor("a1_400");
-            if (c3 == 0) c3 = c1;
+            int c1 = AppearanceConfig.resolveThemeToken("a1_600", Theme.getColor(Theme.key_featuredStickers_addButton));
+            int c2 = AppearanceConfig.resolveThemeToken("a2_600", Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
+            int c3 = AppearanceConfig.resolveThemeToken("a3_600", c1);
             c1 |= 0xFF000000;
             c2 |= 0xFF000000;
             c3 |= 0xFF000000;

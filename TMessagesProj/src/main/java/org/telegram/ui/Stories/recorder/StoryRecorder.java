@@ -2957,7 +2957,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         startLiveButton = new ButtonWithCounterView(context, resourcesProvider);
         startLiveButton.setRoundRadius(24);
-        startLiveButton.setColor(0xFFDA435C);
+        int liveBtnColor = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        if (liveBtnColor == 0) liveBtnColor = 0xFFDA435C;
+        startLiveButton.setColor(liveBtnColor);
+        startLiveButton.setTextColor(app.exteraless.appearance.AppearanceConfig.contrastOnAccent(liveBtnColor));
         startLiveButton.setText(getString(R.string.LiveStoryStart), false);
         startLiveButton.setAlpha(0f);
         startLiveButton.setScaleX(0.8f);

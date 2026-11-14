@@ -2552,7 +2552,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         for (int i = 0; i < views.size(); i++) {
             View v = views.get(i);
-            int leftMargin = (i == 0) ? 0 : dp(3);
+            int leftMargin = (i == 0) ? 0 : 3;
             if (v instanceof MorphButton) {
                 MorphButton mb = (MorphButton) v;
                 int leftR = (i == 0) ? dp(26) : dp(8);

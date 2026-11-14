@@ -654,14 +654,11 @@ public class QrShareView extends View {
         DEEP_QR = new int[n];
         for (int i = 0; i < n; i++) {
             if (i == MONET_COLOR) {
-                int c1 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
-                if (c1 == 0) c1 = 0xFF1C1B1F;
-                int c2 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
-                if (c2 == 0) c2 = 0xFF141218;
+                int c1 = AppearanceConfig.resolveThemeToken("a1_800", 0xFF1C1B1F);
+                int c2 = AppearanceConfig.resolveThemeToken("a1_900", 0xFF141218);
                 DEEP_CENTER[i] = c1;
                 DEEP_EDGE[i] = c2;
-                int qrC = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
-                if (qrC == 0) qrC = Theme.getColor(Theme.key_featuredStickers_addButton);
+                int qrC = AppearanceConfig.resolveThemeToken("a1_600", Theme.getColor(Theme.key_featuredStickers_addButton));
                 DEEP_QR[i] = qrC;
             } else {
                 DEEP_CENTER[i] = deepen(Backdrops.CENTER[i], false);
@@ -673,9 +670,7 @@ public class QrShareView extends View {
 
     private static int deepCenter(int i) {
         if (i == MONET_COLOR) {
-            int c = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
-            if (c == 0) c = 0xFF1C1B1F;
-            return c;
+            return AppearanceConfig.resolveThemeToken("a1_800", 0xFF1C1B1F);
         }
         if (i == TUNED_COLOR) return DEFAULT_TOP;
         buildDeep();
@@ -684,9 +679,7 @@ public class QrShareView extends View {
 
     private static int deepEdge(int i) {
         if (i == MONET_COLOR) {
-            int c = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
-            if (c == 0) c = 0xFF141218;
-            return c;
+            return AppearanceConfig.resolveThemeToken("a1_900", 0xFF141218);
         }
         if (i == TUNED_COLOR) return DEFAULT_BOTTOM;
         buildDeep();
@@ -716,14 +709,11 @@ public class QrShareView extends View {
         s.type = SCENE_COLOR;
         s.index = i;
         if (i == MONET_COLOR) {
-            int c1 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_800");
-            if (c1 == 0) c1 = 0xFF1C1B1F;
-            int c2 = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_900");
-            if (c2 == 0) c2 = 0xFF141218;
+            int c1 = AppearanceConfig.resolveThemeToken("a1_800", 0xFF1C1B1F);
+            int c2 = AppearanceConfig.resolveThemeToken("a1_900", 0xFF141218);
             s.center = c1;
             s.edge = c2;
-            s.qr = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
-            if (s.qr == 0) s.qr = Theme.getColor(Theme.key_featuredStickers_addButton);
+            s.qr = AppearanceConfig.resolveThemeToken("a1_600", Theme.getColor(Theme.key_featuredStickers_addButton));
             s.pattern = 0;
             s.vertical = true;
             buildShaders(s);
@@ -3952,8 +3942,7 @@ public class QrShareView extends View {
         // logo: MoltenGram logo in MD3 mode, or stock plane on the stock QR screen
         final float lr = qr.logoSize(qs) / 2f, lcx = ql + qs / 2f, lcy = qt + qs / 2f;
         if (md3Code) {
-            int centerBg = tw.nekomimi.nekogram.helpers.MonetHelper.getColor("a1_600");
-            if (centerBg == 0) centerBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+            int centerBg = AppearanceConfig.resolveThemeToken("a1_600", Theme.getColor(Theme.key_featuredStickers_addButton));
             fill.setColor(centerBg);
             c.drawCircle(lcx, lcy, lr, fill);
             try {
