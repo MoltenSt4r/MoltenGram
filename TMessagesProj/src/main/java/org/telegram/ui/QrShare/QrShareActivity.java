@@ -993,7 +993,13 @@ public class QrShareActivity extends BaseFragment {
         if (emojiView == null) return;
         final QrEmojiPanel.Tabs strip = emojiView.getTabs();
         final android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setColor(0x33FFFFFF); // the picks island's recipe: the backdrop-hue tint (drawn under, see stripUnder) + 20% white
+        final boolean md3 = app.exteraless.appearance.AppearanceConfig.md3QrShare();
+        if (md3) {
+            bg.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            bg.setAlpha(240);
+        } else {
+            bg.setColor(0x33FFFFFF); // the picks island's recipe: the backdrop-hue tint (drawn under, see stripUnder) + 20% white
+        }
         bg.setCornerRadius(org.telegram.messenger.AndroidUtilities.dp(20));
         // the glass keeps its earlier visible size/margins (it used to sit a rim-width inside the view bounds), but is
         // 3 px taller: 1 px up, 2 px down (≈ +1 dp on this 3.0-density phone)
@@ -1003,12 +1009,14 @@ public class QrShareActivity extends BaseFragment {
         stripRimOut = Math.max(0, rimOut - 3);
         stripInsetTop = Math.max(0, rimOut - 3);
         stripInsetBottom = Math.max(0, rimOut - 4);
-        strip.underDraw = (cv, l, t, r, b2) -> stripUnder(cv, strip, l, t, r, b2);
-        // the picks island's rim (Dark out, Big group), so both islands read as one family
-        strip.overDraw = (cv, l, t, r, b2) -> {
-            stripRect.set(l + stripRimOut, t + stripInsetTop, r - stripRimOut, b2 - stripInsetBottom);
-            stripRim.draw(cv, stripRect, stripRect.height() / 2f, RimTune.BIG, 1f);
-        };
+        if (!md3) {
+            strip.underDraw = (cv, l, t, r, b2) -> stripUnder(cv, strip, l, t, r, b2);
+            // the picks island's rim (Dark out, Big group), so both islands read as one family
+            strip.overDraw = (cv, l, t, r, b2) -> {
+                stripRect.set(l + stripRimOut, t + stripInsetTop, r - stripRimOut, b2 - stripInsetBottom);
+                stripRim.draw(cv, stripRect, stripRect.height() / 2f, RimTune.BIG, 1f);
+            };
+        }
         final int pl = strip.getPaddingLeft(), pt = strip.getPaddingTop(), pr = strip.getPaddingRight(), pb = strip.getPaddingBottom();
         strip.setBackground(new android.graphics.drawable.InsetDrawable(bg, stripRimOut, stripInsetTop, stripRimOut, stripInsetBottom));
         strip.setPadding(pl, pt, pr, pb); // an InsetDrawable reports its inset as padding: keep the layout as it was

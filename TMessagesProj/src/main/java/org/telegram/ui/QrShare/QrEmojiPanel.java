@@ -664,7 +664,7 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             this.documentId = 0;
             this.standardEmoji = emoji;
             this.key = QrShareView.normKey(emoji);
-            if (!NekoConfig.useSystemEmoji.Bool() && !EmojiHelper.isSelectedCustomPack()) {
+            if (!Emoji.isSelectedCustomPack()) {
                 Drawable d = Emoji.getEmojiDrawable(emoji);
                 if (d == null) {
                     d = Emoji.getEmojiDrawable(emoji.replace("\uFE0F", ""));
@@ -775,7 +775,11 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
 
         void set(@Nullable String text, boolean locked) {
             title.setText(text != null ? text.replace('\n', ' ') : null);
-            title.setTextColor(headerColor);
+            if (AppearanceConfig.md3QrShare()) {
+                title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
+            } else {
+                title.setTextColor(headerColor);
+            }
             unlock.setVisibility(locked ? VISIBLE : GONE);
             // one line, cut before the pill
             final FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) title.getLayoutParams();
@@ -943,17 +947,21 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             canvas.drawCircle(circleX, content.getHeight() / 2f, r, circle);
         }
 
+        private final Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+
         @Override
         public void draw(@NonNull Canvas canvas) {
-            if (underDraw != null) underDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
             if (AppearanceConfig.md3QrShare()) {
-                Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 bgPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
                 bgPaint.setAlpha(230);
                 canvas.drawRect(getScrollX(), 0, getScrollX() + getWidth(), getHeight(), bgPaint);
+            } else {
+                if (underDraw != null) underDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
             }
             super.draw(canvas);
-            if (overDraw != null) overDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
+            if (!AppearanceConfig.md3QrShare()) {
+                if (overDraw != null) overDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
+            }
         }
     }
 

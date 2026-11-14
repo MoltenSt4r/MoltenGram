@@ -1211,6 +1211,7 @@ public class QrShareView extends View {
 
     private static class EmojiFontDrawable extends Drawable {
         private final String emoji;
+        private int alpha = 255;
 
         public EmojiFontDrawable(String emoji) {
             this.emoji = emoji;
@@ -1221,6 +1222,9 @@ public class QrShareView extends View {
             android.graphics.Rect bounds = getBounds();
             int size = Math.min(bounds.width(), bounds.height());
             if (size <= 0) return;
+            if (alpha < 255) {
+                canvas.saveLayerAlpha(bounds.left, bounds.top, bounds.right, bounds.bottom, alpha);
+            }
             EmojiHelper.drawEmojiFont(
                 canvas,
                 bounds.left + (bounds.width() - size) / 2,
@@ -1229,10 +1233,15 @@ public class QrShareView extends View {
                 emoji,
                 size
             );
+            if (alpha < 255) {
+                canvas.restore();
+            }
         }
 
         @Override
-        public void setAlpha(int alpha) {}
+        public void setAlpha(int alpha) {
+            this.alpha = alpha;
+        }
 
         @Override
         public void setColorFilter(@Nullable ColorFilter colorFilter) {}
@@ -1257,7 +1266,7 @@ public class QrShareView extends View {
     private Drawable emojiDrawable(String e) {
         Drawable d = emojiCache.get(e);
         if (d == null) {
-            if (NekoConfig.useSystemEmoji.Bool() || EmojiHelper.isSelectedCustomPack()) {
+            if (Emoji.isSelectedCustomPack()) {
                 final String text = emojiTextOf.containsKey(normKey(e)) ? emojiTextOf.get(normKey(e)) : e;
                 d = new EmojiFontDrawable(text);
                 emojiCache.put(e, d);
@@ -5523,6 +5532,8 @@ public class QrShareView extends View {
                 fill.setAlpha((int) (180 * mc));
                 c.drawRoundRect(handleX, handleY, handleX + handleW, handleY + handleH, dp(2), dp(2), fill);
             }
+            liftThis = false;
+            glassSheet = false;
         } else {
             drawGlass(c, islandRect, rad, light && mc < 0.5f, 1f);
             liftThis = false;

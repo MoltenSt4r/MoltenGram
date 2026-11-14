@@ -870,8 +870,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             rebuildAllAndSelf(view, AppearanceConfig.md3QrCode.Bool());
             return;
         } else if (position == md3QrShapeRow) {
-            boolean isRu = "ru".equalsIgnoreCase(LocaleController.getInstance().getCurrentLocaleInfo().shortCode)
-                    || "ru".equalsIgnoreCase(LocaleController.getString("language_code", R.string.language_code));
+            LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+            boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
             CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
             showSelector(position, getString(R.string.OEAppearanceMd3QrShape), shapeNames, AppearanceConfig.md3QrShape, null);
             return;
@@ -1597,8 +1597,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3" : getString(R.string.Default));
                         cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
                     } else if (position == md3QrShapeRow) {
-                        boolean isRu = "ru".equalsIgnoreCase(LocaleController.getInstance().getCurrentLocaleInfo().shortCode)
-                                || "ru".equalsIgnoreCase(LocaleController.getString("language_code", R.string.language_code));
+                        LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
+                        boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
                         CharSequence[] shapeNames = isRu ? Md3AvatarShapesActivity.SHAPE_NAMES_RU : Md3AvatarShapes.SHAPE_NAMES;
                         int shapeIndex = clamp(AppearanceConfig.md3QrShape.Int(), shapeNames.length);
                         cell.setTextAndValue(getString(R.string.OEAppearanceMd3QrShape), shapeNames[shapeIndex], true);
