@@ -228,10 +228,13 @@
 <string name="OEAppearanceHidingInChats">В чатах</string>
 <string name="OEAppearanceHidingAiPremium">AI и Premium</string>
 <string name="OEKillApp">Закрыть приложение</string>
-<string name="OEAppearanceMd3QrShare">Меню QR в стиле MD3</string>
-<string name="OEAppearanceFreeQrPremium">Все функции QR бесплатно (без Premium)</string>
-<string name="OEAppearanceMd3QrCode">MD3-стилизация самого QR-кода</string>
-<string name="OEAppearanceMd3QrShape">Форма элементов QR-кода</string>
+<string name="OEAppearanceQrHeader">QR-код</string>
+<string name="OEAppearanceMd3QrShare">Интерфейс в стиле MD3</string>
+<string name="OEAppearanceFreeQrPremium">Все функции QR бесплатно</string>
+<string name="OEAppearanceFreeQrPremiumDesc">Разблокирует все паттерны и эмодзи без Telegram Premium</string>
+<string name="OEAppearanceMd3QrCode">Стилизация QR-кода</string>
+<string name="OEAppearanceMd3QrShape">Форма QR-кода (MD3)</string>
+<string name="OEAppearanceMd3QrPixelShape">Форма модулей QR-кода</string>
 <string name="OEAppearanceMd3QrShapeRounded">MD3 закруглённая</string>
 <string name="OEAppearanceMd3QrShapeDots">MD3 круглые точки</string>
 <string name="OEAppearanceMd3QrShapeSquircle">MD3 сквирклы</string>

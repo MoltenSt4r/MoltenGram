@@ -954,12 +954,23 @@ object AppearanceConfig {
 
     @JvmField
     val md3QrShape =
-        addConfig("OEAppearanceMd3QrShape", ConfigItem.configTypeInt, QR_SHAPE_ROUNDED)
+        addConfig("OEAppearanceMd3QrShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_SQUARE)
 
     @JvmStatic
     fun md3QrShape(): Int {
         ensureLoaded()
         val s = md3QrShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_SQUARE
+    }
+
+    @JvmField
+    val md3QrPixelShape =
+        addConfig("OEAppearanceMd3QrPixelShape", ConfigItem.configTypeInt, QR_SHAPE_ROUNDED)
+
+    @JvmStatic
+    fun md3QrPixelShape(): Int {
+        ensureLoaded()
+        val s = md3QrPixelShape.Int()
         return if (s in 0..4) s else QR_SHAPE_ROUNDED
     }
 

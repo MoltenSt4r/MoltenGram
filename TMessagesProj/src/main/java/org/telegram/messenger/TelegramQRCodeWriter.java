@@ -136,7 +136,7 @@ public final class TelegramQRCodeWriter {
         imageSize = imageBloks * multiple - 24;
         int imageX = (size - imageSize) / 2;
 
-        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
         float sideQuadPx = sideQuadSize * multiple;
 
         for (int a = 0; a < 3; a++) {
@@ -388,7 +388,7 @@ public final class TelegramQRCodeWriter {
         boolean isTransparentBackground = Color.alpha(backgroundColor) == 0;
         Path clipPath = new Path();
         RectF rectF = new RectF();
-        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
         float sideQuadPx = sideQuadSize * multiple;
 
         for (int a = 0; a < 3; a++) {
@@ -568,7 +568,7 @@ public final class TelegramQRCodeWriter {
 
     public static void drawSideQuads(Canvas canvas, float xOffset, float yOffset, Paint blackPaint, float sideQuadSize, float multiple, int padding, float size, float radiusFactor, float[] radii, boolean isTransparentBackground) {
         Path clipPath = new Path();
-        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrPixelShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
         float sideQuadPx = sideQuadSize * multiple;
         for (int a = 0; a < 3; a++) {
             float x, y;

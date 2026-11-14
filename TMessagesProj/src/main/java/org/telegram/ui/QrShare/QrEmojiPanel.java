@@ -43,6 +43,10 @@ import org.telegram.ui.Components.RecyclerAnimationScrollHelper;
 import org.telegram.ui.Components.RecyclerListView;
 
 import app.exteraless.appearance.AppearanceConfig;
+import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.helpers.remote.EmojiHelper;
+import org.telegram.ui.ActionBar.Theme;
+import android.graphics.Color;
 
 import java.util.ArrayList;
 import java.util.function.Consumer;
@@ -106,6 +110,28 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
     private final RecyclerAnimationScrollHelper scrollHelper;
     private final Tabs tabs;
 
+    private static final int[] CATEGORY_STRINGS = {
+        R.string.Emoji1,
+        R.string.Emoji2,
+        R.string.Emoji3,
+        R.string.Emoji4,
+        R.string.Emoji5,
+        R.string.Emoji6,
+        R.string.Emoji7,
+        R.string.Emoji8
+    };
+
+    private static final int[] CATEGORY_ICONS = {
+        R.drawable.msg_emoji_smiles,
+        R.drawable.msg_emoji_cat,
+        R.drawable.msg_emoji_food,
+        R.drawable.msg_emoji_activities,
+        R.drawable.msg_emoji_travel,
+        R.drawable.msg_emoji_objects,
+        R.drawable.msg_emoji_other,
+        R.drawable.msg_emoji_flags
+    };
+
     /** A section of the grid: the presets, the recent emoji or a pack. */
     private static final class Section {
         final int kind;
@@ -113,18 +139,24 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
         final long setId;
         final ArrayList<TLRPC.Document> documents;
         final ArrayList<String> standardEmojis;
+        final int iconRes;
         int start;   // adapter position of its header (or of its first emoji when it has no title)
 
         Section(int kind, @Nullable String title, long setId, ArrayList<TLRPC.Document> documents) {
-            this(kind, title, setId, documents, null);
+            this(kind, title, setId, documents, null, 0);
         }
 
         Section(int kind, @Nullable String title, long setId, @Nullable ArrayList<TLRPC.Document> documents, @Nullable ArrayList<String> standardEmojis) {
+            this(kind, title, setId, documents, standardEmojis, 0);
+        }
+
+        Section(int kind, @Nullable String title, long setId, @Nullable ArrayList<TLRPC.Document> documents, @Nullable ArrayList<String> standardEmojis, int iconRes) {
             this.kind = kind;
             this.title = title;
             this.setId = setId;
             this.documents = documents != null ? documents : new ArrayList<>();
             this.standardEmojis = standardEmojis != null ? standardEmojis : new ArrayList<>();
+            this.iconRes = iconRes;
         }
 
         int count() {
@@ -221,6 +253,7 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
         super.onAttachedToWindow();
         NotificationCenter.getInstance(account).addWeakObserver(this, NotificationCenter.stickersDidLoad);
         NotificationCenter.getInstance(account).addWeakObserver(this, NotificationCenter.groupStickersDidLoad);
+        NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.emojiLoaded);
         reload();
     }
 
@@ -229,10 +262,15 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
         super.onDetachedFromWindow();
         NotificationCenter.getInstance(account).removeObserver(this, NotificationCenter.stickersDidLoad);
         NotificationCenter.getInstance(account).removeObserver(this, NotificationCenter.groupStickersDidLoad);
+        NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.emojiLoaded);
     }
 
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.emojiLoaded) {
+            grid.invalidateViews();
+            return;
+        }
         if (id == NotificationCenter.stickersDidLoad && args.length > 0 && args[0] instanceof Integer && (Integer) args[0] != MediaDataController.TYPE_EMOJIPACKS) {
             return;
         }
@@ -315,6 +353,7 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
     public void setHeaderColor(int color) {
         if (headerColor == color) return;
         headerColor = color;
+        if (AppearanceConfig.md3QrShare()) return;
         for (int i = 0; i < grid.getChildCount(); i++) {
             final View v = grid.getChildAt(i);
             if (v instanceof Header) ((Header) v).title.setTextColor(color);
@@ -410,11 +449,7 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
                 packs.add(new Section(KIND_PACK, set.set.title, set.set.id, docs));
             }
         }
-        // the presets on top, then Recent: what was applied to the QR, then the recent custom emoji (a few rows)
         final ArrayList<TLRPC.Document> presets = presets();
-        if (!presets.isEmpty()) {
-            sections.add(new Section(KIND_PRESETS, org.telegram.messenger.LocaleController.getString(R.string.QrEmojiPresets), 0, presets));
-        }
         final ArrayList<TLRPC.Document> recent = new ArrayList<>();
         final java.util.HashSet<Long> inRecent = new java.util.HashSet<>();
         final int recentMax = spanCount * RECENT_ROWS;
@@ -445,31 +480,27 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             }
         }
         if (!recent.isEmpty()) {
-            sections.add(new Section(KIND_RECENT, org.telegram.messenger.LocaleController.getString(R.string.RecentlyUsed), 0, recent));
+            sections.add(new Section(KIND_RECENT, org.telegram.messenger.LocaleController.getString(R.string.RecentlyUsed), 0, recent, null, R.drawable.msg_emoji_recent));
         }
 
-        final ArrayList<String> standardList = new ArrayList<>();
-        for (int i = 0; i < Emoji.recentEmoji.size() && standardList.size() < 35; i++) {
-            String e = Emoji.recentEmoji.get(i);
-            if (e != null && !e.startsWith("animated_") && !standardList.contains(e)) {
-                standardList.add(e);
-            }
-        }
-        if (EmojiData.data != null) {
-            for (int cat = 0; cat < Math.min(EmojiData.data.length, 5); cat++) {
-                String[] catEmojis = EmojiData.data[cat];
-                if (catEmojis != null) {
-                    for (int j = 0; j < Math.min(catEmojis.length, 28); j++) {
-                        String em = catEmojis[j];
-                        if (em != null && !standardList.contains(em)) {
-                            standardList.add(em);
-                        }
+        // Standard / Configured System Emoji Categories from EmojiData.dataColored
+        if (EmojiData.dataColored != null) {
+            for (int c = 0; c < Math.min(EmojiData.dataColored.length, CATEGORY_STRINGS.length); c++) {
+                final String[] emList = EmojiData.dataColored[c];
+                if (emList != null && emList.length > 0) {
+                    final ArrayList<String> emojis = new ArrayList<>(emList.length);
+                    for (String em : emList) {
+                        if (em != null) emojis.add(em);
+                    }
+                    if (!emojis.isEmpty()) {
+                        sections.add(new Section(KIND_STANDARD, LocaleController.getString(CATEGORY_STRINGS[c]), 0, null, emojis, CATEGORY_ICONS[c]));
                     }
                 }
             }
         }
-        if (!standardList.isEmpty()) {
-            sections.add(new Section(KIND_STANDARD, LocaleController.getString(R.string.OEAppearanceStandardEmoji), 0, null, standardList));
+
+        if (!presets.isEmpty()) {
+            sections.add(new Section(KIND_PRESETS, org.telegram.messenger.LocaleController.getString(R.string.QrEmojiPresets), 0, presets, null, R.drawable.emoji_tabs_faves));
         }
 
         sections.addAll(packs);
@@ -633,11 +664,15 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             this.documentId = 0;
             this.standardEmoji = emoji;
             this.key = QrShareView.normKey(emoji);
-            Drawable d = Emoji.getEmojiDrawable(emoji);
-            if (d == null) {
-                d = Emoji.getEmojiDrawable(emoji.replace("\uFE0F", ""));
+            if (!NekoConfig.useSystemEmoji.Bool() && !EmojiHelper.isSelectedCustomPack()) {
+                Drawable d = Emoji.getEmojiDrawable(emoji);
+                if (d == null) {
+                    d = Emoji.getEmojiDrawable(emoji.replace("\uFE0F", ""));
+                }
+                this.standardDrawable = d;
+            } else {
+                this.standardDrawable = null;
             }
-            this.standardDrawable = d;
             setContentDescription(emoji);
             invalidate();
         }
@@ -685,13 +720,17 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             }
             final float size = getWidth() * 0.78f * scale;
             final float cx = getWidth() / 2f, cy = getHeight() / 2f;
-            final boolean loaded = standardDrawable != null || (drawable != null && drawable.getImageReceiver() != null && drawable.getImageReceiver().hasBitmapImage());
+            final boolean loaded = standardEmoji != null || (drawable != null && drawable.getImageReceiver() != null && drawable.getImageReceiver().hasBitmapImage());
             if (!loaded) {
                 canvas.drawCircle(cx, cy, size * 0.42f, placeholder);
             }
-            if (standardDrawable != null) {
-                standardDrawable.setBounds((int) (cx - size / 2f), (int) (cy - size / 2f), (int) (cx + size / 2f), (int) (cy + size / 2f));
-                standardDrawable.draw(canvas);
+            if (standardEmoji != null) {
+                if (standardDrawable != null) {
+                    standardDrawable.setBounds((int) (cx - size / 2f), (int) (cy - size / 2f), (int) (cx + size / 2f), (int) (cy + size / 2f));
+                    standardDrawable.draw(canvas);
+                } else {
+                    EmojiHelper.drawEmojiFont(canvas, (int) (cx - size / 2f), (int) (cy - size / 2f), EmojiHelper.getInstance().getCurrentTypeface(), standardEmoji, (int) size);
+                }
             } else if (drawable != null) {
                 drawable.setBounds((int) (cx - size / 2f), (int) (cy - size / 2f), (int) (cx + size / 2f), (int) (cy + size / 2f));
                 drawEmoji(canvas, drawable);
@@ -708,7 +747,11 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
         Header(Context context) {
             super(context);
             title = new TextView(context);
-            title.setTextColor(headerColor);
+            if (AppearanceConfig.md3QrShare()) {
+                title.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueHeader));
+            } else {
+                title.setTextColor(headerColor);
+            }
             title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
             title.setTypeface(AndroidUtilities.bold());
             title.setSingleLine();
@@ -830,14 +873,18 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             content.setGravity(Gravity.CENTER_VERTICAL);
             content.setPadding(dp(TABS_PAD_DP), 0, dp(TABS_PAD_DP), 0);
             addView(content, new LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
-            circle.setColor(TAB_ACTIVE_COLOR);
+            if (AppearanceConfig.md3QrShare()) {
+                circle.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+            } else {
+                circle.setColor(TAB_ACTIVE_COLOR);
+            }
         }
 
         void setSections(ArrayList<Section> sections) {
             content.removeAllViews();
             for (int i = 0; i < sections.size(); i++) {
                 final Section s = sections.get(i);
-                final Tab tab = new Tab(getContext(), s.kind, s.kind == KIND_PACK && !s.documents.isEmpty() ? s.documents.get(0) : null);
+                final Tab tab = new Tab(getContext(), s.kind, s.iconRes, s.kind == KIND_PACK && !s.documents.isEmpty() ? s.documents.get(0) : null, i);
                 final int index = i;
                 tab.setOnClickListener(v -> scrollToSection(index));
                 tab.setContentDescription(s.title);
@@ -852,8 +899,16 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
                 return;
             }
             selected = index;
+            if (AppearanceConfig.md3QrShare()) {
+                circle.setColor(Theme.getColor(Theme.key_featuredStickers_addButton));
+            } else {
+                circle.setColor(TAB_ACTIVE_COLOR);
+            }
             if (!animated) {
                 circleX = Float.NaN;
+            }
+            for (int i = 0; i < content.getChildCount(); i++) {
+                content.getChildAt(i).invalidate();
             }
             final View tab = content.getChildAt(index);
             // keep the active tab in view
@@ -891,6 +946,12 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
         @Override
         public void draw(@NonNull Canvas canvas) {
             if (underDraw != null) underDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
+            if (AppearanceConfig.md3QrShare()) {
+                Paint bgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                bgPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+                bgPaint.setAlpha(230);
+                canvas.drawRect(getScrollX(), 0, getScrollX() + getWidth(), getHeight(), bgPaint);
+            }
             super.draw(canvas);
             if (overDraw != null) overDraw.draw(canvas, getScrollX(), 0, getScrollX() + getWidth(), getHeight());
         }
@@ -899,27 +960,31 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
     /** A tab: the star of the presets, the clock of Recent, or a pack's first emoji. */
     private final class Tab extends View {
 
+        private final int tabIndex;
         private final @Nullable AnimatedEmojiDrawable emoji;
         private final @Nullable Drawable icon;
         private float pressK;
         private boolean pressed;
 
-        Tab(Context context, int kind, @Nullable TLRPC.Document document) {
+        Tab(Context context, int kind, int iconRes, @Nullable TLRPC.Document document, int tabIndex) {
             super(context);
+            this.tabIndex = tabIndex;
             if (document != null) {
                 emoji = AnimatedEmojiDrawable.make(account, AnimatedEmojiDrawable.CACHE_TYPE_ALERT_PREVIEW_TAB_STRIP, document);
                 icon = null;
             } else {
                 emoji = null;
-                int iconRes;
-                if (kind == KIND_PRESETS) {
-                    iconRes = R.drawable.emoji_tabs_faves;
-                } else if (kind == KIND_STANDARD) {
-                    iconRes = R.drawable.msg_emoji_smiles;
-                } else {
-                    iconRes = R.drawable.msg_emoji_recent;
+                int res = iconRes;
+                if (res == 0) {
+                    if (kind == KIND_PRESETS) {
+                        res = R.drawable.emoji_tabs_faves;
+                    } else if (kind == KIND_STANDARD) {
+                        res = R.drawable.msg_emoji_smiles;
+                    } else {
+                        res = R.drawable.msg_emoji_recent;
+                    }
                 }
-                icon = ContextCompat.getDrawable(context, iconRes).mutate();
+                icon = ContextCompat.getDrawable(context, res).mutate();
                 icon.setColorFilter(new PorterDuffColorFilter(TAB_RECENT_COLOR, PorterDuff.Mode.SRC_IN));
             }
         }
@@ -961,6 +1026,11 @@ public class QrEmojiPanel extends FrameLayout implements NotificationCenter.Noti
             final int l = (int) (getWidth() / 2f - s / 2f), t = (int) (getHeight() / 2f - s / 2f);
             final Drawable d = emoji != null ? emoji : icon;
             if (d != null) {
+                if (icon != null && AppearanceConfig.md3QrShare()) {
+                    boolean isSel = tabs != null && tabs.selected == tabIndex;
+                    int tintColor = isSel ? 0xFFFFFFFF : Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), 0.65f);
+                    icon.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
+                }
                 d.setBounds(l, t, (int) (l + s), (int) (t + s));
                 drawEmoji(canvas, d);
             }

@@ -1,6 +1,10 @@
 package org.telegram.ui.QrShare;
 
 import tw.nekomimi.nekogram.NekoConfig;
+import tw.nekomimi.nekogram.helpers.remote.EmojiHelper;
+import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
+import android.graphics.PixelFormat;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.dpf2;
 import static org.telegram.messenger.AndroidUtilities.lerp;
@@ -1205,14 +1209,64 @@ public class QrShareView extends View {
         applyingTheme = false;
     }
 
+    private static class EmojiFontDrawable extends Drawable {
+        private final String emoji;
+
+        public EmojiFontDrawable(String emoji) {
+            this.emoji = emoji;
+        }
+
+        @Override
+        public void draw(@NonNull Canvas canvas) {
+            android.graphics.Rect bounds = getBounds();
+            int size = Math.min(bounds.width(), bounds.height());
+            if (size <= 0) return;
+            EmojiHelper.drawEmojiFont(
+                canvas,
+                bounds.left + (bounds.width() - size) / 2,
+                bounds.top + (bounds.height() - size) / 2,
+                EmojiHelper.getInstance().getCurrentTypeface(),
+                emoji,
+                size
+            );
+        }
+
+        @Override
+        public void setAlpha(int alpha) {}
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter colorFilter) {}
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
+
+        @Override
+        public int getIntrinsicWidth() {
+            return AndroidUtilities.dp(32);
+        }
+
+        @Override
+        public int getIntrinsicHeight() {
+            return AndroidUtilities.dp(32);
+        }
+    }
+
     /** The saved theme: custom emoji over the black backdrop. */
     private Drawable emojiDrawable(String e) {
         Drawable d = emojiCache.get(e);
         if (d == null) {
-            d = Emoji.getEmojiDrawable(e);
-            if (d == null)
-                d = Emoji.getEmojiDrawable(e.replace("\uFE0F", "")); // ❤️ / ☀️ are stored without the variation selector
-            if (d != null) emojiCache.put(e, d);
+            if (NekoConfig.useSystemEmoji.Bool() || EmojiHelper.isSelectedCustomPack()) {
+                final String text = emojiTextOf.containsKey(normKey(e)) ? emojiTextOf.get(normKey(e)) : e;
+                d = new EmojiFontDrawable(text);
+                emojiCache.put(e, d);
+            } else {
+                d = Emoji.getEmojiDrawable(e);
+                if (d == null)
+                    d = Emoji.getEmojiDrawable(e.replace("\uFE0F", "")); // ❤️ / ☀️ are stored without the variation selector
+                if (d != null) emojiCache.put(e, d);
+            }
         }
         return d;
     }
@@ -3802,7 +3856,8 @@ public class QrShareView extends View {
     private void drawCardInner(Canvas c, int w) {
         final float cw = cardW(), ch = cardH(), left = (w - cw) / 2f, top = cardTop();
         rect.set(left, top, left + cw, top + ch);
-        final boolean md3 = app.exteraless.appearance.AppearanceConfig.md3QrShare();
+        final boolean md3 = AppearanceConfig.md3QrShare();
+        final boolean md3Code = AppearanceConfig.md3QrCode();
         if (md3) {
             cardPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
         } else {
@@ -3811,7 +3866,22 @@ public class QrShareView extends View {
         // a soft lift tinted with the scene (darkened QR colour), not grey: 6% alpha, 24dp blur, 4dp drop (was black 13%, 18dp, 6dp)
         drawCardShadow(c, rect, cardShadowColorFor(qrColor()));
         final float cardRadius = md3 ? dp(28) : dp(30);
-        c.drawRoundRect(rect, cardRadius, cardRadius, cardPaint);
+        Path shapePath = null;
+        if (md3Code) {
+            final int shapeId = AppearanceConfig.md3QrShape();
+            shapePath = Md3AvatarShapes.getShapePath(shapeId, left, top, cw, ch);
+        }
+        if (shapePath != null) {
+            c.drawPath(shapePath, cardPaint);
+            c.save();
+            c.clipPath(shapePath);
+        } else {
+            c.drawRoundRect(rect, cardRadius, cardRadius, cardPaint);
+            c.save();
+            path.rewind();
+            path.addRoundRect(rect, cardRadius, cardRadius, Path.Direction.CW);
+            c.clipPath(path);
+        }
         qr.setCardBounds(left, top, left + cw, top + ch);
         final int color = qrColor();
         final float qs = cw * 0.70f, ql = left + (cw - qs) / 2f, qt = top + lerp(cw * 0.12f, (cw - qs) / 2f, tempK); // centred in the square
@@ -3892,6 +3962,7 @@ public class QrShareView extends View {
             }
             if (burst) emitNameBurst(nx, ny);
         }
+        c.restore();
         // drawn over the card in its own transform like the code's particles (no clip: they rise over the QR and off it)
         if (!sharing && nbN > 0) drawNameBurst(c, color);
     }
@@ -5172,34 +5243,60 @@ public class QrShareView extends View {
         final float cy = insetTop + ActionBar.getCurrentActionBarHeight() / 2f;
         closeRect.set(dp(29) - dp(20), cy - dp(20), dp(29) + dp(20), cy + dp(20));
         final float es = elemScale(uiK);
+        final boolean md3 = AppearanceConfig.md3QrShare();
+        final boolean light = scene != null && scene.light;
         c.save();
         c.scale(es, es, closeRect.centerX(), closeRect.centerY());
-        glassButton = true;
-        drawGlass(c, closeRect, dp(20), scene != null && scene.light, 1f);
-        glassButton = false;
-        drawRipple(c, RP_CLOSE, closeRect, scene != null && scene.light);
-        icClose.setColor(glassIconColor());
-        c.save();
-        c.translate(closeRect.centerX() - icClose.getIntrinsicWidth() / 2f, cy - icClose.getIntrinsicHeight() / 2f);
-        icClose.draw(c);
-        c.restore();
+        if (md3) {
+            int btnBg = Theme.getColor(Theme.key_windowBackgroundWhite);
+            fill.setColor(btnBg);
+            fill.setAlpha(235);
+            c.drawRoundRect(closeRect, dp(20), dp(20), fill);
+            drawRipple(c, RP_CLOSE, closeRect, light);
+            icClose.setColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            c.save();
+            c.translate(closeRect.centerX() - icClose.getIntrinsicWidth() / 2f, cy - icClose.getIntrinsicHeight() / 2f);
+            icClose.draw(c);
+            c.restore();
+        } else {
+            glassButton = true;
+            drawGlass(c, closeRect, dp(20), light, 1f);
+            glassButton = false;
+            drawRipple(c, RP_CLOSE, closeRect, light);
+            icClose.setColor(glassIconColor());
+            c.save();
+            c.translate(closeRect.centerX() - icClose.getIntrinsicWidth() / 2f, cy - icClose.getIntrinsicHeight() / 2f);
+            icClose.draw(c);
+            c.restore();
+        }
         c.restore();
         // "Scan QR" pill on the right (mirrors the close button's inset), same glass; the scanner grows out of it
         if (!scanHidden) {
-            final boolean light = scene != null && scene.light;
             scanText.setTextSize(dp(14)); // Roboto Medium 14
             final float pw = dp(12) + dp(20) + dp(6) + scanText.measureText(scanLabel) + dp(14);
             scanRect.set(getWidth() - dp(9) - pw, cy - dp(20), getWidth() - dp(9), cy + dp(20));
             c.save();
             c.scale(es, es, scanRect.centerX(), scanRect.centerY());
-            glassButton = true;
-            drawGlass(c, scanRect, dp(20), light, 1f);
-            glassButton = false;
-            drawRipple(c, RP_SCAN, scanRect, light);
-            icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), glassIconColor(), 1f);
-            scanText.setColor(glassIconColor());
-            final Paint.FontMetrics fm = scanText.getFontMetrics();
-            c.drawText(scanLabel, scanRect.left + dp(12) + dp(20) + dp(6), cy - (fm.ascent + fm.descent) / 2f, scanText);
+            if (md3) {
+                int btnBg = Theme.getColor(Theme.key_featuredStickers_addButton);
+                fill.setColor(btnBg);
+                fill.setAlpha(240);
+                c.drawRoundRect(scanRect, dp(20), dp(20), fill);
+                drawRipple(c, RP_SCAN, scanRect, light);
+                icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), Color.WHITE, 1f);
+                scanText.setColor(Color.WHITE);
+                final Paint.FontMetrics fm = scanText.getFontMetrics();
+                c.drawText(scanLabel, scanRect.left + dp(12) + dp(20) + dp(6), cy - (fm.ascent + fm.descent) / 2f, scanText);
+            } else {
+                glassButton = true;
+                drawGlass(c, scanRect, dp(20), light, 1f);
+                glassButton = false;
+                drawRipple(c, RP_SCAN, scanRect, light);
+                icon(c, icScan, scanRect.left + dp(12) + dp(10), cy, dp(20), glassIconColor(), 1f);
+                scanText.setColor(glassIconColor());
+                final Paint.FontMetrics fm = scanText.getFontMetrics();
+                c.drawText(scanLabel, scanRect.left + dp(12) + dp(20) + dp(6), cy - (fm.ascent + fm.descent) / 2f, scanText);
+            }
             c.restore();
         }
     }
@@ -5320,7 +5417,7 @@ public class QrShareView extends View {
         c.restore();
         final Drawable[] icons = tabIcons;
         for (int i = 0; i < 3; i++) {
-            icon(c, icons[i], tabsRect.left + seg * (i + 0.5f), cy, dp(i == 1 ? 24.5f : 22), glassIconColor(), ma); // the smile glyph is optically smaller
+            icon(c, icons[i], tabsRect.left + seg * (i + 0.5f), cy, dp(i == 1 ? 24.5f : 22), md3Share ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText) : glassIconColor(), ma); // the smile glyph is optically smaller
         }
         c.restore();
     }
@@ -5410,23 +5507,39 @@ public class QrShareView extends View {
             cascadeAt = AnimationUtils.currentAnimationTimeMillis();
         }
         if (mc < 0.05f) cascadeFired = false;
+        final boolean md3Share = AppearanceConfig.md3QrShare();
         sheetLift = mc;
         liftThis = true;
-        drawGlass(c, islandRect, rad, light && mc < 0.5f, 1f);
-        liftThis = false;
-        glassSheet = false;
-        // a distinct, lighter layer: a light tint of the backdrop's own hue (+ the glass white) ~ +12%
-        final int shade = scene != null ? scene.shade : 0x40000000;
-        fill.setColor(shade);
-        fill.setAlpha((int) (Color.alpha(shade) * mc));
-        if (mc > 0.5f) {
-            // over the same grown body as the glass (see drawGlass)
-            final float gin = Math.min(0f, dpf2(RimTune.g[RimTune.SHEET][RimTune.INSET]));
-            rect2.set(islandRect);
-            rect2.inset(gin, gin);
-            c.drawRoundRect(rect2, rad - gin, rad - gin, fill);
-        } else {
+        if (md3Share) {
+            fill.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+            fill.setAlpha((int) (255 * mc));
             c.drawRoundRect(islandRect, rad, rad, fill);
+            if (mc > 0.4f) {
+                float handleW = dp(32);
+                float handleH = dp(4);
+                float handleY = islandRect.top + dp(10);
+                float handleX = islandRect.centerX() - handleW / 2f;
+                fill.setColor(Theme.getColor(Theme.key_sheet_scrollUp));
+                fill.setAlpha((int) (180 * mc));
+                c.drawRoundRect(handleX, handleY, handleX + handleW, handleY + handleH, dp(2), dp(2), fill);
+            }
+        } else {
+            drawGlass(c, islandRect, rad, light && mc < 0.5f, 1f);
+            liftThis = false;
+            glassSheet = false;
+            // a distinct, lighter layer: a light tint of the backdrop's own hue (+ the glass white) ~ +12%
+            final int shade = scene != null ? scene.shade : 0x40000000;
+            fill.setColor(shade);
+            fill.setAlpha((int) (Color.alpha(shade) * mc));
+            if (mc > 0.5f) {
+                // over the same grown body as the glass (see drawGlass)
+                final float gin = Math.min(0f, dpf2(RimTune.g[RimTune.SHEET][RimTune.INSET]));
+                rect2.set(islandRect);
+                rect2.inset(gin, gin);
+                c.drawRoundRect(rect2, rad - gin, rad - gin, fill);
+            } else {
+                c.drawRoundRect(islandRect, rad, rad, fill);
+            }
         }
         // the island's icons stay put and fade as the island opens (no tabs inside the sheet)
         final float ia = 1f - Utilities.clamp01(mc / 0.35f);

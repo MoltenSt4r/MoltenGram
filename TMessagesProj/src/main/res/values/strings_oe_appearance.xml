@@ -237,10 +237,13 @@
 <string name="OEAppearanceHidingInChats">In Chats</string>
 <string name="OEAppearanceHidingAiPremium">AI and Premium</string>
 <string name="OEKillApp">Close App</string>
+<string name="OEAppearanceQrHeader">QR Code</string>
 <string name="OEAppearanceMd3QrShare">MD3 QR Share Menu</string>
 <string name="OEAppearanceFreeQrPremium">Free QR Features (No Premium)</string>
+<string name="OEAppearanceFreeQrPremiumDesc">Unlocks all styles and emoji packs without Telegram Premium</string>
 <string name="OEAppearanceMd3QrCode">MD3 QR Code Styling</string>
-<string name="OEAppearanceMd3QrShape">QR Code Shape</string>
+<string name="OEAppearanceMd3QrShape">QR Code Shape (MD3)</string>
+<string name="OEAppearanceMd3QrPixelShape">QR Module Shape</string>
 <string name="OEAppearanceMd3QrShapeRounded">MD3 Rounded</string>
 <string name="OEAppearanceMd3QrShapeDots">MD3 Circular Dots</string>
 <string name="OEAppearanceMd3QrShapeSquircle">MD3 Squircles</string>
