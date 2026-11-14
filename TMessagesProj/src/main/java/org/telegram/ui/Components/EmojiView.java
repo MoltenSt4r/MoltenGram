@@ -2399,10 +2399,6 @@ public class EmojiView extends FrameLayout implements
                     return;
                 }
                 StickerEmojiCell cell = (StickerEmojiCell) view;
-                if (cell.getSticker() != null && MessageObject.isPremiumSticker(cell.getSticker()) && !AccountInstance.getInstance(currentAccount).getUserConfig().isPremium()) {
-                    ContentPreviewViewer.getInstance().showMenuFor(cell);
-                    return;
-                }
                 ContentPreviewViewer.getInstance().reset();
 
                 if (cell.isDisabled()) {

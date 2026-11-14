@@ -1146,17 +1146,13 @@ public class ChatAttachAlertRichLayout extends ChatAttachAlert.AttachAlertLayout
 
     private void updateSendButtonLocked() {
         if (toolbar != null) {
-            final boolean premiumLocked = !MessagesController.getInstance(currentAccount).richEditorAllowed()
-                && !UserConfig.getInstance(currentAccount).isPremium();
-            toolbar.getSendButton().setLocked(premiumLocked && listView.isLossy());
-            toolbar.setPremiumLocked(premiumLocked);
+            toolbar.getSendButton().setLocked(false);
+            toolbar.setPremiumLocked(false);
         }
     }
 
     private boolean isSendLocked() {
-        return !MessagesController.getInstance(currentAccount).richEditorAllowed()
-            && !UserConfig.getInstance(currentAccount).isPremium()
-            && listView.isLossy();
+        return false;
     }
 
     private void showConversionSheet() {

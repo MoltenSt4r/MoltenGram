@@ -8686,14 +8686,6 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     public boolean sendMessage() {
-        if (richDraftActive && !UserConfig.getInstance(currentAccount).isPremium()) {
-            RichEditor.openConversionSheet(getContext(), this::openRichEditorWithoutFormatting, () -> {
-                if (parentFragment != null) {
-                    parentFragment.showDialog(new PremiumFeatureBottomSheet(parentFragment, PremiumPreviewFragment.PREMIUM_FEATURE_RICH_EDITOR, true));
-                }
-            }, resourcesProvider);
-            return true;
-        }
         if (isInScheduleMode()) {
             AlertsCreator.createScheduleDatePickerDialog(parentActivity, parentFragment.getDialogId(), new AlertsCreator.ScheduleDatePickerDelegate() {
                 @Override
@@ -12488,7 +12480,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             }
             emojiButton.setVisibility(View.GONE);
             deleteRichDraftButton.setVisibility(View.VISIBLE);
-            sendButton.setLocked(!UserConfig.getInstance(currentAccount).isPremium());
+            sendButton.setLocked(false);
         } else {
             richDraftPreview.setVisibility(View.GONE);
             if (messageEditText != null) {
@@ -15677,7 +15669,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             updateGiftButton(true);
         } else if (id == NotificationCenter.currentUserPremiumStatusChanged) {
             if (richDraftActive && sendButton != null) {
-                sendButton.setLocked(!UserConfig.getInstance(currentAccount).isPremium());
+                sendButton.setLocked(false);
             }
         }
     }

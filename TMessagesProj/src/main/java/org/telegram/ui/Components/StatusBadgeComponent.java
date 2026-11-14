@@ -5,6 +5,7 @@ import android.view.View;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.DialogObject;
+import org.telegram.messenger.UserObject;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
@@ -42,8 +43,8 @@ public class StatusBadgeComponent {
         } else if (user != null && user.verified) {
             statusDrawable.set(verifiedDrawable = (verifiedDrawable == null ? new CombinedDrawable(Theme.dialogs_verifiedDrawable, Theme.dialogs_verifiedCheckDrawable) : verifiedDrawable), animated);
             statusDrawable.setColor(null);
-        } else if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
-            statusDrawable.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
+        } else if (user != null && UserObject.getEmojiStatusDocumentId(user) != null) {
+            statusDrawable.set(UserObject.getEmojiStatusDocumentId(user), animated);
             statusDrawable.setColor(colorFilter);
         } else if (user != null && user.premium) {
             statusDrawable.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);

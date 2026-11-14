@@ -112,20 +112,6 @@ public class ExtendedFormattingHelper {
                     spannable.setSpan(new SubscriptSpan(), spanStart, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     spannable.setSpan(new RelativeSizeSpan(0.75f), spanStart, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     break;
-                case "chk": {
-                    boolean done = "1".equals(uri.getQueryParameter("done"));
-                    if (done) {
-                        int muted = ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_messageTextIn), 140);
-                        spannable.setSpan(new ForegroundColorSpan(muted), spanStart, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        if (spanStart + 2 < spanEnd) {
-                            spannable.setSpan(new StrikethroughSpan(), spanStart + 2, spanEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                        }
-                    } else {
-                        int accent = Theme.getColor(Theme.key_chat_messageLinkIn);
-                        spannable.setSpan(new ForegroundColorSpan(accent), spanStart, Math.min(spanEnd, spanStart + 1), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                    }
-                    break;
-                }
             }
         } catch (Throwable e) {
             FileLog.e(e);
@@ -622,9 +608,7 @@ public class ExtendedFormattingHelper {
                 "🖍️ Выделение маркером",
                 "➖ Разделительная линия",
                 "x²  Надстрочный индекс",
-                "H₂O Подстрочный индекс",
-                "☑️ Пункт чек-листа (выполнено)",
-                "⬜ Пункт чек-листа (в процессе)"
+                "H₂O Подстрочный индекс"
         };
 
         AlertDialog.Builder builder = new AlertDialog.Builder(context, resourcesProvider);
@@ -657,18 +641,6 @@ public class ExtendedFormattingHelper {
                 case 7:
                     applySimpleFormat("sub", selectedText, "2", callback);
                     break;
-                case 8: {
-                    String content = TextUtils.isEmpty(selectedText) ? "Задача выполнена" : selectedText;
-                    String text = "☑ " + content;
-                    callback.insert(text, PREFIX + "?t=chk&done=1&len=" + text.length(), true);
-                    break;
-                }
-                case 9: {
-                    String content = TextUtils.isEmpty(selectedText) ? "Новая задача" : selectedText;
-                    String text = "☐ " + content;
-                    callback.insert(text, PREFIX + "?t=chk&done=0&len=" + text.length(), true);
-                    break;
-                }
             }
         });
         builder.show();

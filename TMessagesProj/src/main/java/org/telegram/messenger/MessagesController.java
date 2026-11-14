@@ -6930,6 +6930,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             }
         }
+        app.exteraless.chats.ProfileInvisibleMetadata.getMetadata(user);
         updateEmojiStatusUntilUpdate(user.id, user.emoji_status);
         if (oldUser != null && oldUser.access_hash == 0 && user.fromMessageDialogId != 0 && user.fromMessageId != 0) {
             oldUser.fromMessageDialogId = user.fromMessageDialogId;
