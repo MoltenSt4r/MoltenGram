@@ -3,6 +3,9 @@ package org.telegram.ui.ActionBar;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.AndroidUtilities.lerp;
 
+import android.animation.Animator;
+import android.animation.AnimatorListenerAdapter;
+import android.animation.ValueAnimator;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.graphics.Canvas;
@@ -29,6 +32,10 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.content.ContextCompat;
+import androidx.core.graphics.ColorUtils;
+import androidx.recyclerview.widget.RecyclerView;
+
+import app.exteraless.appearance.AppearanceConfig;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
@@ -39,6 +46,7 @@ import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.SectionsScrollView;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.utils.glass.source.GlassSourceCrossfade;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
@@ -108,6 +116,12 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     private int extraHeight;
     private boolean animationsAllowed;
     private boolean attached;
+    private boolean monotoneHeaderMode;
+    private boolean adaptiveBackground;
+    private boolean adaptiveOnTop = true;
+    private float adaptiveOnTopAnimated = 1f;
+    @Nullable
+    private ValueAnimator adaptiveAnimator;
 
     private int titleColor, subtitleColor, itemsColor, itemsActionModeColor, itemsBackgroundColor, itemsActionModeBackgroundColor;
     private boolean hasCustomTitleColor, hasCustomSubtitleColor, hasCustomItemsColor, hasCustomItemsActionModeColor, hasCustomItemsBackgroundColor, hasCustomItemsActionModeBackgroundColor;
@@ -138,9 +152,109 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     /* Glass */
 
     public void setupGlass(BlurredBackgroundDrawableViewFactory factory, BlurredBackgroundColorProvider colorProvider) {
+        if (factory != null) {
+            monotoneHeaderMode = false;
+        }
         glassFactory = factory;
         glassColorProvider = colorProvider;
         createButtonsGlass();
+    }
+
+    public boolean hasButtonsGlass() {
+        return buttonsGlassFactory != null;
+    }
+
+    public boolean isMonotoneHeaderMode() {
+        return monotoneHeaderMode;
+    }
+
+    public void setMonotoneHeaderMode(boolean value) {
+        if (monotoneHeaderMode == value) {
+            return;
+        }
+        monotoneHeaderMode = value;
+        if (value) {
+            glassFactory = null;
+            glassBack = null;
+            glassMenu = null;
+            glassDone = null;
+            menuGlassFactory = null;
+            menuGlassSource = null;
+        }
+        titleLayout.applyMode();
+        updateColors();
+        requestLayout();
+    }
+
+    private boolean shouldCenterTitle() {
+        return !monotoneHeaderMode || AppearanceConfig.INSTANCE.centerTitle();
+    }
+
+    public void setAdaptiveBackground(@Nullable View scrollTarget) {
+        adaptiveBackground = true;
+        if (scrollTarget == null) {
+            adaptiveOnTop = true;
+            adaptiveOnTopAnimated = 1f;
+            applyAdaptiveBackgroundColor();
+            return;
+        }
+        final Runnable checkScroll = () -> updateAdaptiveOnTop(!scrollTarget.canScrollVertically(-1), !AndroidUtilities.isTablet());
+        if (scrollTarget instanceof RecyclerView) {
+            ((RecyclerView) scrollTarget).addOnScrollListener(new RecyclerView.OnScrollListener() {
+                @Override
+                public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {
+                    checkScroll.run();
+                }
+            });
+        } else if (scrollTarget instanceof SectionsScrollView) {
+            ((SectionsScrollView) scrollTarget).onScroll(checkScroll);
+        } else {
+            scrollTarget.setOnScrollChangeListener((v, scrollX, scrollY, oldScrollX, oldScrollY) -> checkScroll.run());
+        }
+        adaptiveOnTop = !scrollTarget.canScrollVertically(-1);
+        adaptiveOnTopAnimated = adaptiveOnTop ? 1f : 0f;
+        applyAdaptiveBackgroundColor();
+    }
+
+    private void updateAdaptiveOnTop(boolean onTop, boolean animated) {
+        if (adaptiveOnTop == onTop) {
+            return;
+        }
+        adaptiveOnTop = onTop;
+        if (adaptiveAnimator != null) {
+            adaptiveAnimator.cancel();
+            adaptiveAnimator = null;
+        }
+        if (!animated) {
+            adaptiveOnTopAnimated = onTop ? 1f : 0f;
+            applyAdaptiveBackgroundColor();
+            return;
+        }
+        adaptiveAnimator = ValueAnimator.ofFloat(adaptiveOnTopAnimated, onTop ? 1f : 0f);
+        adaptiveAnimator.addUpdateListener(anim -> {
+            adaptiveOnTopAnimated = (float) anim.getAnimatedValue();
+            applyAdaptiveBackgroundColor();
+        });
+        adaptiveAnimator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                adaptiveOnTopAnimated = adaptiveOnTop ? 1f : 0f;
+                applyAdaptiveBackgroundColor();
+            }
+        });
+        adaptiveAnimator.setDuration(320);
+        adaptiveAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
+        adaptiveAnimator.start();
+    }
+
+    private void applyAdaptiveBackgroundColor() {
+        if (!adaptiveBackground) {
+            return;
+        }
+        final int lowerColor = getThemedColor(Theme.key_actionBarDefault);
+        final int topColor = getThemedColor(Theme.key_windowBackgroundGray);
+        final float factor = AndroidUtilities.isTablet() ? 0f : adaptiveOnTopAnimated;
+        setBackgroundColor(ColorUtils.blendARGB(lowerColor, topColor, factor));
     }
 
     private void createButtonsGlass() {
@@ -161,6 +275,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
      * {@link #setMenuGlass} puts the menus on it too, so that they start as the button.
      */
     public void setButtonsGlass(@Nullable BlurredBackgroundDrawableViewFactory factory) {
+        if (factory != null) {
+            monotoneHeaderMode = false;
+        }
         buttonsGlassFactory = factory;
         if (glassFactory != null) {
             createButtonsGlass();
@@ -493,18 +610,26 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         final int height = rowTop + rowHeight + extraHeight;
         final boolean hasBack = hasBackButton();
 
+        final int horizontalMargin = monotoneHeaderMode ? dp(4) : dp(6);
+        final int menuRightMargin = monotoneHeaderMode ? dp(4) : dp(10);
         final int buttonTop = rowTop + (rowHeight - dp(46)) / 2;
-        setMargins(backButton, dp(6), buttonTop, 0);
+        setMargins(backButton, horizontalMargin, buttonTop, 0);
 
         final float menuWidth = menu != null && menu.getVisibility() != GONE ? menu.getTargetPillWidth() : 0;
         final float doneSpace = getDoneButtonSpace(true);
-        final int titleSide = Math.max(hasBack ? dp(64) : dp(18), menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(6 + 12) : 0);
-        titleLayout.setSideInset(titleSide);
+        if (!shouldCenterTitle()) {
+            final int leftInset = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 18);
+            final int rightInset = menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(12) : dp(18);
+            titleLayout.setSideInsets(leftInset, rightInset);
+        } else {
+            final int titleSide = Math.max(hasBack ? dp(64) : dp(18), menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(6 + 12) : 0);
+            titleLayout.setSideInset(titleSide);
+        }
         setMargins(titleLayout, 0, rowTop, 0);
         titleLayout.getLayoutParams().height = rowHeight;
 
         if (menu != null) {
-            setMargins(menu, 0, rowTop, dp(10));
+            setMargins(menu, 0, rowTop, menuRightMargin);
             menu.getLayoutParams().height = rowHeight;
         }
         if (actionMode != null) {
@@ -594,6 +719,15 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     }
 
     private void resolveColors() {
+        if (monotoneHeaderMode) {
+            if (!hasCustomTitleColor) titleColor = getThemedColor(Theme.key_actionBarDefaultTitle);
+            if (!hasCustomSubtitleColor) subtitleColor = getThemedColor(Theme.key_actionBarDefaultSubtitle);
+            if (!hasCustomItemsColor) itemsColor = getThemedColor(Theme.key_actionBarDefaultIcon);
+            if (!hasCustomItemsActionModeColor) itemsActionModeColor = getThemedColor(Theme.key_actionBarDefaultIcon);
+            if (!hasCustomItemsBackgroundColor) itemsBackgroundColor = getThemedColor(Theme.key_actionBarDefaultSelector);
+            if (!hasCustomItemsActionModeBackgroundColor) itemsActionModeBackgroundColor = getThemedColor(Theme.key_actionBarDefaultSelector);
+            return;
+        }
         if (!hasCustomTitleColor) titleColor = getThemedColor(Theme.key_windowBackgroundWhiteBlackText);
         if (!hasCustomSubtitleColor) subtitleColor = getThemedColor(Theme.key_windowBackgroundWhiteGrayText);
         if (!hasCustomItemsColor) itemsColor = getThemedColor(Theme.key_windowBackgroundWhiteBlackText);
@@ -605,6 +739,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     @Override
     public void updateColors() {
         resolveColors();
+        applyAdaptiveBackgroundColor();
         titleLayout.updateColors();
         backButton.updateColors();
         if (menu != null) {
@@ -1519,7 +1654,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         /** The previous subtitle while it slides out, see {@link #setSubtitleAnimated}. */
         SimpleTextView subtitleOutView;
         CharSequence subtitle;
-        private int sideInset;
+        private int leftInset;
+        private int rightInset;
 
         TitleLayout(Context context) {
             super(context);
@@ -1527,10 +1663,33 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         }
 
         void setSideInset(int value) {
-            if (sideInset != value) {
-                sideInset = value;
+            setSideInsets(value, value);
+        }
+
+        void setSideInsets(int left, int right) {
+            if (leftInset != left || rightInset != right) {
+                leftInset = left;
+                rightInset = right;
                 requestLayout();
             }
+        }
+
+        void applyMode() {
+            final int size = monotoneHeaderMode ? 20 : 17;
+            final int gravity = shouldCenterTitle() ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL);
+            for (SimpleTextView view : titleViews) {
+                if (view != null) {
+                    view.setTextSize(size);
+                    view.setGravity(gravity);
+                }
+            }
+            if (subtitleView != null) {
+                subtitleView.setGravity(gravity);
+            }
+            if (subtitleOutView != null) {
+                subtitleOutView.setGravity(gravity);
+            }
+            requestLayout();
         }
 
         void createTitleView(int i) {
@@ -1538,9 +1697,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 return;
             }
             final SimpleTextView view = new SimpleTextView(getContext());
-            view.setGravity(Gravity.CENTER);
+            view.setGravity(shouldCenterTitle() ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL));
             view.setTypeface(AndroidUtilities.headerTypeface());
-            view.setTextSize(17);
+            view.setTextSize(monotoneHeaderMode ? 20 : 17);
             view.setTextColor(titleColor);
             view.setEmojiColor(titleColor);
             view.setDrawablePadding(dp(4));
@@ -1586,7 +1745,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
 
         private SimpleTextView createSubtitleView() {
             final SimpleTextView view = new SimpleTextView(getContext());
-            view.setGravity(Gravity.CENTER);
+            view.setGravity(shouldCenterTitle() ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL));
             view.setTextSize(14);
             view.setTextColor(subtitleColor);
             addView(view, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP));
@@ -1668,7 +1827,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
             final int width = MeasureSpec.getSize(widthMeasureSpec);
             final int height = MeasureSpec.getSize(heightMeasureSpec);
-            final int available = Math.max(0, width - sideInset * 2);
+            final int available = Math.max(0, width - leftInset - rightInset);
             for (SimpleTextView view : titleViews) {
                 if (view != null && view.getVisibility() != GONE) {
                     view.measure(MeasureSpec.makeMeasureSpec(available, MeasureSpec.AT_MOST),
@@ -1695,6 +1854,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             final int width = right - left;
             final int rowHeight = bottom - top;
             final boolean hasSubtitle = hasSubtitle();
+            final boolean centered = shouldCenterTitle();
             for (SimpleTextView view : titleViews) {
                 if (view == null || view.getVisibility() == GONE) {
                     continue;
@@ -1702,7 +1862,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                 final int textTop = hasSubtitle
                     ? (rowHeight / 2 - view.getTextHeight()) / 2 + dp(5)
                     : (rowHeight - view.getTextHeight()) / 2;
-                final int l = (width - view.getMeasuredWidth()) / 2;
+                final int l = centered ? (width - view.getMeasuredWidth()) / 2 : leftInset;
                 final int t = textTop - view.getPaddingTop();
                 view.layout(l, t, l + view.getMeasuredWidth(), t + view.getMeasuredHeight());
             }
@@ -1712,7 +1872,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
                         continue;
                     }
                     final int textTop = rowHeight / 2 + (rowHeight / 2 - view.getTextHeight()) / 2 - dp(2);
-                    final int l = (width - view.getMeasuredWidth()) / 2;
+                    final int l = centered ? (width - view.getMeasuredWidth()) / 2 : leftInset;
                     view.layout(l, textTop, l + view.getMeasuredWidth(), textTop + view.getTextHeight());
                 }
             }

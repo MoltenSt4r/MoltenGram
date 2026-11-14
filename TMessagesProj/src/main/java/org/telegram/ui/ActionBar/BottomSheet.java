@@ -1322,11 +1322,25 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         Rect padding = new Rect();
         shadowDrawable = new FilterTrackingDrawable(context.getResources().getDrawable(R.drawable.sheet_shadow_round).mutate());
         shadowDrawable.setColorFilter(themedBackgroundFilter = new PorterDuffColorFilter(internalBackgroundColor = getThemedColor(Theme.key_dialogBackground), PorterDuff.Mode.MULTIPLY));
+        if (solegramGlass()) {
+            shadowDrawable = new app.exteraless.glass.SolegramLiveGlass.SheetDrawable(shadowDrawable, internalBackgroundColor,
+                app.exteraless.glass.SolegramGlass.menuAlpha(solegramIsDark()), resourcesProvider);
+        }
         shadowDrawable.getPadding(padding);
+        solegramPanelPadding.set(padding);
         backgroundPaddingLeft = padding.left;
         backgroundPaddingTop = padding.top;
 
         container = new ContainerView(getContext()) {
+            private final app.exteraless.glass.SolegramLiveGlass.Host solegramGlassSource = new app.exteraless.glass.SolegramLiveGlass.Host(this, c -> super.draw(c));
+
+            @Override
+            public void draw(@NonNull Canvas canvas) {
+                if (!solegramGlassSource.draw(canvas)) {
+                    super.draw(canvas);
+                }
+            }
+
             @Override
             public boolean drawChild(Canvas canvas, View child, long drawingTime) {
                 try {
@@ -1731,6 +1745,41 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         }
     }
 
+    private final Rect solegramPanelPadding = new Rect();
+
+    private void solegramAttachGlass() {
+        if (!solegramGlass() || containerView == null) {
+            return;
+        }
+        if (!(shadowDrawable instanceof app.exteraless.glass.SolegramLiveGlass.SheetDrawable) && shadowDrawable instanceof android.graphics.drawable.NinePatchDrawable) {
+            final Rect padding = new Rect();
+            shadowDrawable.getPadding(padding);
+            if (padding.equals(solegramPanelPadding)) {
+                final Drawable own = shadowDrawable;
+                final ColorFilter filter = own.getColorFilter();
+                final int color = filter != null ? app.exteraless.glass.SolegramLiveGlass.colorOf(filter) : internalBackgroundColor;
+                shadowDrawable = new app.exteraless.glass.SolegramLiveGlass.SheetDrawable(own, color,
+                    app.exteraless.glass.SolegramGlass.menuAlpha(solegramIsDark()), resourcesProvider);
+                shadowDrawable.setBounds(own.getBounds());
+                shadowDrawable.setAlpha(own.getAlpha());
+                if (containerView.getBackground() == own) {
+                    containerView.setBackground(shadowDrawable);
+                }
+            }
+        }
+        if (shadowDrawable instanceof app.exteraless.glass.SolegramLiveGlass.SheetDrawable) {
+            ((app.exteraless.glass.SolegramLiveGlass.SheetDrawable) shadowDrawable).setOwner(containerView);
+        }
+    }
+
+    private static boolean solegramGlass() {
+        return app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassSheets && app.exteraless.glass.SolegramLiveGlass.available();
+    }
+
+    private boolean solegramIsDark() {
+        return AndroidUtilities.computePerceivedBrightness(getThemedColor(Theme.key_dialogBackground)) < 0.721f;
+    }
+
     @Override
     public void show() {
         if (!AndroidUtilities.isSafeToShow(getContext())) return;
@@ -1739,6 +1788,7 @@ public class BottomSheet extends Dialog implements BaseFragment.AttachedSheet {
         } else {
             super.show();
         }
+        solegramAttachGlass();
         setShowing(true);
         if (focusable) {
             getWindow().setSoftInputMode(focusableSoftInputMode);

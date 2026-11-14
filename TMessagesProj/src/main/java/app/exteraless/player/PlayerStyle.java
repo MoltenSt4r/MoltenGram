@@ -93,8 +93,7 @@ public final class PlayerStyle {
     }
 
     public static boolean titleAbove() {
-        int style = coverStyle();
-        return (style == COVER_CARD || style == COVER_DISC) && item(AppearanceConfig.playerTitleAbove).Bool();
+        return item(AppearanceConfig.playerTitleAbove).Bool();
     }
 
     public static int[] order() {
@@ -226,7 +225,33 @@ public final class PlayerStyle {
     }
 
     public static void reset() {
-        for (ConfigItem item : AppearanceConfig.playerStyleItems()) {
+        AppearanceConfig.ensureLoaded();
+        ConfigItem[] items = {
+                AppearanceConfig.playerBackgroundStyle,
+                AppearanceConfig.playerColorStyle,
+                AppearanceConfig.playerCoverShape,
+                AppearanceConfig.playerSwipeTrack,
+                AppearanceConfig.playerCropCover,
+                AppearanceConfig.playerKeepScreenOn,
+                AppearanceConfig.playerTitleAlign,
+                AppearanceConfig.playerTitleSize,
+                AppearanceConfig.playerTitleAbove,
+                AppearanceConfig.playerOrder,
+                AppearanceConfig.playerShowActions,
+                AppearanceConfig.playerShowModes,
+                AppearanceConfig.playerShowLike,
+                AppearanceConfig.playerShowSource,
+                AppearanceConfig.playerSeekbarStyle,
+                AppearanceConfig.playerWavy,
+                AppearanceConfig.playerSeekbarThickness,
+                AppearanceConfig.playerSeekbarIndicator,
+                AppearanceConfig.playerControlsSize,
+                AppearanceConfig.playerActionsStyle,
+                AppearanceConfig.playerActionButtons,
+                AppearanceConfig.playerMiniWavy,
+                AppearanceConfig.playerMiniCoverShape
+        };
+        for (ConfigItem item : items) {
             switch (item.type) {
                 case ConfigItem.configTypeBool:
                     item.setConfigBool((Boolean) item.defaultValue);

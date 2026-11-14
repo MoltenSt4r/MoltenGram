@@ -41,6 +41,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     private final BaseFragment fragment;
     private final Theme.ResourcesProvider resourcesProvider;
+    private final boolean preview;
     private boolean dark;
     private int seed;
     private final LinearLayout card;
@@ -64,9 +65,14 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private Runnable offsetListener;
 
     public PlayerMiniView(Context context, BaseFragment fragment, Theme.ResourcesProvider resourcesProvider) {
+        this(context, fragment, resourcesProvider, false);
+    }
+
+    private PlayerMiniView(Context context, BaseFragment fragment, Theme.ResourcesProvider resourcesProvider, boolean preview) {
         super(context);
         this.fragment = fragment;
         this.resourcesProvider = resourcesProvider;
+        this.preview = preview;
         dark = PlayerColors.isDark(resourcesProvider);
         seed = PlayerColors.fallbackSeed(resourcesProvider);
         colors = PlayerColors.fromSeed(seed, dark);
@@ -87,7 +93,11 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         });
         card.setClipToOutline(true);
         card.setElevation(dp(3));
-        card.setOnClickListener(v -> Md3Player.open(fragment, this));
+        if (!preview) {
+            card.setOnClickListener(v -> Md3Player.open(fragment, this));
+        } else {
+            card.setClickable(false);
+        }
         card.setContentDescription(getString(R.string.OEPlayerOpen));
         addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, HEIGHT_DP, Gravity.BOTTOM, 12, 0, 12, 12));
 
@@ -141,7 +151,15 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         card.addView(closeButton, LayoutHelper.createLinear(44, 48));
 
         applyColors(colors);
-        setVisibility(GONE);
+        if (preview) {
+            shown = true;
+            showProgress = 1f;
+            hostFactor = 1f;
+            setVisibility(VISIBLE);
+            update(false);
+        } else {
+            setVisibility(GONE);
+        }
     }
 
     public boolean canTransition() {
@@ -213,7 +231,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     }
 
     public static PlayerMiniView preview(Context context) {
-        return new PlayerMiniView(context, null, null);
+        return new PlayerMiniView(context, null, null, true);
     }
 
     public static void styleChanged() {
@@ -221,6 +239,8 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     public void applyStyle(boolean animated) {
         checkThemeColors();
+        cover.setShapeId(PlayerArt.getOrCycleMiniShape(current), animated);
+        playButton.invalidate();
     }
 
     public void setTopState(float anchor, float zone, float shift, float visibility) {
@@ -272,6 +292,10 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        if (preview) {
+            update(false);
+            return;
+        }
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.addObserver(this, NotificationCenter.messagePlayingDidStart);
@@ -287,6 +311,9 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        if (preview) {
+            return;
+        }
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.removeObserver(this, NotificationCenter.messagePlayingDidStart);
@@ -330,6 +357,19 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     public void update(boolean animated) {
         checkThemeColors();
         MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
+        if (preview) {
+            if (mo != null && mo.isMusic() && mo.getId() != 0) {
+                bind(mo, animated);
+            } else {
+                current = null;
+                titleView.setText(getString(R.string.OEPlayerPreviewTitle));
+                artistView.setText(getString(R.string.OEPlayerPreviewArtist));
+                cover.setShapeId(PlayerArt.getOrCycleMiniShape(null), animated);
+                cover.setMessage(null);
+            }
+            playButton.setPlaying(mo == null || !MediaController.getInstance().isMessagePaused(), animated);
+            return;
+        }
         boolean want = Md3Player.miniEnabled() && mo != null && mo.isMusic() && mo.getId() != 0;
         if (want) {
             bind(mo, animated && shown);

@@ -86,6 +86,43 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
     private int selectorWidth;
     private int thumbX;
     private AnimatedFloat animatedThumbX = new AnimatedFloat(this, 0, 60, CubicBezierInterpolator.EASE_OUT);
+    private final AnimatedFloat solegramActive = new AnimatedFloat(this, 0, 320, CubicBezierInterpolator.EASE_OUT_BACK);
+    private final RectF solegramTrackRect = new RectF();
+    private final RectF solegramFillRect = new RectF();
+    private app.exteraless.glass.LiquidControls.Lens solegramLens;
+    private final app.exteraless.glass.LiquidControls.GlassSpring solegramFollow = new app.exteraless.glass.LiquidControls.GlassSpring(0).params(0.16f, 0.88f).rest(0.5f);
+    private boolean solegramFollowReady, solegramRich;
+    private int solegramFollowWidth;
+    private long solegramFollowFrame;
+    private float solegramStretch;
+
+    private int solegramFollow(int target) {
+        final boolean animate = solegramFollowReady && solegramFollowWidth == getMeasuredWidth()
+            && (pressed || solegramFollow.isActive());
+        if (!animate) {
+            solegramFollow.set(target);
+            solegramFollowReady = true;
+            solegramFollowWidth = getMeasuredWidth();
+            solegramFollowFrame = 0;
+            solegramStretch = 0;
+            solegramRich = !org.telegram.messenger.LiteMode.isPowerSaverApplied();
+            return target;
+        }
+        solegramFollow.to(target);
+        final long now = android.view.animation.AnimationUtils.currentAnimationTimeMillis();
+        final float dt = solegramFollowFrame == 0 ? 1f / 60f : Math.max(0f, Math.min(1f / 30f, (now - solegramFollowFrame) / 1000f));
+        solegramFollowFrame = now;
+        final boolean moving = solegramFollow.step(dt);
+        final float stretchTarget = moving && solegramRich ? Math.min(0.32f, Math.abs(solegramFollow.velocity) / AndroidUtilities.dp(2600)) : 0f;
+        solegramStretch += (stretchTarget - solegramStretch) * Math.min(1f, dt * 24f);
+        if (moving || solegramStretch > 0.003f) {
+            postInvalidateOnAnimation();
+        } else {
+            solegramStretch = 0;
+            solegramFollowFrame = 0;
+        }
+        return Math.round(solegramFollow.value);
+    }
     private int thumbDX;
     private float progressToSet = -100;
     private float minProgress = -1;
@@ -146,7 +183,7 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
         outerPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
         outerPaint1.setColor(themedOuterColor = getThemedColor(Theme.key_player_progress));
 
-        selectorWidth = AndroidUtilities.dp(32);
+        selectorWidth = AndroidUtilities.dp(app.exteraless.glass.LiquidControls.enabled() ? 44 : 32);
         thumbSize = AndroidUtilities.dp(24);
         currentRadius = AndroidUtilities.dp(6);
 
@@ -265,6 +302,21 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
     }
 
     boolean captured;
+    private boolean solegramLiquidThumb() {
+        return app.exteraless.glass.LiquidControls.enabled() && !twoSided;
+    }
+
+    private int solegramGrabHalf() {
+        return solegramLiquidThumb() ? selectorWidth / 2 : thumbSize / 2;
+    }
+
+    private boolean solegramOnThumb(float x, int additionWidth) {
+        if (solegramLiquidThumb()) {
+            return Math.abs(x - (thumbX + selectorWidth / 2f)) <= thumbSize / 2f + additionWidth;
+        }
+        return thumbX - additionWidth <= x && x <= thumbX + thumbSize + additionWidth;
+    }
+
     float sx, sy;
     boolean onTouch(MotionEvent ev) {
         if (delegate == null) {
@@ -281,8 +333,8 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
                 final ViewConfiguration vc = ViewConfiguration.get(getContext());
                 if (Math.abs(ev.getY() - sy) < vc.getScaledTouchSlop()) {
                     int additionWidth = (getMeasuredHeight() - thumbSize) / 2;
-                    if (!(thumbX - additionWidth <= ev.getX() && ev.getX() <= thumbX + thumbSize + additionWidth)) {
-                        thumbX = (int) ev.getX() - thumbSize / 2;
+                    if (!solegramOnThumb(ev.getX(), additionWidth)) {
+                        thumbX = (int) ev.getX() - solegramGrabHalf();
                         if (thumbX < minThumbX()) {
                             thumbX = minThumbX();
                         } else if (thumbX > getMeasuredWidth() - selectorWidth) {
@@ -326,8 +378,8 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
                     getParent().requestDisallowInterceptTouchEvent(true);
                     int additionWidth = (getMeasuredHeight() - thumbSize) / 2;
                     if (ev.getY() >= 0 && ev.getY() <= getMeasuredHeight()) {
-                        if (!(thumbX - additionWidth <= ev.getX() && ev.getX() <= thumbX + thumbSize + additionWidth)) {
-                            thumbX = (int) ev.getX() - thumbSize / 2;
+                        if (!solegramOnThumb(ev.getX(), additionWidth)) {
+                            thumbX = (int) ev.getX() - solegramGrabHalf();
                             if (thumbX < minThumbX()) {
                                 thumbX = minThumbX();
                             } else if (thumbX > getMeasuredWidth() - selectorWidth) {
@@ -574,11 +626,13 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
 
         updateModernState();
 
-        if (needCustomDraw() == SLIDER_STYLE_MD3) {
+        final boolean solegramLiquid = app.exteraless.glass.LiquidControls.enabled() && !twoSided;
+        if (!solegramLiquid && needCustomDraw() == SLIDER_STYLE_MD3) {
             drawMd3Slider(canvas, thumbX);
             drawTimestampLabel(canvas);
             return;
         }
+        selectorWidth = AndroidUtilities.dp(solegramLiquid ? 44 : 32);
 
         if (!twoSided && separatorsCount > 1) {
             //float step = (getMeasuredWidth() - selectorWidth) / ((float) separatorsCount - 1f);
@@ -592,7 +646,28 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
 
         float centerY = getMeasuredHeight() / 2f;
         float left = selectorWidth / 2f, right = getMeasuredWidth() - selectorWidth / 2;
-        float top = centerY - AndroidUtilities.dp(lineWidthDp) / 2f, bottom = centerY + AndroidUtilities.dp(lineWidthDp) / 2f;
+        final float barHalfH = solegramLiquid ? AndroidUtilities.dp(Math.max(3, lineWidthDp)) / 2f : AndroidUtilities.dp(lineWidthDp) / 2f;
+        float top = centerY - barHalfH, bottom = centerY + barHalfH;
+
+        float solegramActiveValue = 0, solegramTw = 0, solegramTh = 0, solegramCx = 0;
+        boolean solegramClipped = false;
+        if (solegramLiquid) {
+            thumbX = solegramFollow(thumbX);
+            solegramActiveValue = solegramActive.set(pressed ? 1f : 0f);
+            final float a = Math.max(0f, Math.min(1f, solegramActiveValue));
+            final float scale = app.exteraless.glass.LiquidControls.SLIDER_REST_SCALE
+                + (app.exteraless.glass.LiquidControls.SLIDER_ACTIVE_SCALE - app.exteraless.glass.LiquidControls.SLIDER_REST_SCALE) * a;
+            final float fullHeight = Math.max(AndroidUtilities.dp(12), Math.min(AndroidUtilities.dp(28), getMeasuredHeight() - AndroidUtilities.dp(8)));
+            solegramTh = fullHeight * scale;
+            solegramTw = solegramTh * 1.45f * (1f + solegramStretch);
+            solegramTh *= 1f - solegramStretch * 0.2f;
+            solegramCx = Math.max(solegramTw / 2f + 1, Math.min(getMeasuredWidth() - solegramTw / 2f - 1, thumbX + selectorWidth / 2f));
+            if (a > 0.01f) {
+                canvas.save();
+                app.exteraless.glass.LiquidControls.clipOutThumb(canvas, solegramCx, centerY, solegramTw, solegramTh);
+                solegramClipped = true;
+            }
+        }
 
         rect.set(left, top, right, bottom);
         drawProgressBar(canvas, rect, innerPaint1);
@@ -623,7 +698,11 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
             }
         }
 
-        if (hoverDrawable != null && !isModern) {
+        if (solegramClipped) {
+            canvas.restore();
+        }
+
+        if (hoverDrawable != null && (!isModern || solegramLiquid)) {
             int dx = thumbX + selectorWidth / 2 - AndroidUtilities.dp(16);
             int dy = y + thumbSize / 2 - AndroidUtilities.dp(16);
             hoverDrawable.setBounds(dx, dy, dx + AndroidUtilities.dp(32), dy + AndroidUtilities.dp(32));
@@ -659,7 +738,38 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
             }
         }
 
-        if (!isModern) {
+        if (solegramLiquid) {
+            solegramTrackRect.set(left, top, right, bottom);
+            solegramFillRect.set(left, top, left + thumbX, bottom);
+            if (solegramLens == null) {
+                solegramLens = new app.exteraless.glass.LiquidControls.Lens();
+            }
+            final float lensTop = top, lensBottom = bottom, lensLeft = left, lensRight = right;
+            final int lensThumbX = thumbX;
+            app.exteraless.glass.LiquidControls.drawSliderThumb(canvas, solegramCx, centerY, solegramTw, solegramTh, solegramActiveValue, c -> {
+                innerPaint1.setColor(getThemedColor(Theme.key_player_progressBackground));
+                drawProgressBar(c, solegramTrackRect, innerPaint1);
+                if (bufferedProgress > 0) {
+                    innerPaint1.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
+                    solegramFillRect.set(lensLeft, lensTop, selectorWidth / 2f + bufferedProgress * (getMeasuredWidth() - selectorWidth), lensBottom);
+                    drawProgressBar(c, solegramFillRect, innerPaint1);
+                }
+                if (minProgress >= 0) {
+                    solegramFillRect.set(lensLeft + minProgress * (lensRight - lensLeft), lensTop, lensLeft + lensThumbX, lensBottom);
+                    drawProgressBar(c, solegramFillRect, outerPaint1);
+                    final int wasAlpha = outerPaint1.getAlpha();
+                    solegramFillRect.set(lensLeft, lensTop, lensLeft + minProgress * (lensRight - lensLeft), lensBottom);
+                    outerPaint1.setAlpha((int) (0.50f * wasAlpha));
+                    drawProgressBar(c, solegramFillRect, outerPaint1);
+                    outerPaint1.setAlpha(wasAlpha);
+                } else {
+                    solegramFillRect.set(lensLeft, lensTop, lensLeft + lensThumbX, lensBottom);
+                    if (solegramFillRect.width() > 0) {
+                        drawProgressBar(c, solegramFillRect, outerPaint1);
+                    }
+                }
+            }, solegramLens, getMeasuredWidth(), getMeasuredHeight());
+        } else if (!isModern) {
             if (transitionProgress < 1f) {
                 final float oldCircleProgress = 1f - Easings.easeInQuad.getInterpolation(Math.min(1f, transitionProgress * 3f));
                 final float newCircleProgress = Easings.easeOutQuad.getInterpolation(transitionProgress);

@@ -7,13 +7,26 @@ import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.SharedPreferences;
 import android.graphics.Canvas;
+import android.graphics.LinearGradient;
+import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
+import android.graphics.RecordingCanvas;
+import android.graphics.RectF;
+import android.graphics.RenderEffect;
+import android.graphics.RenderNode;
+import android.graphics.RuntimeShader;
+import android.graphics.Shader;
+import android.os.Build;
+import android.view.HapticFeedbackConstants;
 import android.view.MotionEvent;
 import android.view.View;
+import android.view.ViewConfiguration;
 import android.view.ViewGroup;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.annotation.RequiresApi;
 import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.FloatPropertyCompat;
 import androidx.dynamicanimation.animation.SpringAnimation;
@@ -23,6 +36,10 @@ import android.util.Log;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
+import org.telegram.messenger.LiteMode;
+import org.telegram.messenger.R;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedLinearLayout;
 import org.telegram.ui.Components.CubicBezierInterpolator;
@@ -388,6 +405,10 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
+        if (lensShown) {
+            drawLens(canvas);
+            return;
+        }
         if (drawCustomSelector) {
             final float x = animatedLongSelectedViewCenterX + animatedLongSelectedViewOffsetX;
             final float sWidth = getInterpolatedWidthByX(x, this);
@@ -706,8 +727,343 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            lensMode = app.exteraless.glass.LiquidGlassConfig.glassOn && !MainTabsUiHelper.isMaterial3NavigationBar();
+        }
+        if (lensMode) {
+            lensTouch(ev);
+            final boolean handled = super.dispatchTouchEvent(ev);
+            return handled || lensTracking;
+        }
         clickHelper.onTouchEvent(this, ev);
         return super.dispatchTouchEvent(ev);
+    }
+
+    @Override
+    public boolean onInterceptTouchEvent(MotionEvent ev) {
+        return lensMode && lensDragging || super.onInterceptTouchEvent(ev);
+    }
+
+    private boolean lensMode;
+    private boolean lensTracking, lensDragging;
+    private boolean lensShown;
+    private float lensDownX;
+    @Nullable
+    private View lensDownChild, lensFound, lensStartSelected;
+    private final app.exteraless.glass.LiquidControls.GlassSpring lensX = new app.exteraless.glass.LiquidControls.GlassSpring(0).params(0.34f, 0.7f);
+    private final app.exteraless.glass.LiquidControls.GlassSpring lensA = new app.exteraless.glass.LiquidControls.GlassSpring(0).rest(0.002f);
+    private long lensLastFrame;
+    private boolean lensRich;
+    @Nullable
+    private Object lensShader;
+    private boolean lensShaderFailed;
+    private final Path lensPath = new Path();
+    private final RectF lensRect = new RectF();
+    private final Paint lensPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint lensRimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Matrix lensRimMatrix = new Matrix();
+    @Nullable
+    public Utilities.Callback<Canvas> solegramLensBackdrop;
+
+    private final Utilities.Callback<Canvas> lensContent = c -> {
+        if (solegramLensBackdrop != null) {
+            solegramLensBackdrop.run(c);
+        }
+        final android.graphics.drawable.Drawable bg = getBackground();
+        if (bg != null) {
+            bg.draw(c);
+        }
+        super.dispatchDraw(c);
+    };
+    private final Runnable lensHoldCheck = () -> {
+        if (lensTracking && !lensDragging && lensDownChild != null && lensDownChild.isLongClickable()) {
+            lensRelease(false);
+        }
+    };
+
+    private void lensTouch(MotionEvent ev) {
+        switch (ev.getActionMasked()) {
+            case MotionEvent.ACTION_DOWN: {
+                lensTracking = false;
+                lensDragging = false;
+                removeCallbacks(lensHoldCheck);
+                final View child = findChildUnder(this, ev.getX(), ev.getY());
+                if (child == null) {
+                    return;
+                }
+                lensTracking = true;
+                lensRich = !LiteMode.isPowerSaverApplied();
+                lensDownX = ev.getX();
+                lensDownChild = child;
+                lensStartSelected = findSelectedTab();
+                lensFound = lensStartSelected;
+                if (!lensShown) {
+                    final View from = lensStartSelected != null ? lensStartSelected : child;
+                    lensX.set(from.getX() + from.getWidth() / 2f);
+                    lensA.set(0);
+                    setLensShown(true);
+                }
+                lensX.to(clampXToChildrenCenters(ev.getX(), this));
+                lensA.params(0.3f, 0.66f);
+                lensA.to(1);
+                postDelayed(lensHoldCheck, ViewConfiguration.getLongPressTimeout());
+                invalidate();
+                break;
+            }
+            case MotionEvent.ACTION_MOVE: {
+                if (!lensTracking) {
+                    return;
+                }
+                if (!lensDragging && Math.abs(ev.getX() - lensDownX) > ViewConfiguration.get(getContext()).getScaledTouchSlop()) {
+                    lensDragging = true;
+                    removeCallbacks(lensHoldCheck);
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                }
+                if (lensDragging) {
+                    final float x = clampXToChildrenCenters(ev.getX(), this);
+                    lensX.to(x);
+                    final View found = findNearestVisibleChildByX(x, this);
+                    if (found != null && found != lensFound) {
+                        lensFound = found;
+                        setTabSelected(found, true);
+                        try {
+                            performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
+                        } catch (Exception ignore) {
+                        }
+                    }
+                    invalidate();
+                }
+                break;
+            }
+            case MotionEvent.ACTION_UP:
+                lensRelease(true);
+                break;
+            case MotionEvent.ACTION_CANCEL:
+                lensRelease(false);
+                break;
+        }
+    }
+
+    private void lensRelease(boolean up) {
+        removeCallbacks(lensHoldCheck);
+        if (!lensTracking) {
+            return;
+        }
+        if (lensDragging) {
+            if (up && lensFound != null && lensFound != lensStartSelected) {
+                lensFound.performClick();
+            } else if (lensStartSelected != null && lensFound != lensStartSelected) {
+                setTabSelected(lensStartSelected, true);
+            }
+        }
+        lensTracking = false;
+        lensDragging = false;
+        lensDownChild = null;
+        lensA.params(0.44f, 0.58f);
+        lensA.to(0);
+        invalidate();
+    }
+
+    private void setLensShown(boolean shown) {
+        lensShown = shown;
+        for (int a = 0, N = getChildCount(); a < N; a++) {
+            final View child = getChildAt(a);
+            if (child instanceof GlassTabView) {
+                ((GlassTabView) child).setSkipDrawSelector(shown);
+            }
+        }
+        invalidate();
+    }
+
+    private void drawLens(Canvas canvas) {
+        final long now = System.nanoTime();
+        final float dt = lensLastFrame == 0 ? 1f / 60f : Math.max(0, Math.min(1f / 30f, (now - lensLastFrame) / 1e9f));
+        lensLastFrame = now;
+        if (!lensTracking) {
+            final View selected = findSelectedTab();
+            if (selected != null) {
+                lensX.to(selected.getX() + selected.getWidth() / 2f);
+            }
+        }
+        boolean moving = lensX.step(dt);
+        if (lensA.step(dt)) {
+            moving = true;
+        }
+        if (!moving) {
+            lensLastFrame = 0;
+            if (!lensTracking && Math.abs(lensA.value) < 0.002f) {
+                setLensShown(false);
+                super.dispatchDraw(canvas);
+                return;
+            }
+        }
+
+        final float a = Math.max(-0.25f, Math.min(1.1f, lensA.value));
+        final float on = Math.max(0, Math.min(1, a));
+        final float tabH = getHeight() - getPaddingTop() - getPaddingBottom();
+        final float cx = lensX.value, cy = getPaddingTop() + tabH / 2f;
+        final float pillW = getInterpolatedWidthByX(cx, this);
+        final float lensH = getHeight();
+        final float lensW = Math.max(pillW * 1.24f + dp(10), lensH * 1.28f);
+        final float stretch = lensRich ? Math.min(0.24f, Math.abs(lensX.velocity) / dp(2200)) : 0f;
+        final float w = Math.max(dp(8), pillW + (lensW - pillW) * a) * (1f + stretch);
+        final float h = Math.max(dp(8), tabH + (lensH - tabH) * a) * (1f - stretch * 0.25f);
+        final float r = h / 2f;
+        final float cxDraw = Math.max(w / 2f, Math.min(getWidth() - w / 2f, cx));
+        lensFlow = lensRich ? Math.min(1f, Math.abs(lensX.velocity) / dp(1800)) : 0f;
+        lensRect.set(cxDraw - w / 2f, cy - h / 2f, cxDraw + w / 2f, cy + h / 2f);
+        lensPath.rewind();
+        lensPath.addRoundRect(lensRect, r, r, Path.Direction.CW);
+
+        canvas.save();
+        if (Build.VERSION.SDK_INT >= 26) {
+            canvas.clipOutPath(lensPath);
+        } else {
+            canvas.clipPath(lensPath, android.graphics.Region.Op.DIFFERENCE);
+        }
+        super.dispatchDraw(canvas);
+        canvas.restore();
+
+        if (Build.VERSION.SDK_INT >= 28 && on > 0.01f) {
+            canvas.save();
+            canvas.clipOutPath(lensPath);
+            lensPaint.setColor(0x06000000);
+            lensPaint.setShadowLayer(dp(6) * on, 0, dp(2) * on, (int) (0x26 * on) << 24);
+            canvas.drawPath(lensPath, lensPaint);
+            lensPaint.clearShadowLayer();
+            canvas.restore();
+        }
+        final boolean shaderLens = drawShaderLens(canvas, cxDraw, cy, w, h, on);
+        if (on < 1f) {
+            lensPaint.setColor(Theme.multAlpha(Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider), 0.09f * (1f - on)));
+            canvas.drawPath(lensPath, lensPaint);
+        }
+        if (!shaderLens) {
+            canvas.save();
+            canvas.clipPath(lensPath);
+            final float magnify = 1f + 0.3f * on;
+            canvas.scale(magnify, magnify, cxDraw, cy);
+            super.dispatchDraw(canvas);
+            canvas.restore();
+            if (on > 0.01f) {
+                lensPaint.setColor((int) ((Theme.isCurrentThemeDark() ? 0x0B : 0x0F) * on) << 24 | 0xFFFFFF);
+                canvas.drawPath(lensPath, lensPaint);
+                lensPaint.setStyle(Paint.Style.STROKE);
+                lensPaint.setStrokeWidth(AndroidUtilities.dpf2(3));
+                lensPaint.setColor((int) (0x1A * on) << 24);
+                canvas.save();
+                canvas.clipPath(lensPath);
+                canvas.drawPath(lensPath, lensPaint);
+                canvas.restore();
+                lensPaint.setStyle(Paint.Style.FILL);
+                if (lensRimPaint.getShader() == null) {
+                    lensRimPaint.setStyle(Paint.Style.STROKE);
+                    lensRimPaint.setShader(new LinearGradient(0, 0, 1, 1,
+                        new int[]{0xF0FFFFFF, 0x26FFFFFF, 0xC0FFFFFF}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+                }
+                lensRimMatrix.setScale(lensRect.width(), lensRect.height());
+                lensRimMatrix.postTranslate(lensRect.left, lensRect.top);
+                lensRimPaint.getShader().setLocalMatrix(lensRimMatrix);
+                lensRimPaint.setStrokeWidth(Math.max(1f, AndroidUtilities.dpf2(1.4f)));
+                lensRimPaint.setAlpha((int) (230 * on));
+                final float inset = lensRimPaint.getStrokeWidth() / 2f;
+                lensRect.inset(inset, inset);
+                canvas.drawRoundRect(lensRect, r - inset, r - inset, lensRimPaint);
+            }
+        }
+        if (moving) {
+            postInvalidateOnAnimation();
+        }
+    }
+
+    private final android.graphics.Rect lensBarPadding = new android.graphics.Rect();
+    private final RectF lensBar = new RectF();
+    private float lensFlow;
+
+    private boolean drawShaderLens(Canvas canvas, float cx, float cy, float w, float h, float on) {
+        if (lensShaderFailed || Build.VERSION.SDK_INT < 33 || !canvas.isHardwareAccelerated() || getWidth() <= 0 || getHeight() <= 0) {
+            return false;
+        }
+        try {
+            if (lensShader == null) {
+                lensShader = new LensShader();
+            }
+            final android.graphics.drawable.Drawable bg = getBackground();
+            lensBarPadding.setEmpty();
+            if (bg != null) {
+                bg.getPadding(lensBarPadding);
+            }
+            lensBar.set(lensBarPadding.left, lensBarPadding.top, getWidth() - lensBarPadding.right, getHeight() - lensBarPadding.bottom);
+            if (lensBar.width() <= 0 || lensBar.height() <= 0 || solegramLensBackdrop != null) {
+                lensBar.set(0, 0, getWidth(), getHeight());
+            }
+            ((LensShader) lensShader).draw(canvas, getWidth(), getHeight(), cx, cy, w, h, on, lensFlow, lensBar, lensContent);
+            return true;
+        } catch (Throwable e) {
+            FileLog.e(e);
+            lensShaderFailed = true;
+            lensShader = null;
+            return false;
+        }
+    }
+
+    @RequiresApi(33)
+    private static final class LensShader {
+        private final RenderNode node = new RenderNode("solegramTabLens");
+        private final RuntimeShader shader = new RuntimeShader(AndroidUtilities.readRes(R.raw.solegram_tab_lens_shader));
+
+        private RenderEffect effect;
+        private final float[] last = new float[10];
+        private boolean lastDark;
+        private int lastDispersion = -1;
+
+        void draw(Canvas canvas, int viewW, int viewH, float cx, float cy, float w, float h, float a, float flow, RectF bar, Utilities.Callback<Canvas> content) {
+            node.setPosition(0, 0, viewW, viewH);
+            final RecordingCanvas rc = node.beginRecording(viewW, viewH);
+            try {
+                content.run(rc);
+            } finally {
+                node.endRecording();
+            }
+            final boolean dark = Theme.isCurrentThemeDark();
+            final int dispersion = app.exteraless.glass.LiquidGlassConfig.glassDispersion;
+            if (effect == null || last[0] != cx || last[1] != cy || last[2] != w || last[3] != h || last[4] != a || lastDark != dark
+                || last[5] != bar.left || last[6] != bar.top || last[7] != bar.right || last[8] != bar.bottom
+                || last[9] != flow || lastDispersion != dispersion) {
+                lastDark = dark;
+                lastDispersion = dispersion;
+                last[0] = cx;
+                last[1] = cy;
+                last[2] = w;
+                last[3] = h;
+                last[4] = a;
+                last[5] = bar.left;
+                last[6] = bar.top;
+                last[7] = bar.right;
+                last[8] = bar.bottom;
+                last[9] = flow;
+                final float band = Math.min(w, h) / 2f * 0.45f * (1f + 0.08f * flow);
+                shader.setFloatUniform("center", cx, cy);
+                shader.setFloatUniform("halfSize", w / 2f, h / 2f);
+                shader.setFloatUniform("magnify", 1f + (0.15f + 0.03f * flow) * a);
+                shader.setFloatUniform("band", band);
+                shader.setFloatUniform("bend", band * (0.6f + 0.06f * flow) * a);
+                shader.setFloatUniform("dispersion", (0.6f + 0.6f * dispersion / 100f) * (1f + 0.25f * flow) * a);
+                shader.setFloatUniform("light", 0.9f * a);
+                shader.setFloatUniform("shade", 0.16f * a);
+                shader.setFloatUniform("dp", AndroidUtilities.density);
+                shader.setFloatUniform("barCenter", bar.centerX(), bar.centerY());
+                shader.setFloatUniform("barHalf", bar.width() / 2f, bar.height() / 2f);
+                shader.setFloatUniform("dark", dark ? 1f : 0f);
+                final float body = (dark ? 0.045f : 0.06f) * a;
+                shader.setFloatUniform("tint", body, body, body, body);
+                effect = RenderEffect.createRuntimeShaderEffect(shader, "img");
+                node.setRenderEffect(effect);
+            }
+            canvas.drawRenderNode(node);
+        }
     }
 
 

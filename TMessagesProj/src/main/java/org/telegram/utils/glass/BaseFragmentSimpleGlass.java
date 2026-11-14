@@ -13,6 +13,8 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import app.exteraless.glass.LiquidGlassConfig;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.ui.ActionBar.ActionBar;
@@ -262,15 +264,28 @@ public class BaseFragmentSimpleGlass {
         contentView.addView(header, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP));
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
+            final boolean hasCustomButtonsGlass = simpleActionBar.hasButtonsGlass();
+            final boolean useGlass = hasCustomButtonsGlass || (LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons);
+            simpleActionBar.setMonotoneHeaderMode(!useGlass);
             simpleActionBar.setExtraHeight(0);
-            simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
+            if (useGlass) {
+                if (!hasCustomButtonsGlass) {
+                    simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+                }
+                simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
+            }
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
+            final boolean useGlass = LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons;
             actionBar.setAddToContainer(false);
-            actionBar.setCenterTitleAndGlass(true);
-            actionBar.setExtraHeight(dp(6));
-            actionBar.doNotDrawCenterGlass = true;
-            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            if (useGlass) {
+                actionBar.setCenterTitleAndGlass(true);
+                actionBar.setExtraHeight(dp(6));
+                actionBar.doNotDrawCenterGlass = true;
+                actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            } else {
+                actionBar.setExtraHeight(0);
+            }
         }
     }
 

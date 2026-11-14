@@ -733,49 +733,6 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         });
     }
 
-    public void makeSelectedExtendedFormatting() {
-        final int start;
-        final int end;
-        if (selectionStart >= 0 && selectionEnd >= 0) {
-            start = selectionStart;
-            end = selectionEnd;
-            selectionStart = selectionEnd = -1;
-        } else {
-            start = Math.max(0, getSelectionStart());
-            end = Math.max(start, getSelectionEnd());
-        }
-        Editable curText = getText();
-        if (curText == null) {
-            return;
-        }
-        final int safeStart = Math.min(start, curText.length());
-        final int safeEnd = Math.min(end, curText.length());
-        String selectedText = safeEnd > safeStart ? curText.subSequence(safeStart, safeEnd).toString() : "";
-        app.exteraless.chats.ExtendedFormattingHelper.showFormattingMenu(getContext(), resourcesProvider, selectedText, (text, fmtUrl, replaceSelection) -> {
-            Editable editable = getText();
-            if (editable == null || text == null || fmtUrl == null) {
-                return;
-            }
-            int insertPos = Math.min(safeStart, editable.length());
-            int removeEnd = Math.min(safeEnd, editable.length());
-            if (replaceSelection && removeEnd > insertPos) {
-                editable.replace(insertPos, removeEnd, text);
-            } else {
-                editable.insert(insertPos, text);
-            }
-            int urlEnd = insertPos + text.length();
-            if (fmtUrl.contains("t=table") && text.startsWith("📊\n")) {
-                urlEnd = insertPos + 2;
-            }
-            editable.setSpan(createUrlSpan(fmtUrl), insertPos, urlEnd, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            app.exteraless.chats.ExtendedFormattingHelper.applyFormattingSpan(editable, fmtUrl, insertPos, urlEnd, null);
-            setSelection(Math.min(editable.length(), insertPos + text.length()));
-            if (delegate != null) {
-                delegate.onSpansChanged();
-            }
-        });
-    }
-
     public interface InputDialogCallback {
         void run(String value);
     }
@@ -1238,9 +1195,6 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
             return true;
         } else if (itemId == R.id.menu_color) {
             makeSelectedColor();
-            return true;
-        } else if (itemId == R.id.menu_extended_formatting) {
-            makeSelectedExtendedFormatting();
             return true;
         } else if (itemId == R.id.menu_translate) {
             translateSelected();

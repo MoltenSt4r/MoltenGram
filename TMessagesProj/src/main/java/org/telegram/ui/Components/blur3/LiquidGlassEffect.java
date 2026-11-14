@@ -29,10 +29,26 @@ public class LiquidGlassEffect {
 
     public LiquidGlassEffect(RenderNode node) {
         this.node = node;
-        final String code = AndroidUtilities.readRes(R.raw.liquid_glass_shader);
-        shader = plainShader = new RuntimeShader(code);
+        RuntimeShader s = null;
+        try {
+            s = new RuntimeShader(AndroidUtilities.readRes(R.raw.solegram_glass_shader));
+        } catch (Throwable e) {
+            org.telegram.messenger.FileLog.e(e);
+        }
+        extended = s != null;
+        if (s == null) {
+            s = new RuntimeShader(AndroidUtilities.readRes(R.raw.liquid_glass_shader));
+        }
+        shader = plainShader = s;
+        if (extended) {
+            shader.setFloatUniform("dispersion", 0);
+            shader.setFloatUniform("rim", 0);
+        }
         node.setRenderEffect(effect = RenderEffect.createRuntimeShaderEffect(shader, "img"));
     }
+
+    private final boolean extended;
+    private float dispersion = -1, rim = -1;
 
     private int downsample;
     private float width, height;
@@ -91,6 +107,13 @@ public class LiquidGlassEffect {
         float nodeOffsetX, float nodeOffsetY,
         int downsample
     ) {
+        thickness = Math.max(1, Math.min(app.exteraless.glass.SolegramGlass.thickness(thickness),
+            app.exteraless.glass.SolegramGlass.thicknessLimit(Math.min(width, height))));
+        intensity = app.exteraless.glass.SolegramGlass.intensity(intensity);
+        index = app.exteraless.glass.SolegramGlass.index(index);
+        final float dispersion = extended ? app.exteraless.glass.SolegramGlass.dispersion() : 0;
+        final float rim = extended ? app.exteraless.glass.SolegramGlass.rim() : 0;
+
         if (radiusLeftTop + radiusLeftBottom > height) {
             float a = radiusLeftTop / (radiusLeftTop + radiusLeftBottom);
             radiusLeftTop = height * a;
@@ -114,6 +137,8 @@ public class LiquidGlassEffect {
             Math.abs(this.intensity - intensity) > 0.1f ||
             Math.abs(this.index - index) > 0.1f ||
             this.foregroundColor != foregroundColor ||
+            Math.abs(this.dispersion - dispersion) > 0.001f ||
+            Math.abs(this.rim - rim) > 0.001f ||
             arrowChanged
         ) {
             arrowChanged = false;
@@ -148,6 +173,12 @@ public class LiquidGlassEffect {
             shader.setFloatUniform("refract_intensity", this.intensity = intensity);
             shader.setFloatUniform("refract_index", this.index = index);
             shader.setFloatUniform("foreground_color_premultiplied", r, g, b, a);
+            this.dispersion = dispersion;
+            this.rim = rim;
+            if (extended && shader == plainShader) {
+                shader.setFloatUniform("dispersion", dispersion);
+                shader.setFloatUniform("rim", rim);
+            }
             if (shader == arrowShader) {
                 shader.setFloatUniform("arrow", arrowHeight * scale, arrowTipRadius * scale, arrowFilletRadius * scale, arrowStripe * scale);
                 shader.setFloatUniform("arrow_axis", arrowAxisX * scale, arrowAxisY * scale, arrowDirX, arrowDirY);

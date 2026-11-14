@@ -313,6 +313,20 @@ public class Switch extends View implements Theme.Colorable {
 
     private void animateToCheckedState(boolean newCheckedState) {
         cancelCheckAnimator();
+        if (solegramLiquid()) {
+            solegramRich = !org.telegram.messenger.LiteMode.isPowerSaverApplied();
+            checkAnimator = ObjectAnimator.ofFloat(this, "progress", newCheckedState ? 1 : 0);
+            checkAnimator.setDuration(420);
+            checkAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_BACK);
+            checkAnimator.addListener(new AnimatorListenerAdapter() {
+                @Override
+                public void onAnimationEnd(Animator animation) {
+                    checkAnimator = null;
+                }
+            });
+            checkAnimator.start();
+            return;
+        }
         if (isMaterial3SwitchStyle()) {
             checkSpringAnimator = new SpringAnimation(this, PROGRESS_PROPERTY)
                     .setSpring(new SpringForce(newCheckedState ? 1f : 0f)
@@ -527,9 +541,171 @@ public class Switch extends View implements Theme.Colorable {
         setMeasuredDimension(measuredWidth, measuredHeight);
     }
 
+    private final AnimatedFloat solegramActive = new AnimatedFloat(this, 0, 300, CubicBezierInterpolator.EASE_OUT_BACK);
+    private final RectF solegramTrack = new RectF();
+    private final android.graphics.Path solegramWave = new android.graphics.Path();
+    private app.exteraless.glass.LiquidControls.Lens solegramLens;
+    private float solegramStretch, solegramLastProgress = -1;
+    private long solegramLastFrame;
+    private boolean solegramRich;
+    private final app.exteraless.glass.LiquidControls.LensContent solegramLensContent = c -> solegramDrawTrack(c, solegramTrack.height() / 2f);
+
+    private boolean solegramLiquid() {
+        return app.exteraless.glass.LiquidControls.enabled();
+    }
+
+    private float solegramStretchStep() {
+        final long now = android.view.animation.AnimationUtils.currentAnimationTimeMillis();
+        final float dt = solegramLastFrame == 0 ? 0 : Math.min(0.05f, (now - solegramLastFrame) / 1000f);
+        float target = 0;
+        if (checkAnimator != null && solegramRich && dt > 0 && solegramLastProgress >= 0) {
+            target = Math.min(0.3f, Math.abs(progress - solegramLastProgress) / dt * 0.05f);
+        }
+        solegramLastFrame = checkAnimator != null || solegramStretch > 0.002f ? now : 0;
+        solegramLastProgress = progress;
+        solegramStretch += (target - solegramStretch) * (dt > 0 ? Math.min(1f, dt * 22f) : 0f);
+        if (solegramStretch < 0.002f && target == 0) {
+            solegramStretch = 0;
+        } else if (checkAnimator == null) {
+            invalidate();
+        }
+        return solegramStretch;
+    }
+
+    private int solegramTrackColor(float colorProgress) {
+        final int offColor = processColor(Theme.getColor(trackColorKey, resourcesProvider));
+        final int onColor = processColor(Theme.getColor(trackCheckedColorKey, resourcesProvider));
+        return androidx.core.graphics.ColorUtils.blendARGB(offColor, onColor, Math.max(0f, Math.min(1f, colorProgress)));
+    }
+
+    private void solegramDrawTrack(Canvas canvas, float r) {
+        if (overrideColorProgress == 0) {
+            paint.setColor(solegramTrackColor(progress));
+            canvas.drawRoundRect(solegramTrack, r, r, paint);
+            return;
+        }
+        final boolean toChecked = overrideColorProgress == 1;
+        paint.setColor(solegramTrackColor(toChecked ? 0 : 1));
+        canvas.drawRoundRect(solegramTrack, r, r, paint);
+        if (overlayRad > 0) {
+            canvas.save();
+            solegramWave.rewind();
+            solegramWave.addCircle(overlayCx - getX(), overlayCy - getY(), overlayRad, android.graphics.Path.Direction.CW);
+            canvas.clipPath(solegramWave);
+            paint.setColor(solegramTrackColor(toChecked ? 1 : 0));
+            canvas.drawRoundRect(solegramTrack, r, r, paint);
+            canvas.restore();
+        }
+    }
+
+    private void solegramDrawLiquid(Canvas canvas) {
+        final float w = getMeasuredWidth(), h = getMeasuredHeight();
+        final float trackW = Math.min(w - AndroidUtilities.dp(1), AndroidUtilities.dp(36));
+        final float trackH = Math.min(h * 0.9f, trackW / 1.95f);
+        final float left = (w - trackW) / 2f, top = (h - trackH) / 2f;
+        solegramTrack.set(left, top, left + trackW, top + trackH);
+
+        final float active = solegramActive.set(checkAnimator != null ? 1f : 0f);
+        final float inset = AndroidUtilities.dpf2(2);
+        final float restH = trackH - inset * 2f, restW = restH * 1.42f;
+        final float from = left + inset + restW / 2f, to = left + trackW - inset - restW / 2f;
+        final float room = Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.3f) / restH;
+        final float roomX = (2f * Math.min(from, w - to)) / restW;
+        final float maxScale = Math.max(1f, Math.min(room, roomX));
+        final float a = Math.max(0f, Math.min(1f, active));
+        final float scale = 1f + (maxScale - 1f) * a;
+        final float stretch = solegramStretchStep();
+        final float thumbW = restW * scale * (1f + stretch), thumbH = restH * scale * (1f - stretch * 0.22f);
+        final float halfW = thumbW / 2f;
+        final float cx = Math.max(halfW, Math.min(w - halfW, from + (to - from) * progress));
+        if (a > 0.01f) {
+            canvas.save();
+            app.exteraless.glass.LiquidControls.clipOutThumb(canvas, cx, h / 2f, thumbW, thumbH);
+            solegramDrawTrack(canvas, trackH / 2f);
+            canvas.restore();
+        } else {
+            solegramDrawTrack(canvas, trackH / 2f);
+        }
+        if (solegramLens == null) {
+            solegramLens = new app.exteraless.glass.LiquidControls.Lens();
+        }
+        app.exteraless.glass.LiquidControls.drawThumb(canvas, cx, h / 2f, thumbW, thumbH, a, solegramLensContent,
+            solegramLens, getMeasuredWidth(), getMeasuredHeight());
+        solegramDrawIcon(canvas, cx, h / 2f, thumbH, 1f - a);
+    }
+
+    private void solegramDrawIcon(Canvas canvas, float cx, float cy, float thumbH, float alpha) {
+        if (alpha < 0.02f || iconDrawable == null && drawIconType == 0 && iconAnimator == null) {
+            return;
+        }
+        final int color = solegramTrackColor(progress);
+        paint2.setColor(color);
+        if (iconDrawable != null) {
+            final int iconColor = solegramTrackColor(isChecked ? 1 : 0);
+            if (lastIconColor != iconColor) {
+                iconDrawable.setColorFilter(new PorterDuffColorFilter(lastIconColor = iconColor, PorterDuff.Mode.MULTIPLY));
+            }
+        }
+        final float s = thumbH / AndroidUtilities.dp(16);
+        final int restore = alpha < 0.98f
+            ? canvas.saveLayerAlpha(cx - thumbH, cy - thumbH, cx + thumbH, cy + thumbH, (int) (255 * alpha))
+            : canvas.save();
+        canvas.scale(s, s, cx, cy);
+        int tx = (int) cx;
+        int ty = (int) cy;
+        if (iconDrawable != null) {
+            final float factor = animatorIconVisibility.getFloatValue();
+            if (factor > 0) {
+                final boolean needScale = factor < 1;
+                if (needScale) {
+                    canvas.save();
+                    canvas.scale(factor, factor, tx, ty);
+                }
+                iconDrawable.setBounds(tx - iconDrawable.getIntrinsicWidth() / 2, ty - iconDrawable.getIntrinsicHeight() / 2, tx + iconDrawable.getIntrinsicWidth() / 2, ty + iconDrawable.getIntrinsicHeight() / 2);
+                iconDrawable.draw(canvas);
+                if (needScale) {
+                    canvas.restore();
+                }
+            }
+        } else if (drawIconType == 1) {
+            tx -= AndroidUtilities.dp(10.8f) - AndroidUtilities.dp(1.3f) * progress;
+            ty -= AndroidUtilities.dp(8.5f) - AndroidUtilities.dp(0.5f) * progress;
+            int startX2 = (int) AndroidUtilities.dpf2(4.6f) + tx;
+            int startY2 = (int) (AndroidUtilities.dpf2(9.5f) + ty);
+            int endX2 = startX2 + AndroidUtilities.dp(2);
+            int endY2 = startY2 + AndroidUtilities.dp(2);
+            int startX = (int) AndroidUtilities.dpf2(7.5f) + tx;
+            int startY = (int) AndroidUtilities.dpf2(5.4f) + ty;
+            int endX = startX + AndroidUtilities.dp(7);
+            int endY = startY + AndroidUtilities.dp(7);
+            startX = (int) (startX + (startX2 - startX) * progress);
+            startY = (int) (startY + (startY2 - startY) * progress);
+            endX = (int) (endX + (endX2 - endX) * progress);
+            endY = (int) (endY + (endY2 - endY) * progress);
+            canvas.drawLine(startX, startY, endX, endY, paint2);
+            startX = (int) AndroidUtilities.dpf2(7.5f) + tx;
+            startY = (int) AndroidUtilities.dpf2(12.5f) + ty;
+            endX = startX + AndroidUtilities.dp(7);
+            endY = startY - AndroidUtilities.dp(7);
+            canvas.drawLine(startX, startY, endX, endY, paint2);
+        } else if (drawIconType == 2 || iconAnimator != null) {
+            paint2.setAlpha((int) (255 * (1.0f - iconProgress)));
+            canvas.drawLine(tx, ty, tx, ty - AndroidUtilities.dp(5), paint2);
+            canvas.save();
+            canvas.rotate(-90 * iconProgress, tx, ty);
+            canvas.drawLine(tx, ty, tx + AndroidUtilities.dp(4), ty, paint2);
+            canvas.restore();
+        }
+        canvas.restoreToCount(restore);
+    }
+
     @Override
     protected void onDraw(Canvas canvas) {
         if (getVisibility() != VISIBLE) {
+            return;
+        }
+        if (solegramLiquid()) {
+            solegramDrawLiquid(canvas);
             return;
         }
 

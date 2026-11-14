@@ -426,28 +426,36 @@ public class DownscaleScrollableNoiseSuppressor {
 
         private SourcePart() {
             if (isLiquidGlassEnabled) {
+                final float blurScale = app.exteraless.glass.SolegramGlass.blurScale();
+                final boolean vibrancy = app.exteraless.glass.SolegramGlass.vibrancy();
                 if (simpleMode) {
                     renderNodesForGlass = new DownscaledRenderNode("glass", 0, true);
                     renderNodesForGlass.setScale(4, 4);
-                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f), RenderNodeEffects.getSaturationX3RenderEffect());
+                    if (vibrancy) {
+                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale, RenderNodeEffects.getSaturationX3RenderEffect());
+                    } else {
+                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale);
+                    }
                 } else {
                     renderNodesForGlass = new DownscaledRenderNode("glass", 1, true);
                     renderNodesForGlass.setScale(4, 4);
-                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f));
-                    renderNodesForGlass.setSecondaryEffect(0, RenderNodeEffects.getSaturationX3RenderEffect());
+                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale);
+                    if (vibrancy) {
+                        renderNodesForGlass.setSecondaryEffect(0, RenderNodeEffects.getSaturationX3RenderEffect());
+                    }
                 }
                 renderNodesForBlur = new DownscaledRenderNode("blur", 0);
                 renderNodesForBlur.setScale(8, 8);
-                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40 - 1.66f));
+                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40 - 1.66f) * blurScale);
             } else if (simpleMode) {
                 renderNodesForBlur = new DownscaledRenderNode("blur", 0);
                 renderNodesForBlur.setScale(allowNoiseSuppress ? 16 : 8, allowNoiseSuppress ? 16 : 8);
-                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40), RenderNodeEffects.getSaturationX3RenderEffect());
+                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40) * app.exteraless.glass.SolegramGlass.blurScale(), RenderNodeEffects.getSaturationX3RenderEffect());
                 renderNodesForGlass = null;
             } else {
                 renderNodesForBlur = new DownscaledRenderNode("blur", 1);
                 renderNodesForBlur.setScale(8, 8);
-                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40));
+                renderNodesForBlur.setPrimaryEffectBlur(dpf2(40) * app.exteraless.glass.SolegramGlass.blurScale());
                 renderNodesForBlur.setSecondaryEffect(0, RenderNodeEffects.getSaturationX3RenderEffect());
                 renderNodesForGlass = null;
             }

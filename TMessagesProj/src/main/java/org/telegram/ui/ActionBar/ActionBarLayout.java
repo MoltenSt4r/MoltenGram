@@ -125,6 +125,14 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
     public class LayoutContainer extends FrameLayout {
 
         private Rect rect = new Rect();
+        private app.exteraless.glass.SolegramLiveGlass.Host solegramContentSource;
+
+        public app.exteraless.glass.SolegramLiveGlass.Host solegramContentSource() {
+            if (solegramContentSource == null) {
+                solegramContentSource = new app.exteraless.glass.SolegramLiveGlass.Host(this);
+            }
+            return solegramContentSource;
+        }
         private boolean isKeyboardVisible;
 
         private int fragmentPanTranslationOffset;
@@ -221,7 +229,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                         break;
                     }
                 }
-                boolean result = super.drawChild(canvas, child, drawingTime);
+                final Canvas part = solegramContentSource != null && child == getChildAt(0) && !(child instanceof org.telegram.ui.Components.Bulletin.ParentLayout)
+                    ? solegramContentSource.beginPart(canvas) : null;
+                boolean result = super.drawChild(part != null ? part : canvas, child, drawingTime);
+                if (part != null) {
+                    solegramContentSource.endPart(canvas);
+                }
                 if (actionBarHeight != 0 && headerShadowDrawable != null) {
                     int wasAlpha = headerShadowDrawable.getAlpha();
                     headerShadowDrawable.setBounds(0, actionBarY + actionBarHeight, getMeasuredWidth(), actionBarY + actionBarHeight + headerShadowDrawable.getIntrinsicHeight());
@@ -589,6 +602,12 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
 
     public LayoutContainer containerView;
     public LayoutContainer containerViewBack;
+
+    @androidx.annotation.Nullable
+    public app.exteraless.glass.SolegramLiveGlass.Host solegramScreenBehind(View container) {
+        final LayoutContainer other = container == containerView ? containerViewBack : container == containerViewBack ? containerView : null;
+        return other != null && other.getChildCount() > 0 ? other.solegramContentSource() : null;
+    }
     public LayoutContainer sheetContainer;
     private DrawerLayoutContainer drawerLayoutContainer;
     private ActionBar currentActionBar;

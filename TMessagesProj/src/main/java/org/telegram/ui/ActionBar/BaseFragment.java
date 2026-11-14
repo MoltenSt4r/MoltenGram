@@ -43,6 +43,9 @@ import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.graphics.Insets;
 import androidx.core.view.WindowInsetsCompat;
+import androidx.recyclerview.widget.RecyclerView;
+
+import app.exteraless.glass.LiquidGlassConfig;
 
 import org.telegram.messenger.AccountInstance;
 import org.telegram.messenger.AndroidUtilities;
@@ -315,7 +318,22 @@ public abstract class BaseFragment {
             }
 
             if (useFadeDrawableForActionBar() && header != null) {
-                ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
+                final boolean customButtonsGlass = header instanceof SimpleActionBar && ((SimpleActionBar) header).hasButtonsGlass();
+                if (!customButtonsGlass && LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons && LiquidGlassConfig.frostedHeaders) {
+                    header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
+                } else if (!customButtonsGlass && (!LiquidGlassConfig.glassOn || !LiquidGlassConfig.glassHeaderButtons)) {
+                    if (header instanceof SimpleActionBar) {
+                        ((SimpleActionBar) header).setAdaptiveBackground(listViewForSimpleGlass);
+                    } else if (header instanceof ActionBar && listViewForSimpleGlass instanceof RecyclerView) {
+                        ((ActionBar) header).setAdaptiveBackground((RecyclerView) listViewForSimpleGlass);
+                    } else if (header instanceof ActionBar && listViewForSimpleGlass instanceof SectionsScrollView) {
+                        ((ActionBar) header).setAdaptiveBackground((SectionsScrollView) listViewForSimpleGlass);
+                    } else {
+                        ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
+                    }
+                } else {
+                    ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
+                }
             }
             BaseFragmentSimpleGlass.setListViewParams(listViewForSimpleGlass, mSystemInsets.top, mSystemInsets.bottom, ActionBar.getCurrentActionBarHeight(), 0);
 

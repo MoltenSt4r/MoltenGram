@@ -84,8 +84,10 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         this.staticSource = staticSource;
         source = pickSource();
 
-        boundProps.strokeWidthTop = dpf2(1);
-        boundProps.strokeWidthBottom = dpf2(2 / 3f);
+        solegramStrokeWidthTop = dpf2(1);
+        solegramStrokeWidthBottom = dpf2(2 / 3f);
+        boundProps.strokeWidthTop = app.exteraless.glass.SolegramGlass.highlightWidth(solegramStrokeWidthTop, true);
+        boundProps.strokeWidthBottom = app.exteraless.glass.SolegramGlass.highlightWidth(solegramStrokeWidthBottom, false);
         // Сплошной контур в пикселях, не в dp
         boundProps.strokeWidthFull = 1.0f;
 
@@ -243,6 +245,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     private void onBoundPropsChanged() {
+        solegramCheckAutoLiquid();
         if (renderNodeImpl != null) {
             renderNodeImpl.onBoundPropsChanged();
         }
@@ -338,10 +341,11 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         final boolean glare = outlineStyle == GlassOutlineStyle.GLARE;
         final boolean solid = outlineStyle == GlassOutlineStyle.SOLID;
 
-        backgroundColor = colorProvider.getBackgroundColor();
-        shadowColor = glare ? colorProvider.getShadowColor() : 0;
-        strokeColorTop = glare ? colorProvider.getStrokeColorTop() : 0;
-        strokeColorBottom = glare ? colorProvider.getStrokeColorBottom() : 0;
+        backgroundColor = app.exteraless.glass.SolegramGlass.tint(colorProvider.getBackgroundColor());
+        shadowColor = glare ? app.exteraless.glass.SolegramGlass.shadow(colorProvider.getShadowColor()) : 0;
+        strokeColorTop = glare ? app.exteraless.glass.SolegramGlass.highlight(colorProvider.getStrokeColorTop(), true) : 0;
+        strokeColorBottom = glare ? app.exteraless.glass.SolegramGlass.highlight(colorProvider.getStrokeColorBottom(), false) : 0;
+        solegramApplyStrokeWidth();
         strokeColorFull = solid ? colorProvider.getStrokeColorFull() : 0;
         // the outline and the shadow may follow the theme too (e.g. compact mode's glass)
         outlineShadowColor = glare ? colorProvider.getOutlineShadowColor() : 0;
@@ -428,7 +432,24 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     private void drawRim(Canvas canvas, float alpha) {
+        if (solegramStrokeHidden) {
+            return;
+        }
         final Rect r = boundProps.boundsWithPadding;
+        if (!boundProps.hasArrow() && strokeColorFull == 0) {
+            final int top = Theme.multAlpha(strokeColorTop, alpha), bottom = Theme.multAlpha(strokeColorBottom, alpha);
+            if (Color.alpha(top) != 0) {
+                solegramPaintStrokeTop.setColor(top);
+                solegramPaintStrokeTop.setStrokeWidth(boundProps.strokeWidthTop);
+                drawStroke(canvas, r.left, r.top, r.right, r.bottom, boundProps.radii, boundProps.strokeWidthTop, true, solegramPaintStrokeTop);
+            }
+            if (Color.alpha(bottom) != 0) {
+                solegramPaintStrokeBottom.setColor(bottom);
+                solegramPaintStrokeBottom.setStrokeWidth(boundProps.strokeWidthBottom);
+                drawStroke(canvas, r.left, r.top, r.right, r.bottom, boundProps.radii, boundProps.strokeWidthBottom, false, solegramPaintStrokeBottom);
+            }
+            return;
+        }
         if (boundProps.hasArrow()) {
             rimRenderer.drawPath(canvas, boundProps.path, boundProps.shapeKey, r.left, r.top, r.right, r.bottom, getRim(), alpha);
         } else {
@@ -747,10 +768,155 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     public void setStrokeWidth(float strokeWidthTop, float strokeWidthBottom) {
-        boundProps.strokeWidthTop = strokeWidthTop;
-        boundProps.strokeWidthBottom = strokeWidthBottom;
+        solegramStrokeWidthTop = strokeWidthTop;
+        solegramStrokeWidthBottom = strokeWidthBottom;
+        boundProps.strokeWidthTop = app.exteraless.glass.SolegramGlass.highlightWidth(strokeWidthTop, true);
+        boundProps.strokeWidthBottom = app.exteraless.glass.SolegramGlass.highlightWidth(strokeWidthBottom, false);
         rimFromColors = null;
     }
+
+    // region Solegram glass material helpers
+
+    private final Paint solegramPaintStrokeTop = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint solegramPaintStrokeBottom = new Paint(Paint.ANTI_ALIAS_FLAG);
+    {
+        solegramPaintStrokeTop.setStyle(Paint.Style.STROKE);
+        solegramPaintStrokeBottom.setStyle(Paint.Style.STROKE);
+    }
+
+    public static void drawStroke(
+        Canvas canvas,
+        float left, float top, float right, float bottom,
+        float[] radii, float strokeWidth, boolean isTop,
+        Paint paint
+    ) {
+        final boolean radiiAreSame = isTop ?
+            radii[0] == radii[1] && radii[1] == radii[2] && radii[2] == radii[3] :
+            radii[4] == radii[5] && radii[5] == radii[6] && radii[6] == radii[7];
+        final float strokeHalf = strokeWidth / 2f;
+        if (isTop) {
+            if (radiiAreSame) {
+                canvas.save();
+                if (canvas.clipRect(left, top, right, MathUtils.clamp(top + radii[0] * 2, top, bottom))) {
+                    canvas.drawRoundRect(left - strokeHalf, top + strokeHalf, right + strokeHalf, bottom + strokeHalf, radii[0], radii[0], paint);
+                }
+                canvas.restore();
+            } else {
+                final float cx = (left + right) / 2f;
+                final float half = (bottom - top) / 2f;
+                canvas.save();
+                if (canvas.clipRect(left, top, cx, MathUtils.clamp(top + Math.max(radii[1] * 2, half), top, bottom))) {
+                    canvas.drawRoundRect(left - strokeHalf, top + strokeHalf, right + strokeHalf, bottom + strokeHalf, radii[0], radii[1], paint);
+                }
+                canvas.restore();
+                canvas.save();
+                if (canvas.clipRect(cx, top, right, MathUtils.clamp(top + Math.max(radii[3] * 2, half), top, bottom))) {
+                    canvas.drawRoundRect(left - strokeHalf, top + strokeHalf, right + strokeHalf, bottom + strokeHalf, radii[2], radii[3], paint);
+                }
+                canvas.restore();
+            }
+        } else {
+            if (radiiAreSame) {
+                canvas.save();
+                if (canvas.clipRect(left, MathUtils.clamp(bottom - radii[4] * 2, top, bottom), right, bottom)) {
+                    canvas.drawRoundRect(left - strokeHalf, top - strokeHalf, right + strokeHalf, bottom - strokeHalf, radii[4], radii[4], paint);
+                }
+                canvas.restore();
+            } else {
+                final float cx = (left + right) / 2f;
+                final float half = (bottom - top) / 2f;
+                canvas.save();
+                if (canvas.clipRect(left, MathUtils.clamp(bottom - Math.max(radii[7] * 2, half), top, bottom), cx, bottom)) {
+                    canvas.drawRoundRect(left - strokeHalf, top - strokeHalf, right + strokeHalf, bottom - strokeHalf, radii[6], radii[7], paint);
+                }
+                canvas.restore();
+                canvas.save();
+                if (canvas.clipRect(cx, MathUtils.clamp(bottom - Math.max(radii[5] * 2, half), top, bottom), right, bottom)) {
+                    canvas.drawRoundRect(left - strokeHalf, top - strokeHalf, right + strokeHalf, bottom - strokeHalf, radii[4], radii[5], paint);
+                }
+                canvas.restore();
+            }
+        }
+    }
+
+    public static void drawStroke(Canvas canvas, RectF rect, float radii, float strokeWidth, boolean isTop, Paint paint) {
+        drawStroke(canvas, rect.left, rect.top, rect.right, rect.bottom, radii, strokeWidth, isTop, paint);
+    }
+
+    public static void drawStroke(Canvas canvas, float left, float top, float right, float bottom, float radii, float strokeWidth, boolean isTop, Paint paint) {
+        final float strokeHalf = strokeWidth / 2f;
+        canvas.save();
+        if (isTop) {
+            if (canvas.clipRect(left - strokeHalf, top, right + strokeHalf, MathUtils.clamp(top + radii * 2, top, bottom))) {
+                canvas.drawRoundRect(left - strokeHalf, top + strokeHalf, right + strokeHalf, bottom + strokeHalf, radii, radii, paint);
+            }
+        } else {
+            if (canvas.clipRect(left - strokeHalf, MathUtils.clamp(bottom - radii * 2, top, bottom), right + strokeHalf, bottom)) {
+                canvas.drawRoundRect(left - strokeHalf, top - strokeHalf, right + strokeHalf, bottom - strokeHalf, radii, radii, paint);
+            }
+        }
+        canvas.restore();
+    }
+
+    private boolean solegramPreviewLook() {
+        if (!app.exteraless.glass.SolegramGlass.previewLook()) {
+            return false;
+        }
+        if (inAppKeyboardOptimization || strokeColorTop == 0 && strokeColorBottom == 0 && Color.alpha(shadowColor) == 0) {
+            return false;
+        }
+        for (float r : boundProps.radii) {
+            if (r < dp(6)) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    public BlurredBackgroundColorProvider solegramColorProvider() {
+        return colorProvider;
+    }
+
+    protected boolean solegramStrokeHidden;
+
+    public void solegramSetStrokeHidden(boolean hidden) {
+        if (solegramStrokeHidden != hidden) {
+            solegramStrokeHidden = hidden;
+            invalidateSelf();
+        }
+    }
+
+    private float solegramStrokeWidthTop, solegramStrokeWidthBottom;
+
+    private void solegramApplyStrokeWidth() {
+        final float top = app.exteraless.glass.SolegramGlass.highlightWidth(solegramStrokeWidthTop, true);
+        final float bottom = app.exteraless.glass.SolegramGlass.highlightWidth(solegramStrokeWidthBottom, false);
+        if (top != boundProps.strokeWidthTop || bottom != boundProps.strokeWidthBottom) {
+            boundProps.strokeWidthTop = top;
+            boundProps.strokeWidthBottom = bottom;
+            rimFromColors = null;
+        }
+    }
+
+    private boolean solegramAutoLiquid;
+
+    private void solegramCheckAutoLiquid() {
+        boolean auto = false;
+        if (app.exteraless.glass.LiquidGlassConfig.glassOn && !boundProps.boundsWithPadding.isEmpty()) {
+            final float w = boundProps.body.width(), h = boundProps.body.height();
+            float minRadius = Float.MAX_VALUE;
+            for (float r : boundProps.radii) {
+                minRadius = Math.min(minRadius, r);
+            }
+            auto = w > 0 && h > 0 && h <= dp(72) && minRadius >= Math.min(dp(12), h / 2f - 1);
+        }
+        if (auto != solegramAutoLiquid) {
+            solegramAutoLiquid = auto;
+            implInvalidated = true;
+        }
+    }
+
+    // endregion
 
 
 
@@ -768,7 +934,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     private boolean isLiquidGlassEffectEnabled() {
-        return liquidGlassEffectAllowed && getGlassSettings().isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33;
+        return (liquidGlassEffectAllowed || solegramAutoLiquid) && getGlassSettings().isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33;
     }
 
     private GlassSource pickSource() {
@@ -1350,10 +1516,19 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
                 record();
             }
 
-            final int color = Theme.multAlpha(shadowColor, renderNode.getAlpha() * shadowAlpha);
-            if (Color.alpha(color) != 0) {
-                paintShadow.setShadowLayer(shadowLayerRadius, shadowLayerDx, shadowLayerDy, color);
-                boundProps.drawShadows(canvas, paintShadow, inAppKeyboardOptimization);
+            if (solegramPreviewLook() && boundProps.padding > 0) {
+                final int color = Theme.multAlpha(app.exteraless.glass.SolegramGlass.previewShadowColor(), renderNode.getAlpha() * shadowAlpha);
+                if (Color.alpha(color) != 0) {
+                    final float radius = Math.min(dp(10), boundProps.padding / 2.1f);
+                    paintShadow.setShadowLayer(radius, 0, radius * 0.3f, color);
+                    boundProps.drawShadows(canvas, paintShadow, inAppKeyboardOptimization);
+                }
+            } else {
+                final int color = Theme.multAlpha(shadowColor, renderNode.getAlpha() * shadowAlpha);
+                if (Color.alpha(color) != 0) {
+                    paintShadow.setShadowLayer(shadowLayerRadius, shadowLayerDx, shadowLayerDy, color);
+                    boundProps.drawShadows(canvas, paintShadow, inAppKeyboardOptimization);
+                }
             }
             final int outlineShadow = Theme.multAlpha(outlineShadowColor, renderNode.getAlpha() * shadowAlpha);
             if (Color.alpha(outlineShadow) != 0) {

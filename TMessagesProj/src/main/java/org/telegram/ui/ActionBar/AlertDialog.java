@@ -271,6 +271,11 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
     private boolean topAnimationAutoRepeat = true;
     private boolean blurredBackground;
     private boolean blurredNativeBackground;
+    private boolean solegramGlass;
+    @Nullable
+    private app.exteraless.glass.SolegramLiveGlass solegramLive;
+    private final Rect solegramGlassBounds = new Rect();
+    private float solegramGlassRadius = -1f;
     private int backgroundColor;
     float blurAlpha = 0.8f;
     private boolean blurBehind;
@@ -365,11 +370,20 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
         final boolean isDark = AndroidUtilities.computePerceivedBrightness(backgroundColor) < 0.721f;
         blurredNativeBackground = supportsNativeBlur() && progressViewStyle == ALERT_TYPE_MESSAGE;
         blurredBackground = (blurredNativeBackground || !supportsNativeBlur() && SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_HIGH && LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR)) && isDark;
+        solegramGlass = app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassDialogs
+            && progressStyle != ALERT_TYPE_LOADING && app.exteraless.glass.SolegramLiveGlass.available();
+        if (solegramGlass) {
+            blurredNativeBackground = false;
+            blurredBackground = true;
+        }
 
         backgroundPaddings = new Rect();
         if (progressStyle != ALERT_TYPE_SPINNER || blurredBackground) {
             shadowDrawable = context.getResources().getDrawable(R.drawable.popup_fixed_alert4).mutate();
             blurOpacity = progressStyle == ALERT_TYPE_SPINNER ? 0.55f : (isDark ? 0.80f : 0.985f);
+            if (solegramGlass) {
+                blurOpacity = app.exteraless.glass.SolegramGlass.menuAlpha(isDark);
+            }
             shadowDrawable.setColorFilter(new PorterDuffColorFilter(backgroundColor, PorterDuff.Mode.MULTIPLY));
             shadowDrawable.getPadding(backgroundPaddings);
         }
@@ -650,26 +664,47 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
                     AndroidUtilities.rectTmp.set(getPaddingLeft(), getPaddingTop(), getMeasuredWidth() - getPaddingRight(), getMeasuredHeight() - getPaddingBottom());
                 }
 
-                // draw blur of background
-                float blurAlpha = blurPaintAlpha.set(blurPaint != null ? 1f : 0f);
-                if (blurPaint != null) {
-                    blurPaint.setAlpha((int) (0xFF * blurAlpha));
-                    canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, blurPaint);
-                }
+                if (solegramGlass) {
+                    solegramDrawGlass(canvas, r);
+                } else {
+                    // draw blur of background
+                    float blurAlpha = blurPaintAlpha.set(blurPaint != null ? 1f : 0f);
+                    if (blurPaint != null) {
+                        blurPaint.setAlpha((int) (0xFF * blurAlpha));
+                        canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, blurPaint);
+                    }
 
-                // draw dim above blur
-                if (dimBlurPaint == null) {
-                    dimBlurPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                    dimBlurPaint.setColor(ColorUtils.setAlphaComponent(0xff000000, (int) (0xFF * dimAlpha)));
-                }
-                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, dimBlurPaint);
+                    // draw dim above blur
+                    if (dimBlurPaint == null) {
+                        dimBlurPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        dimBlurPaint.setColor(ColorUtils.setAlphaComponent(0xff000000, (int) (0xFF * dimAlpha)));
+                    }
+                    canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, dimBlurPaint);
 
-                // draw background
-                backgroundPaint.setColor(backgroundColor);
-                backgroundPaint.setAlpha((int) (backgroundPaint.getAlpha() * (blurAlpha * (blurOpacity - 1f) + 1f)));
-                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, backgroundPaint);
+                    // draw background
+                    backgroundPaint.setColor(backgroundColor);
+                    backgroundPaint.setAlpha((int) (backgroundPaint.getAlpha() * (blurAlpha * (blurOpacity - 1f) + 1f)));
+                    canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, backgroundPaint);
+                }
             }
             super.draw(canvas);
+        }
+
+        private void solegramDrawGlass(Canvas canvas, float r) {
+            final app.exteraless.glass.SolegramLiveGlass glass = solegramLive;
+            if (glass == null || !glass.isLive()) {
+                backgroundPaint.setColor(backgroundColor);
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, backgroundPaint);
+                return;
+            }
+            if (solegramGlassRadius != r) {
+                solegramGlassRadius = r;
+                glass.drawable.setRadius(r);
+                glass.drawable.updateColors();
+            }
+            AndroidUtilities.rectTmp.round(solegramGlassBounds);
+            glass.drawable.setBounds(solegramGlassBounds);
+            glass.drawable.draw(canvas);
         }
 
         @Override
@@ -801,6 +836,10 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
     protected View inflateContent(boolean setContent) {
         containerView = new AlertDialogView(getContext());
         containerView.setOrientation(LinearLayout.VERTICAL);
+        if (solegramGlass) {
+            solegramLive = app.exteraless.glass.SolegramLiveGlass.create(containerView, app.exteraless.glass.SolegramLiveGlass.panel(resourcesProvider,
+                (r, dark) -> ColorUtils.setAlphaComponent(backgroundColor, Math.round(255 * blurOpacity)), true), app.exteraless.glass.SolegramLiveGlass.FROSTED);
+        }
         if ((blurredBackground || progressViewStyle == ALERT_TYPE_SPINNER) && progressViewStyle != ALERT_TYPE_LOADING) {
             containerView.setBackground(null);
             containerView.setPadding(0, 0, 0, 0);
@@ -1735,6 +1774,10 @@ public class AlertDialog extends Dialog implements Drawable.Callback, Notificati
         }
         AndroidUtilities.cancelRunOnUIThread(showRunnable);
 
+        if (solegramLive != null) {
+            solegramLive.release();
+            solegramLive = null;
+        }
         if (blurShader != null && blurBitmap != null) {
             blurBitmap.recycle();
             blurShader = null;

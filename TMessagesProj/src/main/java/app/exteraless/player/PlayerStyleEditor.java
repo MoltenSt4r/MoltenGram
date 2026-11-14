@@ -34,6 +34,7 @@ import java.util.function.IntConsumer;
 import java.util.function.IntSupplier;
 
 import app.exteraless.appearance.AppearanceConfig;
+import app.exteraless.appearance.Md3AvatarShapes;
 import tw.nekomimi.nekogram.config.ConfigItem;
 
 @SuppressLint("ViewConstructor")
@@ -46,8 +47,27 @@ public class PlayerStyleEditor extends LinearLayout {
     public static final int TARGET_CONTROLS = 3;
     public static final int TARGET_ACTIONS = 4;
 
+    private static final String[] ACTION_KEYS = {
+            "speed", "lyrics", "playlist", "sleep", "queue", "share", "like"
+    };
+    private static final int[] ACTION_LABELS = {
+            R.string.OEPlayerSpeed,
+            R.string.OEPlayerLyrics,
+            R.string.AudioAddToPlaylist,
+            R.string.OEAppearancePlayerSleepTimer,
+            R.string.OEPlayerQueue,
+            R.string.Forward,
+            R.string.AudioSaveToMyProfile
+    };
+
     public interface Listener {
         void onStyleChanged();
+
+        default void onOpenCoverShapePicker(boolean mini) {
+        }
+
+        default void onOpenFullSettings() {
+        }
     }
 
     private interface Part {
@@ -59,18 +79,11 @@ public class PlayerStyleEditor extends LinearLayout {
     private final Listener listener;
     private final ArrayList<Part> parts = new ArrayList<>();
     private PlayerColors colors;
-    private View sizeRow;
-    private View radiusRow;
-    private View spinRow;
-    private View swipeRow;
-    private View positionGroup;
-    private View backgroundGroup;
+    private View waveChip;
     private ElementCard titleCard;
     private final ElementCard[] blockCard = new ElementCard[3];
     private LinearLayout blockCards;
     private PlayerMiniView miniPreview;
-    private View extendRow;
-    private ChipGroup coverChips;
     private final LinearLayout[] sections = new LinearLayout[3];
     private LinearLayout section;
     private static int selectedSection;
@@ -94,24 +107,55 @@ public class PlayerStyleEditor extends LinearLayout {
         }
 
         section = sections[0];
+        addHeader(R.string.OEAppearancePlayerBackgroundStyle);
         addSegmented(new String[]{
-                getString(R.string.OEPlayerCoverCard), getString(R.string.OEPlayerCoverWide),
-                getString(R.string.OEPlayerCoverFull), getString(R.string.OEPlayerCoverDisc)
-        }, PlayerStyle::coverStyle, value -> AppearanceConfig.playerCoverStyle.setConfigInt(value));
-        sizeRow = addSlider(R.string.OEPlayerCoverSize, PlayerStyle.COVER_SIZE_MIN, PlayerStyle.COVER_SIZE_MAX, 5, "%",
-                () -> Math.round(PlayerStyle.coverSize() * 100), value -> AppearanceConfig.playerCoverSize.setConfigInt(value));
-        radiusRow = addSlider(R.string.OEPlayerCoverRadius, 0, PlayerStyle.COVER_RADIUS_MAX, 2, "",
-                PlayerStyle::coverRadiusDp, value -> AppearanceConfig.playerCoverRadius.setConfigInt(value));
-        coverChips = addChips();
-        spinRow = addChip(coverChips, R.string.OEPlayerDiscSpin, AppearanceConfig.playerDiscSpin);
-        swipeRow = addChip(coverChips, R.string.OEPlayerCoverSwipe, AppearanceConfig.playerCoverSwipe);
-        extendRow = addChip(coverChips, R.string.OEPlayerCoverExtend, AppearanceConfig.playerCoverExtend);
+                getString(R.string.OEPlayerBackgroundSolid),
+                getString(R.string.OEPlayerBackgroundBlur),
+                getString(R.string.OEPlayerBackgroundGradient)
+        }, AppearanceConfig::playerBackgroundStyle, value -> AppearanceConfig.playerBackgroundStyle.setConfigInt(value));
+
         addHeader(R.string.OEPlayerStyleColors);
-        addSegmented(new String[]{getString(R.string.OEPlayerColorsCover), getString(R.string.OEPlayerColorsTheme)},
-                () -> PlayerStyle.themeColors() ? 1 : 0, value -> AppearanceConfig.playerColors.setConfigInt(value));
-        backgroundGroup = addSegmented(new String[]{
-                getString(R.string.OEPlayerBackgroundSolid), getString(R.string.OEPlayerBackgroundGradient), getString(R.string.OEPlayerBackgroundBlur)
-        }, PlayerStyle::background, value -> AppearanceConfig.playerBackground.setConfigInt(value));
+        addSegmented(new String[]{
+                getString(R.string.OEPlayerColorsCover),
+                getString(R.string.OEPlayerColorsTheme)
+        }, () -> AppearanceConfig.playerColorStyle() == 1 ? 1 : 0, value -> AppearanceConfig.playerColorStyle.setConfigInt(value));
+
+        addHeader(R.string.OEAppearancePlayerCoverShape);
+        addSegmented(new String[]{
+                getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                getString(R.string.OEAppearancePlayerCoverShapeRandom)
+        }, () -> {
+            int shape = AppearanceConfig.playerCoverShape();
+            if (shape == AppearanceConfig.COVER_SHAPE_DISABLED) return 0;
+            if (shape == AppearanceConfig.COVER_SHAPE_CYCLE) return 1;
+            if (shape == AppearanceConfig.COVER_SHAPE_RANDOM) return 2;
+            return -1;
+        }, value -> {
+            int mapped = value == 0 ? AppearanceConfig.COVER_SHAPE_DISABLED
+                    : value == 1 ? AppearanceConfig.COVER_SHAPE_CYCLE : AppearanceConfig.COVER_SHAPE_RANDOM;
+            AppearanceConfig.playerCoverShape.setConfigInt(mapped);
+            PlayerArt.clearTrackShapesCache();
+        });
+        addActionRow(
+                () -> {
+                    int shape = AppearanceConfig.playerCoverShape();
+                    if (shape >= 0 && shape < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        return getString(R.string.OEAppearancePlayerCoverShapeCustom) + ": " + Md3AvatarShapes.SHAPE_NAMES[shape];
+                    }
+                    return getString(R.string.OEAppearancePlayerCoverShapeCustom);
+                },
+                () -> {
+                    if (listener != null) {
+                        listener.onOpenCoverShapePicker(false);
+                    }
+                }
+        );
+
+        ChipGroup coverChips = addChips();
+        addChip(coverChips, R.string.OEPlayerCoverSwipe, AppearanceConfig.playerSwipeTrack);
+        addChip(coverChips, R.string.OEAppearancePlayerCropCover, AppearanceConfig.playerCropCover);
+        addChip(coverChips, R.string.OEAppearancePlayerKeepScreenOn, AppearanceConfig.playerKeepScreenOn);
 
         section = sections[1];
         addInfo(R.string.OEPlayerEditorTapHint);
@@ -123,7 +167,7 @@ public class PlayerStyleEditor extends LinearLayout {
         addSegmented(new String[]{
                 getString(R.string.OEPlayerSizeSmall), getString(R.string.OEPlayerSizeMedium), getString(R.string.OEPlayerSizeLarge)
         }, PlayerStyle::titleSize, value -> AppearanceConfig.playerTitleSize.setConfigInt(value));
-        positionGroup = addSegmented(new String[]{getString(R.string.OEPlayerTitleBelow), getString(R.string.OEPlayerTitleAboveCover)},
+        addSegmented(new String[]{getString(R.string.OEPlayerTitleBelow), getString(R.string.OEPlayerTitleAboveCover)},
                 () -> AppearanceConfig.playerTitleAbove.Bool() ? 1 : 0, value -> AppearanceConfig.playerTitleAbove.setConfigBool(value == 1));
         ChipGroup titleChips = addChips();
         addChip(titleChips, R.string.OEPlayerShowLike, AppearanceConfig.playerShowLike);
@@ -135,8 +179,29 @@ public class PlayerStyleEditor extends LinearLayout {
 
         blockCard[PlayerStyle.BLOCK_PROGRESS] = new ElementCard(context, TARGET_PROGRESS, getString(R.string.OEPlayerBlockProgress), null, true);
         section = blockCard[PlayerStyle.BLOCK_PROGRESS].body;
+        addCardLabel(R.string.OEAppearancePlayerSeekbarStyle);
+        addSegmented(new String[]{
+                getString(R.string.OEAppearancePlayerSeekbarWavy),
+                getString(R.string.OEAppearancePlayerSeekbarStraight)
+        }, () -> AppearanceConfig.playerSeekbarStyle() == 1 ? 1 : 0, value -> {
+            AppearanceConfig.playerSeekbarStyle.setConfigInt(value);
+            if (value == 0) {
+                AppearanceConfig.playerWavy.setConfigBool(true);
+            }
+        });
         ChipGroup progressChips = addChips();
-        addChip(progressChips, R.string.OEPlayerShowWave, AppearanceConfig.playerWavy);
+        waveChip = addChip(progressChips, R.string.OEPlayerShowWave, AppearanceConfig.playerWavy);
+        addSlider(R.string.OEPlayerSeekbarThickness, 2, 16, 1, " dp",
+                AppearanceConfig::playerSeekbarThickness, value -> AppearanceConfig.playerSeekbarThickness.setConfigInt(value));
+        addCardLabel(R.string.OEPlayerSeekbarIndicator);
+        addSegmented(new String[]{
+                getString(R.string.OEPlayerSeekbarIndicatorDot),
+                getString(R.string.OEPlayerSeekbarIndicatorBar),
+                getString(R.string.Hide)
+        }, () -> {
+            int ind = AppearanceConfig.playerSeekbarIndicator();
+            return ind < 0 || ind > 2 ? 0 : ind;
+        }, value -> AppearanceConfig.playerSeekbarIndicator.setConfigInt(value));
 
         blockCard[PlayerStyle.BLOCK_CONTROLS] = new ElementCard(context, TARGET_CONTROLS, getString(R.string.OEPlayerBlockControls), null, true);
         section = blockCard[PlayerStyle.BLOCK_CONTROLS].body;
@@ -154,6 +219,14 @@ public class PlayerStyleEditor extends LinearLayout {
         section = blockCard[PlayerStyle.BLOCK_ACTIONS].body;
         addSegmented(new String[]{getString(R.string.OEPlayerActionsButtons), getString(R.string.OEPlayerActionsIsland)},
                 () -> PlayerStyle.actionsIsland() ? 1 : 0, value -> AppearanceConfig.playerActionsStyle.setConfigInt(value));
+        addCardLabel(R.string.OEPlayerActionButtons);
+        ChipGroup actionChips = addChips();
+        for (int i = 0; i < ACTION_KEYS.length; i++) {
+            final String actionKey = ACTION_KEYS[i];
+            Chip chip = new Chip(context, getString(ACTION_LABELS[i]), () -> isActionEnabled(actionKey), enabled -> toggleAction(actionKey, enabled));
+            actionChips.addView(chip);
+            parts.add(chip);
+        }
         layoutBlockCards();
 
         section = sections[1];
@@ -162,37 +235,76 @@ public class PlayerStyleEditor extends LinearLayout {
         section = sections[2];
         miniPreview = PlayerMiniView.preview(context);
         section.addView(miniPreview, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, PlayerMiniView.HEIGHT_DP + 16));
-        addInfo(R.string.OEPlayerMiniMoveHint);
-        addInfo(R.string.OEPlayerStyleCover);
+        addHeader(R.string.OEAppearancePlayerMiniCoverShape);
         addSegmented(new String[]{
-                getString(R.string.OEPlayerMiniCoverRounded), getString(R.string.OEPlayerMiniCoverRound), getString(R.string.OEPlayerMiniCoverHidden)
-        }, PlayerStyle::miniCover, value -> AppearanceConfig.playerMiniCover.setConfigInt(value));
-        addInfo(R.string.OEPlayerMiniShape);
-        addSegmented(new String[]{
-                getString(R.string.OEPlayerMiniShapeRounded), getString(R.string.OEPlayerMiniShapePill), getString(R.string.OEPlayerMiniShapeSquare)
-        }, PlayerStyle::miniShape, value -> AppearanceConfig.playerMiniShape.setConfigInt(value));
-        addInfo(R.string.OEPlayerMiniProgress);
-        addSegmented(new String[]{
-                getString(R.string.OEPlayerMiniProgressRing), getString(R.string.OEPlayerMiniProgressLine),
-                getString(R.string.OEPlayerMiniProgressBorder), getString(R.string.OEPlayerMiniProgressNone)
+                getString(R.string.OEAppearancePlayerCoverShapeFollow),
+                getString(R.string.OEAppearancePlayerCoverShapeDisabled),
+                getString(R.string.OEAppearancePlayerCoverShapeCycle),
+                getString(R.string.OEAppearancePlayerCoverShapeRandom)
         }, () -> {
-            int value = PlayerStyle.miniProgress();
-            return value == PlayerStyle.MINI_PROGRESS_BORDER ? 2 : value == PlayerStyle.MINI_PROGRESS_NONE ? 3 : value;
-        }, value -> AppearanceConfig.playerMiniProgress.setConfigInt(
-                value == 2 ? PlayerStyle.MINI_PROGRESS_BORDER : value == 3 ? PlayerStyle.MINI_PROGRESS_NONE : value));
-        addInfo(R.string.OEPlayerMiniColors);
-        addSegmented(new String[]{getString(R.string.OEPlayerColorsCover), getString(R.string.OEPlayerColorsTheme)},
-                () -> PlayerStyle.miniThemeColors() ? 1 : 0, value -> AppearanceConfig.playerMiniColors.setConfigInt(value));
+            int shape = AppearanceConfig.playerMiniCoverShape();
+            if (shape == AppearanceConfig.COVER_SHAPE_FOLLOW) return 0;
+            if (shape == AppearanceConfig.COVER_SHAPE_DISABLED) return 1;
+            if (shape == AppearanceConfig.COVER_SHAPE_CYCLE) return 2;
+            if (shape == AppearanceConfig.COVER_SHAPE_RANDOM) return 3;
+            return -1;
+        }, value -> {
+            int mapped = value == 0 ? AppearanceConfig.COVER_SHAPE_FOLLOW
+                    : value == 1 ? AppearanceConfig.COVER_SHAPE_DISABLED
+                    : value == 2 ? AppearanceConfig.COVER_SHAPE_CYCLE : AppearanceConfig.COVER_SHAPE_RANDOM;
+            AppearanceConfig.playerMiniCoverShape.setConfigInt(mapped);
+            PlayerArt.clearTrackShapesCache();
+        });
+        addActionRow(
+                () -> {
+                    int shape = AppearanceConfig.playerMiniCoverShape();
+                    if (shape >= 0 && shape < Md3AvatarShapes.SHAPE_NAMES.length) {
+                        return getString(R.string.OEAppearancePlayerCoverShapeCustom) + ": " + Md3AvatarShapes.SHAPE_NAMES[shape];
+                    }
+                    return getString(R.string.OEAppearancePlayerCoverShapeCustom);
+                },
+                () -> {
+                    if (listener != null) {
+                        listener.onOpenCoverShapePicker(true);
+                    }
+                }
+        );
         ChipGroup miniChips = addChips();
-        addChip(miniChips, R.string.OEPlayerMiniCompact, AppearanceConfig.playerMiniCompact);
-        addChip(miniChips, R.string.OEPlayerMiniArtist, AppearanceConfig.playerMiniArtist);
-        addChip(miniChips, R.string.OEPlayerMiniPrevious, AppearanceConfig.playerMiniPrevious);
-        addChip(miniChips, R.string.OEPlayerMiniNext, AppearanceConfig.playerMiniNext);
-        addChip(miniChips, R.string.OEPlayerMiniClose, AppearanceConfig.playerMiniClose);
+        addChip(miniChips, R.string.OEPlayerMiniWavy, AppearanceConfig.playerMiniWavy);
+        addActionRow(() -> getString(R.string.OEAppearancePlayerSettings), () -> {
+            if (listener != null) {
+                listener.onOpenFullSettings();
+            }
+        });
 
         selectSection(selectedSection);
         refreshVisibility();
         setColors(colors);
+    }
+
+    private static boolean isActionEnabled(String key) {
+        for (String part : AppearanceConfig.playerActionButtons().split(",")) {
+            if (key.equals(part.trim())) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private void toggleAction(String key, boolean enabled) {
+        ArrayList<String> next = new ArrayList<>();
+        for (String k : ACTION_KEYS) {
+            boolean was = isActionEnabled(k);
+            boolean keep = k.equals(key) ? enabled : was;
+            if (keep) {
+                next.add(k);
+            }
+        }
+        if (next.isEmpty()) {
+            return;
+        }
+        AppearanceConfig.playerActionButtons.setConfigString(TextUtils.join(",", next));
+        changed();
     }
 
     public void focus(int target) {
@@ -319,16 +431,7 @@ public class PlayerStyleEditor extends LinearLayout {
     }
 
     private void refreshVisibility() {
-        int style = PlayerStyle.coverStyle();
-        boolean framed = style == PlayerStyle.COVER_CARD || style == PlayerStyle.COVER_DISC;
-        setVisible(sizeRow, framed);
-        setVisible(radiusRow, style == PlayerStyle.COVER_CARD);
-        setVisible(spinRow, style == PlayerStyle.COVER_DISC);
-        setVisible(swipeRow, framed);
-        setVisible(extendRow, style == PlayerStyle.COVER_WIDE);
-        setVisible(coverChips, style != PlayerStyle.COVER_FULL);
-        setVisible(positionGroup, framed);
-        setVisible(backgroundGroup, style != PlayerStyle.COVER_FULL);
+        setVisible(waveChip, AppearanceConfig.playerSeekbarStyle() != 1);
     }
 
     private static void setVisible(View view, boolean visible) {
@@ -353,6 +456,73 @@ public class PlayerStyleEditor extends LinearLayout {
             public void refresh() {
             }
         });
+    }
+
+    private void addCardLabel(int textRes) {
+        TextView label = new TextView(getContext());
+        label.setText(getString(textRes));
+        label.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        label.setTypeface(AndroidUtilities.bold());
+        section.addView(label, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 20, 10, 20, 4));
+        parts.add(new Part() {
+            @Override
+            public void bind(PlayerColors c) {
+                label.setTextColor(c.onSurfaceVariant);
+            }
+
+            @Override
+            public void refresh() {
+            }
+        });
+    }
+
+    private void addActionRow(LabelSupplier labelSupplier, Runnable onClick) {
+        ActionButtonRow row = new ActionButtonRow(getContext(), labelSupplier, onClick);
+        section.addView(row, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44, 16, 6, 16, 4));
+        parts.add(row);
+    }
+
+    private interface LabelSupplier {
+        String get();
+    }
+
+    private static class ActionButtonRow extends TextView implements Part {
+
+        private final LabelSupplier labelSupplier;
+        private final GradientDrawable background = new GradientDrawable();
+
+        ActionButtonRow(Context context, LabelSupplier labelSupplier, Runnable onClick) {
+            super(context);
+            this.labelSupplier = labelSupplier;
+            setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            setTypeface(AndroidUtilities.bold());
+            setGravity(Gravity.CENTER);
+            setSingleLine(true);
+            setEllipsize(TextUtils.TruncateAt.END);
+            setPadding(dp(16), 0, dp(16), 0);
+            background.setCornerRadius(dp(18));
+            setOnClickListener(v -> {
+                v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                onClick.run();
+            });
+            refresh();
+        }
+
+        @Override
+        public void bind(PlayerColors c) {
+            background.setColor(c.surfaceHigh);
+            setTextColor(c.primary);
+            GradientDrawable mask = new GradientDrawable();
+            mask.setCornerRadius(dp(18));
+            mask.setColor(0xffffffff);
+            setBackground(new RippleDrawable(ColorStateList.valueOf(c.ripple()), background, mask));
+            refresh();
+        }
+
+        @Override
+        public void refresh() {
+            setText(labelSupplier.get());
+        }
     }
 
     private void addInfo(int textRes) {

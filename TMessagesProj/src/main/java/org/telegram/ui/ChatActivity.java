@@ -30623,11 +30623,6 @@ public class ChatActivity extends BaseFragment implements
                 menu.add(R.id.menu_groupbolditalic, R.id.menu_color, order.getAndIncrement(), s);
             }
         });
-        addActions.put("ext_fmt", () -> {
-            if (app.exteraless.OpenExteraConfig.extendedFormatting()) {
-                menu.add(R.id.menu_groupbolditalic, R.id.menu_extended_formatting, order.getAndIncrement(), "Формат+");
-            }
-        });
         addActions.put("mention", () -> {
             if (NaConfig.INSTANCE.getShowTextCreateMention().Bool()) {
                 menu.add(R.id.menu_groupbolditalic, R.id.menu_mention, order.getAndIncrement(), getString(R.string.CreateMention));

@@ -40,7 +40,7 @@ public class GlassCaptureSourceCanvas {
         FROSTED_FILTERED;
 
         private boolean isFrosted() {
-            return this == FROSTED_GLASS || this == FROSTED_FILTERED;
+            return this == FROSTED_GLASS;
         }
     }
 
@@ -48,7 +48,7 @@ public class GlassCaptureSourceCanvas {
             GlassFadeBlurredDrawable.GlassFadeDownsampledSource {
     }
 
-    private static final int GLASS_DOWNSAMPLE = 5;
+    private static final int GLASS_DOWNSAMPLE = 2;
     private static final ColorFilter IDENTITY_FILTER = new ColorMatrixColorFilter(new ColorMatrix());
     private static final int FROSTED_GLASS_DOWNSAMPLE = 10;
 
@@ -372,7 +372,9 @@ public class GlassCaptureSourceCanvas {
             renderNode = new RenderNode("cap-" + index);
             renderNode.setUseCompositingLayer(true, null);
             renderNodeGlass = new RenderNode("glass-" + index);
-            renderNodeGlass.setRenderEffect(RenderNodeEffects.getSaturationX3RenderEffect());
+            if (app.exteraless.glass.SolegramGlass.vibrancy()) {
+                renderNodeGlass.setRenderEffect(RenderNodeEffects.getSaturationX3RenderEffect());
+            }
             renderNodeGlassFrosted = new RenderNode("glass-frosted-" + index);
             renderNodeFiltered = new RenderNode("filtered-" + index);
             renderNodeFiltered.setRenderEffect(RenderEffect.createColorFilterEffect(IDENTITY_FILTER));
@@ -422,17 +424,16 @@ public class GlassCaptureSourceCanvas {
         ) {
             if (this.glassDownsample != glassDownsample) {
                 this.glassDownsample = glassDownsample;
-                glassRadius = blurRadiusForDownsample(dpf2(7), glassDownsample);
+                glassRadius = Math.max(0.5f, blurRadiusForDownsample(dpf2(7) * app.exteraless.glass.SolegramGlass.blurScale(), glassDownsample));
                 renderNode.setRenderEffect(RenderEffect.createBlurEffect(
                         glassRadius, glassRadius, Shader.TileMode.CLAMP));
+                renderNodeFrostedFiltered.setRenderEffect(null);
             }
             if (this.frostedGlassDownsample != frostedGlassDownsample) {
                 this.frostedGlassDownsample = frostedGlassDownsample;
-                frostedGlassRadius = blurRadiusForDownsample(
-                        dpf2(36), frostedGlassDownsample);
+                frostedGlassRadius = Math.max(0.5f, blurRadiusForDownsample(
+                        dpf2(36) * app.exteraless.glass.SolegramGlass.blurScale(), frostedGlassDownsample));
                 renderNodeGlassFrosted.setRenderEffect(RenderEffect.createBlurEffect(
-                        frostedGlassRadius, frostedGlassRadius, Shader.TileMode.CLAMP));
-                renderNodeFrostedFiltered.setRenderEffect(RenderEffect.createBlurEffect(
                         frostedGlassRadius, frostedGlassRadius, Shader.TileMode.CLAMP));
             }
             this.normalizationDownsample = normalizationDownsample;
@@ -524,20 +525,8 @@ public class GlassCaptureSourceCanvas {
                 recordingCanvas.drawRenderNode(renderNode);
                 renderNodeFiltered.endRecording();
 
-                renderNodeFrostedFiltered.setPosition(
-                        0, 0, frostedGlassWidth, frostedGlassHeight);
+                renderNodeFrostedFiltered.setPosition(0, 0, glassWidth, glassHeight);
                 recordingCanvas = renderNodeFrostedFiltered.beginRecording();
-                recordingCanvas.translate(
-                        (normalizedPositionGlassWithOffset.left
-                                - normalizedPositionFrostedGlassWithOffset.left)
-                                / frostedGlassDownsample,
-                        (normalizedPositionGlassWithOffset.top
-                                - normalizedPositionFrostedGlassWithOffset.top)
-                                / frostedGlassDownsample);
-                if (glassDownsample != frostedGlassDownsample) {
-                    final float scale = glassDownsample / (float) frostedGlassDownsample;
-                    recordingCanvas.scale(scale, scale);
-                }
                 recordingCanvas.drawRenderNode(renderNodeFiltered);
                 renderNodeFrostedFiltered.endRecording();
             }

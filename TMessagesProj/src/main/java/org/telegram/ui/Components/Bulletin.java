@@ -389,8 +389,29 @@ public class Bulletin {
             }
 
             containerLayout.addView(parentLayout);
+            solegramApplyGlass();
         }
         return this;
+    }
+
+    private void solegramApplyGlass() {
+        if (layout == null || layout.hasCustomBackground || !app.exteraless.glass.LiquidGlassConfig.glassOn || !app.exteraless.glass.LiquidGlassConfig.glassMenus || !app.exteraless.glass.SolegramLiveGlass.available()) {
+            return;
+        }
+        app.exteraless.glass.SolegramLiveGlass glass = null;
+        final org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProvider provider =
+            org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.bulletin(layout.resourcesProvider);
+        if (containerLayout instanceof org.telegram.ui.ActionBar.ActionBarLayout.LayoutContainer) {
+            glass = app.exteraless.glass.SolegramLiveGlass.create(layout, provider, app.exteraless.glass.SolegramLiveGlass.CLEAR,
+                ((org.telegram.ui.ActionBar.ActionBarLayout.LayoutContainer) containerLayout).solegramContentSource());
+        } else if (containerLayout instanceof BulletinWindow.BulletinWindowLayout && app.exteraless.glass.SolegramLiveGlass.canSample(containerLayout.getRootView())) {
+            glass = app.exteraless.glass.SolegramLiveGlass.create(layout, provider, app.exteraless.glass.SolegramLiveGlass.CLEAR);
+        }
+        if (glass != null) {
+            glass.drawable.setRadius(dp(16));
+            layout.setCustomBackground(glass.drawable);
+            layout.invalidate();
+        }
     }
 
     public void setCanHide(boolean canHide) {

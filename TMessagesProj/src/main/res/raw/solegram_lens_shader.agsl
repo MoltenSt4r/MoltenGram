@@ -1,0 +1,71 @@
+// Solegram: the glass lens of a liquid switch / slider thumb while it is pressed.
+// A pill of curved glass over what lies under it (img): the middle magnifies a little, towards the
+// rim the surface tilts and bends the picture outwards (the track's edges curve along the rim), the
+// colours split slightly at the bend, light catches the top-left rim and the opposite rim is shaded.
+uniform shader img;
+
+uniform float2 center;   // px
+uniform float2 halfSize; // px, half width / half height of the pill
+uniform float magnify;   // 1 = none
+uniform float bend;      // px, how far the rim looks outwards
+uniform float dispersion;// 0..1
+uniform float light;     // 0..1, highlight strength
+uniform float4 tint;     // premultiplied glass body colour
+
+float sdPill(float2 p) {
+  float r = min(halfSize.x, halfSize.y);
+  float2 q = abs(p) - halfSize + r;
+  return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r;
+}
+
+half4 main(float2 fragCoord) {
+  float2 p = fragCoord - center;
+  float sd = sdPill(p);
+  float coverage = clamp(0.5 - sd, 0.0, 1.0);
+  if (coverage <= 0.0) {
+    return half4(0.0);
+  }
+  float r = min(halfSize.x, halfSize.y);
+
+  // outward normal of the outline (gradient of the distance field)
+  float2 n = float2(sdPill(p + float2(0.5, 0.0)) - sdPill(p - float2(0.5, 0.0)),
+                    sdPill(p + float2(0.0, 0.5)) - sdPill(p - float2(0.0, 0.5)));
+  float nl = length(n);
+  n = nl > 0.0001 ? n / nl : float2(0.0, -1.0);
+
+  // a round cross-section: flat in the middle, steeper and steeper towards the rim
+  float depth = clamp(-sd / r, 0.0, 1.0);          // 0 on the rim, 1 on the centre line
+  float x = 1.0 - depth;
+  float tilt = 1.0 - sqrt(max(0.0, 1.0 - x * x));  // 0 inside, 1 on the rim
+
+  float2 base = center + p / magnify;
+  float2 off = n * (tilt * bend);
+  half4 c = img.eval(base + off);
+  // colours split only where the rim really bends the picture (no fringes on the flat middle)
+  if (dispersion > 0.0 && tilt > 0.02) {
+    float k = dispersion * 0.35 * tilt;
+    half4 cr = img.eval(base + off * (1.0 + k));
+    half4 cb = img.eval(base + off * (1.0 - k));
+    c.r = cr.r;
+    c.b = cb.b;
+    c.a = max(c.a, max(cr.a, cb.a)); // premultiplied: alpha covers every channel taken
+  }
+
+  // glass body (premultiplied) under the refracted picture
+  half4 col = c + half4(tint) * (1.0 - c.a);
+
+  // light: from the top-left, caught by the rim facing it; a soft shade on the far rim
+  float2 L = normalize(float2(-0.55, -0.85));
+  float facing = dot(n, L);
+  float rimBand = tilt * tilt;
+  float spec = light * rimBand * (0.30 + 0.70 * max(facing, 0.0));
+  float sheen = light * 0.10 * smoothstep(0.15, 1.0, -p.y / halfSize.y) * depth;
+  // a crisp bright line right on the outline, brightest towards the light
+  float edgeLine = light * 0.55 * (1.0 - smoothstep(0.0, 2.2, -sd)) * (0.35 + 0.65 * max(facing, 0.0));
+  float hl = clamp(spec + sheen + edgeLine, 0.0, 1.0);
+  col = half4(col.rgb * (1.0 - hl) + half3(hl), col.a + hl * (1.0 - col.a));
+  float shade = light * 0.16 * rimBand * max(-facing, 0.0);
+  col.rgb *= (1.0 - shade);
+
+  return col * coverage;
+}

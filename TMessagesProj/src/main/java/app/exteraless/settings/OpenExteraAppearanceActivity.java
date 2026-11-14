@@ -105,6 +105,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
 
     // Blur
     private int blurHeaderRow;
+    private int liquidGlassRow;
     private int glassOutlineRow;
     private int glassMessageMenuRow;
     private int glassMessagesRow;
@@ -319,6 +320,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         sectionsDividerRow = addRow();
 
         blurHeaderRow = addRow("blurHeader");
+        liquidGlassRow = addRow("liquidGlass");
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
@@ -759,6 +761,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == playerSettingsRow) {
             presentFragment(new app.exteraless.player.PlayerSettingsActivity());
+            return;
+        } else if (position == liquidGlassRow) {
+            presentFragment(new LiquidGlassSettingsActivity());
             return;
         } else if (position == appNavigationRow) {
             presentFragment(new OpenExteraAppNavigationActivity());
@@ -1710,6 +1715,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePillStack), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, true);
                     } else if (position == playerSettingsRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePlayerSettings), getString(R.string.OEAppearancePlayerAppearanceHeader), R.drawable.baseline_music_note_outline_24, false);
+                    } else if (position == liquidGlassRow) {
+                        cell.setTextAndValueAndIcon(getString(R.string.SG_GlassSettings), getString(R.string.SG_GlassSub), R.drawable.msg_customize, true);
                     }
                     break;
                 }
@@ -1789,7 +1796,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_INFO_PRIVACY;
             } else if (position == appNavigationRow || position == appIconRow
                     || position == iconPacksRow || position == emojiSetsRow || position == pillStackRow
-                    || position == playerSettingsRow) {
+                    || position == playerSettingsRow || position == liquidGlassRow) {
                 return TYPE_DETAIL_SETTINGS;
             } else if (position == md3GroupRow || position == hideAiGroupRow
                     || position == iosGroupRow || hideSettingsGroupRow == position) {

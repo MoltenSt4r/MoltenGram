@@ -9960,12 +9960,20 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     }
 
     private class ActivityContentLayout extends FrameLayout {
+        private final app.exteraless.glass.SolegramLiveGlass.Host solegramGlassSource = new app.exteraless.glass.SolegramLiveGlass.Host(this, c -> {
+            super.dispatchDraw(c);
+            drawRippleAbove(c, this);
+        });
+
         public ActivityContentLayout(@NonNull Context context) {
             super(context);
         }
 
         @Override
         protected void dispatchDraw(@NonNull Canvas canvas) {
+            if (solegramGlassSource.draw(canvas)) {
+                return;
+            }
             super.dispatchDraw(canvas);
             drawRippleAbove(canvas, this);
         }

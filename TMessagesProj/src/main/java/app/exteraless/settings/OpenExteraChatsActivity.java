@@ -180,7 +180,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int customEmojiStatusRow;
     private int freeProfileAppearanceRow;
     private int coloredTextRow;
-    private int extendedFormattingRow;
     private int inlineMathRow;
     private int inlineMathCurrencyRow;
     private int hideSendAsPeerRow;
@@ -430,7 +429,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         customEmojiStatusRow = addRow("customEmojiStatus");
         freeProfileAppearanceRow = addRow("freeProfileAppearance");
         coloredTextRow = addRow("coloredText");
-        extendedFormattingRow = addRow("extendedFormatting");
         inlineMathRow = addRow("inlineMathResult");
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
         hideSendAsPeerRow = addRow("hideSendAsPeer");
@@ -1708,7 +1706,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     listAdapter.notifyItemRangeInserted(pluginCommandPrefixesRow, 2);
                 }
             }
-        } else if (position == customEmojiStatusRow || position == freeProfileAppearanceRow || position == coloredTextRow || position == extendedFormattingRow) {
+        } else if (position == customEmojiStatusRow || position == freeProfileAppearanceRow || position == coloredTextRow) {
             for (int i = 0; i < UserConfig.MAX_ACCOUNT_COUNT; i++) {
                 if (UserConfig.getInstance(i).isClientActivated()) {
                     NotificationCenter.getInstance(i).postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_EMOJI_STATUS | MessagesController.UPDATE_MASK_NAME);
@@ -1894,7 +1892,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == customEmojiStatusRow) return OpenExteraConfig.customEmojiStatus;
         if (position == freeProfileAppearanceRow) return OpenExteraConfig.freeProfileAppearance;
         if (position == coloredTextRow) return OpenExteraConfig.coloredText;
-        if (position == extendedFormattingRow) return OpenExteraConfig.extendedFormatting;
         if (position == inlineMathRow) return ChatsConfig.inlineMathResult;
         if (position == inlineMathCurrencyRow) return ChatsConfig.inlineMathCurrency;
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
@@ -2569,10 +2566,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == coloredTextRow) {
                 cell.setTextAndCheck(getString(R.string.OEColoredText),
                         OpenExteraConfig.coloredText.Bool(), true);
-            } else if (position == extendedFormattingRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.OEExtendedFormatting),
-                        getString(R.string.OEExtendedFormattingInfo),
-                        OpenExteraConfig.extendedFormatting.Bool(), true, true);
             } else if (position == inlineMathRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEChatsInlineMath),
                         getString(R.string.OEChatsInlineMathInfo),
