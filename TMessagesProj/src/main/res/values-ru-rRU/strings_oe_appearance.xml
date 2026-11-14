@@ -228,4 +228,20 @@
 <string name="OEAppearanceHidingInChats">В чатах</string>
 <string name="OEAppearanceHidingAiPremium">AI и Premium</string>
 <string name="OEKillApp">Закрыть приложение</string>
+<string name="OEAppearanceMd3QrShare">Меню QR в стиле MD3</string>
+<string name="OEAppearanceFreeQrPremium">Все функции QR бесплатно (без Premium)</string>
+<string name="OEAppearanceMd3QrCode">MD3-стилизация самого QR-кода</string>
+<string name="OEAppearanceMd3QrShape">Форма элементов QR-кода</string>
+<string name="OEAppearanceMd3QrShapeRounded">MD3 закруглённая</string>
+<string name="OEAppearanceMd3QrShapeDots">MD3 круглые точки</string>
+<string name="OEAppearanceMd3QrShapeSquircle">MD3 сквирклы</string>
+<string name="OEAppearanceMd3QrShapeDiamond">MD3 ромбы</string>
+<string name="OEAppearanceMd3QrShapeSquare">Классические квадраты</string>
+<string name="OEAppearanceMd3QrColorSource">Цвет QR-кода</string>
+<string name="OEAppearanceMd3QrColorMonetPrimary">Monet Primary (основной)</string>
+<string name="OEAppearanceMd3QrColorMonetSecondary">Monet Secondary (вторичный)</string>
+<string name="OEAppearanceMd3QrColorMonetTertiary">Monet Tertiary (третичный)</string>
+<string name="OEAppearanceMd3QrColorThemeAccent">Акцент текущей темы</string>
+<string name="OEAppearanceMd3QrColorSceneDefault">По умолчанию из темы QR</string>
+<string name="OEAppearanceStandardEmoji">Системные и стандартные эмодзи</string>
 </resources>

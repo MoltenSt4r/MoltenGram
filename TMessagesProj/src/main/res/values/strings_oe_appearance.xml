@@ -237,4 +237,20 @@
 <string name="OEAppearanceHidingInChats">In Chats</string>
 <string name="OEAppearanceHidingAiPremium">AI and Premium</string>
 <string name="OEKillApp">Close App</string>
+<string name="OEAppearanceMd3QrShare">MD3 QR Share Menu</string>
+<string name="OEAppearanceFreeQrPremium">Free QR Features (No Premium)</string>
+<string name="OEAppearanceMd3QrCode">MD3 QR Code Styling</string>
+<string name="OEAppearanceMd3QrShape">QR Code Shape</string>
+<string name="OEAppearanceMd3QrShapeRounded">MD3 Rounded</string>
+<string name="OEAppearanceMd3QrShapeDots">MD3 Circular Dots</string>
+<string name="OEAppearanceMd3QrShapeSquircle">MD3 Squircles</string>
+<string name="OEAppearanceMd3QrShapeDiamond">MD3 Diamonds</string>
+<string name="OEAppearanceMd3QrShapeSquare">Classic Squares</string>
+<string name="OEAppearanceMd3QrColorSource">QR Code Color</string>
+<string name="OEAppearanceMd3QrColorMonetPrimary">Monet Primary</string>
+<string name="OEAppearanceMd3QrColorMonetSecondary">Monet Secondary</string>
+<string name="OEAppearanceMd3QrColorMonetTertiary">Monet Tertiary</string>
+<string name="OEAppearanceMd3QrColorThemeAccent">Theme Accent</string>
+<string name="OEAppearanceMd3QrColorSceneDefault">Scene Default</string>
+<string name="OEAppearanceStandardEmoji">System &amp; Standard Emoji</string>
 </resources>

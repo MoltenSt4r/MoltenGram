@@ -696,7 +696,7 @@ public class QrShareActivity extends BaseFragment {
                 public void onEmojiPicked(long documentId, @Nullable TLRPC.Document document) {
                     if (view == null) return;
                     // without Premium only the presets apply; any other custom emoji: the Premium toast, nothing applied
-                    if (!getUserConfig().isPremium() && (emojiView == null || !emojiView.isPreset(documentId))) {
+                    if (!getUserConfig().isPremium() && !app.exteraless.appearance.AppearanceConfig.freeQrPremium() && (emojiView == null || !emojiView.isPreset(documentId))) {
                         view.showPremiumEmojiToast();
                         return;
                     }
@@ -705,8 +705,16 @@ public class QrShareActivity extends BaseFragment {
                 }
 
                 @Override
+                public void onStandardEmojiPicked(String emoji) {
+                    if (view == null) return;
+                    view.pickEmoji(emoji);
+                }
+
+                @Override
                 public void onUnlock() {
-                    openPremium();
+                    if (!app.exteraless.appearance.AppearanceConfig.freeQrPremium()) {
+                        openPremium();
+                    }
                 }
             }) {
                 @Override

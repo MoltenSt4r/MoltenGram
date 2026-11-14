@@ -1614,7 +1614,7 @@ public class QrShareView extends View {
     private void openLayer(int t) {
         if (!themeEditable) return;
         // gifts as a theme are for Premium only; the colours and the emoji presets are for everyone
-        if (t == SCENE_GIFT && !org.telegram.messenger.UserConfig.getInstance(currentAccount).isPremium()) {
+        if (t == SCENE_GIFT && !app.exteraless.appearance.AppearanceConfig.freeQrPremium() && !org.telegram.messenger.UserConfig.getInstance(currentAccount).isPremium()) {
             showToast(0, org.telegram.messenger.LocaleController.getString(R.string.QrPremiumGiftsToast), org.telegram.messenger.LocaleController.getString(R.string.QrPremiumSubscribe));
             haptic();
             return;
@@ -3566,6 +3566,10 @@ public class QrShareView extends View {
     // --- card
 
     private int qrColor() {
+        if (app.exteraless.appearance.AppearanceConfig.md3QrCode()) {
+            int customColor = app.exteraless.appearance.AppearanceConfig.getMd3QrColor();
+            if (customColor != 0) return customColor;
+        }
         if (scene == null) return Color.BLACK;
         if (wave < 1f && oldScene != null) {
             // the code takes the new colour as the wave front passes the card centre
@@ -3797,10 +3801,16 @@ public class QrShareView extends View {
     private void drawCardInner(Canvas c, int w) {
         final float cw = cardW(), ch = cardH(), left = (w - cw) / 2f, top = cardTop();
         rect.set(left, top, left + cw, top + ch);
-        cardPaint.setColor(Color.WHITE);
+        final boolean md3 = app.exteraless.appearance.AppearanceConfig.md3QrShare();
+        if (md3) {
+            cardPaint.setColor(Theme.getColor(Theme.key_windowBackgroundWhite));
+        } else {
+            cardPaint.setColor(Color.WHITE);
+        }
         // a soft lift tinted with the scene (darkened QR colour), not grey: 6% alpha, 24dp blur, 4dp drop (was black 13%, 18dp, 6dp)
         drawCardShadow(c, rect, cardShadowColorFor(qrColor()));
-        c.drawRoundRect(rect, dp(30), dp(30), cardPaint);
+        final float cardRadius = md3 ? dp(28) : dp(30);
+        c.drawRoundRect(rect, cardRadius, cardRadius, cardPaint);
         qr.setCardBounds(left, top, left + cw, top + ch);
         final int color = qrColor();
         final float qs = cw * 0.70f, ql = left + (cw - qs) / 2f, qt = top + lerp(cw * 0.12f, (cw - qs) / 2f, tempK); // centred in the square
@@ -5245,32 +5255,58 @@ public class QrShareView extends View {
         saveRect.set(w - dp(42) - br, cy - br, w - dp(42) + br, cy + br);
         tabsRect.set(w / 2f - dp(72), cy - dp(20), w / 2f + dp(72), cy + dp(20));
         final float bs = lerp(0.6f, 1f, sa) * elemScale(uiK); // side buttons scale out as the island expands (and in with the open)
+        final boolean md3Share = app.exteraless.appearance.AppearanceConfig.md3QrShare();
         if (a > 0) {
             c.save();
             c.scale(bs * shareScale, bs * shareScale, shareRect.centerX(), cy);
-            glassButton = true;
-            drawGlass(c, shareRect, dp(20), light, a);
-            glassButton = false;
-            drawRipple(c, RP_SHARE, shareRect, light);
-            icon(c, icShare, shareRect.centerX(), cy, dp(22), glassIconColor(), a);
+            if (md3Share) {
+                int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                fill.setColor(btnColor);
+                fill.setAlpha((int) (230 * a));
+                c.drawRoundRect(shareRect, dp(20), dp(20), fill);
+                drawRipple(c, RP_SHARE, shareRect, light);
+                icon(c, icShare, shareRect.centerX(), cy, dp(22), Color.WHITE, a);
+            } else {
+                glassButton = true;
+                drawGlass(c, shareRect, dp(20), light, a);
+                glassButton = false;
+                drawRipple(c, RP_SHARE, shareRect, light);
+                icon(c, icShare, shareRect.centerX(), cy, dp(22), glassIconColor(), a);
+            }
             c.restore();
             // download: the QR to the gallery (same glass, size and ripple as share; collapses with the bar)
             c.save();
             c.scale(bs * mscale, bs * mscale, saveRect.centerX(), cy);
-            glassButton = true;
-            drawGlass(c, saveRect, dp(20), light, a);
-            glassButton = false;
-            drawRipple(c, RP_SAVE, saveRect, light);
-            icon(c, icDownload, saveRect.centerX(), cy, dp(24), glassIconColor(), a);
+            if (md3Share) {
+                int btnColor = Theme.getColor(Theme.key_featuredStickers_addButton);
+                fill.setColor(btnColor);
+                fill.setAlpha((int) (230 * a));
+                c.drawRoundRect(saveRect, dp(20), dp(20), fill);
+                drawRipple(c, RP_SAVE, saveRect, light);
+                icon(c, icDownload, saveRect.centerX(), cy, dp(24), Color.WHITE, a);
+            } else {
+                glassButton = true;
+                drawGlass(c, saveRect, dp(20), light, a);
+                glassButton = false;
+                drawRipple(c, RP_SAVE, saveRect, light);
+                icon(c, icDownload, saveRect.centerX(), cy, dp(24), glassIconColor(), a);
+            }
             c.restore();
         }
         if (!island || ma <= 0 || !themeEditable) return;
         final float ts = elemScale(uiK) * mscale;
         c.save();
         c.scale(ts, ts, tabsRect.centerX(), tabsRect.centerY());
-        glassButton = true;
-        drawGlass(c, tabsRect, dp(20), light, ma);
-        glassButton = false;
+        if (md3Share) {
+            int tabBgColor = Theme.getColor(Theme.key_windowBackgroundWhite);
+            fill.setColor(tabBgColor);
+            fill.setAlpha((int) (220 * ma));
+            c.drawRoundRect(tabsRect, dp(20), dp(20), fill);
+        } else {
+            glassButton = true;
+            drawGlass(c, tabsRect, dp(20), light, ma);
+            glassButton = false;
+        }
         final float seg = tabsRect.width() / 3f;
         c.save();
         path.rewind();

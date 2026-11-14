@@ -908,6 +908,109 @@ object AppearanceConfig {
         return v.coerceIn(2, 24)
     }
 
+    // ---- QR-код (MD3 и кастомизация) ----
+
+    const val QR_SHAPE_ROUNDED = 0
+    const val QR_SHAPE_DOTS = 1
+    const val QR_SHAPE_SQUIRCLE = 2
+    const val QR_SHAPE_DIAMOND = 3
+    const val QR_SHAPE_SQUARE = 4
+
+    const val QR_COLOR_MONET_PRIMARY = 0
+    const val QR_COLOR_MONET_SECONDARY = 1
+    const val QR_COLOR_MONET_TERTIARY = 2
+    const val QR_COLOR_THEME_ACCENT = 3
+    const val QR_COLOR_SCENE_DEFAULT = 4
+
+    @JvmField
+    val md3QrShare =
+        addConfig("OEAppearanceMd3QrShare", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun md3QrShare(): Boolean {
+        ensureLoaded()
+        return md3QrShare.Bool()
+    }
+
+    @JvmField
+    val freeQrPremium =
+        addConfig("OEAppearanceFreeQrPremium", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun freeQrPremium(): Boolean {
+        ensureLoaded()
+        return freeQrPremium.Bool()
+    }
+
+    @JvmField
+    val md3QrCode =
+        addConfig("OEAppearanceMd3QrCode", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun md3QrCode(): Boolean {
+        ensureLoaded()
+        return md3QrCode.Bool()
+    }
+
+    @JvmField
+    val md3QrShape =
+        addConfig("OEAppearanceMd3QrShape", ConfigItem.configTypeInt, QR_SHAPE_ROUNDED)
+
+    @JvmStatic
+    fun md3QrShape(): Int {
+        ensureLoaded()
+        val s = md3QrShape.Int()
+        return if (s in 0..4) s else QR_SHAPE_ROUNDED
+    }
+
+    @JvmField
+    val md3QrColorSource =
+        addConfig("OEAppearanceMd3QrColorSource", ConfigItem.configTypeInt, QR_COLOR_MONET_PRIMARY)
+
+    @JvmStatic
+    fun md3QrColorSource(): Int {
+        ensureLoaded()
+        val c = md3QrColorSource.Int()
+        return if (c in 0..4) c else QR_COLOR_MONET_PRIMARY
+    }
+
+    @JvmStatic
+    fun getMd3QrColor(): Int {
+        if (!md3QrCode()) return 0
+        val source = md3QrColorSource()
+        if (source == QR_COLOR_SCENE_DEFAULT) return 0
+        return when (source) {
+            QR_COLOR_MONET_PRIMARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton)
+                }
+            }
+            QR_COLOR_MONET_SECONDARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_chats_actionBackground)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_chats_actionBackground)
+                }
+            }
+            QR_COLOR_MONET_TERTIARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_switchTrackChecked)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_switchTrackChecked)
+                }
+            }
+            QR_COLOR_THEME_ACCENT -> {
+                org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlueHeader)
+            }
+            else -> 0
+        }
+    }
+
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */
     @JvmField
     val playerColorStyle =

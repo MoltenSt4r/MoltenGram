@@ -41,6 +41,8 @@ import java.util.Arrays;
 import java.util.Map;
 import java.util.function.Function;
 
+import app.exteraless.appearance.AppearanceConfig;
+
 /**
  * This object renders a QR Code as a BitMatrix 2D array of greyscale values.
  *
@@ -134,6 +136,9 @@ public final class TelegramQRCodeWriter {
         imageSize = imageBloks * multiple - 24;
         int imageX = (size - imageSize) / 2;
 
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        float sideQuadPx = sideQuadSize * multiple;
+
         for (int a = 0; a < 3; a++) {
             int x, y;
             if (a == 0) {
@@ -147,7 +152,18 @@ public final class TelegramQRCodeWriter {
                 y = size - sideQuadSize * multiple - padding;
             }
 
-            float r = (sideQuadSize * multiple) / 3.0f;
+            float r;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                r = sideQuadPx / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                r = sideQuadPx * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                r = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                r = sideQuadPx * 0.22f;
+            } else {
+                r = (sideQuadSize * multiple) / 3.0f;
+            }
             Arrays.fill(radii, r);
 
             rect.setColor(0xff000000);
@@ -156,67 +172,111 @@ public final class TelegramQRCodeWriter {
 
             canvas.drawRect(x + multiple, y + multiple, x + (sideQuadSize - 1) * multiple, y + (sideQuadSize - 1) * multiple, blackPaint);
 
-            r = (sideQuadSize * multiple) / 4.0f;
-            Arrays.fill(radii, r);
+            float rInner;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                rInner = (sideQuadPx - multiple * 2) / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                rInner = (sideQuadPx - multiple * 2) * 0.28f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                rInner = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                rInner = (sideQuadPx - multiple * 2) * 0.2f;
+            } else {
+                rInner = (sideQuadSize * multiple) / 4.0f;
+            }
+            Arrays.fill(radii, rInner);
             rect.setColor(0xffffffff);
             rect.setBounds(x + multiple, y + multiple, x + (sideQuadSize - 1) * multiple, y + (sideQuadSize - 1) * multiple);
             rect.draw(canvas);
 
-            r = ((sideQuadSize - 2) * multiple) / 4.0f;
-            Arrays.fill(radii, r);
+            float rCenter;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                rCenter = ((sideQuadSize - 4) * multiple) / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                rCenter = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.22f;
+            } else {
+                rCenter = ((sideQuadSize - 2) * multiple) / 4.0f;
+            }
+            Arrays.fill(radii, rCenter);
             rect.setColor(0xff000000);
             rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
             rect.draw(canvas);
         }
         float r = multiple / 2.0f;
+        RectF sqRectF = new RectF();
+        Path pathHelper = new Path();
 
         for (int y = 0, outputY = padding; y < inputHeight; y++, outputY += multiple) {
             for (int x = 0, outputX = padding; x < inputWidth; x++, outputX += multiple) {
                 if (has(x, y)) {
-                    Arrays.fill(radii, r);
-                    if (has(x, y - 1)) {
-                        radii[0] = radii[1] = 0;
-                        radii[2] = radii[3] = 0;
-                    }
-                    if (has(x, y + 1)) {
-                        radii[6] = radii[7] = 0;
-                        radii[4] = radii[5] = 0;
-                    }
-                    if (has(x - 1, y)) {
-                        radii[0] = radii[1] = 0;
-                        radii[6] = radii[7] = 0;
-                    }
-                    if (has(x + 1, y)) {
-                        radii[2] = radii[3] = 0;
-                        radii[4] = radii[5] = 0;
-                    }
-                    rect.setColor(0xff000000);
-                    rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
-                    rect.draw(canvas);
-                } else {
-                    boolean has = false;
-                    Arrays.fill(radii, 0);
-                    if (has(x - 1, y - 1) && has(x - 1, y) && has(x, y - 1)) {
-                        radii[0] = radii[1] = r;
-                        has = true;
-                    }
-                    if (has(x + 1, y - 1) && has(x + 1, y) && has(x, y - 1)) {
-                        radii[2] = radii[3] = r;
-                        has = true;
-                    }
-                    if (has(x - 1, y + 1) && has(x - 1, y) && has(x, y + 1)) {
-                        radii[6] = radii[7] = r;
-                        has = true;
-                    }
-                    if (has(x + 1, y + 1) && has(x + 1, y) && has(x, y + 1)) {
-                        radii[4] = radii[5] = r;
-                        has = true;
-                    }
-                    if (has) {
+                    if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                        canvas.drawCircle(outputX + multiple / 2.0f, outputY + multiple / 2.0f, multiple * 0.44f, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                        float pad = multiple * 0.06f;
+                        sqRectF.set(outputX + pad, outputY + pad, outputX + multiple - pad, outputY + multiple - pad);
+                        canvas.drawRoundRect(sqRectF, multiple * 0.35f, multiple * 0.35f, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                        pathHelper.reset();
+                        pathHelper.moveTo(outputX + multiple / 2.0f, outputY + multiple * 0.08f);
+                        pathHelper.lineTo(outputX + multiple * 0.92f, outputY + multiple / 2.0f);
+                        pathHelper.lineTo(outputX + multiple / 2.0f, outputY + multiple * 0.92f);
+                        pathHelper.lineTo(outputX + multiple * 0.08f, outputY + multiple / 2.0f);
+                        pathHelper.close();
+                        canvas.drawPath(pathHelper, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
                         canvas.drawRect(outputX, outputY, outputX + multiple, outputY + multiple, blackPaint);
-                        rect.setColor(0xffffffff);
+                    } else {
+                        Arrays.fill(radii, r);
+                        if (has(x, y - 1)) {
+                            radii[0] = radii[1] = 0;
+                            radii[2] = radii[3] = 0;
+                        }
+                        if (has(x, y + 1)) {
+                            radii[6] = radii[7] = 0;
+                            radii[4] = radii[5] = 0;
+                        }
+                        if (has(x - 1, y)) {
+                            radii[0] = radii[1] = 0;
+                            radii[6] = radii[7] = 0;
+                        }
+                        if (has(x + 1, y)) {
+                            radii[2] = radii[3] = 0;
+                            radii[4] = radii[5] = 0;
+                        }
+                        rect.setColor(0xff000000);
                         rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
                         rect.draw(canvas);
+                    }
+                } else {
+                    if (qrShape == AppearanceConfig.QR_SHAPE_ROUNDED) {
+                        boolean has = false;
+                        Arrays.fill(radii, 0);
+                        if (has(x - 1, y - 1) && has(x - 1, y) && has(x, y - 1)) {
+                            radii[0] = radii[1] = r;
+                            has = true;
+                        }
+                        if (has(x + 1, y - 1) && has(x + 1, y) && has(x, y - 1)) {
+                            radii[2] = radii[3] = r;
+                            has = true;
+                        }
+                        if (has(x - 1, y + 1) && has(x - 1, y) && has(x, y + 1)) {
+                            radii[6] = radii[7] = r;
+                            has = true;
+                        }
+                        if (has(x + 1, y + 1) && has(x + 1, y) && has(x, y + 1)) {
+                            radii[4] = radii[5] = r;
+                            has = true;
+                        }
+                        if (has) {
+                            canvas.drawRect(outputX, outputY, outputX + multiple, outputY + multiple, blackPaint);
+                            rect.setColor(0xffffffff);
+                            rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
+                            rect.draw(canvas);
+                        }
                     }
                 }
             }
@@ -328,6 +388,9 @@ public final class TelegramQRCodeWriter {
         boolean isTransparentBackground = Color.alpha(backgroundColor) == 0;
         Path clipPath = new Path();
         RectF rectF = new RectF();
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        float sideQuadPx = sideQuadSize * multiple;
+
         for (int a = 0; a < 3; a++) {
             int x, y;
             if (a == 0) {
@@ -342,16 +405,38 @@ public final class TelegramQRCodeWriter {
             }
 
             float r;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                r = sideQuadPx / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                r = sideQuadPx * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                r = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                r = sideQuadPx * 0.22f;
+            } else {
+                r = (sideQuadSize * multiple) / 3.0f * radiusFactor;
+            }
+
             if (isTransparentBackground) {
                 rectF.set(x + multiple, y + multiple, x + (sideQuadSize - 1) * multiple, y + (sideQuadSize - 1) * multiple);
-                r = (sideQuadSize * multiple) / 4.0f * radiusFactor;
+                float rHole;
+                if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                    rHole = (sideQuadPx - multiple * 2) / 2.0f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                    rHole = (sideQuadPx - multiple * 2) * 0.28f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                    rHole = 0;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                    rHole = (sideQuadPx - multiple * 2) * 0.2f;
+                } else {
+                    rHole = (sideQuadSize * multiple) / 4.0f * radiusFactor;
+                }
                 clipPath.reset();
-                clipPath.addRoundRect(rectF, r, r, Path.Direction.CW);
+                clipPath.addRoundRect(rectF, rHole, rHole, Path.Direction.CW);
                 clipPath.close();
                 canvas.save();
                 canvas.clipPath(clipPath, Region.Op.DIFFERENCE);
             }
-            r = (sideQuadSize * multiple) / 3.0f * radiusFactor;
             Arrays.fill(radii, r);
             rect.setColor(color);
             rect.setBounds(x, y, x + sideQuadSize * multiple, y + sideQuadSize * multiple);
@@ -362,68 +447,111 @@ public final class TelegramQRCodeWriter {
             }
 
             if (!isTransparentBackground) {
-                r = (sideQuadSize * multiple) / 4.0f * radiusFactor;
-                Arrays.fill(radii, r);
+                float rInner;
+                if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                    rInner = (sideQuadPx - multiple * 2) / 2.0f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                    rInner = (sideQuadPx - multiple * 2) * 0.28f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                    rInner = 0;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                    rInner = (sideQuadPx - multiple * 2) * 0.2f;
+                } else {
+                    rInner = (sideQuadSize * multiple) / 4.0f * radiusFactor;
+                }
+                Arrays.fill(radii, rInner);
                 rect.setColor(backgroundColor);
                 rect.setBounds(x + multiple, y + multiple, x + (sideQuadSize - 1) * multiple, y + (sideQuadSize - 1) * multiple);
                 rect.draw(canvas);
             }
 
-            r = ((sideQuadSize - 2) * multiple) / 4.0f * radiusFactor;
-            Arrays.fill(radii, r);
+            float rCenter;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                rCenter = ((sideQuadSize - 4) * multiple) / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                rCenter = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.22f;
+            } else {
+                rCenter = ((sideQuadSize - 2) * multiple) / 4.0f * radiusFactor;
+            }
+            Arrays.fill(radii, rCenter);
             rect.setColor(color);
             rect.setBounds(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
             rect.draw(canvas);
         }
         float r = multiple / 2.0f * radiusFactor;
+        Path pathHelper = new Path();
 
         for (int y = 0, outputY = padding; y < inputHeight; y++, outputY += multiple) {
             for (int x = 0, outputX = padding; x < inputWidth; x++, outputX += multiple) {
                 if (has(x, y)) {
-                    Arrays.fill(radii, r);
-                    if (has(x, y - 1)) {
-                        radii[0] = radii[1] = 0;
-                        radii[2] = radii[3] = 0;
-                    }
-                    if (has(x, y + 1)) {
-                        radii[6] = radii[7] = 0;
-                        radii[4] = radii[5] = 0;
-                    }
-                    if (has(x - 1, y)) {
-                        radii[0] = radii[1] = 0;
-                        radii[6] = radii[7] = 0;
-                    }
-                    if (has(x + 1, y)) {
-                        radii[2] = radii[3] = 0;
-                        radii[4] = radii[5] = 0;
-                    }
-                    rect.setColor(color);
-                    rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
-                    rect.draw(canvas);
-                } else {
-                    boolean has = false;
-                    Arrays.fill(radii, 0);
-                    if (has(x - 1, y - 1) && has(x - 1, y) && has(x, y - 1)) {
-                        radii[0] = radii[1] = r;
-                        has = true;
-                    }
-                    if (has(x + 1, y - 1) && has(x + 1, y) && has(x, y - 1)) {
-                        radii[2] = radii[3] = r;
-                        has = true;
-                    }
-                    if (has(x - 1, y + 1) && has(x - 1, y) && has(x, y + 1)) {
-                        radii[6] = radii[7] = r;
-                        has = true;
-                    }
-                    if (has(x + 1, y + 1) && has(x + 1, y) && has(x, y + 1)) {
-                        radii[4] = radii[5] = r;
-                        has = true;
-                    }
-                    if (has && !isTransparentBackground) {
+                    if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                        canvas.drawCircle(outputX + multiple / 2.0f, outputY + multiple / 2.0f, multiple * 0.44f, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                        float pad = multiple * 0.06f;
+                        rectF.set(outputX + pad, outputY + pad, outputX + multiple - pad, outputY + multiple - pad);
+                        canvas.drawRoundRect(rectF, multiple * 0.35f, multiple * 0.35f, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                        pathHelper.reset();
+                        pathHelper.moveTo(outputX + multiple / 2.0f, outputY + multiple * 0.08f);
+                        pathHelper.lineTo(outputX + multiple * 0.92f, outputY + multiple / 2.0f);
+                        pathHelper.lineTo(outputX + multiple / 2.0f, outputY + multiple * 0.92f);
+                        pathHelper.lineTo(outputX + multiple * 0.08f, outputY + multiple / 2.0f);
+                        pathHelper.close();
+                        canvas.drawPath(pathHelper, blackPaint);
+                    } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
                         canvas.drawRect(outputX, outputY, outputX + multiple, outputY + multiple, blackPaint);
-                        rect.setColor(backgroundColor);
+                    } else {
+                        Arrays.fill(radii, r);
+                        if (has(x, y - 1)) {
+                            radii[0] = radii[1] = 0;
+                            radii[2] = radii[3] = 0;
+                        }
+                        if (has(x, y + 1)) {
+                            radii[6] = radii[7] = 0;
+                            radii[4] = radii[5] = 0;
+                        }
+                        if (has(x - 1, y)) {
+                            radii[0] = radii[1] = 0;
+                            radii[6] = radii[7] = 0;
+                        }
+                        if (has(x + 1, y)) {
+                            radii[2] = radii[3] = 0;
+                            radii[4] = radii[5] = 0;
+                        }
+                        rect.setColor(color);
                         rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
                         rect.draw(canvas);
+                    }
+                } else {
+                    if (qrShape == AppearanceConfig.QR_SHAPE_ROUNDED) {
+                        boolean has = false;
+                        Arrays.fill(radii, 0);
+                        if (has(x - 1, y - 1) && has(x - 1, y) && has(x, y - 1)) {
+                            radii[0] = radii[1] = r;
+                            has = true;
+                        }
+                        if (has(x + 1, y - 1) && has(x + 1, y) && has(x, y - 1)) {
+                            radii[2] = radii[3] = r;
+                            has = true;
+                        }
+                        if (has(x - 1, y + 1) && has(x - 1, y) && has(x, y + 1)) {
+                            radii[6] = radii[7] = r;
+                            has = true;
+                        }
+                        if (has(x + 1, y + 1) && has(x + 1, y) && has(x, y + 1)) {
+                            radii[4] = radii[5] = r;
+                            has = true;
+                        }
+                        if (has && !isTransparentBackground) {
+                            canvas.drawRect(outputX, outputY, outputX + multiple, outputY + multiple, blackPaint);
+                            rect.setColor(backgroundColor);
+                            rect.setBounds(outputX, outputY, outputX + multiple, outputY + multiple);
+                            rect.draw(canvas);
+                        }
                     }
                 }
             }
@@ -440,6 +568,8 @@ public final class TelegramQRCodeWriter {
 
     public static void drawSideQuads(Canvas canvas, float xOffset, float yOffset, Paint blackPaint, float sideQuadSize, float multiple, int padding, float size, float radiusFactor, float[] radii, boolean isTransparentBackground) {
         Path clipPath = new Path();
+        int qrShape = AppearanceConfig.md3QrCode() ? AppearanceConfig.md3QrShape() : AppearanceConfig.QR_SHAPE_ROUNDED;
+        float sideQuadPx = sideQuadSize * multiple;
         for (int a = 0; a < 3; a++) {
             float x, y;
             if (a == 0) {
@@ -457,25 +587,58 @@ public final class TelegramQRCodeWriter {
             y += yOffset;
 
             float r;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                r = sideQuadPx / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                r = sideQuadPx * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                r = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                r = sideQuadPx * 0.22f;
+            } else {
+                r = (sideQuadSize * multiple) / 3.0f * radiusFactor;
+            }
+
             if (isTransparentBackground) {
                 AndroidUtilities.rectTmp.set(x + multiple, y + multiple, x + (sideQuadSize - 1) * multiple, y + (sideQuadSize - 1) * multiple);
-                r = (sideQuadSize * multiple) / 4.0f * radiusFactor;
+                float rHole;
+                if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                    rHole = (sideQuadPx - multiple * 2) / 2.0f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                    rHole = (sideQuadPx - multiple * 2) * 0.28f;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                    rHole = 0;
+                } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                    rHole = (sideQuadPx - multiple * 2) * 0.2f;
+                } else {
+                    rHole = (sideQuadSize * multiple) / 4.0f * radiusFactor;
+                }
                 clipPath.reset();
-                clipPath.addRoundRect(AndroidUtilities.rectTmp, r, r, Path.Direction.CW);
+                clipPath.addRoundRect(AndroidUtilities.rectTmp, rHole, rHole, Path.Direction.CW);
                 clipPath.close();
                 canvas.save();
                 canvas.clipPath(clipPath, Region.Op.DIFFERENCE);
             }
-            r = (sideQuadSize * multiple) / 3.0f * radiusFactor;
             AndroidUtilities.rectTmp.set(x, y, x + sideQuadSize * multiple, y + sideQuadSize * multiple);
             canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, blackPaint);
             if (isTransparentBackground) {
                 canvas.restore();
             }
 
-            r = ((sideQuadSize - 2) * multiple) / 4.0f * radiusFactor;
+            float rCenter;
+            if (qrShape == AppearanceConfig.QR_SHAPE_DOTS) {
+                rCenter = ((sideQuadSize - 4) * multiple) / 2.0f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUIRCLE) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.32f;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_SQUARE) {
+                rCenter = 0;
+            } else if (qrShape == AppearanceConfig.QR_SHAPE_DIAMOND) {
+                rCenter = ((sideQuadSize - 4) * multiple) * 0.22f;
+            } else {
+                rCenter = ((sideQuadSize - 2) * multiple) / 4.0f * radiusFactor;
+            }
             AndroidUtilities.rectTmp.set(x + multiple * 2, y + multiple * 2, x + (sideQuadSize - 2) * multiple, y + (sideQuadSize - 2) * multiple);
-            canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, blackPaint);
+            canvas.drawRoundRect(AndroidUtilities.rectTmp, rCenter, rCenter, blackPaint);
         }
     }
 
