@@ -728,7 +728,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+            lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && !MainTabsUiHelper.isMaterial3NavigationBar();
         }
         if (lensMode) {
             lensTouch(ev);

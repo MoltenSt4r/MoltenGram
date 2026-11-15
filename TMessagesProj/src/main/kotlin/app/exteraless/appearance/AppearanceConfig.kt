@@ -173,6 +173,17 @@ object AppearanceConfig {
         return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else fabShape()
     }
 
+    /** Форма дополнительной мини-кнопки FAB (камера / истории). */
+    @JvmField
+    val subFabShape = addConfig("OEAppearanceSubFabShape", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabShape(): Int {
+        ensureLoaded()
+        val s = subFabShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else 0
+    }
+
     /** Размер основной кнопки FAB в активном режиме в dp (36..96). */
     @JvmField
     val fabActiveSize = addConfig("OEAppearanceFabActiveSize", ConfigItem.configTypeInt, 56)

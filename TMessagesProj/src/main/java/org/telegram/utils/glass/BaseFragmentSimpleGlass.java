@@ -27,6 +27,7 @@ import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.BlurredBackgroundWithFadeDrawable;
 import org.telegram.ui.Components.blur3.capture.IBlur3Capture;
+import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl;
 import org.telegram.utils.glass.source.GlassSourceColor;
 import org.telegram.utils.glass.source.GlassSourceCrossfade;
@@ -184,6 +185,18 @@ public class BaseFragmentSimpleGlass {
     }
 
     @NonNull
+    public Drawable createFullHeaderGlassDrawable(View view, Theme.ResourcesProvider resourceProvider) {
+        final BlurredBackgroundDrawable drawable = factory.create(
+                view,
+                BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+        drawable.setRadius(0, 0, dp(20), dp(20));
+        drawable.setPadding(0);
+        drawable.setShadowAlpha(0.6f);
+        glassEngine.registerDrawable(view, drawable);
+        return drawable;
+    }
+
+    @NonNull
     public Drawable createNavigationBarFadeDrawable(View view) {
         final GlassFadeBlurredDrawable glassBlurredFadeDrawable = new GlassFadeBlurredDrawable(
             glassSourceForFadeDrawable);
@@ -206,6 +219,18 @@ public class BaseFragmentSimpleGlass {
 
         glassEngine.registerDrawable(view, glassBlurredFadeDrawable);
         return glassBlurredFadeDrawable;
+    }
+
+    @NonNull
+    public Drawable createFullHeaderGlassDrawable(View view, Theme.ResourcesProvider resourceProvider) {
+        final BlurredBackgroundDrawable drawable = factory.create(
+                view,
+                BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+        drawable.setRadius(0, 0, dp(20), dp(20));
+        drawable.setPadding(0);
+        drawable.setShadowAlpha(0.6f);
+        glassEngine.registerDrawable(view, drawable);
+        return drawable;
     }
 
 
@@ -266,10 +291,11 @@ public class BaseFragmentSimpleGlass {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
             final boolean hasCustomButtonsGlass = simpleActionBar.hasButtonsGlass();
             final boolean useGlass = hasCustomButtonsGlass || (LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons);
+            final boolean fullHeaderGlass = !hasCustomButtonsGlass && LiquidGlassConfig.isLiquidGlassEnabled() && LiquidGlassConfig.glassHeaderButtons && !LiquidGlassConfig.frostedHeaders;
             simpleActionBar.setMonotoneHeaderMode(!useGlass);
             simpleActionBar.setExtraHeight(0);
             if (useGlass) {
-                if (!hasCustomButtonsGlass) {
+                if (!hasCustomButtonsGlass && !fullHeaderGlass) {
                     simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
                 }
                 simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
@@ -277,12 +303,16 @@ public class BaseFragmentSimpleGlass {
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
             final boolean useGlass = LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons;
+            final boolean fullHeaderGlass = LiquidGlassConfig.isLiquidGlassEnabled() && LiquidGlassConfig.glassHeaderButtons && !LiquidGlassConfig.frostedHeaders;
             actionBar.setAddToContainer(false);
-            if (useGlass) {
+            if (useGlass && !fullHeaderGlass) {
                 actionBar.setCenterTitleAndGlass(true);
                 actionBar.setExtraHeight(dp(6));
                 actionBar.doNotDrawCenterGlass = true;
                 actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
+            } else if (fullHeaderGlass) {
+                actionBar.setCenterTitleAndGlass(true);
+                actionBar.setExtraHeight(0);
             } else {
                 actionBar.setExtraHeight(0);
             }

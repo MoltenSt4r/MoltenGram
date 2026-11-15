@@ -478,11 +478,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         iBlur3FactoryTabs.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
 
         tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
-        if (MainTabsUiHelper.isMaterial3NavigationBar() && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
-            tabsViewBackground.setRadius(dp(20), dp(20), 0, 0);
-        } else {
-            tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
-        }
+        tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
         tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
         tabsView.setBackground(tabsViewBackground);
 
@@ -1344,7 +1340,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final boolean hidden = NaConfig.INSTANCE.getHideBottomNavigationBar().Bool();
         final int updateLayoutHeight = updateLayoutWrapper.isUpdateLayoutVisible() ? dp(UpdateLayoutWrapper.HEIGHT) : 0;
         final int tabsHeight = hidden ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp());
-        final int gap = hidden || MainTabsUiHelper.isMaterial3NavigationBar() ? dp(12) : dp(4);
+        final int gap = hidden || (MainTabsUiHelper.isMaterial3NavigationBar() && !MainTabsUiHelper.isMaterial3FloatingGlass()) ? dp(12) : dp(4);
         final float factor = hidden ? 1f : animatorTabsVisible.getFloatValue();
         miniPlayer.setHostPosition(-(navigationBarHeight + updateLayoutHeight + tabsHeight + gap - dp(12)), factor);
         updateMiniPlayerTopAnchor();
@@ -1674,14 +1670,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
             tabsViewBackground.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
-            if (MainTabsUiHelper.isMaterial3NavigationBar() && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
-                tabsViewBackground.setRadius(dp(20), dp(20), 0, 0);
-            } else {
-                tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
-            }
+            tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
             tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
             tabsViewBackground.updateColors();
             tabsViewBackground.invalidateDisplayList();
+        }
+        if (tabsView != null && tabsViewWrapper != null) {
+            MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(MainTabsHelper.LEGACY_MAX_WIDTH_DP));
+            MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, 0, 0);
         }
         if (miniPlayer != null) {
             miniPlayer.applyStyle(false);

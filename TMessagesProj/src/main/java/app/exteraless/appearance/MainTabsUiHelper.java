@@ -35,6 +35,11 @@ public final class MainTabsUiHelper {
         return AppearanceConfig.newNavigationBarStyle() && !MainTabsLayout.isBottomNavigationFloating();
     }
 
+    /** MD3-навигация при включённом Liquid Glass: плавающая стеклянная капсула с MD3-индикатором внутри. */
+    public static boolean isMaterial3FloatingGlass() {
+        return isMaterial3NavigationBar() && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+    }
+
     /**
      * Панель как в Telegram iOS: капсула почти во всю ширину экрана, 60dp высотой,
      * вкладки растянуты по ширине. Это та же не-M3 ветка, только шире и выше,
@@ -44,18 +49,24 @@ public final class MainTabsUiHelper {
         return AppearanceConfig.iosNavigationBarStyle() && !isMaterial3NavigationBar();
     }
 
-    /** В iOS-стиле обёртка добавляет к системным инсетам ещё 8dp по бокам — вместе с подложкой выходит 16dp. */
+    /** В iOS-стиле и MD3+LiquidGlass обёртка добавляет к системным инсетам 8dp по бокам. */
     private static int getWrapperSideInset() {
-        return isIosNavigationBar() ? AndroidUtilities.dp(8) : 0;
+        return isIosNavigationBar() || isMaterial3FloatingGlass() ? AndroidUtilities.dp(8) : 0;
     }
 
-    /** M3 — 64dp, иначе высота из MainTabsHelper. */
+    /** M3 — 64dp (при Liquid Glass — с плавающими отступами), иначе высота из MainTabsHelper. */
     public static int getTabsViewHeightDp() {
+        if (isMaterial3FloatingGlass()) {
+            return 64 + MainTabsHelper.getMainTabsMargin() * 2;
+        }
         return isMaterial3NavigationBar() ? 64 : MainTabsHelper.getMainTabsHeightWithMargins();
     }
 
-    /** M3 — dp(64) плюс системный отступ снизу, иначе высота из MainTabsHelper. */
+    /** M3 — dp(64) плюс системный отступ снизу, при Liquid Glass — плавающая капсула. */
     public static int getTabsViewHeight(int bottomInset) {
+        if (isMaterial3FloatingGlass()) {
+            return AndroidUtilities.dp(64 + MainTabsHelper.getMainTabsMargin() * 2);
+        }
         return isMaterial3NavigationBar()
                 ? AndroidUtilities.dp(64) + bottomInset
                 : AndroidUtilities.dp(MainTabsHelper.getMainTabsHeightWithMargins());
@@ -63,6 +74,9 @@ public final class MainTabsUiHelper {
 
     /** В iOS-стиле капсула на 4dp выше, но таб внутри остаётся 48dp — лишнее уходит в паддинг. */
     public static int getTabsInnerPaddingVertical() {
+        if (isMaterial3FloatingGlass()) {
+            return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
+        }
         if (isMaterial3NavigationBar()) {
             return 0;
         }
@@ -70,16 +84,25 @@ public final class MainTabsUiHelper {
     }
 
     public static int getTabsInnerPaddingHorizontal() {
+        if (isMaterial3FloatingGlass()) {
+            return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
+        }
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin() + 4);
     }
 
-    /** В M3 подложка без отступа от краёв. */
+    /** В M3 без Liquid Glass подложка без отступа от краёв; при Liquid Glass — плавающая капсула. */
     public static int getBackgroundInset() {
+        if (isMaterial3FloatingGlass()) {
+            return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin() - 0.334f);
+        }
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin() - 0.334f);
     }
 
-    /** В M3 подложка прямоугольная, иначе скругление в половину высоты. */
+    /** В M3 без Liquid Glass подложка прямоугольная, иначе скругление в половину высоты. */
     public static float getBackgroundRadius() {
+        if (isMaterial3FloatingGlass()) {
+            return AndroidUtilities.dp(32f);
+        }
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsHeight() / 2f);
     }
 
@@ -88,12 +111,15 @@ public final class MainTabsUiHelper {
         return isMaterial3NavigationBar() || isIosNavigationBar() ? LayoutHelper.MATCH_PARENT : MainTabsHelper.getTabsViewWidth();
     }
 
-    /** Сдвиг кнопки «написать» над панелью: в M3 всегда 64. */
+    /** Сдвиг кнопки «написать» над панелью: в M3 64 (или 64 + margin в плавающей капсуле). */
     public static int getTabsFabOffsetDp() {
+        if (isMaterial3FloatingGlass()) {
+            return 64 + MainTabsHelper.getMainTabsMargin();
+        }
         return isMaterial3NavigationBar() ? 64 : MainTabsHelper.getMainTabsHeight() + MainTabsHelper.getMainTabsMargin();
     }
 
-    /** В M3 и iOS-стиле панель во всю ширину (в M3 ещё и без внутренних отступов). */
+    /** В M3 и iOS-стиле панель во всю ширину. */
     public static void applyTabsLayoutStyle(MainTabsLayout layout, int legacyMaxWidthPx) {
         final int paddingH = getTabsInnerPaddingHorizontal();
         final int paddingV = getTabsInnerPaddingVertical();
@@ -102,13 +128,14 @@ public final class MainTabsUiHelper {
     }
 
     /**
-     * В M3 нижний системный отступ уходит внутрь панели, а обёртка его не держит.
-     * Левый и правый инсеты несёт обёртка, поэтому переданы отдельно.
+     * В M3 (без плавающего стекла) нижний системный отступ уходит внутрь панели, а обёртка его не держит.
+     * В плавающей капсуле (MD3 + Liquid Glass или iOS) нижний отступ держит обёртка.
      */
     public static void applyTabsBottomInset(MainTabsLayout layout, View wrapper, int bottomInset, int leftInset, int rightInset) {
         applyTabsBottomInset(layout, bottomInset);
         final int side = getWrapperSideInset();
-        wrapper.setPadding(leftInset + side, 0, rightInset + side, isMaterial3NavigationBar() ? 0 : bottomInset);
+        final boolean insetInWrapper = !isMaterial3NavigationBar() || isMaterial3FloatingGlass();
+        wrapper.setPadding(leftInset + side, 0, rightInset + side, insetInWrapper ? bottomInset : 0);
     }
 
     public static void applyTabsBottomInset(MainTabsLayout layout, int bottomInset) {
@@ -118,15 +145,15 @@ public final class MainTabsUiHelper {
             lp.height = height;
             layout.setLayoutParams(lp);
         }
-        final int paddingBottom = getTabsInnerPaddingVertical() + (isMaterial3NavigationBar() ? bottomInset : 0);
+        final int paddingBottom = getTabsInnerPaddingVertical() + (isMaterial3NavigationBar() && !isMaterial3FloatingGlass() ? bottomInset : 0);
         if (layout.getPaddingBottom() != paddingBottom) {
             layout.setPadding(layout.getPaddingLeft(), layout.getPaddingTop(), layout.getPaddingRight(), paddingBottom);
         }
     }
 
-    /** В M3 обводки у панели нет; значения не-M3 ветки — те же, что в mainTabs. */
+    /** В M3 без Liquid Glass обводки нет; в плавающей стеклянной капсуле и не-M3 — стеклянный контур. */
     public static BlurredBackgroundProviderBuilder applyBackgroundStroke(BlurredBackgroundProviderBuilder builder) {
-        if (isMaterial3NavigationBar()) {
+        if (isMaterial3NavigationBar() && !isMaterial3FloatingGlass()) {
             return builder
                     .setStrokeColorTop(0, 0)
                     .setStrokeColorBottom(0, 0)
@@ -141,7 +168,10 @@ public final class MainTabsUiHelper {
     public static void setBlurBounds(RectF rectF, View view, int bottomInset) {
         final int bottom;
         final int top;
-        if (isMaterial3NavigationBar()) {
+        if (isMaterial3FloatingGlass()) {
+            bottom = view.getMeasuredHeight() - bottomInset - AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
+            top = bottom - AndroidUtilities.dp(64);
+        } else if (isMaterial3NavigationBar()) {
             bottom = view.getMeasuredHeight();
             top = bottom - AndroidUtilities.dp(64) - bottomInset;
         } else {

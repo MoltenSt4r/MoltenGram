@@ -154,6 +154,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
             AppearanceConfig.fabIconColor.setConfigInt(0);
             AppearanceConfig.fabActiveIconColor.setConfigInt(0);
             AppearanceConfig.subFabSize.setConfigInt(48);
+            AppearanceConfig.subFabShape.setConfigInt(0);
             AppearanceConfig.subFabColor.setConfigInt(0);
             AppearanceConfig.subFabIconColor.setConfigInt(0);
             AppearanceConfig.fabAlignment.setConfigInt(AppearanceConfig.FAB_ALIGN_RIGHT);
@@ -989,7 +990,7 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                 case MODE_ACTIVE:
                     return AppearanceConfig.fabActiveShape();
                 case MODE_CAMERA:
-                    return AppearanceConfig.fabShape();
+                    return AppearanceConfig.subFabShape();
                 default:
                     return AppearanceConfig.fabShape();
             }
@@ -1001,6 +1002,8 @@ public class Md3FabAppearanceActivity extends BaseNekoSettingsActivity {
                     AppearanceConfig.fabActiveShape.setConfigInt(shapeId);
                     break;
                 case MODE_CAMERA:
+                    AppearanceConfig.subFabShape.setConfigInt(shapeId);
+                    break;
                 case MODE_RESTING:
                 default:
                     AppearanceConfig.fabShape.setConfigInt(shapeId);
