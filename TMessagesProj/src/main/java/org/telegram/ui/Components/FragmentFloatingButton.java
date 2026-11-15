@@ -31,8 +31,6 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.utils.ViewOutlineProviderImpl;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
-import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundColorProviderThemed;
-import org.telegram.utils.glass.source.GlassSourceColor;
 
 import java.util.ArrayList;
 
@@ -67,9 +65,14 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private final Paint fabBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint fabPressedPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint shapeGlassStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shapeGlassGlowPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shapeGlassSeparatorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint shapeGlassFillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint subGlassBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private int cachedStrokeW, cachedStrokeH;
     private boolean cachedStrokeDark;
     private int cachedStrokeConfigVer = -1;
+    private boolean cachedSubGlassDefaultFill;
     private boolean isFabPressed;
     private int currentIconColor = 0;
 
@@ -86,6 +89,16 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         shapeGlassStrokePaint.setStyle(Paint.Style.STROKE);
         shapeGlassStrokePaint.setStrokeJoin(Paint.Join.ROUND);
         shapeGlassStrokePaint.setStrokeCap(Paint.Cap.ROUND);
+        shapeGlassGlowPaint.setStyle(Paint.Style.STROKE);
+        shapeGlassGlowPaint.setStrokeJoin(Paint.Join.ROUND);
+        shapeGlassGlowPaint.setStrokeCap(Paint.Cap.ROUND);
+        shapeGlassSeparatorPaint.setStyle(Paint.Style.STROKE);
+        shapeGlassSeparatorPaint.setStrokeJoin(Paint.Join.ROUND);
+        shapeGlassSeparatorPaint.setStrokeCap(Paint.Cap.ROUND);
+        shapeGlassFillPaint.setStyle(Paint.Style.FILL);
+        subGlassBorderPaint.setStyle(Paint.Style.STROKE);
+        subGlassBorderPaint.setStrokeJoin(Paint.Join.ROUND);
+        subGlassBorderPaint.setStrokeCap(Paint.Cap.ROUND);
 
         imageView = new RLottieImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -110,8 +123,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 if (shape == 0 && (isSubButton || shapeMorphProgress >= 1f)) {
                     outline.setOval(0, 0, w, h);
                 } else if (shape == 1 && (isSubButton || shapeMorphProgress >= 1f)) {
-                    final int sizeDp = Math.max(1, Math.round(Math.min(w, h) / AndroidUtilities.density));
-                    final float rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
+                    final float rad = Math.min(w, h) * 0.30f;
                     outline.setRoundRect(0, 0, w, h, rad);
                 } else {
                     updateShapePath(w, h);
@@ -122,8 +134,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                         } catch (Throwable ignored) {
                         }
                     }
-                    final int sizeDp = Math.max(1, Math.round(Math.min(w, h) / AndroidUtilities.density));
-                    final float rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
+                    final float rad = Math.min(w, h) * 0.30f;
                     outline.setRoundRect(0, 0, w, h, rad);
                 }
             }
@@ -132,31 +143,6 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             setTranslationZ(dpf2(0.5f));
         }
         setClipToOutline(false);
-
-        if (isSubButton) {
-            iBlur3ColorProviderTabs = new BlurredBackgroundColorProviderThemed(null, Theme.key_dialogBackground) {
-                @Override
-                public int getStrokeColorTop() {
-                    return isDark() ? 0x06FFFFFF : 0x11000000;
-                }
-
-                @Override
-                public int getStrokeColorBottom() {
-                    return isDark() ? 0x11FFFFFF : 0x20000000;
-                }
-
-                @Override
-                public int getShadowColor() {
-                    return isDark() ? 0x04FFFFFF : 0x20000000;
-                }
-            };
-            iBlur3SourceColor = new GlassSourceColor();
-            iBlur3Background = new BlurredBackgroundDrawable(iBlur3SourceColor);
-            iBlur3Background.setColorProvider(iBlur3ColorProviderTabs);
-            iBlur3Background.setStrokeWidth(dpf2(0.4f), dpf2(0.4f));
-            iBlur3Background.setRadius(dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18));
-            iBlur3Background.setPadding(dp(5.66f));
-        }
 
         updateColors();
     }
@@ -202,9 +188,6 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         imageView.setImageResource(drawable);
     }
 
-    private GlassSourceColor iBlur3SourceColor;
-    private BlurredBackgroundDrawable iBlur3Background;
-    private BlurredBackgroundColorProviderThemed iBlur3ColorProviderTabs;
     private BlurredBackgroundDrawable fabGlassDrawable;
 
     public void setGlassFactory(org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory factory) {
@@ -231,43 +214,127 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         fabGlassDrawable.setBounds(0, 0, w, h);
         fabGlassDrawable.setPadding(0);
         fabGlassDrawable.setShadowAlpha(0f);
-        final int activeShape = effectiveShapeId();
-        final boolean isMorphing = !isSubButton && shapeMorphProgress < 1f;
-        final boolean customShapeContour = activeShape >= 2 || isMorphing;
-        fabGlassDrawable.solegramSetStrokeHidden(customShapeContour);
-        fabGlassDrawable.setClipToOutline(!customShapeContour);
-        final int sizeDp = Math.max(1, Math.round(Math.min(w, h) / AndroidUtilities.density));
-        final float rad;
-        if (activeShape == 0 || customShapeContour) {
-            rad = Math.min(w, h) / 2f;
-        } else {
-            rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
+        // Always disable the shader's fixed rounded-rect/circle rim on FABs so main & sub FABs share one unified shapePath glass contour across all 44 shapes and morphs
+        fabGlassDrawable.solegramSetStrokeHidden(true);
+        fabGlassDrawable.setClipToOutline(false);
+        fabGlassDrawable.setRadius(Math.min(w, h) / 2f);
+    }
+
+    private boolean isGlassDarkSurface() {
+        int bgCol = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
+        if (bgCol == 0) {
+            return Theme.isCurrentThemeDark();
         }
-        fabGlassDrawable.setRadius(rad);
+        return Theme.isCurrentThemeDark() || androidx.core.graphics.ColorUtils.calculateLuminance(bgCol | 0xFF000000) < 0.45;
+    }
+
+    private float getGlassRimStrength() {
+        final boolean glassOn = app.exteraless.glass.LiquidGlassConfig.glassOn;
+        if (!glassOn) {
+            return 1f;
+        }
+        final float rimNorm = Math.max(0f, app.exteraless.glass.LiquidGlassConfig.glassRim / 100f);
+        final float hlNorm = Math.max(0f, app.exteraless.glass.LiquidGlassConfig.glassHighlight / 100f);
+        return Math.max(rimNorm, hlNorm * 0.9f);
+    }
+
+    private void ensureShapeGlassShaders(int w, int h, float strength) {
+        final boolean dark = isGlassDarkSurface();
+        final int tintCol = app.exteraless.glass.SolegramGlass.tintColor(resourcesProvider);
+        final int cfgVer = app.exteraless.glass.LiquidGlassConfig.version * 31 + tintCol;
+        if (shapeGlassStrokePaint.getShader() != null && cachedStrokeW == w && cachedStrokeH == h
+                && cachedStrokeDark == dark && cachedStrokeConfigVer == cfgVer) {
+            return;
+        }
+        cachedStrokeW = w;
+        cachedStrokeH = h;
+        cachedStrokeDark = dark;
+        cachedStrokeConfigVer = cfgVer;
+
+        final float s = Math.min(1.5f, Math.max(0f, strength));
+        final float sClamped = Math.min(1f, s);
+        final float opacityNorm = Math.max(0.4f, Math.min(1f, app.exteraless.glass.LiquidGlassConfig.glassOpacity / 100f));
+
+        // Translucent dome glass surface sheen so any FAB silhouette remains clearly visible over uniform dark/light backgrounds
+        final int fillTopAlpha = dark
+                ? Math.round(255f * (0.07f + 0.055f * opacityNorm + 0.02f * sClamped))
+                : Math.round(255f * (0.12f + 0.08f * opacityNorm));
+        final int fillBotAlpha = dark
+                ? Math.round(255f * (0.025f + 0.03f * opacityNorm))
+                : Math.round(255f * (0.04f + 0.04f * opacityNorm));
+        int fillTop = androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, fillTopAlpha);
+        int fillBot = androidx.core.graphics.ColorUtils.setAlphaComponent(dark ? 0xFFFFFFFF : 0xFF000000, fillBotAlpha);
+        if (tintCol != 0 && app.exteraless.glass.LiquidGlassConfig.glassTintAmount > 0) {
+            float tintK = Math.min(0.45f, 0.16f + 0.25f * (app.exteraless.glass.LiquidGlassConfig.glassTintAmount / 60f));
+            fillTop = androidx.core.graphics.ColorUtils.blendARGB(fillTop, androidx.core.graphics.ColorUtils.setAlphaComponent(tintCol, Math.min(255, fillTopAlpha + 20)), tintK);
+            fillBot = androidx.core.graphics.ColorUtils.blendARGB(fillBot, androidx.core.graphics.ColorUtils.setAlphaComponent(tintCol, Math.min(255, fillBotAlpha + 12)), tintK);
+        }
+        shapeGlassFillPaint.setShader(new LinearGradient(0, 0, w, h,
+                new int[]{fillTop, fillBot}, new float[]{0f, 1f}, Shader.TileMode.CLAMP));
+
+        // Soft inner bevel glow along the glass edge
+        final int glowTopAlpha = dark
+                ? Math.min(115, Math.round(255f * (0.07f + 0.15f * s)))
+                : Math.min(150, Math.round(255f * (0.14f + 0.22f * s)));
+        final int glowMidAlpha = Math.round(glowTopAlpha * 0.35f);
+        final int glowBotAlpha = Math.round(glowTopAlpha * 0.72f);
+        shapeGlassGlowPaint.setShader(new LinearGradient(0, 0, w, h,
+                new int[]{
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, glowTopAlpha),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, glowMidAlpha),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, glowBotAlpha)
+                },
+                new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+
+        // Crisp 45-deg specular rim contour following the vector shapePath
+        final int topA = dark
+                ? Math.max(72, Math.min(245, Math.round(255f * (0.28f + 0.44f * s))))
+                : Math.max(150, Math.min(248, Math.round(255f * (0.58f + 0.35f * s))));
+        final int midA = Math.max(28, Math.round(topA * 0.36f));
+        final int botA = Math.max(48, Math.round(topA * 0.72f));
+        shapeGlassStrokePaint.setShader(new LinearGradient(0, 0, w, h,
+                new int[]{
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, topA),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, midA),
+                        androidx.core.graphics.ColorUtils.setAlphaComponent(0xFFFFFFFF, botA)
+                },
+                new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
+
+        if (!dark) {
+            final int sepTop = Math.round(255f * (0.10f + 0.08f * sClamped));
+            final int sepBot = Math.round(255f * (0.16f + 0.10f * sClamped));
+            shapeGlassSeparatorPaint.setShader(new LinearGradient(0, 0, w, h,
+                    new int[]{
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(0xFF000000, sepTop),
+                            androidx.core.graphics.ColorUtils.setAlphaComponent(0xFF000000, sepBot)
+                    },
+                    new float[]{0f, 1f}, Shader.TileMode.CLAMP));
+        } else {
+            shapeGlassSeparatorPaint.setShader(null);
+        }
+    }
+
+    private void drawGlassSurfaceSeparation(Canvas canvas, int w, int h) {
+        final float strength = getGlassRimStrength();
+        ensureShapeGlassShaders(w, h, strength);
+        canvas.drawPath(shapePath, shapeGlassFillPaint);
     }
 
     private void drawShapeGlassOutline(Canvas canvas, int w, int h) {
-        final int activeShape = effectiveShapeId();
-        final boolean isMorphing = !isSubButton && shapeMorphProgress < 1f;
-        if (activeShape < 2 && !isMorphing) {
+        final float strength = getGlassRimStrength();
+        if (strength <= 0.01f) {
             return;
         }
-        final boolean dark = Theme.isCurrentThemeDark();
-        final int cfgVer = app.exteraless.glass.LiquidGlassConfig.version;
-        if (shapeGlassStrokePaint.getShader() == null || cachedStrokeW != w || cachedStrokeH != h
-                || cachedStrokeDark != dark || cachedStrokeConfigVer != cfgVer) {
-            cachedStrokeW = w;
-            cachedStrokeH = h;
-            cachedStrokeDark = dark;
-            cachedStrokeConfigVer = cfgVer;
-            final int topCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x70FFFFFF : 0xD8FFFFFF, true);
-            final int midCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x2EFFFFFF : 0x58FFFFFF, true);
-            final int botCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x42FFFFFF : 0x80FFFFFF, false);
-            shapeGlassStrokePaint.setShader(new LinearGradient(0, 0, w, h,
-                    new int[]{topCol, midCol, botCol}, new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
+        ensureShapeGlassShaders(w, h, strength);
+        final boolean dark = isGlassDarkSurface();
+        if (!dark && shapeGlassSeparatorPaint.getShader() != null) {
+            shapeGlassSeparatorPaint.setStrokeWidth(dpf2(0.85f) * 2f);
+            canvas.drawPath(shapePath, shapeGlassSeparatorPaint);
         }
-        final float baseStroke = dpf2(1.25f);
-        shapeGlassStrokePaint.setStrokeWidth(Math.max(dpf2(0.8f), app.exteraless.glass.SolegramGlass.highlightWidth(baseStroke, true)) * 2f);
+        shapeGlassGlowPaint.setStrokeWidth(dpf2(2.6f) * 2f);
+        canvas.drawPath(shapePath, shapeGlassGlowPaint);
+        final float baseStroke = dpf2(1.1f);
+        shapeGlassStrokePaint.setStrokeWidth(Math.max(dpf2(0.95f), app.exteraless.glass.SolegramGlass.highlightWidth(baseStroke, true)) * 2f);
         canvas.drawPath(shapePath, shapeGlassStrokePaint);
     }
 
@@ -313,36 +380,37 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             if (useGlassSub) {
                 fabGlassDrawable.setShadowAlpha(0f);
                 fabGlassDrawable.updateColors();
-                int activeShape = effectiveShapeId();
+                cachedSubGlassDefaultFill = false;
                 setTranslationZ(0f);
-                setClipToOutline(activeShape == 0 || activeShape == 1);
+                setClipToOutline(false);
                 invalidateOutline();
                 setBackground(null);
                 configureFabGlassDrawable(getWidth(), getHeight());
                 invalidate();
-            } else if (customBgCode != 0) {
-                setTranslationZ(dpf2(0.5f));
-                setClipToOutline(false);
-                int rad = dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(app.exteraless.appearance.AppearanceConfig.subFabSize()));
-                int pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
-                setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, customBg, pressedColor));
             } else {
                 setTranslationZ(dpf2(0.5f));
                 setClipToOutline(false);
-                if (iBlur3SourceColor != null) {
-                    iBlur3SourceColor.setColor(defBg);
+                invalidateOutline();
+                final boolean dark = isGlassDarkSurface();
+                final int fillColor;
+                final int pressedColor;
+                if (customBgCode != 0) {
+                    fillColor = customBg;
+                    pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
+                    cachedSubGlassDefaultFill = false;
+                } else {
+                    fillColor = dark
+                            ? androidx.core.graphics.ColorUtils.blendARGB(defBg, 0xFFFFFFFF, 0.08f)
+                            : defBg;
+                    pressedColor = androidx.core.graphics.ColorUtils.blendARGB(fillColor, dark ? 0xFFFFFFFF : 0xFF000000, 0.12f);
+                    subGlassBorderPaint.setColor(dark ? 0x24FFFFFF : 0x1F000000);
+                    subGlassBorderPaint.setStrokeWidth(dpf2(0.6f) * 2f);
+                    cachedSubGlassDefaultFill = true;
                 }
-                if (iBlur3ColorProviderTabs != null) {
-                    iBlur3ColorProviderTabs.updateColors();
-                }
-                if (iBlur3Background != null) {
-                    iBlur3Background.updateColors();
-                }
+                fabBgPaint.setColor(fillColor);
+                fabPressedPaint.setColor(pressedColor);
+                setBackground(null);
                 invalidate();
-
-                int rad = dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(app.exteraless.appearance.AppearanceConfig.subFabSize()));
-                int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
-                setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
             }
         } else {
             if (currentShapeId < 0 || (!isMorphedToActive && (shapeMorphAnimator == null || !shapeMorphAnimator.isRunning()))) {
@@ -367,9 +435,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 fabGlassDrawable.updateColors();
                 configureFabGlassDrawable(getWidth(), getHeight());
             }
-            int activeShape = effectiveShapeId();
+            cachedSubGlassDefaultFill = false;
             setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
-            setClipToOutline(useGlassFab && (activeShape == 0 || activeShape == 1) && shapeMorphProgress >= 1f);
+            setClipToOutline(false);
             invalidateOutline();
             currentIconColor = iconCol;
 
@@ -404,7 +472,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     @Override
     public void setPressed(boolean pressed) {
         super.setPressed(pressed);
-        if ((!isSubButton || isGlassFabActive()) && isFabPressed != pressed) {
+        if (isFabPressed != pressed) {
             isFabPressed = pressed;
             invalidate();
         }
@@ -413,11 +481,6 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     @Override
     protected void dispatchDraw(Canvas canvas) {
         final boolean glassFab = isGlassFabActive();
-        if (isSubButton && !glassFab) {
-            super.dispatchDraw(canvas);
-            return;
-        }
-
         int w = getWidth();
         int h = getHeight();
         if (w <= 0 || h <= 0) {
@@ -431,8 +494,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             canvas.save();
             canvas.clipPath(shapePath);
             fabGlassDrawable.draw(canvas);
+            drawGlassSurfaceSeparation(canvas, w, h);
             if (isFabPressed) {
-                canvas.drawColor(Theme.isCurrentThemeDark() ? 0x22FFFFFF : 0x18000000);
+                canvas.drawColor(isGlassDarkSurface() ? 0x22FFFFFF : 0x18000000);
             }
             super.dispatchDraw(canvas);
             drawShapeGlassOutline(canvas, w, h);
@@ -444,6 +508,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         canvas.save();
         canvas.clipPath(shapePath);
         super.dispatchDraw(canvas);
+        if (cachedSubGlassDefaultFill) {
+            canvas.drawPath(shapePath, subGlassBorderPaint);
+        }
         canvas.restore();
     }
 
@@ -505,7 +572,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             progressView.setProgressColor(targetIconColor);
             currentIconColor = targetIconColor;
             setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
-            setClipToOutline(useGlassFab && (targetShape == 0 || targetShape == 1));
+            setClipToOutline(false);
             invalidateOutline();
             applyFabSize(targetSizeDp);
             configureFabGlassDrawable(getWidth(), getHeight());
@@ -564,7 +631,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 progressView.setProgressColor(targetIconColor);
                 currentIconColor = targetIconColor;
                 setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
-                setClipToOutline(useGlassFab && (targetShapeId == 0 || targetShapeId == 1));
+                setClipToOutline(false);
                 invalidateOutline();
                 applyFabSize(targetSizeDp);
                 setActiveTranslationY(targetShiftY);
@@ -644,18 +711,12 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     @Override
     protected void onSizeChanged(int w, int h, int oldw, int oldh) {
         super.onSizeChanged(w, h, oldw, oldh);
-        if (iBlur3Background != null) {
-            iBlur3Background.setBounds(0, 0, w, h);
-        }
         configureFabGlassDrawable(w, h);
         invalidateOutline();
     }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (isSubButton && !isGlassFabActive() && iBlur3Background != null) {
-            iBlur3Background.draw(canvas);
-        }
         super.draw(canvas);
     }
 

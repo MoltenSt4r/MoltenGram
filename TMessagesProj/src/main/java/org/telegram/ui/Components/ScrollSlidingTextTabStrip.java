@@ -336,6 +336,13 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         int newColor = isChipFoldersEnabled() ? getChipTextColor(true) : processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
         int prevColor = isChipFoldersEnabled() ? getChipTextColor(false) : processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
 
+        boolean md3 = isChipFoldersEnabled();
+        float blendT = value;
+        if (md3 && (animatingIndicator || swipingToPosition >= 0)) {
+            boolean manualDrag = !animatingIndicator && swipingToPosition >= 0;
+            float rawT = animatingIndicator ? chipAnimRawProgress : swipingProgress;
+            blendT = Md3ChipTabHelper.getTextTransitionProgress(rawT, manualDrag);
+        }
         int r1 = Color.red(newColor);
         int g1 = Color.green(newColor);
         int b1 = Color.blue(newColor);
@@ -345,8 +352,8 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         int b2 = Color.blue(prevColor);
         int a2 = Color.alpha(prevColor);
 
-        prevTab.setTextColor(Color.argb((int) (a1 + (a2 - a1) * value), (int) (r1 + (r2 - r1) * value), (int) (g1 + (g2 - g1) * value), (int) (b1 + (b2 - b1) * value)));
-        newTab.setTextColor(Color.argb((int) (a2 + (a1 - a2) * value), (int) (r2 + (r1 - r2) * value), (int) (g2 + (g1 - g2) * value), (int) (b2 + (b1 - b2) * value)));
+        prevTab.setTextColor(Color.argb((int) (a1 + (a2 - a1) * blendT), (int) (r1 + (r2 - r1) * blendT), (int) (g1 + (g2 - g1) * blendT), (int) (b1 + (b2 - b1) * blendT)));
+        newTab.setTextColor(Color.argb((int) (a2 + (a1 - a2) * blendT), (int) (r2 + (r1 - r2) * blendT), (int) (g2 + (g1 - g2) * blendT), (int) (b2 + (b1 - b2) * blendT)));
 
         indicatorX = animateIndicatorStartX + (animateIndicatorToX - animateIndicatorStartX) * value;
         indicatorWidth = animateIndicatorStartWidth + (animateIndicatorToWidth - animateIndicatorStartWidth) * value;
@@ -889,13 +896,18 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                 int count = tabsContainer.getChildCount();
                 int fromPos = animatingIndicator ? previousPosition : currentPosition;
                 int toPos = animatingIndicator ? currentPosition : (swipingToPosition >= 0 ? swipingToPosition : currentPosition);
-                float t = animatingIndicator ? Math.max(0f, Math.min(1f, animationIdicatorProgress)) : (swipingToPosition >= 0 ? swipingProgress : 1f);
+                boolean inTransition = animatingIndicator || swipingToPosition >= 0;
+                boolean manualDrag = !animatingIndicator && swipingToPosition >= 0;
+                float rawT = animatingIndicator ? chipAnimRawProgress : (swipingToPosition >= 0 ? swipingProgress : 1f);
+                float t = inTransition ? Md3ChipTabHelper.getPillWidthProgress(rawT, manualDrag) : 1f;
                 float transitionSX = 1f;
                 float transitionSY = 1f;
-                if (animatingIndicator) {
-                    float moveT = Md3ChipTabHelper.getPillTravelProgress(chipAnimRawProgress);
-                    transitionSX = Md3ChipTabHelper.getPillTransitionScaleX(chipAnimRawProgress);
-                    transitionSY = Md3ChipTabHelper.getPillTransitionScaleY(chipAnimRawProgress);
+                float transitionAlpha = 1f;
+                if (inTransition) {
+                    float moveT = Md3ChipTabHelper.getPillTravelProgress(rawT, manualDrag);
+                    transitionSX = Md3ChipTabHelper.getPillTransitionScaleX(rawT, manualDrag);
+                    transitionSY = Md3ChipTabHelper.getPillTransitionScaleY(rawT, manualDrag);
+                    transitionAlpha = Md3ChipTabHelper.getPillTransitionAlpha(rawT, manualDrag);
                     float startW = animateIndicatorStartWidth + indicatorWidthAnimationDx;
                     float endW = animateIndicatorToWidth + indicatorWidthAnimationDx;
                     float curW = startW + (endW - startW) * t;
@@ -922,7 +934,10 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                     }
                     float slotLeft = baseX + tab.getLeft() + tab.getTranslationX() + chipInsetH;
                     float slotRight = baseX + tab.getRight() + tab.getTranslationX() - chipInsetH;
-                    float overlapAlpha = Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight);
+                    float rawOverlapAlpha = Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight);
+                    float overlapAlpha = transitionAlpha < 1f
+                            ? 1f - (1f - rawOverlapAlpha) * transitionAlpha
+                            : rawOverlapAlpha;
                     float childAlpha = overlapAlpha * containerAlpha * tab.getAlpha();
                     if (childAlpha <= 0.01f) {
                         continue;
@@ -953,7 +968,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                         pillLeft, pillTop, pillRight, pillBottom,
                         pillSX, pillSY,
                         (pillLeft + pillRight) * 0.5f, (pillTop + pillBottom) * 0.5f,
-                        activeTextColor, containerAlpha,
+                        activeTextColor, containerAlpha * transitionAlpha,
                         fromPos, toPos, count, t,
                         chipRadiiFrom, chipRadiiTo, chipRadiiOut
                 );

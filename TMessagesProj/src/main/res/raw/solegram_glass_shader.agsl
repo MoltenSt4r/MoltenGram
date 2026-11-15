@@ -36,20 +36,19 @@ half4 main(in float2 fragCoord) {
   half edge = 0.0;
   half maxRadius = max(max(radius.x, radius.y), max(radius.z, radius.w));
   if (rim < 0.0) {
-    // Custom vector contour clipped by Path: smooth radial lens dome without circular/rect rim seam.
+    // Custom vector contour clipped externally by Path: gentle smooth glass dome without a fixed circular/rect halo seam.
     half2 halfSize = max(size, half2(1.0));
     half2 u = p / halfSize;
     half len = length(u);
     half2 dir = len > 0.0001 ? (u / len) : half2(0.0);
-    half t = min(len, 1.414);
-    half s = (t * t) / (1.0 + 0.5 * t * t);
-    half domeSin = s * 0.55;
+    half t = min(len, 1.0);
+    half domeSin = t * 0.18;
     half domeCos = sqrt(max(1.0 - domeSin * domeSin, 0.01));
     half3 normal = half3(dir * domeSin, domeCos);
 
     half3 refract_vec = refract(half3(0.0, 0.0, -1.0), normal, 1.0 / refract_index);
-    half h = thickness * (1.0 - 0.45 * s);
-    half refract_length = (h + 8.0 * thickness) / -refract_vec.z;
+    half h = thickness * (1.0 - 0.30 * t);
+    half refract_length = (h + 6.0 * thickness) / -refract_vec.z;
 
     offset = refract_vec.xy * refract_length * refract_intensity;
     uv += offset;
@@ -74,12 +73,13 @@ half4 main(in float2 fragCoord) {
   uv = clamp(uv, center - size + 0.5, center + size - 0.5);
 
   half4 color = img.eval(uv);
-  if (dispersion > 0.0 && (rim < 0.0 || sdRaw < 0.0)) {
+  half disp = rim < 0.0 ? dispersion * 0.35 : dispersion;
+  if (disp > 0.0 && (rim < 0.0 || sdRaw < 0.0)) {
     // five taps across the spectrum instead of three hard copies: soft rainbow fringes along the bevel
-    half4 c0 = img.eval(clamp(uv + offset * dispersion, center - size + 0.5, center + size - 0.5));
-    half4 c1 = img.eval(clamp(uv + offset * dispersion * 0.5, center - size + 0.5, center + size - 0.5));
-    half4 c3 = img.eval(clamp(uv - offset * dispersion * 0.5, center - size + 0.5, center + size - 0.5));
-    half4 c4 = img.eval(clamp(uv - offset * dispersion, center - size + 0.5, center + size - 0.5));
+    half4 c0 = img.eval(clamp(uv + offset * disp, center - size + 0.5, center + size - 0.5));
+    half4 c1 = img.eval(clamp(uv + offset * disp * 0.5, center - size + 0.5, center + size - 0.5));
+    half4 c3 = img.eval(clamp(uv - offset * disp * 0.5, center - size + 0.5, center + size - 0.5));
+    half4 c4 = img.eval(clamp(uv - offset * disp, center - size + 0.5, center + size - 0.5));
     color = half4(c0.r * 0.45 + c1.r * 0.35 + color.r * 0.2,
                   c1.g * 0.2 + color.g * 0.55 + c3.g * 0.25,
                   color.b * 0.1 + c3.b * 0.4 + c4.b * 0.5,

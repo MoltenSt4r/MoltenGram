@@ -179,7 +179,11 @@ public final class Md3ChipTabHelper {
                 return AppearanceConfig.chipFoldersColorTextInactive.Int();
             }
             if (md3Colors && style == 0) {
-                return AppearanceConfig.resolveThemeToken("on_surface", unactiveThemeColor);
+                int primary = AppearanceConfig.resolveThemeToken("primary", activeThemeColor);
+                int onContainer = AppearanceConfig.resolveThemeToken("on_primary_container", unactiveThemeColor);
+                return Theme.isCurrentThemeDark()
+                        ? ColorUtils.blendARGB(primary, onContainer, 0.30f)
+                        : ColorUtils.blendARGB(primary, onContainer, 0.45f);
             }
             return unactiveThemeColor;
         }
@@ -338,55 +342,99 @@ public final class Md3ChipTabHelper {
         if (!isEnabled()) {
             return Math.max(1L, baseDurationMs);
         }
-        if (getAnimMode() == ANIM_NONE) {
+        final int mode = getAnimMode();
+        if (mode == ANIM_NONE) {
             return 0L;
         }
-        return Math.max(60L, Math.round(getScaledDurationMs(baseDurationMs)));
+        float modeMul = 1f;
+        switch (mode) {
+            case ANIM_JELLY:
+                modeMul = 1.35f;
+                break;
+            case ANIM_SQUEEZE:
+                modeMul = 1.15f;
+                break;
+            case ANIM_PRESS:
+                modeMul = 1.10f;
+                break;
+            case ANIM_SPRING:
+                modeMul = 1.45f;
+                break;
+            default:
+                break;
+        }
+        return Math.max(40L, Math.round(getScaledDurationMs(Math.round(baseDurationMs * modeMul))));
     }
 
     public static float getScaledDurationMs(long baseDurationMs) {
         int speed = Math.max(25, AppearanceConfig.chipFoldersAnimSpeed.Int());
-        return Math.max(40f, baseDurationMs * 100f / speed);
+        return Math.max(35f, baseDurationMs * 100f / speed);
     }
 
     public static float getStandardProgress(float rawT) {
+        return getStandardProgress(rawT, false);
+    }
+
+    public static float getStandardProgress(float rawT, boolean manualDrag) {
         float t = Math.max(0f, Math.min(1f, rawT));
         if (!isEnabled()) {
             return t;
         }
         if (getAnimMode() == ANIM_NONE) {
-            return 1f;
+            return manualDrag ? (t >= 0.5f ? 1f : 0f) : 1f;
+        }
+        if (manualDrag) {
+            return t;
         }
         float inv = 1f - t;
         return 1f - inv * inv * inv;
     }
 
     public static float getPillTravelProgress(float rawT) {
+        return getPillTravelProgress(rawT, false);
+    }
+
+    public static float getPillTravelProgress(float rawT, boolean manualDrag) {
         float t = Math.max(0f, Math.min(1f, rawT));
         if (!isEnabled()) {
             return t;
         }
         switch (getAnimMode()) {
             case ANIM_NONE:
-                return 1f;
+                return manualDrag ? (t >= 0.5f ? 1f : 0f) : 1f;
+            case ANIM_PRESS: {
+                // Non-gliding tactile cross-press: depresses outgoing pill first, then snaps to target and rebounds
+                float threshold = manualDrag ? 0.5f : 0.28f;
+                return t >= threshold ? 1f : 0f;
+            }
             case ANIM_JELLY: {
+                if (manualDrag) {
+                    float smooth = t * t * (3f - 2f * t);
+                    float elastic = (float) Math.sin(t * Math.PI * 2.0) * 0.08f * (1f - t);
+                    return smooth + elastic;
+                }
                 float p = t - 1f;
-                float s = 1.45f;
+                float s = 2.05f;
                 float back = 1f + p * p * ((s + 1f) * p + s);
-                float wobble = (float) (Math.sin(t * Math.PI * 3.0) * p * p * 0.055);
+                float wobble = (float) (Math.sin(t * Math.PI * 3.5) * p * p * 0.075);
                 return back + wobble;
             }
             case ANIM_SPRING: {
-                double decay = Math.exp(-5.8 * t);
-                double osc = Math.cos(9.5 * t) + (5.8 / 9.5) * Math.sin(9.5 * t);
+                if (manualDrag) {
+                    float smooth = (float) (1.0 - Math.cos(t * Math.PI)) * 0.5f;
+                    return smooth + (float) (Math.sin(t * Math.PI) * 0.09);
+                }
+                double decay = Math.exp(-4.3 * t);
+                double osc = Math.cos(11.5 * t) + (4.3 / 11.5) * Math.sin(11.5 * t);
                 float spring = (float) (1.0 - decay * osc);
                 float endBlend = t > 0.85f ? (t - 0.85f) / 0.15f : 0f;
                 return spring * (1f - endBlend) + endBlend;
             }
-            case ANIM_PRESS: {
-                return 1f - (float) Math.pow(1f - t, 2.4);
+            case ANIM_SQUEEZE: {
+                return t < 0.5f
+                        ? 4f * t * t * t
+                        : 1f - (float) Math.pow(-2f * t + 2f, 3) * 0.5f;
             }
-            case ANIM_SQUEEZE:
             default: {
                 float inv = 1f - t;
                 return 1f - inv * inv * inv;
@@ -394,23 +442,85 @@ public final class Md3ChipTabHelper {
         }
     }
 
+    public static float getPillWidthProgress(float rawT, boolean manualDrag) {
+        float t = Math.max(0f, Math.min(1f, rawT));
+        if (!isEnabled()) {
+            return t;
+        }
+        int mode = getAnimMode();
+        if (mode == ANIM_NONE) {
+            return manualDrag ? (t >= 0.5f ? 1f : 0f) : 1f;
+        }
+        if (mode == ANIM_PRESS) {
+            float threshold = manualDrag ? 0.5f : 0.28f;
+            return t >= threshold ? 1f : 0f;
+        }
+        return getStandardProgress(t, manualDrag);
+    }
+
+    public static float getPillTransitionAlpha(float rawT, boolean manualDrag) {
+        if (!isEnabled() || rawT <= 0f || rawT >= 1f) {
+            return 1f;
+        }
+        if (getAnimMode() != ANIM_PRESS) {
+            return 1f;
+        }
+        float t = Math.max(0f, Math.min(1f, rawT));
+        float threshold = manualDrag ? 0.5f : 0.28f;
+        if (t < threshold) {
+            float k = t / threshold;
+            return 1f - 0.72f * k * k;
+        }
+        float k = (t - threshold) / (1f - threshold);
+        return Math.min(1f, 0.32f + 0.68f * (float) Math.pow(k, 0.45));
+    }
+
+    public static float getTextTransitionProgress(float rawT, boolean manualDrag) {
+        float t = Math.max(0f, Math.min(1f, rawT));
+        if (!isEnabled()) {
+            return t;
+        }
+        int mode = getAnimMode();
+        if (mode == ANIM_NONE) {
+            return manualDrag ? (t >= 0.5f ? 1f : 0f) : 1f;
+        }
+        if (mode == ANIM_PRESS) {
+            float threshold = manualDrag ? 0.5f : 0.28f;
+            return t >= threshold ? 1f : 0f;
+        }
+        return t;
+    }
+
     public static float getPillTransitionScaleX(float rawT) {
+        return getPillTransitionScaleX(rawT, false);
+    }
+
+    public static float getPillTransitionScaleX(float rawT, boolean manualDrag) {
         if (!isEnabled() || rawT <= 0f || rawT >= 1f) {
             return 1f;
         }
         float t = Math.max(0f, Math.min(1f, rawT));
         switch (getAnimMode()) {
             case ANIM_JELLY: {
-                float stretch = (float) (Math.sin(t * Math.PI) * (1f - t) * 0.22);
-                float wobble = (float) (Math.sin(t * Math.PI * 3.0) * Math.pow(1f - t, 1.5) * 0.12);
-                return 1f + stretch + wobble;
+                float stretch = (float) (Math.sin(t * Math.PI) * (1f - t) * (manualDrag ? 0.26 : 0.36));
+                float wobble = (float) (Math.cos(t * Math.PI * 3.5) * Math.pow(1f - t, 1.4) * (manualDrag ? 0.08 : 0.16));
+                return Math.max(0.68f, 1f + stretch + wobble);
             }
             case ANIM_SQUEEZE:
-                return 1f - (float) Math.sin(t * Math.PI) * 0.16f;
-            case ANIM_PRESS:
-                return 1f - (float) Math.sin(t * Math.PI) * 0.08f;
+                return 1f - (float) Math.sin(t * Math.PI) * (manualDrag ? 0.30f : 0.40f);
+            case ANIM_PRESS: {
+                float threshold = manualDrag ? 0.5f : 0.28f;
+                if (t < threshold) {
+                    float k = t / threshold;
+                    return 1f - 0.24f * (k * k);
+                }
+                float k = (t - threshold) / (1f - threshold);
+                float settle = 0.76f + 0.24f * (1f - (float) Math.pow(1f - k, 2.5));
+                float rebound = (float) Math.sin(k * Math.PI) * 0.07f * (1f - k * 0.4f);
+                return settle + rebound;
+            }
             case ANIM_SPRING:
-                return 1f + (float) (Math.sin(t * Math.PI * 2.2) * Math.exp(-4.0 * t) * 0.09);
+                return 1f - (float) (Math.sin(t * Math.PI * 2.5) * Math.exp(-3.4 * t) * (manualDrag ? 0.08 : 0.14));
             case ANIM_NONE:
             default:
                 return 1f;
@@ -418,22 +528,35 @@ public final class Md3ChipTabHelper {
     }
 
     public static float getPillTransitionScaleY(float rawT) {
+        return getPillTransitionScaleY(rawT, false);
+    }
+
+    public static float getPillTransitionScaleY(float rawT, boolean manualDrag) {
         if (!isEnabled() || rawT <= 0f || rawT >= 1f) {
             return 1f;
         }
         float t = Math.max(0f, Math.min(1f, rawT));
         switch (getAnimMode()) {
             case ANIM_JELLY: {
-                float stretch = (float) (Math.sin(t * Math.PI) * (1f - t) * 0.22);
-                float wobble = (float) (Math.sin(t * Math.PI * 3.0) * Math.pow(1f - t, 1.5) * 0.12);
-                return 1f - stretch * 0.65f - wobble * 0.85f;
+                float stretch = (float) (Math.sin(t * Math.PI) * (1f - t) * (manualDrag ? 0.20 : 0.28));
+                float wobble = (float) (Math.cos(t * Math.PI * 3.5) * Math.pow(1f - t, 1.4) * (manualDrag ? 0.07 : 0.14));
+                return Math.max(0.66f, 1f - stretch * 0.80f - wobble * 0.90f);
             }
             case ANIM_SQUEEZE:
-                return 1f - (float) Math.sin(t * Math.PI) * 0.16f;
-            case ANIM_PRESS:
-                return 1f - (float) Math.sin(t * Math.PI) * 0.08f;
+                return 1f - (float) Math.sin(t * Math.PI) * (manualDrag ? 0.22f : 0.28f);
+            case ANIM_PRESS: {
+                float threshold = manualDrag ? 0.5f : 0.28f;
+                if (t < threshold) {
+                    float k = t / threshold;
+                    return 1f - 0.24f * (k * k);
+                }
+                float k = (t - threshold) / (1f - threshold);
+                float settle = 0.76f + 0.24f * (1f - (float) Math.pow(1f - k, 2.5));
+                float rebound = (float) Math.sin(k * Math.PI) * 0.07f * (1f - k * 0.4f);
+                return settle + rebound;
+            }
             case ANIM_SPRING:
-                return 1f + (float) (Math.sin(t * Math.PI * 2.2) * Math.exp(-4.0 * t) * 0.09);
+                return 1f + (float) (Math.sin(t * Math.PI * 2.5) * Math.exp(-3.4 * t) * (manualDrag ? 0.06 : 0.11));
             case ANIM_NONE:
             default:
                 return 1f;
@@ -447,13 +570,13 @@ public final class Md3ChipTabHelper {
         float p = Math.max(0f, Math.min(1f, pressProgress));
         switch (getAnimMode()) {
             case ANIM_JELLY:
-                return 1f + 0.045f * p;
+                return 1f + 0.065f * p;
             case ANIM_SQUEEZE:
-                return 1f - 0.095f * p;
+                return 1f - 0.135f * p;
             case ANIM_PRESS:
-                return 1f - 0.075f * p;
+                return 1f - 0.135f * p;
             case ANIM_SPRING:
-                return 1f - 0.06f * p;
+                return 1f - 0.09f * p;
             case ANIM_NONE:
             default:
                 return 1f;
@@ -467,13 +590,13 @@ public final class Md3ChipTabHelper {
         float p = Math.max(0f, Math.min(1f, pressProgress));
         switch (getAnimMode()) {
             case ANIM_JELLY:
-                return 1f - 0.08f * p;
+                return 1f - 0.105f * p;
             case ANIM_SQUEEZE:
-                return 1f - 0.095f * p;
+                return 1f - 0.105f * p;
             case ANIM_PRESS:
-                return 1f - 0.075f * p;
+                return 1f - 0.135f * p;
             case ANIM_SPRING:
-                return 1f - 0.06f * p;
+                return 1f - 0.09f * p;
             case ANIM_NONE:
             default:
                 return 1f;
