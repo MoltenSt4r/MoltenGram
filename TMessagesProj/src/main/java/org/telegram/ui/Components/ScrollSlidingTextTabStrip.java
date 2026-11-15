@@ -105,6 +105,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
     private final float[] chipRadiiOut = new float[8];
     private int swipingToPosition = -1;
     private float swipingProgress;
+    private float chipAnimRawProgress = 1f;
 
     private int tabLineColorKey = Theme.key_actionBarTabLine;
     private int activeTextColorKey = Theme.key_actionBarTabActiveText;
@@ -467,6 +468,25 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         return idToPosition.get(id, -1) != -1;
     }
 
+    private class ChipTabTextView extends AnimatedEmojiSpan.TextViewEmojis implements Md3ChipTabHelper.ChipPressHost {
+        protected final Md3ChipTabHelper.PressState md3PressState = new Md3ChipTabHelper.PressState();
+
+        ChipTabTextView(Context context) {
+            super(context);
+        }
+
+        @Override
+        public void setPressed(boolean pressed) {
+            super.setPressed(pressed);
+            md3PressState.onPressedChanged(this, tabsContainer, ScrollSlidingTextTabStrip.this);
+        }
+
+        @Override
+        public float getMd3PressProgress() {
+            return md3PressState.getProgress();
+        }
+    }
+
     public void addTextTab(final int id, CharSequence text) {
         addTextTab(id, text, null, null);
     }
@@ -490,7 +510,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             viewsCache.delete(id);
         }
         if (tab == null) {
-            tab = new AnimatedEmojiSpan.TextViewEmojis(getContext()) {
+            tab = new ChipTabTextView(getContext()) {
                 @Override
                 public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
                     super.onInitializeAccessibilityNodeInfo(info);
@@ -504,6 +524,14 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                 }
                 @Override
                 protected void onDraw(Canvas canvas) {
+                    final float pressP = md3PressState.step(this, tabsContainer, ScrollSlidingTextTabStrip.this);
+                    final float pressSX = Md3ChipTabHelper.getPressScaleX(pressP);
+                    final float pressSY = Md3ChipTabHelper.getPressScaleY(pressP);
+                    final boolean pressScaled = Math.abs(pressSX - 1f) > 0.001f || Math.abs(pressSY - 1f) > 0.001f;
+                    if (pressScaled) {
+                        canvas.save();
+                        canvas.scale(pressSX, pressSY, getWidth() * 0.5f, getHeight() * 0.5f);
+                    }
                     final float reordering = reorderingAlpha.set(ScrollSlidingTextTabStrip.this.reordering);
                     if (delegate != null && delegate.canReorder(id)) {
                         if (reordering > 0) {
@@ -525,6 +553,9 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                         if (reordering > 0) {
                             canvas.restore();
                         }
+                    }
+                    if (pressScaled) {
+                        canvas.restore();
                     }
                 }
             };
@@ -586,12 +617,35 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             animateIndicatorToWidth = getChildWidth(nextChild);
             animateIndicatorToX = nextChild.getLeft() + (nextChild.getMeasuredWidth() - animateIndicatorToWidth) / 2f;
         }
+        final boolean md3 = isChipFoldersEnabled();
+        if (md3 && Md3ChipTabHelper.getAnimMode() == Md3ChipTabHelper.ANIM_NONE) {
+            animatingIndicator = false;
+            chipAnimRawProgress = 1f;
+            setEnabled(true);
+            setAnimationIdicatorProgress(1.0f);
+            refreshChipTabStyles();
+            if (delegate != null) {
+                delegate.onPageSelected(pageId, scrollingForward);
+                delegate.onPageScrolled(1.0f);
+            }
+            scrollToChild(position1, false);
+            return;
+        }
         setEnabled(false);
 
+        chipAnimRawProgress = 0f;
         final ValueAnimator animator = ValueAnimator.ofFloat(0f, 1f);
-        animator.setDuration(Math.max(1L, animationDuration));
-        animator.setInterpolator(interpolator);
-        animator.addUpdateListener(anim -> setAnimationIdicatorProgress((float) anim.getAnimatedValue()));
+        animator.setDuration(md3 ? Md3ChipTabHelper.getIndicatorDurationMs(animationDuration) : Math.max(1L, animationDuration));
+        animator.setInterpolator(md3 ? new android.view.animation.LinearInterpolator() : interpolator);
+        animator.addUpdateListener(anim -> {
+            float raw = (float) anim.getAnimatedValue();
+            if (md3) {
+                chipAnimRawProgress = raw;
+                setAnimationIdicatorProgress(Md3ChipTabHelper.getStandardProgress(raw));
+            } else {
+                setAnimationIdicatorProgress(raw);
+            }
+        });
         animator.addListener(new AnimatorListenerAdapter() {
             private boolean cancelled;
 
@@ -833,6 +887,30 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             float pillBottom = height - getPaddingBottom() - chipInsetV;
             if (isChipFoldersEnabled()) {
                 int count = tabsContainer.getChildCount();
+                int fromPos = animatingIndicator ? previousPosition : currentPosition;
+                int toPos = animatingIndicator ? currentPosition : (swipingToPosition >= 0 ? swipingToPosition : currentPosition);
+                float t = animatingIndicator ? Math.max(0f, Math.min(1f, animationIdicatorProgress)) : (swipingToPosition >= 0 ? swipingProgress : 1f);
+                float transitionSX = 1f;
+                float transitionSY = 1f;
+                if (animatingIndicator) {
+                    float moveT = Md3ChipTabHelper.getPillTravelProgress(chipAnimRawProgress);
+                    transitionSX = Md3ChipTabHelper.getPillTransitionScaleX(chipAnimRawProgress);
+                    transitionSY = Md3ChipTabHelper.getPillTransitionScaleY(chipAnimRawProgress);
+                    float startW = animateIndicatorStartWidth + indicatorWidthAnimationDx;
+                    float endW = animateIndicatorToWidth + indicatorWidthAnimationDx;
+                    float curW = startW + (endW - startW) * t;
+                    float startC = animateIndicatorStartX + indicatorXAnimationDx + startW * 0.5f;
+                    float endC = animateIndicatorToX + indicatorXAnimationDx + endW * 0.5f;
+                    float curC = startC + (endC - startC) * moveT;
+                    l = curC - curW * 0.5f;
+                    r = curC + curW * 0.5f;
+                    if (reordering && current != null) {
+                        l += current.getTranslationX();
+                        r += current.getTranslationX();
+                    }
+                    pillLeft = getPaddingLeft() + l + chipInsetH;
+                    pillRight = getPaddingLeft() + r - chipInsetH;
+                }
                 int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
                 int unactiveTextColor = processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
                 float containerAlpha = tabsContainer.getAlpha();
@@ -845,24 +923,40 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
                     float slotLeft = baseX + tab.getLeft() + tab.getTranslationX() + chipInsetH;
                     float slotRight = baseX + tab.getRight() + tab.getTranslationX() - chipInsetH;
                     float overlapAlpha = Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight);
+                    float childAlpha = overlapAlpha * containerAlpha * tab.getAlpha();
+                    if (childAlpha <= 0.01f) {
+                        continue;
+                    }
+                    float sx = tab.getScaleX() * Md3ChipTabHelper.getViewPressScaleX(tab);
+                    float sy = tab.getScaleY() * Md3ChipTabHelper.getViewPressScaleY(tab);
+                    boolean scaled = Math.abs(sx - 1f) > 0.001f || Math.abs(sy - 1f) > 0.001f;
+                    if (scaled) {
+                        canvas.save();
+                        canvas.scale(sx, sy, (slotLeft + slotRight) * 0.5f, (pillTop + pillBottom) * 0.5f);
+                    }
                     Md3ChipTabHelper.drawInactiveChip(
                             canvas, inactiveChipDrawable,
                             slotLeft, pillTop, slotRight, pillBottom,
                             i, count, unactiveTextColor,
-                            overlapAlpha * containerAlpha * tab.getAlpha(),
+                            childAlpha,
                             chipRadiiScratch
                     );
+                    if (scaled) {
+                        canvas.restore();
+                    }
                 }
-                int fromPos = animatingIndicator ? previousPosition : currentPosition;
-                int toPos = animatingIndicator ? currentPosition : (swipingToPosition >= 0 ? swipingToPosition : currentPosition);
-                float t = animatingIndicator ? animationIdicatorProgress : (swipingToPosition >= 0 ? swipingProgress : 1f);
-                Md3ChipTabHelper.getCornerRadii(true, fromPos, count, chipRadiiFrom);
-                Md3ChipTabHelper.getCornerRadii(true, toPos, count, chipRadiiTo);
-                Md3ChipTabHelper.lerpCornerRadii(chipRadiiFrom, chipRadiiTo, t, chipRadiiOut);
-                Md3ChipTabHelper.configureSelectorDrawable(selectorDrawable, activeTextColor, chipRadiiOut);
-                selectorDrawable.setAlpha((int) (255 * containerAlpha));
-                selectorDrawable.setBounds(Math.round(pillLeft), Math.round(pillTop), Math.round(pillRight), Math.round(pillBottom));
-                selectorDrawable.draw(canvas);
+                View activeTab = tabsContainer.getChildAt(toPos);
+                float pillSX = transitionSX * Md3ChipTabHelper.getViewPressScaleX(activeTab);
+                float pillSY = transitionSY * Md3ChipTabHelper.getViewPressScaleY(activeTab);
+                Md3ChipTabHelper.drawActivePill(
+                        canvas, selectorDrawable,
+                        pillLeft, pillTop, pillRight, pillBottom,
+                        pillSX, pillSY,
+                        (pillLeft + pillRight) * 0.5f, (pillTop + pillBottom) * 0.5f,
+                        activeTextColor, containerAlpha,
+                        fromPos, toPos, count, t,
+                        chipRadiiFrom, chipRadiiTo, chipRadiiOut
+                );
                 selectorDrawable.setAlpha(wasAlpha);
                 return super.drawChild(canvas, child, drawingTime);
             } else {

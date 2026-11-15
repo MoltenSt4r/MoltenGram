@@ -84,6 +84,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         this.isSubButton = isSubButton;
         setWillNotDraw(false);
         shapeGlassStrokePaint.setStyle(Paint.Style.STROKE);
+        shapeGlassStrokePaint.setStrokeJoin(Paint.Join.ROUND);
+        shapeGlassStrokePaint.setStrokeCap(Paint.Cap.ROUND);
 
         imageView = new RLottieImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -261,8 +263,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             final int topCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x70FFFFFF : 0xD8FFFFFF, true);
             final int midCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x2EFFFFFF : 0x58FFFFFF, true);
             final int botCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x42FFFFFF : 0x80FFFFFF, false);
-            shapeGlassStrokePaint.setShader(new LinearGradient(0, 0, 0, h,
-                    new int[]{topCol, midCol, botCol}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
+            shapeGlassStrokePaint.setShader(new LinearGradient(0, 0, w, h,
+                    new int[]{topCol, midCol, botCol}, new float[]{0f, 0.48f, 1f}, Shader.TileMode.CLAMP));
         }
         final float baseStroke = dpf2(1.25f);
         shapeGlassStrokePaint.setStrokeWidth(Math.max(dpf2(0.8f), app.exteraless.glass.SolegramGlass.highlightWidth(baseStroke, true)) * 2f);

@@ -163,6 +163,10 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         boundProps.radii[2] = boundProps.radii[3] = topRight;
         boundProps.radii[4] = boundProps.radii[5] = bottomRight;
         boundProps.radii[6] = boundProps.radii[7] = bottomLeft;
+        boundProps.shaderRadii[0] = boundProps.shaderRadii[1] = topLeft;
+        boundProps.shaderRadii[2] = boundProps.shaderRadii[3] = topRight;
+        boundProps.shaderRadii[4] = boundProps.shaderRadii[5] = bottomRight;
+        boundProps.shaderRadii[6] = boundProps.shaderRadii[7] = bottomLeft;
         boundProps.build();
 
         onBoundPropsChanged();
@@ -884,6 +888,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     public void solegramSetStrokeHidden(boolean hidden) {
         if (solegramStrokeHidden != hidden) {
             solegramStrokeHidden = hidden;
+            invalidateDisplayList();
             invalidateSelf();
         }
     }
@@ -1510,7 +1515,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
                     boundProps.liquidIndex,
                     backgroundColor,
                     originX - sL, originY - sT,
-                    downsample
+                    downsample,
+                    solegramStrokeHidden
                 );
             }
 

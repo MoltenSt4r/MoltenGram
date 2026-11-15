@@ -573,9 +573,9 @@ public class ChatActivity extends BaseFragment implements
     private @NonNull BlurredBackgroundDrawableViewFactory glassBackgroundDrawableFactoryFrosted;
 
     private final @NonNull GlassSourceWrapped navbarContentSourceWallpaper;
+    private final @NonNull GlassSourceWrapped liquidContentSourceWallpaper;
+    private @Nullable Drawable lastBackgroundDrawable;
     private @NonNull BlurredBackgroundDrawableViewFactory navbarContentDrawableFactory;
-
-    private final GlassEngine glassEngine = new GlassEngine();
 
     private Dialog closeChatDialog;
     private boolean showCloseChatDialogLater;
@@ -3063,6 +3063,7 @@ public class ChatActivity extends BaseFragment implements
         super(args);
 
         navbarContentSourceWallpaper = new GlassSourceWrapped();
+        liquidContentSourceWallpaper = new GlassSourceWrapped();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && SharedConfig.chatBlurEnabled()) {
             scrollableViewNoiseSuppressor = new DownscaleScrollableNoiseSuppressor();
 
@@ -3075,11 +3076,11 @@ public class ChatActivity extends BaseFragment implements
             glassBackgroundDrawableFactoryFrosted = new BlurredBackgroundDrawableViewFactory(glassBackgroundSourceFrostedRenderNode);
             glassBackgroundDrawableFactoryFrosted.setLiquidGlassEffectAllowed(false);
 
-            glassBackgroundSourceRenderNode = new GlassSourceRenderNode(navbarContentSourceWallpaper);
+            glassBackgroundSourceRenderNode = new GlassSourceRenderNode(liquidContentSourceWallpaper);
             glassBackgroundSourceRenderNode.setScrollableNoiseSuppressor(scrollableViewNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
-            glassBackgroundSourceRenderNode.setUnderSource(navbarContentSourceWallpaper);
+            glassBackgroundSourceRenderNode.setUnderSource(liquidContentSourceWallpaper);
             glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(
-                    glassBackgroundSourceRenderNode, glassBackgroundSourceFrostedRenderNode, navbarContentSourceWallpaper);
+                    glassBackgroundSourceRenderNode, glassBackgroundSourceFrostedRenderNode, liquidContentSourceWallpaper);
             glassBackgroundDrawableFactory.setLiquidGlassEffectAllowed(true);
             glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(20) : dp(48));
         } else {
@@ -3089,7 +3090,7 @@ public class ChatActivity extends BaseFragment implements
             glassBackgroundSourceRenderNode = null;
             glassBackgroundSourceFrostedRenderNode = null;
 
-            glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(navbarContentSourceWallpaper);
+            glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(liquidContentSourceWallpaper);
             glassBackgroundDrawableFactoryFrosted = new BlurredBackgroundDrawableViewFactory(navbarContentSourceWallpaper);
         }
         navbarContentDrawableFactory = new BlurredBackgroundDrawableViewFactory(navbarContentSourceWallpaper);
@@ -4106,6 +4107,13 @@ public class ChatActivity extends BaseFragment implements
 
     private GlassEngine getGlassEngine() {
         return parentChatActivity != null ? parentChatActivity.getGlassEngine() : glassEngine;
+    }
+
+    @Override
+    protected void onViewCreated(View view) {
+        if (parentChatActivity == null) {
+            super.onViewCreated(view);
+        }
     }
 
     @Override
@@ -7853,7 +7861,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         });
-        glassEngine.addScrolledView(chatListView);
+        getGlassEngine().addScrolledView(chatListView);
 
         contentView.addView(chatListView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
@@ -7862,7 +7870,6 @@ public class ChatActivity extends BaseFragment implements
         chatActivityFadeView.setup(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && glassBackgroundSourceFrostedRenderNode != null ? glassBackgroundDrawableFactoryFrosted : navbarContentDrawableFactory);
         chatActivityFadeView.setFadeHeightTop(dp(48));
         chatActivityFadeView.setFadeHeightBottom(dp(48));
-        chatActivityFadeView.setVisibility(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? View.GONE : View.VISIBLE);
         contentView.addView(chatActivityFadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         if (false/* && getDialogId() != getUserConfig().getClientUserId()*/) {
@@ -8563,7 +8570,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             }
         });
-        glassEngine.addScrolledView(messagesSearchListView);
+        getGlassEngine().addScrolledView(messagesSearchListView);
 
         if (parentThemeDelegate == null && !isInsideContainer) {
             searchViewPager = new ViewPagerFixed(context, resourceProvider) {
@@ -8626,6 +8633,7 @@ public class ChatActivity extends BaseFragment implements
                             }
                         };
                         container.chatActivity.navbarContentSourceWallpaper.setSource(navbarContentSourceWallpaper);
+                        container.chatActivity.liquidContentSourceWallpaper.setSource(liquidContentSourceWallpaper);
                         container.chatActivity.parentThemeDelegate = themeDelegate;
                         container.chatActivity.parentChatActivity = ChatActivity.this;
                         container.chatActivity.chatActivityDelegate = new ChatActivityDelegate() {
@@ -8663,7 +8671,7 @@ public class ChatActivity extends BaseFragment implements
                 }
             });
             searchViewPager.setAllowDisallowInterceptTouch(false);
-            glassEngine.addScrolledView(searchViewPager);
+            getGlassEngine().addScrolledView(searchViewPager);
             contentView.addView(searchViewPager, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP));
 
             hashtagSearchTabs = new ChatSearchTabs(context) {
@@ -9609,7 +9617,7 @@ public class ChatActivity extends BaseFragment implements
             }
         };
         chatScrollHelper.setScrollListener(() -> {
-            glassEngine.invalidate();
+            getGlassEngine().invalidate();
             this.invalidateMessagesVisiblePart();
         });
         chatScrollHelper.setAnimationCallback(chatScrollHelperCallback);
@@ -19457,11 +19465,13 @@ public class ChatActivity extends BaseFragment implements
         @Override
         public void onUpdateBackgroundDrawable(Drawable drawable) {
             super.onUpdateBackgroundDrawable(drawable);
+            lastBackgroundDrawable = drawable;
             if (drawable instanceof MotionBackgroundDrawable) {
                 ((MotionBackgroundDrawable) drawable).setFastRenderAllowed();
             }
 
             final GlassSource source = wallpaperBitmapProvider.updateSourceFromBackgroundViewDrawable(drawable);
+            final GlassSource liquidSource = wallpaperBitmapProvider.updateLiquidSourceFromBackgroundViewDrawable(drawable);
             final int statusBarColor = wallpaperBitmapProvider.getStatusBarColor(source);
             final float statusBarBrightness = AndroidUtilities.computePerceivedBrightness(statusBarColor);
             final int navigationBarColor = wallpaperBitmapProvider.getNavigationBarColor(source);
@@ -19473,7 +19483,11 @@ public class ChatActivity extends BaseFragment implements
             if (source instanceof GlassSourceBitmap && getMeasuredWidth() > 0 && getMeasuredHeight() > 0) {
                 ((GlassSourceBitmap) source).setParentSize(getMeasuredWidth(), getMeasuredHeight(), 0);
             }
+            if (liquidSource instanceof GlassSourceBitmap && getMeasuredWidth() > 0 && getMeasuredHeight() > 0) {
+                ((GlassSourceBitmap) liquidSource).setParentSize(getMeasuredWidth(), getMeasuredHeight(), 0);
+            }
             navbarContentSourceWallpaper.setSource(source);
+            liquidContentSourceWallpaper.setSource(liquidSource);
             invalidateGlassSources();
             if (chatActivityFadeView != null) {
                 chatActivityFadeView.setOverlayColor(isCompactMode() ? getThemedColor(Theme.key_chat_compact_backgroundGradient) : 0);
@@ -20532,6 +20546,10 @@ public class ChatActivity extends BaseFragment implements
 
             if (navbarContentSourceWallpaper.getSource() instanceof GlassSourceBitmap) {
                 ((GlassSourceBitmap) navbarContentSourceWallpaper.getSource())
+                    .setParentSize(widthSize, heightSize, 0);
+            }
+            if (liquidContentSourceWallpaper.getSource() instanceof GlassSourceBitmap) {
+                ((GlassSourceBitmap) liquidContentSourceWallpaper.getSource())
                     .setParentSize(widthSize, heightSize, 0);
             }
             if (lastWidth != widthSize) {
@@ -52809,7 +52827,7 @@ public class ChatActivity extends BaseFragment implements
             checkUi_sideControlsLayoutPosition();
             checkUi_topPanelPositions();
             checkUi_topPanelLayoutWidth();
-            glassEngine.invalidate();
+            getGlassEngine().invalidate();
         } else if (id == ANIMATOR_ID_SEARCH_FIELD_VISIBILITY) {
             checkUi_avatarContainerVisibility();
             if (actionBar != null) {
@@ -53340,6 +53358,13 @@ public class ChatActivity extends BaseFragment implements
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && glassBackgroundDrawableFactory != null) {
             glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(20) : dp(48));
         }
+        if (lastBackgroundDrawable != null) {
+            final GlassSource liquidSource = wallpaperBitmapProvider.updateLiquidSourceFromBackgroundViewDrawable(lastBackgroundDrawable);
+            if (liquidSource instanceof GlassSourceBitmap && contentView != null && contentView.getMeasuredWidth() > 0 && contentView.getMeasuredHeight() > 0) {
+                ((GlassSourceBitmap) liquidSource).setParentSize(contentView.getMeasuredWidth(), contentView.getMeasuredHeight(), 0);
+            }
+            liquidContentSourceWallpaper.setSource(liquidSource);
+        }
         selectedBackgroundDelegateThemeColors();
         if (actionBar != null) {
             actionBar.updateColors();
@@ -53348,15 +53373,12 @@ public class ChatActivity extends BaseFragment implements
         if (chatInputViewsContainer != null) {
             chatInputViewsContainer.invalidate();
         }
-        if (chatActivityFadeView != null) {
-            chatActivityFadeView.setVisibility(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? View.GONE : View.VISIBLE);
-        }
         if (chatListView != null) {
             chatListView.invalidateViews();
             chatListView.invalidate();
         }
         invalidateGlassSources();
-        glassEngine.invalidate();
+        getGlassEngine().invalidate();
         if (contentView != null) {
             invalidateAllGlassAttachedViews();
         }
@@ -53368,7 +53390,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         if (BitwiseUtils.hasFlag(flags, GlassEngine.FLAG_INVALIDATED_POSITIONS)) {
-            GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
+            GlassPositionsArray glassPositionsArray = getGlassEngine().getAllVisibleDrawablesWithDisplayListPositionsMerged();
             final int outsetPx = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(16) : dp(48);
             glassPositionsArray.outset(outsetPx, outsetPx);
             if (chatListView != null && contentView != null) {

@@ -193,8 +193,9 @@ public class FilterTabsView extends FrameLayout {
     public static final float TAB_INTERNAL_PADDING = 12.5f;
     private static final float TAB_COUNTER_HEIGHT = 17.333f;
 
-    public class TabView extends View {
+    public class TabView extends View implements Md3ChipTabHelper.ChipPressHost {
 
+        private final Md3ChipTabHelper.PressState md3PressState = new Md3ChipTabHelper.PressState();
         public ValueAnimator changeAnimator;
         private Tab currentTab;
         private int textHeight;
@@ -265,6 +266,17 @@ public class FilterTabsView extends FrameLayout {
             super(context);
         }
 
+        @Override
+        public void setPressed(boolean pressed) {
+            super.setPressed(pressed);
+            md3PressState.onPressedChanged(this, listView, FilterTabsView.this);
+        }
+
+        @Override
+        public float getMd3PressProgress() {
+            return md3PressState.getProgress();
+        }
+
         public void setTab(Tab tab, int position) {
             currentTab = tab;
             currentPosition = position;
@@ -324,6 +336,14 @@ public class FilterTabsView extends FrameLayout {
         @SuppressLint("DrawAllocation")
         @Override
         protected void onDraw(@NonNull Canvas canvas) {
+            final float pressP = md3PressState.step(this, listView, FilterTabsView.this);
+            final float pressSX = Md3ChipTabHelper.getPressScaleX(pressP);
+            final float pressSY = Md3ChipTabHelper.getPressScaleY(pressP);
+            final boolean pressScaled = Math.abs(pressSX - 1f) > 0.001f || Math.abs(pressSY - 1f) > 0.001f;
+            if (pressScaled) {
+                canvas.save();
+                canvas.scale(pressSX, pressSY, getMeasuredWidth() * 0.5f, getMeasuredHeight() * 0.5f);
+            }
             boolean reorderEnabled = !currentTab.isDefault || UserConfig.getInstance(UserConfig.selectedAccount).isPremium();
             boolean showRemove = !currentTab.isDefault && reorderEnabled;
             if (reorderEnabled && editingAnimationProgress != 0) {
@@ -688,6 +708,9 @@ public class FilterTabsView extends FrameLayout {
                 }
 
             }
+            if (pressScaled) {
+                canvas.restore();
+            }
         }
 
         private boolean attached;
@@ -991,15 +1014,20 @@ public class FilterTabsView extends FrameLayout {
                 return;
             }
             long newTime = SystemClock.elapsedRealtime();
-            long dt = (newTime - lastAnimationTime);
+            long dt = newTime - lastAnimationTime;
             if (dt > 17) {
                 dt = 17;
+            } else if (dt < 1) {
+                dt = 1;
             }
-            animationTime += dt / 320.0f;
-            setAnimationIdicatorProgress(interpolator.getInterpolation(animationTime));
+            lastAnimationTime = newTime;
+            final boolean md3 = Md3ChipTabHelper.isEnabled();
+            final float duration = md3 ? Md3ChipTabHelper.getIndicatorDurationMs(320L) : 320.0f;
+            animationTime += dt / Math.max(1.0f, duration);
             if (animationTime > 1.0f) {
                 animationTime = 1.0f;
             }
+            setAnimationIdicatorProgress(md3 ? Md3ChipTabHelper.getStandardProgress(animationTime) : interpolator.getInterpolation(animationTime));
             if (animationTime < 1.0f) {
                 AndroidUtilities.runOnUIThread(animationRunnable);
             } else {
@@ -1320,7 +1348,25 @@ public class FilterTabsView extends FrameLayout {
             animatingIndicator = false;
         }
 
+        if (Md3ChipTabHelper.isEnabled() && Md3ChipTabHelper.getAnimMode() == Md3ChipTabHelper.ANIM_NONE) {
+            animationTime = 1.0f;
+            animatingIndicator = false;
+            setEnabled(true);
+            if (delegate != null) {
+                delegate.onPageSelected(tab, scrollingForward);
+                delegate.onTabSelected(tab, scrollingForward, true);
+                oldAnimatedTab = currentPosition;
+            }
+            setAnimationIdicatorProgress(1.0f);
+            scrollToChild(position);
+            if (NekoConfig.hideAllTab.Bool() && !currentTabIsDefault()) {
+                toggleAllTabs(false);
+            }
+            return;
+        }
+
         animationTime = 0;
+        lastAnimationTime = SystemClock.elapsedRealtime();
         animatingIndicatorProgress = 0;
         animatingIndicator = true;
         setEnabled(false);
@@ -1617,7 +1663,11 @@ public class FilterTabsView extends FrameLayout {
         float indicatorX = 0;
         float indicatorWidth = 0;
         float activeChildAlpha = 1f;
-        float activeChildScale = 1f;
+        float activeChildScaleX = 1f;
+        float activeChildScaleY = 1f;
+        float transitionScaleX = 1f;
+        float transitionScaleY = 1f;
+        View activeTabView = null;
         int fromPos = currentPosition;
         int toPos = currentPosition;
         float cornerT = 1f;
@@ -1632,17 +1682,31 @@ public class FilterTabsView extends FrameLayout {
                     int newX = positionToX.get(idx2);
                     int prevW = positionToWidth.get(idx1);
                     int newW = positionToWidth.get(idx2);
+                    float stdT = Math.max(0f, Math.min(1f, animatingIndicatorProgress));
+                    float moveT = animatingIndicator ? Md3ChipTabHelper.getPillTravelProgress(animationTime) : stdT;
+                    if (animatingIndicator) {
+                        transitionScaleX = Md3ChipTabHelper.getPillTransitionScaleX(animationTime);
+                        transitionScaleY = Md3ChipTabHelper.getPillTransitionScaleY(animationTime);
+                    }
+                    indicatorWidth = prevW + (newW - prevW) * stdT;
+                    float prevCenter = prevX + prevW * 0.5f;
+                    float newCenter = newX + newW * 0.5f;
+                    float curCenter = prevCenter + (newCenter - prevCenter) * moveT;
+                    float baseX = curCenter - indicatorWidth * 0.5f;
                     float padding = FolderIconHelper.getTabPadding();
                     if (additionalTabWidth != 0) {
-                        indicatorX = lerp(prevX, newX, animatingIndicatorProgress) + dp(padding / 2f);
+                        indicatorX = baseX + dp(padding / 2f);
                     } else {
                         int x = positionToX.get(position);
-                        indicatorX = lerp(prevX, newX, animatingIndicatorProgress) - (x - holder.itemView.getLeft()) + dp(padding / 2f);
+                        indicatorX = baseX - (x - holder.itemView.getLeft()) + dp(padding / 2f);
                     }
-                    indicatorWidth = lerp(prevW, newW, animatingIndicatorProgress);
                     fromPos = idx1;
                     toPos = idx2;
-                    cornerT = animatingIndicatorProgress;
+                    cornerT = stdT;
+                    RecyclerListView.ViewHolder toHolder = listView.findViewHolderForAdapterPosition(toPos);
+                    if (toHolder != null) {
+                        activeTabView = toHolder.itemView;
+                    }
                 }
             }
         } else {
@@ -1658,7 +1722,9 @@ public class FilterTabsView extends FrameLayout {
                         : tabView.getMeasuredWidth();
                 indicatorX = (int) (tabView.getX() + (viewWidth - indicatorWidth) / 2);
                 activeChildAlpha = tabView.getAlpha();
-                activeChildScale = tabView.getScaleX();
+                activeChildScaleX = tabView.getScaleX();
+                activeChildScaleY = tabView.getScaleY();
+                activeTabView = tabView;
             }
         }
         float listLeft = listView.getX();
@@ -1699,27 +1765,34 @@ public class FilterTabsView extends FrameLayout {
             if (childAlpha <= 0.01f) {
                 continue;
             }
+            float sx = tabChild.getScaleX() * Md3ChipTabHelper.getViewPressScaleX(tabChild);
+            float sy = tabChild.getScaleY() * Md3ChipTabHelper.getViewPressScaleY(tabChild);
+            boolean scaled = Math.abs(sx - 1f) > 0.001f || Math.abs(sy - 1f) > 0.001f;
+            if (scaled) {
+                canvas.save();
+                canvas.scale(sx, sy, (slotLeft + slotRight) * 0.5f, (chipTop + chipBottom) * 0.5f);
+            }
             Md3ChipTabHelper.drawInactiveChip(
                     canvas, inactiveChipDrawable,
                     slotLeft, chipTop, slotRight, chipBottom,
                     pos, count, unactiveThemeColor, childAlpha, chipRadiiScratch
             );
-        }
-        if (indicatorWidth > 0f && pillRight > pillLeft && activeChildAlpha > 0.01f) {
-            Md3ChipTabHelper.getCornerRadii(true, fromPos, count, chipRadiiFrom);
-            Md3ChipTabHelper.getCornerRadii(true, toPos, count, chipRadiiTo);
-            Md3ChipTabHelper.lerpCornerRadii(chipRadiiFrom, chipRadiiTo, cornerT, chipRadiiOut);
-            Md3ChipTabHelper.configureSelectorDrawable(selectorDrawable, activeThemeColor, chipRadiiOut);
-            selectorDrawable.setAlpha(Math.round(255 * listAlpha * activeChildAlpha));
-            if (activeChildScale != 1f) {
-                canvas.save();
-                canvas.scale(activeChildScale, activeChildScale, (pillLeft + pillRight) * 0.5f, height * 0.5f);
-            }
-            selectorDrawable.setBounds(Math.round(pillLeft), Math.round(chipTop), Math.round(pillRight), Math.round(chipBottom));
-            selectorDrawable.draw(canvas);
-            if (activeChildScale != 1f) {
+            if (scaled) {
                 canvas.restore();
             }
+        }
+        if (indicatorWidth > 0f && pillRight > pillLeft && activeChildAlpha > 0.01f) {
+            float pillSX = activeChildScaleX * Md3ChipTabHelper.getViewPressScaleX(activeTabView) * transitionScaleX;
+            float pillSY = activeChildScaleY * Md3ChipTabHelper.getViewPressScaleY(activeTabView) * transitionScaleY;
+            Md3ChipTabHelper.drawActivePill(
+                    canvas, selectorDrawable,
+                    pillLeft, chipTop, pillRight, chipBottom,
+                    pillSX, pillSY,
+                    (pillLeft + pillRight) * 0.5f, (chipTop + chipBottom) * 0.5f,
+                    activeThemeColor, listAlpha * activeChildAlpha,
+                    fromPos, toPos, count, cornerT,
+                    chipRadiiFrom, chipRadiiTo, chipRadiiOut
+            );
         }
         canvas.restore();
     }

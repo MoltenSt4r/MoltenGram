@@ -48,7 +48,7 @@ public class LiquidGlassEffect {
     }
 
     private final boolean extended;
-    private float dispersion = -1, rim = -1;
+    private float dispersion = -2f, rim = -2f;
 
     private int downsample;
     private float width, height;
@@ -107,12 +107,34 @@ public class LiquidGlassEffect {
         float nodeOffsetX, float nodeOffsetY,
         int downsample
     ) {
+        update(
+            width, height, bodyX, bodyY,
+            radiusLeftTop, radiusRightTop, radiusRightBottom, radiusLeftBottom,
+            thickness, intensity, index, foregroundColor,
+            nodeOffsetX, nodeOffsetY, downsample, false
+        );
+    }
+
+    public void update(
+        float width, float height,
+        float bodyX, float bodyY,
+        float radiusLeftTop, float radiusRightTop, float radiusRightBottom, float radiusLeftBottom,
+
+        float thickness,
+        float intensity,
+        float index,
+        int foregroundColor,
+
+        float nodeOffsetX, float nodeOffsetY,
+        int downsample,
+        boolean disableRim
+    ) {
         thickness = Math.max(1, Math.min(app.exteraless.glass.SolegramGlass.thickness(thickness),
             app.exteraless.glass.SolegramGlass.thicknessLimit(Math.min(width, height))));
         intensity = app.exteraless.glass.SolegramGlass.intensity(intensity);
         index = app.exteraless.glass.SolegramGlass.index(index);
         final float dispersion = extended ? app.exteraless.glass.SolegramGlass.dispersion() : 0;
-        final float rim = extended ? app.exteraless.glass.SolegramGlass.rim() : 0;
+        final float rim = !extended ? 0 : (disableRim ? -1f : app.exteraless.glass.SolegramGlass.rim());
 
         if (radiusLeftTop + radiusLeftBottom > height) {
             float a = radiusLeftTop / (radiusLeftTop + radiusLeftBottom);

@@ -22,6 +22,12 @@ public class WallpaperBitmapProvider {
     private final GlassSourceColor sourceColor = new GlassSourceColor();
     private final GlassSourceBitmap sourceBitmap = new GlassSourceBitmap();
 
+    private final GlassSourceColor liquidSourceColor = new GlassSourceColor();
+    private final GlassSourceBitmap liquidSourceBitmap = new GlassSourceBitmap();
+    private java.lang.ref.WeakReference<Bitmap> lastLiquidInputBitmap;
+    private Bitmap cachedLiquidBitmap;
+    private int lastLiquidBlurRadius = -1;
+
     private static final Rect tmpRect = new Rect();
 
     public GlassSource updateSourceFromBackgroundViewDrawable(
@@ -68,6 +74,108 @@ public class WallpaperBitmapProvider {
         }
 
         return sourceBitmap;
+    }
+
+    public GlassSource updateLiquidSourceFromBackgroundViewDrawable(
+        Drawable drawable
+    ) {
+        if (drawable instanceof ColorDrawable) {
+            final int color = ((ColorDrawable) drawable).getColor();
+            liquidSourceColor.setColor(color);
+            return liquidSourceColor;
+        }
+
+        if (drawable instanceof MotionBackgroundDrawable) {
+            final MotionBackgroundDrawable motionDrawable = (MotionBackgroundDrawable) drawable;
+            if (motionDrawable.getIntensity() >= 0 && motionDrawable.getBitmap() != null) {
+                liquidSourceBitmap.setBitmap(motionDrawable.getBitmap());
+                return liquidSourceBitmap;
+            }
+        }
+
+        if (drawable instanceof BitmapDrawable) {
+            final Bitmap bitmap = prepareLiquidBitmap(((BitmapDrawable) drawable).getBitmap());
+            liquidSourceBitmap.setBitmap(bitmap);
+            return liquidSourceBitmap;
+        }
+
+        if (drawable instanceof ChatBackgroundDrawable) {
+            ChatBackgroundDrawable chatDrawable = (ChatBackgroundDrawable) drawable;
+            Drawable inner = chatDrawable.getDrawable(false);
+            if (inner != null && inner != drawable) {
+                return updateLiquidSourceFromBackgroundViewDrawable(inner);
+            }
+        }
+
+        if (drawable != null) {
+            final int recW = 360;
+            final int recH = 640;
+            Canvas canvas = liquidSourceBitmap.beginRecording(recW, recH);
+            tmpRect.set(drawable.getBounds());
+            drawable.setBounds(0, 0, recW, recH);
+            drawable.draw(canvas);
+            drawable.setBounds(tmpRect);
+            liquidSourceBitmap.endRecording();
+            final Bitmap prepared = prepareLiquidBitmap(liquidSourceBitmap.getBitmap());
+            if (prepared != null) {
+                liquidSourceBitmap.setBitmap(prepared);
+            }
+        }
+
+        return liquidSourceBitmap;
+    }
+
+    private static int getLiquidBlurRadius() {
+        if (!app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+            return 4;
+        }
+        final float scale = app.exteraless.glass.SolegramGlass.blurScale();
+        return scale <= 0.12f ? 0 : Math.max(1, Math.round(5f * scale));
+    }
+
+    private Bitmap prepareLiquidBitmap(Bitmap bitmap) {
+        if (bitmap == null || bitmap.isRecycled() || bitmap.getWidth() <= 0 || bitmap.getHeight() <= 0) {
+            return null;
+        }
+        final int radius = getLiquidBlurRadius();
+        final Bitmap prevInput = lastLiquidInputBitmap != null ? lastLiquidInputBitmap.get() : null;
+        if (prevInput == bitmap && cachedLiquidBitmap != null && !cachedLiquidBitmap.isRecycled() && lastLiquidBlurRadius == radius) {
+            return cachedLiquidBitmap;
+        }
+
+        final int maxSide = 720;
+        final int w = bitmap.getWidth();
+        final int h = bitmap.getHeight();
+        final float down = Math.max(1f, Math.max(w, h) / (float) maxSide);
+        final int outW = Math.max(1, Math.round(w / down));
+        final int outH = Math.max(1, Math.round(h / down));
+
+        Bitmap out;
+        if (outW != w || outH != h) {
+            out = Bitmap.createScaledBitmap(bitmap, outW, outH, true);
+        } else {
+            out = bitmap.copy(Bitmap.Config.ARGB_8888, radius > 0);
+        }
+        if (out == null) {
+            return null;
+        }
+        if (radius > 0) {
+            if (!out.isMutable()) {
+                final Bitmap mutable = out.copy(Bitmap.Config.ARGB_8888, true);
+                if (mutable != null) {
+                    out = mutable;
+                }
+            }
+            if (out.isMutable()) {
+                Utilities.stackBlurBitmap(out, radius);
+            }
+        }
+        out.setHasAlpha(false);
+
+        lastLiquidInputBitmap = new java.lang.ref.WeakReference<>(bitmap);
+        cachedLiquidBitmap = out;
+        lastLiquidBlurRadius = radius;
+        return out;
     }
 
     public int getNavigationBarColor(GlassSource source) {
