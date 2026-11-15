@@ -1285,14 +1285,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .add(NotificationCenter.appUpdateLoading)
             .add(NotificationCenter.needSetDayNightTheme);
 
-        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
-
         return super.onFragmentCreate();
     }
 
     @Override
     public void onFragmentDestroy() {
-        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
         Bulletin.removeDelegate(this);
         Bulletin.removeDelegate(contentView);
 
@@ -1323,7 +1320,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final float animatedPosition = viewPager.getPositionAnimated();
         final float isProfile = 1f - MathUtils.clamp(Math.abs(getPositionProfile() - animatedPosition), 0, 1);
         final float hide = 1f - AndroidUtilities.getNavigationBarThirdButtonsFactor(0, 1f, navigationBarHeight);
-        float alpha = (1f - isProfile * hide) * animatorTabsVisible.getFloatValue();
+        float alpha = (1f - isProfile * hide) * animatorTabsVisible.getFloatValue() * (1f - speedDialDimProgress);
         if (tabletLayout) {
             alpha = 0.0f;
         }
@@ -1473,11 +1470,42 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
     /* * */
 
+    private float speedDialDimProgress;
+    private ValueAnimator speedDialDimAnimator;
+    private Runnable onSpeedDialScrimClick;
+
     private class MainTabsActivityControllerImpl implements MainTabsActivityController {
         @Override
         public void setTabsVisible(boolean visible) {
             animatorTabsVisible.setValue(visible, true);
         }
+
+        @Override
+        public void setSpeedDialOpen(boolean open, boolean animated, Runnable onScrimClick) {
+            onSpeedDialScrimClick = open ? onScrimClick : null;
+            final float target = open ? 1f : 0f;
+            if (speedDialDimAnimator != null) {
+                speedDialDimAnimator.cancel();
+                speedDialDimAnimator = null;
+            }
+            if (!animated) {
+                applySpeedDialDimProgress(target);
+                return;
+            }
+            speedDialDimAnimator = ValueAnimator.ofFloat(speedDialDimProgress, target);
+            speedDialDimAnimator.setDuration(open ? 240 : 180);
+            speedDialDimAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+            speedDialDimAnimator.addUpdateListener(anim -> applySpeedDialDimProgress((float) anim.getAnimatedValue()));
+            speedDialDimAnimator.start();
+        }
+    }
+
+    private void applySpeedDialDimProgress(float progress) {
+        speedDialDimProgress = Math.max(0f, Math.min(1f, progress));
+        if (tabsView != null) {
+            tabsView.setSpeedDialDim(speedDialDimProgress, onSpeedDialScrimClick);
+        }
+        checkUi_fadeView();
     }
 
 
@@ -1559,12 +1587,15 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private final @NonNull GlassSourceColor iBlur3SourceColor;
     private final @Nullable GlassSourceRenderNode iBlur3SourceTabGlass;
     private final @Nullable GlassSourceRenderNode iBlur3SourceTabFrosted;
-    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = () -> {
+
+    @Override
+    protected void onLiquidGlassConfigChanged() {
+        super.onLiquidGlassConfigChanged();
         if (miniPlayer != null) {
             miniPlayer.applyStyle(false);
         }
         blur3_updateColors();
-    };
+    }
 
     /** The one the tabs draw now; null with the blur off, they are on the color then. */
     @Nullable
@@ -1677,13 +1708,26 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
         if (tabsView != null && tabsViewWrapper != null) {
             MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
-            MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, 0, 0);
+            MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, insetLeft, insetRight);
+        }
+        if (fadeView != null && updateLayoutWrapper != null) {
+            final int updateLayoutHeight = updateLayoutWrapper.isUpdateLayoutVisible() ? dp(UpdateLayoutWrapper.HEIGHT) : 0;
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int fadeHeight = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
+            final ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
+            if (lp != null && lp.height != fadeHeight) {
+                lp.height = fadeHeight;
+                fadeView.setLayoutParams(lp);
+            }
         }
         if (miniPlayer != null) {
             miniPlayer.applyStyle(false);
             miniPlayer.invalidateGlass();
         }
         invalidateTabsGlass();
+        blur3_onFragmentGlassCaptured();
+        checkUi_tabsPosition();
+        checkUi_fadeView();
         if (fadeView != null) {
             fadeView.invalidate();
         }

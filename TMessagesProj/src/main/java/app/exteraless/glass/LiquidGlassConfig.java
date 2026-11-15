@@ -192,11 +192,7 @@ public final class LiquidGlassConfig {
         prefs().edit().putInt(PREFIX + key, value).apply();
         reload();
         notifyChanged();
-        if ("glassTint".equals(key)) {
-            scheduleThemeBroadcast(true);
-        } else if ("glassTintAmount".equals(key) || "glassOpacity".equals(key) || "glassHighlight".equals(key)) {
-            scheduleThemeBroadcast(false);
-        }
+        scheduleThemeBroadcast("glassTint".equals(key));
     }
 
     public static void putBoolean(String key, boolean value) {
@@ -211,9 +207,7 @@ public final class LiquidGlassConfig {
         }
         reload();
         notifyChanged();
-        if ("glassOn".equals(key) || "glassShadow".equals(key) || "glassPreviewLook".equals(key) || "frostedHeaders".equals(key)) {
-            scheduleThemeBroadcast(true);
-        }
+        scheduleThemeBroadcast(true);
     }
 
     public static void enableTexturedGlass() {

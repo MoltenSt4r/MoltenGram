@@ -997,6 +997,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
 
     @Override
     public boolean shouldHaveDisplayList() {
+        checkThemeColors();
+        checkGlassSettings();
         return resolveImpl() == renderNodeImpl && renderNodeImpl != null;
     }
 
@@ -1011,6 +1013,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     }
 
     public void updateDisplayList() {
+        checkThemeColors();
+        checkGlassSettings();
         if (resolveImpl() == renderNodeImpl && renderNodeImpl != null) {
             renderNodeImpl.record();
         }

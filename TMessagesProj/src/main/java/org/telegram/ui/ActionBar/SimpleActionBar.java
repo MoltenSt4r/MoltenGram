@@ -762,9 +762,15 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         }
         if (glassBack != null) {
             glassBack.updateColors();
+            glassBack.invalidateDisplayList();
         }
         if (glassMenu != null) {
             glassMenu.updateColors();
+            glassMenu.invalidateDisplayList();
+        }
+        if (glassDone != null) {
+            glassDone.updateColors();
+            glassDone.invalidateDisplayList();
         }
         invalidate();
     }

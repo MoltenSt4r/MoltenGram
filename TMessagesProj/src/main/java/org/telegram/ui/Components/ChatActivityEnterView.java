@@ -2910,7 +2910,7 @@ public class ChatActivityEnterView extends FrameLayout implements
             if (md3Input) {
                 messageEditTextContainer.addView(liveStreamButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
             } else {
-                messageEditTextContainer.addView(liveStreamButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.LEFT, DEFAULT_HEIGHT, 0, 0, 0));
+                messageEditTextContainer.addView(liveStreamButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 0, 0));
             }
             updateLiveStreamButtonAppearance();
             updateLiveStreamButtonVisibility();
@@ -7981,8 +7981,43 @@ public class ChatActivityEnterView extends FrameLayout implements
         int newVis = visible ? VISIBLE : GONE;
         if (liveStreamButton.getVisibility() != newVis) {
             liveStreamButton.setVisibility(newVis);
-            updateFieldRight(attachButton != null && attachButton.getVisibility() == VISIBLE ? 1 : 0);
+            updateFieldRight(lastAttachVisible);
+            updateAttachLayoutParams();
         }
+    }
+
+    private boolean isLiveStreamButtonVisible() {
+        return liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
+    }
+
+    private boolean isAttachSlotOccupied() {
+        return attachButton != null
+                && attachButton.getVisibility() == VISIBLE
+                && attachButtonAlpha > 0.01f
+                && (!NekoConfig.useChatAttachMediaMenu.Bool() || isStories || lastAttachVisible != 0);
+    }
+
+    private float getLiveStreamBaseOffsetX() {
+        if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+            return 0f;
+        }
+        return isAttachSlotOccupied() ? -dp(DEFAULT_HEIGHT) : 0f;
+    }
+
+    private void updateLiveStreamButtonPosition() {
+        if (liveStreamButton == null) {
+            return;
+        }
+        final float baseAlpha = liveStreamEnabled ? 1.0f : 0.72f;
+        liveStreamButton.setAlpha(baseAlpha * attachLayoutPaddingAlpha);
+        if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+            liveStreamButton.setTranslationX(0f);
+            return;
+        }
+        final float attachTx = attachLayoutPaddingTranslationX + attachLayoutTranslationX + (sendButton != null ? (
+            -Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT + 12)) * sendButton.getAlpha()
+        ) : 0);
+        liveStreamButton.setTranslationX(attachTx + getLiveStreamBaseOffsetX());
     }
 
     private void updateLiveStreamButtonAppearance() {
@@ -7991,7 +8026,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         int iconColor = getThemedColor(liveStreamEnabled ? Theme.key_featuredStickers_addButton : Theme.key_glass_defaultIcon);
         liveStreamButton.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN));
-        liveStreamButton.setAlpha(liveStreamEnabled ? 1.0f : 0.72f);
+        liveStreamButton.setAlpha((liveStreamEnabled ? 1.0f : 0.72f) * attachLayoutPaddingAlpha);
         if (liveStreamEnabled) {
             liveStreamButton.setBackground(Theme.createInsetRoundRectDrawable(
                 Theme.multAlpha(getThemedColor(Theme.key_featuredStickers_addButton), 0.18f), dp(19), dp(5), dp(5)
@@ -10473,16 +10508,17 @@ public class ChatActivityEnterView extends FrameLayout implements
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) messageEditText.getLayoutParams();
         int oldRightMargin = layoutParams.rightMargin;
         int oldLeftMargin = layoutParams.leftMargin;
-        boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
+        boolean liveVisible = isLiveStreamButtonVisible();
         if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
             layoutParams.rightMargin = dp(liveVisible ? 96 : 48);
             layoutParams.leftMargin = dp(48);
             if (oldRightMargin != layoutParams.rightMargin || oldLeftMargin != layoutParams.leftMargin) {
                 messageEditText.setLayoutParams(layoutParams);
             }
+            updateLiveStreamButtonPosition();
             return;
         }
-        layoutParams.leftMargin = dp(liveVisible ? 96 : 52);
+        layoutParams.leftMargin = dp(52);
         if (isStories && isLiveComment) {
             layoutParams.rightMargin = dp(suggestButtonVisible ? 50 : 2) + Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
         } else if (attachVisible == 1 || attachVisible == 2/* && layoutParams.rightMargin != dp(2)*/) {
@@ -10500,13 +10536,22 @@ public class ChatActivityEnterView extends FrameLayout implements
                 layoutParams.rightMargin = dp(2);
             }
         }
-        layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)));
+        if (liveVisible) {
+            if (layoutParams.rightMargin <= dp(2)) {
+                layoutParams.rightMargin = dp(DEFAULT_HEIGHT);
+            } else {
+                layoutParams.rightMargin += dp(DEFAULT_HEIGHT);
+            }
+        }
+        final int sendOverflow = Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
+        layoutParams.rightMargin = Math.max(layoutParams.rightMargin, sendOverflow + (liveVisible ? dp(DEFAULT_HEIGHT) : 0));
         if (doneButton != null && doneButton.getVisibility() == VISIBLE) {
             layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, doneButton.width() - dp(DEFAULT_HEIGHT)));
         }
         if (oldRightMargin != layoutParams.rightMargin || oldLeftMargin != layoutParams.leftMargin) {
             messageEditText.setLayoutParams(layoutParams);
         }
+        updateLiveStreamButtonPosition();
         if (recordedAudioPanel != null) {
             FrameLayout.LayoutParams layoutParams2 = (FrameLayout.LayoutParams) recordedAudioPanel.getLayoutParams();
             layoutParams2.rightMargin = editingMessageObject == null ? Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT)) : 0;
@@ -16961,7 +17006,9 @@ public class ChatActivityEnterView extends FrameLayout implements
     private void updateAttachLayoutParams() {
         updateAttachButtonTranslationX();
         if (attachLayout != null) {
-            attachLayout.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX);
+            final float liveOffset = (!app.exteraless.chats.ChatsConfig.md3ChatInput() && isLiveStreamButtonVisible())
+                    ? -dp(DEFAULT_HEIGHT) : 0f;
+            attachLayout.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX + liveOffset);
             attachLayout.setAlpha(attachLayoutAlpha * attachLayoutPaddingAlpha);
             attachLayout.setVisibility(attachLayout.getAlpha() > 0 ? View.VISIBLE : View.GONE);
             if (attachButton != null && isStories) {
@@ -16978,10 +17025,12 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     private void updateAttachButtonTranslationX() {
-        if (attachButton == null) return;
-        attachButton.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX + (sendButton != null ? (
-            -Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT + 12)) * sendButton.getAlpha()
-        ) : 0));
+        if (attachButton != null) {
+            attachButton.setTranslationX(attachLayoutPaddingTranslationX + attachLayoutTranslationX + (sendButton != null ? (
+                -Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT + 12)) * sendButton.getAlpha()
+            ) : 0));
+        }
+        updateLiveStreamButtonPosition();
     }
 
     private void updateEmojiButtonParams() {

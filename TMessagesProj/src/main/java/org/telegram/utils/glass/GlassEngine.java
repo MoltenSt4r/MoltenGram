@@ -21,6 +21,7 @@ import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.SectionsScrollView;
 import org.telegram.ui.Components.ViewPagerFixed;
 import org.telegram.ui.Components.blur3.DownscaleScrollableNoiseSuppressor;
+import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.utils.glass.source.GlassSourceColor;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
 import org.telegram.utils.glass.positions.GlassPositionsArray;
@@ -275,7 +276,7 @@ public class GlassEngine {
         int flags = 0;
         if (lastGlassSettingsGenerationId != glassSettingsGenerationId) {
             lastGlassSettingsGenerationId = glassSettingsGenerationId;
-            flags |= FLAG_INVALIDATED_LITE_MODE;
+            flags |= FLAG_INVALIDATED_LITE_MODE | FLAG_INVALIDATED_POSITIONS;
             // a glass may go over to a source without a capture and back
             externalCapturePositionInvalidated = true;
         }
@@ -308,6 +309,10 @@ public class GlassEngine {
             final ViewPositionState state = viewPositionStates.get(a);
             if (BitwiseUtils.hasFlag(flags, FLAG_INVALIDATED_LITE_MODE)) {
                 state.drawable.setGlassSettings(glassSettings);
+                state.drawable.updateColors();
+                if (state.drawable instanceof BlurredBackgroundDrawable) {
+                    ((BlurredBackgroundDrawable) state.drawable).invalidateDisplayList();
+                }
             }
             if (BitwiseUtils.hasFlag(flags, FLAG_INVALIDATED_THEMED)) {
                 state.drawable.updateColors();

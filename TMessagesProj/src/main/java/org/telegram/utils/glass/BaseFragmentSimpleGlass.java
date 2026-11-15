@@ -298,8 +298,27 @@ public class BaseFragmentSimpleGlass {
         this.capture = capture;
     }
 
+    public void refreshGlass() {
+        if (glassSource != null) {
+            glassSource.invalidateDisplayListForDrawables();
+        }
+        if (frostedGlassSource != null) {
+            frostedGlassSource.invalidateDisplayListForDrawables();
+        }
+        if (contentView != null && contentView.isAttachedToWindow()) {
+            invalidate(GlassEngine.FLAG_INVALIDATED_POSITIONS
+                    | GlassEngine.FLAG_INVALIDATED_LITE_MODE
+                    | GlassEngine.FLAG_INVALIDATED_THEMED);
+            glassEngine.invalidate();
+            contentView.invalidate();
+        }
+    }
+
     private void invalidate(int flags) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || glassCaptureSourceCanvas == null || !captureIgnoresBlurSetting && !GlassEngine.getCurrentGlassSettings().isBlurEnabled) {
+            return;
+        }
+        if (contentView == null || contentView.getWidth() <= 0 || contentView.getHeight() <= 0) {
             return;
         }
 

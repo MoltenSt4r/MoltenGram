@@ -2905,16 +2905,20 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
         adaptive_updateColor();
         if (glassDrawable != null) {
             glassDrawable.updateColors();
+            glassDrawable.invalidateDisplayList();
         }
         if (glassDrawableMenu != null) {
             glassDrawableMenu.updateColors();
+            glassDrawableMenu.invalidateDisplayList();
         }
         if (glassDrawableBack != null) {
             glassDrawableBack.updateColors();
+            glassDrawableBack.invalidateDisplayList();
         }
         if (additionalSubTitleOverlayContainer != null) {
             additionalSubTitleOverlayContainer.updateColors();
         }
+        invalidate();
     }
     @Override
     public void addColorKeys(HashSet<Integer> colors) {

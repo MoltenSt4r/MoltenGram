@@ -3107,7 +3107,6 @@ public class ChatActivity extends BaseFragment implements
 
     private NotificationCenter.ObserversGroup observersGroup;
     private NotificationCenter.ObserversGroup globalObserversGroup;
-    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = this::updateChatGlassConfig;
 
     @Override
     public boolean onFragmentCreate() {
@@ -3327,7 +3326,6 @@ public class ChatActivity extends BaseFragment implements
 
         // exteraless plugins: реестр пунктов меняется, когда плагин включают/выключают.
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.pluginMenuItemsUpdated);
-        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
 
         if (chatMode != MODE_SCHEDULED) {
             if (threadMessageId == 0) {
@@ -3876,7 +3874,6 @@ public class ChatActivity extends BaseFragment implements
 
         getNotificationCenter().removeObserver(this, NotificationCenter.closeChats);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.pluginMenuItemsUpdated);
-        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
 
         if (chatMode == 0 && AndroidUtilities.isTablet()) {
             getNotificationCenter().postNotificationName(NotificationCenter.openedChatChanged, dialog_id, getTopicId(), true);
@@ -41766,7 +41763,7 @@ public class ChatActivity extends BaseFragment implements
                 view = new ChatMessageCell(mContext, currentAccount, true, sharedResources, themeDelegate);
                 ChatMessageCell chatMessageCell = (ChatMessageCell) view;
                 chatMessageCell.setResourcesProvider(themeDelegate);
-                chatMessageCell.setWallpaperBlurSource(navbarContentSourceWallpaper);
+                chatMessageCell.setWallpaperBlurSource(themeDelegate.getWallpaperBlurSource());
                 chatMessageCell.shouldCheckVisibleOnScreen = false;
                 chatMessageCell.setDelegate(getChatMessageCellDelegate());
                 chatMessageCell.draftAnimationsPool = botDraftAnimationsPool;
@@ -48215,6 +48212,9 @@ public class ChatActivity extends BaseFragment implements
     public class ThemeDelegate implements Theme.ResourcesProvider, ChatActionCell.ThemeDelegate, MessagePreviewView.ResourcesDelegate {
 
         public org.telegram.utils.glass.source.GlassSource getWallpaperBlurSource() {
+            if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMessages) {
+                return liquidContentSourceWallpaper;
+            }
             return navbarContentSourceWallpaper;
         }
 
@@ -53354,7 +53354,14 @@ public class ChatActivity extends BaseFragment implements
         return topicsTabs != null ? topicsTabs.getTabsVisibleSpaceWithPadding(position, dp(7)) : 0;
     }
 
+    @Override
+    protected void onLiquidGlassConfigChanged() {
+        super.onLiquidGlassConfigChanged();
+        updateChatGlassConfig();
+    }
+
     private void updateChatGlassConfig() {
+        app.exteraless.glass.GlassBubbleRenderer.clearSnapshotCache();
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && glassBackgroundDrawableFactory != null) {
             glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(20) : dp(48));
         }
@@ -53367,17 +53374,33 @@ public class ChatActivity extends BaseFragment implements
         }
         selectedBackgroundDelegateThemeColors();
         if (actionBar != null) {
+            app.exteraless.appearance.ChatHeaderUiHelper.applyChatHeaderGlassStyle(actionBar);
             actionBar.updateColors();
             actionBar.invalidate();
         }
         if (chatInputViewsContainer != null) {
+            chatInputViewsContainer.updateColors();
             chatInputViewsContainer.invalidate();
         }
+        if (sideControlsButtonsLayout != null) {
+            sideControlsButtonsLayout.updateColors();
+        }
+        if (bottomChannelButtonsLayout != null) {
+            bottomChannelButtonsLayout.updateColors();
+        }
+        for (BlurredBackgroundDrawable d : glassAttachedDrawables) {
+            d.updateColors();
+            d.invalidateDisplayList();
+        }
         if (chatListView != null) {
+            for (int i = 0, n = chatListView.getChildCount(); i < n; i++) {
+                chatListView.getChildAt(i).invalidate();
+            }
             chatListView.invalidateViews();
             chatListView.invalidate();
         }
         invalidateGlassSources();
+        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS);
         getGlassEngine().invalidate();
         if (contentView != null) {
             invalidateAllGlassAttachedViews();

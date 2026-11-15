@@ -433,6 +433,29 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             dividerPaint.setColor(Theme.getDividerColor(resourcesProvider));
             canvas.drawLine(0, 1, getMeasuredWidth(), 1, dividerPaint);
         }
+
+        if (speedDialDimProgress > 0.001f) {
+            speedDialDimPaint.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(android.graphics.Color.BLACK, Math.round(140f * speedDialDimProgress)));
+            if (MainTabsUiHelper.isMaterial3NavigationBar() && !MainTabsUiHelper.isMaterial3FloatingGlass()) {
+                canvas.drawRect(0, 0, getWidth(), getHeight(), speedDialDimPaint);
+            } else {
+                final float r = dp(MainTabsUiHelper.getBackgroundRadius());
+                final int inset = MainTabsUiHelper.getBackgroundInset();
+                speedDialDimRect.set(inset, inset, getWidth() - inset, getHeight() - inset);
+                canvas.drawRoundRect(speedDialDimRect, r, r, speedDialDimPaint);
+            }
+        }
+    }
+
+    private float speedDialDimProgress;
+    private Runnable onSpeedDialDimClick;
+    private final Paint speedDialDimPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF speedDialDimRect = new RectF();
+
+    public void setSpeedDialDim(float progress, Runnable onClick) {
+        speedDialDimProgress = Math.max(0f, Math.min(1f, progress));
+        onSpeedDialDimClick = onClick;
+        invalidate();
     }
 
     private boolean drawTopDivider = true;
@@ -727,6 +750,12 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
+        if (speedDialDimProgress > 0.05f) {
+            if (ev.getActionMasked() == MotionEvent.ACTION_UP && onSpeedDialDimClick != null) {
+                onSpeedDialDimClick.run();
+            }
+            return true;
+        }
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
             lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && !MainTabsUiHelper.isMaterial3NavigationBar();
         }

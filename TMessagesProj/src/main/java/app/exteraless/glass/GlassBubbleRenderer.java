@@ -62,12 +62,28 @@ public final class GlassBubbleRenderer {
         final Matrix matrix = new Matrix();
     }
 
+    public static void clearSnapshotCache() {
+        SNAPSHOT_CACHE.evictAll();
+    }
+
     @Nullable
     public static SnapshotResult resolveWallpaperSnapshot(
             @Nullable Theme.ResourcesProvider resourcesProvider,
             @Nullable GlassSourceBitmap bitmapSource,
             int containerW,
             int containerH
+    ) {
+        boolean liquid = LiquidGlassConfig.isLiquidGlassEnabled() && LiquidGlassConfig.glassMessages;
+        return resolveWallpaperSnapshot(resourcesProvider, bitmapSource, containerW, containerH, liquid);
+    }
+
+    @Nullable
+    public static SnapshotResult resolveWallpaperSnapshot(
+            @Nullable Theme.ResourcesProvider resourcesProvider,
+            @Nullable GlassSourceBitmap bitmapSource,
+            int containerW,
+            int containerH,
+            boolean liquidGlassOn
     ) {
         Drawable wallpaperDrawable = null;
         if (resourcesProvider instanceof ChatActivity.ThemeDelegate) {
@@ -77,10 +93,12 @@ public final class GlassBubbleRenderer {
         int cH = containerH > 0 ? containerH : (AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920);
 
         float blurScale = SolegramGlass.blurScale();
-        int blurRadius = Math.max(3, Math.min(26, Math.round(16f * blurScale)));
+        int blurRadius = liquidGlassOn
+                ? Math.max(0, Math.min(8, Math.round(4f * blurScale)))
+                : Math.max(3, Math.min(26, Math.round(16f * blurScale)));
 
         if (wallpaperDrawable != null) {
-            String key = buildWallpaperSignature(wallpaperDrawable, cW, cH, blurRadius);
+            String key = buildWallpaperSignature(wallpaperDrawable, cW, cH, blurRadius, liquidGlassOn);
             Bitmap snap = SNAPSHOT_CACHE.get(key);
             if (snap == null || snap.isRecycled()) {
                 snap = captureAndBlurWallpaper(wallpaperDrawable, cW, cH, blurRadius);
@@ -110,9 +128,10 @@ public final class GlassBubbleRenderer {
         return null;
     }
 
-    private static String buildWallpaperSignature(Drawable drawable, int cW, int cH, int blurRadius) {
+    private static String buildWallpaperSignature(Drawable drawable, int cW, int cH, int blurRadius, boolean liquidGlassOn) {
         StringBuilder sb = new StringBuilder(64);
         sb.append(System.identityHashCode(drawable))
+                .append('|').append(liquidGlassOn ? 'L' : 'F')
                 .append('|').append(Theme.isCurrentThemeDark() ? 1 : 0)
                 .append('|').append(blurRadius)
                 .append('|').append(cW / 64).append('x').append(cH / 64);
@@ -243,13 +262,16 @@ public final class GlassBubbleRenderer {
             float bottomRight = radii[4];
             float bottomLeft = radii[6];
 
-            float baseThickness = AndroidUtilities.dpf2(11f) * thicknessNorm;
-            float effectiveThickness = Math.max(
-                    1.5f,
-                    Math.min(SolegramGlass.thickness(baseThickness), SolegramGlass.thicknessLimit(Math.min(bw, bh)))
-            );
-            float effectiveIntensity = Math.max(0.01f, SolegramGlass.intensity(0.32f * Math.max(0.25f, refractionNorm)));
-            float index = SolegramGlass.index(1.5f);
+            float effectiveThickness = liquidGlassOn
+                    ? Math.max(
+                            1.5f,
+                            Math.min(SolegramGlass.thickness(AndroidUtilities.dpf2(11f)), SolegramGlass.thicknessLimit(Math.min(bw, bh)))
+                    )
+                    : Math.max(1.5f, Math.min(AndroidUtilities.dpf2(11f) * thicknessNorm, Math.min(bw, bh) * 0.4f));
+            float effectiveIntensity = liquidGlassOn
+                    ? Math.max(0.01f, SolegramGlass.intensity(0.75f))
+                    : Math.max(0.01f, 0.32f * Math.max(0.25f, refractionNorm));
+            float index = liquidGlassOn ? SolegramGlass.index(1.5f) : 1.5f;
             float dispersion = liquidGlassOn ? SolegramGlass.dispersion() : 0f;
             float rim = liquidGlassOn ? SolegramGlass.rim() : 0f;
 

@@ -352,9 +352,33 @@ public abstract class BaseFragment {
         return true;
     }
 
+    private int lastAppliedLiquidGlassVersion = LiquidGlassConfig.version;
+    private boolean baseGlassListenerRegistered;
+    private final LiquidGlassConfig.Listener baseGlassConfigListener = this::dispatchLiquidGlassConfigChanged;
+
     @CallSuper
     protected void onViewCreated(View view) {
         glassEngine.setRoot(view);
+        ensureLiquidGlassListener();
+        if (view != null) {
+            view.addOnAttachStateChangeListener(new View.OnAttachStateChangeListener() {
+                @Override
+                public void onViewAttachedToWindow(@NonNull View v) {
+                    checkLiquidGlassConfigVersion();
+                }
+
+                @Override
+                public void onViewDetachedFromWindow(@NonNull View v) {
+                }
+            });
+        }
+    }
+
+    private void ensureLiquidGlassListener() {
+        if (!baseGlassListenerRegistered && !isFinished) {
+            baseGlassListenerRegistered = true;
+            LiquidGlassConfig.addListener(baseGlassConfigListener);
+        }
     }
 
     protected View createView(Context context) {
@@ -666,6 +690,10 @@ public abstract class BaseFragment {
 
     @CallSuper
     public void onFragmentDestroy() {
+        if (baseGlassListenerRegistered) {
+            baseGlassListenerRegistered = false;
+            LiquidGlassConfig.removeListener(baseGlassConfigListener);
+        }
         org.telegram.ui.Wallet.WalletPluginFreeze.leave(this);
         getConnectionsManager().cancelRequestsForGuid(classGuid);
         getMessagesStorage().cancelTasksForGuid(classGuid);
@@ -706,12 +734,60 @@ public abstract class BaseFragment {
     @CallSuper
     public void onResume() {
         isPaused = false;
+        ensureLiquidGlassListener();
+        checkLiquidGlassConfigVersion();
         if (actionBar != null) {
             actionBar.onResume();
         }
         if (getLastStoryViewer() != null) {
             getLastStoryViewer().onResume();
             getLastStoryViewer().updatePlayingMode();
+        }
+    }
+
+    private void dispatchLiquidGlassConfigChanged() {
+        if (isFinished) {
+            return;
+        }
+        if (fragmentView != null && fragmentView.isAttachedToWindow()) {
+            lastAppliedLiquidGlassVersion = LiquidGlassConfig.version;
+            onLiquidGlassConfigChanged();
+        }
+    }
+
+    private void checkLiquidGlassConfigVersion() {
+        if (isFinished) {
+            return;
+        }
+        final int ver = LiquidGlassConfig.version;
+        if (lastAppliedLiquidGlassVersion != ver) {
+            if (fragmentView == null || fragmentView.isAttachedToWindow()) {
+                lastAppliedLiquidGlassVersion = ver;
+            }
+            onLiquidGlassConfigChanged();
+        }
+    }
+
+    protected void onLiquidGlassConfigChanged() {
+        if (actionBar != null) {
+            actionBar.updateColors();
+            actionBar.invalidate();
+        }
+        if (simpleActionBar != null) {
+            simpleActionBar.updateColors();
+            simpleActionBar.invalidate();
+        }
+        if (simpleGlass != null) {
+            simpleGlass.refreshGlass();
+        }
+        if (navigationBarFadeView != null) {
+            navigationBarFadeView.invalidate();
+        }
+        if (glassEngine != null) {
+            glassEngine.invalidate();
+        }
+        if (fragmentView != null) {
+            fragmentView.invalidate();
         }
     }
 

@@ -334,6 +334,7 @@ public class DownscaleScrollableNoiseSuppressor {
 
         hash = MediaDataController.calcHash(hash, width);
         hash = MediaDataController.calcHash(hash, height);
+        hash = MediaDataController.calcHash(hash, app.exteraless.glass.LiquidGlassConfig.version);
 
         for (int a = 0; a < resultRenderNodes.length; a++) {
             RenderNode renderNode = resultRenderNodes[a];
@@ -410,6 +411,10 @@ public class DownscaleScrollableNoiseSuppressor {
             tmpRectF.set(position);
 
             builder.start();
+            builder.add(position.left);
+            builder.add(position.top);
+            builder.add(position.right);
+            builder.add(position.bottom);
             capture.captureCalculateHash(builder, tmpRectF);
             final long hash = builder.get();
 
@@ -487,7 +492,7 @@ public class DownscaleScrollableNoiseSuppressor {
                 renderNodesForBlur.setPrimaryEffectBlur(dpf2(40 - 1.66f) * blurScale);
             } else if (simpleMode) {
                 renderNodesForBlur = new DownscaledRenderNode("blur", 0);
-                renderNodesForBlur.setScale(allowNoiseSuppress ? 16 : 8, allowNoiseSuppress ? 16 : 8);
+                renderNodesForBlur.setScale(8, 8);
                 renderNodesForBlur.setPrimaryEffectBlur(dpf2(40) * blurScale, RenderNodeEffects.getSaturationX3RenderEffect());
                 renderNodesForGlass = null;
             } else {

@@ -177,8 +177,12 @@ public class GlassCaptureSourceCanvas {
     }
 
     public void invalidate() {
+        if (rootView == null || capture == null) {
+            return;
+        }
         for (int a = 0; a < positionsCount; a++) {
             final Position position = positions.get(a);
+            position.setDownsamples(glassDownsample, frostedGlassDownsample, normalizationDownsample);
             position.capture(capture, frostedFilteredRequested, rootView.getWidth(), rootView.getHeight());
         }
 

@@ -455,13 +455,31 @@ public class Md3SpeedDialView extends FrameLayout {
         setVisibility(VISIBLE);
         scrimView.setAlpha(0f);
         scrimView.animate().alpha(1f).setDuration(240).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();
+        if (activity != null) {
+            activity.onSpeedDialOpenChanged(true, true);
+        }
 
         if (mainFab != null && mainFab.imageView != null) {
             mainFab.imageView.animate().rotation(45f).setDuration(240).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();
         }
 
         if (storiesFab != null) {
-            storiesFab.animate().alpha(0f).scaleX(0.4f).scaleY(0.4f).setDuration(180).start();
+            storiesFab.animate().cancel();
+            storiesFab.setClickable(false);
+            storiesFab.setEnabled(false);
+            storiesFab.setFocusable(false);
+            storiesFab.animate()
+                    .alpha(0f)
+                    .scaleX(0.4f)
+                    .scaleY(0.4f)
+                    .setDuration(180)
+                    .withEndAction(() -> {
+                        if (isOpen && storiesFab != null) {
+                            storiesFab.setVisibility(INVISIBLE);
+                            storiesFab.setClickable(false);
+                        }
+                    })
+                    .start();
         }
 
         final int count = itemViews.size();
@@ -490,10 +508,17 @@ public class Md3SpeedDialView extends FrameLayout {
     public void close(boolean animated) {
         if (!isOpen) return;
         isOpen = false;
+        if (activity != null) {
+            activity.onSpeedDialOpenChanged(false, animated);
+        }
 
         if (mainFab != null) {
             mainFab.morphTo(AppearanceConfig.fabShape(), AppearanceConfig.fabSize(), AppearanceConfig.fabColor(), animated);
         }
+
+        final boolean showStoriesFab = storiesFab != null
+                && (!(storiesFab instanceof org.telegram.ui.Components.FragmentFloatingButton)
+                || ((org.telegram.ui.Components.FragmentFloatingButton) storiesFab).getButtonVisible());
 
         if (animated) {
             scrimView.animate().alpha(0f).setDuration(180).start();
@@ -501,7 +526,17 @@ public class Md3SpeedDialView extends FrameLayout {
                 mainFab.imageView.animate().rotation(0f).setDuration(200).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();
             }
             if (storiesFab != null) {
-                storiesFab.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).start();
+                storiesFab.animate().cancel();
+                if (showStoriesFab) {
+                    storiesFab.setVisibility(VISIBLE);
+                    storiesFab.setClickable(true);
+                    storiesFab.setEnabled(true);
+                    storiesFab.setFocusable(true);
+                    storiesFab.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(200).start();
+                } else {
+                    storiesFab.setClickable(false);
+                    storiesFab.setAlpha(0f);
+                }
             }
 
             for (CapsuleItemView item : itemViews) {
@@ -525,9 +560,19 @@ public class Md3SpeedDialView extends FrameLayout {
                 mainFab.imageView.setRotation(0f);
             }
             if (storiesFab != null) {
-                storiesFab.setAlpha(1f);
-                storiesFab.setScaleX(1f);
-                storiesFab.setScaleY(1f);
+                storiesFab.animate().cancel();
+                if (showStoriesFab) {
+                    storiesFab.setVisibility(VISIBLE);
+                    storiesFab.setClickable(true);
+                    storiesFab.setEnabled(true);
+                    storiesFab.setFocusable(true);
+                    storiesFab.setAlpha(1f);
+                    storiesFab.setScaleX(1f);
+                    storiesFab.setScaleY(1f);
+                } else {
+                    storiesFab.setClickable(false);
+                    storiesFab.setAlpha(0f);
+                }
             }
             setVisibility(GONE);
         }

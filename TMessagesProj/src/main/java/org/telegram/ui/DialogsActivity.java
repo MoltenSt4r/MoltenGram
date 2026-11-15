@@ -570,7 +570,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private BlurredBackgroundDrawable topPanelLayoutBackground;
     private BlurredBackgroundDrawable filterTabsViewBackground;
     private BlurredBackgroundDrawable searchFieldBackground;
-    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = this::updateDialogsGlassConfig;
     private ButtonWithCounterView addChatsToCommunityButton;
     private ChatActivityFadeView communityBottomFadeView;
     private ChatAvatarContainer avatarContainer;
@@ -3054,7 +3053,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         LastSeenHelper.preload();
-        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
 
         return true;
     }
@@ -3197,7 +3195,6 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @Override
     public void onFragmentDestroy() {
-        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
         super.onFragmentDestroy();
         searchTabsViewBackground = null;
         topPanelLayoutBackground = null;
@@ -4986,7 +4983,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         floatingButtonStories.setContentDescription(getString(R.string.StoryPrivacyButtonPost));
         floatingButtonStories.setImageResource(R.drawable.camera);
         floatingButtonStories.setGlassFactory(iBlur3FactoryLiquidGlass);
-        floatingButtonStories.setOnClickListener(v -> openStoriesRecorder());
+        floatingButtonStories.setOnClickListener(v -> {
+            if (speedDialView != null && speedDialView.isOpen()) {
+                return;
+            }
+            openStoriesRecorder();
+        });
         contentView.addView(floatingButtonStories, FragmentFloatingButton.createSubButtonLayoutParams());
 
         floatingButton3 = new FragmentFloatingButton(context, resourceProvider);
@@ -14671,14 +14673,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return false;
     }
 
-    private int appendExpandedViewCaptureRect(View view, int expandPx, int poolIndex) {
+    private int appendExpandedViewCaptureRect(View view, int expandPx, int poolIndex, float maxBottomY) {
         if (view == null || fragmentView == null || view.getVisibility() != View.VISIBLE || view.getAlpha() <= 0f) {
             return poolIndex;
         }
         if (ViewPositionWatcher.computeRectInParent(view, fragmentView, iBlur3TmpRect)
                 && iBlur3TmpRect.width() > 0 && iBlur3TmpRect.height() > 0) {
             iBlur3TmpRect.inset(-expandPx, -expandPx);
-            iBlur3TmpRect.intersect(0, 0, fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
+            iBlur3TmpRect.intersect(0, 0, fragmentView.getMeasuredWidth(), Math.min(fragmentView.getMeasuredHeight(), maxBottomY));
+            if (iBlur3TmpRect.top < iBlur3PositionActionBar.bottom && iBlur3TmpRect.bottom > iBlur3PositionActionBar.top) {
+                iBlur3TmpRect.top = Math.max(iBlur3TmpRect.top, iBlur3PositionActionBar.bottom);
+            }
             if (!iBlur3TmpRect.isEmpty() && !isCoveredByExistingPositions(iBlur3TmpRect)) {
                 addDynamicCaptureRect(iBlur3TmpRect.left, iBlur3TmpRect.top, iBlur3TmpRect.right, iBlur3TmpRect.bottom, poolIndex);
                 return poolIndex + 1;
@@ -14687,27 +14692,51 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return poolIndex;
     }
 
+    public void onSpeedDialOpenChanged(boolean open, boolean animated) {
+        if (mainTabsActivityController != null) {
+            mainTabsActivityController.setSpeedDialOpen(open, animated, () -> {
+                if (speedDialView != null && speedDialView.isOpen()) {
+                    speedDialView.close(true);
+                }
+            });
+        }
+        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS);
+    }
+
+    @Override
+    protected void onLiquidGlassConfigChanged() {
+        super.onLiquidGlassConfigChanged();
+        updateDialogsGlassConfig();
+    }
+
     private void updateDialogsGlassConfig() {
         final boolean liquidActive = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
         final boolean liquidHeaders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
         final boolean liquidFolders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFolders;
 
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
+
         iBlur3FactoryLiquidGlass.setOutset(liquidActive ? dp(8) : dp(48));
         if (searchTabsViewBackground != null) {
             searchTabsViewBackground.setLiquidGlassEffectAllowed(liquidHeaders);
             searchTabsViewBackground.updateColors();
+            searchTabsViewBackground.invalidateDisplayList();
         }
         if (topPanelLayoutBackground != null) {
             topPanelLayoutBackground.setLiquidGlassEffectAllowed(liquidHeaders);
             topPanelLayoutBackground.updateColors();
+            topPanelLayoutBackground.invalidateDisplayList();
         }
         if (filterTabsViewBackground != null) {
             filterTabsViewBackground.setLiquidGlassEffectAllowed(liquidFolders);
             filterTabsViewBackground.updateColors();
+            filterTabsViewBackground.invalidateDisplayList();
         }
         if (searchFieldBackground != null) {
             searchFieldBackground.setLiquidGlassEffectAllowed(liquidHeaders);
             searchFieldBackground.updateColors();
+            searchFieldBackground.invalidateDisplayList();
         }
         if (floatingButton3 != null) {
             floatingButton3.updateColors();
@@ -14715,6 +14744,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (floatingButtonStories != null) {
             floatingButtonStories.updateColors();
         }
+        updateFloatingButtonOffset();
         if (speedDialView != null) {
             speedDialView.updateColors();
         }
@@ -14732,6 +14762,15 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             final float filtersTabVisibility = animatorFilterTabsVisible != null ? animatorFilterTabsVisible.getFloatValue() : 0f;
             topBubblesFadeView.setAlpha(Math.max(filtersTabVisibility, topPanelsVisibility) * (liquidHeaders ? 0.12f : 1f));
         }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            if (iBlur3SourceGlass != null) {
+                iBlur3SourceGlass.invalidateDisplayListForDrawables();
+            }
+            if (iBlur3SourceGlassFrosted != null) {
+                iBlur3SourceGlassFrosted.invalidateDisplayListForDrawables();
+            }
+        }
+        invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS);
         glassEngine.invalidate();
         if (fragmentView != null) {
             fragmentView.invalidate();
@@ -14782,15 +14821,31 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
 
             int poolIdx = 0;
+            final boolean glassFabActive = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFab;
+            final boolean speedDialOpen = speedDialView != null && speedDialView.isOpen();
             final org.telegram.utils.glass.positions.GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
             for (int i = 0, n = glassPositionsArray.size(); i < n; i++) {
                 final RectF rect = glassPositionsArray.get(i);
-                if (rect.width() > 0 && rect.height() > 0 && !isCoveredByExistingPositions(rect)) {
-                    addDynamicCaptureRect(rect.left, rect.top, rect.right, rect.bottom, poolIdx++);
+                if (rect.width() <= 0 || rect.height() <= 0) {
+                    continue;
+                }
+                iBlur3TmpRect.set(rect);
+                if (iBlur3TmpRect.top < iBlur3PositionActionBar.bottom && iBlur3TmpRect.bottom > iBlur3PositionActionBar.top) {
+                    iBlur3TmpRect.top = Math.max(iBlur3TmpRect.top, iBlur3PositionActionBar.bottom);
+                }
+                if (hasBottomBlur && iBlur3TmpRect.bottom > iBlur3PositionMainTabs.top && iBlur3TmpRect.top < iBlur3PositionMainTabs.bottom) {
+                    iBlur3TmpRect.bottom = Math.min(iBlur3TmpRect.bottom, iBlur3PositionMainTabs.top);
+                }
+                if (iBlur3TmpRect.width() > 0 && iBlur3TmpRect.height() > 0 && !isCoveredByExistingPositions(iBlur3TmpRect)) {
+                    addDynamicCaptureRect(iBlur3TmpRect.left, iBlur3TmpRect.top, iBlur3TmpRect.right, iBlur3TmpRect.bottom, poolIdx++);
                 }
             }
-            poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx);
-            appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx);
+            if (glassFabActive) {
+                poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx, hasBottomBlur ? iBlur3PositionMainTabs.top : Float.MAX_VALUE);
+                if (!speedDialOpen) {
+                    appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx, hasBottomBlur ? iBlur3PositionMainTabs.top : Float.MAX_VALUE);
+                }
+            }
 
             scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3Positions, iBlur3Positions.size());
         }

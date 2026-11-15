@@ -20213,10 +20213,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private GlassSourceBitmap resolveWallpaperBitmapSource() {
-        GlassSource src = this.wallpaperBlurSource;
-        if (src == null && resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
+        GlassSource src = null;
+        if (resourcesProvider instanceof org.telegram.ui.ChatActivity.ThemeDelegate) {
             src = ((org.telegram.ui.ChatActivity.ThemeDelegate) resourcesProvider).getWallpaperBlurSource();
-            this.wallpaperBlurSource = src;
+        }
+        if (src == null) {
+            src = this.wallpaperBlurSource;
         }
         int depth = 0;
         while (src instanceof GlassSourceWrapped && depth < 6) {
@@ -20355,8 +20357,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 pHeight = AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920;
             }
             boolean dark = isDark();
-            int rawVeilAlpha = Math.round(255f * (dark ? 0.42f : 0.48f) * (opacityNorm / 0.55f));
-            int veilAlphaClamped = Math.max(24, Math.min(220, rawVeilAlpha));
+            int rawVeilAlpha = liquidGlassOn
+                    ? Math.round(255f * (dark ? 0.28f : 0.32f) * (opacityNorm / 0.55f))
+                    : Math.round(255f * (dark ? 0.42f : 0.48f) * (opacityNorm / 0.55f));
+            int veilAlphaClamped = Math.max(20, Math.min(220, rawVeilAlpha));
             int veilBaseRgb = dark
                     ? ColorUtils.blendARGB(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_topPanelBackground, resourcesProvider), 255), 0xFF28282E, 0.55f)
                     : 0xFFFFFFFF;
@@ -20400,7 +20404,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 drewWallpaperBitmap = true;
             } else {
                 wallpaperSnap = app.exteraless.glass.GlassBubbleRenderer.resolveWallpaperSnapshot(
-                        resourcesProvider, bitmapSource, pWidth, pHeight
+                        resourcesProvider, bitmapSource, pWidth, pHeight, liquidGlassOn
                 );
                 if (wallpaperSnap != null && wallpaperSnap.bitmap != null && !wallpaperSnap.bitmap.isRecycled()) {
                     if (glassShaderState == null) {
