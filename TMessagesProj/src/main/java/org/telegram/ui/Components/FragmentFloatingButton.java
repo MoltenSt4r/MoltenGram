@@ -236,9 +236,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         fabGlassDrawable.setClipToOutline(!customShapeContour);
         final int sizeDp = Math.max(1, Math.round(Math.min(w, h) / AndroidUtilities.density));
         final float rad;
-        if (customShapeContour) {
-            rad = dpf2(2.5f);
-        } else if (activeShape == 0) {
+        if (activeShape == 0 || customShapeContour) {
             rad = Math.min(w, h) / 2f;
         } else {
             rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
@@ -260,11 +258,11 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             cachedStrokeH = h;
             cachedStrokeDark = dark;
             cachedStrokeConfigVer = cfgVer;
-            final int topCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x4CFFFFFF : 0xCCFFFFFF, true);
-            final int midCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x16FFFFFF : 0x38FFFFFF, true);
-            final int botCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x24FFFFFF : 0x68FFFFFF, false);
+            final int topCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x70FFFFFF : 0xD8FFFFFF, true);
+            final int midCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x2EFFFFFF : 0x58FFFFFF, true);
+            final int botCol = app.exteraless.glass.SolegramGlass.highlight(dark ? 0x42FFFFFF : 0x80FFFFFF, false);
             shapeGlassStrokePaint.setShader(new LinearGradient(0, 0, 0, h,
-                    new int[]{topCol, midCol, botCol}, new float[]{0f, 0.45f, 1f}, Shader.TileMode.CLAMP));
+                    new int[]{topCol, midCol, botCol}, new float[]{0f, 0.5f, 1f}, Shader.TileMode.CLAMP));
         }
         final float baseStroke = dpf2(1.25f);
         shapeGlassStrokePaint.setStrokeWidth(Math.max(dpf2(0.8f), app.exteraless.glass.SolegramGlass.highlightWidth(baseStroke, true)) * 2f);

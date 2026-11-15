@@ -319,13 +319,7 @@ public abstract class BaseFragment {
 
             if (useFadeDrawableForActionBar() && header != null) {
                 final boolean customButtonsGlass = header instanceof SimpleActionBar && ((SimpleActionBar) header).hasButtonsGlass();
-                if (!customButtonsGlass && LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons) {
-                    if (LiquidGlassConfig.frostedHeaders || !LiquidGlassConfig.isLiquidGlassEnabled()) {
-                        header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
-                    } else {
-                        header.setBackground(simpleGlass.createFullHeaderGlassDrawable(header, resourceProvider));
-                    }
-                } else if (!customButtonsGlass && (!LiquidGlassConfig.glassOn || !LiquidGlassConfig.glassHeaderButtons)) {
+                if (!customButtonsGlass) {
                     if (header instanceof SimpleActionBar) {
                         ((SimpleActionBar) header).setAdaptiveBackground(listViewForSimpleGlass);
                     } else if (header instanceof ActionBar && listViewForSimpleGlass instanceof RecyclerView) {

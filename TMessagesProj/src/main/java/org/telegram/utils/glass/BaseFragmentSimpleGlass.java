@@ -278,32 +278,15 @@ public class BaseFragmentSimpleGlass {
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
             final boolean hasCustomButtonsGlass = simpleActionBar.hasButtonsGlass();
-            final boolean useGlass = hasCustomButtonsGlass || (LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons);
-            final boolean fullHeaderGlass = !hasCustomButtonsGlass && LiquidGlassConfig.isLiquidGlassEnabled() && LiquidGlassConfig.glassHeaderButtons && !LiquidGlassConfig.frostedHeaders;
-            simpleActionBar.setMonotoneHeaderMode(!useGlass);
+            simpleActionBar.setMonotoneHeaderMode(!hasCustomButtonsGlass);
             simpleActionBar.setExtraHeight(0);
-            if (useGlass) {
-                if (!hasCustomButtonsGlass && !fullHeaderGlass) {
-                    simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
-                }
+            if (hasCustomButtonsGlass) {
                 simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
             }
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
-            final boolean useGlass = LiquidGlassConfig.glassOn && LiquidGlassConfig.glassHeaderButtons;
-            final boolean fullHeaderGlass = LiquidGlassConfig.isLiquidGlassEnabled() && LiquidGlassConfig.glassHeaderButtons && !LiquidGlassConfig.frostedHeaders;
             actionBar.setAddToContainer(false);
-            if (useGlass && !fullHeaderGlass) {
-                actionBar.setCenterTitleAndGlass(true);
-                actionBar.setExtraHeight(dp(6));
-                actionBar.doNotDrawCenterGlass = true;
-                actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
-            } else if (fullHeaderGlass) {
-                actionBar.setCenterTitleAndGlass(true);
-                actionBar.setExtraHeight(0);
-            } else {
-                actionBar.setExtraHeight(0);
-            }
+            actionBar.setExtraHeight(0);
         }
     }
 

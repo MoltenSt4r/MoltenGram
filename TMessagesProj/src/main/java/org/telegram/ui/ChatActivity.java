@@ -7862,6 +7862,7 @@ public class ChatActivity extends BaseFragment implements
         chatActivityFadeView.setup(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && glassBackgroundSourceFrostedRenderNode != null ? glassBackgroundDrawableFactoryFrosted : navbarContentDrawableFactory);
         chatActivityFadeView.setFadeHeightTop(dp(48));
         chatActivityFadeView.setFadeHeightBottom(dp(48));
+        chatActivityFadeView.setVisibility(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? View.GONE : View.VISIBLE);
         contentView.addView(chatActivityFadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         if (false/* && getDialogId() != getUserConfig().getClientUserId()*/) {
@@ -53346,6 +53347,9 @@ public class ChatActivity extends BaseFragment implements
         }
         if (chatInputViewsContainer != null) {
             chatInputViewsContainer.invalidate();
+        }
+        if (chatActivityFadeView != null) {
+            chatActivityFadeView.setVisibility(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? View.GONE : View.VISIBLE);
         }
         if (chatListView != null) {
             chatListView.invalidateViews();

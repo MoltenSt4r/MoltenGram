@@ -1664,9 +1664,12 @@ public class FilterTabsView extends FrameLayout {
         float listLeft = listView.getX();
         indicatorX += listLeft;
         int gapH = Md3ChipTabHelper.getSpacingHalfPx();
-        int vInset = height >= dp(44) ? dp(6) : Math.max(dp(4), (height - dp(32)) / 2);
-        float chipTop = vInset;
-        float chipBottom = height - vInset;
+        int topPad = getPaddingTop();
+        int botPad = getPaddingBottom();
+        int innerH = Math.max(1, height - topPad - botPad);
+        int vInset = innerH >= dp(40) ? dp(4) : dp(2);
+        float chipTop = topPad + vInset;
+        float chipBottom = height - botPad - vInset;
         float add = additionalTabWidth / 2f;
         float internalPadding = FolderIconHelper.getTabInternalPadding();
         float pillLeft = indicatorWidth > 0f ? indicatorX - dp(internalPadding) - add + gapH : -1f;
