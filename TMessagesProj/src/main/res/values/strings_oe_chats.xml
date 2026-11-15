@@ -271,6 +271,7 @@
 <string name="OEBotBannerNote">Telegram does not expose an API for a bot to upload its own description banner — change it via @BotFather (/setdescription).</string>
 <string name="OEBotSaved">Bot profile updated</string>
 <string name="OEBotNameRequired">Bot name cannot be empty</string>
+<string name="OEBotProfileSyncRequired">Enable and configure sync bot first</string>
 <string name="OEBotLiveStreamOn">Live typing stream enabled</string>
 <string name="OEBotLiveStreamOff">Live typing stream disabled</string>
 </resources>

@@ -164,19 +164,19 @@ public class BaseFragmentSimpleGlass {
             glassSourceForFadeDrawable);
 
         final GlassFadeRangeParams gradientRangeMask = new GlassFadeRangeParams(
-                dp(32), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(14), GlassFadeRangeParams.Gravity.START, 0, 0);
         final GlassFadeRangeParams gradientRangeFade = new GlassFadeRangeParams(
-                dp(56), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(24), GlassFadeRangeParams.Gravity.START, 0, 0);
         final GlassFadeRangeParams gradientRangeFallback = new GlassFadeRangeParams(
-                dp(48), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(20), GlassFadeRangeParams.Gravity.START, 0, 0);
 
         glassBlurredFadeDrawable.setDirection(GlassFadeDirection.TOP);
         glassBlurredFadeDrawable.setOverlayColorSource(glassBackgroundSourceColor);
-        glassBlurredFadeDrawable.setOverlayAlpha(160);
+        glassBlurredFadeDrawable.setOverlayAlpha(235);
         glassBlurredFadeDrawable.setMaskRange(gradientRangeMask);
         glassBlurredFadeDrawable.setOverlayRange(gradientRangeFade);
 
-        glassBlurredFadeDrawable.setOverlayOnlyAlpha(210);
+        glassBlurredFadeDrawable.setOverlayOnlyAlpha(248);
         glassBlurredFadeDrawable.setOverlayOnlyRange(gradientRangeFallback);
 
         glassEngine.registerDrawable(view, glassBlurredFadeDrawable);

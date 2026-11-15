@@ -88,10 +88,10 @@ object OpenExteraConfig {
     // ---- Статические геттеры для вызова из Java в горячих местах ----
 
     @JvmStatic
-    fun customEmojiStatus(): Boolean = customEmojiStatus.Bool()
+    fun customEmojiStatus(): Boolean = customEmojiStatus.Bool() && botProfileSync.Bool()
 
     @JvmStatic
-    fun freeProfileAppearance(): Boolean = freeProfileAppearance.Bool()
+    fun freeProfileAppearance(): Boolean = freeProfileAppearance.Bool() && botProfileSync.Bool()
 
     @JvmStatic
     fun botProfileSync(): Boolean = botProfileSync.Bool()

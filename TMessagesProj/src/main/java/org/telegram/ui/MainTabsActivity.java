@@ -478,7 +478,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         iBlur3FactoryTabs.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
 
         tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
-        tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
+        if (MainTabsUiHelper.isMaterial3NavigationBar() && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+            tabsViewBackground.setRadius(dp(20), dp(20), 0, 0);
+        } else {
+            tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
+        }
         tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
         tabsView.setBackground(tabsViewBackground);
 
@@ -1670,6 +1674,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
             tabsViewBackground.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+            if (MainTabsUiHelper.isMaterial3NavigationBar() && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                tabsViewBackground.setRadius(dp(20), dp(20), 0, 0);
+            } else {
+                tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
+            }
+            tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
             tabsViewBackground.updateColors();
             tabsViewBackground.invalidateDisplayList();
         }

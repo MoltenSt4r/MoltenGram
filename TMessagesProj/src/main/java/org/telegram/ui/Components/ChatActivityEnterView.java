@@ -2902,6 +2902,41 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         setEmojiButtonImage(false, false);
 
+        if (isChat) {
+            liveStreamButton = new ImageView(context);
+            liveStreamButton.setScaleType(ImageView.ScaleType.CENTER);
+            liveStreamButton.setImageResource(R.drawable.deproko_baseline_bots_24);
+            liveStreamButton.setPadding(dp(7), dp(7), dp(7), dp(7));
+            if (md3Input) {
+                messageEditTextContainer.addView(liveStreamButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, DEFAULT_HEIGHT, 0));
+            } else {
+                messageEditTextContainer.addView(liveStreamButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.LEFT, DEFAULT_HEIGHT, 0, 0, 0));
+            }
+            updateLiveStreamButtonAppearance();
+            updateLiveStreamButtonVisibility();
+            liveStreamButton.setOnClickListener(v -> {
+                if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress() || attachLayoutPaddingAlpha == 0f) {
+                    return;
+                }
+                liveStreamEnabled = !liveStreamEnabled;
+                updateLiveStreamButtonAppearance();
+                if (liveStreamEnabled) {
+                    CharSequence currentText = messageEditText != null ? messageEditText.getText() : null;
+                    if (!TextUtils.isEmpty(currentText)) {
+                        sendOrUpdateLiveDraft(currentText);
+                    }
+                } else {
+                    stopLiveDraft();
+                }
+                if (fragment != null) {
+                    BulletinFactory.of(fragment).createSimpleBulletin(
+                        R.raw.info,
+                        getString(liveStreamEnabled ? R.string.OEBotLiveStreamOn : R.string.OEBotLiveStreamOff)
+                    ).show();
+                }
+            });
+        }
+
         deleteRichDraftButton = new ImageView(context);
         deleteRichDraftButton.setScaleType(ImageView.ScaleType.CENTER);
         deleteRichDraftButton.setImageResource(R.drawable.menu_delete_old);
@@ -2976,35 +3011,6 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                 });
             }
-
-            liveStreamButton = new ImageView(context);
-            liveStreamButton.setScaleType(ImageView.ScaleType.CENTER);
-            liveStreamButton.setImageResource(R.drawable.deproko_baseline_bots_24);
-            ThemeBind.selectorBackground(liveStreamButton, Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)), null, ThemeBind.of(Theme.key_listSelector), resourcesProvider);
-            attachLayout.addView(liveStreamButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
-            updateLiveStreamButtonAppearance();
-            updateLiveStreamButtonVisibility();
-            liveStreamButton.setOnClickListener(v -> {
-                if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress() || attachLayoutPaddingAlpha == 0f) {
-                    return;
-                }
-                liveStreamEnabled = !liveStreamEnabled;
-                updateLiveStreamButtonAppearance();
-                if (liveStreamEnabled) {
-                    CharSequence currentText = messageEditText != null ? messageEditText.getText() : null;
-                    if (!TextUtils.isEmpty(currentText)) {
-                        sendOrUpdateLiveDraft(currentText);
-                    }
-                } else {
-                    stopLiveDraft();
-                }
-                if (fragment != null) {
-                    BulletinFactory.of(fragment).createSimpleBulletin(
-                        R.raw.info,
-                        getString(liveStreamEnabled ? R.string.OEBotLiveStreamOn : R.string.OEBotLiveStreamOff)
-                    ).show();
-                }
-            });
 
             attachButton = new ImageView(context) {
                 @Override
@@ -7983,8 +7989,16 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (liveStreamButton == null) {
             return;
         }
-        int key = liveStreamEnabled ? Theme.key_featuredStickers_addButton : Theme.key_glass_defaultIcon;
-        liveStreamButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(key), PorterDuff.Mode.MULTIPLY));
+        int iconColor = getThemedColor(liveStreamEnabled ? Theme.key_featuredStickers_addButton : Theme.key_glass_defaultIcon);
+        liveStreamButton.setColorFilter(new PorterDuffColorFilter(iconColor, PorterDuff.Mode.SRC_IN));
+        liveStreamButton.setAlpha(liveStreamEnabled ? 1.0f : 0.72f);
+        if (liveStreamEnabled) {
+            liveStreamButton.setBackground(Theme.createInsetRoundRectDrawable(
+                Theme.multAlpha(getThemedColor(Theme.key_featuredStickers_addButton), 0.18f), dp(19), dp(5), dp(5)
+            ));
+        } else {
+            liveStreamButton.setBackground(Theme.createInsetRoundRectDrawable(getThemedColor(Theme.key_listSelector), dp(19), dp(1), dp(3)));
+        }
     }
 
     public void sendOrUpdateLiveDraft(@Nullable CharSequence text) {
@@ -10459,22 +10473,22 @@ public class ChatActivityEnterView extends FrameLayout implements
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) messageEditText.getLayoutParams();
         int oldRightMargin = layoutParams.rightMargin;
         int oldLeftMargin = layoutParams.leftMargin;
+        boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
         if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
-            boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
-            layoutParams.rightMargin = dp(48);
-            layoutParams.leftMargin = dp(liveVisible ? 96 : 48);
+            layoutParams.rightMargin = dp(liveVisible ? 96 : 48);
+            layoutParams.leftMargin = dp(48);
             if (oldRightMargin != layoutParams.rightMargin || oldLeftMargin != layoutParams.leftMargin) {
                 messageEditText.setLayoutParams(layoutParams);
             }
             return;
         }
+        layoutParams.leftMargin = dp(liveVisible ? 96 : 52);
         if (isStories && isLiveComment) {
             layoutParams.rightMargin = dp(suggestButtonVisible ? 50 : 2) + Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
         } else if (attachVisible == 1 || attachVisible == 2/* && layoutParams.rightMargin != dp(2)*/) {
-            boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
             if (botButton != null && botButton.getVisibility() == VISIBLE && scheduledButton != null && scheduledButton.getVisibility() == VISIBLE && attachButton != null && attachButton.getVisibility() == VISIBLE) {
                 layoutParams.rightMargin = dp(146);
-            } else if (botButton != null && botButton.getVisibility() == VISIBLE || notifyButton != null && notifyButton.getVisibility() == VISIBLE || scheduledButton != null && scheduledButton.getTag() != null || liveVisible) {
+            } else if (botButton != null && botButton.getVisibility() == VISIBLE || notifyButton != null && notifyButton.getVisibility() == VISIBLE || scheduledButton != null && scheduledButton.getTag() != null) {
                 layoutParams.rightMargin = dp(98);
             } else {
                 layoutParams.rightMargin = dp(50);
@@ -10490,7 +10504,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (doneButton != null && doneButton.getVisibility() == VISIBLE) {
             layoutParams.rightMargin = Math.max(layoutParams.rightMargin, Math.max(0, doneButton.width() - dp(DEFAULT_HEIGHT)));
         }
-        if (oldRightMargin != layoutParams.rightMargin) {
+        if (oldRightMargin != layoutParams.rightMargin || oldLeftMargin != layoutParams.leftMargin) {
             messageEditText.setLayoutParams(layoutParams);
         }
         if (recordedAudioPanel != null) {

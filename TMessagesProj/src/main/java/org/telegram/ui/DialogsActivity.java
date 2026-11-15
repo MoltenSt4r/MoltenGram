@@ -6486,7 +6486,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 BulletinFactory.of(this)
                     .createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString(R.string.BirthdaySetupLater), LocaleController.getString(R.string.Settings), () -> {
-                        presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                        presentFragment(new UserInfoActivity());
                     })
                     .setDuration(Bulletin.DURATION_PROLONG)
                     .show();

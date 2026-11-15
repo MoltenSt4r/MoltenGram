@@ -217,7 +217,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
 
     private int effectiveShapeId() {
         if (isSubButton) {
-            return app.exteraless.appearance.AppearanceConfig.fabShape();
+            return app.exteraless.appearance.AppearanceConfig.squareFab() ? 1 : 0;
         }
         return currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
     }
@@ -235,12 +235,10 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         fabGlassDrawable.solegramSetStrokeHidden(customShapeContour);
         final int sizeDp = Math.max(1, Math.round(Math.min(w, h) / AndroidUtilities.density));
         final float rad;
-        if (activeShape == 0) {
+        if (activeShape == 0 || customShapeContour) {
             rad = Math.min(w, h) / 2f;
-        } else if (activeShape == 1) {
-            rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
         } else {
-            rad = Math.min(w, h) * 0.42f;
+            rad = Math.min(Math.min(w, h) / 2f, dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(sizeDp)));
         }
         fabGlassDrawable.setRadius(rad);
     }

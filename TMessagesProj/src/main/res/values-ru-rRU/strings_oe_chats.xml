@@ -268,6 +268,7 @@
 <string name="OEBotBannerNote">Telegram не даёт боту API для загрузки баннера описания — его нужно менять через @BotFather (/setdescription).</string>
 <string name="OEBotSaved">Профиль бота обновлён</string>
 <string name="OEBotNameRequired">Имя бота не может быть пустым</string>
+<string name="OEBotProfileSyncRequired">Сначала включите и настройте бота-синхронизатора</string>
 <string name="OEBotLiveStreamOn">Live-печать включена</string>
 <string name="OEBotLiveStreamOff">Live-печать выключена</string>
 </resources>

@@ -2788,7 +2788,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         presentFragment(fragment);
                     }
                 } else if (id == edit_profile) {
-                    presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                    presentFragment(new UserInfoActivity());
                 } else if (id == invite_to_group) {
                     final TLRPC.User user = getMessagesController().getUser(userId);
                     if (user == null) {
@@ -2937,7 +2937,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         });
                     }
                 } else if (id == edit_info) {
-                    presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                    presentFragment(new UserInfoActivity());
                 } else if (id == edit_color) {
 //                    if (!getUserConfig().isPremium()) {
 //                        showDialog(new PremiumFeatureBottomSheet(ProfileActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_NAME_COLOR, true));
@@ -4026,7 +4026,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         onWriteButtonClick();
                         break;
                     case ProfileActionsView.KEY_EDIT_INFO:
-                        presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                        presentFragment(new UserInfoActivity());
                         break;
                     case ProfileActionsView.KEY_EDIT_USERNAME:
                         TLRPC.User user = getUserConfig().getCurrentUser();
@@ -4688,7 +4688,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 });
                 builder.show();
             } else if (position == bioRow) {
-                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                presentFragment(new UserInfoActivity());
             } else if (position == numberRow) {
                 TLRPC.User user = UserConfig.getInstance(currentAccount).getCurrentUser();
                 if (user == null || TextUtils.isEmpty(user.phone)) {
@@ -8396,10 +8396,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return true;
         });
         sharedMediaLayout.addPagesOverlay(headerFadeView, 0);
-        headerFadeView.setBackground(glass.createActionBarFadeDrawable(headerFadeView));
+        final boolean useFadeHeader = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
+        if (useFadeHeader) {
+            headerFadeView.setBackground(glass.createActionBarFadeDrawable(headerFadeView));
+        } else {
+            headerFadeView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
+        }
         // the progressive blur of the simple screens over the rows, under the name and the buttons
         headerBlurView = new View(getContext());
-        headerBlurView.setBackground(glass.createActionBarFadeDrawable(headerBlurView));
+        if (useFadeHeader) {
+            headerBlurView.setBackground(glass.createActionBarFadeDrawable(headerBlurView));
+        } else {
+            headerBlurView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
+        }
         contentView.addView(headerBlurView, contentView.indexOfChild(avatarContainer2), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 0, Gravity.TOP));
         glassEngine.addScrolledView(listView);
         sharedMediaLayout.setPagesGlassEngine(glassEngine);
@@ -17225,7 +17234,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             });
         } else if (position == channelInfoRow || position == userInfoRow || position == bioRow) {
             itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileEditBio), () -> {
-                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                presentFragment(new UserInfoActivity());
             });
         } else if (position == phoneRow) {
             itemOptions.add(R.drawable.menu_storage_path, getString(R.string.ProfilePhoneEdit), () -> {
@@ -17314,7 +17323,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 });
             }
             itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileChannelChange), () -> {
-                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+                presentFragment(new UserInfoActivity());
             });
             itemOptions.add(R.drawable.msg_delete, getString(R.string.Remove), true, () -> {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());

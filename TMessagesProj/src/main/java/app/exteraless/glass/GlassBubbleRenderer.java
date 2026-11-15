@@ -34,7 +34,7 @@ import org.telegram.utils.glass.source.GlassSourceBitmap;
  */
 public final class GlassBubbleRenderer {
 
-    private static final int MAX_SNAPSHOT_SIDE = 300;
+    private static final int MAX_SNAPSHOT_SIDE = 720;
     private static final LruCache<String, Bitmap> SNAPSHOT_CACHE = new LruCache<>(3);
     private static String cachedShaderSource;
 
@@ -77,7 +77,7 @@ public final class GlassBubbleRenderer {
         int cH = containerH > 0 ? containerH : (AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920);
 
         float blurScale = SolegramGlass.blurScale();
-        int blurRadius = Math.max(2, Math.min(26, Math.round(9f * blurScale)));
+        int blurRadius = Math.max(3, Math.min(26, Math.round(16f * blurScale)));
 
         if (wallpaperDrawable != null) {
             String key = buildWallpaperSignature(wallpaperDrawable, cW, cH, blurRadius);
@@ -223,6 +223,7 @@ public final class GlassBubbleRenderer {
             if (state.lastBitmap != bitmap || state.bitmapShader == null) {
                 state.lastBitmap = bitmap;
                 state.bitmapShader = new BitmapShader(bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                state.bitmapShader.setFilterMode(BitmapShader.FILTER_MODE_LINEAR);
                 state.shader.setInputShader("img", state.bitmapShader);
             }
 

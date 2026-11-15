@@ -324,7 +324,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
-        if (AppearanceConfig.glassMessages.Bool() && SharedConfig.chatBlurEnabled()) {
+        if (AppearanceConfig.glassMessages.Bool() && SharedConfig.chatBlurEnabled()
+                && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
             glassMessagesOpacityRow = addRow("glassMessagesOpacity");
             glassMessagesRefractionRow = addRow("glassMessagesRefraction");
             glassMessagesStrokeRow = addRow("glassMessagesStroke");

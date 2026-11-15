@@ -728,7 +728,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     @Override
     public boolean dispatchTouchEvent(MotionEvent ev) {
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            lensMode = app.exteraless.glass.LiquidGlassConfig.glassOn && !MainTabsUiHelper.isMaterial3NavigationBar();
+            lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
         }
         if (lensMode) {
             lensTouch(ev);
@@ -1047,14 +1047,17 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 last[7] = bar.right;
                 last[8] = bar.bottom;
                 last[9] = flow;
-                final float band = Math.min(w, h) / 2f * 0.45f * (1f + 0.08f * flow);
+                final float thickScale = app.exteraless.glass.LiquidGlassConfig.glassThickness / 100f;
+                final float refractScale = app.exteraless.glass.LiquidGlassConfig.glassRefraction / 100f;
+                final float rimScale = app.exteraless.glass.LiquidGlassConfig.glassRim / 100f;
+                final float band = Math.min(w, h) / 2f * 0.45f * thickScale * (1f + 0.08f * flow);
                 shader.setFloatUniform("center", cx, cy);
                 shader.setFloatUniform("halfSize", w / 2f, h / 2f);
-                shader.setFloatUniform("magnify", 1f + (0.15f + 0.03f * flow) * a);
+                shader.setFloatUniform("magnify", 1f + (0.15f + 0.03f * flow) * refractScale * a);
                 shader.setFloatUniform("band", band);
-                shader.setFloatUniform("bend", band * (0.6f + 0.06f * flow) * a);
+                shader.setFloatUniform("bend", band * (0.6f + 0.06f * flow) * refractScale * a);
                 shader.setFloatUniform("dispersion", (0.6f + 0.6f * dispersion / 100f) * (1f + 0.25f * flow) * a);
-                shader.setFloatUniform("light", 0.9f * a);
+                shader.setFloatUniform("light", 0.9f * rimScale * a);
                 shader.setFloatUniform("shade", 0.16f * a);
                 shader.setFloatUniform("dp", AndroidUtilities.density);
                 shader.setFloatUniform("barCenter", bar.centerX(), bar.centerY());

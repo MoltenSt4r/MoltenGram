@@ -17,8 +17,6 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.tgnet.tl.TL_bots;
-import org.telegram.ui.ActionBar.BaseFragment;
-import org.telegram.ui.UserInfoActivity;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayOutputStream;
@@ -78,10 +76,6 @@ public final class BotAccountHelper {
     public static boolean isBotSession(int account) {
         TLRPC.User user = UserConfig.getInstance(account).getCurrentUser();
         return user != null && user.bot;
-    }
-
-    public static BaseFragment createSelfProfileFragment(int account) {
-        return isBotSession(account) ? new BotProfileActivity() : new UserInfoActivity();
     }
 
     public static void updateBotInfo(

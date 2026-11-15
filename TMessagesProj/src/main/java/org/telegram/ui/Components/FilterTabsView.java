@@ -55,6 +55,7 @@ import androidx.recyclerview.widget.LinearSmoothScroller;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AccountInstance;
+import app.exteraless.appearance.Md3ChipTabHelper;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.Emoji;
 import org.telegram.messenger.LocaleController;
@@ -366,7 +367,19 @@ public class FilterTabsView extends FrameLayout {
                 unreadKey = Theme.key_chats_tabUnreadUnactiveBackground;
                 unreadOtherKey = Theme.key_chats_tabUnreadActiveBackground;
             }
-            if (animateToKey < 0) {
+            if (Md3ChipTabHelper.isEnabled()) {
+                int themeActive = Theme.getColor(activeTextColorKey, resourcesProvider);
+                int themeInactive = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+                int activeColor = Md3ChipTabHelper.getTextColor(true, themeActive, themeInactive);
+                int inactiveColor = Md3ChipTabHelper.getTextColor(false, themeActive, themeInactive);
+                int targetColor = currentTab.id == id1 ? activeColor : inactiveColor;
+                int otherColor = currentTab.id == id1 ? inactiveColor : activeColor;
+                if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
+                    textPaint.setColor(ColorUtils.blendARGB(otherColor, targetColor, animatingIndicatorProgress));
+                } else {
+                    textPaint.setColor(targetColor);
+                }
+            } else if (animateToKey < 0) {
                 if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
                     textPaint.setColor(ColorUtils.blendARGB(Theme.getColor(otherKey, resourcesProvider), Theme.getColor(key, resourcesProvider), animatingIndicatorProgress));
                 } else {
@@ -933,6 +946,11 @@ public class FilterTabsView extends FrameLayout {
 
     private int scrollingToChild = -1;
     private final GradientDrawable selectorDrawable;
+    private final GradientDrawable inactiveChipDrawable = new GradientDrawable();
+    private final float[] chipRadiiScratch = new float[8];
+    private final float[] chipRadiiFrom = new float[8];
+    private final float[] chipRadiiTo = new float[8];
+    private final float[] chipRadiiOut = new float[8];
 
     private int tabLineColorKey = Theme.key_actionBarTabLine;
     private int activeTextColorKey = Theme.key_actionBarTabActiveText;
@@ -1279,7 +1297,8 @@ public class FilterTabsView extends FrameLayout {
     BlurredBackgroundDrawable blurredBackgroundDrawable;
 
     public void setBlurredBackground(BlurredBackgroundDrawable drawable) {
-        setBackground(blurredBackgroundDrawable = drawable);
+        blurredBackgroundDrawable = drawable;
+        setBackground(Md3ChipTabHelper.isEnabled() ? null : drawable);
     }
 
     public void scrollToTab(Tab tab, int position) {
@@ -1532,8 +1551,12 @@ public class FilterTabsView extends FrameLayout {
 
     @Override
     protected boolean drawChild(@NonNull Canvas canvas, View child, long drawingTime) {
+        boolean md3Chips = child == listView && Md3ChipTabHelper.isEnabled();
+        if (md3Chips) {
+            drawMd3ChipLayer(canvas);
+        }
         boolean result = super.drawChild(canvas, child, drawingTime);
-        if (child == listView) {
+        if (child == listView && !md3Chips) {
             drawSelector(canvas);
         }
         long newTime = SystemClock.elapsedRealtime();
@@ -1587,6 +1610,115 @@ public class FilterTabsView extends FrameLayout {
             invalidate();
         }
         return result;
+    }
+
+    private void drawMd3ChipLayer(Canvas canvas) {
+        final int height = getMeasuredHeight();
+        float indicatorX = 0;
+        float indicatorWidth = 0;
+        float activeChildAlpha = 1f;
+        float activeChildScale = 1f;
+        int fromPos = currentPosition;
+        int toPos = currentPosition;
+        float cornerT = 1f;
+        if (animatingIndicator || manualScrollingToPosition != -1) {
+            int position = layoutManager.findFirstVisibleItemPosition();
+            if (position != RecyclerListView.NO_POSITION) {
+                RecyclerListView.ViewHolder holder = listView.findViewHolderForAdapterPosition(position);
+                if (holder != null) {
+                    int idx1 = animatingIndicator ? previousPosition : currentPosition;
+                    int idx2 = animatingIndicator ? currentPosition : manualScrollingToPosition;
+                    int prevX = positionToX.get(idx1);
+                    int newX = positionToX.get(idx2);
+                    int prevW = positionToWidth.get(idx1);
+                    int newW = positionToWidth.get(idx2);
+                    float padding = FolderIconHelper.getTabPadding();
+                    if (additionalTabWidth != 0) {
+                        indicatorX = lerp(prevX, newX, animatingIndicatorProgress) + dp(padding / 2f);
+                    } else {
+                        int x = positionToX.get(position);
+                        indicatorX = lerp(prevX, newX, animatingIndicatorProgress) - (x - holder.itemView.getLeft()) + dp(padding / 2f);
+                    }
+                    indicatorWidth = lerp(prevW, newW, animatingIndicatorProgress);
+                    fromPos = idx1;
+                    toPos = idx2;
+                    cornerT = animatingIndicatorProgress;
+                }
+            }
+        } else {
+            RecyclerListView.ViewHolder holder = listView.findViewHolderForAdapterPosition(currentPosition);
+            if (holder != null) {
+                final TabView tabView = (TabView) holder.itemView;
+                final float indicatorWidthC = tabView.animateTabWidth
+                        ? lerp(tabView.animateFromTabWidth, tabView.tabWidth, tabView.changeProgress)
+                        : tabView.tabWidth;
+                indicatorWidth = Math.max(dp(16), indicatorWidthC);
+                float viewWidth = tabView.animateTabWidth
+                        ? lerp(tabView.animateFromTabWidth + dp(20), tabView.getMeasuredWidth(), tabView.changeProgress)
+                        : tabView.getMeasuredWidth();
+                indicatorX = (int) (tabView.getX() + (viewWidth - indicatorWidth) / 2);
+                activeChildAlpha = tabView.getAlpha();
+                activeChildScale = tabView.getScaleX();
+            }
+        }
+        float listLeft = listView.getX();
+        indicatorX += listLeft;
+        int gapH = Md3ChipTabHelper.getSpacingHalfPx();
+        int vInset = height >= dp(44) ? dp(6) : dp(2);
+        float chipTop = vInset;
+        float chipBottom = height - vInset;
+        float add = additionalTabWidth / 2f;
+        float internalPadding = FolderIconHelper.getTabInternalPadding();
+        float pillLeft = indicatorWidth > 0f ? indicatorX - dp(internalPadding) - add + gapH : -1f;
+        float pillRight = indicatorWidth > 0f ? indicatorX + indicatorWidth + dp(internalPadding) + add - gapH : -1f;
+        int activeThemeColor = Theme.getColor(activeTextColorKey, resourcesProvider);
+        int unactiveThemeColor = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+        int count = Math.max(1, tabs.size());
+        float listAlpha = listView.getAlpha();
+        canvas.save();
+        canvas.translate(listView.getTranslationX(), 0);
+        canvas.scale(listView.getScaleX(), 1f, listView.getPivotX() + listLeft, listView.getPivotY());
+        for (int i = 0, childCount = listView.getChildCount(); i < childCount; i++) {
+            View tabChild = listView.getChildAt(i);
+            if (!(tabChild instanceof TabView) || tabChild.getVisibility() != VISIBLE) {
+                continue;
+            }
+            int pos = listView.getChildAdapterPosition(tabChild);
+            if (pos < 0) {
+                pos = ((TabView) tabChild).currentPosition;
+            }
+            float slotLeft = listLeft + tabChild.getLeft() + tabChild.getTranslationX() + gapH;
+            float slotRight = listLeft + tabChild.getRight() + tabChild.getTranslationX() - gapH;
+            float overlapAlpha = indicatorWidth > 0f
+                    ? Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight)
+                    : 1f;
+            float childAlpha = overlapAlpha * listAlpha * tabChild.getAlpha();
+            if (childAlpha <= 0.01f) {
+                continue;
+            }
+            Md3ChipTabHelper.drawInactiveChip(
+                    canvas, inactiveChipDrawable,
+                    slotLeft, chipTop, slotRight, chipBottom,
+                    pos, count, unactiveThemeColor, childAlpha, chipRadiiScratch
+            );
+        }
+        if (indicatorWidth > 0f && pillRight > pillLeft && activeChildAlpha > 0.01f) {
+            Md3ChipTabHelper.getCornerRadii(true, fromPos, count, chipRadiiFrom);
+            Md3ChipTabHelper.getCornerRadii(true, toPos, count, chipRadiiTo);
+            Md3ChipTabHelper.lerpCornerRadii(chipRadiiFrom, chipRadiiTo, cornerT, chipRadiiOut);
+            Md3ChipTabHelper.configureSelectorDrawable(selectorDrawable, activeThemeColor, chipRadiiOut);
+            selectorDrawable.setAlpha(Math.round(255 * listAlpha * activeChildAlpha));
+            if (activeChildScale != 1f) {
+                canvas.save();
+                canvas.scale(activeChildScale, activeChildScale, (pillLeft + pillRight) * 0.5f, height * 0.5f);
+            }
+            selectorDrawable.setBounds(Math.round(pillLeft), Math.round(chipTop), Math.round(pillRight), Math.round(chipBottom));
+            selectorDrawable.draw(canvas);
+            if (activeChildScale != 1f) {
+                canvas.restore();
+            }
+        }
+        canvas.restore();
     }
 
     private void drawSelector(Canvas canvas) {
@@ -1687,8 +1819,13 @@ public class FilterTabsView extends FrameLayout {
     }
 
     public void updateColors() {
+        setBackground(Md3ChipTabHelper.isEnabled() ? null : blurredBackgroundDrawable);
         if (blurredBackgroundDrawable != null) {
             blurredBackgroundDrawable.updateColors();
+        }
+        if (listView != null) {
+            listView.invalidateViews();
+            listView.invalidate();
         }
         invalidate();
     }

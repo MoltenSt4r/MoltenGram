@@ -1663,12 +1663,23 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             return;
         }
 
+        if (position == customEmojiStatusRow || position == freeProfileAppearanceRow) {
+            if (!OpenExteraConfig.botProfileSync.Bool()) {
+                BulletinFactory.of(this).createErrorBulletin(getString(R.string.OEBotProfileSyncRequired)).show();
+                return;
+            }
+        }
+
         if (position == botProfileSyncRow) {
             boolean currentlyEnabled = OpenExteraConfig.botProfileSync.Bool();
             if (currentlyEnabled) {
                 OpenExteraConfig.botProfileSync.setConfigBool(false);
                 if (view instanceof TextCheckCell) {
                     ((TextCheckCell) view).setChecked(false);
+                }
+                if (listAdapter != null) {
+                    if (customEmojiStatusRow != -1) listAdapter.notifyItemChanged(customEmojiStatusRow);
+                    if (freeProfileAppearanceRow != -1) listAdapter.notifyItemChanged(freeProfileAppearanceRow);
                 }
                 ProfileInvisibleMetadata.resyncSelfMetadata(currentAccount, null);
                 return;
@@ -1696,6 +1707,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                         ((TextCheckCell) view).setChecked(true);
                     } else if (listAdapter != null && botProfileSyncRow != -1) {
                         listAdapter.notifyItemChanged(botProfileSyncRow);
+                    }
+                    if (listAdapter != null) {
+                        if (customEmojiStatusRow != -1) listAdapter.notifyItemChanged(customEmojiStatusRow);
+                        if (freeProfileAppearanceRow != -1) listAdapter.notifyItemChanged(freeProfileAppearanceRow);
                     }
                     ProfileInvisibleMetadata.resyncSelfMetadata(currentAccount, null);
                     String username = result.getBotUsername();
@@ -2624,11 +2639,15 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                         getString(R.string.OEPluginCommandSuggestionsInfo),
                         OpenExteraConfig.pluginCommandSuggestions.Bool(), true, true);
             } else if (position == customEmojiStatusRow) {
+                boolean botReady = OpenExteraConfig.botProfileSync.Bool();
                 cell.setTextAndCheck(getString(R.string.OECustomEmojiStatus),
-                        OpenExteraConfig.customEmojiStatus.Bool(), true);
+                        botReady && OpenExteraConfig.customEmojiStatus.Bool(), true);
+                cell.setEnabled(botReady, null);
             } else if (position == freeProfileAppearanceRow) {
+                boolean botReady = OpenExteraConfig.botProfileSync.Bool();
                 cell.setTextAndCheck(getString(R.string.OEFreeProfileAppearance),
-                        OpenExteraConfig.freeProfileAppearance.Bool(), true);
+                        botReady && OpenExteraConfig.freeProfileAppearance.Bool(), true);
+                cell.setEnabled(botReady, null);
             } else if (position == botProfileSyncRow) {
                 cell.setTextAndValueAndCheck(getString(R.string.OEBotProfileSync),
                         getString(R.string.OEBotProfileSyncInfo),

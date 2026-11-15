@@ -466,6 +466,9 @@ public class BlurredBackgroundProviderImpl {
         final boolean isDark = resourcesProvider != null ? resourcesProvider.isDark() : Theme.isCurrentThemeDark();
         final boolean isLight = !isDark;
         boolean blurEnabled = SharedConfig.chatBlurEnabled();
+        if (blurEnabled && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+            return true;
+        }
         if (blurEnabled && isLight) {
             if (!app.exteraless.glass.LiquidGlassConfig.frostedHeaders && MessagesController.getInstance(currentAccount).config.disableBlurInLightTheme.get()) {
                 blurEnabled = false;
