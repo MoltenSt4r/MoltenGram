@@ -8122,7 +8122,7 @@ public class ChatActivity extends BaseFragment implements
             mentionContainer.setAlpha(0f);
         }
         mentionContainer.setDialogId(dialog_id);
-        mentionContainer.setBackgroundDrawable(glassBackgroundDrawableFactoryFrosted.create(mentionContainer, blurredBackgroundColorProviderWhite));
+        mentionContainer.setBackgroundDrawable(glassBackgroundDrawableFactory.create(mentionContainer, blurredBackgroundColorProviderWhite));
         {
             final int indexToAdd = chatActivityFadeView != null ? contentView.indexOfChild(chatActivityFadeView) : -1;
             contentView.addView(mentionContainer, indexToAdd, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 110, Gravity.LEFT | Gravity.BOTTOM));

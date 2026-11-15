@@ -14822,6 +14822,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             int poolIdx = 0;
             final boolean glassFabActive = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFab;
+            final float dynamicMaxBottom = hasBottomBlur
+                    ? ((int) Math.floor(iBlur3PositionMainTabs.top / 16f)) * 16f
+                    : Float.MAX_VALUE;
             final boolean speedDialOpen = speedDialView != null && speedDialView.isOpen();
             final org.telegram.utils.glass.positions.GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
             for (int i = 0, n = glassPositionsArray.size(); i < n; i++) {
@@ -14833,17 +14836,17 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 if (iBlur3TmpRect.top < iBlur3PositionActionBar.bottom && iBlur3TmpRect.bottom > iBlur3PositionActionBar.top) {
                     iBlur3TmpRect.top = Math.max(iBlur3TmpRect.top, iBlur3PositionActionBar.bottom);
                 }
-                if (hasBottomBlur && iBlur3TmpRect.bottom > iBlur3PositionMainTabs.top && iBlur3TmpRect.top < iBlur3PositionMainTabs.bottom) {
-                    iBlur3TmpRect.bottom = Math.min(iBlur3TmpRect.bottom, iBlur3PositionMainTabs.top);
+                if (hasBottomBlur && iBlur3TmpRect.bottom > dynamicMaxBottom && iBlur3TmpRect.top < iBlur3PositionMainTabs.bottom) {
+                    iBlur3TmpRect.bottom = Math.min(iBlur3TmpRect.bottom, dynamicMaxBottom);
                 }
                 if (iBlur3TmpRect.width() > 0 && iBlur3TmpRect.height() > 0 && !isCoveredByExistingPositions(iBlur3TmpRect)) {
                     addDynamicCaptureRect(iBlur3TmpRect.left, iBlur3TmpRect.top, iBlur3TmpRect.right, iBlur3TmpRect.bottom, poolIdx++);
                 }
             }
             if (glassFabActive) {
-                poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx, hasBottomBlur ? iBlur3PositionMainTabs.top : Float.MAX_VALUE);
+                poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx, dynamicMaxBottom);
                 if (!speedDialOpen) {
-                    appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx, hasBottomBlur ? iBlur3PositionMainTabs.top : Float.MAX_VALUE);
+                    appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx, dynamicMaxBottom);
                 }
             }
 

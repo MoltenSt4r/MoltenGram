@@ -1387,6 +1387,9 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
             if (liquidGlassEffect == null || Build.VERSION.SDK_INT < 33 || !(source instanceof GlassFadeBlurredDrawable.GlassFadeDownsampledSource)) {
                 return 1;
             }
+            if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                return 1;
+            }
             final Rect b = boundProps.boundsWithPadding;
             if (b.width() <= dp(180) || b.height() <= dp(96)) {
                 return 1;

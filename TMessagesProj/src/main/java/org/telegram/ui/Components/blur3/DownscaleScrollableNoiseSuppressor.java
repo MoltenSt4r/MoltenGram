@@ -369,6 +369,7 @@ public class DownscaleScrollableNoiseSuppressor {
                 final SourcePart sourcePart = rectRenderNodes.get(b);
                 canvas.save();
                 canvas.translate(sourcePart.position.left, sourcePart.position.top);
+                canvas.clipRect(0, 0, sourcePart.position.width(), sourcePart.position.height());
 
                 final RenderNode rn = getRenderNode(a, b);
                 canvas.drawRenderNode(rn);
