@@ -36,8 +36,7 @@ public class VoiceChangerController {
     private static final int PITCH_WINDOW = 2048;
     private final float[] pitchBuffer = new float[PITCH_BUF_SIZE];
     private int pitchWritePos = 0;
-    private double pitchReadPos1 = 0;
-    private double pitchReadPos2 = PITCH_WINDOW / 2.0;
+    private double pitchPhase = 0.0;
 
     // Freqcrush state
     private float freqAccumulator = 0;
@@ -68,8 +67,7 @@ public class VoiceChangerController {
     public synchronized void resetState() {
         // Pitch
         pitchWritePos = 0;
-        pitchReadPos1 = 0;
-        pitchReadPos2 = PITCH_WINDOW / 2.0;
+        pitchPhase = 0.0;
         for (int i = 0; i < pitchBuffer.length; i++) {
             pitchBuffer[i] = 0;
         }
@@ -99,9 +97,17 @@ public class VoiceChangerController {
      * Обрабатывает буфер 16-bit PCM mono 48kHz на лету
      */
     public synchronized void process(ByteBuffer buffer, int lenBytes) {
+        process(buffer, lenBytes, 48000);
+    }
+
+    /**
+     * Обрабатывает буфер 16-bit PCM mono с заданной частотой дискретизации на лету
+     */
+    public synchronized void process(ByteBuffer buffer, int lenBytes, int sampleRate) {
         if (!isEnabled() || lenBytes <= 0) {
             return;
         }
+        int sr = sampleRate > 0 ? sampleRate : 48000;
 
         int pitch = ChatsConfig.voiceChangerPitch();
         int freqCrush = ChatsConfig.voiceChangerFreqCrush();
@@ -112,7 +118,7 @@ public class VoiceChangerController {
         int glitchRepeats = ChatsConfig.voiceChangerGlitchRepeats();
 
         boolean hasPitch = (pitch != 0);
-        boolean hasFreq = (freqCrush < 48000 && freqCrush >= 1000);
+        boolean hasFreq = (freqCrush < 48000 && freqCrush >= 1000 && freqCrush < sr);
         boolean hasBit = (bitCrush < 16 && bitCrush >= 2);
         boolean hasEcho = (echoDelay > 0 && echoFeedback > 0);
         boolean hasGlitch = (glitchRate > 0);
@@ -127,41 +133,57 @@ public class VoiceChangerController {
         int numSamples = lenBytes / 2;
 
         double pitchRatio = hasPitch ? Math.pow(2.0, pitch / 12.0) : 1.0;
-        float freqStep = hasFreq ? (48000.0f / freqCrush) : 1.0f;
+        double phaseStep = (1.0 - pitchRatio) / PITCH_WINDOW;
+        float freqStep = hasFreq ? ((float) sr / freqCrush) : 1.0f;
         int bitShift = hasBit ? (16 - bitCrush) : 0;
         int bitStep = hasBit ? (1 << bitShift) : 1;
 
-        int echoDelaySamples = hasEcho ? Math.min(ECHO_BUF_SIZE - 1, (int) (echoDelay * 48000L / 1000L)) : 0;
+        int echoDelaySamples = hasEcho ? Math.min(ECHO_BUF_SIZE - 1, Math.max(1, (int) (echoDelay * (long) sr / 1000L))) : 0;
         float echoFb = hasEcho ? Math.min(0.9f, echoFeedback / 100.0f) : 0.0f;
 
         for (int i = 0; i < numSamples; i++) {
             int byteIndex = startPos + i * 2;
             short sample = buffer.getShort(byteIndex);
 
-            // 1. Pitch Shifter
+            // 1. Pitch Shifter (dual-head Hann-windowed delay line, bounded inside [0..PITCH_WINDOW])
             if (hasPitch) {
                 pitchBuffer[pitchWritePos] = sample;
 
-                double delta = (pitchWritePos - pitchReadPos1 + PITCH_BUF_SIZE) % PITCH_BUF_SIZE;
-                double phase = (delta % PITCH_WINDOW) / PITCH_WINDOW;
-                double w = 0.5 * (1.0 - Math.cos(2.0 * Math.PI * phase));
+                double p1 = pitchPhase;
+                double p2 = p1 + 0.5;
+                if (p2 >= 1.0) {
+                    p2 -= 1.0;
+                }
 
-                int idx1 = (int) pitchReadPos1 % PITCH_BUF_SIZE;
+                double delay1 = p1 * PITCH_WINDOW;
+                double delay2 = p2 * PITCH_WINDOW;
+
+                double rp1 = pitchWritePos - delay1;
+                if (rp1 < 0) rp1 += PITCH_BUF_SIZE;
+                double rp2 = pitchWritePos - delay2;
+                if (rp2 < 0) rp2 += PITCH_BUF_SIZE;
+
+                int idx1 = (int) rp1 % PITCH_BUF_SIZE;
                 int idx1Next = (idx1 + 1) % PITCH_BUF_SIZE;
-                double frac1 = pitchReadPos1 - (int) pitchReadPos1;
+                double frac1 = rp1 - (int) rp1;
                 double s1 = pitchBuffer[idx1] * (1.0 - frac1) + pitchBuffer[idx1Next] * frac1;
 
-                int idx2 = (int) pitchReadPos2 % PITCH_BUF_SIZE;
+                int idx2 = (int) rp2 % PITCH_BUF_SIZE;
                 int idx2Next = (idx2 + 1) % PITCH_BUF_SIZE;
-                double frac2 = pitchReadPos2 - (int) pitchReadPos2;
+                double frac2 = rp2 - (int) rp2;
                 double s2 = pitchBuffer[idx2] * (1.0 - frac2) + pitchBuffer[idx2Next] * frac2;
 
-                double pitchOut = s1 * w + s2 * (1.0 - w);
+                double w1 = 0.5 * (1.0 - Math.cos(2.0 * Math.PI * p1));
+                double pitchOut = s1 * w1 + s2 * (1.0 - w1);
                 sample = (short) Math.max(-32768, Math.min(32767, Math.round(pitchOut)));
 
                 pitchWritePos = (pitchWritePos + 1) % PITCH_BUF_SIZE;
-                pitchReadPos1 = (pitchReadPos1 + pitchRatio) % PITCH_BUF_SIZE;
-                pitchReadPos2 = (pitchReadPos2 + pitchRatio) % PITCH_BUF_SIZE;
+                pitchPhase += phaseStep;
+                if (pitchPhase >= 1.0) {
+                    pitchPhase -= 1.0;
+                } else if (pitchPhase < 0.0) {
+                    pitchPhase += 1.0;
+                }
             }
 
             // 2. Random Glitch / Stutter («зависание ПК»)
@@ -174,7 +196,9 @@ public class VoiceChangerController {
                         glitchCooldown--;
                     } else if (random.nextFloat() < (glitchRate / 100.0f) * 0.0004f) {
                         isGlitching = true;
-                        glitchGrainLength = 960 + random.nextInt(1200); // ~20-45ms зерно
+                        int grainBase = Math.max(240, (int) (sr * 0.02f));
+                        int grainRand = Math.max(240, (int) (sr * 0.025f));
+                        glitchGrainLength = Math.min(MAX_GRAIN_SIZE, grainBase + random.nextInt(grainRand));
                         glitchRepeatsLeft = Math.max(2, glitchRepeats);
                         glitchReadPos = 0;
                     }
@@ -186,7 +210,7 @@ public class VoiceChangerController {
                         glitchRepeatsLeft--;
                         if (glitchRepeatsLeft <= 0) {
                             isGlitching = false;
-                            glitchCooldown = (int) (48000L * (100 - glitchRate) / 200L + 2400);
+                            glitchCooldown = (int) ((long) sr * (100 - glitchRate) / 200L + sr / 20);
                         }
                     }
                 }

@@ -1261,7 +1261,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 int len = audioRecorder.read(buffer, buffer.capacity());
                 if (len > 0) {
                     buffer.limit(len);
-                    app.exteraless.voice.VoiceChangerController.getInstance().process(buffer, len);
+                    app.exteraless.voice.VoiceChangerController.getInstance().process(buffer, len, sampleRate);
                     double sum = 0;
                     try {
                         long newSamplesCount = samplesCount + len / 2;
@@ -4865,6 +4865,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     public static boolean shouldUseAudioRecorderV2(int account) {
+        if (app.exteraless.voice.VoiceChangerController.getInstance().isEnabled()) {
+            return false;
+        }
         return SharedSettings.audioRecorderV2Enabled.isSet() ?
             SharedSettings.audioRecorderV2Enabled.get() :
             !MessagesController.getInstance(account).config.audioRecorderV2Disabled.get();

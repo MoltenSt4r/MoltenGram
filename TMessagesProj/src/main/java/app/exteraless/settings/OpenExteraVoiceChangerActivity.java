@@ -3,15 +3,24 @@ package app.exteraless.settings;
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
+import android.Manifest;
 import android.content.Context;
+import android.content.pm.PackageManager;
 import android.media.AudioFormat;
 import android.media.AudioManager;
 import android.media.AudioRecord;
 import android.media.AudioTrack;
 import android.media.MediaRecorder;
+import android.os.Build;
+import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.HorizontalScrollView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
+import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -49,6 +58,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
 
     private int masterHeaderRow;
     private int masterEnableRow;
+    private int testMicRow;
     private int masterDividerRow;
 
     private int presetsHeaderRow;
@@ -59,15 +69,17 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     private int pitchSliderRow;
     private int freqCrushSliderRow;
     private int bitCrushSliderRow;
-    private int echoDelaySliderRow;
-    private int echoFeedbackSliderRow;
-    private int glitchRateSliderRow;
-    private int glitchRepeatsSliderRow;
     private int effectsDividerRow;
 
-    private int testHeaderRow;
-    private int testMicRow;
-    private int testDividerRow;
+    private int echoHeaderRow;
+    private int echoDelaySliderRow;
+    private int echoFeedbackSliderRow;
+    private int echoDividerRow;
+
+    private int glitchHeaderRow;
+    private int glitchRateSliderRow;
+    private int glitchRepeatsSliderRow;
+    private int glitchDividerRow;
 
     private static final int TEST_STATE_IDLE = 0;
     private static final int TEST_STATE_RECORDING = 1;
@@ -124,6 +136,11 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
 
         masterHeaderRow = addRow("masterHeader");
         masterEnableRow = addRow("masterEnable");
+        if (ChatsConfig.voiceChangerEnabled.Bool()) {
+            testMicRow = addRow("testMic");
+        } else {
+            testMicRow = -1;
+        }
         masterDividerRow = addRow();
 
         boolean enabled = ChatsConfig.voiceChangerEnabled.Bool();
@@ -137,15 +154,17 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             pitchSliderRow = addRow("pitchSlider");
             freqCrushSliderRow = addRow("freqCrushSlider");
             bitCrushSliderRow = addRow("bitCrushSlider");
-            echoDelaySliderRow = addRow("echoDelaySlider");
-            echoFeedbackSliderRow = addRow("echoFeedbackSlider");
-            glitchRateSliderRow = addRow("glitchRateSlider");
-            glitchRepeatsSliderRow = addRow("glitchRepeatsSlider");
             effectsDividerRow = addRow();
 
-            testHeaderRow = addRow("testHeader");
-            testMicRow = addRow("testMic");
-            testDividerRow = addRow();
+            echoHeaderRow = addRow("echoHeader");
+            echoDelaySliderRow = addRow("echoDelaySlider");
+            echoFeedbackSliderRow = addRow("echoFeedbackSlider");
+            echoDividerRow = addRow();
+
+            glitchHeaderRow = addRow("glitchHeader");
+            glitchRateSliderRow = addRow("glitchRateSlider");
+            glitchRepeatsSliderRow = addRow("glitchRepeatsSlider");
+            glitchDividerRow = addRow();
         } else {
             presetsHeaderRow = -1;
             presetsRow = -1;
@@ -154,14 +173,15 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             pitchSliderRow = -1;
             freqCrushSliderRow = -1;
             bitCrushSliderRow = -1;
+            effectsDividerRow = -1;
+            echoHeaderRow = -1;
             echoDelaySliderRow = -1;
             echoFeedbackSliderRow = -1;
+            echoDividerRow = -1;
+            glitchHeaderRow = -1;
             glitchRateSliderRow = -1;
             glitchRepeatsSliderRow = -1;
-            effectsDividerRow = -1;
-            testHeaderRow = -1;
-            testMicRow = -1;
-            testDividerRow = -1;
+            glitchDividerRow = -1;
         }
     }
 
@@ -328,6 +348,11 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         if (testState != TEST_STATE_IDLE) {
             return;
         }
+        if (Build.VERSION.SDK_INT >= 23 && getParentActivity() != null
+                && getParentActivity().checkSelfPermission(Manifest.permission.RECORD_AUDIO) != PackageManager.PERMISSION_GRANTED) {
+            getParentActivity().requestPermissions(new String[]{Manifest.permission.RECORD_AUDIO}, 3);
+            return;
+        }
         testState = TEST_STATE_RECORDING;
         isTesting = true;
         stopRecordingEarly = false;
@@ -458,8 +483,16 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         private static final int TYPE_GLITCH_RATE_SLIDER = 9;
         private static final int TYPE_GLITCH_REPEATS_SLIDER = 10;
 
+        private static final int TYPE_PRESETS = 11;
+
         public ListAdapter(Context context) {
             super(context);
+        }
+
+        private void refreshPresetChips() {
+            if (presetsRow >= 0) {
+                notifyItemChanged(presetsRow);
+            }
         }
 
         @Override
@@ -478,11 +511,17 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     view = new TextSettingsCell(mContext);
                     view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     break;
+                case TYPE_PRESETS: {
+                    view = new PresetChipsView(mContext);
+                    view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    break;
+                }
                 case TYPE_PITCH_SLIDER: {
                     AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
                             value -> {
                                 ChatsConfig.voiceChangerPitch.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             -12, 12,
                             getString(R.string.OEVoiceChangerPitch),
@@ -497,6 +536,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                             value -> {
                                 ChatsConfig.voiceChangerFreqCrush.setConfigInt(value * 1000);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             4, 48,
                             getString(R.string.OEVoiceChangerFreqCrush),
@@ -511,6 +551,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                             value -> {
                                 ChatsConfig.voiceChangerBitCrush.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             2, 16,
                             getString(R.string.OEVoiceChangerBitCrush),
@@ -523,13 +564,14 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 case TYPE_ECHO_DELAY_SLIDER: {
                     AvatarCornersSeekBar slider = new AvatarCornersSeekBar(mContext,
                             value -> {
-                                ChatsConfig.voiceChangerEchoDelay.setConfigInt(value * 10);
+                                ChatsConfig.voiceChangerEchoDelay.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
-                            0, 80,
+                            0, 800,
                             getString(R.string.OEVoiceChangerEchoDelay),
                             "0 ms", "800 ms");
-                    slider.setValueSuffix("0 ms");
+                    slider.setValueSuffix("ms");
                     slider.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider;
                     break;
@@ -539,6 +581,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                             value -> {
                                 ChatsConfig.voiceChangerEchoFeedback.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             0, 90,
                             getString(R.string.OEVoiceChangerEchoFeedback),
@@ -553,6 +596,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                             value -> {
                                 ChatsConfig.voiceChangerGlitchRate.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             0, 100,
                             getString(R.string.OEVoiceChangerGlitchRate),
@@ -567,6 +611,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                             value -> {
                                 ChatsConfig.voiceChangerGlitchRepeats.setConfigInt(value);
                                 VoiceChangerController.getInstance().resetState();
+                                refreshPresetChips();
                             },
                             2, 8,
                             getString(R.string.OEVoiceChangerGlitchRepeats),
@@ -595,8 +640,10 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                         cell.setText(getString(R.string.OEVoiceChangerPresets));
                     } else if (position == effectsHeaderRow) {
                         cell.setText(getString(R.string.OEVoiceChangerEffects));
-                    } else if (position == testHeaderRow) {
-                        cell.setText(getString(R.string.OEVoiceChangerTestAudio));
+                    } else if (position == echoHeaderRow) {
+                        cell.setText(getString(R.string.OEVoiceChangerEchoDelay));
+                    } else if (position == glitchHeaderRow) {
+                        cell.setText(getString(R.string.OEVoiceChangerGlitchRate));
                     }
                     break;
                 }
@@ -604,15 +651,17 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     TextCheckCell cell = (TextCheckCell) holder.itemView;
                     if (position == masterEnableRow) {
                         cell.setTextAndCheck(getString(R.string.OEVoiceChangerEnable),
-                                ChatsConfig.voiceChangerEnabled.Bool(), false);
+                                ChatsConfig.voiceChangerEnabled.Bool(), testMicRow >= 0);
                     }
+                    break;
+                }
+                case TYPE_PRESETS: {
+                    ((PresetChipsView) holder.itemView).updateSelection();
                     break;
                 }
                 case TYPE_SETTINGS: {
                     TextSettingsCell cell = (TextSettingsCell) holder.itemView;
-                    if (position == presetsRow) {
-                        cell.setTextAndValue(getString(R.string.OEVoiceChangerPresetSelect), getCurrentPresetName(), false);
-                    } else if (position == testMicRow) {
+                    if (position == testMicRow) {
                         cell.setTextAndValue(getString(R.string.OEVoiceChangerTestAudio),
                                 isTesting ? getString(R.string.OEVoiceChangerStopTest) : getString(R.string.OEVoiceChangerRecordTest), false);
                     }
@@ -635,7 +684,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_ECHO_DELAY_SLIDER: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
-                    slider.setValue(ChatsConfig.voiceChangerEchoDelay.Int() / 10);
+                    slider.setValue(ChatsConfig.voiceChangerEchoDelay.Int());
                     break;
                 }
                 case TYPE_ECHO_FEEDBACK_SLIDER: {
@@ -655,7 +704,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_SHADOW: {
                     TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-                    if (position == effectsDividerRow) {
+                    if (position == glitchDividerRow) {
                         cell.setText(getString(R.string.OEVoiceChangerGlitchRateInfo));
                     } else {
                         cell.setText(null);
@@ -669,11 +718,13 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         @Override
         public int getItemViewType(int position) {
             if (position == masterHeaderRow || position == presetsHeaderRow
-                    || position == effectsHeaderRow || position == testHeaderRow) {
+                    || position == effectsHeaderRow || position == echoHeaderRow || position == glitchHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == masterEnableRow) {
                 return TYPE_CHECK;
-            } else if (position == presetsRow || position == testMicRow) {
+            } else if (position == presetsRow) {
+                return TYPE_PRESETS;
+            } else if (position == testMicRow) {
                 return TYPE_SETTINGS;
             } else if (position == pitchSliderRow) {
                 return TYPE_PITCH_SLIDER;
@@ -692,5 +743,89 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             }
             return TYPE_SHADOW;
         }
+    }
+
+    private class PresetChipsView extends HorizontalScrollView {
+        private final LinearLayout row;
+        private final TextView[] chips;
+
+        PresetChipsView(Context context) {
+            super(context);
+            setHorizontalScrollBarEnabled(false);
+            setOverScrollMode(OVER_SCROLL_NEVER);
+            setPadding(dp(14), dp(8), dp(14), dp(12));
+            setClipToPadding(false);
+
+            row = new LinearLayout(context);
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            addView(row, new LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT));
+
+            String[] names = new String[] {
+                    getString(R.string.OEVoiceChangerPresetDefault),
+                    getString(R.string.OEVoiceChangerPresetGlitch),
+                    getString(R.string.OEVoiceChangerPresetBitcrush),
+                    getString(R.string.OEVoiceChangerPresetDemon),
+                    getString(R.string.OEVoiceChangerPresetChipmunk),
+                    getString(R.string.OEVoiceChangerPresetEcho),
+                    getString(R.string.OEVoiceChangerPresetWalkie)
+            };
+            chips = new TextView[names.length];
+            for (int i = 0; i < names.length; i++) {
+                final int index = i;
+                TextView chip = new TextView(context);
+                chip.setText(names[i]);
+                chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
+                chip.setTypeface(AndroidUtilities.getTypeface(AndroidUtilities.TYPEFACE_ROBOTO_MEDIUM));
+                chip.setPadding(dp(14), dp(8), dp(14), dp(8));
+                chip.setGravity(Gravity.CENTER);
+                chip.setSingleLine(true);
+                chip.setOnClickListener(v -> {
+                    applyPreset(index);
+                    VoiceChangerController.getInstance().resetState();
+                    if (listAdapter != null) {
+                        listAdapter.notifyDataSetChanged();
+                    }
+                });
+                LinearLayout.LayoutParams lp = new LinearLayout.LayoutParams(LayoutParams.WRAP_CONTENT, LayoutParams.WRAP_CONTENT);
+                if (i > 0) {
+                    lp.leftMargin = dp(8);
+                }
+                row.addView(chip, lp);
+                chips[i] = chip;
+            }
+            updateSelection();
+        }
+
+        void updateSelection() {
+            int active = getCurrentPresetIndex();
+            int accent = getThemedColor(Theme.key_featuredStickers_addButton);
+            int onAccent = getThemedColor(Theme.key_featuredStickers_buttonText);
+            int textNormal = getThemedColor(Theme.key_windowBackgroundWhiteBlackText);
+            int surfaceIdle = ColorUtils.setAlphaComponent(textNormal, 20);
+            for (int i = 0; i < chips.length; i++) {
+                boolean selected = (i == active);
+                chips[i].setTextColor(selected ? onAccent : textNormal);
+                chips[i].setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(18), selected ? accent : surfaceIdle, ColorUtils.setAlphaComponent(accent, 45)));
+            }
+        }
+    }
+
+    private int getCurrentPresetIndex() {
+        int pitch = ChatsConfig.voiceChangerPitch.Int();
+        int freq = ChatsConfig.voiceChangerFreqCrush.Int();
+        int bit = ChatsConfig.voiceChangerBitCrush.Int();
+        int echoDelay = ChatsConfig.voiceChangerEchoDelay.Int();
+        int echoFeedback = ChatsConfig.voiceChangerEchoFeedback.Int();
+        int glitch = ChatsConfig.voiceChangerGlitchRate.Int();
+
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) return 0;
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 40 && echoFeedback == 45 && glitch == 75) return 1;
+        if (pitch == 0 && freq == 8000 && bit == 4 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) return 2;
+        if (pitch == -6 && freq == 48000 && bit == 16 && echoDelay == 120 && echoFeedback == 35 && glitch == 0) return 3;
+        if (pitch == 8 && freq == 48000 && bit == 16 && echoDelay == 0 && echoFeedback == 0 && glitch == 0) return 4;
+        if (pitch == 0 && freq == 48000 && bit == 16 && echoDelay == 280 && echoFeedback == 65 && glitch == 0) return 5;
+        if (pitch == 1 && freq == 6000 && bit == 6 && echoDelay == 0 && echoFeedback == 0 && glitch == 15) return 6;
+        return -1;
     }
 }
