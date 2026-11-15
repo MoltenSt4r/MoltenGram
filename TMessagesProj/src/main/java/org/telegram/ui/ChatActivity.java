@@ -5730,7 +5730,7 @@ public class ChatActivity extends BaseFragment implements
                         AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * outScale + width), (int) (y - AndroidUtilities.dp(16) * outScale + width), (int) (x + AndroidUtilities.dp(16) * outScale - width), (int) (y + AndroidUtilities.dp(16) * outScale - width));
                         Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
 
-                        wasAlpha = outlineActionBackgroundPaint.getAlpha();
+                        int wasAlpha = outlineActionBackgroundPaint.getAlpha();
                         outlineActionBackgroundPaint.setAlpha((int) (wasAlpha * iconProgress));
 
                         outlineActionBackgroundPaint.setStrokeWidth(width);
