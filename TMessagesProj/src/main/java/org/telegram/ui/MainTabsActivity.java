@@ -1676,7 +1676,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             tabsViewBackground.invalidateDisplayList();
         }
         if (tabsView != null && tabsViewWrapper != null) {
-            MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(MainTabsHelper.LEGACY_MAX_WIDTH_DP));
+            MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
             MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, 0, 0);
         }
         if (miniPlayer != null) {

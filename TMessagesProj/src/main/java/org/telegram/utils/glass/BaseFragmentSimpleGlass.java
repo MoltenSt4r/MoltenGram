@@ -221,18 +221,6 @@ public class BaseFragmentSimpleGlass {
         return glassBlurredFadeDrawable;
     }
 
-    @NonNull
-    public Drawable createFullHeaderGlassDrawable(View view, Theme.ResourcesProvider resourceProvider) {
-        final BlurredBackgroundDrawable drawable = factory.create(
-                view,
-                BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
-        drawable.setRadius(0, 0, dp(20), dp(20));
-        drawable.setPadding(0);
-        drawable.setShadowAlpha(0.6f);
-        glassEngine.registerDrawable(view, drawable);
-        return drawable;
-    }
-
 
 
     public void setViews(FrameLayout contentView, RecyclerListView listView, @Nullable View actionBar, Theme.ResourcesProvider resourceProvider) {
