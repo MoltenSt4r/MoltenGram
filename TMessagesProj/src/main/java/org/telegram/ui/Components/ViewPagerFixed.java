@@ -2122,7 +2122,7 @@ public class ViewPagerFixed extends FrameLayout {
             float listLeft = listView.getX();
             indicatorXf += listLeft;
             int gapH = Md3ChipTabHelper.getSpacingHalfPx();
-            int vInset = height >= dp(44) ? dp(6) : dp(2);
+            int vInset = height >= dp(44) ? dp(6) : Math.max(dp(4), (height - dp(32)) / 2);
             float chipTop = vInset;
             float chipBottom = height - vInset;
             float add = additionalTabWidth / 2f;
