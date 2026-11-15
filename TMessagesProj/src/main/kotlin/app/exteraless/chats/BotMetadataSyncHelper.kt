@@ -210,7 +210,7 @@ object BotMetadataSyncHelper {
         }
         activeFetchCount.incrementAndGet()
 
-        val finish = {
+        val finish: () -> Unit = {
             activeFetchCount.decrementAndGet()
             inFlightFetches.remove(ownerUserId)
         }

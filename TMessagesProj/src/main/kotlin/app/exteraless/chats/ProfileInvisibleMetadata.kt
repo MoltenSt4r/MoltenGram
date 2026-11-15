@@ -631,7 +631,7 @@ object ProfileInvisibleMetadata {
             }
         }
 
-        if (OpenExteraConfig.freeNameColor()) {
+        if (OpenExteraConfig.freeProfileAppearance()) {
             val prevFake = appliedFakeNameColor[user.id]
             val isSyntheticOrEmpty = user.color == null ||
                 (prevFake != null && user.color.color == prevFake.first && user.color.background_emoji_id == prevFake.second)
@@ -702,14 +702,14 @@ object ProfileInvisibleMetadata {
 
     @JvmStatic
     fun getNameColorId(user: TLRPC.User?): Int? {
-        if (!OpenExteraConfig.freeNameColor()) return null
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameColorId >= 0) meta.nameColorId else null
     }
 
     @JvmStatic
     fun getNameEmojiId(user: TLRPC.User?): Long? {
-        if (!OpenExteraConfig.freeNameColor()) return null
+        if (!OpenExteraConfig.freeProfileAppearance()) return null
         val meta = getMetadata(user) ?: return null
         return if (meta.nameEmojiId != 0L) meta.nameEmojiId else null
     }
