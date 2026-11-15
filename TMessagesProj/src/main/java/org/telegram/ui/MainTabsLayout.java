@@ -1057,13 +1057,13 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 shader.setFloatUniform("barCenter", bar.centerX(), bar.centerY());
                 shader.setFloatUniform("barHalf", bar.width() / 2f, bar.height() / 2f);
                 shader.setFloatUniform("dark", dark ? 1f : 0f);
-                final int customTint = app.exteraless.glass.SolegramGlass.tintColor(resourcesProvider);
+                final int customTint = app.exteraless.glass.SolegramGlass.tintColor();
                 if (customTint != 0 && app.exteraless.glass.LiquidGlassConfig.glassTintAmount > 0) {
                     final float norm = Math.min(1f, app.exteraless.glass.LiquidGlassConfig.glassTintAmount / 60f);
                     final float tintA = (0.08f + 0.24f * norm) * a;
-                    final float tr = Color.red(customTint) / 255f * tintA;
-                    final float tg = Color.green(customTint) / 255f * tintA;
-                    final float tb = Color.blue(customTint) / 255f * tintA;
+                    final float tr = android.graphics.Color.red(customTint) / 255f * tintA;
+                    final float tg = android.graphics.Color.green(customTint) / 255f * tintA;
+                    final float tb = android.graphics.Color.blue(customTint) / 255f * tintA;
                     shader.setFloatUniform("tint", tr, tg, tb, tintA);
                 } else {
                     final float body = (dark ? 0.045f : 0.06f) * a;
