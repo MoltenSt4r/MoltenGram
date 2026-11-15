@@ -621,12 +621,82 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         scrollTo(pageId, idToPosition.get(pageId), null);
     }
 
+    private boolean isChipFoldersEnabled() {
+        return app.exteraless.appearance.AppearanceConfig.chipFoldersEnabled.Bool();
+    }
+
+    private float getChipCornerRadius(boolean active) {
+        if (!isChipFoldersEnabled()) {
+            return AndroidUtilities.dpf2(10);
+        }
+        int shape = app.exteraless.appearance.AppearanceConfig.chipFoldersShape.Int();
+        switch (shape) {
+            case 0: return dp(20);
+            case 1: return dp(12);
+            case 2: return dp(8);
+            case 3: return dp(4);
+            case 4: return dp(14);
+            case 5: return dp(active
+                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusActive.Int()
+                    : app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusInactive.Int());
+            default: return dp(20);
+        }
+    }
+
+    private void applyChipTabStyle(TextView tab, boolean active) {
+        if (tab == null) {
+            return;
+        }
+        int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
+        int unactiveTextColor = processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+        if (!isChipFoldersEnabled()) {
+            tab.setTextColor(active ? activeTextColor : unactiveTextColor);
+            tab.setBackground(
+                new InsetDrawable(
+                    Theme.createSelectorDrawable(Theme.multAlpha(activeTextColor, .15f), Theme.RIPPLE_MASK_ROUNDRECT_6DP, dp(14)),
+                    dp(4), dp(4), dp(4), dp(4)
+                )
+            );
+            return;
+        }
+        boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
+        int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
+        int textColor = active
+                ? (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int() != 0
+                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int()
+                    : activeTextColor)
+                : (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int() != 0
+                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int()
+                    : unactiveTextColor);
+        tab.setTextColor(textColor);
+
+        int inactiveFill = (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int() != 0)
+                ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int()
+                : (style == 1 || style == 3 ? 0 : Theme.multAlpha(unactiveTextColor, 0.10f));
+        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
+        bg.setCornerRadius(getChipCornerRadius(false));
+        bg.setColor(inactiveFill);
+        if (style == 1) {
+            bg.setStroke(dp(1), Theme.multAlpha(unactiveTextColor, 0.28f));
+        }
+        android.graphics.drawable.Drawable ripple = Theme.createSelectorDrawable(
+                Theme.multAlpha(activeTextColor, 0.16f),
+                Theme.RIPPLE_MASK_ROUNDRECT_6DP,
+                Math.max(dp(4), Math.round(getChipCornerRadius(false)))
+        );
+        android.graphics.drawable.LayerDrawable layered = new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{ bg, ripple });
+        int gap = app.exteraless.appearance.AppearanceConfig.chipFoldersSpacing.Int() == 2
+                ? Math.max(dp(2), dp(app.exteraless.appearance.AppearanceConfig.chipFoldersCustomSpacing.Int()) / 2)
+                : dp(3);
+        tab.setBackground(new InsetDrawable(layered, gap, dp(5), gap, dp(5)));
+    }
+
     public void finishAddingTabs() {
         int count = tabsContainer.getChildCount();
         for (int a = 0; a < count; a++) {
             TextView tab = (TextView) tabsContainer.getChildAt(a);
             tab.setTag(currentPosition == a ? activeTextColorKey : unactiveTextColorKey);
-            tab.setTextColor(processColor(Theme.getColor(currentPosition == a ? activeTextColorKey : unactiveTextColorKey, resourcesProvider)));
+            applyChipTabStyle(tab, currentPosition == a);
             if (useMinimalWidth) {
                 if (
                     prevPositionToWidth.size() != positionToWidth.size() ||
@@ -660,17 +730,25 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         int count = tabsContainer.getChildCount();
         for (int a = 0; a < count; a++) {
             TextView tab = (TextView) tabsContainer.getChildAt(a);
-            tab.setTextColor(processColor(Theme.getColor(currentPosition == a ? activeTextColorKey : unactiveTextColorKey, resourcesProvider)));
-//            tab.setBackground(Theme.createSelectorDrawable(Theme.multAlpha(processColor(Theme.getColor(activeTextColorKey, resourcesProvider)), .15f), 3));
-            tab.setBackground(
-                new InsetDrawable(
-                    Theme.createSelectorDrawable(Theme.multAlpha(processColor(Theme.getColor(activeTextColorKey, resourcesProvider)), .15f), Theme.RIPPLE_MASK_ROUNDRECT_6DP, dp(14)),
-                    dp(4), dp(4), dp(4), dp(4)
-                )
-            );
+            applyChipTabStyle(tab, currentPosition == a);
         }
-//        selectorDrawable.setColor(processColor(Theme.getColor(tabLineColorKey, resourcesProvider)));
-        selectorDrawable.setColor(Theme.multAlpha(processColor(Theme.getColor(activeTextColorKey, resourcesProvider)), .15f));
+        int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
+        if (isChipFoldersEnabled()) {
+            boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
+            int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
+            float rad = getChipCornerRadius(true);
+            selectorDrawable.setCornerRadii(new float[]{rad, rad, rad, rad, rad, rad, rad, rad});
+            int activeFill = (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int() != 0)
+                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int()
+                    : Theme.multAlpha(activeTextColor, style == 3 ? 0.12f : 0.22f);
+            selectorDrawable.setColor(activeFill);
+            selectorDrawable.setStroke(style == 1 ? dp(1.2f) : 0, style == 1 ? Theme.multAlpha(activeTextColor, 0.85f) : 0);
+        } else {
+            float rad = AndroidUtilities.dpf2(10);
+            selectorDrawable.setCornerRadii(new float[]{rad, rad, rad, rad, rad, rad, rad, rad});
+            selectorDrawable.setStroke(0, 0);
+            selectorDrawable.setColor(Theme.multAlpha(activeTextColor, .15f));
+        }
         if (backgroundDrawable != null) {
             // glass background is drawn manually (not the view background), so the theme dispatcher does not reach it
             backgroundDrawable.updateColors();
@@ -770,11 +848,13 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
 //                (int) r,
 //                height
 //            );
+            int chipInsetH = isChipFoldersEnabled() ? dp(3) : dp(4);
+            int chipInsetV = isChipFoldersEnabled() ? dp(5) : dp(4);
             selectorDrawable.setBounds(
-                getPaddingLeft() + (int) l + dp(4),
-                getPaddingTop() + dp(4),
-                getPaddingLeft() + (int) r - dp(4),
-                height - getPaddingBottom() - dp(4)
+                getPaddingLeft() + (int) l + chipInsetH,
+                getPaddingTop() + chipInsetV,
+                getPaddingLeft() + (int) r - chipInsetH,
+                height - getPaddingBottom() - chipInsetV
             );
             selectorDrawable.draw(canvas);
             selectorDrawable.setAlpha(wasAlpha);

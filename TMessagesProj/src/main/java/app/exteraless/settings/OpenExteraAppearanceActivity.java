@@ -296,8 +296,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (iosExpanded) {
             iosNavBarRow = addRow("iosNavBar");
             iosChatHeaderRow = addRow("iosChatHeader");
+            liquidGlassRow = addRow("liquidGlass");
         } else {
-            iosNavBarRow = iosChatHeaderRow = -1;
+            iosNavBarRow = iosChatHeaderRow = liquidGlassRow = -1;
         }
         gooeyAvatarRow = addRow("gooeyAvatar");
         customThemesRow = addRow("customThemes");
@@ -320,7 +321,6 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         sectionsDividerRow = addRow();
 
         blurHeaderRow = addRow("blurHeader");
-        liquidGlassRow = addRow("liquidGlass");
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
@@ -1001,6 +1001,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return;
             }
             boolean enabled = AppearanceConfig.glassMessages.toggleConfigBool();
+            app.exteraless.glass.LiquidGlassConfig.putBoolean("glassMessages", enabled);
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(enabled);
             }
@@ -1980,12 +1981,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         }
     }
 
-    private static final int IOS_STYLE_COUNT = 2;
+    private static final int IOS_STYLE_COUNT = 3;
 
     private int iosSelectedCount() {
         int n = 0;
         if (AppearanceConfig.iosNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.iosChatHeader.Bool()) n++;
+        if (app.exteraless.glass.LiquidGlassConfig.glassOn) n++;
         return n;
     }
 
@@ -1993,6 +1995,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         boolean enable = iosSelectedCount() == 0;
         AppearanceConfig.iosNavigationBarStyle.setConfigBool(enable);
         AppearanceConfig.iosChatHeader.setConfigBool(enable);
+        app.exteraless.glass.LiquidGlassConfig.putBoolean("glassOn", enable);
+        if (enable) {
+            app.exteraless.glass.LiquidGlassConfig.enableTexturedGlass();
+        }
         if (enable) {
             AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
         }

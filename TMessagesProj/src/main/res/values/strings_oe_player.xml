@@ -241,4 +241,11 @@
 <string name="OEAppearancePlayerLyricsAudioRecognition">Audio recognition (SongRec)</string>
 <string name="OEAppearancePlayerLyricsAudioRecognitionDesc">Split audio into segments to recognize track and find lyrics</string>
 <string name="OEPlayerDragToReorder">Drag to reorder</string>
+<string name="OEAppearancePlayerChatSeekbar">MD3 seekbar on chat media</string>
+<string name="OEAppearancePlayerChatSeekbarDesc">Use custom wavy or straight MD3 progress bar on music messages in chats</string>
+<string name="OEAppearancePlayerClassicSeekbar">MD3 seekbar in classic player</string>
+<string name="OEAppearancePlayerClassicSeekbarDesc">Use custom wavy or straight MD3 progress bar in the classic player</string>
+<string name="OEAppearancePlayerMediaSeekbarStyle">Chat &amp; classic seekbar shape</string>
+<string name="OEAppearancePlayerMediaSeekbarIndicator">Chat &amp; classic seekbar thumb</string>
+<string name="OEPlayerSeekbarIndicatorNone">None</string>
 </resources>

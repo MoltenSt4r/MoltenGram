@@ -241,4 +241,11 @@
 <string name="OEPlayerPreviewTitle">Название трека</string>
 <string name="OEPlayerPreviewArtist">Исполнитель</string>
 <string name="OEPlayerDragToReorder">Перетащите, чтобы изменить порядок</string>
+<string name="OEAppearancePlayerChatSeekbar">MD3-ползунок на медиа в чатах</string>
+<string name="OEAppearancePlayerChatSeekbarDesc">Волнистая или прямая MD3-линия прогресса для аудиозаписей в чатах</string>
+<string name="OEAppearancePlayerClassicSeekbar">MD3-ползунок в классическом плеере</string>
+<string name="OEAppearancePlayerClassicSeekbarDesc">Волнистая или прямая MD3-линия прогресса в классическом плеере</string>
+<string name="OEAppearancePlayerMediaSeekbarStyle">Вид линии медиаползунка</string>
+<string name="OEAppearancePlayerMediaSeekbarIndicator">Индикатор медиаползунка</string>
+<string name="OEPlayerSeekbarIndicatorNone">Без всего</string>
 </resources>

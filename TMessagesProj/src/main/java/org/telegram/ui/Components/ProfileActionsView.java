@@ -151,10 +151,12 @@ public class ProfileActionsView extends View {
     }
 
     private void drawGlass(Canvas canvas, RectF rect, float radius, float alpha) {
+        final float capsuleRadius = Math.min(radius, Math.min(rect.width(), rect.height()) / 2f);
         if (glassUsed == glass.size()) {
-            glass.add(glassFactory.create(this, ProfileButtonsGlass.NO_COLORS).setRadius(radius));
+            glass.add(glassFactory.create(this, ProfileButtonsGlass.NO_COLORS).setRadius(capsuleRadius));
         }
         final BlurredBackgroundDrawable drawable = glass.get(glassUsed++);
+        drawable.setRadius(capsuleRadius);
         drawable.setBounds((int) rect.left, (int) rect.top, (int) Math.ceil(rect.right), (int) Math.ceil(rect.bottom));
         drawable.setAlpha((int) (0xFF * alpha));
         drawable.draw(canvas);

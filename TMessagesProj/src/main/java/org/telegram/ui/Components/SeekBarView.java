@@ -93,6 +93,21 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
     private final app.exteraless.glass.LiquidControls.GlassSpring solegramFollow = new app.exteraless.glass.LiquidControls.GlassSpring(0).params(0.16f, 0.88f).rest(0.5f);
     private boolean solegramFollowReady, solegramRich;
     private int solegramFollowWidth;
+    private boolean isPlayerMediaMode;
+    private boolean isPlayerPlaying;
+    private android.graphics.Path mediaWavePath;
+    private Paint mediaWavePaint;
+
+    public void setPlayerMediaMode(boolean value) {
+        isPlayerMediaMode = value;
+    }
+
+    public void setPlayerPlaying(boolean value) {
+        if (isPlayerPlaying != value) {
+            isPlayerPlaying = value;
+            invalidate();
+        }
+    }
     private long solegramFollowFrame;
     private float solegramStretch;
 
@@ -183,7 +198,7 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
         outerPaint1 = new Paint(Paint.ANTI_ALIAS_FLAG);
         outerPaint1.setColor(themedOuterColor = getThemedColor(Theme.key_player_progress));
 
-        selectorWidth = AndroidUtilities.dp(app.exteraless.glass.LiquidControls.enabled() ? 44 : 32);
+        selectorWidth = AndroidUtilities.dp(32);
         thumbSize = AndroidUtilities.dp(24);
         currentRadius = AndroidUtilities.dp(6);
 
@@ -626,13 +641,20 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
 
         updateModernState();
 
-        final boolean solegramLiquid = app.exteraless.glass.LiquidControls.enabled() && !twoSided;
+        final boolean solegramLiquid = app.exteraless.glass.LiquidControls.enabled() && !twoSided && !isPlayerMediaMode;
+        if (isPlayerMediaMode && app.exteraless.appearance.AppearanceConfig.classicPlayerSeekbarEnabled()) {
+            drawPlayerMediaSeekbar(canvas, thumbX);
+            drawTimestampLabel(canvas);
+            return;
+        }
         if (!solegramLiquid && needCustomDraw() == SLIDER_STYLE_MD3) {
             drawMd3Slider(canvas, thumbX);
             drawTimestampLabel(canvas);
             return;
         }
-        selectorWidth = AndroidUtilities.dp(solegramLiquid ? 44 : 32);
+        if (selectorWidth != AndroidUtilities.dp(32)) {
+            selectorWidth = AndroidUtilities.dp(32);
+        }
 
         if (!twoSided && separatorsCount > 1) {
             //float step = (getMeasuredWidth() - selectorWidth) / ((float) separatorsCount - 1f);
@@ -747,7 +769,7 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
             final float lensTop = top, lensBottom = bottom, lensLeft = left, lensRight = right;
             final int lensThumbX = thumbX;
             app.exteraless.glass.LiquidControls.drawSliderThumb(canvas, solegramCx, centerY, solegramTw, solegramTh, solegramActiveValue, c -> {
-                innerPaint1.setColor(getThemedColor(Theme.key_player_progressBackground));
+                innerPaint1.setColor(hasCustomInnerColor ? customInnerColor : getThemedColor(Theme.key_player_progressBackground));
                 drawProgressBar(c, solegramTrackRect, innerPaint1);
                 if (bufferedProgress > 0) {
                     innerPaint1.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
@@ -786,6 +808,89 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
 
         if (needInvalidate) {
             postInvalidateOnAnimation();
+        }
+    }
+
+    private void drawPlayerMediaSeekbar(Canvas canvas, int thumbX) {
+        final float left = selectorWidth / 2f;
+        final float right = getMeasuredWidth() - selectorWidth / 2f;
+        final float cy = getMeasuredHeight() / 2f;
+        if (right <= left) {
+            return;
+        }
+        final float thumbCx = Math.max(left, Math.min(right, thumbX + selectorWidth / 2f));
+        final int style = app.exteraless.appearance.AppearanceConfig.mediaSeekbarStyle(); // 0 = wavy, 1 = straight MD3
+        final int indicator = app.exteraless.appearance.AppearanceConfig.mediaSeekbarIndicator(); // 0 = bar, 1 = dot, 2 = none
+        final float strokeDp = Math.max(2f, Math.min(8f, app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness()));
+        final float trackStroke = AndroidUtilities.dpf2(strokeDp * 0.75f);
+        final float gap = indicator == 2 ? 0f : AndroidUtilities.dp(5f);
+
+        innerPaint1.setColor(getInnerTrackColor());
+        float inactiveStart = Math.min(right, thumbCx + gap);
+        if (right > inactiveStart) {
+            float halfH = trackStroke * 0.5f;
+            float rad = halfH;
+            if (bufferedProgress > 0 && bufferedProgress < 1f) {
+                float bufRight = Math.max(inactiveStart, Math.min(right, left + bufferedProgress * (right - left)));
+                canvas.drawRoundRect(inactiveStart, cy - halfH, right, cy + halfH, rad, rad, innerPaint1);
+                innerPaint1.setColor(getThemedColor(Theme.key_player_progressCachedBackground));
+                if (bufRight > inactiveStart) {
+                    canvas.drawRoundRect(inactiveStart, cy - halfH, bufRight, cy + halfH, rad, rad, innerPaint1);
+                }
+            } else {
+                canvas.drawRoundRect(inactiveStart, cy - halfH, right, cy + halfH, rad, rad, innerPaint1);
+            }
+        }
+
+        float activeEnd = Math.max(left, thumbCx - gap);
+        if (activeEnd > left) {
+            if (style == 0) {
+                if (mediaWavePath == null) {
+                    mediaWavePath = new android.graphics.Path();
+                }
+                if (mediaWavePaint == null) {
+                    mediaWavePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    mediaWavePaint.setStyle(Paint.Style.STROKE);
+                    mediaWavePaint.setStrokeCap(Paint.Cap.ROUND);
+                    mediaWavePaint.setStrokeJoin(Paint.Join.ROUND);
+                }
+                mediaWavePaint.setColor(outerPaint1.getColor());
+                mediaWavePaint.setStrokeWidth(trackStroke);
+
+                float amp = AndroidUtilities.dpf2(Math.min(3.5f, 1.8f + strokeDp * 0.25f));
+                float wavelength = AndroidUtilities.dpf2(20f);
+                float phase = isPlayerPlaying ? ((SystemClock.uptimeMillis() % 1200L) / 1200f) * (float) (2.0 * Math.PI) : 0f;
+                float step = AndroidUtilities.dpf2(2f);
+                mediaWavePath.rewind();
+                boolean first = true;
+                for (float x = left; x <= activeEnd; x += step) {
+                    float edgeFade = Math.min(1f, Math.min((x - left) / AndroidUtilities.dp(4f), (activeEnd - x) / AndroidUtilities.dp(4f)));
+                    float y = cy + (float) Math.sin((x - left) / wavelength * 2.0 * Math.PI - phase) * amp * Math.max(0f, edgeFade);
+                    if (first) {
+                        mediaWavePath.moveTo(x, y);
+                        first = false;
+                    } else {
+                        mediaWavePath.lineTo(x, y);
+                    }
+                }
+                mediaWavePath.lineTo(activeEnd, cy);
+                canvas.drawPath(mediaWavePath, mediaWavePaint);
+                if (isPlayerPlaying) {
+                    postInvalidateOnAnimation();
+                }
+            } else {
+                float halfH = trackStroke * 0.55f;
+                canvas.drawRoundRect(left, cy - halfH, activeEnd, cy + halfH, halfH, halfH, outerPaint1);
+            }
+        }
+
+        if (indicator == 0) {
+            float barW = AndroidUtilities.dpf2(3.5f);
+            float barH = AndroidUtilities.dpf2(pressed ? 20f : 16f);
+            canvas.drawRoundRect(thumbCx - barW / 2f, cy - barH / 2f, thumbCx + barW / 2f, cy + barH / 2f, barW / 2f, barW / 2f, outerPaint1);
+        } else if (indicator == 1) {
+            float dotR = AndroidUtilities.dpf2(pressed ? 7.5f : 5.5f);
+            canvas.drawCircle(thumbCx, cy, dotR, outerPaint1);
         }
     }
 

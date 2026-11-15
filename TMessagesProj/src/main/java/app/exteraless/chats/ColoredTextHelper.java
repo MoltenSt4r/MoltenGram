@@ -15,8 +15,9 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
-import android.widget.SeekBar;
 import android.widget.TextView;
+
+import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.FileLog;
@@ -26,6 +27,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.SeekBarView;
 
 public class ColoredTextHelper {
 
@@ -112,114 +114,129 @@ public class ColoredTextHelper {
         AlertDialog.Builder builder = new AlertDialog.Builder(context, resourcesProvider);
         builder.setTitle("Цвет текста");
 
+        int surfaceColor = Theme.getColor(Theme.key_dialogBackground, resourcesProvider);
+        int textColor = Theme.getColor(Theme.key_dialogTextBlack, resourcesProvider);
+        int subTextColor = Theme.getColor(Theme.key_dialogTextGray3, resourcesProvider);
+        int tonalBg = ColorUtils.blendARGB(surfaceColor, textColor, 0.08f);
+
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(20), dp(12), dp(20), dp(8));
+        root.setPadding(dp(20), dp(8), dp(20), dp(4));
 
-        // 1. Preview box
+        // 1. MD3 Tonal Preview Card with adaptive contrast
         FrameLayout previewBox = new FrameLayout(context);
         GradientDrawable previewBg = new GradientDrawable();
-        previewBg.setCornerRadius(dp(12));
-        previewBg.setColor(Color.HSVToColor(hsv));
+        previewBg.setCornerRadius(dp(20));
+        int initRgb = Color.HSVToColor(hsv);
+        previewBg.setColor(initRgb);
+        previewBg.setStroke(dp(1), ColorUtils.setAlphaComponent(textColor, 0x1A));
         previewBox.setBackground(previewBg);
-        previewBox.setPadding(dp(16), dp(12), dp(16), dp(12));
+        previewBox.setPadding(dp(18), dp(14), dp(18), dp(14));
 
         TextView previewText = new TextView(context);
         previewText.setText("Образец текста");
         previewText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         previewText.setTypeface(AndroidUtilities.bold());
-        previewText.setTextColor(Color.WHITE);
-        previewText.setShadowLayer(dp(2), 0, dp(1), 0x88000000);
+        int onSwatch = app.exteraless.utils.UIUtil.getOnAccentColor(initRgb);
+        previewText.setTextColor(onSwatch);
         previewBox.addView(previewText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.LEFT));
 
         TextView hexText = new TextView(context);
-        hexText.setText(String.format("#%06X", (0xFFFFFF & Color.HSVToColor(hsv))));
-        hexText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        hexText.setText(String.format("#%06X", (0xFFFFFF & initRgb)));
+        hexText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
         hexText.setTypeface(AndroidUtilities.headerTypeface());
-        hexText.setTextColor(Color.WHITE);
-        hexText.setShadowLayer(dp(2), 0, dp(1), 0x88000000);
+        hexText.setPadding(dp(10), dp(4), dp(10), dp(4));
+        GradientDrawable hexBadge = new GradientDrawable();
+        hexBadge.setCornerRadius(dp(12));
+        hexBadge.setColor(ColorUtils.setAlphaComponent(onSwatch, 0x22));
+        hexText.setBackground(hexBadge);
+        hexText.setTextColor(onSwatch);
         previewBox.addView(hexText, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.RIGHT));
 
-        root.addView(previewBox, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 52, 0, 0, 0, 16));
+        root.addView(previewBox, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 60, 0, 0, 0, 14));
 
-        // 2. Labels and 3 Sliders: Hue, Saturation, Brightness
+        // 2. Three global-styled SeekBarView sliders (follows NaConfig.getSliderStyle & AppearanceConfig.sliderThickness)
+        LinearLayout hueRow = new LinearLayout(context);
+        hueRow.setOrientation(LinearLayout.HORIZONTAL);
+        hueRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView hueLabel = new TextView(context);
+        hueLabel.setText("Оттенок");
         hueLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        hueLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
-        hueLabel.setText("Оттенок: " + Math.round(hsv[0]) + "°");
-        root.addView(hueLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
+        hueLabel.setTypeface(AndroidUtilities.bold());
+        hueLabel.setTextColor(textColor);
+        hueRow.addView(hueLabel, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+        TextView hueVal = new TextView(context);
+        hueVal.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        hueVal.setTypeface(AndroidUtilities.bold());
+        hueVal.setTextColor(subTextColor);
+        hueVal.setPadding(dp(8), dp(2), dp(8), dp(2));
+        GradientDrawable huePill = new GradientDrawable();
+        huePill.setCornerRadius(dp(10));
+        huePill.setColor(tonalBg);
+        hueVal.setBackground(huePill);
+        hueVal.setText(Math.round(hsv[0]) + "°");
+        hueRow.addView(hueVal, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        root.addView(hueRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
 
-        SeekBar hueBar = new SeekBar(context);
-        hueBar.setMax(360);
-        hueBar.setProgress(Math.round(hsv[0]));
-        root.addView(hueBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+        SeekBarView hueBar = new SeekBarView(context, resourcesProvider);
+        hueBar.setReportChanges(true);
+        hueBar.setProgress(hsv[0] / 360f);
+        root.addView(hueBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 0, 0, 4));
 
+        LinearLayout satRow = new LinearLayout(context);
+        satRow.setOrientation(LinearLayout.HORIZONTAL);
+        satRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView satLabel = new TextView(context);
+        satLabel.setText("Насыщенность");
         satLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        satLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
-        satLabel.setText("Насыщенность: " + Math.round(hsv[1] * 100f) + "%");
-        root.addView(satLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
+        satLabel.setTypeface(AndroidUtilities.bold());
+        satLabel.setTextColor(textColor);
+        satRow.addView(satLabel, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+        TextView satVal = new TextView(context);
+        satVal.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        satVal.setTypeface(AndroidUtilities.bold());
+        satVal.setTextColor(subTextColor);
+        satVal.setPadding(dp(8), dp(2), dp(8), dp(2));
+        GradientDrawable satPill = new GradientDrawable();
+        satPill.setCornerRadius(dp(10));
+        satPill.setColor(tonalBg);
+        satVal.setBackground(satPill);
+        satVal.setText(Math.round(hsv[1] * 100f) + "%");
+        satRow.addView(satVal, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        root.addView(satRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
-        SeekBar satBar = new SeekBar(context);
-        satBar.setMax(100);
-        satBar.setProgress(Math.round(hsv[1] * 100f));
-        root.addView(satBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 10));
+        SeekBarView satBar = new SeekBarView(context, resourcesProvider);
+        satBar.setReportChanges(true);
+        satBar.setProgress(hsv[1]);
+        root.addView(satBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 0, 0, 4));
 
+        LinearLayout valRow = new LinearLayout(context);
+        valRow.setOrientation(LinearLayout.HORIZONTAL);
+        valRow.setGravity(Gravity.CENTER_VERTICAL);
         TextView valLabel = new TextView(context);
+        valLabel.setText("Яркость");
         valLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
-        valLabel.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider));
-        valLabel.setText("Яркость: " + Math.round(hsv[2] * 100f) + "%");
-        root.addView(valLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 2));
+        valLabel.setTypeface(AndroidUtilities.bold());
+        valLabel.setTextColor(textColor);
+        valRow.addView(valLabel, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+        TextView valVal = new TextView(context);
+        valVal.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        valVal.setTypeface(AndroidUtilities.bold());
+        valVal.setTextColor(subTextColor);
+        valVal.setPadding(dp(8), dp(2), dp(8), dp(2));
+        GradientDrawable valPill = new GradientDrawable();
+        valPill.setCornerRadius(dp(10));
+        valPill.setColor(tonalBg);
+        valVal.setBackground(valPill);
+        valVal.setText(Math.round(hsv[2] * 100f) + "%");
+        valRow.addView(valVal, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+        root.addView(valRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
 
-        SeekBar valBar = new SeekBar(context);
-        valBar.setMax(100);
-        valBar.setProgress(Math.round(hsv[2] * 100f));
-        root.addView(valBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
+        SeekBarView valBar = new SeekBarView(context, resourcesProvider);
+        valBar.setReportChanges(true);
+        valBar.setProgress(hsv[2]);
+        root.addView(valBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 0, 0, 10));
 
-        Runnable updateState = () -> {
-            int curColor = Color.HSVToColor(hsv);
-            previewBg.setColor(curColor);
-            previewBox.invalidate();
-            hexText.setText(String.format("#%06X", (0xFFFFFF & curColor)));
-            hueLabel.setText("Оттенок: " + Math.round(hsv[0]) + "°");
-            satLabel.setText("Насыщенность: " + Math.round(hsv[1] * 100f) + "%");
-            valLabel.setText("Яркость: " + Math.round(hsv[2] * 100f) + "%");
-        };
-
-        hueBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                hsv[0] = progress;
-                updateState.run();
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        satBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                hsv[1] = progress / 100f;
-                updateState.run();
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        valBar.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
-            @Override
-            public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
-                hsv[2] = progress / 100f;
-                updateState.run();
-            }
-            @Override public void onStartTrackingTouch(SeekBar seekBar) {}
-            @Override public void onStopTrackingTouch(SeekBar seekBar) {}
-        });
-
-        // 3. Quick preset chips
-        LinearLayout presetsLayout = new LinearLayout(context);
-        presetsLayout.setOrientation(LinearLayout.HORIZONTAL);
-        presetsLayout.setGravity(Gravity.CENTER);
         int[] presets = new int[]{
                 0xFFF44336, // Red
                 0xFFFF9800, // Orange
@@ -230,23 +247,87 @@ public class ColoredTextHelper {
                 0xFF9C27B0, // Purple
                 0xFFE91E63  // Pink
         };
-        for (int pColor : presets) {
+        LinearLayout presetsLayout = new LinearLayout(context);
+        presetsLayout.setOrientation(LinearLayout.HORIZONTAL);
+        presetsLayout.setGravity(Gravity.CENTER);
+        final View[] swatchViews = new View[presets.length];
+        final GradientDrawable[] swatchDrawables = new GradientDrawable[presets.length];
+
+        Runnable updateState = () -> {
+            int curColor = Color.HSVToColor(hsv);
+            int curOn = app.exteraless.utils.UIUtil.getOnAccentColor(curColor);
+            previewBg.setColor(curColor);
+            previewBox.invalidate();
+            previewText.setTextColor(curOn);
+            hexBadge.setColor(ColorUtils.setAlphaComponent(curOn, 0x22));
+            hexText.setTextColor(curOn);
+            hexText.setText(String.format("#%06X", (0xFFFFFF & curColor)));
+            hueVal.setText(Math.round(hsv[0]) + "°");
+            satVal.setText(Math.round(hsv[1] * 100f) + "%");
+            valVal.setText(Math.round(hsv[2] * 100f) + "%");
+
+            int trackBg = Theme.getColor(Theme.key_player_progressBackground, resourcesProvider);
+            int pureHue = Color.HSVToColor(new float[]{hsv[0], 1f, 0.9f});
+            hueBar.setColors(trackBg, pureHue);
+            satBar.setColors(trackBg, curColor);
+            valBar.setColors(trackBg, curColor);
+
+            for (int i = 0; i < presets.length; i++) {
+                boolean selected = (presets[i] & 0xFFFFFF) == (curColor & 0xFFFFFF);
+                swatchDrawables[i].setStroke(dp(selected ? 2.5f : 1f), selected ? textColor : ColorUtils.setAlphaComponent(textColor, 0x26));
+                swatchViews[i].setScaleX(selected ? 1.12f : 1f);
+                swatchViews[i].setScaleY(selected ? 1.12f : 1f);
+            }
+        };
+
+        hueBar.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+            @Override
+            public void onSeekBarDrag(boolean stop, float progress) {
+                hsv[0] = Math.max(0f, Math.min(360f, progress * 360f));
+                updateState.run();
+            }
+            @Override public void onSeekBarPressed(boolean pressed) {}
+        });
+
+        satBar.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+            @Override
+            public void onSeekBarDrag(boolean stop, float progress) {
+                hsv[1] = Math.max(0f, Math.min(1f, progress));
+                updateState.run();
+            }
+            @Override public void onSeekBarPressed(boolean pressed) {}
+        });
+
+        valBar.setDelegate(new SeekBarView.SeekBarViewDelegate() {
+            @Override
+            public void onSeekBarDrag(boolean stop, float progress) {
+                hsv[2] = Math.max(0f, Math.min(1f, progress));
+                updateState.run();
+            }
+            @Override public void onSeekBarPressed(boolean pressed) {}
+        });
+
+        // 3. MD3 Circular preset swatches with active selection ring
+        for (int i = 0; i < presets.length; i++) {
+            int pColor = presets[i];
             View dot = new View(context);
             GradientDrawable d = new GradientDrawable();
             d.setShape(GradientDrawable.OVAL);
             d.setColor(pColor);
-            d.setStroke(dp(1), 0x33000000);
             dot.setBackground(d);
             dot.setOnClickListener(v -> {
                 Color.colorToHSV(pColor, hsv);
-                hueBar.setProgress(Math.round(hsv[0]));
-                satBar.setProgress(Math.round(hsv[1] * 100f));
-                valBar.setProgress(Math.round(hsv[2] * 100f));
+                hueBar.setProgress(hsv[0] / 360f, true);
+                satBar.setProgress(hsv[1], true);
+                valBar.setProgress(hsv[2], true);
                 updateState.run();
             });
+            swatchViews[i] = dot;
+            swatchDrawables[i] = d;
             presetsLayout.addView(dot, LayoutHelper.createLinear(28, 28, 4, 0, 4, 0));
         }
-        root.addView(presetsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+        root.addView(presetsLayout, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 8));
+        updateState.run();
 
         builder.setView(root);
         builder.setPositiveButton("Применить", (dialog, which) -> {

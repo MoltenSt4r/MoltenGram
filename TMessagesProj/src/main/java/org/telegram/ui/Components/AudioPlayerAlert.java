@@ -655,6 +655,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
             }
         };
         seekBarView.setLineWidth(4);
+        seekBarView.setPlayerMediaMode(true);
         seekBarView.setDelegate(new SeekBarView.SeekBarViewDelegate() {
             @Override
             public void onSeekBarDrag(boolean stop, float progress) {
@@ -2296,6 +2297,7 @@ public class AudioPlayerAlert extends BottomSheet implements NotificationCenter.
 
     private void updateProgress(MessageObject messageObject, boolean animated) {
         if (seekBarView != null) {
+            seekBarView.setPlayerPlaying(!MediaController.getInstance().isMessagePaused());
             int newTime;
             if (seekBarView.isDragging()) {
                 newTime = (int) (messageObject.getDuration() * seekBarView.getProgress());

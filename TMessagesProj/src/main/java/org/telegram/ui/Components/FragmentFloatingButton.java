@@ -175,6 +175,16 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private GlassSourceColor iBlur3SourceColor;
     private BlurredBackgroundDrawable iBlur3Background;
     private BlurredBackgroundColorProviderThemed iBlur3ColorProviderTabs;
+    private BlurredBackgroundDrawable fabGlassDrawable;
+
+    public void setGlassFactory(org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory factory) {
+        if (isSubButton || factory == null) {
+            return;
+        }
+        fabGlassDrawable = factory.create(this, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+        updateColors();
+        invalidate();
+    }
 
     private Drawable themedBackground;
     private int themedIconColor;
@@ -228,7 +238,13 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             int mainColor = app.exteraless.utils.UIUtil.resolveFabColor(mainBgCode, defBg);
 
             int mainIconCode = app.exteraless.appearance.AppearanceConfig.fabIconColor();
-            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
+            boolean useGlassFab = fabGlassDrawable != null && app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassFab;
+            int iconCol = (useGlassFab && mainIconCode == 0)
+                    ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider)
+                    : app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
+            if (fabGlassDrawable != null) {
+                fabGlassDrawable.updateColors();
+            }
             currentIconColor = iconCol;
 
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
@@ -289,6 +305,19 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         }
 
         updateShapePath(w, h);
+        if (fabGlassDrawable != null && !isSubButton && app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassFab) {
+            fabGlassDrawable.setBounds(0, 0, w, h);
+            fabGlassDrawable.setRadius(app.exteraless.appearance.AppearanceConfig.fabShape() == app.exteraless.appearance.Md3AvatarShapes.SHAPE_SQUARE ? dp(16) : Math.min(w, h) / 2f);
+            canvas.save();
+            canvas.clipPath(shapePath);
+            fabGlassDrawable.draw(canvas);
+            if (isFabPressed) {
+                canvas.drawColor(Theme.isCurrentThemeDark() ? 0x22FFFFFF : 0x18000000);
+            }
+            super.dispatchDraw(canvas);
+            canvas.restore();
+            return;
+        }
         canvas.drawPath(shapePath, isFabPressed ? fabPressedPaint : fabBgPaint);
 
         canvas.save();

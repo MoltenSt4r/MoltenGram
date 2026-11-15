@@ -326,4 +326,14 @@
 <string name="SG_PreviewMessage4">Call me when you can</string>
 <string name="SG_PreviewMessage5">Photo</string>
 <string name="SG_PreviewMessage6">The new album is out</string>
+<string name="SG_GlassFab">Floating action buttons</string>
+<string name="SG_GlassFabInfo">Apply Liquid Glass to floating action buttons (FAB) in main chat list</string>
+<string name="SG_GlassMiniPlayer">Mini-player</string>
+<string name="SG_GlassMiniPlayerInfo">Use Liquid Glass material for the floating mini-player bar</string>
+<string name="SG_GlassMessages">Glass messages</string>
+<string name="SG_GlassMessagesInfo">Translucent glass message bubbles (synced with Chat appearance)</string>
+<string name="SG_GlassMainHeader">Main header &amp; search</string>
+<string name="SG_GlassMainHeaderInfo">Use Liquid Glass for top panels and the search bar in main chat list</string>
+<string name="SG_GlassFolders">Folder bar &amp; MD3 chips</string>
+<string name="SG_GlassFoldersInfo">Apply Liquid Glass to the folders panel (compatible with MD3 chips)</string>
 </resources>

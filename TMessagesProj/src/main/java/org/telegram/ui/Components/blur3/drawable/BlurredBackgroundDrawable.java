@@ -924,6 +924,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
 
     private boolean liquidGlassEffectAllowed;
     private int glassSettingsGeneration = GlassEngine.getGlassSettingsGenerationId();
+    private int solegramConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
 
     /** The screen wants the liquid glass here: it is drawn while the glass settings have it on (Android 13+). */
     public void setLiquidGlassEffectAllowed() {
@@ -958,6 +959,13 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         if (glassSettingsGeneration != generation) {
             glassSettingsGeneration = generation;
             setGlassSettings(GlassEngine.getCurrentGlassSettings());
+        }
+        final int sgVer = app.exteraless.glass.LiquidGlassConfig.version;
+        if (solegramConfigVersion != sgVer) {
+            solegramConfigVersion = sgVer;
+            updateColors();
+            invalidateDisplayList();
+            invalidateSelf();
         }
     }
 

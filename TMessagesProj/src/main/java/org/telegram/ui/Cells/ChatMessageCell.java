@@ -1743,8 +1743,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
         boolean dark = isDark();
         int tintAlpha = Math.round((dark ? 0x4C : 0x30) * alphaInternal);
+        int bubbleTintColor = ColorUtils.setAlphaComponent(dark ? 0xFF141418 : 0xFFFFFFFF, Math.max(0, Math.min(255, tintAlpha)));
+        if (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+            bubbleTintColor = app.exteraless.glass.SolegramGlass.tint(bubbleTintColor, resourcesProvider);
+        }
         glassTintPaint.setStyle(Paint.Style.FILL);
-        glassTintPaint.setColor(ColorUtils.setAlphaComponent(dark ? 0xFF141418 : 0xFFFFFFFF, Math.max(0, Math.min(255, tintAlpha))));
+        glassTintPaint.setColor(bubbleTintColor);
         canvas.drawPath(clipPath, glassTintPaint);
         return true;
     }
@@ -13878,6 +13882,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 } else {
                     canvas.translate(seekBarX, seekBarY + yoffset);
                     seekBar.setAlpha(isRoundVideo ? CubicBezierInterpolator.EASE_IN.getInterpolation(getVideoTranscriptionProgress()) : 1f);
+                    boolean playingMusic = org.telegram.messenger.MediaController.getInstance().isPlayingMessage(currentMessageObject) && !org.telegram.messenger.MediaController.getInstance().isMessagePaused();
+                    seekBar.setPlaying(playingMusic);
                     seekBar.draw(canvas);
                 }
             }
@@ -20197,7 +20203,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public boolean shouldDrawGlassBubble() {
-        return app.exteraless.appearance.AppearanceConfig.glassMessages()
+        return (app.exteraless.appearance.AppearanceConfig.glassMessages()
+                || (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassMessages))
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()
                 && currentMessageObject != null
                 && !currentMessageObject.shouldDrawWithoutBackground()
@@ -20375,6 +20382,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 int veilAlpha = Math.round(255f * (drewWallpaperBitmap ? opacityNorm : Math.min(0.92f, opacityNorm + 0.14f)) * alphaInternal);
                 baseVeilColor = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.max(0, Math.min(255, veilAlpha)));
+            }
+            if (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+                baseVeilColor = app.exteraless.glass.SolegramGlass.tint(baseVeilColor, resourcesProvider);
             }
             glassTintPaint.setStyle(Paint.Style.FILL);
             glassTintPaint.setColor(baseVeilColor);
@@ -25254,7 +25264,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     public int getThemedColor(int key) {
-        if (app.exteraless.appearance.AppearanceConfig.glassMessages()
+        if ((app.exteraless.appearance.AppearanceConfig.glassMessages()
+                || (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassMessages))
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()) {
             key = mapGlassOutColorKey(key);
         }

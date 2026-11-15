@@ -87,18 +87,44 @@ public final class SolegramGlass {
 
     /** Glass fill colour with the chosen tint mixed in; the alpha stays as Telegram computed it. */
     public static int tint(int color) {
-        final int tint = tintColor();
+        return tint(color, null);
+    }
+
+    public static int tint(int color, Theme.ResourcesProvider resourcesProvider) {
+        final int tint = tintColor(resourcesProvider);
         if (tint == 0 || LiquidGlassConfig.glassTintAmount <= 0) {
             return color;
         }
-        final int mixed = ColorUtils.blendARGB(color | 0xFF000000, tint, LiquidGlassConfig.glassTintAmount / 100f);
-        return ColorUtils.setAlphaComponent(mixed, Color.alpha(color));
+        // Map the 0..60 tint slider to a vivid, unmistakable tint over both dark and light translucent glass
+        final float norm = Math.min(1f, LiquidGlassConfig.glassTintAmount / 60f);
+        final float amount = 0.20f + 0.70f * norm;
+        final int mixed = ColorUtils.blendARGB(color | 0xFF000000, tint, amount);
+        final int origAlpha = Color.alpha(color);
+        if (origAlpha == 0 || origAlpha == 255) {
+            return ColorUtils.setAlphaComponent(mixed, origAlpha);
+        }
+        final int minAlpha = Math.round(255f * (0.22f + 0.38f * norm));
+        return ColorUtils.setAlphaComponent(mixed, Math.max(origAlpha, minAlpha));
     }
 
     public static int tintColor() {
+        return tintColor(null);
+    }
+
+    public static int tintColor(Theme.ResourcesProvider resourcesProvider) {
         final int index = LiquidGlassConfig.glassTint;
         if (index == TINT_ACCENT) {
-            return Theme.getColor(Theme.key_chats_actionBackground) | 0xFF000000;
+            int accent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+            if (accent == 0) {
+                accent = Theme.getColor(Theme.key_chats_actionBackground, resourcesProvider);
+            }
+            if (accent == 0) {
+                accent = Theme.getColor(Theme.key_switchTrackChecked, resourcesProvider);
+            }
+            if (accent == 0) {
+                accent = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText4, resourcesProvider);
+            }
+            return accent != 0 ? (accent | 0xFF000000) : 0;
         }
         if (index > TINT_ACCENT && index < TINT_COLORS.length) {
             return TINT_COLORS[index];

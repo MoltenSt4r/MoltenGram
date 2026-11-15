@@ -4890,7 +4890,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         searchTabsAndFiltersLayout = new SearchTabsAndFiltersLayout(getContext());
         contentView.addView(searchTabsAndFiltersLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, SEARCH_TABS_HEIGHT, Gravity.TOP, 4, 0, 4, 0));
 
-        BlurredBackgroundDrawable searchTabsViewBackground = iBlur3FactoryLiquidGlass.create(searchTabsAndFiltersLayout, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+        BlurredBackgroundDrawableViewFactory headerBlurFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
+        BlurredBackgroundDrawable searchTabsViewBackground = headerBlurFactory.create(searchTabsAndFiltersLayout, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
         searchTabsViewBackground.setRadius(dp(18));
         searchTabsViewBackground.setPadding(dp(6.666f));
         searchTabsAndFiltersLayout.setPadding(0, dp(7), 0, dp(7));
@@ -4912,6 +4913,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         contentView.addView(floatingButtonStories, FragmentFloatingButton.createSubButtonLayoutParams());
 
         floatingButton3 = new FragmentFloatingButton(context, resourceProvider);
+        floatingButton3.setGlassFactory(iBlur3FactoryLiquidGlass);
 
         speedDialView = new app.exteraless.components.Md3SpeedDialView(context, this, floatingButton3, floatingButtonStories, resourceProvider);
         contentView.addView(speedDialView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -4990,7 +4992,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             });
 
-            BlurredBackgroundDrawable topPanelLayoutBackground = iBlur3FactoryLiquidGlass.create(topPanelLayout)
+            BlurredBackgroundDrawableViewFactory topPanelFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
+            BlurredBackgroundDrawable topPanelLayoutBackground = topPanelFactory.create(topPanelLayout)
                 .setColorProvider(BlurredBackgroundProviderImpl.topPanel(resourceProvider))
                 .setPadding(dp(7));
 
@@ -5337,7 +5340,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (filterTabsView != null) {
-            BlurredBackgroundDrawable filterTabsViewBackground = iBlur3FactoryLiquidGlass.create(filterTabsView, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+            BlurredBackgroundDrawableViewFactory foldersFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassFolders) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
+            BlurredBackgroundDrawable filterTabsViewBackground = foldersFactory.create(filterTabsView, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
             filterTabsViewBackground.setRadius(dp(18));
             filterTabsViewBackground.setPadding(dp(6.666f));
             filterTabsView.setPadding(0, dp(7), 0, dp(7));
@@ -5346,7 +5350,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (fragmentSearchField != null) {
-            fragmentSearchField.setupBlurredBackground(iBlur3FactoryLiquidGlass.create(fragmentSearchField, BlurredBackgroundProviderImpl.topPanel(resourceProvider)));
+            BlurredBackgroundDrawableViewFactory searchFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
+            fragmentSearchField.setupBlurredBackground(searchFactory.create(fragmentSearchField, BlurredBackgroundProviderImpl.topPanel(resourceProvider)));
         }
 
         dialogStoriesCell = new DialogStoriesCell(context, this, currentAccount, isArchive() ? DialogStoriesCell.TYPE_ARCHIVE : DialogStoriesCell.TYPE_DIALOGS) {

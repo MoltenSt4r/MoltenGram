@@ -317,4 +317,14 @@
 <string name="SG_PreviewMessage4">Позвони, как сможешь</string>
 <string name="SG_PreviewMessage5">Фото</string>
 <string name="SG_PreviewMessage6">Вышел новый альбом</string>
+<string name="SG_GlassFab">Кнопки действия (FAB)</string>
+<string name="SG_GlassFabInfo">Применять Liquid Glass к плавающей кнопке действия (FAB) в списке чатов</string>
+<string name="SG_GlassMiniPlayer">Мини-плеер</string>
+<string name="SG_GlassMiniPlayerInfo">Использовать Liquid Glass для плавающего мини-плеера</string>
+<string name="SG_GlassMessages">Стеклянные сообщения</string>
+<string name="SG_GlassMessagesInfo">Полупрозрачные стеклянные пузыри сообщений (синхронно с настройками чатов)</string>
+<string name="SG_GlassMainHeader">Шапка и поиск в главном меню</string>
+<string name="SG_GlassMainHeaderInfo">Использовать Liquid Glass для верхней панели и строки поиска в списке чатов</string>
+<string name="SG_GlassFolders">Панель папок и MD3-чипсы</string>
+<string name="SG_GlassFoldersInfo">Применять Liquid Glass к панели папок (работает и с MD3-чипсами)</string>
 </resources>

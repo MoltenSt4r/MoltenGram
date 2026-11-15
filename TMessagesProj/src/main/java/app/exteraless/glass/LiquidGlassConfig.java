@@ -23,7 +23,7 @@ public final class LiquidGlassConfig {
 
     private static final String PREFIX = "MG_";
     private static final String KEY_DEFAULTS_VERSION = PREFIX + "glassDefaultsVersion";
-    private static final int GLASS_DEFAULTS_VERSION = 1;
+    private static final int GLASS_DEFAULTS_VERSION = 2;
 
     public static volatile int version = 1;
 
@@ -41,12 +41,17 @@ public final class LiquidGlassConfig {
     public static boolean glassShadow = true;
     public static boolean glassVibrancy = false;
     public static boolean glassPreviewLook = true;
-    public static boolean liquidControls = true;
+    public static boolean liquidControls = false;
     public static boolean glassHeaderButtons = false;
     public static boolean frostedHeaders = false;
     public static boolean glassMenus = true;
     public static boolean glassDialogs = true;
     public static boolean glassSheets = true;
+    public static boolean glassFab = false;
+    public static boolean glassMiniPlayer = false;
+    public static boolean glassMessages = false;
+    public static boolean glassMainHeader = true;
+    public static boolean glassFolders = true;
 
     static {
         init();
@@ -59,11 +64,18 @@ public final class LiquidGlassConfig {
     private static void init() {
         try {
             final SharedPreferences p = prefs();
-            if (p.getInt(KEY_DEFAULTS_VERSION, 0) < GLASS_DEFAULTS_VERSION) {
+            final int savedVer = p.getInt(KEY_DEFAULTS_VERSION, 0);
+            if (savedVer < GLASS_DEFAULTS_VERSION) {
                 final SharedPreferences.Editor editor = p.edit();
-                writeGlassDefaults(editor);
+                if (savedVer == 0) {
+                    writeGlassDefaults(editor);
+                } else {
+                    editor.putBoolean(PREFIX + "liquidControls", false);
+                }
                 editor.putInt(KEY_DEFAULTS_VERSION, GLASS_DEFAULTS_VERSION).commit();
-                new android.os.Handler(android.os.Looper.getMainLooper()).post(LiquidGlassConfig::enableTexturedGlass);
+                if (savedVer == 0) {
+                    new android.os.Handler(android.os.Looper.getMainLooper()).post(LiquidGlassConfig::enableTexturedGlass);
+                }
             }
             reload();
         } catch (Throwable e) {
@@ -87,12 +99,17 @@ public final class LiquidGlassConfig {
         glassShadow = p.getBoolean(PREFIX + "glassShadow", true);
         glassVibrancy = p.getBoolean(PREFIX + "glassVibrancy", false);
         glassPreviewLook = p.getBoolean(PREFIX + "glassPreviewLook", true);
-        liquidControls = p.getBoolean(PREFIX + "liquidControls", true);
+        liquidControls = p.getBoolean(PREFIX + "liquidControls", false);
         glassHeaderButtons = p.getBoolean(PREFIX + "glassHeaderButtons", false);
         frostedHeaders = p.getBoolean(PREFIX + "frostedHeaders", false);
         glassMenus = p.getBoolean(PREFIX + "glassMenus", true);
         glassDialogs = p.getBoolean(PREFIX + "glassDialogs", true);
         glassSheets = p.getBoolean(PREFIX + "glassSheets", true);
+        glassFab = p.getBoolean(PREFIX + "glassFab", false);
+        glassMiniPlayer = p.getBoolean(PREFIX + "glassMiniPlayer", false);
+        glassMessages = p.getBoolean(PREFIX + "glassMessages", false);
+        glassMainHeader = p.getBoolean(PREFIX + "glassMainHeader", true);
+        glassFolders = p.getBoolean(PREFIX + "glassFolders", true);
     }
 
     private static void writeGlassDefaults(SharedPreferences.Editor editor) {
@@ -110,12 +127,17 @@ public final class LiquidGlassConfig {
             .putBoolean(PREFIX + "glassShadow", true)
             .putBoolean(PREFIX + "glassVibrancy", false)
             .putBoolean(PREFIX + "glassPreviewLook", true)
-            .putBoolean(PREFIX + "liquidControls", true)
+            .putBoolean(PREFIX + "liquidControls", false)
             .putBoolean(PREFIX + "glassHeaderButtons", false)
             .putBoolean(PREFIX + "frostedHeaders", false)
             .putBoolean(PREFIX + "glassMenus", true)
             .putBoolean(PREFIX + "glassDialogs", true)
-            .putBoolean(PREFIX + "glassSheets", true);
+            .putBoolean(PREFIX + "glassSheets", true)
+            .putBoolean(PREFIX + "glassFab", false)
+            .putBoolean(PREFIX + "glassMiniPlayer", false)
+            .putBoolean(PREFIX + "glassMessages", false)
+            .putBoolean(PREFIX + "glassMainHeader", true)
+            .putBoolean(PREFIX + "glassFolders", true);
     }
 
     public static void putInt(String key, int value) {
@@ -126,6 +148,12 @@ public final class LiquidGlassConfig {
 
     public static void putBoolean(String key, boolean value) {
         prefs().edit().putBoolean(PREFIX + key, value).apply();
+        if ("glassMessages".equals(key)) {
+            try {
+                app.exteraless.appearance.AppearanceConfig.glassMessages.setConfigBool(value);
+            } catch (Throwable ignore) {
+            }
+        }
         reload();
         notifyChanged();
     }

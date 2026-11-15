@@ -901,6 +901,48 @@ object AppearanceConfig {
         return if (v in 2..16) v else 4
     }
 
+    /** Включает MD3 / волнистый прогресс-бар на аудиосообщениях (музыке) в чатах. */
+    @JvmField
+    val chatMediaSeekbarEnabled = addConfig("OEAppearanceChatMediaSeekbarEnabled", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun chatMediaSeekbarEnabled(): Boolean {
+        ensureLoaded()
+        return chatMediaSeekbarEnabled.Bool()
+    }
+
+    /** Включает MD3 / волнистый прогресс-бар в классическом аудиоплеере. */
+    @JvmField
+    val classicPlayerSeekbarEnabled = addConfig("OEAppearanceClassicPlayerSeekbarEnabled", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun classicPlayerSeekbarEnabled(): Boolean {
+        ensureLoaded()
+        return classicPlayerSeekbarEnabled.Bool()
+    }
+
+    /** Стиль линии для медиа в чатах и классического плеера: 0 = волнистая (MD3), 1 = прямая MD3. */
+    @JvmField
+    val mediaSeekbarStyle = addConfig("OEAppearanceMediaSeekbarStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun mediaSeekbarStyle(): Int {
+        ensureLoaded()
+        val v = mediaSeekbarStyle.Int()
+        return if (v in 0..1) v else 0
+    }
+
+    /** Индикатор для медиа в чатах и классического плеера: 0 = чёрточка, 1 = кружочек, 2 = без всего. */
+    @JvmField
+    val mediaSeekbarIndicator = addConfig("OEAppearanceMediaSeekbarIndicator", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun mediaSeekbarIndicator(): Int {
+        ensureLoaded()
+        val v = mediaSeekbarIndicator.Int()
+        return if (v in 0..2) v else 0
+    }
+
 
     /** Толщина слайдеров MD3 (SeekBarView): по умолчанию 8 dp. */
     @JvmField

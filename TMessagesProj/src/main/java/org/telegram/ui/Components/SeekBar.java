@@ -73,6 +73,13 @@ public class SeekBar {
     private long lastUpdateTime;
     private View parentView;
     private float alpha = 1f;
+    private boolean playing;
+    private Path customWavePath;
+    private Paint customWavePaint;
+
+    public void setPlaying(boolean value) {
+        playing = value;
+    }
 
     public SeekBar(View parent) {
         if (paint == null) {
@@ -200,6 +207,14 @@ public class SeekBar {
         if (alpha < 1) {
             canvas.saveLayerAlpha(0, 0, width, height, (int) (255 * alpha), Canvas.ALL_SAVE_FLAG);
         }
+        if (app.exteraless.appearance.AppearanceConfig.chatMediaSeekbarEnabled()) {
+            drawCustomMediaSeekBar(canvas);
+            if (alpha < 1) {
+                canvas.restore();
+            }
+            updateTimestampAnimation();
+            return;
+        }
         rect.set(thumbWidth / 2, height / 2 - lineHeight / 2, width - thumbWidth / 2, height / 2 + lineHeight / 2);
         paint.setColor(selected ? backgroundSelectedColor : backgroundColor);
         drawProgressBar(canvas, rect, paint);
@@ -243,6 +258,89 @@ public class SeekBar {
         }
 
         updateTimestampAnimation();
+    }
+
+    private void drawCustomMediaSeekBar(Canvas canvas) {
+        float left = thumbWidth / 2f;
+        float right = width - thumbWidth / 2f;
+        float cy = height / 2f;
+        if (right <= left) {
+            return;
+        }
+        float thumbCx = Math.max(left, Math.min(right, left + (pressed ? draggingThumbX : thumbX)));
+        int style = app.exteraless.appearance.AppearanceConfig.mediaSeekbarStyle(); // 0 = wavy, 1 = straight MD3
+        int indicator = app.exteraless.appearance.AppearanceConfig.mediaSeekbarIndicator(); // 0 = bar, 1 = dot, 2 = none
+        float thickness = Math.max(AndroidUtilities.dpf2(2.2f), Math.min(AndroidUtilities.dpf2(4.2f), AndroidUtilities.dpf2(app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness() * 0.65f)));
+        float gap = indicator == 2 ? 0f : AndroidUtilities.dp(4f);
+
+        float inactiveStart = Math.min(right, thumbCx + gap);
+        if (right > inactiveStart) {
+            rect.set(inactiveStart, cy - thickness * 0.5f, right, cy + thickness * 0.5f);
+            paint.setColor(selected ? backgroundSelectedColor : backgroundColor);
+            canvas.drawRoundRect(rect, thickness * 0.5f, thickness * 0.5f, paint);
+            if (bufferedProgress > 0 && bufferedProgress < 1f) {
+                float bufRight = Math.max(inactiveStart, Math.min(right, left + bufferedProgress * (right - left)));
+                if (bufRight > inactiveStart) {
+                    paint.setColor(selected ? backgroundSelectedColor : cacheColor);
+                    rect.set(inactiveStart, cy - thickness * 0.5f, bufRight, cy + thickness * 0.5f);
+                    canvas.drawRoundRect(rect, thickness * 0.5f, thickness * 0.5f, paint);
+                }
+            }
+        }
+
+        float activeEnd = Math.max(left, thumbCx - gap);
+        if (activeEnd > left) {
+            if (style == 0) {
+                if (customWavePath == null) {
+                    customWavePath = new Path();
+                }
+                if (customWavePaint == null) {
+                    customWavePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                    customWavePaint.setStyle(Paint.Style.STROKE);
+                    customWavePaint.setStrokeCap(Paint.Cap.ROUND);
+                    customWavePaint.setStrokeJoin(Paint.Join.ROUND);
+                }
+                customWavePaint.setColor(progressColor);
+                customWavePaint.setStrokeWidth(thickness);
+
+                float amp = AndroidUtilities.dpf2(2.1f);
+                float wavelength = AndroidUtilities.dpf2(16f);
+                float phase = playing ? ((SystemClock.uptimeMillis() % 1200L) / 1200f) * (float) (2.0 * Math.PI) : 0f;
+                float step = AndroidUtilities.dpf2(1.8f);
+                customWavePath.rewind();
+                boolean first = true;
+                for (float x = left; x <= activeEnd; x += step) {
+                    float edgeFade = Math.min(1f, Math.min((x - left) / AndroidUtilities.dp(3.5f), (activeEnd - x) / AndroidUtilities.dp(3.5f)));
+                    float y = cy + (float) Math.sin((x - left) / wavelength * 2.0 * Math.PI - phase) * amp * Math.max(0f, edgeFade);
+                    if (first) {
+                        customWavePath.moveTo(x, y);
+                        first = false;
+                    } else {
+                        customWavePath.lineTo(x, y);
+                    }
+                }
+                customWavePath.lineTo(activeEnd, cy);
+                canvas.drawPath(customWavePath, customWavePaint);
+                if (playing && parentView != null) {
+                    parentView.invalidate();
+                }
+            } else {
+                paint.setColor(progressColor);
+                rect.set(left, cy - thickness * 0.55f, activeEnd, cy + thickness * 0.55f);
+                canvas.drawRoundRect(rect, thickness * 0.55f, thickness * 0.55f, paint);
+            }
+        }
+
+        paint.setColor(circleColor);
+        if (indicator == 0) {
+            float barW = AndroidUtilities.dpf2(2.8f);
+            float barH = AndroidUtilities.dpf2(pressed ? 14f : 11f);
+            rect.set(thumbCx - barW / 2f, cy - barH / 2f, thumbCx + barW / 2f, cy + barH / 2f);
+            canvas.drawRoundRect(rect, barW / 2f, barW / 2f, paint);
+        } else if (indicator == 1) {
+            float dotR = AndroidUtilities.dpf2(pressed ? 6.5f : 5f);
+            canvas.drawCircle(thumbCx, cy, dotR, paint);
+        }
     }
 
     protected void onTimestampUpdate(URLSpanNoUnderline link) {

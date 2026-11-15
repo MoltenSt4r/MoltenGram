@@ -51,6 +51,11 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
     private static final int ID_GLASS_TINT = 11;
     private static final int ID_GLASS_RESTART = 12;
     private static final int ID_GLASS_RESET = 13;
+    private static final int ID_GLASS_FAB = 14;
+    private static final int ID_GLASS_MINI_PLAYER = 15;
+    private static final int ID_GLASS_MESSAGES = 16;
+    private static final int ID_GLASS_MAIN_HEADER = 17;
+    private static final int ID_GLASS_FOLDERS = 18;
 
     private UniversalRecyclerView listView;
     private SolegramGlassPreview glassPreview;
@@ -125,6 +130,16 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
                     .setChecked(LiquidGlassConfig.glassHeaderButtons));
             items.add(UItem.asButtonCheck(ID_FROSTED_HEADERS, getString(R.string.SG_FrostedHeaders), getString(R.string.SG_FrostedHeadersInfo))
                     .setChecked(LiquidGlassConfig.frostedHeaders));
+            items.add(UItem.asButtonCheck(ID_GLASS_MAIN_HEADER, getString(R.string.SG_GlassMainHeader), getString(R.string.SG_GlassMainHeaderInfo))
+                    .setChecked(LiquidGlassConfig.glassMainHeader));
+            items.add(UItem.asButtonCheck(ID_GLASS_FOLDERS, getString(R.string.SG_GlassFolders), getString(R.string.SG_GlassFoldersInfo))
+                    .setChecked(LiquidGlassConfig.glassFolders));
+            items.add(UItem.asButtonCheck(ID_GLASS_FAB, getString(R.string.SG_GlassFab), getString(R.string.SG_GlassFabInfo))
+                    .setChecked(LiquidGlassConfig.glassFab));
+            items.add(UItem.asButtonCheck(ID_GLASS_MINI_PLAYER, getString(R.string.SG_GlassMiniPlayer), getString(R.string.SG_GlassMiniPlayerInfo))
+                    .setChecked(LiquidGlassConfig.glassMiniPlayer));
+            items.add(UItem.asButtonCheck(ID_GLASS_MESSAGES, getString(R.string.SG_GlassMessages), getString(R.string.SG_GlassMessagesInfo))
+                    .setChecked(LiquidGlassConfig.glassMessages || app.exteraless.appearance.AppearanceConfig.glassMessages()));
             if (SolegramLiveGlass.available() || Build.VERSION.SDK_INT >= 33) {
                 items.add(UItem.asButtonCheck(ID_GLASS_MENUS, getString(R.string.SG_GlassMenus), getString(R.string.SG_GlassMenusInfo))
                         .setChecked(LiquidGlassConfig.glassMenus));
@@ -210,6 +225,32 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
                 LiquidGlassConfig.putBoolean("glassSheets", !LiquidGlassConfig.glassSheets);
                 refreshList();
                 break;
+            case ID_GLASS_MAIN_HEADER:
+                LiquidGlassConfig.putBoolean("glassMainHeader", !LiquidGlassConfig.glassMainHeader);
+                refreshList();
+                break;
+            case ID_GLASS_FOLDERS:
+                LiquidGlassConfig.putBoolean("glassFolders", !LiquidGlassConfig.glassFolders);
+                refreshList();
+                break;
+            case ID_GLASS_FAB:
+                LiquidGlassConfig.putBoolean("glassFab", !LiquidGlassConfig.glassFab);
+                refreshList();
+                break;
+            case ID_GLASS_MINI_PLAYER:
+                LiquidGlassConfig.putBoolean("glassMiniPlayer", !LiquidGlassConfig.glassMiniPlayer);
+                app.exteraless.player.PlayerMiniView.styleChanged();
+                refreshList();
+                break;
+            case ID_GLASS_MESSAGES: {
+                boolean enable = !(LiquidGlassConfig.glassMessages || app.exteraless.appearance.AppearanceConfig.glassMessages());
+                if (enable && !SharedConfig.chatBlurEnabled()) {
+                    SharedConfig.toggleChatBlur();
+                }
+                LiquidGlassConfig.putBoolean("glassMessages", enable);
+                refreshList();
+                break;
+            }
             case ID_GLASS_TINT:
                 showGlassTintSelector();
                 break;
