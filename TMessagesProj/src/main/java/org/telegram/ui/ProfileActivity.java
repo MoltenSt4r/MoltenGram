@@ -2788,7 +2788,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         presentFragment(fragment);
                     }
                 } else if (id == edit_profile) {
-                    presentFragment(new UserInfoActivity());
+                    presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                 } else if (id == invite_to_group) {
                     final TLRPC.User user = getMessagesController().getUser(userId);
                     if (user == null) {
@@ -2937,7 +2937,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         });
                     }
                 } else if (id == edit_info) {
-                    presentFragment(new UserInfoActivity());
+                    presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                 } else if (id == edit_color) {
 //                    if (!getUserConfig().isPremium()) {
 //                        showDialog(new PremiumFeatureBottomSheet(ProfileActivity.this, PremiumPreviewFragment.PREMIUM_FEATURE_NAME_COLOR, true));
@@ -4026,7 +4026,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         onWriteButtonClick();
                         break;
                     case ProfileActionsView.KEY_EDIT_INFO:
-                        presentFragment(new UserInfoActivity());
+                        presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                         break;
                     case ProfileActionsView.KEY_EDIT_USERNAME:
                         TLRPC.User user = getUserConfig().getCurrentUser();
@@ -4688,7 +4688,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 });
                 builder.show();
             } else if (position == bioRow) {
-                presentFragment(new UserInfoActivity());
+                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
             } else if (position == numberRow) {
                 TLRPC.User user = UserConfig.getInstance(currentAccount).getCurrentUser();
                 if (user == null || TextUtils.isEmpty(user.phone)) {
@@ -11326,7 +11326,8 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 versionRow = rowCount++;
             } else {
                 String username = UserObject.getPublicUsername(user);
-                boolean hasInfo = userInfo != null && !TextUtils.isEmpty(userInfo.about) || user != null && !TextUtils.isEmpty(username);
+                final String cleanedAbout = userInfo != null ? app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about) : null;
+                boolean hasInfo = !TextUtils.isEmpty(cleanedAbout) || user != null && !TextUtils.isEmpty(username);
                 boolean hasPhone = user != null && (!TextUtils.isEmpty(user.phone) || !TextUtils.isEmpty(vcardPhone));
 
                 if (!isBot && userInfo != null && userInfo.unofficial_security_risk) {
@@ -11348,7 +11349,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 if (!isBot && (hasPhone || !hasInfo) && !hideNumber) {
                     phoneRow = rowCount++;
                 }
-                if (userInfo != null && !TextUtils.isEmpty(userInfo.about)) {
+                if (!TextUtils.isEmpty(cleanedAbout)) {
                     userInfoRow = rowCount++;
                 }
                 if (user != null && username != null) {
@@ -12133,15 +12134,19 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     nameTextView.setRightDrawable2(null);
                     nameTextViewRightDrawable2ContentDescription = null;
                 }
-                Long selfEmojiDocId = (user != null && user.self) ? UserObject.getEmojiStatusDocumentId(user) : null;
-                if (user != null && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (user.self && selfEmojiDocId != null && selfEmojiDocId != 0))) {
+                Long customEmojiDocId = user != null ? UserObject.getEmojiStatusDocumentId(user) : null;
+                final boolean customCollectible = user != null && UserObject.isEmojiStatusCollectible(user);
+                if (user != null && !MessagesController.isSupportUser(user) && (DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0 || (customEmojiDocId != null && customEmojiDocId != 0))) {
                     rightIconIsStatus = true;
-                    if (user.self && (selfEmojiDocId != null && selfEmojiDocId != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
+                    if ((customEmojiDocId != null && customEmojiDocId != 0) && DialogObject.getEmojiStatusDocumentId(user.emoji_status) == 0) {
                         TLRPC.TL_emojiStatus status = new TLRPC.TL_emojiStatus();
-                        status.document_id = selfEmojiDocId;
+                        status.document_id = customEmojiDocId;
                         nameTextView.setRightDrawable(getEmojiStatusDrawable(status, true, true));
                     } else {
                         nameTextView.setRightDrawable(getEmojiStatusDrawable(user.emoji_status, true, true));
+                    }
+                    if (emojiStatusDrawable != null && customCollectible) {
+                        emojiStatusDrawable.setParticles(true, true);
                     }
                     nameTextViewRightDrawableContentDescription = LocaleController.getString(R.string.AccDescrPremium);
                 } else if (getMessagesController().isPremiumUser(user)) {
@@ -12167,15 +12172,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         showStatusSelect();
                     });
                 }
-                if (!user.self && getMessagesController().isPremiumUser(user)) {
+                if (!user.self && (getMessagesController().isPremiumUser(user) || rightIconIsStatus)) {
                     final SimpleTextView textView = nameTextView;
                     nameTextView.setRightDrawableOnClick(v -> {
                         if (user.emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
                             TLRPC.TL_emojiStatusCollectible status = (TLRPC.TL_emojiStatusCollectible) user.emoji_status;
-                            if (status != null) {
+                            if (status != null && !TextUtils.isEmpty(status.slug)) {
                                 Browser.openUrl(getContext(), "https://" + getMessagesController().linkPrefix + "/nft/" + status.slug);
+                                return;
                             }
-                            return;
                         }
                         PremiumPreviewBottomSheet premiumPreviewBottomSheet = new PremiumPreviewBottomSheet(ProfileActivity.this, currentAccount, user, resourcesProvider);
                         int[] coords = new int[2];
@@ -14351,8 +14356,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                         aboutLinkCell.setTextAndValue(MessageHelper.zalgoFilter(text), LocaleController.getString(R.string.DescriptionPlaceholder), ChatObject.isChannel(currentChat) && !currentChat.megagroup);
                     } else if (position == bioRow) {
                         String value;
-                        if (userInfo == null || !TextUtils.isEmpty(userInfo.about)) {
-                            value = userInfo == null ? LocaleController.getString(R.string.Loading) : app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about);
+                        final String cleanBioValue = userInfo != null ? app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userInfo.about) : null;
+                        if (userInfo == null || !TextUtils.isEmpty(cleanBioValue)) {
+                            value = userInfo == null ? LocaleController.getString(R.string.Loading) : cleanBioValue;
                             aboutLinkCell.setTextAndValue(MessageHelper.zalgoFilter(value), LocaleController.getString(R.string.UserBio), true/*getUserConfig().isPremium()*/);
                             currentBio = userInfo != null ? userInfo.about : null;
                         } else {
@@ -17219,7 +17225,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             });
         } else if (position == channelInfoRow || position == userInfoRow || position == bioRow) {
             itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileEditBio), () -> {
-                presentFragment(new UserInfoActivity());
+                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
             });
         } else if (position == phoneRow) {
             itemOptions.add(R.drawable.menu_storage_path, getString(R.string.ProfilePhoneEdit), () -> {
@@ -17308,7 +17314,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 });
             }
             itemOptions.add(R.drawable.msg_edit, getString(R.string.ProfileChannelChange), () -> {
-                presentFragment(new UserInfoActivity());
+                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
             });
             itemOptions.add(R.drawable.msg_delete, getString(R.string.Remove), true, () -> {
                 AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());

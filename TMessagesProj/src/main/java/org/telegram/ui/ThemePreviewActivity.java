@@ -2349,9 +2349,9 @@ public class ThemePreviewActivity extends BaseFragment implements DownloadContro
                 } else {
                     parentLayout.rebuildAllFragmentViews(false, false);
                     Theme.applyThemeFile(new File(applyingTheme.pathToFile), applyingTheme.name, applyingTheme.info, false);
-                    MessagesController.getInstance(applyingTheme.account).saveTheme(applyingTheme, null, false, false);
+                    MessagesController.getInstance(applyingTheme.account).saveTheme(applyingTheme, null, applyingTheme.isDark(), false);
                     SharedPreferences.Editor editor = ApplicationLoader.applicationContext.getSharedPreferences("themeconfig", Activity.MODE_PRIVATE).edit();
-                    editor.putString("lastDayTheme", applyingTheme.getKey());
+                    editor.putString(applyingTheme.isDark() ? "lastDarkTheme" : "lastDayTheme", applyingTheme.getKey());
                     editor.commit();
                 }
                 BaseFragment lastFragment = getParentLayout().getFragmentStack().get(Math.max(0, getParentLayout().getFragmentStack().size() - 2));

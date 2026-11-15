@@ -38,23 +38,32 @@ public final class SolegramGlass {
 
     /** Edge (bevel) width of liquid glass. */
     public static float thickness(float base) {
+        if (!LiquidGlassConfig.glassOn) {
+            return base;
+        }
         return base * LiquidGlassConfig.glassThickness / 100f;
     }
 
     /** Upper bound for the bevel so it never eats the whole element. */
     public static float thicknessLimit(float minSide) {
+        if (!LiquidGlassConfig.glassOn) {
+            return minSide / 5f;
+        }
         final float scale = Math.max(1f, LiquidGlassConfig.glassThickness / 100f);
         return Math.min(minSide / 5f * scale, minSide / 2.5f);
     }
 
     /** How far the content behind the glass is displaced. */
     public static float intensity(float base) {
+        if (!LiquidGlassConfig.glassOn) {
+            return base;
+        }
         return base * LiquidGlassConfig.glassRefraction / 100f;
     }
 
     /** Refraction index: 150 keeps Telegram's value, 100 is flat glass, 250 is a strong lens. */
     public static float index(float base) {
-        if (LiquidGlassConfig.glassIndex == 150) {
+        if (!LiquidGlassConfig.glassOn || LiquidGlassConfig.glassIndex == 150) {
             return base;
         }
         return Math.max(1f, 1f + (base - 1f) * (LiquidGlassConfig.glassIndex - 100) / 50f);
@@ -62,27 +71,39 @@ public final class SolegramGlass {
 
     /** Colour split at the edges (0 = off). */
     public static float dispersion() {
+        if (!LiquidGlassConfig.glassOn) {
+            return 0f;
+        }
         return LiquidGlassConfig.glassDispersion / 200f;
     }
 
     /** Light along the inner edge of liquid glass (0 = off). */
     public static float rim() {
+        if (!LiquidGlassConfig.glassOn) {
+            return 0f;
+        }
         return LiquidGlassConfig.glassRim / 100f * 0.35f;
     }
 
     /** Opacity of the glass tint layer. Telegram uses 0.85 for liquid and 0.76 for frosted glass. */
     public static float alpha(boolean liquid) {
+        if (!LiquidGlassConfig.glassOn) {
+            return liquid ? 0.85f : 0.76f;
+        }
         final float value = LiquidGlassConfig.glassOpacity / 100f;
         return liquid ? value : value * (0.76f / 0.85f);
     }
 
     /** Multiplier for the blur radius under the glass. */
     public static float blurScale() {
+        if (!LiquidGlassConfig.glassOn) {
+            return 1f;
+        }
         return Math.max(0.05f, LiquidGlassConfig.glassBlur / 100f);
     }
 
     public static boolean vibrancy() {
-        return LiquidGlassConfig.glassVibrancy;
+        return LiquidGlassConfig.glassOn && LiquidGlassConfig.glassVibrancy;
     }
 
     /** Glass fill colour with the chosen tint mixed in; the alpha stays as Telegram computed it. */
@@ -91,6 +112,9 @@ public final class SolegramGlass {
     }
 
     public static int tint(int color, Theme.ResourcesProvider resourcesProvider) {
+        if (!LiquidGlassConfig.glassOn) {
+            return color;
+        }
         final int tint = tintColor(resourcesProvider);
         if (tint == 0 || LiquidGlassConfig.glassTintAmount <= 0) {
             return color;
@@ -112,6 +136,9 @@ public final class SolegramGlass {
     }
 
     public static int tintColor(Theme.ResourcesProvider resourcesProvider) {
+        if (!LiquidGlassConfig.glassOn) {
+            return 0;
+        }
         final int index = LiquidGlassConfig.glassTint;
         if (index == TINT_ACCENT) {
             int accent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
@@ -142,6 +169,9 @@ public final class SolegramGlass {
      * @param top the upper (lit) edge
      */
     public static int highlight(int color, boolean top) {
+        if (!LiquidGlassConfig.glassOn) {
+            return color;
+        }
         final int setting = LiquidGlassConfig.glassHighlight;
         if (color == 0 || setting == 100) {
             return color; // no edge of its own (flat panels) stays without one
@@ -163,6 +193,9 @@ public final class SolegramGlass {
 
     /** The width of the outline: hairlines grow with the outline brightness above 100%, so it shows on every element. */
     public static float highlightWidth(float width, boolean top) {
+        if (!LiquidGlassConfig.glassOn) {
+            return width;
+        }
         final int setting = LiquidGlassConfig.glassHighlight;
         if (setting <= 100 || width <= 0) {
             return width;
@@ -173,6 +206,9 @@ public final class SolegramGlass {
     }
 
     public static int shadow(int color) {
+        if (!LiquidGlassConfig.glassOn) {
+            return color;
+        }
         return LiquidGlassConfig.glassShadow ? color : 0;
     }
 
@@ -180,7 +216,7 @@ public final class SolegramGlass {
 
     /** Veil over the blur of frosted headers: lighter than Telegram's, follows the glass density slider. */
     public static int headerScrimAlpha(int telegramAlpha) {
-        if (!LiquidGlassConfig.frostedHeaders) {
+        if (!LiquidGlassConfig.glassOn || !LiquidGlassConfig.frostedHeaders) {
             return telegramAlpha;
         }
         final float alpha = Math.max(0.35f, Math.min(0.92f, 0.62f * LiquidGlassConfig.glassOpacity / 85f));
@@ -188,10 +224,13 @@ public final class SolegramGlass {
     }
 
     public static boolean previewLook() {
-        return LiquidGlassConfig.glassPreviewLook;
+        return LiquidGlassConfig.glassOn && LiquidGlassConfig.glassPreviewLook;
     }
 
     public static int previewShadowColor() {
+        if (!LiquidGlassConfig.glassOn) {
+            return 0;
+        }
         return LiquidGlassConfig.glassShadow ? (Theme.isCurrentThemeDark() ? 0x40000000 : 0x2E000000) : 0;
     }
     // endregion
@@ -224,6 +263,9 @@ public final class SolegramGlass {
 
     /** Blur radius of the picture under menus (at {@link #MENU_BLUR_DOWNSCALE}), following the blur slider. */
     public static int menuBlurRadius() {
+        if (!LiquidGlassConfig.glassOn) {
+            return 15;
+        }
         return Math.max(2, Math.round(15 * blurScale()));
     }
 
@@ -239,6 +281,9 @@ public final class SolegramGlass {
 
     /** Density of menu glass: Telegram's own (0.85 dark, 0.825 light) at the default density, then the slider's. */
     public static float menuAlpha(boolean dark) {
+        if (!LiquidGlassConfig.glassOn) {
+            return dark ? 0.85f : 0.825f;
+        }
         return Math.max(0.3f, Math.min(1f, LiquidGlassConfig.glassOpacity / 100f * (dark ? 1f : 0.97f)));
     }
 
@@ -277,6 +322,9 @@ public final class SolegramGlass {
      * plain glass so the text reads over anything behind, yet clearly frosted. Follows the density slider above that floor.
      */
     public static float readingAlpha(boolean dark) {
+        if (!LiquidGlassConfig.glassOn) {
+            return dark ? 0.875f : 0.86f;
+        }
         final float base = Math.max(0f, Math.min(1f, LiquidGlassConfig.glassOpacity / 100f));
         return Math.max(dark ? 0.875f : 0.86f, base + (1f - base) * 0.2f);
     }

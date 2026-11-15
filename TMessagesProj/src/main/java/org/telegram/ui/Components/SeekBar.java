@@ -330,7 +330,7 @@ public class SeekBar {
                 customWavePaint.setColor(progressColor);
                 customWavePaint.setStrokeWidth(thickness);
 
-                float amp = AndroidUtilities.dpf2(1.5f) * customWaveAmplitude;
+                float amp = AndroidUtilities.dpf2(2.0f) * customWaveAmplitude;
                 float wavelength = AndroidUtilities.dpf2(16f);
                 float phase = ((now % 1200L) / 1200f) * (float) (2.0 * Math.PI);
                 float step = AndroidUtilities.dpf2(1.6f);

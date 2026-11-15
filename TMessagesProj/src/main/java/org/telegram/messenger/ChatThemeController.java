@@ -356,6 +356,9 @@ public class ChatThemeController extends BaseController {
     }
 
     public void saveChatWallpaper(long dialogId, TLRPC.WallPaper wallPaper) {
+        if (wallPaper == null && getMessagesController().uploadingWallpaperInfo != null && getMessagesController().uploadingWallpaperInfo.dialogId == dialogId) {
+            return;
+        }
         if (wallPaper != null) {
             try {
                 SerializedData data = new SerializedData(wallPaper.getObjectSize());
@@ -790,11 +793,13 @@ public class ChatThemeController extends BaseController {
             if (userFull != null) {
                 userFull.wallpaper = wallpaper;
                 userFull.flags |= 16777216;
+                saveChatWallpaper(dialogId, wallpaper);
                 getMessagesStorage().updateUserInfo(userFull, false);
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.userInfoDidLoad, dialogId, userFull);
             } else if (chatFull != null) {
                 chatFull.wallpaper = wallpaper;
                 chatFull.flags2 |= 128;
+                saveChatWallpaper(dialogId, wallpaper);
                 getMessagesStorage().updateChatInfo(chatFull, false);
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, chatFull, 0, false, false);
             }

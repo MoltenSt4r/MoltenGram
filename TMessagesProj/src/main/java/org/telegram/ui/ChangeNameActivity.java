@@ -175,9 +175,14 @@ public class ChangeNameActivity extends BaseFragment {
         if (currentUser == null || lastNameField.getText() == null || firstNameField.getText() == null) {
             return;
         }
-        String newFirst = firstNameField.getText().toString();
-        String newLast = lastNameField.getText().toString();
-        newLast = app.exteraless.chats.ProfileInvisibleMetadata.formatLastName(newLast, app.exteraless.chats.ProfileInvisibleMetadata.getMetadata(currentUser));
+        final kotlin.Pair<String, String> packedNames = app.exteraless.chats.ProfileInvisibleMetadata.packProfileNamesForEdit(
+                currentAccount,
+                currentUser,
+                firstNameField.getText().toString(),
+                lastNameField.getText().toString()
+        );
+        String newFirst = packedNames.getFirst();
+        String newLast = packedNames.getSecond();
         if (currentUser.first_name != null && currentUser.first_name.equals(newFirst) && currentUser.last_name != null && currentUser.last_name.equals(newLast)) {
             return;
         }

@@ -230,6 +230,16 @@
 <string name="OEChatsMessageAnimPop">Pop</string>
 <string name="OECustomEmojiStatus">Custom Emoji Statuses</string>
 <string name="OEFreeProfileAppearance">Profile Styling without Premium</string>
+<string name="OEBotProfileSync">Sync via @BotFather Bot</string>
+<string name="OEBotProfileSyncInfo">Creates a companion bot via your account to store statuses, colors and QR styling inside the bot bio, keeping your own last name and bio clean.</string>
+<string name="OEBotProfileSyncProgress">Setting up bot via @BotFather...</string>
+<string name="OEBotProfileSyncFailedTitle">Could not enable bot sync</string>
+<string name="OEBotProfileSyncErrLimit">Bot creation limit reached on your account. Delete an unused bot in @BotFather and try again.</string>
+<string name="OEBotProfileSyncErrSpam">Cannot message @BotFather (account restricted / spam block).</string>
+<string name="OEBotProfileSyncErrFlood">Rate limited by Telegram (%s). Please wait and try again.</string>
+<string name="OEBotProfileSyncErrBlocked">@BotFather is blocked. Unblock @BotFather and try again.</string>
+<string name="OEBotProfileSyncErrGeneric">@BotFather could not create the bot (%s).</string>
+<string name="OEBotProfileSyncSuccess">Sync bot @%s ready</string>
 <string name="OEColoredText">Colored Text</string>
 <string name="FeedHideChannelAvatars">Hide channel avatars</string>
 <string name="FeedHideChannelAvatarsInfo">Do not display channel avatars next to posts in the feed.</string>
@@ -247,4 +257,20 @@
 <string name="OEChatsVoiceHeader">Voice Messages</string>
 <string name="OEDoubleTapSaveToDevice">Save to device</string>
 <string name="OESendAfterSlowMode">Send when slow mode ends</string>
+<string name="OEBotProfileTitle">Bot Profile</string>
+<string name="OEBotChangeAvatar">Change Bot Avatar</string>
+<string name="OEBotRemoveAvatar">Remove Avatar</string>
+<string name="OEBotInfoSection">Bot Details</string>
+<string name="OEBotNameHint">Bot name</string>
+<string name="OEBotAboutHint">Short description (About, up to 120 chars)</string>
+<string name="OEBotDescriptionHint">What can this bot do? (up to 512 chars)</string>
+<string name="OEBotUsernameNote">Telegram only allows changing a bot\'s base @username when creating the bot or via Fragment.</string>
+<string name="OEBotBannerSection">What Can This Bot Do Banner</string>
+<string name="OEBotBannerEmpty">No banner image set</string>
+<string name="OEBotEditBannerBotFather">Change Banner in @BotFather</string>
+<string name="OEBotBannerNote">Telegram does not expose an API for a bot to upload its own description banner — change it via @BotFather (/setdescription).</string>
+<string name="OEBotSaved">Bot profile updated</string>
+<string name="OEBotNameRequired">Bot name cannot be empty</string>
+<string name="OEBotLiveStreamOn">Live typing stream enabled</string>
+<string name="OEBotLiveStreamOff">Live typing stream disabled</string>
 </resources>

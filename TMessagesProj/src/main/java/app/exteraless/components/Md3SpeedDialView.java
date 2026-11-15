@@ -1551,12 +1551,27 @@ public class Md3SpeedDialView extends FrameLayout {
         @Override
         protected void onSizeChanged(int w, int h, int oldw, int oldh) {
             super.onSizeChanged(w, h, oldw, oldh);
+            final org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable activeDrawable =
+                    (getBackground() instanceof org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable)
+                            ? (org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable) getBackground()
+                            : null;
             if (glassDrawable != null) {
                 glassDrawable.setBounds(0, 0, w, h);
+                glassDrawable.setPadding(0);
+                glassDrawable.setRadius(currentCornerRadius);
+                if (glassDrawable == activeDrawable) {
+                    glassDrawable.invalidateDisplayList();
+                }
             }
             if (frostedGlassDrawable != null) {
                 frostedGlassDrawable.setBounds(0, 0, w, h);
+                frostedGlassDrawable.setPadding(0);
+                frostedGlassDrawable.setRadius(currentCornerRadius);
+                if (frostedGlassDrawable == activeDrawable) {
+                    frostedGlassDrawable.invalidateDisplayList();
+                }
             }
+            invalidateOutline();
         }
 
         public void updateColors() {

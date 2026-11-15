@@ -1,6 +1,8 @@
 package org.telegram.ui.Components;
 
+import app.exteraless.appearance.Md3ChipTabHelper;
 import app.exteraless.utils.AppUtils;
+import app.exteraless.utils.UIUtil;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.Utilities.swapItems;
@@ -1449,6 +1451,18 @@ public class ViewPagerFixed extends FrameLayout {
 
                 if (selectorType == 9) {
                     textPaint.setColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+                } else if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled()) {
+                    int themeActive = Theme.getColor(activeTextColorKey, resourcesProvider);
+                    int themeInactive = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+                    int activeColor = Md3ChipTabHelper.getTextColor(true, themeActive, themeInactive);
+                    int inactiveColor = Md3ChipTabHelper.getTextColor(false, themeActive, themeInactive);
+                    int targetColor = currentTab.id == id1 ? activeColor : inactiveColor;
+                    int otherColor = currentTab.id == id1 ? inactiveColor : activeColor;
+                    if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
+                        textPaint.setColor(ColorUtils.blendARGB(otherColor, targetColor, animatingIndicatorProgress));
+                    } else {
+                        textPaint.setColor(targetColor);
+                    }
                 } else if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
                     textPaint.setColor(ColorUtils.blendARGB(Theme.getColor(otherKey, resourcesProvider), Theme.getColor(key, resourcesProvider), animatingIndicatorProgress));
                 } else {
@@ -1495,8 +1509,12 @@ public class ViewPagerFixed extends FrameLayout {
                 }
 
                 if (counterText != null || currentTab.id != Integer.MAX_VALUE && (isEditing || editingStartAnimationProgress != 0)) {
+                    boolean chipMode = selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled();
                     textCounterPaint.setColor(Theme.getColor(backgroundColorKey, resourcesProvider));
-                    if (Theme.hasThemeKey(unreadKey) && Theme.hasThemeKey(unreadOtherKey)) {
+                    if (chipMode) {
+                        counterPaint.setColor(textPaint.getColor());
+                        textCounterPaint.setColor(UIUtil.getOnAccentColor(counterPaint.getColor()));
+                    } else if (Theme.hasThemeKey(unreadKey) && Theme.hasThemeKey(unreadOtherKey)) {
                         int color1 = Theme.getColor(unreadKey, resourcesProvider);
                         if ((animatingIndicator || manualScrollingToPosition != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
                             int color3 = Theme.getColor(unreadOtherKey, resourcesProvider);
@@ -1585,6 +1603,11 @@ public class ViewPagerFixed extends FrameLayout {
 
         private int scrollingToChild = -1;
         private GradientDrawable selectorDrawable;
+        private final GradientDrawable inactiveChipDrawable = new GradientDrawable();
+        private final float[] chipRadiiScratch = new float[8];
+        private final float[] chipRadiiFrom = new float[8];
+        private final float[] chipRadiiTo = new float[8];
+        private final float[] chipRadiiOut = new float[8];
 
         private int tabLineColorKey = Theme.key_profile_tabSelectedLine;
         private int activeTextColorKey = Theme.key_profile_tabSelectedText;
@@ -1728,7 +1751,7 @@ public class ViewPagerFixed extends FrameLayout {
 
             if (tabsSelectorType == SELECTOR_TYPE_BUBBLE_STYLE) {
                 listView.setSelectorType(9);
-                listView.setSelectorRadius(6);
+                listView.setSelectorRadius(Md3ChipTabHelper.isEnabled() ? 18 : 6);
             } else {
                 listView.setSelectorType(tabsSelectorType == 10 ? 9 : tabsSelectorType);
                 if (tabsSelectorType == 3) {
@@ -2053,8 +2076,140 @@ public class ViewPagerFixed extends FrameLayout {
 
         private final Paint selectorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+        private void drawMd3ChipLayer(Canvas canvas, int height) {
+            float indicatorXf = 0f;
+            float indicatorWidthf = 0f;
+            float activeChildAlpha = 1f;
+            float activeChildScale = 1f;
+            int fromPos = currentPosition;
+            int toPos = currentPosition;
+            float cornerT = 1f;
+
+            if (animatingIndicator || manualScrollingToPosition != -1) {
+                int position = layoutManager.findFirstVisibleItemPosition();
+                if (position != RecyclerListView.NO_POSITION) {
+                    RecyclerListView.ViewHolder holder = listView.findViewHolderForAdapterPosition(position);
+                    if (holder != null) {
+                        int idx1 = animatingIndicator ? previousPosition : currentPosition;
+                        int idx2 = animatingIndicator ? currentPosition : manualScrollingToPosition;
+                        int prevX = positionToX.get(idx1);
+                        int newX = positionToX.get(idx2);
+                        int prevW = positionToWidth.get(idx1);
+                        int newW = positionToWidth.get(idx2);
+                        if (additionalTabWidth != 0) {
+                            indicatorXf = (prevX + (newX - prevX) * animatingIndicatorProgress) + dp(tabMarginDp);
+                        } else {
+                            int x = positionToX.get(position);
+                            indicatorXf = (prevX + (newX - prevX) * animatingIndicatorProgress) - (x - holder.itemView.getLeft()) + dp(tabMarginDp);
+                        }
+                        indicatorWidthf = prevW + (newW - prevW) * animatingIndicatorProgress;
+                        fromPos = idx1;
+                        toPos = idx2;
+                        cornerT = animatingIndicatorProgress;
+                    }
+                }
+            } else {
+                RecyclerListView.ViewHolder holder = listView.findViewHolderForAdapterPosition(currentPosition);
+                if (holder != null) {
+                    TabView tabView = (TabView) holder.itemView;
+                    indicatorWidthf = tabView.tabWidth;
+                    indicatorXf = tabView.getX() + (tabView.getMeasuredWidth() - indicatorWidthf) / 2f;
+                    activeChildAlpha = tabView.getAlpha();
+                    activeChildScale = tabView.getScaleX();
+                }
+            }
+
+            float listLeft = listView.getX();
+            indicatorXf += listLeft;
+            int gapH = Md3ChipTabHelper.getSpacingHalfPx();
+            int vInset = height >= dp(44) ? dp(6) : dp(2);
+            float chipTop = vInset;
+            float chipBottom = height - vInset;
+            float add = additionalTabWidth / 2f;
+            float pillLeft = indicatorWidthf > 0f ? indicatorXf - dp(tabMarginDp) - add + gapH : -1f;
+            float pillRight = indicatorWidthf > 0f ? indicatorXf + indicatorWidthf + dp(tabMarginDp) + add - gapH : -1f;
+
+            int activeThemeColor = Theme.getColor(activeTextColorKey, resourcesProvider);
+            int unactiveThemeColor = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+            int count = Math.max(1, tabs.size());
+            float listAlpha = listView.getAlpha();
+
+            canvas.save();
+            canvas.translate(listView.getTranslationX(), 0);
+            canvas.scale(listView.getScaleX(), 1f, listView.getPivotX() + listLeft, listView.getPivotY());
+
+            for (int i = 0, childCount = listView.getChildCount(); i < childCount; i++) {
+                View tabChild = listView.getChildAt(i);
+                if (!(tabChild instanceof TabView) || tabChild.getVisibility() != VISIBLE) {
+                    continue;
+                }
+                int pos = listView.getChildAdapterPosition(tabChild);
+                if (pos < 0) {
+                    pos = ((TabView) tabChild).currentPosition;
+                }
+                float slotLeft = listLeft + tabChild.getLeft() + tabChild.getTranslationX() + gapH;
+                float slotRight = listLeft + tabChild.getRight() + tabChild.getTranslationX() - gapH;
+                float overlapAlpha = indicatorWidthf > 0f
+                        ? Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight)
+                        : 1f;
+                float childAlpha = overlapAlpha * listAlpha * tabChild.getAlpha();
+                if (childAlpha <= 0.01f) {
+                    continue;
+                }
+                boolean scaled = tabChild.getScaleX() != 1f || tabChild.getScaleY() != 1f;
+                if (scaled) {
+                    canvas.save();
+                    canvas.scale(tabChild.getScaleX(), tabChild.getScaleY(), (slotLeft + slotRight) * 0.5f, height * 0.5f);
+                }
+                Md3ChipTabHelper.drawInactiveChip(
+                        canvas, inactiveChipDrawable,
+                        slotLeft, chipTop, slotRight, chipBottom,
+                        pos, count, unactiveThemeColor, childAlpha, chipRadiiScratch
+                );
+                if (scaled) {
+                    canvas.restore();
+                }
+            }
+
+            if (indicatorWidthf > 0f && pillRight > pillLeft && activeChildAlpha > 0.01f) {
+                Md3ChipTabHelper.getCornerRadii(true, fromPos, count, chipRadiiFrom);
+                Md3ChipTabHelper.getCornerRadii(true, toPos, count, chipRadiiTo);
+                Md3ChipTabHelper.lerpCornerRadii(chipRadiiFrom, chipRadiiTo, cornerT, chipRadiiOut);
+                Md3ChipTabHelper.configureSelectorDrawable(selectorDrawable, activeThemeColor, chipRadiiOut);
+                selectorDrawable.setAlpha(Math.round(255 * listAlpha * activeChildAlpha));
+                if (activeChildScale != 1f) {
+                    canvas.save();
+                    canvas.scale(activeChildScale, activeChildScale, (pillLeft + pillRight) * 0.5f, height * 0.5f);
+                }
+                selectorDrawable.setBounds(Math.round(pillLeft), Math.round(chipTop), Math.round(pillRight), Math.round(chipBottom));
+                selectorDrawable.draw(canvas);
+                if (activeChildScale != 1f) {
+                    canvas.restore();
+                }
+            }
+            canvas.restore();
+        }
+
         @Override
         protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+            if (child == listView && selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled()) {
+                final int height = getMeasuredHeight();
+                if (isInHiddenMode && hideProgress != 1f) {
+                    hideProgress += 0.1f;
+                    if (hideProgress > 1f) {
+                        hideProgress = 1f;
+                    }
+                    invalidate();
+                } else if (!isInHiddenMode && hideProgress != 0) {
+                    hideProgress -= 0.12f;
+                    if (hideProgress < 0) {
+                        hideProgress = 0;
+                    }
+                    invalidate();
+                }
+                drawMd3ChipLayer(canvas, height);
+                return super.drawChild(canvas, child, drawingTime);
+            }
             boolean result = super.drawChild(canvas, child, drawingTime);
             if (child == listView) {
                 final int height = getMeasuredHeight();
@@ -2173,6 +2328,12 @@ public class ViewPagerFixed extends FrameLayout {
             }
             if (selectorDrawable != null) {
                 selectorDrawable.setColor(Theme.getColor(tabLineColorKey, resourcesProvider));
+                if (!Md3ChipTabHelper.isEnabled()) {
+                    selectorDrawable.setStroke(0, 0);
+                }
+            }
+            if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE && listView != null) {
+                listView.setSelectorRadius(Md3ChipTabHelper.isEnabled() ? 18 : 6);
             }
             if (listView != null) {
                 listView.invalidateViews();

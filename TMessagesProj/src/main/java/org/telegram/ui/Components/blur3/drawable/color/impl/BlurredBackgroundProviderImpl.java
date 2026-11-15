@@ -230,7 +230,10 @@ public class BlurredBackgroundProviderImpl {
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
                     }
 
-                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+                    if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                        return solegramPanelColor(r);
+                    }
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(false);
                     final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })

@@ -217,6 +217,22 @@ public class UserObject {
         return null;
     }
 
+    public static boolean isEmojiStatusCollectible(TLRPC.User user) {
+        if (user == null) {
+            return false;
+        }
+        if (user.emoji_status != null && !(user.emoji_status instanceof TLRPC.TL_emojiStatusEmpty)) {
+            if (DialogObject.isEmojiStatusCollectible(user.emoji_status)) {
+                return true;
+            }
+            return app.exteraless.chats.ProfileInvisibleMetadata.isEmojiStatusCollectible(user);
+        }
+        if (app.exteraless.chats.ProfileInvisibleMetadata.isEmojiStatusCollectible(user)) {
+            return true;
+        }
+        return app.exteraless.chats.CustomEmojiStatusHelper.isCollectibleStatus(user.id);
+    }
+
     public static boolean isService(long user_id) {
         return user_id == 333000 || user_id == 777000 || user_id == 42777;
     }

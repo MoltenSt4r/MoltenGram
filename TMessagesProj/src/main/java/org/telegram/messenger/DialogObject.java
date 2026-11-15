@@ -377,8 +377,7 @@ public class DialogObject {
     public static boolean isEmojiStatusCollectible(long dialogId) {
         if (dialogId >= 0) {
             final TLRPC.User user = MessagesController.getInstance(UserConfig.selectedAccount).getUser(dialogId);
-            if (user == null) return false;
-            return isEmojiStatusCollectible(user.emoji_status);
+            return UserObject.isEmojiStatusCollectible(user);
         } else {
             final TLRPC.Chat chat = MessagesController.getInstance(UserConfig.selectedAccount).getChat(-dialogId);
             if (chat == null) return false;

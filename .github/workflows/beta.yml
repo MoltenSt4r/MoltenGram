@@ -103,17 +103,17 @@ jobs:
       - name: Beta Build
         id: beta_build_step
         env:
-          COMMIT_ID: ${{ github.event.head_commit.id }}
+          COMMIT_ID: ${{ github.sha }}
         run: |
           export LOCAL_PROPERTIES="${{ secrets.LOCAL_PROPERTIES }}"
           export BUILD_TIMESTAMP=$(date +%s)
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           export NATIVE_TARGET=arm64-v8a
-          ./gradlew TMessagesProj:assembleStaging -PSTAGING_CODENAME=Cardamom
+          ./gradlew TMessagesProj:assembleStaging -PSTAGING_CODENAME=StarAnise
       - name: Upload arm64-v8a Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Beta-Cardamom
+          name: Beta-StarAnise
           path: |
             TMessagesProj/build/outputs/apk/staging/*.apk
 
@@ -121,20 +121,22 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
-          tag_name: v13.2.1-beta-cardamom
-          name: MoltenGram v13.2.1 Beta «Cardamom»
+          tag_name: v13.2.1-beta-staranise
+          target_commitish: ${{ github.sha }}
+          name: MoltenGram v13.2.1 Beta «StarAnise»
           prerelease: true
           make_latest: false
           body: |
-            ### 🌿 MoltenGram v13.2.1 Beta «Cardamom»
+            ### ✨ MoltenGram v13.2.1 Beta «StarAnise»
 
-            **Liquid Glass (по умолчанию выключен):**
-            - Живой захват и рендеринг Liquid Glass с хроматической дисперсией, преломлением, бликом и оттенком темы (в настройках **iOS Design → Liquid Glass**)
-            - Поддержка живого стекла для навигации, шапки главного экрана и папок, мини-плеера, FAB, Speed Dial («Стекло» / «Контур»), стеклянных пузырей сообщений и полупрозрачных меню
+            **Вход по токену бота:**
+            - Отдельное окно редактирования профиля бота (имя, описание «О боте», описание «Что умеет этот бот?» с выбором языка, загрузка и удаление аватарки, копирование `@username`, просмотр баннера описания)
+            - Кнопка **Live-печати** (`SendMessageTextDraftAction`) в поле ввода личных чатов с живым стримингом набираемого текста
 
-            **Плеер и интерфейс:**
-            - Анимация волнистой линии плеера корректно останавливается на паузе
-            - Добавлены 2 новые иконки приложения: **Aero** и **Stone**
+            **Liquid Glass и интерфейс:**
+            - Исправлен сброс тонизации Liquid Glass при выключении и доработано отображение мини-плеера и волнистой шкалы аудиосообщений
+            - Исправлено переключение и сохранение тёмных/дневных тем чата и локальных обоев без глобального сброса темы
+            - Добавлен скрытый профиль и синхронизация бесплатных эмодзи-статусов через скрытые теги и бота-синхронизатора
           files: |
             TMessagesProj/build/outputs/apk/staging/*.apk
 
@@ -146,7 +148,7 @@ jobs:
           TG_API_ID: ${{ secrets.TG_API_ID || '39205442' }}
           TG_API_HASH: ${{ secrets.TG_API_HASH || '1090b570704d1d97975994ee9c177dba' }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          RELEASE_TITLE: "MoltenGram v13.2.1 Beta «Cardamom»"
+          RELEASE_TITLE: "MoltenGram v13.2.1 Beta «StarAnise»"
           COMMIT_SHA: ${{ github.sha }}
           COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
           COMMITS_JSON: ${{ toJSON(github.event.commits) }}

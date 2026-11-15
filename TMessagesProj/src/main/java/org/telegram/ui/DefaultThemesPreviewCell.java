@@ -115,6 +115,7 @@ public class DefaultThemesPreviewCell extends LinearLayout implements Theme.Colo
                 }
             }
 
+            Theme.turnOffAutoNight(parentFragment);
             Theme.switchThemeWithReveal(info, false, accentId, view);
 
             selectedPosition = position;
@@ -136,8 +137,6 @@ public class DefaultThemesPreviewCell extends LinearLayout implements Theme.Colo
                 editor.putString(currentType == ThemeActivity.THEME_TYPE_NIGHT || info.isDark() ? "lastDarkTheme" : "lastDayTheme", info.getKey());
                 editor.commit();
             }
-
-            Theme.turnOffAutoNight(parentFragment);
         });
 
         progressView = new FlickerLoadingView(getContext(), null);
@@ -258,10 +257,9 @@ public class DefaultThemesPreviewCell extends LinearLayout implements Theme.Colo
                             dayNightCell.setTextAndIcon(LocaleController.getString(R.string.SettingsSwitchToDayMode), darkThemeDrawable, true);
                             dayNightCell.imageLeft += 2;
                         }
-
-                        Theme.turnOffAutoNight(parentFragment);
                     };
 
+                    Theme.turnOffAutoNight(parentFragment);
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needSetDayNightTheme, themeInfo, false, pos, -1, toDark, dayNightCell.getImageView(), dayNightCell, then);
                 }
             });

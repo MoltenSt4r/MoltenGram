@@ -1637,6 +1637,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private final Matrix glassShaderMatrix = new Matrix();
     private Bitmap lastGlassShaderBitmap;
     private BitmapShader cachedGlassBitmapShader;
+    private app.exteraless.glass.GlassBubbleRenderer.CellState glassShaderState;
 
     private static Bitmap cachedCustomBubbleBgBitmap;
     private static String cachedCustomBubbleBgPath;
@@ -20323,29 +20324,51 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             boolean drewWallpaperBitmap = false;
+            boolean drewRuntimeGlass = false;
             float offsetX = inParentSpace ? 0f : getX();
             float offsetY = inParentSpace ? 0f : getY();
             ViewParent p = getParent();
             int pHeight = parentHeight;
+            int pWidth = AndroidUtilities.displaySize.x > 0 ? AndroidUtilities.displaySize.x : 1080;
             if (p instanceof View) {
                 View pv = (View) p;
                 offsetX += pv.getX();
                 offsetY += pv.getY();
-                if (pv.getHeight() > 0) {
-                    pHeight = pv.getHeight();
+                if (pv.getParent() instanceof View) {
+                    View rootContainer = (View) pv.getParent();
+                    if (rootContainer.getWidth() > 0) {
+                        pWidth = rootContainer.getWidth();
+                    }
+                    if (rootContainer.getHeight() > 0) {
+                        pHeight = rootContainer.getHeight();
+                    }
+                } else {
+                    if (pv.getWidth() > 0) {
+                        pWidth = pv.getWidth();
+                    }
+                    if (pv.getHeight() > 0) {
+                        pHeight = pv.getHeight();
+                    }
                 }
             }
             if (pHeight <= 0) {
                 pHeight = AndroidUtilities.displaySize.y > 0 ? AndroidUtilities.displaySize.y : 1920;
             }
+            boolean dark = isDark();
+            int rawVeilAlpha = Math.round(255f * (dark ? 0.42f : 0.48f) * (opacityNorm / 0.55f));
+            int veilAlphaClamped = Math.max(24, Math.min(220, rawVeilAlpha));
+            int veilBaseRgb = dark
+                    ? ColorUtils.blendARGB(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_topPanelBackground, resourcesProvider), 255), 0xFF28282E, 0.55f)
+                    : 0xFFFFFFFF;
+            int baseVeilColor = ColorUtils.setAlphaComponent(veilBaseRgb, veilAlphaClamped);
+            if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+                baseVeilColor = app.exteraless.glass.SolegramGlass.tint(baseVeilColor, resourcesProvider);
+            }
+
             Bitmap customBubbleBmp = getCustomBubbleBgBitmap();
             GlassSourceBitmap bitmapSource = customBubbleBmp != null ? null : resolveWallpaperBitmapSource();
+            app.exteraless.glass.GlassBubbleRenderer.SnapshotResult wallpaperSnap = null;
             if (customBubbleBmp != null && !customBubbleBmp.isRecycled()) {
-                if (lastGlassShaderBitmap != customBubbleBmp || cachedGlassBitmapShader == null) {
-                    lastGlassShaderBitmap = customBubbleBmp;
-                    cachedGlassBitmapShader = new BitmapShader(customBubbleBmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
-                    glassBitmapPaint.setShader(cachedGlassBitmapShader);
-                }
                 float bw = bRight - bLeft;
                 float bh = bBottom - bTop;
                 float scale = Math.max(bw / Math.max(1f, (float) customBubbleBmp.getWidth()), bh / Math.max(1f, (float) customBubbleBmp.getHeight()));
@@ -20354,76 +20377,97 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 glassShaderMatrix.reset();
                 glassShaderMatrix.postScale(scale, scale);
                 glassShaderMatrix.postTranslate(dx, dy);
-                cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
-                glassBitmapPaint.setStyle(Paint.Style.FILL);
-                glassBitmapPaint.setAlpha(alphaInt);
-                canvas.drawPath(glassBubblePath, glassBitmapPaint);
-                drewWallpaperBitmap = true;
-            } else if (bitmapSource != null) {
-                Bitmap bmp = bitmapSource.getBitmap();
-                if (bmp != null && !bmp.isRecycled()) {
-                    if (lastGlassShaderBitmap != bmp || cachedGlassBitmapShader == null) {
-                        lastGlassShaderBitmap = bmp;
-                        cachedGlassBitmapShader = new BitmapShader(bmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+
+                if (glassShaderState == null) {
+                    glassShaderState = new app.exteraless.glass.GlassBubbleRenderer.CellState();
+                }
+                drewRuntimeGlass = app.exteraless.glass.GlassBubbleRenderer.drawRuntimeGlassBubble(
+                        canvas, glassShaderState, glassBubblePath, glassRectF, glassRadii,
+                        customBubbleBmp, glassShaderMatrix, 0f, 0f,
+                        thicknessNorm, refractionNorm, baseVeilColor, alphaInternal, liquidGlassOn
+                );
+                if (!drewRuntimeGlass) {
+                    if (lastGlassShaderBitmap != customBubbleBmp || cachedGlassBitmapShader == null) {
+                        lastGlassShaderBitmap = customBubbleBmp;
+                        cachedGlassBitmapShader = new BitmapShader(customBubbleBmp, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
                         glassBitmapPaint.setShader(cachedGlassBitmapShader);
                     }
-                    glassShaderMatrix.set(bitmapSource.getMatrix());
-                    glassShaderMatrix.postTranslate(-offsetX, -offsetY);
                     cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
                     glassBitmapPaint.setStyle(Paint.Style.FILL);
                     glassBitmapPaint.setAlpha(alphaInt);
                     canvas.drawPath(glassBubblePath, glassBitmapPaint);
-
-                    if (refractionNorm > 0.01f) {
-                        float cx = (bLeft + bRight) * 0.5f;
-                        float cy = (bTop + bBottom) * 0.5f;
-                        float lensScale = 1.0f + 0.085f * refractionNorm;
-                        glassShaderMatrix.postScale(lensScale, lensScale, cx, cy);
-                        cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
-                        glassBitmapPaint.setStyle(Paint.Style.STROKE);
-                        glassBitmapPaint.setStrokeWidth(AndroidUtilities.dpf2((5f + 11f * refractionNorm) * thicknessNorm));
-                        glassBitmapPaint.setAlpha(Math.min(255, Math.round(alphaInt * (0.45f + 0.35f * Math.min(1.5f, refractionNorm)))));
-                        canvas.save();
-                        canvas.clipPath(glassBubblePath);
-                        canvas.drawPath(glassBubblePath, glassBitmapPaint);
-                        if (dispersionNorm > 0.05f) {
-                            float dispOffset = AndroidUtilities.dpf2(1.4f * dispersionNorm);
-                            glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFFFF6878, PorterDuff.Mode.MULTIPLY));
-                            glassBitmapPaint.setAlpha(Math.min(200, Math.round(alphaInt * 0.28f * Math.min(1.5f, dispersionNorm))));
-                            glassShaderMatrix.postTranslate(-dispOffset, -dispOffset * 0.5f);
-                            cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
-                            canvas.drawPath(glassBubblePath, glassBitmapPaint);
-
-                            glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFF5CE1FF, PorterDuff.Mode.MULTIPLY));
-                            glassShaderMatrix.postTranslate(dispOffset * 2f, dispOffset);
-                            cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
-                            canvas.drawPath(glassBubblePath, glassBitmapPaint);
-                            glassBitmapPaint.setColorFilter(null);
+                }
+                drewWallpaperBitmap = true;
+            } else {
+                wallpaperSnap = app.exteraless.glass.GlassBubbleRenderer.resolveWallpaperSnapshot(
+                        resourcesProvider, bitmapSource, pWidth, pHeight
+                );
+                if (wallpaperSnap != null && wallpaperSnap.bitmap != null && !wallpaperSnap.bitmap.isRecycled()) {
+                    if (glassShaderState == null) {
+                        glassShaderState = new app.exteraless.glass.GlassBubbleRenderer.CellState();
+                    }
+                    drewRuntimeGlass = app.exteraless.glass.GlassBubbleRenderer.drawRuntimeGlassBubble(
+                            canvas, glassShaderState, glassBubblePath, glassRectF, glassRadii,
+                            wallpaperSnap.bitmap, wallpaperSnap.baseMatrix, offsetX, offsetY,
+                            thicknessNorm, refractionNorm, baseVeilColor, alphaInternal, liquidGlassOn
+                    );
+                    if (!drewRuntimeGlass) {
+                        if (lastGlassShaderBitmap != wallpaperSnap.bitmap || cachedGlassBitmapShader == null) {
+                            lastGlassShaderBitmap = wallpaperSnap.bitmap;
+                            cachedGlassBitmapShader = new BitmapShader(wallpaperSnap.bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                            glassBitmapPaint.setShader(cachedGlassBitmapShader);
                         }
-                        canvas.restore();
+                        glassShaderMatrix.set(wallpaperSnap.baseMatrix);
+                        glassShaderMatrix.postTranslate(-offsetX, -offsetY);
+                        cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
                         glassBitmapPaint.setStyle(Paint.Style.FILL);
+                        glassBitmapPaint.setAlpha(alphaInt);
+                        canvas.drawPath(glassBubblePath, glassBitmapPaint);
+
+                        if (refractionNorm > 0.01f) {
+                            float cx = (bLeft + bRight) * 0.5f;
+                            float cy = (bTop + bBottom) * 0.5f;
+                            float lensScale = 1.0f + 0.085f * refractionNorm;
+                            glassShaderMatrix.postScale(lensScale, lensScale, cx, cy);
+                            cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                            glassBitmapPaint.setStyle(Paint.Style.STROKE);
+                            glassBitmapPaint.setStrokeWidth(AndroidUtilities.dpf2((5f + 11f * refractionNorm) * thicknessNorm));
+                            glassBitmapPaint.setAlpha(Math.min(255, Math.round(alphaInt * (0.45f + 0.35f * Math.min(1.5f, refractionNorm)))));
+                            canvas.save();
+                            canvas.clipPath(glassBubblePath);
+                            canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                            if (dispersionNorm > 0.05f) {
+                                float dispOffset = AndroidUtilities.dpf2(1.4f * dispersionNorm);
+                                glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFFFF6878, PorterDuff.Mode.MULTIPLY));
+                                glassBitmapPaint.setAlpha(Math.min(200, Math.round(alphaInt * 0.28f * Math.min(1.5f, dispersionNorm))));
+                                glassShaderMatrix.postTranslate(-dispOffset, -dispOffset * 0.5f);
+                                cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                                canvas.drawPath(glassBubblePath, glassBitmapPaint);
+
+                                glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFF5CE1FF, PorterDuff.Mode.MULTIPLY));
+                                glassShaderMatrix.postTranslate(dispOffset * 2f, dispOffset);
+                                cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                                canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                                glassBitmapPaint.setColorFilter(null);
+                            }
+                            canvas.restore();
+                            glassBitmapPaint.setStyle(Paint.Style.FILL);
+                        }
                     }
                     drewWallpaperBitmap = true;
                 }
             }
 
-            boolean dark = isDark();
-            int baseVeilColor;
-            if (dark) {
-                int panelBg = Theme.getColor(Theme.key_chat_topPanelBackground, resourcesProvider);
-                int neutralDark = ColorUtils.blendARGB(ColorUtils.setAlphaComponent(panelBg, 255), 0xFF28282E, 0.55f);
-                int veilAlpha = Math.round(255f * (drewWallpaperBitmap ? opacityNorm : Math.min(0.90f, opacityNorm + 0.12f)) * alphaInternal);
-                baseVeilColor = ColorUtils.setAlphaComponent(neutralDark, Math.max(0, Math.min(255, veilAlpha)));
-            } else {
-                int veilAlpha = Math.round(255f * (drewWallpaperBitmap ? opacityNorm : Math.min(0.92f, opacityNorm + 0.14f)) * alphaInternal);
-                baseVeilColor = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.max(0, Math.min(255, veilAlpha)));
+            if (!drewRuntimeGlass) {
+                int fallbackVeilAlpha = Math.round(255f * (drewWallpaperBitmap ? opacityNorm : Math.min(0.88f, opacityNorm + 0.14f)) * alphaInternal);
+                int fallbackVeilColor = ColorUtils.setAlphaComponent(veilBaseRgb, Math.max(0, Math.min(255, fallbackVeilAlpha)));
+                if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+                    fallbackVeilColor = app.exteraless.glass.SolegramGlass.tint(fallbackVeilColor, resourcesProvider);
+                }
+                glassTintPaint.setStyle(Paint.Style.FILL);
+                glassTintPaint.setColor(fallbackVeilColor);
+                canvas.drawPath(glassBubblePath, glassTintPaint);
             }
-            if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
-                baseVeilColor = app.exteraless.glass.SolegramGlass.tint(baseVeilColor, resourcesProvider);
-            }
-            glassTintPaint.setStyle(Paint.Style.FILL);
-            glassTintPaint.setColor(baseVeilColor);
-            canvas.drawPath(glassBubblePath, glassTintPaint);
 
             GlassOutlineStyle outlineStyle = GlassOutlineStyle.current();
             if (outlineStyle != GlassOutlineStyle.HIDDEN && strokeDp > 0.05f) {
@@ -20438,11 +20482,16 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 glassStrokePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
 
                 if (outlineStyle == GlassOutlineStyle.GLARE) {
-                    if (drewWallpaperBitmap && cachedGlassBitmapShader != null && bitmapSource != null) {
+                    if (drewWallpaperBitmap && wallpaperSnap != null && wallpaperSnap.bitmap != null && !wallpaperSnap.bitmap.isRecycled()) {
+                        if (lastGlassShaderBitmap != wallpaperSnap.bitmap || cachedGlassBitmapShader == null) {
+                            lastGlassShaderBitmap = wallpaperSnap.bitmap;
+                            cachedGlassBitmapShader = new BitmapShader(wallpaperSnap.bitmap, Shader.TileMode.CLAMP, Shader.TileMode.CLAMP);
+                            glassBitmapPaint.setShader(cachedGlassBitmapShader);
+                        }
                         float cx = (bLeft + bRight) * 0.5f;
                         float cy = (bTop + bBottom) * 0.5f;
                         float edgeScale = 1.04f + 0.06f * refractionNorm;
-                        glassShaderMatrix.set(bitmapSource.getMatrix());
+                        glassShaderMatrix.set(wallpaperSnap.baseMatrix);
                         glassShaderMatrix.postTranslate(-offsetX, -offsetY);
                         glassShaderMatrix.postScale(edgeScale, edgeScale, cx, cy);
                         cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);

@@ -554,7 +554,8 @@ public class DrawerAccountPickerView extends FrameLayout {
             premiumStatusDrawable.setCurrentAccount(account);
 
             final int statusColor = Theme.getColor(COLOR_KEY_STATUS);
-            final long emojiStatusId = DialogObject.getEmojiStatusDocumentId(user.emoji_status);
+            final Long customEmojiId = UserObject.getEmojiStatusDocumentId(user);
+            final long emojiStatusId = customEmojiId != null ? customEmojiId : 0L;
             final boolean premium = MessagesController.getInstance(account).isPremiumUser(user);
             Drawable rightDrawable = null;
             if (emojiStatusId != 0) {
@@ -567,7 +568,7 @@ public class DrawerAccountPickerView extends FrameLayout {
                 premiumStatusDrawable.set((Drawable) null, false);
             }
             premiumStatusDrawable.setColor(statusColor);
-            premiumStatusDrawable.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), false);
+            premiumStatusDrawable.setParticles(UserObject.isEmojiStatusCollectible(user), false);
             nameView.setRightDrawable(rightDrawable);
 
             unreadBadge.bind(account, nameView);

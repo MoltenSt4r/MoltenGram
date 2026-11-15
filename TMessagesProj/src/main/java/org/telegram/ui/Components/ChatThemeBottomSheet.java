@@ -619,14 +619,10 @@ public class ChatThemeBottomSheet extends BottomSheet implements NotificationCen
             }
             themeDelegate.setCurrentTheme(originalTheme, wallpaper, reveal == null, originalIsDark);
         }
-        if (forceDark != originalIsDark) {
+        if (forceDark != originalIsDark && appThemeSwitched) {
             final Theme.ThemeInfo activeTheme = Theme.getActiveTheme().isDark() == originalIsDark ? Theme.getActiveTheme() : appThemeFor(originalIsDark);
-            if (appThemeSwitched) {
-                // the sheet switched the whole app (list next to the chat): switch it back the same way
-                switchAppTheme(activeTheme);
-            } else {
-                Theme.applyTheme(activeTheme, false, originalIsDark);
-            }
+            // the sheet switched the whole app (list next to the chat): switch it back the same way
+            switchAppTheme(activeTheme);
         }
         appThemeSwitched = false;
         startChatReveal(reveal);

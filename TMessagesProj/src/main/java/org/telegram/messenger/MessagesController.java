@@ -2595,6 +2595,7 @@ public class MessagesController extends BaseController implements NotificationCe
         final TL_stars.starGiftAttributeBackdrop backdrop = findAttribute(gift.attributes, TL_stars.starGiftAttributeBackdrop.class);
         final TL_stars.starGiftAttributePattern pattern = findAttribute(gift.attributes, TL_stars.starGiftAttributePattern.class);
         status.title = gift.title + " #" + gift.num;
+        status.slug = gift.slug;
         if (model != null) {
             status.document_id = model.document.id;
         }
@@ -2624,6 +2625,9 @@ public class MessagesController extends BaseController implements NotificationCe
             new_emoji_status = emojiStatusCollectibleFromGift((TL_stars.TL_starGiftUnique) gift);
         }
 
+        final boolean isCollectibleRequest = new_emoji_status instanceof TLRPC.TL_emojiStatusCollectible || newStatus instanceof TLRPC.TL_inputEmojiStatusCollectible;
+        final boolean isClearRequest = new_emoji_status == null || new_emoji_status instanceof TLRPC.TL_emojiStatusEmpty;
+        boolean fallbackHandled = false;
         TLObject r;
         if (myself) {
             TL_account.updateEmojiStatus req = new TL_account.updateEmojiStatus();
@@ -2636,16 +2640,32 @@ public class MessagesController extends BaseController implements NotificationCe
                 getNotificationCenter().postNotificationName(NotificationCenter.userEmojiStatusUpdated, user);
             }
             LocalPremiumStatusHelper.apply(new_emoji_status);
+            if (!getUserConfig().isPremium()) {
+                if (new_emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
+                    app.exteraless.chats.CustomEmojiStatusHelper.saveSelfCollectibleStatus(
+                            getUserConfig().getClientUserId(),
+                            (TLRPC.TL_emojiStatusCollectible) new_emoji_status
+                    );
+                } else if (isClearRequest) {
+                    app.exteraless.chats.CustomEmojiStatusHelper.saveSelfCollectibleStatus(
+                            getUserConfig().getClientUserId(),
+                            null
+                    );
+                }
+            }
             if (app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() && !getUserConfig().isPremium()) {
-                if (new_emoji_status != null && !(new_emoji_status instanceof TLRPC.TL_emojiStatusEmpty)) {
+                if (!isClearRequest) {
                     long docId = DialogObject.getEmojiStatusDocumentId(new_emoji_status);
-                    if (docId != 0) {
-                        app.exteraless.chats.CustomEmojiStatusHelper.setCustomEmojiStatus(currentAccount, docId, null);
-                    } else {
+                    if (docId != 0 && !isCollectibleRequest) {
+                        app.exteraless.chats.CustomEmojiStatusHelper.setCustomEmojiStatus(currentAccount, docId, false, null);
+                        fallbackHandled = true;
+                    } else if (docId == 0) {
                         app.exteraless.chats.CustomEmojiStatusHelper.clearCustomEmojiStatus(currentAccount, null);
+                        fallbackHandled = true;
                     }
                 } else {
                     app.exteraless.chats.CustomEmojiStatusHelper.clearCustomEmojiStatus(currentAccount, null);
+                    fallbackHandled = true;
                 }
             }
         } else {
@@ -2663,7 +2683,25 @@ public class MessagesController extends BaseController implements NotificationCe
         }
         getMessagesController().updateEmojiStatusUntilUpdate(dialogId, new_emoji_status);
         getNotificationCenter().postNotificationName(NotificationCenter.updateInterfaces, MessagesController.UPDATE_MASK_EMOJI_STATUS);
-        if (UserConfig.getInstance(currentAccount).isPremium()) getConnectionsManager().sendRequest(r, null);
+        if (UserConfig.getInstance(currentAccount).isPremium() || !myself || (isCollectibleRequest && !fallbackHandled)) {
+            final TLRPC.EmojiStatus targetStatus = new_emoji_status;
+            getConnectionsManager().sendRequest(r, (response, error) -> {
+                if (error != null && myself && isCollectibleRequest && !UserConfig.getInstance(currentAccount).isPremium()
+                        && app.exteraless.chats.CustomEmojiStatusHelper.isEnabled()) {
+                    long docId = DialogObject.getEmojiStatusDocumentId(targetStatus);
+                    if (docId != 0) {
+                        AndroidUtilities.runOnUIThread(() -> {
+                            TLRPC.User cur = getUserConfig().getCurrentUser();
+                            if (cur != null && DialogObject.getEmojiStatusDocumentId(cur.emoji_status) == docId) {
+                                app.exteraless.chats.CustomEmojiStatusHelper.setCustomEmojiStatus(currentAccount, docId, true, null);
+                            }
+                        });
+                    }
+                }
+            });
+        } else if (myself && isClearRequest) {
+            getConnectionsManager().sendRequest(r, null);
+        }
     }
 
     public void removeFilter(DialogFilter filter) {
@@ -6930,7 +6968,7 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             }
         }
-        app.exteraless.chats.ProfileInvisibleMetadata.getMetadata(user);
+        app.exteraless.chats.ProfileInvisibleMetadata.getMetadata(user, currentAccount);
         updateEmojiStatusUntilUpdate(user.id, user.emoji_status);
         if (oldUser != null && oldUser.access_hash == 0 && user.fromMessageDialogId != 0 && user.fromMessageId != 0) {
             oldUser.fromMessageDialogId = user.fromMessageDialogId;
@@ -7754,7 +7792,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 getMessagesStorage().putUsersAndChats(res.users, res.chats, true, true);
                 getMessagesStorage().updateChatInfo(res.full_chat, false);
                 getStoriesController().updateStoriesFromFullPeer(dialogId, res.full_chat.stories);
-                ChatThemeController.getInstance(currentAccount).saveChatWallpaper(-chatId, res.full_chat.wallpaper);
+                if (res.full_chat.wallpaper != null || uploadingWallpaperInfo == null || uploadingWallpaperInfo.dialogId != dialogId) {
+                    ChatThemeController.getInstance(currentAccount).saveChatWallpaper(-chatId, res.full_chat.wallpaper);
+                }
                 if (ChatObject.isChannel(chat)) {
                     Integer value = dialogs_read_inbox_max.get(dialogId);
                     if (value == null) {
@@ -7880,7 +7920,9 @@ public class MessagesController extends BaseController implements NotificationCe
                 res.full_user.user = getUser(res.full_user.id);
                 getMessagesStorage().updateUserInfo(userFull, false);
                 getStoriesController().updateStoriesFromFullPeer(dialogId, userFull.stories);
-                ChatThemeController.getInstance(currentAccount).saveChatWallpaper(res.full_user.id, res.full_user.wallpaper);
+                if (res.full_user.wallpaper != null || uploadingWallpaperInfo == null || uploadingWallpaperInfo.dialogId != dialogId) {
+                    ChatThemeController.getInstance(currentAccount).saveChatWallpaper(res.full_user.id, res.full_user.wallpaper);
+                }
 
                 if (whenReceivedFullUser != null) {
                     whenReceivedFullUser.run(userFull);
@@ -7908,7 +7950,6 @@ public class MessagesController extends BaseController implements NotificationCe
                     }
                     fullUsers.put(user.id, userFull);
                     final boolean contactBlockedChanged = syncUserContactBlocked(user.id, userFull);
-                    app.exteraless.chats.CustomEmojiStatusHelper.processUserBio(currentAccount, user.id, userFull.about);
                     getTranslateController().updateDialogFull(user.id);
                     StarsController.getInstance(currentAccount).invalidateProfileGifts(userFull);
                     loadingFullUsers.remove(user.id);
@@ -10812,7 +10853,6 @@ public class MessagesController extends BaseController implements NotificationCe
                 }
             }
             if (info != null) {
-                app.exteraless.chats.CustomEmojiStatusHelper.processUserBio(currentAccount, user.id, info.about);
                 if (fullUsers.get(user.id) == null) {
                     fullUsers.put(user.id, info);
                     getTranslateController().updateDialogFull(user.id);

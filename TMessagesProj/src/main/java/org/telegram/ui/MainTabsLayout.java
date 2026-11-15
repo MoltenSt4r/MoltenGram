@@ -429,7 +429,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
         super.dispatchDraw(canvas);
 
-        if (drawTopDivider && MainTabsUiHelper.isMaterial3NavigationBar()) {
+        if (drawTopDivider && MainTabsUiHelper.isMaterial3NavigationBar() && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
             dividerPaint.setColor(Theme.getDividerColor(resourcesProvider));
             canvas.drawLine(0, 1, getMeasuredWidth(), 1, dividerPaint);
         }
@@ -1018,6 +1018,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         private final float[] last = new float[10];
         private boolean lastDark;
         private int lastDispersion = -1;
+        private int lastVersion = -1;
 
         void draw(Canvas canvas, int viewW, int viewH, float cx, float cy, float w, float h, float a, float flow, RectF bar, Utilities.Callback<Canvas> content) {
             node.setPosition(0, 0, viewW, viewH);
@@ -1029,11 +1030,13 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             }
             final boolean dark = Theme.isCurrentThemeDark();
             final int dispersion = app.exteraless.glass.LiquidGlassConfig.glassDispersion;
+            final int configVersion = app.exteraless.glass.LiquidGlassConfig.version;
             if (effect == null || last[0] != cx || last[1] != cy || last[2] != w || last[3] != h || last[4] != a || lastDark != dark
                 || last[5] != bar.left || last[6] != bar.top || last[7] != bar.right || last[8] != bar.bottom
-                || last[9] != flow || lastDispersion != dispersion) {
+                || last[9] != flow || lastDispersion != dispersion || lastVersion != configVersion) {
                 lastDark = dark;
                 lastDispersion = dispersion;
+                lastVersion = configVersion;
                 last[0] = cx;
                 last[1] = cy;
                 last[2] = w;
@@ -1057,7 +1060,9 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 shader.setFloatUniform("barCenter", bar.centerX(), bar.centerY());
                 shader.setFloatUniform("barHalf", bar.width() / 2f, bar.height() / 2f);
                 shader.setFloatUniform("dark", dark ? 1f : 0f);
-                final int customTint = app.exteraless.glass.SolegramGlass.tintColor();
+                final int customTint = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                    ? app.exteraless.glass.SolegramGlass.tintColor()
+                    : 0;
                 if (customTint != 0 && app.exteraless.glass.LiquidGlassConfig.glassTintAmount > 0) {
                     final float norm = Math.min(1f, app.exteraless.glass.LiquidGlassConfig.glassTintAmount / 60f);
                     final float tintA = (0.08f + 0.24f * norm) * a;

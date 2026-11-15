@@ -73,6 +73,10 @@ object OpenExteraConfig {
     @JvmField
     val freeProfileAppearance = addConfig("OEFreeProfileAppearance", ConfigItem.configTypeBool, true)
 
+    /** Хранить невидимые метаданные статуса/профиля в описании отдельного бота через @BotFather */
+    @JvmField
+    val botProfileSync = addConfig("OEBotProfileSync", ConfigItem.configTypeBool, false)
+
     /** Отображать цветной текст в сообщениях (разметка tg://color) */
     @JvmField
     val coloredText = addConfig("OEColoredText", ConfigItem.configTypeBool, true)
@@ -88,6 +92,9 @@ object OpenExteraConfig {
 
     @JvmStatic
     fun freeProfileAppearance(): Boolean = freeProfileAppearance.Bool()
+
+    @JvmStatic
+    fun botProfileSync(): Boolean = botProfileSync.Bool()
 
     @JvmStatic
     fun coloredText(): Boolean = coloredText.Bool()

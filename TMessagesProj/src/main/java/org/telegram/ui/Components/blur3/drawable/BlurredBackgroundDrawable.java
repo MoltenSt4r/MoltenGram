@@ -304,6 +304,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
 
     @Override
     public void onGlassOutlineStyleChanged() {
+        implInvalidated = true;
+        solegramCheckAutoLiquid();
         updateColors();
     }
 
@@ -1371,16 +1373,20 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         private boolean clipToOutline = true;
         private final RectF sourceBounds = new RectF();
 
-        /** How much the lens is downsampled: as the source is. */
+        /** How much the lens is downsampled: 1:1 on compact controls to avoid curved-edge pixelation, capped at 2x elsewhere. */
         private int getLensDownsample() {
             if (liquidGlassEffect == null || Build.VERSION.SDK_INT < 33 || !(source instanceof GlassFadeBlurredDrawable.GlassFadeDownsampledSource)) {
+                return 1;
+            }
+            final Rect b = boundProps.boundsWithPadding;
+            if (b.width() <= dp(180) || b.height() <= dp(96)) {
                 return 1;
             }
             final GlassFadeBlurredDrawable.GlassFadeDownsampledSource downsampled = (GlassFadeBlurredDrawable.GlassFadeDownsampledSource) source;
             if (!downsampled.isDownsampledSourceSupported()) {
                 return 1;
             }
-            return Math.max(downsampled.getDownsample(), 1);
+            return Math.max(Math.min(downsampled.getDownsample(), 2), 1);
         }
 
         ImplRenderNode() {

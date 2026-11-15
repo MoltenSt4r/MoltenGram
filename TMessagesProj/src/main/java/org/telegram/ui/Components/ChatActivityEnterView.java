@@ -701,6 +701,10 @@ public class ChatActivityEnterView extends FrameLayout implements
     private BotKeyboardView botKeyboardView;
     private ImageView notifyButton;
     @Nullable
+    private ImageView liveStreamButton;
+    private boolean liveStreamEnabled;
+    private long liveDraftRandomId;
+    @Nullable
     private ImageView scheduledButton;
     @Nullable
     private ImageView giftButton;
@@ -2972,6 +2976,35 @@ public class ChatActivityEnterView extends FrameLayout implements
                     }
                 });
             }
+
+            liveStreamButton = new ImageView(context);
+            liveStreamButton.setScaleType(ImageView.ScaleType.CENTER);
+            liveStreamButton.setImageResource(R.drawable.deproko_baseline_bots_24);
+            ThemeBind.selectorBackground(liveStreamButton, Theme.createSelectorDrawable(getThemedColor(Theme.key_listSelector)), null, ThemeBind.of(Theme.key_listSelector), resourcesProvider);
+            attachLayout.addView(liveStreamButton, LayoutHelper.createLinear(DEFAULT_HEIGHT, DEFAULT_HEIGHT));
+            updateLiveStreamButtonAppearance();
+            updateLiveStreamButtonVisibility();
+            liveStreamButton.setOnClickListener(v -> {
+                if (adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress() || attachLayoutPaddingAlpha == 0f) {
+                    return;
+                }
+                liveStreamEnabled = !liveStreamEnabled;
+                updateLiveStreamButtonAppearance();
+                if (liveStreamEnabled) {
+                    CharSequence currentText = messageEditText != null ? messageEditText.getText() : null;
+                    if (!TextUtils.isEmpty(currentText)) {
+                        sendOrUpdateLiveDraft(currentText);
+                    }
+                } else {
+                    stopLiveDraft();
+                }
+                if (fragment != null) {
+                    BulletinFactory.of(fragment).createSimpleBulletin(
+                        R.raw.info,
+                        getString(liveStreamEnabled ? R.string.OEBotLiveStreamOn : R.string.OEBotLiveStreamOff)
+                    ).show();
+                }
+            });
 
             attachButton = new ImageView(context) {
                 @Override
@@ -7724,6 +7757,7 @@ public class ChatActivityEnterView extends FrameLayout implements
     }
 
     public void onDestroy() {
+        stopLiveDraft();
         if (audioTimelineView != null) {
             audioTimelineView.destroy();
         }
@@ -7922,8 +7956,79 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
     }
 
+    public boolean isLiveStreamEnabled() {
+        return liveStreamEnabled
+            && app.exteraless.bots.BotAccountHelper.isBotSession(currentAccount)
+            && dialog_id > 0
+            && (fragment == null || fragment.getChatMode() == 0)
+            && !isEditingMessage();
+    }
+
+    public void updateLiveStreamButtonVisibility() {
+        if (liveStreamButton == null) {
+            return;
+        }
+        boolean visible = app.exteraless.bots.BotAccountHelper.isBotSession(currentAccount)
+            && dialog_id > 0
+            && (fragment == null || fragment.getChatMode() == 0)
+            && !isEditingMessage();
+        int newVis = visible ? VISIBLE : GONE;
+        if (liveStreamButton.getVisibility() != newVis) {
+            liveStreamButton.setVisibility(newVis);
+            updateFieldRight(attachButton != null && attachButton.getVisibility() == VISIBLE ? 1 : 0);
+        }
+    }
+
+    private void updateLiveStreamButtonAppearance() {
+        if (liveStreamButton == null) {
+            return;
+        }
+        int key = liveStreamEnabled ? Theme.key_featuredStickers_addButton : Theme.key_glass_defaultIcon;
+        liveStreamButton.setColorFilter(new PorterDuffColorFilter(getThemedColor(key), PorterDuff.Mode.MULTIPLY));
+    }
+
+    public void sendOrUpdateLiveDraft(@Nullable CharSequence text) {
+        if (!isLiveStreamEnabled()) {
+            return;
+        }
+        if (TextUtils.isEmpty(text)) {
+            stopLiveDraft();
+            return;
+        }
+        if (liveDraftRandomId == 0) {
+            liveDraftRandomId = Utilities.random.nextLong();
+            if (liveDraftRandomId == 0) {
+                liveDraftRandomId = 1L;
+            }
+        }
+        long threadMsgId = fragment != null ? fragment.getTopicId() : 0;
+        app.exteraless.bots.BotAccountHelper.sendLiveTextDraft(currentAccount, dialog_id, threadMsgId, liveDraftRandomId, text);
+    }
+
+    public void stopLiveDraft() {
+        if (liveDraftRandomId == 0 || dialog_id <= 0) {
+            liveDraftRandomId = 0;
+            return;
+        }
+        long randomId = liveDraftRandomId;
+        liveDraftRandomId = 0;
+        long threadMsgId = fragment != null ? fragment.getTopicId() : 0;
+        app.exteraless.bots.BotAccountHelper.sendLiveTextDraft(currentAccount, dialog_id, threadMsgId, randomId, null);
+    }
+
+    public void onLiveMessageSent() {
+        liveDraftRandomId = 0;
+    }
+
     public void setDialogId(long id, int account) {
+        if (dialog_id != id || currentAccount != account) {
+            stopLiveDraft();
+            liveStreamEnabled = false;
+            liveDraftRandomId = 0;
+        }
         dialog_id = id;
+        updateLiveStreamButtonAppearance();
+        updateLiveStreamButtonVisibility();
         if (currentAccount != account) {
             notificationsLocker.unlock();
             NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.recordStarted);
@@ -10353,10 +10458,12 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         FrameLayout.LayoutParams layoutParams = (FrameLayout.LayoutParams) messageEditText.getLayoutParams();
         int oldRightMargin = layoutParams.rightMargin;
+        int oldLeftMargin = layoutParams.leftMargin;
         if (app.exteraless.chats.ChatsConfig.md3ChatInput()) {
+            boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
             layoutParams.rightMargin = dp(48);
-            layoutParams.leftMargin = dp(48);
-            if (oldRightMargin != layoutParams.rightMargin) {
+            layoutParams.leftMargin = dp(liveVisible ? 96 : 48);
+            if (oldRightMargin != layoutParams.rightMargin || oldLeftMargin != layoutParams.leftMargin) {
                 messageEditText.setLayoutParams(layoutParams);
             }
             return;
@@ -10364,9 +10471,10 @@ public class ChatActivityEnterView extends FrameLayout implements
         if (isStories && isLiveComment) {
             layoutParams.rightMargin = dp(suggestButtonVisible ? 50 : 2) + Math.max(0, sendButton.width() - dp(DEFAULT_HEIGHT));
         } else if (attachVisible == 1 || attachVisible == 2/* && layoutParams.rightMargin != dp(2)*/) {
+            boolean liveVisible = liveStreamButton != null && liveStreamButton.getVisibility() == VISIBLE;
             if (botButton != null && botButton.getVisibility() == VISIBLE && scheduledButton != null && scheduledButton.getVisibility() == VISIBLE && attachButton != null && attachButton.getVisibility() == VISIBLE) {
                 layoutParams.rightMargin = dp(146);
-            } else if (botButton != null && botButton.getVisibility() == VISIBLE || notifyButton != null && notifyButton.getVisibility() == VISIBLE || scheduledButton != null && scheduledButton.getTag() != null) {
+            } else if (botButton != null && botButton.getVisibility() == VISIBLE || notifyButton != null && notifyButton.getVisibility() == VISIBLE || scheduledButton != null && scheduledButton.getTag() != null || liveVisible) {
                 layoutParams.rightMargin = dp(98);
             } else {
                 layoutParams.rightMargin = dp(50);

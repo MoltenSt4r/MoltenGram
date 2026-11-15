@@ -762,6 +762,7 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
             if (themeInfo == Theme.getCurrentTheme()) {
                 return;
             }
+            Theme.turnOffAutoNight(fragment);
             Theme.switchThemeWithReveal(themeInfo, false, -1, from);
         }
         updateRows();
@@ -774,10 +775,6 @@ public class ThemesHorizontalListCell extends RecyclerListView implements Notifi
             }
         }
         EmojiThemes.saveCustomTheme(themeInfo, themeInfo.currentAccentId);
-
-        if (currentType != ThemeActivity.THEME_TYPE_NIGHT) {
-            Theme.turnOffAutoNight(fragment);
-        }
     }
 
     public void setDrawDivider(boolean draw) {

@@ -207,6 +207,8 @@ public class DownscaleScrollableNoiseSuppressor {
             hash = MediaDataController.calcHash(hash, originalWidth);
             hash = MediaDataController.calcHash(hash, originalHeight);
             hash = MediaDataController.calcHash(hash, k);
+            hash = MediaDataController.calcHash(hash, scaleX);
+            hash = MediaDataController.calcHash(hash, scaleY);
             hash = MediaDataController.calcHash(hash, app.exteraless.glass.LiquidGlassConfig.version);
 
             boolean ignoreHashCheck = !renderNodeOriginalWithOffset.hasDisplayList()
@@ -299,7 +301,7 @@ public class DownscaleScrollableNoiseSuppressor {
     }
 
     public static float downscaleRadius(float radius, float scale) {
-        return Math.max(1, convertSigmaToRadius(convertRadiusToSigma(radius) / scale));
+        return Math.max(scale > 1f ? 1.5f : 0.5f, convertSigmaToRadius(convertRadiusToSigma(radius) / scale));
     }
 
 
@@ -461,22 +463,23 @@ public class DownscaleScrollableNoiseSuppressor {
             configuredVibrancy = vibrancy;
 
             if (liquid) {
+                final int glassScale = blurScale < 0.7f ? 1 : 2;
                 if (simpleMode) {
                     if (renderNodesForGlass == null) {
                         renderNodesForGlass = new DownscaledRenderNode("glass", 0, true);
-                        renderNodesForGlass.setScale(4, 4);
                     }
+                    renderNodesForGlass.setScale(glassScale, glassScale);
                     if (vibrancy) {
-                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale, RenderNodeEffects.getSaturationX3RenderEffect());
+                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(11f) * blurScale, RenderNodeEffects.getSaturationX3RenderEffect());
                     } else {
-                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale);
+                        renderNodesForGlass.setPrimaryEffectBlur(dpf2(11f) * blurScale);
                     }
                 } else {
                     if (renderNodesForGlass == null) {
                         renderNodesForGlass = new DownscaledRenderNode("glass", 1, true);
-                        renderNodesForGlass.setScale(4, 4);
                     }
-                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(6f) * blurScale);
+                    renderNodesForGlass.setScale(glassScale, glassScale);
+                    renderNodesForGlass.setPrimaryEffectBlur(dpf2(11f) * blurScale);
                     renderNodesForGlass.setSecondaryEffect(0, vibrancy ? RenderNodeEffects.getSaturationX3RenderEffect() : null);
                 }
                 renderNodesForBlur = new DownscaledRenderNode("blur", 0);

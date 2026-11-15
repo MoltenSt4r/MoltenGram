@@ -191,3 +191,17 @@ def test_stable_same_semver_different_commit_triggers_update():
         remote_ver='12.10.6', remote_timestamp=1700000060, remote_commit='af5c2fa', remote_is_canary=False,
         current_ver='12.10.6', current_commit='af5c2fa66cad', current_timestamp=1700000000, current_is_canary=False
     )
+
+
+def test_beta_timestamp_build_code_upgrades_over_legacy_canary():
+    legacy_canary_code = extract_build_code('MoltenGram-v13.2.1-dff5f28(20224).apk')
+    beta_timestamp_code = extract_build_code('MoltenGram-v13.2.1-f0c019f.9492810.apk')
+    assert legacy_canary_code == 20224
+    assert beta_timestamp_code == 9492810
+    assert beta_timestamp_code > legacy_canary_code
+    assert is_newer_version(
+        remote_ver='13.2.1', remote_timestamp=1794728100, remote_commit='abcdef1', remote_is_canary=False,
+        current_ver='13.2.1', current_commit='1234567', current_timestamp=1794720000, current_is_canary=False,
+        current_build_code=legacy_canary_code, include_canary=True,
+        apk_name='MoltenGram-v13.2.1-abcdef1.9492810.apk'
+    )

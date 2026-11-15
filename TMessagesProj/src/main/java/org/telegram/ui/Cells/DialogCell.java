@@ -1633,7 +1633,7 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                             if (emojiStatusId != null) {
                                 nameLayoutEllipsizeByGradient = true;
                                 emojiStatus.set(emojiStatusId, false);
-                                emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), false);
+                                emojiStatus.setParticles(UserObject.isEmojiStatusCollectible(user), false);
                             } else {
                                 nameLayoutEllipsizeByGradient = true;
                                 emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, false);
@@ -3587,11 +3587,11 @@ public class DialogCell extends BaseCell implements StoriesListPlaceProvider.Ava
                         if (user != null && userStatusDocId != null && userStatusDocId != 0) {
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(userStatusDocId, animated);
-                            emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);
+                            emojiStatus.setParticles(UserObject.isEmojiStatusCollectible(user), animated);
                         } else if (user != null && DialogObject.getEmojiStatusDocumentId(user.emoji_status) != 0) {
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(DialogObject.getEmojiStatusDocumentId(user.emoji_status), animated);
-                            emojiStatus.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), animated);
+                            emojiStatus.setParticles(UserObject.isEmojiStatusCollectible(user), animated);
                         } else {
                             nameLayoutEllipsizeByGradient = true;
                             emojiStatus.set(PremiumGradient.getInstance().premiumStarDrawableMini, animated);

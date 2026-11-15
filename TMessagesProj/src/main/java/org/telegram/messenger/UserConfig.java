@@ -475,6 +475,7 @@ public class UserConfig extends BaseController {
 
     public void clearConfig() {
         getPreferences().edit().clear().apply();
+        app.exteraless.bots.BotAccountHelper.clearBotToken(currentAccount);
 
         sharingMyLocationUntil = 0;
         lastMyLocationShareTime = 0;

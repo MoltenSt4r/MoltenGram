@@ -987,6 +987,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             return result;
         }
 
+        private Paint headerFeatherPaint;
+        private float headerFeatherStart = -1f;
+        private float headerFeatherEnd = -1f;
+
         @Override
         public void drawBlurRect(Canvas canvas, float y, Rect rectTmp, Paint blurScrimPaint, boolean top) {
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q || !SharedConfig.chatBlurEnabled() || iBlur3SourceGlassFrosted == null || !BlurredBackgroundProviderImpl.checkBlurEnabled(currentAccount, resourceProvider)) {
@@ -1007,8 +1011,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             if (useLiquidHeader) {
                 final float coverProgress = Math.max(searchAnimationProgress, progressToActionMode);
-                final float restAlpha = Math.max(0.25f, Math.min(0.92f, app.exteraless.glass.SolegramGlass.alpha(true) * 0.72f));
+                final float restAlpha = Math.max(0.16f, Math.min(0.55f, app.exteraless.glass.SolegramGlass.alpha(true) * 0.42f));
                 final int blurAlpha = Math.round(255f * AndroidUtilities.lerp(restAlpha, isThemeLight ? 0.85f : 0.9f, coverProgress));
+                final float featherH = top && coverProgress < 0.85f && rectTmp.height() > dp(24)
+                        ? AndroidUtilities.lerp(Math.min(dp(18), rectTmp.height() / 3f), 0f, coverProgress)
+                        : 0f;
+
+                int layerCount = -1;
+                if (featherH > 1f) {
+                    layerCount = canvas.saveLayer(rectTmp.left, rectTmp.top, rectTmp.right, rectTmp.bottom, null);
+                }
 
                 canvas.save();
                 canvas.translate(0, -y);
@@ -1020,6 +1032,25 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 canvas.drawRect(rectTmp, blurScrimPaint);
                 blurScrimPaint.setColor(oldScrimColor);
                 blurScrimPaint.setAlpha(oldScrimAlpha);
+
+                if (layerCount != -1) {
+                    final float fStart = rectTmp.bottom - featherH;
+                    final float fEnd = rectTmp.bottom;
+                    if (headerFeatherPaint == null) {
+                        headerFeatherPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                        headerFeatherPaint.setXfermode(new android.graphics.PorterDuffXfermode(android.graphics.PorterDuff.Mode.DST_IN));
+                    }
+                    if (headerFeatherStart != fStart || headerFeatherEnd != fEnd) {
+                        headerFeatherStart = fStart;
+                        headerFeatherEnd = fEnd;
+                        headerFeatherPaint.setShader(new android.graphics.LinearGradient(
+                                0, fStart, 0, fEnd,
+                                0xFFFFFFFF, 0x00FFFFFF, android.graphics.Shader.TileMode.CLAMP
+                        ));
+                    }
+                    canvas.drawRect(rectTmp.left, fStart, rectTmp.right, fEnd, headerFeatherPaint);
+                    canvas.restoreToCount(layerCount);
+                }
                 return;
             }
 
@@ -6455,7 +6486,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                 BulletinFactory.of(this)
                     .createSimpleBulletin(R.raw.chats_infotip, LocaleController.getString(R.string.BirthdaySetupLater), LocaleController.getString(R.string.Settings), () -> {
-                        presentFragment(new UserInfoActivity());
+                        presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                     })
                     .setDuration(Bulletin.DURATION_PROLONG)
                     .show();
@@ -6889,7 +6920,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             final float baseAlpha = Math.max(filtersTabVisibility, topPanelsVisibility);
             final float fadeScale = (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
                     && app.exteraless.glass.LiquidGlassConfig.glassMainHeader
-                    && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders) ? 0.12f : 1f;
+                    && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders) ? 0.38f : 1f;
             topBubblesFadeView.setAlpha(baseAlpha * fadeScale);
         }
     }
@@ -7319,6 +7350,16 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         if (dialogStoriesCell != null) {
             dialogStoriesCell.onResume();
         }
+        if (floatingButton3 != null) {
+            floatingButton3.updateColors();
+        }
+        if (floatingButtonStories != null) {
+            floatingButtonStories.updateColors();
+        }
+        if (speedDialView != null) {
+            speedDialView.updateColors();
+        }
+        updateFloatingButtonOffset();
         if (rightSlidingDialogContainer != null) {
             rightSlidingDialogContainer.onResume();
         }
@@ -14303,6 +14344,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             final float factor = factor0 * factor1;
             final float s = lerp(0.98f, 1f, factor);
 
+            searchTabsAndFiltersLayout.setFiltersBackgroundAlpha(animatorSearchFilterTabsVisible.getFloatValue());
             searchTabsAndFiltersLayout.setScaleX(s);
             searchTabsAndFiltersLayout.setScaleY(s);
             searchTabsAndFiltersLayout.setAlpha(factor);
@@ -14800,6 +14842,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     private void switchTheme(Theme.ThemeInfo themeInfo, boolean toDark) {
         if (optionsItem == null) return;
+        Theme.turnOffAutoNight(BulletinFactory.of(this), () -> presentFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_NIGHT)));
         int[] pos = new int[2];
         optionsItem.getLocationInWindow(pos);
         pos[0] += optionsItem.getIconView().getMeasuredWidth() / 2;

@@ -695,7 +695,7 @@ public final class SolegramLiveGlass implements GlassSource, org.telegram.ui.Com
 
     @RequiresApi(33)
     private void drawLive(Canvas canvas, float left, float top, float right, float bottom) {
-        final int scale = recipe == FROSTED ? 8 : 4; // as the chat's glass downscales (DownscaleScrollableNoiseSuppressor)
+        final int scale = recipe == FROSTED ? 6 : 2; // finer downscale on live liquid glass to prevent edge pixelation
         final float radius = (recipe == FROSTED ? dpf2(40 - 1.66f) : dpf2(6)) * SolegramGlass.blurScale();
         final boolean dark = Theme.isCurrentThemeDark();
         updateEffect(scale, radius, dark);

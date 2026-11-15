@@ -35,7 +35,7 @@ public class WallpaperBitmapProvider {
 
         if (drawable instanceof MotionBackgroundDrawable) {
             final MotionBackgroundDrawable motionDrawable = (MotionBackgroundDrawable) drawable;
-            if (motionDrawable.getIntensity() >= 0) {
+            if (motionDrawable.getIntensity() >= 0 && motionDrawable.getBitmap() != null) {
                 sourceBitmap.setBitmap(motionDrawable.getBitmap());
                 return sourceBitmap;
             }
@@ -49,13 +49,18 @@ public class WallpaperBitmapProvider {
 
         if (drawable instanceof ChatBackgroundDrawable) {
             ChatBackgroundDrawable chatDrawable = (ChatBackgroundDrawable) drawable;
-            return updateSourceFromBackgroundViewDrawable(chatDrawable.getDrawable(false));
+            Drawable inner = chatDrawable.getDrawable(false);
+            if (inner != null && inner != drawable) {
+                return updateSourceFromBackgroundViewDrawable(inner);
+            }
         }
 
         if (drawable != null) {
-            Canvas canvas = sourceBitmap.beginRecording(120, 160);
+            final int recW = 180;
+            final int recH = 320;
+            Canvas canvas = sourceBitmap.beginRecording(recW, recH);
             tmpRect.set(drawable.getBounds());
-            drawable.setBounds(0, 0, 120, 160);
+            drawable.setBounds(0, 0, recW, recH);
             drawable.draw(canvas);
             drawable.setBounds(tmpRect);
             sourceBitmap.endRecording();

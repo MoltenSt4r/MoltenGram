@@ -1023,6 +1023,7 @@ public class ChatActivity extends BaseFragment implements
     private String pendingLinkSearchString;
     private Runnable pendingWebPageTimeoutRunnable;
     private Runnable waitingForCharaterEnterRunnable;
+    private Runnable liveDraftRunnable;
     private Runnable onChatMessagesLoaded;
 
     private TLRPC.ChatInvite chatInvite;
@@ -2460,6 +2461,13 @@ public class ChatActivity extends BaseFragment implements
 
         @Override
         public void onMessageSend(CharSequence message, boolean notify, int scheduleDate, int scheduleRepeatPeriod, long payStars) {
+            if (liveDraftRunnable != null) {
+                AndroidUtilities.cancelRunOnUIThread(liveDraftRunnable);
+                liveDraftRunnable = null;
+            }
+            if (chatActivityEnterView != null) {
+                chatActivityEnterView.onLiveMessageSent();
+            }
             if (chatListItemAnimator != null) {
                 chatActivityEnterViewAnimateFromTop = chatActivityEnterView.getBackgroundTop();
                 if (chatActivityEnterViewAnimateFromTop != 0) {
@@ -2630,6 +2638,20 @@ public class ChatActivity extends BaseFragment implements
         @Override
         public void onTextChanged(final CharSequence text, boolean bigChange, boolean fromDraft) {
             MediaController.getInstance().setInputFieldHasText(!TextUtils.isEmpty(text) || chatActivityEnterView.isEditingMessage());
+            if (liveDraftRunnable != null) {
+                AndroidUtilities.cancelRunOnUIThread(liveDraftRunnable);
+                liveDraftRunnable = null;
+            }
+            if (!fromDraft && chatActivityEnterView != null && chatActivityEnterView.isLiveStreamEnabled()) {
+                final CharSequence draftSnapshot = text;
+                liveDraftRunnable = () -> {
+                    liveDraftRunnable = null;
+                    if (chatActivityEnterView != null) {
+                        chatActivityEnterView.sendOrUpdateLiveDraft(draftSnapshot);
+                    }
+                };
+                AndroidUtilities.runOnUIThread(liveDraftRunnable, 300);
+            }
             if (mentionContainer != null && mentionContainer.getAdapter() != null) {
                 mentionContainer.getAdapter().searchUsernameOrHashtag(text, chatActivityEnterView.getCursorPosition(), messages, false, false);
             }
@@ -3059,7 +3081,7 @@ public class ChatActivity extends BaseFragment implements
             glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(
                     glassBackgroundSourceRenderNode, glassBackgroundSourceFrostedRenderNode, navbarContentSourceWallpaper);
             glassBackgroundDrawableFactory.setLiquidGlassEffectAllowed(true);
-            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(8) : dp(48));
+            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(20) : dp(48));
         } else {
             scrollableViewNoiseSuppressor = null;
             recommendedAdditionalSizeY = 0;
@@ -3802,6 +3824,10 @@ public class ChatActivity extends BaseFragment implements
     public void onFragmentDestroy() {
         app.exteraless.plugins.menus.MenuInjector.releaseMessageMenu(this);
         super.onFragmentDestroy();
+        if (liveDraftRunnable != null) {
+            AndroidUtilities.cancelRunOnUIThread(liveDraftRunnable);
+            liveDraftRunnable = null;
+        }
         AndroidUtilities.cancelRunOnUIThread(loadNextNewerFeedPage);
         if (feedIntegration != null) {
             feedIntegration.destroy();
@@ -4114,7 +4140,12 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 final boolean isThemeLight = themeDelegate != null && !themeDelegate.isDark();
-                if (isThemeLight && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                    final int base = app.exteraless.glass.SolegramGlass.tint(getThemedColor(Theme.key_chat_messagePanelBackground), themeDelegate);
+                    final float a = Math.max(0.18f, Math.min(0.60f, app.exteraless.glass.SolegramGlass.alpha(true) * 0.62f));
+                    return Theme.multAlpha(ColorUtils.setAlphaComponent(base, 255), a);
+                }
+                if (isThemeLight) {
                     return ColorUtils.setAlphaComponent(super.getBackgroundColor(), 216);
                 }
                 return super.getBackgroundColor();
@@ -4136,7 +4167,12 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 final boolean isThemeLight = themeDelegate != null && !themeDelegate.isDark();
-                if (isThemeLight && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
+                    final int base = app.exteraless.glass.SolegramGlass.tint(getThemedColor(Theme.key_windowBackgroundWhite), themeDelegate);
+                    final float a = Math.max(0.18f, Math.min(0.60f, app.exteraless.glass.SolegramGlass.alpha(true) * 0.62f));
+                    return Theme.multAlpha(ColorUtils.setAlphaComponent(base, 255), a);
+                }
+                if (isThemeLight) {
                     return ColorUtils.setAlphaComponent(super.getBackgroundColor(), 216);
                 }
                 return super.getBackgroundColor();
@@ -5306,7 +5342,7 @@ public class ChatActivity extends BaseFragment implements
         chatInputViewsContainer.setInputIslandBubbleDrawable(
             glassBackgroundDrawableFactory.create(chatInputViewsContainer, blurredBackgroundColorProvider));
         chatInputViewsContainer.setUnderKeyboardBackgroundDrawable(
-            glassBackgroundDrawableFactoryFrosted.create(chatInputViewsContainer, blurredBackgroundColorProvider));
+            (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? glassBackgroundDrawableFactory : glassBackgroundDrawableFactoryFrosted).create(chatInputViewsContainer, blurredBackgroundColorProvider));
 
 
         chatInputBubbleContainer = chatInputViewsContainer.getInputIslandBubbleContainer();
@@ -7823,7 +7859,7 @@ public class ChatActivity extends BaseFragment implements
 
         chatActivityFadeView = new ChatActivityFadeView(context);
         chatActivityFadeView.setResourcesProvider(themeDelegate);
-        chatActivityFadeView.setup(navbarContentDrawableFactory);
+        chatActivityFadeView.setup(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && glassBackgroundSourceFrostedRenderNode != null ? glassBackgroundDrawableFactoryFrosted : navbarContentDrawableFactory);
         chatActivityFadeView.setFadeHeightTop(dp(48));
         chatActivityFadeView.setFadeHeightBottom(dp(48));
         contentView.addView(chatActivityFadeView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
@@ -19433,6 +19469,9 @@ public class ChatActivity extends BaseFragment implements
             shouldHaveLightStatusBarIcons = statusBarBrightness <= 0.721f;
             shouldHaveLightNavigationBarIcons = navigationBarBrightness <= 0.9f;
 
+            if (source instanceof GlassSourceBitmap && getMeasuredWidth() > 0 && getMeasuredHeight() > 0) {
+                ((GlassSourceBitmap) source).setParentSize(getMeasuredWidth(), getMeasuredHeight(), 0);
+            }
             navbarContentSourceWallpaper.setSource(source);
             invalidateGlassSources();
             if (chatActivityFadeView != null) {
@@ -26937,11 +26976,15 @@ public class ChatActivity extends BaseFragment implements
             if (theme != null) {
                 if (chatThemeBottomSheet != null) {
                     chatThemeBottomSheet.setupLightDarkTheme(theme.isDark());
-                } else {
+                } else if (themeDelegate.chatTheme != null || themeDelegate.wallpaper != null) {
                     // switch the chat theme / wallpaper to the day or night variant of the theme being applied; instantly, like
                     // the app theme itself (the app-wide reveal shows the change; a chat fade here would run under it and be
                     // cut short by the instant app theme apply)
                     themeDelegate.setCurrentTheme(themeDelegate.chatTheme, themeDelegate.wallpaper, false, theme.isDark());
+                } else {
+                    themeDelegate.isDark = theme.isDark();
+                    themeDelegate.currentColors.clear();
+                    themeDelegate.backgroundDrawable = null;
                 }
             }
         } else if (id == NotificationCenter.chatAvailableReactionsUpdated) {
@@ -32654,10 +32697,7 @@ public class ChatActivity extends BaseFragment implements
                 };
                 SpannableStringBuilder text = new SpannableStringBuilder(AndroidUtilities.replaceSingleTag(LocaleController.getString(R.string.ReportSpamUserEmojiStatusHint2), openStatus));
                 SpannableString emoji = new SpannableString("x");
-                Long docid = null;
-                if (DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status) != 0) {
-                    docid = DialogObject.getEmojiStatusDocumentId(currentUser.emoji_status);
-                }
+                Long docid = UserObject.getEmojiStatusDocumentId(currentUser);
                 if (docid != null) {
                     AnimatedEmojiSpan span = new AnimatedEmojiSpan(docid, emojiStatusSpamHint.getPaint().getFontMetricsInt());
                     span.full = false;
@@ -48079,10 +48119,20 @@ public class ChatActivity extends BaseFragment implements
 
     private void checkThemeEmoticonOrWallpaper() {
         getNotificationCenter().doOnIdle(() -> {
-            setChatThemeEmoticon(userInfo != null ? userInfo.theme : null);
-//            if (emoticon == null && chatInfo != null) {
-//                emoticon = chatInfo.theme_emoticon;
-//            }
+            if (currentUser != null && userInfo != null) {
+                setChatThemeEmoticon(userInfo.theme);
+            } else if (currentChat != null && chatInfo != null) {
+                if (!TextUtils.isEmpty(chatInfo.theme_emoticon)) {
+                    TLRPC.TL_chatTheme chatTheme = new TLRPC.TL_chatTheme();
+                    chatTheme.emoticon = chatInfo.theme_emoticon;
+                    setChatThemeEmoticon(chatTheme);
+                } else {
+                    EmojiThemes existing = ChatThemeController.getInstance(currentAccount).getDialogTheme(dialog_id);
+                    if (existing == null || TextUtils.isEmpty(existing.getThemeKey().giftSlug)) {
+                        setChatThemeEmoticon(null);
+                    }
+                }
+            }
         });
     }
 
@@ -48243,7 +48293,7 @@ public class ChatActivity extends BaseFragment implements
                     return compactColor;
                 }
             }
-            if (chatTheme == null) {
+            if (chatTheme == null && (currentColors == null || currentColors.size() == 0)) {
                 return Theme.getColor(key);
             }
             int index = currentColors.indexOfKey(key);
@@ -48267,7 +48317,7 @@ public class ChatActivity extends BaseFragment implements
         }
 
         public int getCurrentColor(int key, boolean ignoreAnimation) {
-            if (chatTheme == null && backgroundDrawable == null) {
+            if (chatTheme == null && backgroundDrawable == null && (currentColors == null || currentColors.size() == 0)) {
                 return Theme.getColor(key);
             }
 
@@ -48458,10 +48508,26 @@ public class ChatActivity extends BaseFragment implements
             }
         }
 
+        private Theme.ThemeInfo resolveAppThemeForMode(boolean dark) {
+            if (Theme.getActiveTheme().isDark() == dark) {
+                return Theme.getActiveTheme();
+            }
+            SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("themeconfig", Activity.MODE_PRIVATE);
+            String dayThemeName = preferences.getString("lastDayTheme", "Blue");
+            if (Theme.getTheme(dayThemeName) == null || Theme.getTheme(dayThemeName).isDark()) {
+                dayThemeName = "Blue";
+            }
+            String nightThemeName = preferences.getString("lastDarkTheme", "Dark Blue");
+            if (Theme.getTheme(nightThemeName) == null || !Theme.getTheme(nightThemeName).isDark()) {
+                nightThemeName = "Dark Blue";
+            }
+            return dark ? Theme.getTheme(nightThemeName) : Theme.getTheme(dayThemeName);
+        }
+
         private void setupChatTheme(EmojiThemes chatTheme, TLRPC.WallPaper wallPaper, boolean withAnimation, boolean createNewResources) {
-            // Перенос exteraGram 12.9.0:ChatActivity:12501: при выключенных
-            // индивидуальных темах чат остаётся в общей теме приложения.
-            if (!AppearanceConfig.customThemes()) return;
+            if (!AppearanceConfig.customThemes()) {
+                chatTheme = null;
+            }
             if (parentThemeDelegate != null) return;
 
             this.chatTheme = chatTheme;
@@ -48478,32 +48544,22 @@ public class ChatActivity extends BaseFragment implements
                 currentColor = Theme.getServiceMessageColor();
             }
             if (chatTheme == null && wallPaper == null) {
-                currentColors = new SparseIntArray();
                 currentPaints.clear();
                 currentDrawables.clear();
                 Drawable wallpaperDrawable = Theme.getCachedWallpaperNonBlocking();
                 if (wallpaperDrawable instanceof MotionBackgroundDrawable) {
                     ((MotionBackgroundDrawable) wallpaperDrawable).setPhase(prevPhase);
                 }
-                backgroundDrawable = null;//wallpaperDrawable;
-
-                Theme.ThemeInfo activeTheme;
                 if (Theme.getActiveTheme().isDark() == isDark) {
-                    activeTheme = Theme.getActiveTheme();
+                    currentColors = new SparseIntArray();
+                    backgroundDrawable = null;
                 } else {
-                    SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("themeconfig", Activity.MODE_PRIVATE);
-                    String dayThemeName = preferences.getString("lastDayTheme", "Blue");
-                    if (Theme.getTheme(dayThemeName) == null || Theme.getTheme(dayThemeName).isDark()) {
-                        dayThemeName = "Blue";
-                    }
-                    String nightThemeName = preferences.getString("lastDarkTheme", "Dark Blue");
-                    if (Theme.getTheme(nightThemeName) == null || !Theme.getTheme(nightThemeName).isDark()) {
-                        nightThemeName = "Dark Blue";
-                    }
-                    activeTheme = isDark ? Theme.getTheme(nightThemeName) : Theme.getTheme(dayThemeName);
+                    Theme.ThemeInfo oppositeTheme = resolveAppThemeForMode(isDark);
+                    currentColors = Theme.buildPreviewColors(oppositeTheme);
+                    backgroundDrawable = Theme.createBackgroundDrawable(oppositeTheme, currentColors, null, prevPhase, true).wallpaper;
+                    initDrawables();
+                    initPaints();
                 }
-
-                Theme.applyTheme(activeTheme, false, isDark);
                 initServiceMessageColors(backgroundDrawable);
                 ownCompactResources = false;
                 updateCompactResources();
@@ -48513,7 +48569,11 @@ public class ChatActivity extends BaseFragment implements
                     Theme.createChatResources(ApplicationLoader.applicationContext, false);
                 }
                 if (chatTheme == null) {
-                    currentColors = new SparseIntArray();
+                    if (Theme.getActiveTheme().isDark() == isDark) {
+                        currentColors = new SparseIntArray();
+                    } else {
+                        currentColors = Theme.buildPreviewColors(resolveAppThemeForMode(isDark));
+                    }
                 } else {
                     currentColors = chatTheme.createColors(currentAccount, isDark ? 1 : 0);
                 }
@@ -48561,25 +48621,6 @@ public class ChatActivity extends BaseFragment implements
                     patternAlphaAnimator.start();
                 }
 
-                if (chatTheme == null && dialog_id >= 0) {
-                    Theme.ThemeInfo activeTheme;
-                    if (Theme.getActiveTheme().isDark() == isDark) {
-                        activeTheme = Theme.getActiveTheme();
-                    } else {
-                        SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("themeconfig", Activity.MODE_PRIVATE);
-                        String dayThemeName = preferences.getString("lastDayTheme", "Blue");
-                        if (Theme.getTheme(dayThemeName) == null || Theme.getTheme(dayThemeName).isDark()) {
-                            dayThemeName = "Blue";
-                        }
-                        String nightThemeName = preferences.getString("lastDarkTheme", "Dark Blue");
-                        if (Theme.getTheme(nightThemeName) == null || !Theme.getTheme(nightThemeName).isDark()) {
-                            nightThemeName = "Dark Blue";
-                        }
-                        activeTheme = isDark ? Theme.getTheme(nightThemeName) : Theme.getTheme(dayThemeName);
-                    }
-
-                    Theme.applyTheme(activeTheme, false, isDark);
-                }
                 if (createNewResources) {
                     int[] colors = AndroidUtilities.calcDrawableColor(backgroundDrawable);
                     currentColor = colors[0];
@@ -49000,10 +49041,13 @@ public class ChatActivity extends BaseFragment implements
         if (contentView == null || parentThemeDelegate != null) {
             return;
         }
-        if (themeDelegate.backgroundDrawable != null && contentView.getBackgroundImage() != null) {
+        if (themeDelegate.backgroundDrawable != null) {
+            if (contentView.getBackgroundImage() != themeDelegate.backgroundDrawable) {
+                contentView.setBackgroundImage(themeDelegate.backgroundDrawable, false);
+            }
             return;
         }
-        if (contentView.getBackgroundImage() == null || AndroidUtilities.isTablet()) {
+        if (!isCompactMode() || contentView.getBackgroundImage() == null || AndroidUtilities.isTablet()) {
             // compact mode starts with its plain background, a chat drawn by the pull-down transition never swaps it in
             final Drawable drawable = isCompactMode() ? contentView.getCompactBackground() : Theme.getCachedWallpaper();
             contentView.setBackgroundImage(drawable, !isCompactMode() && Theme.isWallpaperMotion());
@@ -53293,7 +53337,7 @@ public class ChatActivity extends BaseFragment implements
 
     private void updateChatGlassConfig() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && glassBackgroundDrawableFactory != null) {
-            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(8) : dp(48));
+            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(20) : dp(48));
         }
         selectedBackgroundDelegateThemeColors();
         if (actionBar != null) {

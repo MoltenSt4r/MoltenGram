@@ -227,6 +227,16 @@
 <string name="OEChatsMessageAnimPop">Всплывание (Pop)</string>
 <string name="OECustomEmojiStatus">Кастомные эмодзи-статусы</string>
 <string name="OEFreeProfileAppearance">Оформление без премиума</string>
+<string name="OEBotProfileSync">Синхронизация через бота (@BotFather)</string>
+<string name="OEBotProfileSyncInfo">Создаёт служебного бота от вашего имени и хранит статусы, цвета и тему QR в его описании, оставляя вашу фамилию и «О себе» почти нетронутыми.</string>
+<string name="OEBotProfileSyncProgress">Настройка бота через @BotFather...</string>
+<string name="OEBotProfileSyncFailedTitle">Не удалось включить синхронизацию</string>
+<string name="OEBotProfileSyncErrLimit">Достигнут лимит ботов на аккаунте (20). Удалите лишнего бота в @BotFather и попробуйте снова.</string>
+<string name="OEBotProfileSyncErrSpam">Нельзя написать @BotFather (спам-блок или ограничение аккаунта).</string>
+<string name="OEBotProfileSyncErrFlood">Слишком много запросов к @BotFather. Подождите немного и попробуйте снова.</string>
+<string name="OEBotProfileSyncErrBlocked">@BotFather заблокирован на вашем аккаунте. Разблокируйте его и повторите попытку.</string>
+<string name="OEBotProfileSyncErrGeneric">@BotFather не подтвердил создание бота (%s).</string>
+<string name="OEBotProfileSyncSuccess">Бот @%s готов и привязан</string>
 <string name="OEColoredText">Цветной текст</string>
 <string name="FeedHideChannelAvatars">Скрыть аватарки каналов</string>
 <string name="FeedHideChannelAvatarsInfo">Не показывать аватарки каналов рядом с публикациями в ленте.</string>
@@ -244,4 +254,20 @@
 <string name="OEChatsVoiceHeader">Голосовые сообщения</string>
 <string name="OEDoubleTapSaveToDevice">Сохранить на устройство</string>
 <string name="OESendAfterSlowMode">Отправить после слоумода</string>
+<string name="OEBotProfileTitle">Профиль бота</string>
+<string name="OEBotChangeAvatar">Изменить аватар бота</string>
+<string name="OEBotRemoveAvatar">Удалить аватар</string>
+<string name="OEBotInfoSection">Данные бота</string>
+<string name="OEBotNameHint">Имя бота</string>
+<string name="OEBotAboutHint">О себе (до 120 символов)</string>
+<string name="OEBotDescriptionHint">Что умеет этот бот? (до 512 символов)</string>
+<string name="OEBotUsernameNote">Telegram разрешает менять базовый @username бота только при создании или через Fragment.</string>
+<string name="OEBotBannerSection">Баннер «Что умеет этот бот»</string>
+<string name="OEBotBannerEmpty">Баннер не задан</string>
+<string name="OEBotEditBannerBotFather">Изменить баннер в @BotFather</string>
+<string name="OEBotBannerNote">Telegram не даёт боту API для загрузки баннера описания — его нужно менять через @BotFather (/setdescription).</string>
+<string name="OEBotSaved">Профиль бота обновлён</string>
+<string name="OEBotNameRequired">Имя бота не может быть пустым</string>
+<string name="OEBotLiveStreamOn">Live-печать включена</string>
+<string name="OEBotLiveStreamOff">Live-печать выключена</string>
 </resources>

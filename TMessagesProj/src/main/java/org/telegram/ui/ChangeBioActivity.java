@@ -214,10 +214,7 @@ public class ChangeBioActivity extends BaseFragment {
         final AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
 
         final TL_account.updateProfile req = new TL_account.updateProfile();
-        String tag = app.exteraless.chats.CustomEmojiStatusHelper.getTagForCurrentUser(currentAccount);
-        final String newAbout = (!tag.isEmpty())
-                ? app.exteraless.chats.CustomEmojiStatusHelper.formatBioWithTag(newName, tag, userFull.user != null && userFull.user.premium)
-                : app.exteraless.chats.CustomEmojiStatusHelper.cleanBio(newName);
+        final String newAbout = newName;
         req.about = newAbout;
         req.flags |= 4;
 

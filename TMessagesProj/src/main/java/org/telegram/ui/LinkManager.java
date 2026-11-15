@@ -569,7 +569,10 @@ public class LinkManager {
         }
 
         if ("edit".equalsIgnoreCase(first)) {
-            presentFragment(new UserInfoActivity());
+            presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
+            if (app.exteraless.bots.BotAccountHelper.isBotSession(currentAccount)) {
+                return true;
+            }
             if ("first-name".equalsIgnoreCase(second))
                 scrollTo("firstNameRow");
             if ("last-name".equalsIgnoreCase(second))
@@ -593,7 +596,7 @@ public class LinkManager {
 
         if ("my-profile".equalsIgnoreCase(first)) {
             if ("edit".equalsIgnoreCase(second)) {
-                presentFragment(new UserInfoActivity());
+                presentFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                 return true;
             }
 

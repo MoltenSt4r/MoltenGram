@@ -7,8 +7,10 @@ import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LiteMode;
+import org.telegram.messenger.NotificationCenter;
 import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.blur3.GlassOutlineStyle;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.utils.glass.GlassEngine;
@@ -169,10 +171,32 @@ public final class LiquidGlassConfig {
             .putBoolean(PREFIX + "glassFolders", true);
     }
 
+    private static final Runnable postThemeChangedRunnable = () -> {
+        NotificationCenter.getGlobalInstance().postNotificationName(
+                NotificationCenter.didSetNewTheme,
+                Theme.isCurrentThemeDark(),
+                false,
+                true);
+    };
+
+    private static void scheduleThemeBroadcast(boolean immediate) {
+        AndroidUtilities.cancelRunOnUIThread(postThemeChangedRunnable);
+        if (immediate) {
+            AndroidUtilities.runOnUIThread(postThemeChangedRunnable);
+        } else {
+            AndroidUtilities.runOnUIThread(postThemeChangedRunnable, 60);
+        }
+    }
+
     public static void putInt(String key, int value) {
         prefs().edit().putInt(PREFIX + key, value).apply();
         reload();
         notifyChanged();
+        if ("glassTint".equals(key)) {
+            scheduleThemeBroadcast(true);
+        } else if ("glassTintAmount".equals(key) || "glassOpacity".equals(key) || "glassHighlight".equals(key)) {
+            scheduleThemeBroadcast(false);
+        }
     }
 
     public static void putBoolean(String key, boolean value) {
@@ -187,6 +211,9 @@ public final class LiquidGlassConfig {
         }
         reload();
         notifyChanged();
+        if ("glassOn".equals(key) || "glassShadow".equals(key) || "glassPreviewLook".equals(key) || "frostedHeaders".equals(key)) {
+            scheduleThemeBroadcast(true);
+        }
     }
 
     public static void enableTexturedGlass() {
@@ -209,13 +236,16 @@ public final class LiquidGlassConfig {
         reload();
         enableTexturedGlass();
         notifyChanged();
+        scheduleThemeBroadcast(true);
     }
 
     public static void notifyChanged() {
         version++;
+        ThemeBind.updateAll();
         Theme.reloadAllResources(ApplicationLoader.applicationContext);
         GlassOutlineStyle.dispatchChange();
         GlassEngine.bumpGeneration();
+        app.exteraless.player.PlayerMiniView.styleChanged();
         for (Listener listener : listeners) {
             try {
                 listener.onLiquidGlassConfigChanged();

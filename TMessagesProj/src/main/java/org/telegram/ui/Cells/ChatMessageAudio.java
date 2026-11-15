@@ -241,6 +241,8 @@ class ChatMessageAudio {
                 canvas.save();
             }
             canvas.translate(tx + cell.seekBarX, y);
+            boolean playingMusic = showSeekbar && !MediaController.getInstance().isMessagePaused();
+            cell.seekBar.setPlaying(playingMusic);
             cell.seekBar.draw(canvas);
             canvas.restore();
         }

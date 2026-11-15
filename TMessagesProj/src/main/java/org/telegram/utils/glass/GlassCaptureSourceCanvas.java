@@ -413,6 +413,8 @@ public class GlassCaptureSourceCanvas {
 
         private float glassRadius;
         private float frostedGlassRadius;
+        private float configuredBlurScale = -1f;
+        private boolean configuredVibrancy;
 
         private int glassOffsetX, glassOffsetY;
         private int frostedGlassOffsetX, frostedGlassOffsetY;
@@ -422,9 +424,18 @@ public class GlassCaptureSourceCanvas {
                 int frostedGlassDownsample,
                 int normalizationDownsample
         ) {
+            final float blurScale = app.exteraless.glass.SolegramGlass.blurScale();
+            final boolean vibrancy = app.exteraless.glass.SolegramGlass.vibrancy();
+            if (configuredBlurScale != blurScale || configuredVibrancy != vibrancy) {
+                configuredBlurScale = blurScale;
+                configuredVibrancy = vibrancy;
+                this.glassDownsample = -1;
+                this.frostedGlassDownsample = -1;
+                renderNodeGlass.setRenderEffect(vibrancy ? RenderNodeEffects.getSaturationX3RenderEffect() : null);
+            }
             if (this.glassDownsample != glassDownsample) {
                 this.glassDownsample = glassDownsample;
-                glassRadius = Math.max(0.5f, blurRadiusForDownsample(dpf2(7) * app.exteraless.glass.SolegramGlass.blurScale(), glassDownsample));
+                glassRadius = Math.max(glassDownsample > 1 ? 1.5f : 0.5f, blurRadiusForDownsample(dpf2(7) * blurScale, glassDownsample));
                 renderNode.setRenderEffect(RenderEffect.createBlurEffect(
                         glassRadius, glassRadius, Shader.TileMode.CLAMP));
                 renderNodeFrostedFiltered.setRenderEffect(null);
@@ -432,7 +443,7 @@ public class GlassCaptureSourceCanvas {
             if (this.frostedGlassDownsample != frostedGlassDownsample) {
                 this.frostedGlassDownsample = frostedGlassDownsample;
                 frostedGlassRadius = Math.max(0.5f, blurRadiusForDownsample(
-                        dpf2(36) * app.exteraless.glass.SolegramGlass.blurScale(), frostedGlassDownsample));
+                        dpf2(36) * blurScale, frostedGlassDownsample));
                 renderNodeGlassFrosted.setRenderEffect(RenderEffect.createBlurEffect(
                         frostedGlassRadius, frostedGlassRadius, Shader.TileMode.CLAMP));
             }

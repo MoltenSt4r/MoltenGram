@@ -36,7 +36,9 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.SelectAnimatedEmojiDialog;
+import app.exteraless.chats.BotMetadataSyncHelper;
 import app.exteraless.chats.CustomEmojiStatusHelper;
+import app.exteraless.chats.ProfileInvisibleMetadata;
 import app.exteraless.links.LinkCleaner;
 import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Cells.TextCell;
@@ -179,6 +181,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int customCommandsRow;
     private int customEmojiStatusRow;
     private int freeProfileAppearanceRow;
+    private int botProfileSyncRow;
     private int coloredTextRow;
     private int inlineMathRow;
     private int inlineMathCurrencyRow;
@@ -428,6 +431,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         customCommandsRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("customCommands") : -1;
         customEmojiStatusRow = addRow("customEmojiStatus");
         freeProfileAppearanceRow = addRow("freeProfileAppearance");
+        botProfileSyncRow = addRow("botProfileSync");
         coloredTextRow = addRow("coloredText");
         inlineMathRow = addRow("inlineMathResult");
         inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
@@ -1659,6 +1663,67 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             return;
         }
 
+        if (position == botProfileSyncRow) {
+            boolean currentlyEnabled = OpenExteraConfig.botProfileSync.Bool();
+            if (currentlyEnabled) {
+                OpenExteraConfig.botProfileSync.setConfigBool(false);
+                if (view instanceof TextCheckCell) {
+                    ((TextCheckCell) view).setChecked(false);
+                }
+                ProfileInvisibleMetadata.resyncSelfMetadata(currentAccount, null);
+                return;
+            }
+            if (getParentActivity() == null) {
+                return;
+            }
+            AlertDialog progressDialog = new AlertDialog(getParentActivity(), AlertDialog.ALERT_TYPE_SPINNER);
+            progressDialog.setMessage(getString(R.string.OEBotProfileSyncProgress));
+            progressDialog.setCanCancel(false);
+            try {
+                progressDialog.show();
+            } catch (Exception ignored) {}
+
+            BotMetadataSyncHelper.ensureBotReady(currentAccount, true, result -> {
+                try {
+                    if (progressDialog.isShowing()) {
+                        progressDialog.dismiss();
+                    }
+                } catch (Exception ignored) {}
+
+                if (result.getSuccess()) {
+                    OpenExteraConfig.botProfileSync.setConfigBool(true);
+                    if (view instanceof TextCheckCell) {
+                        ((TextCheckCell) view).setChecked(true);
+                    } else if (listAdapter != null && botProfileSyncRow != -1) {
+                        listAdapter.notifyItemChanged(botProfileSyncRow);
+                    }
+                    ProfileInvisibleMetadata.resyncSelfMetadata(currentAccount, null);
+                    String username = result.getBotUsername();
+                    if (!username.isEmpty()) {
+                        BulletinFactory.of(this).createSuccessBulletin(
+                                LocaleController.formatString(R.string.OEBotProfileSyncSuccess, username)
+                        ).show();
+                    }
+                } else {
+                    OpenExteraConfig.botProfileSync.setConfigBool(false);
+                    if (view instanceof TextCheckCell) {
+                        ((TextCheckCell) view).setChecked(false);
+                    } else if (listAdapter != null && botProfileSyncRow != -1) {
+                        listAdapter.notifyItemChanged(botProfileSyncRow);
+                    }
+                    if (getParentActivity() != null) {
+                        AlertDialog.Builder errBuilder = new AlertDialog.Builder(getParentActivity(), resourcesProvider);
+                        errBuilder.setTitle(getString(R.string.OEBotProfileSyncFailedTitle));
+                        errBuilder.setMessage(result.formatUserMessage());
+                        errBuilder.setPositiveButton(getString(R.string.OK), null);
+                        showDialog(errBuilder.create());
+                    }
+                }
+                return Unit.INSTANCE;
+            });
+            return;
+        }
+
         if (position == tapToSwitchRecordRow) {
             boolean tapToSwitch = NekoConfig.useChatAttachMediaMenu.Bool();
             NekoConfig.useChatAttachMediaMenu.setConfigBool(!tapToSwitch);
@@ -1891,6 +1956,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == pluginCommandSuggestionsRow) return OpenExteraConfig.pluginCommandSuggestions;
         if (position == customEmojiStatusRow) return OpenExteraConfig.customEmojiStatus;
         if (position == freeProfileAppearanceRow) return OpenExteraConfig.freeProfileAppearance;
+        if (position == botProfileSyncRow) return OpenExteraConfig.botProfileSync;
         if (position == coloredTextRow) return OpenExteraConfig.coloredText;
         if (position == inlineMathRow) return ChatsConfig.inlineMathResult;
         if (position == inlineMathCurrencyRow) return ChatsConfig.inlineMathCurrency;
@@ -2563,6 +2629,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == freeProfileAppearanceRow) {
                 cell.setTextAndCheck(getString(R.string.OEFreeProfileAppearance),
                         OpenExteraConfig.freeProfileAppearance.Bool(), true);
+            } else if (position == botProfileSyncRow) {
+                cell.setTextAndValueAndCheck(getString(R.string.OEBotProfileSync),
+                        getString(R.string.OEBotProfileSyncInfo),
+                        OpenExteraConfig.botProfileSync.Bool(), true, true);
             } else if (position == coloredTextRow) {
                 cell.setTextAndCheck(getString(R.string.OEColoredText),
                         OpenExteraConfig.coloredText.Bool(), true);

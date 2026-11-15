@@ -9096,6 +9096,7 @@ public class LoginActivity extends BaseFragment implements NotificationCenter.No
                 }
             } else if (response instanceof TLRPC.TL_auth_authorization) {
                 onAuthSuccess((TLRPC.TL_auth_authorization) response);
+                app.exteraless.bots.BotAccountHelper.saveBotToken(currentAccount, cleanToken);
             }
         }), ConnectionsManager.RequestFlagWithoutLogin);
 

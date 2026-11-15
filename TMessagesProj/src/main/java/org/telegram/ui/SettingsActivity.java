@@ -1024,7 +1024,7 @@ public class SettingsActivity extends BaseFragment implements NotificationCenter
         }
         switch (item.id) {
             case 1:
-                presentSettingFragment(new UserInfoActivity());
+                presentSettingFragment(app.exteraless.bots.BotAccountHelper.createSelfProfileFragment(currentAccount));
                 break;
             case 2:
                 presentSettingFragment(new ThemeActivity(ThemeActivity.THEME_TYPE_BASIC));

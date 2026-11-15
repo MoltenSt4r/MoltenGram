@@ -1222,7 +1222,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
     private ColoredImageSpan lockSpan;
     private boolean shownWearInfo;
     private void onWearPressed(View v) {
-        if (UserConfig.getInstance(currentAccount).isPremium() && (isWorn(currentAccount, getUniqueGift()) || shownWearInfo)) {
+        final boolean allowFreeStatus = UserConfig.getInstance(currentAccount).isPremium() || app.exteraless.chats.CustomEmojiStatusHelper.isEnabled();
+        if (allowFreeStatus && (isWorn(currentAccount, getUniqueGift()) || shownWearInfo)) {
             toggleWear();
             return;
         }
@@ -1232,7 +1233,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         final String product = gift.title + " #" + LocaleController.formatNumber(gift.num, ',');
         wearTitle.setText(LocaleController.formatString(R.string.Gift2WearTitle, product));
         SpannableStringBuilder buttonText = new SpannableStringBuilder(getString(R.string.Gift2WearStart));
-        if (!UserConfig.getInstance(currentAccount).isPremium()) {
+        if (!allowFreeStatus) {
             buttonText.append(" l");
             if (lockSpan == null) {
                 lockSpan = new ColoredImageSpan(R.drawable.msg_mini_lock3);
@@ -1256,7 +1257,8 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         final String product = gift.title + " #" + LocaleController.formatNumber(gift.num, ',');
         wearTitle.setText(LocaleController.formatString(R.string.Gift2WearTitle, product));
         SpannableStringBuilder buttonText = new SpannableStringBuilder(getString(R.string.Gift2WearStart));
-        if (dialogId == UserConfig.getInstance(currentAccount).getClientUserId() && !UserConfig.getInstance(currentAccount).isPremium()) {
+        final boolean allowFreeStatus = UserConfig.getInstance(currentAccount).isPremium() || app.exteraless.chats.CustomEmojiStatusHelper.isEnabled();
+        if (dialogId == UserConfig.getInstance(currentAccount).getClientUserId() && !allowFreeStatus) {
             buttonText.append(" l");
             if (lockSpan == null) {
                 lockSpan = new ColoredImageSpan(R.drawable.msg_mini_lock3);
@@ -1285,6 +1287,13 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
                 final TLRPC.TL_emojiStatusCollectible status = (TLRPC.TL_emojiStatusCollectible) user.emoji_status;
                 return status.collectible_id == gift.id;
             }
+            if (user != null && UserObject.isEmojiStatusCollectible(user)) {
+                final Long docId = UserObject.getEmojiStatusDocumentId(user);
+                final TL_stars.starGiftAttributeModel model = MessagesController.findAttribute(gift.attributes, TL_stars.starGiftAttributeModel.class);
+                if (docId != null && docId != 0 && model != null && model.document != null && model.document.id == docId) {
+                    return true;
+                }
+            }
         } else {
             final TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(-dialogId);
             if (chat != null && chat.emoji_status instanceof TLRPC.TL_emojiStatusCollectible) {
@@ -1308,7 +1317,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
         } else {
             final long did = getDialogId();
             if (did >= 0) {
-                if (!UserConfig.getInstance(currentAccount).isPremium()) {
+                if (!UserConfig.getInstance(currentAccount).isPremium() && !app.exteraless.chats.CustomEmojiStatusHelper.isEnabled()) {
                     getBulletinFactory()
                         .createSimpleBulletinDetail(R.raw.star_premium_2, AndroidUtilities.premiumText(getString(R.string.Gift2ActionWearNeededPremium), () -> {
                             new PremiumFeatureBottomSheet(getDummyFragment(), PremiumPreviewFragment.PREMIUM_FEATURE_EMOJI_STATUS, false).show();

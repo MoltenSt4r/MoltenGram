@@ -475,7 +475,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             iBlur3SourceTabFrosted != null ? iBlur3SourceTabFrosted : iBlur3SourceColor,
             iBlur3SourceColor);
         iBlur3FactoryTabs.setSourceRootView(viewPositionWatcher, contentView);
-        iBlur3FactoryTabs.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar());
+        iBlur3FactoryTabs.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
 
         tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
         tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
@@ -1172,7 +1172,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         ViewGroup.MarginLayoutParams lp;
         {
-            final int height = navigationBarHeight + updateLayoutHeight + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int height = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
             lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
             if (lp.height != height) {
                 lp.height = height;
@@ -1668,18 +1669,26 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private void blur3_updateColors() {
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
+            tabsViewBackground.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar() || app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
             tabsViewBackground.updateColors();
+            tabsViewBackground.invalidateDisplayList();
         }
         if (miniPlayer != null) {
             miniPlayer.applyStyle(false);
             miniPlayer.invalidateGlass();
         }
-        blur3_invalidateBlur();
+        invalidateTabsGlass();
         if (fadeView != null) {
             fadeView.invalidate();
         }
         if (tabsView != null) {
             tabsView.invalidate();
+        }
+        if (tabsViewWrapper != null) {
+            tabsViewWrapper.invalidate();
+        }
+        if (contentView != null) {
+            contentView.invalidate();
         }
         if (tabs != null) {
             for (GlassTabView tabView : tabs) {

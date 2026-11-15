@@ -658,8 +658,8 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         }
 
         firstNameEdit.setText(currentFirstName = user.first_name);
-        lastNameEdit.setText(currentLastName = user.last_name);
-        bioEdit.setText(currentBio = userFull.about);
+        lastNameEdit.setText(currentLastName = app.exteraless.chats.ProfileInvisibleMetadata.cleanLastName(user.last_name));
+        bioEdit.setText(currentBio = app.exteraless.chats.CustomEmojiStatusHelper.cleanBioDisplay(userFull.about));
         birthday = currentBirthday = userFull.birthday;
         if ((userFull.flags2 & 64) != 0) {
             currentChannel = userFull.personal_channel_id;
@@ -726,14 +726,21 @@ public class UserInfoActivity extends UniversalFragment implements NotificationC
         ) {
             TL_account.updateProfile req1 = new TL_account.updateProfile();
 
+            final kotlin.Pair<String, String> packedNames = app.exteraless.chats.ProfileInvisibleMetadata.packProfileNamesForEdit(
+                    currentAccount,
+                    user,
+                    firstNameEdit.getText().toString(),
+                    lastNameEdit.getText().toString()
+            );
             req1.flags |= 1;
-            req1.first_name = user.first_name = firstNameEdit.getText().toString();
+            req1.first_name = user.first_name = packedNames.getFirst();
 
             req1.flags |= 2;
-            req1.last_name = user.last_name = lastNameEdit.getText().toString();
+            req1.last_name = user.last_name = packedNames.getSecond();
 
             req1.flags |= 4;
-            req1.about = userFull.about = bioEdit.getText().toString();
+            final String visibleBio = bioEdit.getText().toString();
+            req1.about = userFull.about = visibleBio;
             userFull.flags = TextUtils.isEmpty(userFull.about) ? (userFull.flags & ~2) : (userFull.flags | 2);
 
             requests.add(req1);

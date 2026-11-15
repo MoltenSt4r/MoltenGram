@@ -1257,11 +1257,10 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     menuItem.getIconView().getLocationInWindow(pos);
                     pos[0] += menuItem.getIconView().getMeasuredWidth() / 2;
                     pos[1] += menuItem.getIconView().getMeasuredHeight() / 2;
+                    Theme.turnOffAutoNight(ThemeActivity.this);
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.needSetDayNightTheme, themeInfo, false, pos, -1, toDark, menuItem.getIconView());
                     updateRows(true);
                     //AndroidUtilities.updateVisibleRows(listView);
-
-                    Theme.turnOffAutoNight(ThemeActivity.this);
                 }
             }
         });
@@ -1599,6 +1598,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     return;
                 }
                 Theme.selectedAutoNightType = Theme.AUTO_NIGHT_TYPE_NONE;
+                Theme.saveAutoNightThemeConfig();
                 updateRows(true);
                 Theme.checkAutoNightThemeConditions();
             } else if (position == nightScheduledRow) {
@@ -1609,6 +1609,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                 if (Theme.autoNightScheduleByLocation) {
                     updateSunTime(null, true);
                 }
+                Theme.saveAutoNightThemeConfig();
                 updateRows(true);
                 Theme.checkAutoNightThemeConditions();
             } else if (position == nightAutomaticRow) {
@@ -1616,6 +1617,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     return;
                 }
                 Theme.selectedAutoNightType = Theme.AUTO_NIGHT_TYPE_AUTOMATIC;
+                Theme.saveAutoNightThemeConfig();
                 updateRows(true);
                 Theme.checkAutoNightThemeConditions();
             } else if (position == nightSystemDefaultRow) {
@@ -1623,12 +1625,14 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     return;
                 }
                 Theme.selectedAutoNightType = Theme.AUTO_NIGHT_TYPE_SYSTEM;
+                Theme.saveAutoNightThemeConfig();
                 updateRows(true);
                 Theme.checkAutoNightThemeConditions();
             } else if (position == scheduleLocationRow) {
                 Theme.autoNightScheduleByLocation = !Theme.autoNightScheduleByLocation;
                 TextCheckCell checkCell = (TextCheckCell) view;
                 checkCell.setChecked(Theme.autoNightScheduleByLocation);
+                Theme.saveAutoNightThemeConfig();
                 updateRows(true);
                 if (Theme.autoNightScheduleByLocation) {
                     updateSunTime(null, true);
