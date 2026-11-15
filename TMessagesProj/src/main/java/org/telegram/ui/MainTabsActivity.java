@@ -7,6 +7,7 @@ import static org.telegram.ui.Components.Premium.LimitReachedBottomSheet.TYPE_AC
 
 import org.telegram.messenger.FileLog;
 import android.animation.Animator;
+import android.animation.ValueAnimator;
 import android.content.Context;
 import android.content.Intent;
 import android.content.res.Configuration;
