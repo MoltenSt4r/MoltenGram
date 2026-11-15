@@ -1289,7 +1289,7 @@ public class StarGiftSheet extends BottomSheetWithRecyclerListView implements No
             }
             if (user != null && UserObject.isEmojiStatusCollectible(user)) {
                 final Long docId = UserObject.getEmojiStatusDocumentId(user);
-                final TL_stars.starGiftAttributeModel model = MessagesController.findAttribute(gift.attributes, TL_stars.starGiftAttributeModel.class);
+                final TL_stars.starGiftAttributeModel model = findAttribute(gift.attributes, TL_stars.starGiftAttributeModel.class);
                 if (docId != null && docId != 0 && model != null && model.document != null && model.document.id == docId) {
                     return true;
                 }

@@ -7960,7 +7960,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         return liveStreamEnabled
             && app.exteraless.bots.BotAccountHelper.isBotSession(currentAccount)
             && dialog_id > 0
-            && (fragment == null || fragment.getChatMode() == 0)
+            && (parentFragment == null || parentFragment.getChatMode() == 0)
             && !isEditingMessage();
     }
 
@@ -7970,7 +7970,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         boolean visible = app.exteraless.bots.BotAccountHelper.isBotSession(currentAccount)
             && dialog_id > 0
-            && (fragment == null || fragment.getChatMode() == 0)
+            && (parentFragment == null || parentFragment.getChatMode() == 0)
             && !isEditingMessage();
         int newVis = visible ? VISIBLE : GONE;
         if (liveStreamButton.getVisibility() != newVis) {
@@ -8001,7 +8001,7 @@ public class ChatActivityEnterView extends FrameLayout implements
                 liveDraftRandomId = 1L;
             }
         }
-        long threadMsgId = fragment != null ? fragment.getTopicId() : 0;
+        long threadMsgId = parentFragment != null ? parentFragment.getTopicId() : 0;
         app.exteraless.bots.BotAccountHelper.sendLiveTextDraft(currentAccount, dialog_id, threadMsgId, liveDraftRandomId, text);
     }
 
@@ -8012,7 +8012,7 @@ public class ChatActivityEnterView extends FrameLayout implements
         }
         long randomId = liveDraftRandomId;
         liveDraftRandomId = 0;
-        long threadMsgId = fragment != null ? fragment.getTopicId() : 0;
+        long threadMsgId = parentFragment != null ? parentFragment.getTopicId() : 0;
         app.exteraless.bots.BotAccountHelper.sendLiveTextDraft(currentAccount, dialog_id, threadMsgId, randomId, null);
     }
 

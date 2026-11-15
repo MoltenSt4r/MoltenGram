@@ -207,8 +207,8 @@ public class DownscaleScrollableNoiseSuppressor {
             hash = MediaDataController.calcHash(hash, originalWidth);
             hash = MediaDataController.calcHash(hash, originalHeight);
             hash = MediaDataController.calcHash(hash, k);
-            hash = MediaDataController.calcHash(hash, scaleX);
-            hash = MediaDataController.calcHash(hash, scaleY);
+            hash = MediaDataController.calcHash(hash, Float.floatToRawIntBits(scaleX));
+            hash = MediaDataController.calcHash(hash, Float.floatToRawIntBits(scaleY));
             hash = MediaDataController.calcHash(hash, app.exteraless.glass.LiquidGlassConfig.version);
 
             boolean ignoreHashCheck = !renderNodeOriginalWithOffset.hasDisplayList()
