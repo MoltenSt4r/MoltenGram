@@ -10,6 +10,8 @@
     <string name="ClearMessageDatabase">Clear Message Database</string>
     <string name="ClearMessageDatabaseNotification">Message database cleared.</string>
     <string name="CustomDeletedMark">Custom Deleted Mark</string>
+    <string name="DeletedMarkColor">Deleted Mark Color</string>
+    <string name="DeletedMarkColorDefault">Default</string>
     <string name="HidePremiumSection">Hide Premium in Settings</string>
     <string name="HideHelpSection">Hide Help in Settings</string>
     <string name="ProviderLLMTranslator">AI Translator</string>
@@ -155,7 +157,7 @@
     <string name="SendOfflinePacketAfterOnline">Go Offline Automatically</string>
     <string name="MarkReadAfterSend">Read on Interact</string>
     <string name="GhostModeNotice">Long tap on any option to prevent it from changing on toggling Ghost Mode.</string>
-    <string name="MarkReadAfterSendNotice">Automatically reads message when you send a new one or tap a reaction.</string>
+    <string name="MarkReadAfterSendNotice">Automatically reads message when you send a new one, tap a reaction or vote in a poll.</string>
     <string name="SendWithoutSoundRowNotice">Automatically sends outgoing messages without sound.</string>
     <string name="GhostReadMessage">Read Message</string>
     <string name="GhostModeExcludeRead">Exclude Read</string>
@@ -256,6 +258,12 @@
     <string name="StyleMaterialDesign3" translatable="false">Material Design 3</string>
     <string name="SaveDeletedExclusionMenu">Save Deleted</string>
     <string name="SaveDeletedExcluded">Exclude</string>
+    <string name="SaveDeletedExceptionsMode">Deleted Messages Exceptions</string>
+    <string name="SaveEditedExceptionsMode">Edit History Exceptions</string>
+    <string name="SaveExceptionsAllExceptSelected">All except selected</string>
+    <string name="SaveExceptionsOnlySelected">Only selected</string>
+    <string name="SaveExceptionsIncluded">Save</string>
+    <string name="SaveEditedExclusionMenu">Save Edits</string>
     <string name="MarkdownParser">Markdown Parser</string>
     <string name="KeepTranslatorPreferences">Keep Translator Preferences</string>
     <string name="KeepTranslatorPreferencesNotice">Preserve the current translator settings when changing App language.</string>

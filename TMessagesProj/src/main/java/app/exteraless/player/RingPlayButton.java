@@ -48,6 +48,18 @@ public class RingPlayButton extends View {
     private ValueAnimator resetAnimator;
     private float resetProgress;
     private boolean animatingReset;
+    private boolean showRing = true;
+
+    public void setShowRing(boolean show) {
+        if (showRing != show) {
+            showRing = show;
+            invalidate();
+        }
+    }
+
+    public void setRingVisible(boolean visible) {
+        setShowRing(visible);
+    }
 
     public void animateResetToZero() {
         if (drawnProgress <= 0.02f) {
@@ -123,7 +135,7 @@ public class RingPlayButton extends View {
             return;
         }
         playing = value;
-        if (animated) {
+        if (animated && isAttachedToWindow()) {
             alt.target = value ? 1f : 0f;
         } else {
             alt.snap(value ? 1f : 0f);
@@ -156,6 +168,10 @@ public class RingPlayButton extends View {
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
         lastFrame = 0;
+        if (!playing) {
+            amplitude = 0f;
+            alt.snap(0f);
+        }
         if (playing) {
             postInvalidateOnAnimation();
         }
@@ -165,6 +181,10 @@ public class RingPlayButton extends View {
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
         removeCallbacks(waveFrame);
+        if (!playing) {
+            amplitude = 0f;
+            alt.snap(0f);
+        }
     }
 
     @Override
@@ -173,12 +193,16 @@ public class RingPlayButton extends View {
         float dt = lastFrame == 0 ? 0.016f : Math.min(0.05f, (now - lastFrame) / 1000f);
         lastFrame = now;
         boolean animating = alt.step(dt);
-        float targetAmp = playing && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
-        amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
-        if (Math.abs(amplitude - targetAmp) < dpf2(0.03f)) {
+        boolean wavy = app.exteraless.appearance.AppearanceConfig.playerMiniWavy();
+        float targetAmp = playing && wavy && !LiteMode.isPowerSaverApplied() ? maxAmplitude : 0f;
+        float lerpRate = targetAmp == 0f
+                ? (1f - (float) Math.pow(0.45, dt / 0.016f))
+                : (1f - (float) Math.pow(0.85, dt / 0.04f));
+        amplitude += (targetAmp - amplitude) * lerpRate;
+        if (Math.abs(amplitude - targetAmp) < dpf2(targetAmp == 0f ? 0.06f : 0.03f)) {
             amplitude = targetAmp;
         }
-        if (amplitude > 0f) {
+        if (amplitude > 0f && playing) {
             phase = (phase + 6f * dt) % TAU;
         }
         float cx = getWidth() / 2f;
@@ -189,44 +213,55 @@ public class RingPlayButton extends View {
         drawnProgress = progress;
         float sweep = 360f * progress;
 
-        float strokeWidth = trackPaint.getStrokeWidth();
-        float visibleGap = dpf2(4.5f);
-        float gapDistance = visibleGap + strokeWidth;
-        float gapDeg = (float) Math.toDegrees(gapDistance / radius);
+        if (showRing) {
+            float strokeWidth = trackPaint.getStrokeWidth();
+            float gapFraction = Math.max(0f, Math.min(1f, (sweep - 2f) / 22f));
+            float visibleGap = dpf2(0.5f + 2.0f * gapFraction);
+            float gapDistance = visibleGap + strokeWidth;
+            float gapDeg = (float) Math.toDegrees(gapDistance / radius);
 
-        trackRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
-        if (sweep <= 1.5f) {
-            canvas.drawCircle(cx, cy, radius, trackPaint);
-        } else {
-            float inactiveStart = sweep + gapDeg;
-            float inactiveEnd = 360f - gapDeg;
-            float inactiveSweep = inactiveEnd - inactiveStart;
-            if (inactiveSweep > 2f) {
-                canvas.drawArc(trackRect, -90f + inactiveStart, inactiveSweep, false, trackPaint);
+            trackRect.set(cx - radius, cy - radius, cx + radius, cy + radius);
+            if (sweep <= 1.5f) {
+                canvas.drawCircle(cx, cy, radius, trackPaint);
+            } else {
+                float inactiveStart = sweep + gapDeg;
+                float inactiveEnd = 360f - gapDeg;
+                float inactiveSweep = inactiveEnd - inactiveStart;
+                if (inactiveSweep > 2f) {
+                    canvas.drawArc(trackRect, -90f + inactiveStart, inactiveSweep, false, trackPaint);
+                }
             }
-        }
-        if (sweep > 1.5f) {
-            path.rewind();
-            boolean first = true;
-            for (float deg = 0; ; deg += 3f) {
-                boolean last = deg >= sweep;
-                float d = last ? sweep : deg;
-                double th = Math.toRadians(d - 90);
-                float r = radius + amplitude * (float) Math.sin(waves * Math.toRadians(d) - phase);
-                float x = cx + r * (float) Math.cos(th);
-                float y = cy + r * (float) Math.sin(th);
-                if (first) {
-                    path.moveTo(x, y);
-                    first = false;
+            if (sweep > 1.5f) {
+                ringPaint.setColor(ringColor);
+                float sweepWaveScale = sweep <= 12f ? 0f : Math.min(1f, (sweep - 12f) / 28f);
+                float effectiveAmp = amplitude * sweepWaveScale;
+                if (effectiveAmp > 0.01f) {
+                    float taperDeg = sweep < 358f ? Math.min(12f, sweep * 0.25f) : 0f;
+                    path.rewind();
+                    boolean first = true;
+                    for (float deg = 0; ; deg += 3f) {
+                        boolean last = deg >= sweep;
+                        float d = last ? sweep : deg;
+                        double th = Math.toRadians(d - 90);
+                        float endFactor = taperDeg > 0f ? Math.min(1f, Math.min(d, sweep - d) / taperDeg) : 1f;
+                        float r = radius + effectiveAmp * endFactor * (float) Math.sin(waves * Math.toRadians(d) - phase);
+                        float x = cx + r * (float) Math.cos(th);
+                        float y = cy + r * (float) Math.sin(th);
+                        if (first) {
+                            path.moveTo(x, y);
+                            first = false;
+                        } else {
+                            path.lineTo(x, y);
+                        }
+                        if (last) {
+                            break;
+                        }
+                    }
+                    canvas.drawPath(path, ringPaint);
                 } else {
-                    path.lineTo(x, y);
-                }
-                if (last) {
-                    break;
+                    canvas.drawArc(trackRect, -90f, sweep, false, ringPaint);
                 }
             }
-            ringPaint.setColor(ringColor);
-            canvas.drawPath(path, ringPaint);
         }
         float t = Math.max(0f, Math.min(1f, alt.value));
         drawIcon(canvas, playIcon, 1f - t, 1f - 0.4f * alt.value);

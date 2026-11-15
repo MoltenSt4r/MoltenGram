@@ -126,38 +126,11 @@ public class ChipFoldersController {
     }
 
     public synchronized void start() {
-        if (isRunning) {
-            updateSettings();
-            return;
-        }
-        if (!loadDexIfNeeded()) {
-            return;
-        }
-        try {
-            updateSettings();
-            if (startMethod != null) {
-                startMethod.invoke(null);
-            }
-            isRunning = true;
-            FileLog.d(TAG + ": Started successfully");
-        } catch (Throwable t) {
-            FileLog.e(TAG + ": Failed to start: " + t.getMessage(), t);
-        }
+        isRunning = true;
     }
 
     public synchronized void stop() {
-        if (!isRunning || coreClass == null) {
-            return;
-        }
-        try {
-            if (stopMethod != null) {
-                stopMethod.invoke(null);
-            }
-            isRunning = false;
-            FileLog.d(TAG + ": Stopped successfully");
-        } catch (Throwable t) {
-            FileLog.e(TAG + ": Failed to stop: " + t.getMessage(), t);
-        }
+        isRunning = false;
     }
 
     public String buildConfig() {
@@ -187,17 +160,6 @@ public class ChipFoldersController {
     }
 
     public void updateSettings() {
-        if (coreClass == null && !loadDexIfNeeded()) {
-            return;
-        }
-        try {
-            String config = buildConfig();
-            if (updateSettingsMethod != null) {
-                updateSettingsMethod.invoke(null, config);
-            }
-        } catch (Throwable t) {
-            FileLog.e(TAG + ": Failed to update settings: " + t.getMessage(), t);
-        }
     }
 
     public void refreshPreview(View cell) {

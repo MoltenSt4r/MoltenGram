@@ -22,6 +22,7 @@ import android.widget.TextView;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.EmojiTextView;
 import org.telegram.ui.Components.LayoutHelper;
 
@@ -38,7 +39,7 @@ public class TextDetailSettingsCell extends FrameLayout {
 
         textView = new EmojiTextView(context);
         textView.setTypeface(AndroidUtilities.regular());
-        textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+        ThemeBind.textColor(textView, Theme.key_windowBackgroundWhiteBlackText);
         textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
         textView.setLines(1);
         textView.setMaxLines(1);
@@ -49,7 +50,7 @@ public class TextDetailSettingsCell extends FrameLayout {
 
         valueTextView = new EmojiTextView(context);
         valueTextView.setTypeface(AndroidUtilities.regular());
-        valueTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2));
+        ThemeBind.textColor(valueTextView, Theme.key_windowBackgroundWhiteGrayText2);
         valueTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
         valueTextView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
         valueTextView.setLines(1);
@@ -60,7 +61,7 @@ public class TextDetailSettingsCell extends FrameLayout {
 
         imageView = new ImageView(context);
         imageView.setScaleType(ImageView.ScaleType.CENTER);
-        imageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
+        ThemeBind.colorFilter(imageView, Theme.key_windowBackgroundWhiteGrayIcon, PorterDuff.Mode.MULTIPLY);
         imageView.setVisibility(GONE);
         addView(imageView, LayoutHelper.createFrame(52, 52, (LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.TOP, 8, 6, 8, 0));
 
@@ -100,7 +101,7 @@ public class TextDetailSettingsCell extends FrameLayout {
         }
     }
 
-    private AppIconsSelectorCell.AdaptiveIconImageView rightLauncherIconView;
+    private ImageView rightLauncherIconView;
 
     private void updatePaddings(boolean hasLeftIcon, boolean hasRightIcon) {
         int left = hasLeftIcon ? AndroidUtilities.dp(50) : 0;
@@ -153,19 +154,11 @@ public class TextDetailSettingsCell extends FrameLayout {
             return;
         }
         if (rightLauncherIconView == null) {
-            rightLauncherIconView = new AppIconsSelectorCell.AdaptiveIconImageView(getContext());
+            rightLauncherIconView = new ImageView(getContext());
             addView(rightLauncherIconView, LayoutHelper.createFrame(36, 36, (LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT) | Gravity.CENTER_VERTICAL, 21, 0, 21, 0));
         }
         rightLauncherIconView.setVisibility(VISIBLE);
-        rightLauncherIconView.setImageResource(icon.background);
-        if (icon.foreground != 0) {
-            rightLauncherIconView.setForeground(icon.foreground);
-        } else {
-            rightLauncherIconView.setForeground(0);
-        }
-        rightLauncherIconView.setOuterPadding(AndroidUtilities.dp(3));
-        rightLauncherIconView.setBackgroundOuterPadding(AndroidUtilities.dp(20));
-        rightLauncherIconView.setAdaptiveIconMode(icon.group != org.telegram.ui.LauncherIconController.IconGroup.TELEGRAM);
+        rightLauncherIconView.setImageDrawable(org.telegram.ui.LauncherIconController.createIconPreviewDrawable(getContext(), icon, 36));
         updatePaddings(imageView.getVisibility() == VISIBLE, true);
     }
 

@@ -65,9 +65,21 @@ object OpenExteraConfig {
     @JvmField
     val useCurrentEmojiForReactions = addConfig("OEUseCurrentEmojiForReactions", ConfigItem.configTypeBool, false)
 
-    /** Пользовательские эмодзи-статусы без Telegram Premium через код в Bio */
+    /** Пользовательские эмодзи-статусы без Telegram Premium */
     @JvmField
     val customEmojiStatus = addConfig("OECustomEmojiStatus", ConfigItem.configTypeBool, true)
+
+    /** Оформление профиля без Telegram Premium (цвет профиля, цвет имени и эмодзи из метаданных) */
+    @JvmField
+    val freeProfileAppearance = addConfig("OEFreeProfileAppearance", ConfigItem.configTypeBool, true)
+
+    /** Хранить невидимые метаданные статуса/профиля в описании отдельного бота через @BotFather */
+    @JvmField
+    val botProfileSync = addConfig("OEBotProfileSync", ConfigItem.configTypeBool, false)
+
+    /** Отображать цветной текст в сообщениях (разметка tg://color) */
+    @JvmField
+    val coloredText = addConfig("OEColoredText", ConfigItem.configTypeBool, true)
 
     /** Скрывать невидимый код эмодзи-статуса при отображении описания (Bio) */
     @JvmField
@@ -76,7 +88,16 @@ object OpenExteraConfig {
     // ---- Статические геттеры для вызова из Java в горячих местах ----
 
     @JvmStatic
-    fun customEmojiStatus(): Boolean = customEmojiStatus.Bool()
+    fun customEmojiStatus(): Boolean = customEmojiStatus.Bool() && botProfileSync.Bool()
+
+    @JvmStatic
+    fun freeProfileAppearance(): Boolean = freeProfileAppearance.Bool() && botProfileSync.Bool()
+
+    @JvmStatic
+    fun botProfileSync(): Boolean = botProfileSync.Bool()
+
+    @JvmStatic
+    fun coloredText(): Boolean = coloredText.Bool()
 
     @JvmStatic
     fun cleanBioDisplay(): Boolean = cleanBioDisplay.Bool()

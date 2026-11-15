@@ -1,6 +1,10 @@
-cmake_minimum_required(VERSION 3.10.2)
+cmake_minimum_required(VERSION 3.16)
 
-set(CMAKE_CXX_FLAGS "-std=c++14 -DANDROID -g0 -O2")
+set(CMAKE_CXX_STANDARD 17)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_CXX_EXTENSIONS OFF)
+
+set(CMAKE_CXX_FLAGS "-DANDROID -g0 -O2")
 set(CMAKE_C_FLAGS "-w -std=c11 -DANDROID -D_LARGEFILE_SOURCE=1 -g0 -O2 -Wno-error=implicit-function-declaration")
 set(CMAKE_ASM_FLAGS "${CFLAGS} -x assembler-with-cpp")
 set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -ffunction-sections -fdata-sections -fvisibility=hidden -flto=thin")
@@ -12,6 +16,37 @@ if (${ANDROID_ABI} STREQUAL "armeabi-v7a" OR ${ANDROID_ABI} STREQUAL "arm64-v8a"
 else()
     enable_language(ASM_NASM)
 endif()
+
+# Abseil
+set(ABSL_PROPAGATE_CXX_STD ON)
+set(ABSL_BUILD_TESTING OFF)
+set(ABSL_ENABLE_INSTALL OFF)
+add_subdirectory(
+        third_party/absl
+        ${CMAKE_CURRENT_BINARY_DIR}/absl
+        EXCLUDE_FROM_ALL)
+
+add_library(webrtc_absl INTERFACE)
+target_link_libraries(webrtc_absl INTERFACE
+        absl::base
+        absl::strings
+        absl::str_format
+        absl::cord
+        absl::synchronization
+        absl::time
+        absl::status
+        absl::statusor
+        absl::hash
+        absl::flat_hash_map
+        absl::flat_hash_set
+        absl::flags
+        absl::flags_parse
+        absl::random_random
+        absl::random_distributions
+        absl::crc32c
+        absl::log
+        absl::check
+)
 
 add_library(avutil STATIC IMPORTED)
 set_target_properties(avutil PROPERTIES IMPORTED_LOCATION ${CMAKE_HOME_DIRECTORY}/ffmpeg/${ANDROID_ABI}/libavutil.a)
@@ -49,6 +84,11 @@ set_target_properties(tde2e PROPERTIES IMPORTED_LOCATION ${CMAKE_HOME_DIRECTORY}
 add_library(tdutils STATIC IMPORTED)
 set_target_properties(tdutils PROPERTIES IMPORTED_LOCATION ${CMAKE_HOME_DIRECTORY}/tde2e/${ANDROID_ABI}/libtdutils.a)
 
+add_subdirectory(
+        prisma
+        ${CMAKE_CURRENT_BINARY_DIR}/prisma
+        EXCLUDE_FROM_ALL)
+
 #tgnet
 add_library(tgnet STATIC
         tgnet/ApiScheme.cpp
@@ -85,6 +125,30 @@ target_link_libraries(tgnet
 add_library(tlottie STATIC IMPORTED)
 set_target_properties(tlottie PROPERTIES
         IMPORTED_LOCATION ${CMAKE_HOME_DIRECTORY}/tlottie_lib/${ANDROID_ABI}/libtlottie.a)
+
+# Wallet Engine: matching Rust archive and generated UniFFI C++20 wrapper.
+set(WALLET_ENGINE_INCLUDE_DIR ${CMAKE_CURRENT_SOURCE_DIR}/prebuild/include/wallet-engine)
+add_library(wallet_engine STATIC IMPORTED)
+set_target_properties(wallet_engine PROPERTIES
+        IMPORTED_LOCATION ${CMAKE_CURRENT_SOURCE_DIR}/prebuild/lib/${ANDROID_ABI}/libwallet_engine.a)
+
+add_library(wallet_engine_cpp STATIC
+        ${WALLET_ENGINE_INCLUDE_DIR}/wallet_engine.cpp
+        ${WALLET_ENGINE_INCLUDE_DIR}/gram_wallet.cpp)
+# Keep C++20 local: existing JNI sources include Breakpad's C++17-only headers.
+# Any new source that includes wallet_engine.hpp must also opt into C++20.
+target_compile_features(wallet_engine_cpp PRIVATE cxx_std_20)
+# Keep unused bindings discardable even when voip resets CMAKE_CXX_FLAGS below.
+target_compile_options(wallet_engine_cpp PRIVATE -ffunction-sections -fdata-sections)
+target_include_directories(wallet_engine_cpp PUBLIC ${WALLET_ENGINE_INCLUDE_DIR})
+target_link_libraries(wallet_engine_cpp PUBLIC wallet_engine dl m)
+
+# Compile the JNI bridge as C++20 without changing the legacy JNI sources.
+# An object library keeps its JNI entry points in the existing tmessages .so.
+add_library(wallet_engine_jni OBJECT wallet/WalletEngineBridge.cpp wallet/GramWalletAdapter.cpp)
+target_compile_features(wallet_engine_jni PRIVATE cxx_std_20)
+set_target_properties(wallet_engine_jni PROPERTIES POSITION_INDEPENDENT_CODE ON)
+target_link_libraries(wallet_engine_jni PRIVATE wallet_engine_cpp)
 
 #sqlite
 add_library(sqlite STATIC
@@ -124,6 +188,21 @@ add_library(${NATIVE_LIB} SHARED
         secureid_ocr.cpp
         tde2e/bridge.cpp
 )
+
+include(twidget/twidget.cmake)
+twidget_target_sources(${NATIVE_LIB})
+
+# Compile JNI directly into the shared library so archive extraction cannot drop its exports.
+set(PRISMA_BRIDGE_SOURCES
+        "${CMAKE_CURRENT_SOURCE_DIR}/prisma/bridge/PrismaEngine.cpp"
+        "${CMAKE_CURRENT_SOURCE_DIR}/prisma/bridge/PrismaJni.cpp")
+target_sources(${NATIVE_LIB} PRIVATE ${PRISMA_BRIDGE_SOURCES})
+target_include_directories(${NATIVE_LIB} PRIVATE
+        "${CMAKE_CURRENT_SOURCE_DIR}/prisma/bridge")
+set_property(SOURCE ${PRISMA_BRIDGE_SOURCES} APPEND PROPERTY
+        COMPILE_OPTIONS -fexceptions -frtti)
+set_property(SOURCE ${PRISMA_BRIDGE_SOURCES} APPEND PROPERTY
+        COMPILE_DEFINITIONS BOOST_REGEX_STANDALONE)
 
 target_compile_options(${NATIVE_LIB} PUBLIC
         -ffast-math -Oz -funroll-loops -ffast-math -fno-strict-aliasing -fno-math-errno)
@@ -217,6 +296,7 @@ target_include_directories(${NATIVE_LIB} PUBLIC
         third_party/xiph/opusfile/include
         third_party/xiph/ogg/include
         third_party/libyuv/include
+        third_party/absl
         boringssl/include
         ffmpeg/include
         emoji
@@ -234,10 +314,15 @@ target_link_options(${NATIVE_LIB} PRIVATE "-Wl,--version-script=${CMAKE_CURRENT_
 target_link_libraries(${NATIVE_LIB}
         -Wl,--whole-archive rnnoise openh264 voipandroid -Wl,--no-whole-archive
         tgvoip
+        webrtc_absl
         tgcalls
+        wasm
         tgcalls_tp
         tgnet
+        prisma
         tlottie
+        wallet_engine_jni
+        wallet_engine_cpp
         sqlite
         swscale
         avformat

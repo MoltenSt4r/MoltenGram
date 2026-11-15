@@ -57,15 +57,17 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
             }
             @Override
             protected void dispatchDraw(@NonNull Canvas canvas) {
+                int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+                if (accent == 0) accent = 0xFF8BC8F5;
                 outerRect.set(0, getHeight() - dp(36), getWidth(), getHeight());
-                containerPaint.setColor(Theme.multAlpha(ColorUtils.blendARGB(0xFF1E2025, 0xFFE5E7EB, invert), 0.86f));
+                int darkSurface = ColorUtils.blendARGB(0xFF1C1B1F, accent, 0.14f);
+                int lightSurface = ColorUtils.blendARGB(0xFFF3F4F6, accent, 0.10f);
+                containerPaint.setColor(Theme.multAlpha(ColorUtils.blendARGB(darkSurface, lightSurface, invert), 0.90f));
                 canvas.drawRoundRect(outerRect, dp(18), dp(18), containerPaint);
 
                 setRect((int) Math.floor(mode), a);
                 setRect((int) Math.ceil(mode), b);
                 lerp(a, b, mode - (float) Math.floor(mode), c);
-                int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
-                if (accent == 0) accent = 0xFF8BC8F5;
                 backgroundPaint.setColor(accent);
                 canvas.drawRoundRect(c, c.height() / 2f, c.height() / 2f, backgroundPaint);
 
@@ -114,7 +116,7 @@ public class StoryModeTabs extends FrameLayout implements FlashViews.Invertable 
 
     private void updateTabTextColors(int accent) {
         int inactiveColor = ColorUtils.blendARGB(0xCCFFFFFF, 0xCC000000, invert);
-        int activeColor = UIUtil.getOnAccentColor(accent);
+        int activeColor = app.exteraless.appearance.AppearanceConfig.contrastOnAccent(accent);
         float liveActive = Utilities.clamp(1f - Math.abs(mode - (-1f)), 1f, 0f);
         float photoActive = Utilities.clamp(1f - Math.abs(mode - 0f), 1f, 0f);
         float videoActive = Utilities.clamp(1f - Math.abs(mode - 1f), 1f, 0f);

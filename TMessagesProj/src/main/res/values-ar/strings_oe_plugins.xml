@@ -23,6 +23,7 @@
     <string name="PluginsInstallReadError">تعذّرت قراءة الملف المحدد.</string>
     <string name="PluginsCrashedTitle">تعطّلت الإضافة</string>
     <string name="PluginsCrashedMessage">تم تعطيل الإضافة %1$s بعد حدوث عطل.</string>
+    <string name="PluginsAutoSafeMode">تعطّل التطبيق عدة مرات متتالية بعد التشغيل مباشرةً، لذلك تم إيقاف الإضافات (الوضع الآمن). عندما تكون مستعدًا، أوقف الوضع الآمن من قسم الإضافات.</string>
     <string name="PluginsMenuOpenSettings">فتح الإعدادات</string>
     <string name="PluginsMenuReload">إعادة التحميل</string>
     <string name="PluginsMenuCopyId">نسخ المعرّف</string>
@@ -185,4 +186,15 @@
     <string name="PluginOverlayOpen">فتح الإعدادات</string>
     <string name="PluginsSafeModeEnabledNow">تم تفعيل الوضع الآمن، وأُوقفت جميع الإضافات.</string>
     <string name="PluginsSafeModeDisabledNow">تم إيقاف الوضع الآمن، جارٍ تحميل الإضافات.</string>
+<string name="PluginActivityExport">تصدير السجل</string>
+<string name="OEPluginLinkEngineDisabled">فعّل **محرك الإضافات** لفتح إعدادات **%1$s**.</string>
+<string name="OEPluginLinkNotFound">الإضافة **%1$s** غير مثبتة.</string>
+<string name="OEPluginLinkNoSettings">لا توجد إعدادات لـ **%1$s**.</string>
+<string name="PluginsExportAll">تصدير الإضافات</string>
+<string name="PluginsImportAll">استيراد الإضافات</string>
+<string name="PluginsImportConfirm">تثبيت %1$d إضافة من النسخة الاحتياطية واستعادة إعداداتها؟ لا تُستعاد الأذونات: امنحها مجددًا عند الحاجة.</string>
+<string name="PluginsImportDone">تم استيراد الإضافات: %1$d من %2$d</string>
+<string name="PluginsImportInvalid">هذا الملف ليس نسخة احتياطية للإضافات</string>
+<string name="PluginsRetryHooks">إعادة تفعيل الخطافات</string>
+<string name="PluginsHooksBrokenInfo">توقف التطبيق مرتين أثناء تشغيل محرك الخطافات، لذا أُوقفت خطافات الإضافات. اضغط للمحاولة مرة أخرى، ويسري ذلك بعد إعادة التشغيل.</string>
 </resources>

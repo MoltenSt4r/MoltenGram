@@ -99,6 +99,17 @@ public class PythonPluginsEngine extends com.exteragram.messenger.plugins.Python
         }
     }
 
+    public String pathPermission(String pluginId, String path) {
+        if (!started || loader == null) {
+            return null;
+        }
+        try {
+            PyObject permission = loader.callAttr("java_path_permission", pluginId, path);
+            return permission == null ? null : permission.toJava(String.class);
+        } catch (Throwable t) {
+            return PluginPermissions.FILES;
+        }
+    }
     public String debugPythonStacks() {
         if (!started || loader == null) {
             return null;
@@ -537,7 +548,7 @@ public class PythonPluginsEngine extends com.exteragram.messenger.plugins.Python
     }
 
     private PyObject callHook(String pluginId, String method, Object... args) {
-        if (!started) {
+        if (!started || org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
             return null;
         }
         PluginsWatchdog watchdog = PluginsController.getInstance().getWatchdog();

@@ -157,6 +157,105 @@ public class ActionBarPopupWindow extends PopupWindow {
             this(context, resId, resourcesProvider, 0);
         }
 
+        private app.exteraless.glass.SolegramLiveGlass solegramGlass;
+        private Drawable solegramPlainBackground;
+        @androidx.annotation.Nullable
+        private app.exteraless.glass.SolegramLiveGlass.Host solegramGlassHost;
+        private int solegramGlassColor, solegramGlassRecipeUsed;
+        public int solegramGlassRecipe = app.exteraless.glass.SolegramLiveGlass.CLEAR;
+        boolean solegramManaged;
+
+        public void solegramUseGlass(View windowRoot) {
+            if (backgroundDrawable == null) {
+                return;
+            }
+            final boolean ours = solegramGlass != null && backgroundDrawable == solegramGlass.drawable;
+            if (!ours && backgroundDrawable instanceof org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable) {
+                return;
+            }
+            app.exteraless.glass.SolegramLiveGlass.Host host = null;
+            if (!app.exteraless.glass.SolegramLiveGlass.canSample(windowRoot)) {
+                host = solegramScreenBehind();
+                if (host == null || !host.canSample()) {
+                    solegramDropGlass();
+                    if (app.exteraless.glass.SolegramLiveGlass.frostBehind(windowRoot, backgroundDrawable)) {
+                        invalidate();
+                    }
+                    return;
+                }
+            }
+            final int ownColor = backgroundColor == Color.WHITE ? 0 : backgroundColor;
+            if (ours && solegramGlassHost == host && solegramGlassColor == ownColor && solegramGlassRecipeUsed == solegramGlassRecipe) {
+                solegramGlass.drawable.updateColors();
+                solegramGlass.drawable.invalidateDisplayList();
+                invalidate();
+                return;
+            }
+            solegramDropGlass();
+            final Rect padding = new Rect();
+            backgroundDrawable.getPadding(padding);
+            final app.exteraless.glass.SolegramLiveGlass glass = app.exteraless.glass.SolegramLiveGlass.menu(this,
+                resourcesProvider, ownColor, solegramGlassRecipe, padding.left, host);
+            if (glass == null) {
+                return;
+            }
+            backgroundDrawable.setAlpha(255);
+            solegramPlainBackground = backgroundDrawable;
+            solegramGlass = glass;
+            solegramGlassHost = host;
+            solegramGlassColor = ownColor;
+            solegramGlassRecipeUsed = solegramGlassRecipe;
+            final int keepColor = backgroundColor;
+            setBackgroundDrawable(glass.drawable);
+            backgroundColor = keepColor;
+            invalidate();
+        }
+
+        @androidx.annotation.Nullable
+        private app.exteraless.glass.SolegramLiveGlass.Host solegramScreenBehind() {
+            final android.view.ViewParent container = getParent();
+            if (container instanceof ActionBarLayout.LayoutContainer && container.getParent() instanceof ActionBarLayout) {
+                return ((ActionBarLayout) container.getParent()).solegramScreenBehind((View) container);
+            }
+            return null;
+        }
+
+        @Override
+        protected void onAttachedToWindow() {
+            super.onAttachedToWindow();
+            if (!solegramManaged && backgroundDrawable != null) {
+                for (android.view.ViewParent p = getParent(); p instanceof View; p = p.getParent()) {
+                    if (p instanceof ActionBarPopupWindowLayout) {
+                        return;
+                    }
+                }
+                try {
+                    if (app.exteraless.glass.SolegramLiveGlass.menusOn()) {
+                        solegramUseGlass(getRootView());
+                    } else {
+                        solegramDropGlass();
+                    }
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
+            }
+        }
+
+        public void solegramDropGlass() {
+            if (solegramGlass == null) {
+                return;
+            }
+            if (backgroundDrawable == solegramGlass.drawable && solegramPlainBackground != null) {
+                final int keepColor = backgroundColor;
+                setBackgroundDrawable(solegramPlainBackground);
+                setBackgroundColor(keepColor);
+                invalidate();
+            }
+            solegramGlass.release();
+            solegramGlass = null;
+            solegramGlassHost = null;
+        }
+
         public ActionBarPopupWindowLayout(Context context, int resId, Theme.ResourcesProvider resourcesProvider, int flags) {
             super(context);
             this.resourcesProvider = resourcesProvider;
@@ -167,7 +266,7 @@ public class ActionBarPopupWindow extends PopupWindow {
             }
             if (backgroundDrawable != null) {
                 backgroundDrawable.getPadding(bgPaddings);
-                setBackgroundColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                ThemeBind.backgroundColor(this, Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider);
             }
 
 
@@ -374,6 +473,8 @@ public class ActionBarPopupWindow extends PopupWindow {
             backgroundDrawable = drawable;
             if (backgroundDrawable != null) {
                 backgroundDrawable.getPadding(bgPaddings);
+            } else {
+                bgPaddings.setEmpty();
             }
         }
 
@@ -830,10 +931,61 @@ public class ActionBarPopupWindow extends PopupWindow {
         }
     }
 
+    public boolean solegramAllowGlass = true;
+    private final ArrayList<ActionBarPopupWindowLayout> solegramPanels = new ArrayList<>();
+
+    private void solegramCollectPanels() {
+        solegramPanels.clear();
+        solegramCollectPanels(getContentView(), 0);
+        for (int i = 0; i < solegramPanels.size(); i++) {
+            solegramPanels.get(i).solegramManaged = true;
+        }
+    }
+
+    private void solegramCollectPanels(View view, int depth) {
+        if (view instanceof ActionBarPopupWindowLayout) {
+            if (((ActionBarPopupWindowLayout) view).getBackgroundDrawable() != null) {
+                solegramPanels.add((ActionBarPopupWindowLayout) view);
+            }
+            return;
+        }
+        if (view instanceof ViewGroup && depth < 3) {
+            final ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                solegramCollectPanels(group.getChildAt(i), depth + 1);
+            }
+        }
+    }
+
+    private void solegramApplyGlass() {
+        try {
+            final boolean glass = solegramAllowGlass && app.exteraless.glass.SolegramLiveGlass.menusOn();
+            final View root = getContentView().getRootView();
+            for (int i = 0; i < solegramPanels.size(); i++) {
+                if (glass) {
+                    solegramPanels.get(i).solegramUseGlass(root);
+                } else {
+                    solegramPanels.get(i).solegramDropGlass();
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    private void solegramReleaseGlass() {
+        for (int i = 0; i < solegramPanels.size(); i++) {
+            solegramPanels.get(i).solegramDropGlass();
+        }
+        solegramPanels.clear();
+    }
+
     @Override
     public void showAsDropDown(View anchor, int xoff, int yoff) {
         try {
+            solegramCollectPanels();
             super.showAsDropDown(anchor, xoff, yoff);
+            solegramApplyGlass();
             registerListener(anchor);
         } catch (Exception e) {
             FileLog.e(e);
@@ -1024,7 +1176,9 @@ public class ActionBarPopupWindow extends PopupWindow {
 
     @Override
     public void showAtLocation(View parent, int gravity, int x, int y) {
+        solegramCollectPanels();
         super.showAtLocation(parent, gravity, x, y);
+        solegramApplyGlass();
         unregisterListener();
     }
 
@@ -1079,7 +1233,7 @@ public class ActionBarPopupWindow extends PopupWindow {
                 windowAnimatorSet.setDuration(dismissAnimationDuration);
             } else {
                 windowAnimatorSet.playTogether(
-                        ObjectAnimator.ofFloat(viewGroup, View.TRANSLATION_Y, dp((content != null && content.shownFromBottom) ? 5 : -5)),
+                        ObjectAnimator.ofFloat(viewGroup, View.TRANSLATION_Y, viewGroup.getTranslationY() + dp((content != null && content.shownFromBottom) ? 5 : -5)),
                         ObjectAnimator.ofFloat(viewGroup, View.ALPHA, 0.0f));
                 windowAnimatorSet.setDuration(dismissAnimationDuration);
             }
@@ -1091,6 +1245,7 @@ public class ActionBarPopupWindow extends PopupWindow {
                     isClosingAnimated = false;
                     setFocusable(false);
                     try {
+                        solegramReleaseGlass();
                         ActionBarPopupWindow.super.dismiss();
                     } catch (Exception ignore) {
 
@@ -1107,6 +1262,7 @@ public class ActionBarPopupWindow extends PopupWindow {
             windowAnimatorSet.start();
         } else {
             try {
+                solegramReleaseGlass();
                 super.dismiss();
             } catch (Exception ignore) {
 

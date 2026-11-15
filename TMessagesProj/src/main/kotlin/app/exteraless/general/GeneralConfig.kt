@@ -38,6 +38,16 @@ object GeneralConfig {
     @JvmStatic
     fun lastfmNick(): String = lastfmNick.String() ?: ""
 
+    @JvmField
+    val botPrivacyEnabled = addConfig("OEGeneralBotPrivacyEnabled", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val botPrivacyAlwaysAsk = addConfig("OEGeneralBotPrivacyAlwaysAsk", ConfigItem.configTypeBool, false)
+
+    // Telegram user ID, never an account slot (slots are reused after logout).
+    @JvmField
+    val botPrivacyUserId = addConfig("OEGeneralBotPrivacyUserId", ConfigItem.configTypeLong, 0L)
+
     /**
      * «Download Speed Boost» — трёхпозиционный выбор (0: обычный, 1: быстрый,
      * 2: максимальный). Применяется в FileLoadOperation.updateParams: уровень 2
@@ -114,6 +124,10 @@ object GeneralConfig {
                 } catch (e: Exception) {
                     FileLog.e(e)
                 }
+            }
+            // Older test builds used the dedicated-account flag as the master switch for Always ask.
+            if (botPrivacyAlwaysAsk.Bool() && botPrivacyEnabled.Bool()) {
+                botPrivacyEnabled.setConfigBool(false)
             }
             configLoaded = true
         }

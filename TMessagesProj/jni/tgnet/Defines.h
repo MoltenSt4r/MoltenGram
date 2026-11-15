@@ -18,15 +18,17 @@
 
 #define USE_DEBUG_SESSION false
 #define READ_BUFFER_SIZE 1024 * 1024 * 2
+#define MAX_DESERIALIZE_DEPTH 16
 //#define DEBUG_VERSION
 #define PFS_ENABLED 1
 #define DEFAULT_DATACENTER_ID INT_MAX
 #define DC_UPDATE_TIME 60 * 60
 #define TEMP_AUTH_KEY_EXPIRE_TIME 24 * 60 * 60
 #define PROXY_CONNECTIONS_COUNT 10
-#define DOWNLOAD_CONNECTIONS_COUNT 2
-#define UPLOAD_CONNECTIONS_COUNT 4
+#define DOWNLOAD_CONNECTIONS_COUNT 8
+#define UPLOAD_CONNECTIONS_COUNT 8
 #define CONNECTION_BACKGROUND_KEEP_TIME 10000
+#define CONNECTION_BACKGROUND_PENDING_KEEP_TIME 120000
 #define MAX_ACCOUNT_COUNT 10
 #define USE_DELEGATE_HOST_RESOLVE
 
@@ -155,7 +157,7 @@ typedef struct ConnectiosManagerDelegate {
     virtual int32_t getInitFlags(int32_t instanceNum) = 0;
     virtual void onPremiumFloodWait(int32_t instanceNum, int32_t requestToken, bool isUpload) = 0;
     virtual void onIntegrityCheckClassic(int32_t instanceNum, int32_t requestToken, std::string project, std::string nonce) = 0;
-    virtual void onCaptchaCheck(int32_t instanceNum, int32_t requestToken, std::string action, std::string key_id) = 0;
+    virtual void onCaptchaCheck(int32_t instanceNum, int32_t requestToken, int32_t generation, std::string action, std::string key_id) = 0;
 } ConnectiosManagerDelegate;
 
 typedef struct HandshakeDelegate {
@@ -178,7 +180,9 @@ enum RequestFlag {
     RequestFlagIgnoreFloodWait = 1024,
     RequestFlagListenAfterCancel = 2048,
     RequestFlagIsCancel = 32768,
-    RequestFlagFailOnServerErrorsExceptFloodWait = 65536
+    RequestFlagFailOnServerErrorsExceptFloodWait = 65536,
+    RequestFlagSmallDownload = 131072,
+    RequestFlagDownloadByteBudget = 262144
 };
 
 inline std::string to_string_int32(int32_t value) {

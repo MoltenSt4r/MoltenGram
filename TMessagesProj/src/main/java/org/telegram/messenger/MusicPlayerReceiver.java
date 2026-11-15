@@ -80,6 +80,14 @@ public class MusicPlayerReceiver extends BroadcastReceiver {
                         MediaController.getInstance().setPlaybackOrderType(2);
                     }
                     break;
+                case android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED:
+                    if (app.exteraless.appearance.AppearanceConfig.playerResumeOnBluetooth()) {
+                        MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
+                        if (mo != null && MediaController.getInstance().isMessagePaused()) {
+                            MediaController.getInstance().playMessage(mo);
+                        }
+                    }
+                    break;
             }
         }
     }

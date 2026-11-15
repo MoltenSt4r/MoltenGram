@@ -57,6 +57,7 @@ public class TableLayout extends View {
     public static final int ALIGN_MARGINS = 1;
 
     static final int MAX_SIZE = 100000;
+    private static final int MAX_GRID_COUNT = 1024;
     static final int UNINITIALIZED_HASH = 0;
     private TextSelectionHelper.ArticleTextSelectionHelper textSelectionHelper;
 
@@ -412,6 +413,23 @@ public class TableLayout extends View {
 
     private ArrayList<Child> childrens = new ArrayList<>();
 
+    // html caps colspan at 1000
+    private static final int MAX_COLSPAN = 1000;
+
+    public static int sanitizeSpans(ArrayList<TL_iv.pageTableRow> rows) {
+        int columns = 0;
+        for (int r = 0; r < rows.size(); r++) {
+            int cols = 0;
+            for (TL_iv.pageTableCell cell : rows.get(r).cells) {
+                cell.colspan = Math.max(1, Math.min(cell.colspan, MAX_COLSPAN));
+                cell.rowspan = Math.max(1, Math.min(cell.rowspan, rows.size() - r));
+                cols += cell.colspan;
+            }
+            columns = Math.max(columns, cols);
+        }
+        return columns;
+    }
+
     public void addChild(int x, int y, int colspan, int rowspan) {
         Child child = new Child(childrens.size());
         LayoutParams layoutParams = new LayoutParams();
@@ -471,6 +489,17 @@ public class TableLayout extends View {
             return;
         }
         this.fillWidth = fillWidth;
+        requestLayout();
+    }
+
+    private boolean balancedColumns;
+
+    /** Size columns to fit the given width with limited wrapping, scrolling only when cells would wrap too much. */
+    public void setBalancedColumns(boolean balanced) {
+        if (balancedColumns == balanced) {
+            return;
+        }
+        balancedColumns = balanced;
         requestLayout();
     }
 
@@ -846,6 +875,9 @@ public class TableLayout extends View {
         final boolean horizontal = (mOrientation == HORIZONTAL);
         final Axis axis = horizontal ? mHorizontalAxis : mVerticalAxis;
         final int count = (axis.definedCount != UNDEFINED) ? axis.definedCount : 0;
+        if (count < 0 || count > MAX_GRID_COUNT) {
+            handleInvalidParams("Table grid count out of bounds");
+        }
 
         int major = 0;
         int minor = 0;
@@ -858,12 +890,18 @@ public class TableLayout extends View {
             final Interval majorRange = majorSpec.span;
             final boolean majorWasDefined = majorSpec.startDefined;
             final int majorSpan = majorRange.size();
+            if (majorSpan <= 0 || majorSpan > MAX_GRID_COUNT) {
+                handleInvalidParams("Table row or column span out of bounds");
+            }
             if (majorWasDefined) {
                 major = majorRange.min;
             }
 
             final Spec minorSpec = horizontal ? lp.columnSpec : lp.rowSpec;
             final Interval minorRange = minorSpec.span;
+            if (minorRange.size() <= 0 || minorRange.size() > MAX_GRID_COUNT) {
+                handleInvalidParams("Table row or column span out of bounds");
+            }
             final boolean minorWasDefined = minorSpec.startDefined;
             final int minorSpan = clip(minorRange, minorWasDefined, count);
             if (minorWasDefined) {
@@ -967,7 +1005,75 @@ public class TableLayout extends View {
         child.measure(getTotalMargin(child, true) + childWidth, getTotalMargin(child, false) + childHeight, first);
     }
 
+    private void measureChildrenFirstPassBalanced(int widthSpec, int heightSpec) {
+        final int N = getChildCount();
+        final int width = MeasureSpec.getSize(widthSpec);
+        final int padding = itemPaddingLeft * 2;
+        // Let a single column take the whole width, but keep some of the next one visible.
+        final int maxColumnWidth = colCount > 1 ? Math.round(width * 0.8f) : width;
+        final int maxContentWidth = Math.max(1, maxColumnWidth - padding);
+
+        final ArrayList<TableColumnBalancer.Cell> metrics = new ArrayList<>(N);
+        final TableColumnBalancer.Cell[] byChild = new TableColumnBalancer.Cell[N];
+        for (int i = 0; i < N; i++) {
+            final Child c = getChildAt(i);
+            final LayoutParams lp = c.getLayoutParams();
+            final Interval span = lp.columnSpec.span;
+            c.setTextLayout(delegate.createTextLayout(c.cell, maxContentWidth));
+            if (c.textLayout == null) {
+                lp.width = 0;
+                lp.height = 0;
+                measureChildWithMargins2(c, widthSpec, heightSpec, 0, 0, true);
+                continue;
+            }
+            lp.height = Math.max(minimumCellHeight, c.textHeight + itemPaddingTop + itemPaddingBottom);
+            final int emojiCount = c.textLayout.getEmojiOnlyCount();
+            final TableColumnBalancer.Cell cell;
+            if (emojiCount > 0) {
+                cell = TableColumnBalancer.fixed(span.min, span.size(), lp.height * emojiCount);
+            } else {
+                final Layout layout = c.textLayout.getLayout();
+                cell = TableColumnBalancer.measure(
+                    layout != null ? layout.getText() : null,
+                    layout != null ? layout.getPaint() : null,
+                    span.min, span.size(), padding, maxContentWidth, c.textWidth
+                );
+            }
+            byChild[i] = cell;
+            metrics.add(cell);
+        }
+
+        final int[] columnWidths = TableColumnBalancer.compute(metrics, colCount, width, 0);
+
+        for (int i = 0; i < N; i++) {
+            final Child c = getChildAt(i);
+            final TableColumnBalancer.Cell cell = byChild[i];
+            if (cell == null) continue;
+            final LayoutParams lp = c.getLayoutParams();
+            if (c.textLayout.getEmojiOnlyCount() > 0) {
+                lp.width = cell.maxWidth;
+            } else {
+                final Interval span = lp.columnSpec.span;
+                int target = 0;
+                for (int col = Math.max(0, span.min); col < Math.min(colCount, span.max); col++) {
+                    target += columnWidths[col];
+                }
+                target = Math.max(1, target - padding);
+                if (c.textWidth > target) {
+                    c.setTextLayout(delegate.createTextLayout(c.cell, target));
+                    lp.height = Math.max(minimumCellHeight, c.textHeight + itemPaddingTop + itemPaddingBottom);
+                }
+                lp.width = c.textWidth + padding;
+            }
+            measureChildWithMargins2(c, widthSpec, heightSpec, lp.width, lp.height, true);
+        }
+    }
+
     private void measureChildrenWithMargins(int widthSpec, int heightSpec, boolean firstPass) {
+        if (firstPass && balancedColumns && mOrientation == HORIZONTAL) {
+            measureChildrenFirstPassBalanced(widthSpec, heightSpec);
+            return;
+        }
         int N = getChildCount();
         //float maxWidth = 0;
         for (int i = 0; i < N; i++) {
@@ -1309,7 +1415,11 @@ public class TableLayout extends View {
         }
 
         public int getCount() {
-            return max(definedCount, getMaxIndex());
+            int count = max(definedCount, getMaxIndex());
+            if (count > MAX_GRID_COUNT) {
+                handleInvalidParams("Table grid count out of bounds");
+            }
+            return count;
         }
 
         public void setCount(int count) {

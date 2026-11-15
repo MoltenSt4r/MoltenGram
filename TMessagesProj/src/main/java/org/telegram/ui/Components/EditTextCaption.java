@@ -47,14 +47,12 @@ import androidx.core.view.accessibility.AccessibilityNodeInfoCompat;
 
 import org.jetbrains.annotations.NotNull;
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.BuildVars;
-import org.telegram.messenger.CodeHighlighting;
+import org.telegram.utils.code.highlight.CodeHighlighting;
 import org.telegram.messenger.Emoji;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.messenger.R;
-import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.utils.CopyUtilities;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.AlertDialog;
@@ -62,6 +60,7 @@ import org.telegram.ui.ActionBar.AlertDialogDecor;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.FloatingToolbar;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.LaunchActivity;
 
 import java.util.List;
@@ -91,6 +90,7 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
     private int lineCount;
     private boolean isInitLineCount;
     private final Theme.ResourcesProvider resourcesProvider;
+    private int themedQuoteColor;
     private AlertDialog creationLinkDialog;
     public boolean adaptiveCreateLinkDialog;
 
@@ -103,7 +103,7 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
     public EditTextCaption(Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
         this.resourcesProvider = resourcesProvider;
-        quoteColor = Theme.getColor(Theme.key_chat_inQuote, resourcesProvider);
+        quoteColor = themedQuoteColor = Theme.getColor(Theme.key_chat_inQuote, resourcesProvider);
         addTextChangedListener(new TextWatcher() {
             @Override
             public void beforeTextChanged(CharSequence s, int start, int count, int after) {
@@ -638,13 +638,24 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
             start = getSelectionStart();
             end = getSelectionEnd();
         }
+        String initial = "http://";
+        Editable curText = getText();
+        if (curText != null && start >= 0 && end <= curText.length() && start < end) {
+            URLSpanReplacement[] existing = curText.getSpans(start, end, URLSpanReplacement.class);
+            if (existing != null && existing.length > 0 && !TextUtils.isEmpty(existing[0].getURL())) {
+                initial = existing[0].getURL();
+            }
+        }
         showInputDialog(
             LocaleController.getString(R.string.CreateLink),
             LocaleController.getString(R.string.URL),
-            "http://",
+            initial,
             true,
             url -> {
                 Editable editable = getText();
+                if (editable == null) {
+                    return;
+                }
                 CharacterStyle[] spans = editable.getSpans(start, end, CharacterStyle.class);
                 if (spans != null && spans.length > 0) {
                     for (CharacterStyle oldSpan : spans) {
@@ -661,9 +672,11 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
                         }
                     }
                 }
-                try {
-                    editable.setSpan(createUrlSpan(app.exteraless.links.LinkCleaner.cleanUrlString(url).toString()), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-                } catch (Exception ignore) {}
+                if (!TextUtils.isEmpty(url)) {
+                    try {
+                        editable.setSpan(createUrlSpan(app.exteraless.links.LinkCleaner.cleanUrlString(url).toString()), start, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    } catch (Exception ignore) {}
+                }
                 if (delegate != null) {
                     delegate.onSpansChanged();
                 }
@@ -672,6 +685,52 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
                 }
             }
         );
+    }
+
+    public void makeSelectedColor() {
+        final int start;
+        final int end;
+        if (selectionStart >= 0 && selectionEnd >= 0) {
+            start = selectionStart;
+            end = selectionEnd;
+            selectionStart = selectionEnd = -1;
+        } else {
+            start = getSelectionStart();
+            end = getSelectionEnd();
+        }
+        if (start < 0 || end <= start) {
+            return;
+        }
+        Editable curText = getText();
+        if (curText == null || curText.length() < end) {
+            return;
+        }
+        final int len = end - start;
+        int initialColor = 0xFFE91E63;
+        android.text.style.ForegroundColorSpan[] existingSpans = curText.getSpans(start, end, android.text.style.ForegroundColorSpan.class);
+        if (existingSpans != null && existingSpans.length > 0) {
+            initialColor = existingSpans[0].getForegroundColor();
+        }
+        app.exteraless.chats.ColoredTextHelper.showColorPickerDialog(getContext(), resourcesProvider, initialColor, color -> {
+            Editable editable = getText();
+            if (editable == null || start < 0 || end > editable.length() || start >= end) {
+                return;
+            }
+            android.text.style.ForegroundColorSpan[] spans = editable.getSpans(start, end, android.text.style.ForegroundColorSpan.class);
+            if (spans != null) {
+                for (android.text.style.ForegroundColorSpan oldSpan : spans) {
+                    editable.removeSpan(oldSpan);
+                }
+            }
+            String hex = String.format("%06X", (0xFFFFFF & color));
+            editable.insert(start, "\u200B");
+            String colorUrl = app.exteraless.chats.ColoredTextHelper.PREFIX + "?c=" + hex + "&len=" + len;
+            editable.setSpan(createUrlSpan(colorUrl), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            editable.setSpan(new android.text.style.ForegroundColorSpan(color), start + 1, start + 1 + len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            if (delegate != null) {
+                delegate.onSpansChanged();
+            }
+        });
     }
 
     public interface InputDialogCallback {
@@ -708,19 +767,19 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         final String def = initial == null ? "" : initial;
         editText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
         editText.setText(def);
-        editText.setTextColor(getThemedColor(Theme.key_dialogTextBlack));
+        ThemeBind.textColor(editText, Theme.key_dialogTextBlack, resourcesProvider);
         editText.setHintText(hint);
-        editText.setHeaderHintColor(getThemedColor(Theme.key_windowBackgroundWhiteBlueHeader));
+        ThemeBind.editHeaderHintColor(editText, Theme.key_windowBackgroundWhiteBlueHeader, resourcesProvider);
         editText.setSingleLine(true);
         editText.setFocusable(true);
         editText.setTransformHintToHeader(true);
-        editText.setLineColors(getThemedColor(Theme.key_windowBackgroundWhiteInputField), getThemedColor(Theme.key_windowBackgroundWhiteInputFieldActivated), getThemedColor(Theme.key_text_RedRegular));
+        ThemeBind.lineColors(editText, Theme.key_windowBackgroundWhiteInputField, Theme.key_windowBackgroundWhiteInputFieldActivated, Theme.key_text_RedRegular, resourcesProvider);
         editText.setImeOptions(EditorInfo.IME_ACTION_DONE);
         editText.setBackgroundDrawable(null);
         editText.requestFocus();
         editText.setPadding(0, 0, 0, 0);
-        editText.setHighlightColor(getThemedColor(Theme.key_chat_inTextSelectionHighlight));
-        editText.setHandlesColor(getThemedColor(Theme.key_chat_TextSelectionCursor));
+        ThemeBind.highlightColor(editText, Theme.key_chat_inTextSelectionHighlight, resourcesProvider);
+        ThemeBind.editHandlesColor(editText, Theme.key_chat_TextSelectionCursor, resourcesProvider);
         container.addView(editText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.FILL));
 
         TextView pasteTextView = new TextView(getContext());
@@ -730,8 +789,8 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         pasteTextView.setPadding(dp(10), 0, dp(10), 0);
         pasteTextView.setGravity(Gravity.CENTER);
         int textColor = getThemedColor(Theme.key_windowBackgroundWhiteBlueText2);
-        pasteTextView.setTextColor(textColor);
-        pasteTextView.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(6), Theme.multAlpha(textColor, .12f), Theme.multAlpha(textColor, .15f)));
+        ThemeBind.textColor(pasteTextView, Theme.key_windowBackgroundWhiteBlueText2, resourcesProvider);
+        ThemeBind.selectorBackground(pasteTextView, Theme.createSimpleSelectorRoundRectDrawable(dp(6), Theme.multAlpha(textColor, .12f), Theme.multAlpha(textColor, .15f)), ThemeBind.multAlpha(Theme.key_windowBackgroundWhiteBlueText2, .12f), ThemeBind.multAlpha(Theme.key_windowBackgroundWhiteBlueText2, .15f), resourcesProvider);
         ScaleStateListAnimator.apply(pasteTextView, .1f, 1.5f);
         container.addView(pasteTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 26, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 24, 3));
         pasteTextView.setVisibility(showPaste ? VISIBLE : GONE);
@@ -1134,6 +1193,9 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
         } else if (itemId == R.id.menu_date) {
             makeSelectedDate();
             return true;
+        } else if (itemId == R.id.menu_color) {
+            makeSelectedColor();
+            return true;
         } else if (itemId == R.id.menu_translate) {
             translateSelected();
             return true;
@@ -1215,6 +1277,10 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
 
     @Override
     protected void onDraw(Canvas canvas) {
+        if (quoteColor == themedQuoteColor) {
+            // follow theme changes unless a custom quote color was set
+            quoteColor = themedQuoteColor = Theme.getColor(Theme.key_chat_inQuote, resourcesProvider);
+        }
         canvas.save();
         canvas.translate(0, offsetY);
         super.onDraw(canvas);

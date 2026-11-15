@@ -19,6 +19,7 @@ import org.telegram.tgnet.tl.TL_account;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
 import xyz.nextalone.nagram.helper.LocalPeerColorHelper;
 import xyz.nextalone.nagram.helper.LocalPremiumStatusHelper;
+import java.util.Locale;
 
 public class UserObject {
 
@@ -50,6 +51,26 @@ public class UserObject {
 
     public static boolean isBot(TLRPC.User user) {
         return user != null && user.bot;
+    }
+
+    @NonNull
+    public static String getBotStatus(TLRPC.User user) {
+        final String username = getPublicUsername(user);
+        if (username != null) {
+            final String lower = username.toLowerCase(Locale.ROOT);
+            if (lower.endsWith("agent")) {
+                return LocaleController.getString(R.string.BotTypeAgent);
+            } else if (lower.endsWith("game")) {
+                return LocaleController.getString(R.string.BotTypeGame);
+            } else if (lower.endsWith("app")) {
+                return LocaleController.getString(R.string.BotTypeApp);
+            } else if (lower.endsWith("ai")) {
+                return LocaleController.getString(R.string.BotTypeAI);
+            } else if (lower.endsWith("gay")) {
+                return LocaleController.getString(R.string.BotTypeNonBinary);
+            }
+        }
+        return LocaleController.getString(R.string.Bot);
     }
 
     public static boolean isReplyUser(long did) {
@@ -164,6 +185,10 @@ public class UserObject {
         if (local != null && local != 0) {
             return local;
         }
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getEmojiStatusDocumentId(user);
+        if (invisible != null && invisible != 0) {
+            return invisible;
+        }
         Long custom = app.exteraless.chats.CustomEmojiStatusHelper.getEmojiStatusDocumentId(user.id);
         if (custom != null && custom != 0) {
             return custom;
@@ -192,6 +217,22 @@ public class UserObject {
         return null;
     }
 
+    public static boolean isEmojiStatusCollectible(TLRPC.User user) {
+        if (user == null) {
+            return false;
+        }
+        if (user.emoji_status != null && !(user.emoji_status instanceof TLRPC.TL_emojiStatusEmpty)) {
+            if (DialogObject.isEmojiStatusCollectible(user.emoji_status)) {
+                return true;
+            }
+            return app.exteraless.chats.ProfileInvisibleMetadata.isEmojiStatusCollectible(user);
+        }
+        if (app.exteraless.chats.ProfileInvisibleMetadata.isEmojiStatusCollectible(user)) {
+            return true;
+        }
+        return app.exteraless.chats.CustomEmojiStatusHelper.isCollectibleStatus(user.id);
+    }
+
     public static boolean isService(long user_id) {
         return user_id == 333000 || user_id == 777000 || user_id == 42777;
     }
@@ -207,6 +248,9 @@ public class UserObject {
         if (user == null) return 0;
         if (user.color instanceof TLRPC.TL_peerColor && (user.color.flags & 1) != 0) return user.color.color;
 
+        Integer invisible = app.exteraless.chats.ProfileInvisibleMetadata.getNameColorId(user);
+        if (invisible != null) return invisible;
+
         Integer replace = LocalPeerColorHelper.getColorId(user);
         if (replace != null) return replace;
 
@@ -215,6 +259,9 @@ public class UserObject {
 
     public static long getEmojiId(TLRPC.User user) {
         if (user != null && user.color instanceof TLRPC.TL_peerColor && (user.color.flags & 2) != 0) return user.color.background_emoji_id;
+
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getNameEmojiId(user);
+        if (invisible != null) return invisible;
 
         Long replace = LocalPeerColorHelper.getEmojiId(user);
         if (replace != null) return replace;
@@ -225,6 +272,9 @@ public class UserObject {
     public static int getProfileColorId(TLRPC.User user) {
         if (user == null) return 0;
         if (user.profile_color instanceof TLRPC.TL_peerColor && (user.profile_color.flags & 1) != 0) return user.profile_color.color;
+
+        Integer invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileColorId(user);
+        if (invisible != null) return invisible;
 
         Integer replace = LocalPeerColorHelper.getProfileColorId(user);
         if (replace != null) return replace;
@@ -238,6 +288,9 @@ public class UserObject {
         }
         if (user != null && user.profile_color != null && (user.profile_color.flags & 2) != 0) return user.profile_color.background_emoji_id;
 
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileEmojiId(user);
+        if (invisible != null) return invisible;
+
         Long replace = LocalPeerColorHelper.getProfileEmojiId(user);
         if (replace != null) return replace;
 
@@ -246,6 +299,13 @@ public class UserObject {
 
     public static long getOnlyProfileEmojiId(TLRPC.User user) {
         if (user != null && user.profile_color instanceof TLRPC.TL_peerColor && (user.profile_color.flags & 2) != 0) return user.profile_color.background_emoji_id;
+
+        Long invisible = app.exteraless.chats.ProfileInvisibleMetadata.getProfileEmojiId(user);
+        if (invisible != null) return invisible;
+
+        Long replace = LocalPeerColorHelper.getProfileEmojiId(user);
+        if (replace != null) return replace;
+
         return 0;
     }
 
@@ -381,6 +441,11 @@ public class UserObject {
 
     public static boolean isBotForum(TLRPC.User user) {
         return user != null && user.bot_forum_view;
+    }
+
+    /** A bot forum's topics are in the sidebar instead of the tabs. */
+    public static boolean isBotForumSidebar(TLRPC.User user) {
+        return isBotForum(user) && user.bot_forum_sidebar;
     }
 
     public static boolean isBotForumWithEditableTopics(int currentAccount, long userId) {

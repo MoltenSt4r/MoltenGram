@@ -180,7 +180,7 @@ public final class IntentsDispatcher {
             return false;
         }
         for (Handler handler : handlers) {
-            if (!handler.before || !matches(handler, context)) {
+            if (!handler.before || !matches(handler, context) || org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
                 continue;
             }
             PluginsWatchdog watchdog = PluginsController.getInstance().getWatchdog();
@@ -205,7 +205,7 @@ public final class IntentsDispatcher {
             return;
         }
         for (Handler handler : handlers) {
-            if (handler.before || !matches(handler, context)) {
+            if (handler.before || !matches(handler, context) || org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
                 continue;
             }
             PluginsWatchdog watchdog = PluginsController.getInstance().getWatchdog();

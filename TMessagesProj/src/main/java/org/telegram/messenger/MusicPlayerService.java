@@ -77,11 +77,52 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
 
     private String loadingFilePath;
 
+    private boolean pausedByMute = false;
+
     private BroadcastReceiver headsetPlugReceiver = new BroadcastReceiver() {
         @Override
         public void onReceive(Context context, Intent intent) {
-            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(intent.getAction())) {
+            String action = intent != null ? intent.getAction() : null;
+            if (action == null) return;
+            if (AudioManager.ACTION_AUDIO_BECOMING_NOISY.equals(action)) {
                 MediaController.getInstance().pauseMessage(MediaController.getInstance().getPlayingMessageObject());
+            } else if ("android.media.VOLUME_CHANGED_ACTION".equals(action)) {
+                if (app.exteraless.appearance.AppearanceConfig.playerPauseOnMute()) {
+                    try {
+                        int streamType = intent.getIntExtra("android.media.EXTRA_VOLUME_STREAM_TYPE", -1);
+                        if (streamType == AudioManager.STREAM_MUSIC || streamType == -1) {
+                            int vol = audioManager != null ? audioManager.getStreamVolume(AudioManager.STREAM_MUSIC) : -1;
+                            boolean isMuted = vol == 0
+                                    || (android.os.Build.VERSION.SDK_INT >= 23 && audioManager != null && audioManager.isStreamMute(AudioManager.STREAM_MUSIC))
+                                    || intent.getBooleanExtra("android.media.EXTRA_STREAM_VOLUME_MUTED", false);
+                            if (isMuted) {
+                                MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
+                                if (mo != null && !MediaController.getInstance().isMessagePaused()) {
+                                    pausedByMute = true;
+                                    MediaController.getInstance().pauseMessage(mo);
+                                }
+                            } else if (vol > 0 && pausedByMute) {
+                                pausedByMute = false;
+                            }
+                        }
+                    } catch (Throwable ignore) {}
+                }
+            } else if (android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED.equals(action)
+                    || "android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED".equals(action)
+                    || "android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED".equals(action)) {
+                if (app.exteraless.appearance.AppearanceConfig.playerResumeOnBluetooth()) {
+                    boolean isConnected = android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED.equals(action);
+                    if (!isConnected) {
+                        int state = intent.getIntExtra(android.bluetooth.BluetoothProfile.EXTRA_STATE, -1);
+                        isConnected = (state == android.bluetooth.BluetoothProfile.STATE_CONNECTED);
+                    }
+                    if (isConnected) {
+                        MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
+                        if (mo != null && MediaController.getInstance().isMessagePaused()) {
+                            MediaController.getInstance().playMessage(mo);
+                        }
+                    }
+                }
             }
         }
     };
@@ -230,7 +271,12 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
             updateShuffleMode();
         }
 
-        registerReceiver(headsetPlugReceiver, new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY));
+        IntentFilter audioFilter = new IntentFilter(AudioManager.ACTION_AUDIO_BECOMING_NOISY);
+        audioFilter.addAction("android.media.VOLUME_CHANGED_ACTION");
+        audioFilter.addAction(android.bluetooth.BluetoothDevice.ACTION_ACL_CONNECTED);
+        audioFilter.addAction("android.bluetooth.a2dp.profile.action.CONNECTION_STATE_CHANGED");
+        audioFilter.addAction("android.bluetooth.headset.profile.action.CONNECTION_STATE_CHANGED");
+        registerReceiver(headsetPlugReceiver, audioFilter);
 
         super.onCreate();
     }

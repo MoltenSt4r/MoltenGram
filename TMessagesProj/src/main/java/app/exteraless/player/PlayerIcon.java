@@ -22,7 +22,9 @@ public class PlayerIcon extends Drawable {
     public static final String MORE = circle(12, 5, 1.8f) + circle(12, 12, 1.8f) + circle(12, 19, 1.8f);
     public static final String HEART = "M12 20.5s-7.5-4.6-7.5-10.3A4.3 4.3 0 0 1 12 7.6a4.3 4.3 0 0 1 7.5 2.6c0 5.7-7.5 10.3-7.5 10.3z";
     public static final String SHUFFLE = "M16 4h4v4M4 20L20 4M20 16v4h-4M14.5 14.5L20 20M4 4l5 5";
+    public static final String REVERSE = "M4 4h4v4M20 20L4 4M4 16v4h4M9.5 9.5L4 4M20 20l-5-5";
     public static final String REPEAT = "M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4";
+    public static final String ONCE = "M17 2l3 3-3 3M4 11V9a4 4 0 0 1 4-4h12M7 22l-3-3 3-3M20 13v2a4 4 0 0 1-4 4H4M12 7v5l3 3";
     public static final String PREV = roundRect(5, 5.5f, 2.6f, 13, 1.2f) + "M19 6.6v10.8a1 1 0 0 1-1.55.84l-8.1-5.4a1 1 0 0 1 0-1.68l8.1-5.4A1 1 0 0 1 19 6.6z";
     public static final String NEXT = roundRect(16.4f, 5.5f, 2.6f, 13, 1.2f) + "M5 6.6v10.8a1 1 0 0 0 1.55.84l8.1-5.4a1 1 0 0 0 0-1.68l-8.1-5.4A1 1 0 0 0 5 6.6z";
     public static final String PLAY = "M8 5.8v12.4a1 1 0 0 0 1.54.84l9.6-6.2a1 1 0 0 0 0-1.68l-9.6-6.2A1 1 0 0 0 8 5.8z";
@@ -32,8 +34,15 @@ public class PlayerIcon extends Drawable {
     public static final String QUEUE = "M4 6h12M4 11h12M4 16h7M15 14v6l5-3z";
     public static final String SLEEP = "M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z";
     public static final String PLAYLIST_ADD = "M4 6h16M4 11h10M4 16h6M18 14v6M15 17h6";
+    public static final String SHARE = "M18 16.08a3 3 0 0 0-2.24 1.02L8.91 13.6a3.27 3.27 0 0 0 0-1.2l6.85-3.5a3 3 0 1 0-.91-1.8 3.2 3.2 0 0 0 .06.5L8.06 11.1a3 3 0 1 0 0 3.8l6.85 3.5a2.97 2.97 0 1 0 3.09-2.32z";
     public static final String NOTE = "M9 17V5l11-2v12" + circle(6.5f, 17, 2.5f) + circle(17.5f, 15, 2.5f);
     public static final String CLOSE = "M6 6l12 12M18 6L6 18";
+    public static final String CHEVRON_UP = "M6 15l6-6 6 6";
+    public static final String CHECK = "M5 13l4 4L19 7";
+    public static final String ARROW_UP = "M12 19V5M5 12l7-7 7 7";
+    public static final String ARROW_DOWN = "M12 5v14M19 12l-7 7-7-7";
+    public static final String EYE = "M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" + circle(12, 12, 3);
+    public static final String EYE_OFF = "M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24M1 1l22 22";
 
     private static final HashMap<String, Path> cache = new HashMap<>();
 

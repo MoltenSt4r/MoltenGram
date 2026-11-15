@@ -1076,6 +1076,19 @@ public class ReactionsLayoutInBubble {
                 }
             }
 
+            if (!paid && parentView instanceof ChatMessageCell && ((ChatMessageCell) parentView).isCompactMode()) {
+                // compact mode: neutral chips, solid over the plain background or the compact outgoing bubble
+                if (choosen) {
+                    backgroundColor = Theme.getColor(Theme.key_chat_compact_reactionBackgroundSelected, resourcesProvider);
+                    textColor = Theme.getColor(Theme.key_chat_compact_reactionTextSelected, resourcesProvider);
+                } else {
+                    final int under = isOutOwner() ? Theme.getCompactOutBubbleColor(resourcesProvider) : Theme.getColor(Theme.key_chat_compact_background, resourcesProvider);
+                    backgroundColor = ColorUtils.compositeColors(Theme.getColor(Theme.key_chat_compact_reactionBackground, resourcesProvider), under);
+                    textColor = Theme.getColor(Theme.key_chat_compact_reactionText, resourcesProvider);
+                }
+                serviceTextColor = textColor;
+                serviceBackgroundColor = backgroundColor;
+            }
             if (drawBgOnlyIfChosen) {
                 backgroundColor = 0;
                 serviceBackgroundColor = 0;
@@ -1293,8 +1306,16 @@ public class ReactionsLayoutInBubble {
                             parentView.invalidate();
                         }
                     }
-                    imageReceiver2.setImageCoords(imageReceiver.getImageX() - imageReceiver.getImageWidth() / 2, imageReceiver.getImageY() - imageReceiver.getImageWidth() / 2, imageReceiver.getImageWidth() * 2, imageReceiver.getImageHeight() * 2);
+                    // lottie bounds are truncated to int, so keep the fractional offset in canvas translation
+                    // to match the static last frame exactly and avoid a jump when the animation ends
+                    final float x2 = imageReceiver.getImageX() - imageReceiver.getImageWidth() / 2;
+                    final float y2 = imageReceiver.getImageY() - imageReceiver.getImageHeight() / 2;
+                    final int ix2 = (int) Math.floor(x2), iy2 = (int) Math.floor(y2);
+                    imageReceiver2.setImageCoords(ix2, iy2, imageReceiver.getImageWidth() * 2, imageReceiver.getImageHeight() * 2);
+                    canvas.save();
+                    canvas.translate(x2 - ix2, y2 - iy2);
                     imageReceiver2.draw(canvas);
+                    canvas.restore();
                 }
                 if (drawStaticImage) {
                     imageReceiver.draw(canvas);
@@ -1718,7 +1739,7 @@ public class ReactionsLayoutInBubble {
                 visibleReaction.isStar = true;
             } else if (reaction instanceof TLRPC.TL_reactionEmoji) {
                 visibleReaction.emojicon = ((TLRPC.TL_reactionEmoji) reaction).emoticon;
-                visibleReaction.hash = visibleReaction.emojicon.hashCode();
+                visibleReaction.hash = visibleReaction.emojicon != null ? visibleReaction.emojicon.hashCode() : 0;
             } else if (reaction instanceof TLRPC.TL_reactionCustomEmoji) {
                 visibleReaction.documentId = ((TLRPC.TL_reactionCustomEmoji) reaction).document_id;
                 visibleReaction.hash = visibleReaction.documentId;

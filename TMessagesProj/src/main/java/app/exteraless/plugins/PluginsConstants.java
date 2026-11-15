@@ -54,6 +54,9 @@ public final class PluginsConstants {
 
     public static final String KEY_WATCHDOG_MUTED_PREFIX = "watchdog_muted_";
 
+    public static final String KEY_WATCHDOG_EARLY_CRASHES = "watchdog_early_crashes";
+    public static final String KEY_SAFE_MODE_AUTO = "pluginsSafeModeAuto";
+
     /** Per-plugin настройки: отдельный prefs-файл plugin_settings_<id>, значения — JSON. */
     public static final String SETTINGS_PREFS_PREFIX = "plugin_settings_";
 
@@ -80,12 +83,13 @@ public final class PluginsConstants {
      * ограничение стоит у 72 — при прежнем значении "1.0.0" ни один из них не
      * ставился вообще.
      *
-     * 1.4.5.3 — версия SDK exteraGram 12.9.2 (assets/plugins_pysdk/v.txt), по
-     * документации которой и написан наш Python-SDK. Заявлять её честно:
+     * Значение повторяет версию SDK exteraGram (в 12.9.2 — 1.4.5.3,
+     * assets/plugins_pysdk/v.txt), по документации которой и написан наш
+     * Python-SDK. Заявлять её честно:
      * поверхность имён и семантика соответствуют, отсутствующее покрыто
      * явными исключениями, а не молчаливыми заглушками.
      */
-    public static final String SDK_VERSION = "1.4.5.3";
+    public static final String SDK_VERSION = "1.4.5.7";
 
     /** Имя движка в карте getEngines(); плагины каталога берут его отсюда. */
     public static final String PYTHON = "python";

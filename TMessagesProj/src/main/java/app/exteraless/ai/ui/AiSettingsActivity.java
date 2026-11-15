@@ -85,6 +85,11 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
     private int clearHistoryRow;
     private int generationDividerRow;
 
+    private int telegramHeaderRow;
+    private int replaceEditorRow;
+    private int replaceSummariesRow;
+    private int telegramDividerRow;
+
     private TemperatureCell temperatureCell;
     private Client testClient;
     private String testRequestId;
@@ -139,6 +144,11 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
         disableToolsRow = addRow("disableTools");
         clearHistoryRow = addRow("clearHistory");
         generationDividerRow = addRow();
+
+        telegramHeaderRow = addRow("telegramHeader");
+        replaceEditorRow = addRow("replaceEditor");
+        replaceSummariesRow = addRow("replaceSummaries");
+        telegramDividerRow = addRow();
     }
 
     @Override
@@ -225,6 +235,12 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
         } else if (position == disableToolsRow) {
             AiConfig.setDisableTools(!AiConfig.getDisableTools());
             ((TextCheckCell) view).setChecked(AiConfig.getDisableTools());
+        } else if (position == replaceEditorRow) {
+            AiConfig.setReplaceTelegramEditor(!AiConfig.getReplaceTelegramEditor(currentAccount));
+            ((TextCheckCell) view).setChecked(AiConfig.getReplaceTelegramEditor(currentAccount));
+        } else if (position == replaceSummariesRow) {
+            AiConfig.setReplaceTelegramSummaries(!AiConfig.getReplaceTelegramSummaries(currentAccount));
+            ((TextCheckCell) view).setChecked(AiConfig.getReplaceTelegramSummaries(currentAccount));
         } else if (position == clearHistoryRow) {
             AiConfig.clearConversationHistory();
             BulletinFactory.of(this).createSimpleBulletin(R.raw.ic_delete,
@@ -822,6 +838,8 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setText(getString(R.string.OEAiServiceHeader));
                     } else if (position == generationHeaderRow) {
                         cell.setText(getString(R.string.OEAiGenerationHeader));
+                    } else if (position == telegramHeaderRow) {
+                        cell.setText(getString(R.string.OEAiTelegramHeader));
                     }
                     break;
                 }
@@ -836,6 +854,12 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                     } else if (position == disableToolsRow) {
                         cell.setTextAndValueAndCheck(getString(R.string.OEAiDisableTools),
                                 getString(R.string.OEAiDisableToolsInfo), AiConfig.getDisableTools(), true, true);
+                    } else if (position == replaceEditorRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAiReplaceEditor),
+                                getString(R.string.OEAiReplaceEditorInfo), AiConfig.getReplaceTelegramEditor(currentAccount), true, true);
+                    } else if (position == replaceSummariesRow) {
+                        cell.setTextAndValueAndCheck(getString(R.string.OEAiReplaceSummaries),
+                                getString(R.string.OEAiReplaceSummariesInfo), AiConfig.getReplaceTelegramSummaries(currentAccount), true, false);
                     }
                     break;
                 }
@@ -882,11 +906,13 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
                 }
                 case TYPE_INFO_PRIVACY: {
                     TextInfoPrivacyCell cell = (TextInfoPrivacyCell) holder.itemView;
-                    boolean bottom = position == generationDividerRow;
+                    boolean bottom = position == telegramDividerRow;
                     if (position == serviceDividerRow) {
                         cell.setText(getString(R.string.OEAiServiceInfo));
                     } else if (position == generationDividerRow) {
                         cell.setText(getString(R.string.OEAiGenerationInfo));
+                    } else if (position == telegramDividerRow) {
+                        cell.setText(getString(R.string.OEAiTelegramInfo));
                     }
                     cell.setBackground(Theme.getThemedDrawable(mContext,
                             bottom ? R.drawable.greydivider_bottom : R.drawable.greydivider,
@@ -898,16 +924,17 @@ public class AiSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == serviceHeaderRow || position == generationHeaderRow) {
+            if (position == serviceHeaderRow || position == generationHeaderRow || position == telegramHeaderRow) {
                 return TYPE_HEADER;
             }
-            if (position == serviceDividerRow || position == generationDividerRow) {
+            if (position == serviceDividerRow || position == generationDividerRow || position == telegramDividerRow) {
                 return TYPE_INFO_PRIVACY;
             }
             if (position == temperatureRow) {
                 return TYPE_TEMPERATURE;
             }
-            if (position == streamingRow || position == saveHistoryRow || position == disableToolsRow) {
+            if (position == streamingRow || position == saveHistoryRow || position == disableToolsRow
+                    || position == replaceEditorRow || position == replaceSummariesRow) {
                 return TYPE_CHECK;
             }
             return TYPE_SETTINGS;

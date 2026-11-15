@@ -135,6 +135,14 @@ def _parse_requires(value: Any) -> Dict[str, Dict[str, Optional[str]]]:
     return requires
 
 
+def _parse_permissions(value: Any) -> list:
+    from extera_utils.metadata_parser import PluginMetadataError, _validate_permissions
+    try:
+        return _validate_permissions(value or [])
+    except PluginMetadataError as e:
+        raise MetainfoError(str(e).replace("__permissions__", "permissions")) from None
+
+
 def resolve_placeholders(text: str, lookup: Optional[Callable[[str], Any]]) -> str:
     """Replace {key} placeholders using *lookup* (falls back to the key name)."""
     if lookup is None or "{" not in text:
@@ -170,6 +178,9 @@ def build_metadata(raw: Dict[str, Any],
 
     author = meta.get("author") or "Unknown author"
 
+    declared_permissions = "permissions" in meta
+    permissions = _parse_permissions(meta.get("permissions")) if declared_permissions else []
+
     min_version = meta.get("min_version")
     app_version = meta.get("app_version")
     if app_version is None and min_version is not None:
@@ -189,6 +200,8 @@ def build_metadata(raw: Dict[str, Any],
         "beta": bool(meta.get("beta", False)),
         "requirements": _parse_requirements(meta.get("requirements")),
         "requires": _parse_requires(meta.get("requires")),
+        "permissions": permissions,
+        "permissions_declared": declared_permissions,
     }
 
 

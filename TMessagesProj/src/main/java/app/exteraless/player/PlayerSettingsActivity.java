@@ -2,6 +2,7 @@ package app.exteraless.player;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
+import org.telegram.messenger.LocaleController;
 
 import android.content.Context;
 import android.content.Intent;
@@ -38,7 +39,10 @@ import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Cells.CheckBoxCell;
+import org.telegram.ui.Cells.SlideIntChooseView;
 import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
@@ -60,16 +64,26 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
     private int appearanceHeaderRow;
     private int bgStyleRow;
-    private int seekbarStyleRow;
     private int colorStyleRow;
     private int coverShapeRow;
     private int miniCoverShapeRow;
     private int swipeTrackRow;
     private int cropCoverRow;
     private int keepScreenOnRow;
+    private int actionButtonsRow;
+    private int seekbarWavyRow;
+    private int miniPlayerWavyRow;
+    private int seekbarThicknessRow;
+    private int seekbarIndicatorRow;
+    private int chatMediaSeekbarRow;
+    private int classicPlayerSeekbarRow;
+    private int mediaSeekbarStyleRow;
+    private int mediaSeekbarIndicatorRow;
     private int appearanceShadowRow;
 
     private int lyricsHeaderRow;
+    private int lyricsPreviewRow;
+    private int lyricsAudioRecognitionRow;
     private int lyricsExperimentalRow;
     private int lyricsSourcesRow;
     private int lyricsPriorityRow;
@@ -80,11 +94,13 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsShadowRow;
 
     private int audioHeaderRow;
+    private int miniPreviewRow;
+    private int pauseOnMuteRow;
+    private int resumeOnBluetoothRow;
     private int crossfadeRow;
     private int crossfadeDurationRow;
     private int playlistsRow;
     private int sleepTimerRow;
-    private int systemEqualizerRow;
     private int audioShadowRow;
 
     @Override
@@ -104,17 +120,26 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         // Appearance
         appearanceHeaderRow = addRow("appearanceHeader");
         bgStyleRow = addRow("bgStyle");
-        seekbarStyleRow = addRow("seekbarStyle");
         colorStyleRow = addRow("colorStyle");
         coverShapeRow = addRow("coverShape");
         miniCoverShapeRow = addRow("miniCoverShape");
         swipeTrackRow = addRow("swipeTrack");
         cropCoverRow = addRow("cropCover");
         keepScreenOnRow = addRow("keepScreenOn");
+        actionButtonsRow = addRow("actionButtons");
+        seekbarWavyRow = addRow("seekbarWavy");
+        miniPlayerWavyRow = addRow("miniPlayerWavy");
+        seekbarThicknessRow = addRow("seekbarThickness");
+        seekbarIndicatorRow = addRow("seekbarIndicator");
+        chatMediaSeekbarRow = addRow("chatMediaSeekbar");
+        classicPlayerSeekbarRow = addRow("classicPlayerSeekbar");
+        mediaSeekbarStyleRow = addRow("mediaSeekbarStyle");
+        mediaSeekbarIndicatorRow = addRow("mediaSeekbarIndicator");
         appearanceShadowRow = addRow();
 
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
+        lyricsAudioRecognitionRow = addRow("lyricsAudioRecognition");
         lyricsExperimentalRow = addRow("lyricsExperimental");
         lyricsSourcesRow = addRow("lyricsSources");
         lyricsPriorityRow = addRow("lyricsPriority");
@@ -126,11 +151,12 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Audio
         audioHeaderRow = addRow("audioHeader");
+        pauseOnMuteRow = addRow("pauseOnMute");
+        resumeOnBluetoothRow = addRow("resumeOnBluetooth");
         crossfadeRow = addRow("crossfade");
         crossfadeDurationRow = addRow("crossfadeDuration");
         playlistsRow = addRow("playlists");
         sleepTimerRow = addRow("sleepTimer");
-        systemEqualizerRow = addRow("systemEqualizer");
         audioShadowRow = addRow();
     }
 
@@ -151,10 +177,79 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 AppearanceConfig.playerBackgroundStyle.setConfigInt(which);
                 if (listAdapter != null) listAdapter.notifyItemChanged(bgStyleRow);
             });
-        } else if (position == seekbarStyleRow) {
-            new SeekbarStyleDialog(getContext(), which -> {
-                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarStyleRow);
-            }).show();
+        } else if (position == actionButtonsRow) {
+            showActionButtonsDialog();
+        } else if (position == seekbarWavyRow) {
+            boolean nextVal = !AppearanceConfig.playerWavy.Bool();
+            AppearanceConfig.playerWavy.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == miniPlayerWavyRow) {
+            boolean nextVal = !AppearanceConfig.playerMiniWavy();
+            AppearanceConfig.playerMiniWavy.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == seekbarIndicatorRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerSeekbarIndicatorDot),
+                    getString(R.string.OEPlayerSeekbarIndicatorBar),
+                    "Скрыть"
+            };
+            showSelector(getString(R.string.OEPlayerSeekbarIndicator), options, which -> {
+                AppearanceConfig.playerSeekbarIndicator.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(seekbarIndicatorRow);
+            });
+        } else if (position == chatMediaSeekbarRow) {
+            boolean nextVal = !AppearanceConfig.chatMediaSeekbarEnabled();
+            AppearanceConfig.chatMediaSeekbarEnabled.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == classicPlayerSeekbarRow) {
+            boolean nextVal = !AppearanceConfig.classicPlayerSeekbarEnabled();
+            AppearanceConfig.classicPlayerSeekbarEnabled.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == mediaSeekbarStyleRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEAppearancePlayerSeekbarWavy),
+                    getString(R.string.OEAppearancePlayerSeekbarStraight)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerMediaSeekbarStyle), options, which -> {
+                AppearanceConfig.mediaSeekbarStyle.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(mediaSeekbarStyleRow);
+            });
+        } else if (position == mediaSeekbarIndicatorRow) {
+            CharSequence[] options = {
+                    getString(R.string.OEPlayerSeekbarIndicatorBar),
+                    getString(R.string.OEPlayerSeekbarIndicatorDot),
+                    getString(R.string.OEPlayerSeekbarIndicatorNone)
+            };
+            showSelector(getString(R.string.OEAppearancePlayerMediaSeekbarIndicator), options, which -> {
+                AppearanceConfig.mediaSeekbarIndicator.setConfigInt(which);
+                if (listAdapter != null) listAdapter.notifyItemChanged(mediaSeekbarIndicatorRow);
+            });
+        } else if (position == pauseOnMuteRow) {
+            boolean nextVal = !AppearanceConfig.playerPauseOnMute();
+            AppearanceConfig.playerPauseOnMute.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == resumeOnBluetoothRow) {
+            boolean nextVal = !AppearanceConfig.playerResumeOnBluetooth();
+            AppearanceConfig.playerResumeOnBluetooth.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == lyricsAudioRecognitionRow) {
+            boolean nextVal = !AppearanceConfig.playerLyricsAudioRecognition();
+            AppearanceConfig.playerLyricsAudioRecognition.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
         } else if (position == colorStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerColorStyleCover),
@@ -302,26 +397,23 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             LocalPlaylistsController.getInstance().showPlaylistsDialog(getParentActivity(), getResourceProvider());
         } else if (position == sleepTimerRow) {
             SleepTimer.showDialog(getContext(), getResourceProvider());
-        } else if (position == systemEqualizerRow) {
-            try {
-                Intent eqIntent = new Intent(AudioEffect.ACTION_DISPLAY_AUDIO_EFFECT_CONTROL_PANEL);
-                eqIntent.putExtra(AudioEffect.EXTRA_PACKAGE_NAME, getContext().getPackageName());
-                eqIntent.putExtra(AudioEffect.EXTRA_CONTENT_TYPE, AudioEffect.CONTENT_TYPE_MUSIC);
-                if (getParentActivity() != null && eqIntent.resolveActivity(getParentActivity().getPackageManager()) != null) {
-                    getParentActivity().startActivity(eqIntent);
-                } else {
-                    BulletinFactory.global().createSimpleBulletin(R.drawable.baseline_volume_up_24, getString(R.string.OEAppearancePlayerEqualizerNotFound)).show();
-                }
-            } catch (Throwable t) {
-                FileLog.e(t);
-            }
         }
     }
+
+    private static final int TYPE_SLIDER = 101;
 
     private class ListAdapter extends BaseListAdapter {
 
         public ListAdapter(Context context) {
             super(context);
+        }
+
+        @Override
+        protected boolean isSectionContent(int viewType) {
+            if (viewType == TYPE_SLIDER) {
+                return true;
+            }
+            return super.isSectionContent(viewType);
         }
 
         @Override
@@ -334,13 +426,18 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         public int getItemViewType(int position) {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
+            } else if (position == seekbarThicknessRow) {
+                return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
-                    || position == lyricsExperimentalRow || position == lyricsTranslateRow || position == lyricsAutoscrollRow
-                    || position == crossfadeRow) {
+                    || position == seekbarWavyRow || position == miniPlayerWavyRow || position == chatMediaSeekbarRow || position == classicPlayerSeekbarRow
+                    || position == pauseOnMuteRow || position == resumeOnBluetoothRow
+                    || position == lyricsAudioRecognitionRow || position == lyricsExperimentalRow
+                    || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == seekbarStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+            } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+                    || position == actionButtonsRow || position == seekbarIndicatorRow || position == mediaSeekbarStyleRow || position == mediaSeekbarIndicatorRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
-                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow || position == systemEqualizerRow) {
+                    || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow) {
                 return TYPE_SETTINGS;
             } else if (position == appearanceShadowRow || position == lyricsShadowRow || position == audioShadowRow) {
                 return TYPE_SHADOW;
@@ -348,10 +445,31 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             return TYPE_SETTINGS;
         }
 
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_SLIDER) {
+                SlideIntChooseView cell = new SlideIntChooseView(mContext, getResourceProvider());
+                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(cell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
+        }
+
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             int type = holder.getItemViewType();
-            if (type == TYPE_HEADER) {
+            if (type == TYPE_SLIDER) {
+                if (position == seekbarThicknessRow) {
+                    SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
+                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 16, val -> val + " dp");
+                    options.toString = (typ, val) -> typ == 0 ? ("Толщина линии прогресса: " + val + " dp") : (val + " dp");
+                    cell.setLabel("Толщина линии прогресса");
+                    cell.set(AppearanceConfig.playerSeekbarThickness(), options, newValue -> {
+                        AppearanceConfig.playerSeekbarThickness.setConfigInt(newValue);
+                    });
+                }
+            } else if (type == TYPE_HEADER) {
                 HeaderCell cell = (HeaderCell) holder.itemView;
                 if (position == appearanceHeaderRow) {
                     cell.setText(getString(R.string.OEAppearancePlayerAppearanceHeader));
@@ -368,6 +486,20 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerCropCover), AppearanceConfig.playerCropCover(), true);
                 } else if (position == keepScreenOnRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerKeepScreenOn), AppearanceConfig.playerKeepScreenOn(), false);
+                } else if (position == seekbarWavyRow) {
+                    cell.setTextAndCheck("Волнистая линия прогресса", AppearanceConfig.playerWavy.Bool(), true);
+                } else if (position == miniPlayerWavyRow) {
+                    cell.setTextAndCheck("Волнистая линия в мини-плеере", AppearanceConfig.playerMiniWavy(), true);
+                } else if (position == chatMediaSeekbarRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerChatSeekbar), getString(R.string.OEAppearancePlayerChatSeekbarDesc), AppearanceConfig.chatMediaSeekbarEnabled(), true, true);
+                } else if (position == classicPlayerSeekbarRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerClassicSeekbar), getString(R.string.OEAppearancePlayerClassicSeekbarDesc), AppearanceConfig.classicPlayerSeekbarEnabled(), true, true);
+                } else if (position == pauseOnMuteRow) {
+                    cell.setTextAndCheck("Пауза при отключении звука", AppearanceConfig.playerPauseOnMute(), true);
+                } else if (position == resumeOnBluetoothRow) {
+                    cell.setTextAndCheck("Возобновлять при подключении Bluetooth", AppearanceConfig.playerResumeOnBluetooth(), true);
+                } else if (position == lyricsAudioRecognitionRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsAudioRecognition), getString(R.string.OEAppearancePlayerLyricsAudioRecognitionDesc), AppearanceConfig.playerLyricsAudioRecognition(), true, true);
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
                 } else if (position == lyricsTranslateRow) {
@@ -384,10 +516,34 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     int bgStyle = AppearanceConfig.playerBackgroundStyle();
                     String bgStyleName = bgStyle == 1 ? getString(R.string.OEAppearancePlayerBackgroundStyleBlur) : bgStyle == 2 ? getString(R.string.OEAppearancePlayerBackgroundStyleGradient) : getString(R.string.OEAppearancePlayerBackgroundStyleTheme);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerBackgroundStyle), bgStyleName, true);
-                } else if (position == seekbarStyleRow) {
-                    int seekbarStyle = AppearanceConfig.playerSeekbarStyle();
-                    String seekbarName = seekbarStyle == 0 ? getString(R.string.OEAppearancePlayerSeekbarDefault) : seekbarStyle == 1 ? getString(R.string.OEAppearancePlayerSeekbarWavy) : seekbarStyle == 2 ? getString(R.string.OEAppearancePlayerSeekbarSlim) : getString(R.string.OEAppearancePlayerSeekbarSquiggly);
-                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerSeekbarStyle), seekbarName, true);
+                } else if (position == actionButtonsRow) {
+                    String active = AppearanceConfig.playerActionButtons();
+                    String[] parts = (active != null && !active.isEmpty()) ? active.split(",") : new String[]{"speed", "lyrics", "playlist", "sleep", "queue"};
+                    StringBuilder sb = new StringBuilder();
+                    for (int i = 0; i < parts.length; i++) {
+                        if (i > 0) sb.append(", ");
+                        String a = parts[i].trim();
+                        if ("speed".equals(a)) sb.append("Скорость");
+                        else if ("lyrics".equals(a)) sb.append("Текст");
+                        else if ("playlist".equals(a)) sb.append("Плейлист");
+                        else if ("sleep".equals(a)) sb.append("Таймер");
+                        else if ("queue".equals(a)) sb.append("Очередь");
+                        else if ("share".equals(a)) sb.append("Поделиться");
+                        else if ("like".equals(a)) sb.append("В профиль");
+                    }
+                    cell.setTextAndValue("Кнопки панели действий", sb.toString(), true);
+                } else if (position == seekbarIndicatorRow) {
+                    int ind = AppearanceConfig.playerSeekbarIndicator();
+                    String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorBar) : ind == 2 ? "Скрыть" : getString(R.string.OEPlayerSeekbarIndicatorDot);
+                    cell.setTextAndValue(getString(R.string.OEPlayerSeekbarIndicator), indName, true);
+                } else if (position == mediaSeekbarStyleRow) {
+                    int style = AppearanceConfig.mediaSeekbarStyle();
+                    String styleName = style == 1 ? getString(R.string.OEAppearancePlayerSeekbarStraight) : getString(R.string.OEAppearancePlayerSeekbarWavy);
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerMediaSeekbarStyle), styleName, true);
+                } else if (position == mediaSeekbarIndicatorRow) {
+                    int ind = AppearanceConfig.mediaSeekbarIndicator();
+                    String indName = ind == 1 ? getString(R.string.OEPlayerSeekbarIndicatorDot) : ind == 2 ? getString(R.string.OEPlayerSeekbarIndicatorNone) : getString(R.string.OEPlayerSeekbarIndicatorBar);
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerMediaSeekbarIndicator), indName, false);
                 } else if (position == colorStyleRow) {
                     int colorStyle = AppearanceConfig.playerColorStyle();
                     String colorName = colorStyle == 1 ? getString(R.string.OEAppearancePlayerColorStyleTheme) : getString(R.string.OEAppearancePlayerColorStyleCover);
@@ -447,8 +603,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     SleepTimer timer = SleepTimer.getInstance();
                     String timerStatus = timer.isRunning() ? timer.getFormattedRemaining() : getString(R.string.OEAppearancePlayerSleepTimerOff);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerSleepTimer), timerStatus, true);
-                } else if (position == systemEqualizerRow) {
-                    cell.setText(getString(R.string.OEAppearancePlayerEqualizer), false);
                 }
             }
         }
@@ -766,6 +920,9 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         if (getParentActivity() == null) {
             return;
         }
+        if (android.os.Build.VERSION.SDK_INT >= 21) {
+            // Android 5.0+ MD3 container
+        }
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
         builder.setTitle(getString(R.string.OEAppearancePlayerCrossfadeDuration));
 
@@ -784,8 +941,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         LinearLayout card1 = new LinearLayout(getParentActivity());
         card1.setOrientation(LinearLayout.VERTICAL);
         card1.setGravity(Gravity.CENTER);
-        card1.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card1.setPadding(dp(14), dp(10), dp(14), dp(10));
         card1.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
+
+        TextView titleText1 = new TextView(getParentActivity());
+        titleText1.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeIn));
+        titleText1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        titleText1.setGravity(Gravity.CENTER);
+        titleText1.setTextColor(Theme.getColor(Theme.key_dialogTextGray2, getResourceProvider()));
+        card1.addView(titleText1, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         TextView valueText1 = new TextView(getParentActivity());
         valueText1.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
@@ -797,8 +961,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         LinearLayout card2 = new LinearLayout(getParentActivity());
         card2.setOrientation(LinearLayout.VERTICAL);
         card2.setGravity(Gravity.CENTER);
-        card2.setPadding(dp(14), dp(12), dp(14), dp(12));
+        card2.setPadding(dp(14), dp(10), dp(14), dp(10));
         card2.setBackground(Theme.createRoundRectDrawable(dp(12), cardBg));
+
+        TextView titleText2 = new TextView(getParentActivity());
+        titleText2.setText(getString(R.string.OEAppearancePlayerCrossfadeFadeOut));
+        titleText2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        titleText2.setGravity(Gravity.CENTER);
+        titleText2.setTextColor(Theme.getColor(Theme.key_dialogTextGray2, getResourceProvider()));
+        card2.addView(titleText2, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 4));
 
         TextView valueText2 = new TextView(getParentActivity());
         valueText2.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
@@ -852,5 +1023,96 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
+    }
+
+    private void showActionButtonsDialog() {
+        if (getParentActivity() == null) return;
+        final String[] keys = new String[]{
+                "speed",
+                "lyrics",
+                "playlist",
+                "sleep",
+                "queue",
+                "share",
+                "like"
+        };
+        CharSequence[] items = new CharSequence[]{
+                "Скорость",
+                "Текст песни",
+                "Добавить в плейлист",
+                "Таймер сна",
+                "Очередь (Далее)",
+                "Поделиться",
+                "Сохранить в профиль"
+        };
+        String currentActions = AppearanceConfig.playerActionButtons();
+        boolean[] checked = new boolean[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            checked[i] = currentActions.contains(keys[i]);
+        }
+
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity(), getResourceProvider());
+        builder.setTitle("Кнопки панели действий");
+
+        ScrollView scrollView = new ScrollView(getParentActivity());
+        LinearLayout container = new LinearLayout(getParentActivity());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(0, dp(8), 0, dp(8));
+        scrollView.addView(container);
+
+        CheckBoxCell[] cells = new CheckBoxCell[keys.length];
+        for (int i = 0; i < keys.length; i++) {
+            final int index = i;
+            CheckBoxCell cell = new CheckBoxCell(getParentActivity(), 1, getResourceProvider());
+            cell.setBackground(Theme.getSelectorDrawable(false));
+            cell.setPadding(dp(12), 0, dp(12), 0);
+            cell.setText(items[i], "", checked[i], false);
+            cell.setOnClickListener(v -> {
+                boolean next = !cells[index].isChecked();
+                if (!next) {
+                    int count = 0;
+                    for (int j = 0; j < cells.length; j++) {
+                        if (j == index ? next : cells[j].isChecked()) count++;
+                    }
+                    if (count < 1) {
+                        BulletinFactory.of(PlayerSettingsActivity.this).createSimpleBulletin(R.raw.info, getString(R.string.OEPlayerActionButtonsMin)).show();
+                        return;
+                    }
+                }
+                cells[index].setChecked(next, true);
+            });
+            cells[i] = cell;
+            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50, 0, 2, 0, 2));
+        }
+
+        builder.setView(scrollView);
+        builder.setPositiveButton(getString(R.string.Save), (dialog, which) -> {
+            StringBuilder sb = new StringBuilder();
+            for (int i = 0; i < keys.length; i++) {
+                if (cells[i].isChecked()) {
+                    if (sb.length() > 0) sb.append(",");
+                    sb.append(keys[i]);
+                }
+            }
+            AppearanceConfig.playerActionButtons.setConfigString(sb.toString());
+            if (listAdapter != null) listAdapter.notifyItemChanged(actionButtonsRow);
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    @Override
+    public String getSearchPrefix() {
+        return "OEPlayer";
+    }
+
+    @Override
+    public String getSearchTitle() {
+        return LocaleController.getString(R.string.OEAppearancePlayerSettings);
+    }
+
+    @Override
+    public int getSearchIcon() {
+        return R.drawable.baseline_music_note_outline_24;
     }
 }

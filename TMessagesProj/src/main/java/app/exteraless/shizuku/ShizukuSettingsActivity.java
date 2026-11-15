@@ -240,11 +240,11 @@ public class ShizukuSettingsActivity extends BaseNekoSettingsActivity implements
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == statusHeaderRow) {
-                        cell.setText(LocaleController.getString(R.string.AuthAnotherClient));
+                        cell.setText(getString(R.string.ShizukuStatusHeader));
                     } else if (position == featuresHeaderRow) {
                         cell.setText(getString(R.string.Features));
                     } else if (position == systemHeaderRow) {
-                        cell.setText(LocaleController.getString(R.string.StorageUsage));
+                        cell.setText(getString(R.string.ShizukuMaintenanceHeader));
                     }
                     break;
                 }

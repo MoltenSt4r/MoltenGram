@@ -51,33 +51,43 @@ public class GridLayoutManagerFixed extends GridLayoutManager {
     @Override
     protected void recycleViewsFromStart(RecyclerView.Recycler recycler, int scrollingOffset,
                                          int noRecycleSpace) {
-        if (scrollingOffset < 0) {
-            return;
-        }
-        // ignore padding, ViewGroup may not clip children.
-        final int childCount = getChildCount();
-        if (mShouldReverseLayout) {
-            for (int i = childCount - 1; i >= 0; i--) {
-                View child = getChildAt(i);
-                final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
-                if (child.getBottom() + params.bottomMargin > scrollingOffset
-                        || child.getTop() + child.getHeight() > scrollingOffset) {
-                    // stop here
-                    recycleChildren(recycler, childCount - 1, i);
-                    return;
+        try {
+            if (scrollingOffset < 0) {
+                return;
+            }
+            // ignore padding, ViewGroup may not clip children.
+            final int childCount = getChildCount();
+            if (mShouldReverseLayout) {
+                for (int i = childCount - 1; i >= 0; i--) {
+                    View child = getChildAt(i);
+                    if (child == null || !(child.getLayoutParams() instanceof RecyclerView.LayoutParams)) {
+                        continue;
+                    }
+                    final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
+                    if (child.getBottom() + params.bottomMargin > scrollingOffset
+                            || child.getTop() + child.getHeight() > scrollingOffset) {
+                        // stop here
+                        recycleChildren(recycler, childCount - 1, i);
+                        return;
+                    }
+                }
+            } else {
+                for (int i = 0; i < childCount; i++) {
+                    View child = getChildAt(i);
+                    if (child == null || !(child.getLayoutParams() instanceof RecyclerView.LayoutParams)) {
+                        continue;
+                    }
+                    final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
+                    if (child.getBottom() + params.bottomMargin > scrollingOffset
+                            || child.getTop() + child.getHeight() > scrollingOffset) {
+                        // stop here
+                        recycleChildren(recycler, 0, i);
+                        return;
+                    }
                 }
             }
-        } else {
-            for (int i = 0; i < childCount; i++) {
-                View child = getChildAt(i);
-                final RecyclerView.LayoutParams params = (RecyclerView.LayoutParams) child.getLayoutParams();
-                if (child.getBottom() + params.bottomMargin > scrollingOffset
-                        || child.getTop() + child.getHeight() > scrollingOffset) {
-                    // stop here
-                    recycleChildren(recycler, 0, i);
-                    return;
-                }
-            }
+        } catch (Exception e) {
+            org.telegram.messenger.FileLog.e(e);
         }
     }
 

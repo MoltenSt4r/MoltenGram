@@ -78,6 +78,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
     private static final int ID_HIDE_CONTACTS_TAB = -108;
     private static final int ID_HIDE_CALLS_TAB = -109;
     private static final int ID_HIDE_PROFILE_TAB = -110;
+    private static final int ID_ALWAYS_DOWNLOADS = -111;
 
     private static final int ID_FAB_APPEARANCE = -135;
     private static final int ID_FAB_SHAPE = -120;
@@ -171,6 +172,8 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         items.add(UItem.asHeader(getString(R.string.OEGeneral)));
         items.add(UItem.asButton(ID_TABLET_MODE, getString(R.string.OETabletMode),
                 tabletModes()[clamp(NekoConfig.tabletMode.Int(), 3)]));
+        items.add(UItem.asCheck(ID_ALWAYS_DOWNLOADS, getString(R.string.AlwaysShowDownloadIcon))
+                .setChecked(NaConfig.INSTANCE.getAlwaysShowDownloadIcon().Bool()));
         // Вместо переключателя Spring Animations здесь трёхпозиционный
         // NaConfig.backAnimationStyle: он покрывает и Spring, и Classic.
         items.add(UItem.asButton(ID_BACK_ANIMATION, getString(R.string.OEBackAnimation),
@@ -195,11 +198,11 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
             items.add(UItem.asCheck(ID_HIDE_PROFILE_TAB, getString(R.string.MainTabsHideProfile))
                     .setChecked(NaConfig.INSTANCE.getMainTabsHideProfile().Bool()));
         }
-        items.add(UItem.asShadow(null));
 
         items.add(UItem.asHeader("Плавающая кнопка (FAB)"));
         items.add(UItem.asButton(ID_FAB_APPEARANCE, R.drawable.msg_theme, "Внешний вид и анимации FAB",
                 "Формы, размеры, цвета, выравнивание и интерактивный предпросмотр"));
+
         items.add(UItem.asCheck(ID_FAB_SPEED_DIAL, getString(R.string.OEAppearanceMd3SpeedDial))
                 .setChecked(AppearanceConfig.md3FabSpeedDial()));
         if (AppearanceConfig.md3FabSpeedDial()) {
@@ -438,6 +441,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         int hexPreviewColor = isCustomHex ? currentColor : 0xFF6750A4;
         String hexSubtitle = isCustomHex ? String.format("#%06X", (0xFFFFFF & currentColor)) : "Ввод любого цвета";
         options.add(new Option(-9999, "Свой цвет (HEX)", hexSubtitle, hexPreviewColor, true));
+        options.add(new Option(-8888, "На базе акцентного (слайдеры)", "Смещение оттенка, яркость, насыщенность и контраст", defaultColor, false));
 
         final AlertDialog[] dialogRef = new AlertDialog[1];
 
@@ -487,7 +491,23 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
 
             row.setOnClickListener(v -> {
                 if (dialogRef[0] != null) dialogRef[0].dismiss();
-                if (opt.isHex) {
+                if (opt.value == -8888) {
+                    app.exteraless.appearance.AccentColorTunerBottomSheet sheet = new app.exteraless.appearance.AccentColorTunerBottomSheet(
+                            context,
+                            getResourceProvider(),
+                            item.Int(),
+                            false,
+                            newColor -> {
+                                item.setConfigInt(newColor);
+                                update();
+                                if (getParentLayout() != null) {
+                                    getParentLayout().rebuildFragments(0);
+                                }
+                            },
+                            null
+                    );
+                    sheet.show();
+                } else if (opt.isHex) {
                     showHexColorDialog(title, item);
                 } else {
                     item.setConfigInt(opt.value);
@@ -600,7 +620,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
             ID_FAB_APPEARANCE, ID_FAB_SHAPE, ID_FAB_ACTIVE_SHAPE, ID_FAB_SPEED_DIAL, ID_FAB_CUSTOMIZE, ID_FAB_SIZE_SLIDER,
             ID_FAB_ACTIVE_SIZE_SLIDER, ID_FAB_COLOR, ID_FAB_ALIGNMENT, ID_SUB_FAB_ALIGNMENT,
             ID_SUB_FAB_SIZE_SLIDER, ID_SUB_FAB_COLOR,
-            ID_DRAWER, ID_IMMERSIVE
+            ID_DRAWER, ID_IMMERSIVE, ID_ALWAYS_DOWNLOADS
     };
     private static final String[] LINK_KEYS = {
             "tabletMode", "backAnimation", "predictiveBackIntensity", "bottomNavigationBar",
@@ -608,7 +628,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
             "fabAppearance", "fabShape", "fabActiveShape", "md3FabSpeedDial", "md3FabItems", "fabSize",
             "fabActiveSize", "fabColor", "fabAlignment", "subFabAlignment",
             "subFabSize", "subFabColor",
-            "navigationDrawer", "immersiveDrawerAnimation"
+            "navigationDrawer", "immersiveDrawerAnimation", "AlwaysShowDownloadIcon"
     };
 
     private static String linkKey(int id) {
@@ -781,6 +801,13 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         if (id == ID_HIDE_TAB_TITLES || id == ID_HIDE_CONTACTS_TAB
                 || id == ID_HIDE_CALLS_TAB || id == ID_HIDE_PROFILE_TAB) {
             toggleMainTab(mainTabConfig(id));
+            return;
+        }
+        if (id == ID_ALWAYS_DOWNLOADS) {
+            ConfigItem downloads = NaConfig.INSTANCE.getAlwaysShowDownloadIcon();
+            downloads.setConfigBool(!downloads.Bool());
+            update();
+            getNotificationCenter().postNotificationName(NotificationCenter.onDownloadingFilesChanged);
             return;
         }
         if (id == ID_ADD_DIVIDER) {

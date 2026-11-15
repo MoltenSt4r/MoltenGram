@@ -19,6 +19,7 @@ public class AyuState {
     private static final AyuStateVariable allowReadPacket = new AyuStateVariable();
     private static final AyuStateVariable hideSelection = new AyuStateVariable();
     private static final LongSparseArray<ArrayList<Integer>> deletePermitted = new LongSparseArray<>();
+    private static final LongSparseArray<ArrayList<Integer>> deleteKept = new LongSparseArray<>();
 
     public static void setAllowReadPacket(boolean val, int resetAfter) {
         allowReadPacket.val = val;
@@ -55,6 +56,29 @@ public class AyuState {
         }
 
         return list.contains(messageId);
+    }
+
+    public static void keepDeletedMessages(long dialogId, ArrayList<Integer> messageIds) {
+        var list = deleteKept.get(dialogId);
+        if (list == null) {
+            list = new ArrayList<>();
+            deleteKept.put(dialogId, list);
+        }
+
+        list.addAll(messageIds);
+    }
+
+    public static boolean isDeleteKept(long dialogId, int messageId) {
+        var list = deleteKept.get(dialogId);
+        if (list == null) {
+            return false;
+        }
+
+        return list.contains(messageId);
+    }
+
+    public static void releaseKeptMessages(long dialogId) {
+        deleteKept.remove(dialogId);
     }
 
     public static void messageDeleted(long dialogId, int messageId) {

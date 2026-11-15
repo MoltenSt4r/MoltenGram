@@ -48,6 +48,7 @@ public class WavySeekBar extends View {
     private float amplitude;
     private float phase;
     private long lastFrame;
+    private boolean frozen;
     private float maxAmplitude = dp(4);
 
     private ValueAnimator returnAnimator;
@@ -57,6 +58,7 @@ public class WavySeekBar extends View {
     private ValueAnimator resetAnimator;
     private float resetProgress;
     private boolean animatingReset;
+    private boolean waveEnabled = true;
 
     public WavySeekBar(Context context) {
         super(context);
@@ -81,8 +83,24 @@ public class WavySeekBar extends View {
         invalidate();
     }
 
+    public void setFrozen(boolean value) {
+        if (frozen == value) {
+            return;
+        }
+        frozen = value;
+        lastFrame = 0;
+        if (!value) {
+            invalidate();
+        }
+    }
+
     public void setMaxAmplitude(float px) {
         maxAmplitude = px;
+        invalidate();
+    }
+
+    public void setWave(boolean wave) {
+        waveEnabled = wave;
         invalidate();
     }
 
@@ -276,15 +294,14 @@ public class WavySeekBar extends View {
     @Override
     protected void onDraw(@NonNull Canvas canvas) {
         long now = SystemClock.elapsedRealtime();
-        float dt = lastFrame == 0 ? 0.016f : Math.min(0.05f, (now - lastFrame) / 1000f);
-        lastFrame = now;
+        float dt = frozen ? 0f : lastFrame == 0 ? 0.016f : Math.min(0.05f, (now - lastFrame) / 1000f);
+        lastFrame = frozen ? 0 : now;
 
-        int style = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
-        // 0: Default (Thick track + pill thumb)
-        // 1: Wavy (Wavy track + round dot thumb)
-        // 2: Slim (Thin track + no thumb)
-        // 3: Squiggly (Wavy track + vertical bar thumb)
-        boolean isWavy = style == 1 || style == 3;
+        int seekbarStyle = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
+        int indicator = app.exteraless.appearance.AppearanceConfig.playerSeekbarIndicator();
+        int thickness = app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness();
+        boolean isMaterial3 = (seekbarStyle == 1);
+        boolean isWavy = !isMaterial3 && waveEnabled && app.exteraless.appearance.AppearanceConfig.playerWavy.Bool();
         float targetAmp = (playing && isWavy) ? maxAmplitude : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.05f)) {
@@ -294,7 +311,7 @@ public class WavySeekBar extends View {
             phase = (phase + 6f * dt) % TAU;
         }
 
-        float strokeW = style == 0 ? dp(8) : dp(3.5f);
+        float strokeW = dp(Math.max(2, thickness));
         wavePaint.setStrokeWidth(strokeW);
         trackPaint.setStrokeWidth(strokeW);
 
@@ -312,14 +329,25 @@ public class WavySeekBar extends View {
             p = progress;
         }
 
-        float thumbW = dragging ? dp(3) : dp(5);
+        float thumbW = dragging ? dp(3.5f) : dp(5);
         float x = left + p * (right - left);
-        float gap = (style == 2) ? 0 : dp(5);
-        float thumbRadius = (style == 1) ? dp(7) : (thumbW / 2f);
-        float waveEnd = x - gap - thumbRadius;
+        float visualGap = dp(4) + strokeW * 0.35f;
+        float capHalf = strokeW / 2f;
+        float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
+        float waveEnd = (indicator == 2) ? x : (x - thumbRadius - visualGap - capHalf);
+        float stopX = right - dp(1);
+        float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
         float lambda = dp(34);
         float step = dp(2);
 
+        // 1. Draw inactive background track first
+        if (indicator == 2) {
+            canvas.drawLine(left, cy, stopX, cy, trackPaint);
+        } else if (restX < stopX) {
+            canvas.drawLine(restX, cy, stopX, cy, trackPaint);
+        }
+
+        // 2. Draw active progress on top
         if (waveEnd > left) {
             if (amplitude > 0f && isWavy) {
                 path.rewind();
@@ -344,34 +372,21 @@ public class WavySeekBar extends View {
             }
         }
 
-        float stopX = right - dp(1);
-        float restX = Math.min(stopX, x + thumbRadius + gap);
-        if (restX < stopX) {
-            canvas.drawLine(restX, cy, stopX, cy, trackPaint);
-        }
-
-        if (style == 0) {
-            // Default: thick track, vertical pill thumb, dot at end
-            canvas.drawCircle(stopX, cy, dp(2.5f), fillPaint);
-            rect.set(x - thumbW / 2f, cy - dp(12), x + thumbW / 2f, cy + dp(12));
-            canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
-        } else if (style == 1) {
-            // Wavy: circular round dot thumb, dot at end
-            canvas.drawCircle(stopX, cy, dp(2), fillPaint);
-            canvas.drawCircle(x, cy, dp(7), fillPaint);
-        } else if (style == 2) {
-            // Slim: smooth line, no thumb
-            if (dragging) {
-                canvas.drawCircle(x, cy, dp(3.5f), fillPaint);
+        // 3. Draw thumb indicator if not hidden
+        if (indicator != 2) {
+            if (isMaterial3 || indicator == 1) {
+                float barH = Math.max(strokeW + dp(isMaterial3 ? 12 : 8), dp(isMaterial3 ? 24 : 18));
+                rect.set(x - thumbW / 2f, cy - barH / 2f, x + thumbW / 2f, cy + barH / 2f);
+                canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
+                if (isMaterial3) {
+                    canvas.drawCircle(stopX, cy, strokeW / 2f, fillPaint);
+                }
+            } else if (indicator == 0) {
+                canvas.drawCircle(x, cy, thumbRadius, fillPaint);
             }
-        } else {
-            // Squiggly (style 3): wavy line with vertical bar thumb
-            canvas.drawCircle(stopX, cy, dp(2), fillPaint);
-            rect.set(x - thumbW / 2f, cy - dp(9), x + thumbW / 2f, cy + dp(9));
-            canvas.drawRoundRect(rect, dpf2(1.5f), dpf2(1.5f), fillPaint);
         }
 
-        if (amplitude > 0f || targetAmp != amplitude) {
+        if (!frozen && (amplitude > 0f || targetAmp != amplitude)) {
             postInvalidateOnAnimation();
         } else {
             lastFrame = 0;

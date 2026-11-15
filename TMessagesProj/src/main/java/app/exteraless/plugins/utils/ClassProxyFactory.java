@@ -286,7 +286,7 @@ public final class ClassProxyFactory {
         if (mr.mvel != null) {
             return executeMvel(mr, peer, proxy, args);
         }
-        if (peer instanceof PyObject) {
+        if (peer instanceof PyObject && !org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
             try {
                 Object[] callArgs = new Object[2 + args.length];
                 callArgs[0] = mr.pyKey;

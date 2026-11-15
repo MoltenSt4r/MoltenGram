@@ -50,4 +50,10 @@
     <string name="OEAiDetails">详情</string>
     <string name="OEAiDisableTools">禁用工具</string>
     <string name="OEAiDisableToolsInfo">插件审查像以前一样一次性发送代码：仅前 48 KB，不解码内嵌数据</string>
+    <string name="OEAiTelegramHeader">Telegram AI</string>
+    <string name="OEAiReplaceEditor">AI 编辑器</string>
+    <string name="OEAiReplaceEditorInfo">翻译、改写风格并校对草稿</string>
+    <string name="OEAiReplaceSummaries">摘要</string>
+    <string name="OEAiReplaceSummariesInfo">为长消息和帖子生成摘要</string>
+    <string name="OEAiTelegramInfo">所选功能将使用你的 AI 服务而不是 Telegram 服务器，并且不受 Premium 限制。</string>
 </resources>

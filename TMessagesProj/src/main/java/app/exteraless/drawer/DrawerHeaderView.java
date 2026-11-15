@@ -322,7 +322,7 @@ public class DrawerHeaderView extends FrameLayout {
         } else {
             premiumStatusDrawable.set((Drawable) null, true);
         }
-        premiumStatusDrawable.setParticles(DialogObject.isEmojiStatusCollectible(user.emoji_status), true);
+        premiumStatusDrawable.setParticles(org.telegram.messenger.UserObject.isEmojiStatusCollectible(user), true);
         premiumStatusDrawable.setColor(statusColor);
         nameView.setRightDrawable(emojiStatusId != 0 || premium || app.exteraless.chats.CustomEmojiStatusHelper.isEnabled() ? premiumStatusDrawable : null);
 

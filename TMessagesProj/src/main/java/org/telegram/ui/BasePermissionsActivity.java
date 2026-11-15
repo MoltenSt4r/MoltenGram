@@ -56,10 +56,7 @@ public class BasePermissionsActivity extends FragmentActivity {
                 showPermissionErrorAlert(R.raw.permission_request_camera, LocaleController.getString(R.string.VoipNeedCameraPermission));
             }
         } else if (requestCode == REQUEST_CODE_EXTERNAL_STORAGE || requestCode == REQUEST_CODE_EXTERNAL_STORAGE_FOR_AVATAR) {
-            if (!granted) {
-                showPermissionErrorAlert(R.raw.permission_request_folder, requestCode == REQUEST_CODE_EXTERNAL_STORAGE_FOR_AVATAR ? LocaleController.getString(R.string.PermissionNoStorageAvatar) :
-                        LocaleController.getString(R.string.PermissionStorageWithHint));
-            } else {
+            if (granted) {
                 ImageLoader.getInstance().checkMediaPaths();
             }
         } else if (requestCode == REQUEST_CODE_ATTACH_CONTACT) {
@@ -105,7 +102,7 @@ public class BasePermissionsActivity extends FragmentActivity {
 
     protected AlertDialog createPermissionErrorAlert(@RawRes int animationId, String message) {
         return new AlertDialog.Builder(this)
-                .setTopAnimation(animationId, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground))
+                .setTopAnimation(animationId, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground)).setTopBackgroundColorKey(Theme.key_dialogTopBackground, null)
                 .setMessage(AndroidUtilities.replaceTags(message))
                 .setPositiveButton(LocaleController.getString(R.string.PermissionOpenSettings), (dialogInterface, i) -> {
                     try {

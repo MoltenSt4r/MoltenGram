@@ -5,7 +5,7 @@ import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
 
-import org.telegram.messenger.CodeHighlighting;
+import org.telegram.utils.code.highlight.CodeHighlighting;
 import org.telegram.messenger.LinkifyPort;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.ui.Components.TextStyleSpan;
@@ -25,7 +25,7 @@ public class EntitiesHelper {
             Pattern.compile("_{2}([^_\\n]+)_{2}"), // italic
             Pattern.compile("~{2}([^~\\n]+)~{2}"), // strike
             Pattern.compile("[|]{2}([^|\\n]+)[|]{2}"), // spoiler
-            Pattern.compile("\\[([^]]+?)]\\(" + LinkifyPort.WEB_URL_REGEX + "\\)")}; // link
+            Pattern.compile("\\[([^]]+?)]\\(([^)]+)\\)")}; // link
 
     public static void parseMarkdown(CharSequence[] message, boolean allowStrike) {
         var spannable = message[0] instanceof Spannable ? (Spannable) message[0] : Spannable.Factory.getInstance().newSpannable(message[0]);

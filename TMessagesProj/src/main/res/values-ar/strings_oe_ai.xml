@@ -50,4 +50,10 @@
     <string name="OEAiDetails">التفاصيل</string>
     <string name="OEAiDisableTools">تعطيل الأدوات</string>
     <string name="OEAiDisableToolsInfo">يرسل فحص الإضافة الشيفرة في طلب واحد كما في السابق: أول 48 كيلوبايت فقط، ولا تُفك البيانات المضمّنة</string>
+    <string name="OEAiTelegramHeader">ذكاء Telegram الاصطناعي</string>
+    <string name="OEAiReplaceEditor">محرر الذكاء الاصطناعي</string>
+    <string name="OEAiReplaceEditorInfo">ترجمة المسودات وتغيير أسلوبها وتدقيقها</string>
+    <string name="OEAiReplaceSummaries">الملخصات</string>
+    <string name="OEAiReplaceSummariesInfo">تلخيص الرسائل والمنشورات الطويلة</string>
+    <string name="OEAiTelegramInfo">تستخدم الميزات المحددة خدمة الذكاء الاصطناعي الخاصة بك بدلاً من خوادم Telegram، ومن دون قيود Premium.</string>
 </resources>

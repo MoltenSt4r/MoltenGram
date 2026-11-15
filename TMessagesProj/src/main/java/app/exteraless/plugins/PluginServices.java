@@ -208,13 +208,23 @@ public final class PluginServices {
         if (callback == null) {
             return () -> { };
         }
-        return () -> {
+        return () -> runWhenUnfrozen(() -> {
             try {
                 callback.call();
             } catch (Throwable t) {
                 FileLog.e("plugin callback failed", t);
             }
-        };
+        });
+    }
+
+    private static final long FROZEN_RETRY_MS = 300L;
+
+    static void runWhenUnfrozen(Runnable task) {
+        if (org.telegram.ui.Wallet.WalletPluginFreeze.isFrozen()) {
+            UI_HANDLER.postDelayed(() -> runWhenUnfrozen(task), FROZEN_RETRY_MS);
+            return;
+        }
+        task.run();
     }
 
     public static void postRunnable(DispatchQueue queue, PyObject callback, long delay) {
@@ -234,11 +244,13 @@ public final class PluginServices {
             if (callback == null) {
                 return;
             }
-            try {
-                callback.call(response, error);
-            } catch (Throwable t) {
-                FileLog.e("plugin request callback failed", t);
-            }
+            runWhenUnfrozen(() -> {
+                try {
+                    callback.call(response, error);
+                } catch (Throwable t) {
+                    FileLog.e("plugin request callback failed", t);
+                }
+            });
         };
         return ConnectionsManager.getInstance(account).sendRequest(request, delegate);
     }
@@ -247,13 +259,13 @@ public final class PluginServices {
         if (callback == null) {
             return;
         }
-        final Runnable runnable = () -> {
+        final Runnable runnable = () -> runWhenUnfrozen(() -> {
             try {
                 callback.call();
             } catch (Throwable t) {
                 FileLog.e("plugin ui callback failed", t);
             }
-        };
+        });
         final Message message = Message.obtain(UI_HANDLER, runnable);
         message.setAsynchronous(true);
         UI_HANDLER.sendMessageDelayed(message, Math.max(0L, delay));

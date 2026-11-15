@@ -367,8 +367,9 @@ public class MonetHelper {
     }
 
     private static Integer resolveToken(String token) {
+        String cacheKey = (Theme.isCurrentThemeDark() ? "d:" : "l:") + token;
         synchronized (tokenCache) {
-            Integer cached = tokenCache.get(token);
+            Integer cached = tokenCache.get(cacheKey);
             if (cached != null) {
                 return cached;
             }
@@ -376,7 +377,7 @@ public class MonetHelper {
         Integer resolved = computeToken(token);
         if (resolved != null) {
             synchronized (tokenCache) {
-                tokenCache.put(token, resolved);
+                tokenCache.put(cacheKey, resolved);
             }
         }
         return resolved;

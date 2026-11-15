@@ -50,9 +50,11 @@
     <string name="OEChatsTapToSwitchRecord">Tocar para cambiar entre voz y video</string>
     <string name="OEChatsKeepAttachButton">Mantener el botón de adjuntar al escribir</string>
     <string name="OEChatsRemoveMessageTail">Quitar la cola del mensaje</string>
+    <string name="OEChatsUnreadCapsule">Etiqueta compacta de no leídos</string>
     <string name="OEChatsReplaceEditedWithIcon">Sustituir «%1$s» por un icono</string>
     <string name="OEChatsShowOnlineStatus">Mostrar el indicador de conexión</string>
     <string name="OEChatsHideShareButton">Ocultar el botón lateral «%1$s»</string>
+    <string name="OEChatsHideMoneyButton">Ocultar «%1$s» en el menú de adjuntos</string>
     <string name="OEChatsShowResultsBeforeVoting">Ver resultados antes de votar</string>
     <string name="OEChatsShowResultsBeforeVotingInfo">Los resultados de las encuestas públicas se verán sin necesidad de votar.</string>
     <string name="OEChatsHideReactions">Ocultar reacciones</string>
@@ -152,4 +154,6 @@
     <string name="OEChatsMenusHeader">Menús</string>
     <string name="OEChatsPlaybackHeader">Reproducción</string>
     <string name="OEChatsVoiceHeader">Mensajes de voz</string>
+    <string name="OEDoubleTapSaveToDevice">Guardar en el dispositivo</string>
+    <string name="OESendAfterSlowMode">Enviar al terminar el modo lento</string>
 </resources>

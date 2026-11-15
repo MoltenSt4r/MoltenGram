@@ -2,6 +2,8 @@ package app.exteraless.plugins;
 
 import android.app.Activity;
 import android.content.SharedPreferences;
+import android.os.Process;
+import android.os.SystemClock;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
@@ -18,6 +20,7 @@ import java.io.File;
 import java.io.RandomAccessFile;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayDeque;
+import java.util.Collection;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -100,6 +103,10 @@ public class PluginsWatchdog {
     private static final long EXECUTION_SWEEP_MS = 500L;
     private static final long MAIN_BUDGET_NANOS = 250L * 1_000_000L;
     private static final int SLOW_WINDOWS_BEFORE_ALERT = 3;
+    private static final long EARLY_CRASH_WINDOW_MS = 15000L;
+    private static final int EARLY_CRASHES_BEFORE_SAFE_MODE = 3;
+    private static final String ELYX_NAMESPACE = "ElyxPlugins.";
+    private static final String FALLBACK_MODULE_PREFIX = "extera_plugin_";
 
     /** Один заход в код плагина. Сравнивается по ссылке — так проверка узнаёт «тот же самый». */
     public static final class ExecutionInfo {
@@ -155,6 +162,7 @@ public class PluginsWatchdog {
     private volatile RandomAccessFile markerFile;
     private volatile String persistedMarker;
     private volatile ScheduledFuture<?> pendingMarkerClear;
+    private volatile boolean dying;
 
     PluginsWatchdog(SharedPreferences preferences) {
         this.preferences = preferences;
@@ -504,7 +512,7 @@ public class PluginsWatchdog {
     }
 
     private void clearMarkerNow() {
-        if (persistedMarker == null) {
+        if (persistedMarker == null || dying) {
             return;
         }
         try {
@@ -710,6 +718,121 @@ public class PluginsWatchdog {
     public long getMainThreadMillis(String pluginId) {
         AtomicLong counter = pluginId == null ? null : mainThreadNanos.get(pluginId);
         return counter == null ? 0L : counter.get() / 1_000_000L;
+    }
+
+    public static void onUncaughtException(Throwable error) {
+        try {
+            PluginsController controller = PluginsController.peekInstance();
+            PluginsWatchdog watchdog = controller != null ? controller.getWatchdog() : null;
+            if (watchdog != null) {
+                watchdog.recordUncaught(error, controller);
+            }
+        } catch (Throwable ignore) {
+        }
+    }
+
+    private void recordUncaught(Throwable error, PluginsController controller) {
+        String culprit = findPluginInTrace(error, controller.plugins.keySet());
+        if (culprit != null) {
+            dying = true;
+            persistedMarker = null;
+            noteMarker(culprit);
+            FileLog.e("PluginsWatchdog: uncaught exception thrown through plugin " + culprit);
+            return;
+        }
+        if (!controller.isEngineEnabled() || controller.isSafeMode()) {
+            return;
+        }
+        if (SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime() < EARLY_CRASH_WINDOW_MS) {
+            int crashes = preferences.getInt(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES, 0) + 1;
+            preferences.edit().putInt(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES, crashes).commit();
+        }
+    }
+
+    static String findPluginInTrace(Throwable error, Collection<String> pluginIds) {
+        int depth = 0;
+        for (Throwable t = error; t != null && depth < 10; t = t.getCause(), depth++) {
+            String outermost = null;
+            for (StackTraceElement element : t.getStackTrace()) {
+                String className = element.getClassName();
+                if (className == null || !className.startsWith("<python>.")) {
+                    continue;
+                }
+                String id = pluginIdForModule(className.substring("<python>.".length()), pluginIds);
+                if (id != null) {
+                    outermost = id;
+                }
+            }
+            if (outermost != null) {
+                return outermost;
+            }
+        }
+        return null;
+    }
+
+    static String pluginIdForModule(String module, Collection<String> pluginIds) {
+        if (module.startsWith(ELYX_NAMESPACE)) {
+            String rest = module.substring(ELYX_NAMESPACE.length());
+            int dot = rest.indexOf('.');
+            String id = dot >= 0 ? rest.substring(0, dot) : rest;
+            return pluginIds.contains(id) ? id : null;
+        }
+        int dot = module.indexOf('.');
+        String top = dot >= 0 ? module.substring(0, dot) : module;
+        if (pluginIds.contains(top)) {
+            return top;
+        }
+        if (top.startsWith(FALLBACK_MODULE_PREFIX)) {
+            String sanitized = top.substring(FALLBACK_MODULE_PREFIX.length());
+            for (String id : pluginIds) {
+                if (id.equals(sanitized) || id.replaceAll("[^0-9A-Za-z_]", "_").equals(sanitized)) {
+                    return id;
+                }
+            }
+        }
+        return null;
+    }
+
+    public boolean consumeEarlyCrashLoop() {
+        int crashes = preferences.getInt(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES, 0);
+        if (crashes < EARLY_CRASHES_BEFORE_SAFE_MODE) {
+            return false;
+        }
+        preferences.edit().remove(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES).apply();
+        return true;
+    }
+
+    public void scheduleEarlyCrashReset() {
+        long alive = SystemClock.elapsedRealtime() - Process.getStartElapsedRealtime();
+        AndroidUtilities.runOnUIThread(() -> {
+            if (preferences.contains(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES)) {
+                preferences.edit().remove(PluginsConstants.KEY_WATCHDOG_EARLY_CRASHES).apply();
+            }
+        }, Math.max(0L, EARLY_CRASH_WINDOW_MS - alive));
+    }
+
+    public boolean consumeAutoSafeMode() {
+        if (!preferences.getBoolean(PluginsConstants.KEY_SAFE_MODE_AUTO, false)) {
+            return false;
+        }
+        preferences.edit().remove(PluginsConstants.KEY_SAFE_MODE_AUTO).apply();
+        return true;
+    }
+
+    public static String consumeStartupNotice() {
+        PluginsController controller = PluginsController.peekInstance();
+        PluginsWatchdog watchdog = controller != null ? controller.getWatchdog() : null;
+        if (watchdog == null) {
+            return null;
+        }
+        if (watchdog.consumeAutoSafeMode()) {
+            return LocaleController.getString(R.string.PluginsAutoSafeMode);
+        }
+        String crashed = watchdog.consumeCrashedPlugin();
+        if (crashed != null) {
+            return LocaleController.formatString(R.string.PluginsCrashedMessage, watchdog.displayNameOf(crashed));
+        }
+        return null;
     }
 
     /** id плагина, отключённого после падения (однократное чтение для UI, потом очистить). */

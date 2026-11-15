@@ -6,8 +6,7 @@ import android.content.ClipboardManager;
 import android.content.Context;
 import android.text.TextUtils;
 import android.util.TypedValue;
-import android.view.Gravity;
-import android.widget.FrameLayout;
+import android.widget.LinearLayout;
 import android.widget.ScrollView;
 import android.widget.TextView;
 
@@ -19,6 +18,8 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.LaunchActivity;
+
+import app.exteraless.plugins.PluginsWatchdog;
 
 public final class CrashReportDialog {
 
@@ -56,9 +57,19 @@ public final class CrashReportDialog {
         final ScrollView scrollView = new ScrollView(context);
         scrollView.addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        final FrameLayout container = new FrameLayout(context);
-        container.addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT,
-                (int) (AndroidUtilities.displaySize.y * 0.4f / AndroidUtilities.density), Gravity.TOP));
+        final LinearLayout container = new LinearLayout(context);
+        container.setOrientation(LinearLayout.VERTICAL);
+        final String notice = PluginsWatchdog.consumeStartupNotice();
+        if (!TextUtils.isEmpty(notice)) {
+            final TextView noticeView = new TextView(context);
+            noticeView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            noticeView.setTextColor(Theme.getColor(Theme.key_dialogTextBlack));
+            noticeView.setText(notice);
+            noticeView.setPadding(AndroidUtilities.dp(24), AndroidUtilities.dp(4), AndroidUtilities.dp(24), AndroidUtilities.dp(12));
+            container.addView(noticeView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        }
+        container.addView(scrollView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT,
+                (int) (AndroidUtilities.displaySize.y * 0.4f / AndroidUtilities.density)));
 
         final AlertDialog.Builder builder = new AlertDialog.Builder(context);
         builder.setTitle(LocaleController.getString(R.string.OECrashTitle));

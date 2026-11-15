@@ -69,6 +69,11 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     private int testMicRow;
     private int testDividerRow;
 
+    private static final int TEST_STATE_IDLE = 0;
+    private static final int TEST_STATE_RECORDING = 1;
+    private static final int TEST_STATE_PLAYING = 2;
+    private int testState = TEST_STATE_IDLE;
+    private volatile boolean stopRecordingEarly = false;
     private boolean isTesting = false;
     private AudioTrack activeTestTrack = null;
 
@@ -176,7 +181,9 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         } else if (position == presetsRow) {
             showPresetDialog();
         } else if (position == testMicRow) {
-            if (isTesting) {
+            if (testState == TEST_STATE_RECORDING) {
+                finishRecordingEarly();
+            } else if (testState == TEST_STATE_PLAYING) {
                 stopAudioTest();
             } else {
                 startAudioTest();
@@ -318,10 +325,12 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
     }
 
     private void startAudioTest() {
-        if (isTesting) {
+        if (testState != TEST_STATE_IDLE) {
             return;
         }
+        testState = TEST_STATE_RECORDING;
         isTesting = true;
+        stopRecordingEarly = false;
         BulletinFactory.of(this).createSimpleBulletin(R.raw.contact_check, getString(R.string.OEVoiceChangerRecordTest)).show();
 
         Utilities.globalQueue.postRunnable(() -> {
@@ -341,7 +350,7 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     recordedData = new byte[maxBytes];
 
                     long start = System.currentTimeMillis();
-                    while (isTesting && System.currentTimeMillis() - start < 3000 && totalBytes + bufferSize <= maxBytes) {
+                    while (!stopRecordingEarly && testState == TEST_STATE_RECORDING && System.currentTimeMillis() - start < 3000 && totalBytes + bufferSize <= maxBytes) {
                         int read = record.read(recordedData, totalBytes, bufferSize);
                         if (read > 0) {
                             totalBytes += read;
@@ -365,12 +374,13 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
             final int finalTotal = totalBytes;
 
             AndroidUtilities.runOnUIThread(() -> {
-                if (!isTesting) {
-                    return;
-                }
-                if (finalData == null || finalTotal <= 0) {
+                if (testState == TEST_STATE_IDLE || finalData == null || finalTotal <= 0) {
                     stopAudioTest();
                     return;
+                }
+                testState = TEST_STATE_PLAYING;
+                if (listAdapter != null) {
+                    listAdapter.notifyDataSetChanged();
                 }
 
                 // Process recorded audio through Voice Changer
@@ -388,8 +398,11 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                         activeTestTrack.play();
                         activeTestTrack.write(finalData, 0, finalTotal);
 
-                        long playDurationMs = (long) (finalTotal / 2.0 / sampleRate * 1000L) + 500L;
-                        Thread.sleep(Math.max(500, playDurationMs));
+                        long playDurationMs = (long) (finalTotal / 2.0 / sampleRate * 1000L) + 300L;
+                        long playStart = System.currentTimeMillis();
+                        while (testState == TEST_STATE_PLAYING && System.currentTimeMillis() - playStart < playDurationMs) {
+                            Thread.sleep(50);
+                        }
                     } catch (Exception e) {
                         FileLog.e(e);
                     } finally {
@@ -404,8 +417,14 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
         }
     }
 
+    private void finishRecordingEarly() {
+        stopRecordingEarly = true;
+    }
+
     private void stopAudioTest() {
+        testState = TEST_STATE_IDLE;
         isTesting = false;
+        stopRecordingEarly = false;
         if (activeTestTrack != null) {
             try {
                 activeTestTrack.stop();

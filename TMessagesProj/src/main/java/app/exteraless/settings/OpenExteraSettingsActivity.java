@@ -26,6 +26,7 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
 
     private static final int MENU_CLOUD = 1;
+    private static final int MENU_SEARCH = 2;
 
     private static final int TYPE_ABOUT = 100;
 
@@ -35,12 +36,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int generalRow;
     private int appearanceRow;
     private int chatsRow;
-    private int voiceChangerRow;
-    private int deviceSpoofRow;
-    private int torRow;
     private int pluginsRow;
-    private int updatesRow;
-    private int shizukuRow;
+    private int toolsRow;
     private int otherRow;
     private int categoriesDividerRow;
 
@@ -52,7 +49,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int creditsHeaderRow;
     private int creditsExteralessRow;
     private int creditsNagramXRow;
-    private int creditsMaterialgramRow;
     private int creditsDividerRow;
 
     @Override
@@ -65,12 +61,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         generalRow = addRow("general");
         appearanceRow = addRow("appearance");
         chatsRow = addRow("chats");
-        voiceChangerRow = addRow("voiceChanger");
-        deviceSpoofRow = addRow("deviceSpoof");
-        torRow = addRow("tor");
         pluginsRow = addRow("plugins");
-        updatesRow = addRow("updates");
-        shizukuRow = addRow("shizuku");
+        toolsRow = addRow("tools");
         otherRow = addRow("other");
         categoriesDividerRow = addRow();
 
@@ -82,7 +74,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         creditsHeaderRow = addRow("creditsHeader");
         creditsExteralessRow = addRow("creditsExteraless");
         creditsNagramXRow = addRow("creditsNagramX");
-        creditsMaterialgramRow = addRow("creditsMaterialgram");
         creditsDividerRow = addRow();
     }
 
@@ -110,7 +101,9 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                             android.view.Gravity.TOP));
         }
         if (actionBar != null) {
-            actionBar.createMenu().addItem(MENU_CLOUD, R.drawable.cloud_sync, getResourceProvider());
+            final org.telegram.ui.ActionBar.ActionBarMenu menu = actionBar.createMenu();
+            menu.addItem(MENU_SEARCH, R.drawable.outline_header_search, getResourceProvider());
+            menu.addItem(MENU_CLOUD, R.drawable.cloud_sync, getResourceProvider());
             actionBar.setActionBarMenuOnItemClick(new org.telegram.ui.ActionBar.ActionBar.ActionBarMenuOnItemClick() {
                 @Override
                 public void onItemClick(int id) {
@@ -118,6 +111,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         finishFragment();
                     } else if (id == MENU_CLOUD) {
                         presentFragment(new OpenExteraCloudActivity());
+                    } else if (id == MENU_SEARCH) {
+                        showSettingsSearchDialog();
                     }
                 }
             });
@@ -158,17 +153,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     @Override
     public void onResume() {
         super.onResume();
-        if (listAdapter != null && listView != null && !listView.isComputingLayout()) {
-            if (voiceChangerRow != -1) {
-                listAdapter.notifyItemChanged(voiceChangerRow);
-            }
-            if (deviceSpoofRow != -1) {
-                listAdapter.notifyItemChanged(deviceSpoofRow);
-            }
-            if (torRow != -1) {
-                listAdapter.notifyItemChanged(torRow);
-            }
-        }
     }
 
     @Override
@@ -209,18 +193,10 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new OpenExteraAppearanceActivity());
         } else if (position == chatsRow) {
             presentFragment(new OpenExteraChatsActivity());
-        } else if (position == voiceChangerRow) {
-            presentFragment(new OpenExteraVoiceChangerActivity());
-        } else if (position == deviceSpoofRow) {
-            presentFragment(new app.exteraless.spoof.DeviceSpoofActivity());
-        } else if (position == torRow) {
-            presentFragment(new app.exteraless.tor.TorSettingsActivity());
         } else if (position == pluginsRow) {
             presentFragment(new app.exteraless.plugins.ui.PluginsActivity());
-        } else if (position == updatesRow) {
-            presentFragment(new OpenExteraUpdatesActivity());
-        } else if (position == shizukuRow) {
-            presentFragment(new app.exteraless.shizuku.ShizukuSettingsActivity());
+        } else if (position == toolsRow) {
+            presentFragment(new OpenExteraToolsActivity());
         } else if (position == otherRow) {
             presentFragment(new OpenExteraOtherActivity());
         } else if (position == channelRow) {
@@ -232,8 +208,6 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             getMessagesController().openByUserName("exteraless", this, 1);
         } else if (position == creditsNagramXRow) {
             getMessagesController().openByUserName("NagramX", this, 1);
-        } else if (position == creditsMaterialgramRow) {
-            getMessagesController().openByUserName("materialgram", this, 1);
         }
     }
 
@@ -246,7 +220,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             if (viewType == TYPE_ABOUT) {
-                View view = new AboutHeaderCell(mContext);
+                AboutHeaderCell view = new AboutHeaderCell(mContext);
+                view.setOnLogoClickListener(v -> showDialog(new app.exteraless.updater.UpdaterSheet(OpenExteraSettingsActivity.this)));
                 // У экстеры шапка лежит на фоне окна, а не в карточке-секции.
                 view.setTag(RecyclerListView.TAG_NOT_SECTION);
                 view.setLayoutParams(new RecyclerView.LayoutParams(
@@ -278,42 +253,10 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndIcon(getString(R.string.OpenExteraAppearance), R.drawable.msg_theme, true);
                     } else if (position == chatsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraChats), R.drawable.msg_discussion, true);
-                    } else if (position == voiceChangerRow) {
-                        boolean vcEnabled = app.exteraless.chats.ChatsConfig.voiceChangerEnabled.Bool();
-                        cell.setTextAndValueAndIcon(getString(R.string.OEVoiceChanger), getString(vcEnabled ? R.string.NotificationsOn : R.string.OEVoiceChangerOff), R.drawable.msg_voicechat, true);
-                    } else if (position == deviceSpoofRow) {
-                        boolean spoofing = app.exteraless.spoof.DeviceSpoofManager.getInstance().isSpoofingEnabled();
-                        String val = spoofing ? app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel() : null;
-                        if (val != null) {
-                            cell.setTextAndValueAndIcon(getString(R.string.DeviceSpoofing), val, R.drawable.msg_devices_solar, true);
-                        } else {
-                            cell.setTextAndIcon(getString(R.string.DeviceSpoofing), R.drawable.msg_devices_solar, true);
-                        }
-                    } else if (position == torRow) {
-                        int torStatus = app.exteraless.tor.TorController.getInstance().getStatus();
-                        String statusStr;
-                        if (torStatus == app.exteraless.tor.TorController.STATUS_CONNECTED) {
-                            statusStr = getString(R.string.TorConnected);
-                        } else if (torStatus == app.exteraless.tor.TorController.STATUS_CONNECTING) {
-                            statusStr = getString(R.string.TorStarting);
-                        } else if (torStatus == app.exteraless.tor.TorController.STATUS_STOPPING) {
-                            statusStr = getString(R.string.TorStopping);
-                        } else {
-                            statusStr = getString(R.string.TorDisabled);
-                        }
-                        cell.setTextAndValueAndIcon(getString(R.string.TorSettingsTitle), statusStr, R.drawable.ic_orbot, true);
                     } else if (position == pluginsRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraPlugins), R.drawable.msg_plugins, true);
-                    } else if (position == updatesRow) {
-                        boolean hasUpd = app.exteraless.ota.MoltenGramOtaManager.getInstance().isUpdateAvailable();
-                        cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdates),
-                                hasUpd ? getString(R.string.OpenExteraUpdatesAvailable) : ("v" + org.telegram.messenger.BuildConfig.BUILD_VERSION_STRING),
-                                R.drawable.sync_outline_28, true);
-                    } else if (position == shizukuRow) {
-                        String statusStr = app.exteraless.shizuku.ShizukuController.getInstance().hasPermission()
-                                ? getString(R.string.ShizukuStatusConnected)
-                                : (app.exteraless.shizuku.ShizukuController.getInstance().isAvailable() ? getString(R.string.ShizukuStatusPermissionRequired) : getString(R.string.ShizukuStatusDisconnected));
-                        cell.setTextAndValueAndIcon(getString(R.string.ShizukuSettings), statusStr, R.drawable.msg_permissions, true);
+                    } else if (position == toolsRow) {
+                        cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.baseline_build_outline_24, true);
                     } else if (position == otherRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraOther), R.drawable.msg_fave, false);
                     } else if (position == channelRow) {
@@ -327,10 +270,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                                 "@exteraless", R.drawable.msg_channel, true);
                     } else if (position == creditsNagramXRow) {
                         cell.setTextAndValueAndIcon("NagramX",
-                                "@NagramX", R.drawable.msg_channel, true);
-                    } else if (position == creditsMaterialgramRow) {
-                        cell.setTextAndValueAndIcon("materialgram",
-                                "@materialgram", R.drawable.msg_channel, false);
+                                "@NagramX", R.drawable.msg_channel, false);
                     }
                     // ВАЖНО: только после setTextAndIcon* — они сбрасывают imageLeft в 16dp.
                     // Метрики сняты с 12.9.0 (420 dpi): иконка 88px от края экрана, текст 219px,

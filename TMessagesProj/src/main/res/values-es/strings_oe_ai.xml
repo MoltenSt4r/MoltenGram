@@ -50,4 +50,10 @@
     <string name="OEAiDetails">Detalles</string>
     <string name="OEAiDisableTools">Desactivar herramientas</string>
     <string name="OEAiDisableToolsInfo">La revisión de plugins envía el código en una sola solicitud, como antes: solo los primeros 48 KB, sin decodificar los datos incrustados</string>
+    <string name="OEAiTelegramHeader">IA de Telegram</string>
+    <string name="OEAiReplaceEditor">Editor IA</string>
+    <string name="OEAiReplaceEditorInfo">Traducir, cambiar el estilo y corregir borradores</string>
+    <string name="OEAiReplaceSummaries">Resúmenes</string>
+    <string name="OEAiReplaceSummariesInfo">Resumir mensajes y publicaciones largos</string>
+    <string name="OEAiTelegramInfo">Las funciones seleccionadas usan tu servicio de IA en lugar de los servidores de Telegram, sin límites de Premium.</string>
 </resources>

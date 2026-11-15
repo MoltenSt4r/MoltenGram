@@ -88,7 +88,7 @@ public class AvatarCornersPreviewCell extends FrameLayout {
         preview.setWillNotDraw(false);
         // Подложка превью общая для всех экранов настроек.
         preview.setBackground(new PreviewBackgroundDrawable());
-        addView(preview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.CENTER, 21, 112, 21, 21));
+        addView(preview, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.CENTER, 21, 130, 21, 21));
     }
 
     public void setNeedDivider(boolean needDivider) {
@@ -120,7 +120,7 @@ public class AvatarCornersPreviewCell extends FrameLayout {
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         super.onMeasure(
                 MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
-                MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(112 + 89 + 21), MeasureSpec.EXACTLY)
+                MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(130 + 89 + 21), MeasureSpec.EXACTLY)
         );
     }
 }

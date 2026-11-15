@@ -24,6 +24,10 @@ import java.util.Set;
 import app.exteraless.ai.ui.AiSettingsActivity;
 import app.exteraless.appearance.ChipFoldersSettingsActivity;
 import app.exteraless.chats.TextAnimationSettingsActivity;
+import app.exteraless.icons.IconPacksActivity;
+import app.exteraless.pillstack.pills.weather.WeatherSettingsActivity;
+import app.exteraless.settings.OpenExteraCloudActivity;
+import app.exteraless.settings.OpenExteraGlyphActivity;
 import app.exteraless.pillstack.PillStackSettingsActivity;
 import app.exteraless.player.PlayerSettingsActivity;
 import app.exteraless.plugins.ui.PluginStoreSettingsActivity;
@@ -37,6 +41,7 @@ import app.exteraless.settings.OpenExteraGeneralActivity;
 import app.exteraless.settings.OpenExteraGlyphActivity;
 import app.exteraless.settings.OpenExteraOtherActivity;
 import app.exteraless.settings.OpenExteraSettingsActivity;
+import app.exteraless.settings.OpenExteraToolsActivity;
 import app.exteraless.settings.OpenExteraUpdatesActivity;
 import app.exteraless.shizuku.ShizukuSettingsActivity;
 import app.exteraless.tor.TorSettingsActivity;
@@ -62,7 +67,9 @@ public class SettingsHelper {
     private static final Map<String, String> MOVED_ROWS = new HashMap<>();
 
     static {
-        SEARCH_TITLE_ALIASES.put("OEGeneral:lastfm", "OEGeneralLastFm");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyAlwaysAsk", "OEBotPrivacyAlwaysAsk");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyEnabled", "OEBotPrivacyEnabled");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:botPrivacyAccount", "OEBotPrivacyAccount");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuGhost", "GhostMode");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuDisableAll", "OEGeneralAyuMomentsDisableAll");
         SEARCH_TITLE_ALIASES.put("OEAyu:ayuClearDatabase", "ClearMessageDatabase");
@@ -104,6 +111,35 @@ public class SettingsHelper {
         SEARCH_TITLE_ALIASES.put("OEVoiceChanger:glitchRateSlider", "OEVoiceChangerGlitchRate");
         SEARCH_TITLE_ALIASES.put("OEVoiceChanger:glitchRepeatsSlider", "OEVoiceChangerGlitchRepeats");
         SEARCH_TITLE_ALIASES.put("OEVoiceChanger:testMic", "OEVoiceChangerTestAudio");
+        SEARCH_TITLE_ALIASES.put("OEAppearance:md3SwitchExpressiveColors", "OEAppearanceSwitchExpressiveColors");
+        SEARCH_TITLE_ALIASES.put("OEAppearance:md3SliderThickness", "OEAppearanceSliderThickness");
+        SEARCH_TITLE_ALIASES.put("OEAppearance:customThemes", "OEAppearanceCustomThemes");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:bgStyle", "OEAppearancePlayerBackgroundStyle");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:colorStyle", "OEAppearancePlayerColorStyle");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:coverShape", "OEAppearancePlayerCoverShape");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:miniCoverShape", "OEAppearancePlayerMiniCoverShape");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:swipeTrack", "OEAppearancePlayerSwipeTrack");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:cropCover", "OEAppearancePlayerCropCover");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:keepScreenOn", "OEAppearancePlayerKeepScreenOn");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:actionButtons", "OEPlayerActionButtons");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:seekbarWavy", "OEAppearancePlayerSeekbarWavy");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:miniPlayerWavy", "OEAppearancePlayerSeekbarWavy");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:seekbarThickness", "OEPlayerSeekbarThickness");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:seekbarIndicator", "OEPlayerSeekbarIndicator");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsAudioRecognition", "OEAppearancePlayerLyricsAudioRecognition");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsExperimental", "OEAppearancePlayerLyricsExperimental");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsSources", "OEAppearancePlayerLyricsSources");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsPriority", "OEAppearancePlayerLyricsPriority");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsTranslate", "OEAppearancePlayerLyricsTranslate");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsAlignment", "OEAppearancePlayerLyricsAlignment");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsAutoscroll", "OEAppearancePlayerLyricsAutoScroll");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:lyricsTextSize", "OEAppearancePlayerLyricsTextSize");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:pauseOnMute", "OEAppearancePlayerPauseOnMute");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:resumeOnBluetooth", "OEAppearancePlayerResumeOnBluetooth");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:crossfade", "OEAppearancePlayerCrossfade");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:crossfadeDuration", "OEAppearancePlayerCrossfadeDuration");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:playlists", "OEPlayerLocalPlaylists");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:sleepTimer", "OEAppearancePlayerSleepTimer");
         MOVED_ROWS.put("chats:translateInSheet", "general");
         MOVED_ROWS.put("other:unlimitedPinnedDialogs", "general");
         MOVED_ROWS.put("other:glyph", "general");
@@ -141,6 +177,7 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("MainTabsHideContacts", "navigation");
         NAGRAM_ROWS.put("MainTabsHideCallsSettings", "navigation");
         NAGRAM_ROWS.put("MainTabsHideProfile", "navigation");
+        NAGRAM_ROWS.put("AlwaysShowDownloadIcon", "navigation");
         NAGRAM_ROWS.put("DisableSystemAccount", "privacy");
         NAGRAM_ROWS.put("PerformanceClass", "powersaving");
         NAGRAM_ROWS.put("VideoPlayerDecoder", "chats");
@@ -394,6 +431,12 @@ public class SettingsHelper {
                 case "other":
                     fragment = neko_fragment = new OpenExteraOtherActivity();
                     break;
+                case "tools":
+                case "exteraless_tools":
+                case "moltengram_tools":
+                case "exterams_tools":
+                    fragment = neko_fragment = new OpenExteraToolsActivity();
+                    break;
                 case "ayumoments":
                     fragment = neko_fragment = new OpenExteraAyuMomentsActivity();
                     break;
@@ -499,11 +542,26 @@ public class SettingsHelper {
                 case "exteraless_other":
                     fragment = neko_fragment = new OpenExteraOtherActivity();
                     break;
+                case "tools":
+                case "exteraless_tools":
+                case "moltengram_tools":
+                case "exterams_tools":
+                    fragment = neko_fragment = new OpenExteraToolsActivity();
+                    break;
                 case "exteraless_ayumoments":
                     fragment = neko_fragment = new OpenExteraAyuMomentsActivity();
                     break;
                 case "pillstack":
                     fragment = neko_fragment = new PillStackSettingsActivity();
+                    break;
+                case "pillstackweather":
+                    fragment = neko_fragment = new WeatherSettingsActivity();
+                    break;
+                case "iconpacks":
+                    fragment = neko_fragment = new IconPacksActivity();
+                    break;
+                case "exteraless_ai":
+                    fragment = neko_fragment = new AiSettingsActivity();
                     break;
                 case "ota_updates":
                 case "updates":
@@ -788,6 +846,7 @@ public class SettingsHelper {
         exteralessFragments.add(new OpenExteraGeneralActivity());
         exteralessFragments.add(new OpenExteraAppearanceActivity());
         exteralessFragments.add(new OpenExteraChatsActivity());
+        exteralessFragments.add(new OpenExteraToolsActivity());
         exteralessFragments.add(new app.exteraless.settings.OpenExteraVoiceChangerActivity());
         exteralessFragments.add(new OpenExteraOtherActivity());
         exteralessFragments.add(new OpenExteraAyuMomentsActivity());
@@ -802,6 +861,7 @@ public class SettingsHelper {
         exteralessFragments.add(new TextAnimationSettingsActivity());
         exteralessFragments.add(new OpenExteraGlyphActivity());
         exteralessFragments.add(new app.exteraless.appearance.Md3AvatarShapesActivity());
+        exteralessFragments.add(new app.exteraless.appearance.Md3FabAppearanceActivity());
         exteralessFragments.add(new app.exteraless.spoof.DeviceSpoofActivity());
 
         String e_title = getString(R.string.OpenExtera);
@@ -831,6 +891,30 @@ public class SettingsHelper {
                         uid + entry.getKey(), title, e_title, f_title, drawable, open));
             }
         }
+
+        String navTitle = getString(R.string.OEAppNavigation);
+        int navUid = 993000;
+        int navIcon = R.drawable.msg_actions;
+        items.add(new SettingsSearchResult(
+                navUid + 1, "FAB (Плавающая кнопка)", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 2, "Кнопка действия (FAB)", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 3, "Меню FAB и Speed Dial", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 4, "Форма и цвет FAB", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.appearance.Md3FabAppearanceActivity())
+        ));
+        items.add(new SettingsSearchResult(
+                navUid + 5, "Навигация и плавающая кнопка", e_title, navTitle, navIcon,
+                () -> callback.presentFragment(new app.exteraless.settings.OpenExteraAppNavigationActivity())
+        ));
 
         String n_title = getString(R.string.Language);
         for (BaseNekoXSettingsActivity fragment: fragments) {

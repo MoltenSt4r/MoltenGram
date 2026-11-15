@@ -3,9 +3,11 @@ package org.telegram.messenger;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
+import android.content.IntentFilter;
 import android.content.SharedPreferences;
 import android.os.BatteryManager;
 import android.os.Build;
+import android.os.SystemClock;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.math.MathUtils;
@@ -13,10 +15,13 @@ import androidx.core.math.MathUtils;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedEmojiDrawable;
+import org.telegram.utils.glass.GlassEngine;
 
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Iterator;
+
+import me.vkryl.core.BitwiseUtils;
 
 public class LiteMode {
 
@@ -75,7 +80,6 @@ public class LiteMode {
         FLAG_CHAT_BACKGROUND |
         FLAG_CHAT_FORUM_TWOCOLUMN |
         FLAG_CHAT_SPOILER |
-        FLAG_CHAT_BLUR |
         FLAG_CHAT_SCALE |
         FLAG_CHAT_THANOS |
         FLAG_CALLS_ANIMATIONS |
@@ -91,6 +95,10 @@ public class LiteMode {
 
     private static int powerSaverLevel;
     private static boolean lastPowerSaverApplied;
+    private static boolean followSystemSaver;
+    private static boolean lastSystemSaver;
+    private static long lastSystemSaverChecked;
+    private static BroadcastReceiver systemSaverReceiver;
 
     private static int value;
     private static boolean loaded;
@@ -103,8 +111,8 @@ public class LiteMode {
         if (!loaded) {
             loadPreference();
         }
-        if (!ignorePowerSaving && Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
-            if (getBatteryLevel() <= powerSaverLevel && powerSaverLevel > 0) {
+        if (!ignorePowerSaving) {
+            if (followSystemSaver ? isSystemPowerSaveMode() : powerSaverLevel > 0 && isBatteryLow(getBatteryLevel())) {
                 if (!lastPowerSaverApplied) {
                     onPowerSaverApplied(lastPowerSaverApplied = true);
                 }
@@ -117,20 +125,73 @@ public class LiteMode {
         return value;
     }
 
-    private static int lastBatteryLevelCached = -1;
-    private static long lastBatteryLevelChecked;
+    private static final long BATTERY_LEVEL_QUERY_INTERVAL = 60 * 1000;
 
-    @RequiresApi(api = Build.VERSION_CODES.LOLLIPOP)
+    private static volatile int lastBatteryLevel = -1;
+    private static volatile long lastBatteryLevelChecked;
+    private static volatile boolean batteryLevelQueryRunning;
+
+    private static boolean isBatteryLow(int batteryLevel) {
+        return powerSaverLevel >= 100 || batteryLevel >= 0 && batteryLevel <= powerSaverLevel;
+    }
+
+    // returns the cached level (-1 if unknown); BatteryReceiver is the main source, BatteryManager is only queried in background
     public static int getBatteryLevel() {
-        long time = 0;
-        if (lastBatteryLevelCached < 0 || (time = System.currentTimeMillis()) - lastBatteryLevelChecked > 1000 * 12) {
+        final long time = SystemClock.elapsedRealtime();
+        if (!batteryLevelQueryRunning && (lastBatteryLevelChecked == 0 || time - lastBatteryLevelChecked > BATTERY_LEVEL_QUERY_INTERVAL)) {
+            batteryLevelQueryRunning = true;
+            lastBatteryLevelChecked = time;
+            Utilities.globalQueue.postRunnable(LiteMode::queryBatteryLevel);
+        }
+        return lastBatteryLevel;
+    }
+
+    private static void queryBatteryLevel() {
+        int level = -1;
+        try {
             BatteryManager batteryManager = (BatteryManager) ApplicationLoader.applicationContext.getSystemService(Context.BATTERY_SERVICE);
             if (batteryManager != null) {
-                lastBatteryLevelCached = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
-                lastBatteryLevelChecked = time;
+                level = batteryManager.getIntProperty(BatteryManager.BATTERY_PROPERTY_CAPACITY);
             }
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
-        return lastBatteryLevelCached;
+        lastBatteryLevelChecked = SystemClock.elapsedRealtime();
+        batteryLevelQueryRunning = false;
+        if (level >= 0 && level <= 100) {
+            setBatteryLevel(level);
+        }
+    }
+
+    private static void setBatteryLevel(int level) {
+        lastBatteryLevelChecked = SystemClock.elapsedRealtime();
+        if (lastBatteryLevel == level) {
+            return;
+        }
+        lastBatteryLevel = level;
+        // check power saver applied
+        AndroidUtilities.runOnUIThread(() -> getValue(false));
+    }
+
+    private static void onBatteryChanged(Intent intent) {
+        if (intent == null) {
+            return;
+        }
+        final int level = intent.getIntExtra(BatteryManager.EXTRA_LEVEL, -1);
+        final int scale = intent.getIntExtra(BatteryManager.EXTRA_SCALE, -1);
+        if (level >= 0 && scale > 0) {
+            setBatteryLevel(MathUtils.clamp(Math.round(level * 100f / scale), 0, 100));
+        }
+    }
+
+    public static void registerBatteryReceiver() {
+        try {
+            // ACTION_BATTERY_CHANGED is sticky, the current state is returned right away
+            final Intent intent = ApplicationLoader.applicationContext.registerReceiver(new BatteryReceiver(), new IntentFilter(Intent.ACTION_BATTERY_CHANGED));
+            onBatteryChanged(intent);
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
     }
 
     private static int preprocessFlag(int flag) {
@@ -210,27 +271,37 @@ public class LiteMode {
         }
 
         final SharedPreferences preferences = MessagesController.getGlobalMainSettings();
-        if (!preferences.contains("lite_mode6")) {
-            if (preferences.contains("lite_mode5")) {
+        if (!preferences.contains("lite_mode7")) {
+            if (preferences.contains("lite_mode6")) {
+                defaultValue = preferences.getInt("lite_mode6", defaultValue);
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
+            } else if (preferences.contains("lite_mode5")) {
                 defaultValue = preferences.getInt("lite_mode5", defaultValue);
-                defaultValue &=~ FLAG_LIQUID_GLASS;
-                preferences.edit().putInt("lite_mode6", defaultValue).apply();
+                defaultValue &= ~FLAG_LIQUID_GLASS;
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode4")) {
                 defaultValue = preferences.getInt("lite_mode4", defaultValue);
-                preferences.edit().putInt("lite_mode5", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode3")) {
                 defaultValue = preferences.getInt("lite_mode3", defaultValue);
                 defaultValue |= FLAG_PARTICLES;
-                preferences.edit().putInt("lite_mode5", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode2")) {
                 defaultValue = preferences.getInt("lite_mode2", defaultValue);
                 defaultValue |= FLAG_CHAT_THANOS;
-                preferences.edit().putInt("lite_mode3", defaultValue).apply();
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else if (preferences.contains("lite_mode")) {
                 defaultValue = preferences.getInt("lite_mode", defaultValue);
                 if (defaultValue == 4095) {
                     defaultValue = PRESET_HIGH;
                 }
+                defaultValue &= ~FLAG_CHAT_BLUR;
+                preferences.edit().putInt("lite_mode7", defaultValue).apply();
             } else {
                 if (preferences.contains("light_mode")) {
                     boolean prevLiteModeEnabled = (preferences.getInt("light_mode", SharedConfig.getDevicePerformanceClass() == SharedConfig.PERFORMANCE_CLASS_LOW ? 1 : 0) & 1) > 0;
@@ -266,7 +337,7 @@ public class LiteMode {
                     }
                 }
                 if (preferences.contains("chatBlur")) {
-                    boolean chatBlur = preferences.getBoolean("chatBlur", true);
+                    boolean chatBlur = preferences.getBoolean("chatBlur", false);
                     if (chatBlur) {
                         defaultValue |= FLAG_CHAT_BLUR;
                     } else {
@@ -277,16 +348,98 @@ public class LiteMode {
         }
 
         int prevValue = value;
-        value = preferences.getInt("lite_mode6", defaultValue);
+        value = preferences.getInt("lite_mode7", defaultValue);
         if (loaded) {
             onFlagsUpdate(prevValue, value);
         }
         powerSaverLevel = preferences.getInt("lite_mode_battery_level", batteryDefaultValue);
+        followSystemSaver = preferences.getBoolean("lite_mode_follow_system", false);
         loaded = true;
+        if (followSystemSaver) {
+            AndroidUtilities.runOnUIThread(LiteMode::updateSystemSaverReceiver);
+        }
     }
 
     public static void savePreference() {
-        MessagesController.getGlobalMainSettings().edit().putInt("lite_mode6", value).putInt("lite_mode_battery_level", powerSaverLevel).apply();
+        MessagesController.getGlobalMainSettings().edit().putInt("lite_mode7", value).putInt("lite_mode_battery_level", powerSaverLevel).putBoolean("lite_mode_follow_system", followSystemSaver).apply();
+    }
+
+    public static boolean isFollowSystemPowerSaver() {
+        if (!loaded) {
+            loadPreference();
+        }
+        return followSystemSaver;
+    }
+
+    public static void setFollowSystemPowerSaver(boolean value) {
+        if (!loaded) {
+            loadPreference();
+        }
+        followSystemSaver = value;
+        lastSystemSaverChecked = 0;
+        savePreference();
+        updateSystemSaverReceiver();
+        getValue(false);
+    }
+
+    private static boolean isSystemPowerSaveMode() {
+        long now = System.currentTimeMillis();
+        if (lastSystemSaverChecked != 0 && now - lastSystemSaverChecked < 3000) {
+            return lastSystemSaver;
+        }
+        lastSystemSaverChecked = now;
+        boolean saver = false;
+        Context context = ApplicationLoader.applicationContext;
+        try {
+            android.os.PowerManager powerManager = (android.os.PowerManager) context.getSystemService(Context.POWER_SERVICE);
+            saver = powerManager != null && powerManager.isPowerSaveMode();
+        } catch (Throwable ignore) {
+        }
+        if (!saver) {
+            try {
+                android.content.ContentResolver resolver = context.getContentResolver();
+                int smartMode = android.provider.Settings.System.getInt(resolver, "SmartModeStatus", 0);
+                saver = android.provider.Settings.System.getInt(resolver, "POWER_SAVE_MODE_OPEN", 0) == 1
+                        || smartMode == 1 || smartMode == 4
+                        || "1".equals(android.provider.Settings.System.getString(resolver, "psm_switch"))
+                        || android.provider.Settings.Global.getInt(resolver, "low_power", 0) == 1;
+            } catch (Throwable ignore) {
+            }
+        }
+        lastSystemSaver = saver;
+        return saver;
+    }
+
+    private static void updateSystemSaverReceiver() {
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) {
+            return;
+        }
+        if (followSystemSaver && systemSaverReceiver == null) {
+            systemSaverReceiver = new BroadcastReceiver() {
+                @Override
+                public void onReceive(Context c, Intent intent) {
+                    lastSystemSaverChecked = 0;
+                    AndroidUtilities.runOnUIThread(() -> getValue(false));
+                }
+            };
+            android.content.IntentFilter filter = new android.content.IntentFilter();
+            filter.addAction(android.os.PowerManager.ACTION_POWER_SAVE_MODE_CHANGED);
+            filter.addAction("miui.intent.action.POWER_SAVE_MODE_CHANGED");
+            filter.addAction("huawei.intent.action.POWER_MODE_CHANGED_ACTION");
+            try {
+                androidx.core.content.ContextCompat.registerReceiver(context, systemSaverReceiver, filter, androidx.core.content.ContextCompat.RECEIVER_EXPORTED);
+            } catch (Throwable e) {
+                systemSaverReceiver = null;
+                FileLog.e(e);
+            }
+        } else if (!followSystemSaver && systemSaverReceiver != null) {
+            try {
+                context.unregisterReceiver(systemSaverReceiver);
+            } catch (Throwable ignore) {
+            }
+            systemSaverReceiver = null;
+        }
     }
 
     public static int getPowerSaverLevel() {
@@ -339,6 +492,9 @@ public class LiteMode {
         if ((changedFlags & FLAG_CHAT_BACKGROUND) > 0) {
             Theme.reloadWallpaper(true);
         }
+        if (BitwiseUtils.hasFlag(changedFlags, FLAG_CHAT_BLUR) || BitwiseUtils.hasFlag(changedFlags, FLAG_LIQUID_GLASS)) {
+            GlassEngine.getCurrentGlassSettings();
+        }
     }
 
     private static HashSet<Utilities.Callback<Boolean>> onPowerSaverAppliedListeners;
@@ -355,11 +511,10 @@ public class LiteMode {
         }
     }
 
-    public static class BatteryReceiver extends BroadcastReceiver {
+    private static class BatteryReceiver extends BroadcastReceiver {
         @Override
         public void onReceive(Context context, Intent intent) {
-            lastBatteryLevelChecked = 0;
-            getValue();
+            onBatteryChanged(intent);
         }
     }
 }

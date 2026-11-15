@@ -41,6 +41,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
 
     private final BaseFragment fragment;
     private final Theme.ResourcesProvider resourcesProvider;
+    private final boolean preview;
     private boolean dark;
     private int seed;
     private final LinearLayout card;
@@ -54,6 +55,35 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private final PlayerIcon nextIcon = PlayerIcon.fill(PlayerIcon.NEXT, 24);
     private final PlayerIcon closeIcon = PlayerIcon.stroke(PlayerIcon.CLOSE, 22);
     private PlayerColors colors;
+    private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable cardGlassDrawable;
+    private static final java.util.concurrent.CopyOnWriteArrayList<java.lang.ref.WeakReference<PlayerMiniView>> instances = new java.util.concurrent.CopyOnWriteArrayList<>();
+    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = this::onGlassConfigChanged;
+
+    public void setGlassFactory(org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory factory) {
+        if (preview || factory == null) {
+            return;
+        }
+        cardGlassDrawable = factory.create(card, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+        cardGlassDrawable.setRadius(dp(20));
+        cardGlassDrawable.setShadowAlpha(0f);
+        cardGlassDrawable.setLiquidGlassEffectAllowed(true);
+        applyColors(colors);
+    }
+
+    private void onGlassConfigChanged() {
+        applyStyle(false);
+        notifyOffset();
+    }
+
+    public void invalidateGlass() {
+        if (cardGlassDrawable != null) {
+            cardGlassDrawable.invalidateDisplayList();
+            cardGlassDrawable.invalidateSelf();
+        }
+        if (card != null) {
+            card.invalidate();
+        }
+    }
     private ValueAnimator showAnimator;
     private MessageObject current;
     private String currentKey;
@@ -64,9 +94,14 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     private Runnable offsetListener;
 
     public PlayerMiniView(Context context, BaseFragment fragment, Theme.ResourcesProvider resourcesProvider) {
+        this(context, fragment, resourcesProvider, false);
+    }
+
+    private PlayerMiniView(Context context, BaseFragment fragment, Theme.ResourcesProvider resourcesProvider, boolean preview) {
         super(context);
         this.fragment = fragment;
         this.resourcesProvider = resourcesProvider;
+        this.preview = preview;
         dark = PlayerColors.isDark(resourcesProvider);
         seed = PlayerColors.fallbackSeed(resourcesProvider);
         colors = PlayerColors.fromSeed(seed, dark);
@@ -86,8 +121,12 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             }
         });
         card.setClipToOutline(true);
-        card.setElevation(dp(6));
-        card.setOnClickListener(v -> Md3Player.open(fragment, this));
+        card.setElevation(dp(3));
+        if (!preview) {
+            card.setOnClickListener(v -> Md3Player.open(fragment, this));
+        } else {
+            card.setClickable(false);
+        }
         card.setContentDescription(getString(R.string.OEPlayerOpen));
         addView(card, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, HEIGHT_DP, Gravity.BOTTOM, 12, 0, 12, 12));
 
@@ -141,7 +180,15 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         card.addView(closeButton, LayoutHelper.createLinear(44, 48));
 
         applyColors(colors);
-        setVisibility(GONE);
+        if (preview) {
+            shown = true;
+            showProgress = 1f;
+            hostFactor = 1f;
+            setVisibility(VISIBLE);
+            update(false);
+        } else {
+            setVisibility(GONE);
+        }
     }
 
     public boolean canTransition() {
@@ -212,6 +259,48 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         offsetListener = listener;
     }
 
+    public static PlayerMiniView preview(Context context) {
+        return new PlayerMiniView(context, null, null, true);
+    }
+
+    public static void styleChanged() {
+        for (java.lang.ref.WeakReference<PlayerMiniView> ref : instances) {
+            PlayerMiniView v = ref.get();
+            if (v == null) {
+                instances.remove(ref);
+            } else {
+                v.applyStyle(false);
+                v.notifyOffset();
+            }
+        }
+    }
+
+    public void applyStyle(boolean animated) {
+        checkThemeColors();
+        if (colors != null) {
+            applyColors(colors);
+        } else {
+            invalidateGlass();
+        }
+        cover.setShapeId(PlayerArt.getOrCycleMiniShape(current), animated);
+        playButton.invalidate();
+    }
+
+    public void setTopState(float anchor, float zone, float shift, float visibility) {
+    }
+
+    public float getVisibleOffset(boolean chats) {
+        return getVisibleOffset();
+    }
+
+    public int getTargetOffset(boolean chats) {
+        return getTargetOffset();
+    }
+
+    public int getTargetTopOffset(boolean chats) {
+        return 0;
+    }
+
     public float getVisibleOffset() {
         return (dp(HEIGHT_DP) + dp(8)) * showProgress * hostFactor;
     }
@@ -246,6 +335,12 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
+        if (preview) {
+            update(false);
+            return;
+        }
+        instances.addIfAbsent(new java.lang.ref.WeakReference<>(this));
+        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.addObserver(this, NotificationCenter.messagePlayingDidStart);
@@ -261,6 +356,16 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        if (preview) {
+            return;
+        }
+        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
+        for (java.lang.ref.WeakReference<PlayerMiniView> ref : instances) {
+            PlayerMiniView v = ref.get();
+            if (v == null || v == this) {
+                instances.remove(ref);
+            }
+        }
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
             NotificationCenter nc = NotificationCenter.getInstance(a);
             nc.removeObserver(this, NotificationCenter.messagePlayingDidStart);
@@ -304,6 +409,19 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     public void update(boolean animated) {
         checkThemeColors();
         MessageObject mo = MediaController.getInstance().getPlayingMessageObject();
+        if (preview) {
+            if (mo != null && mo.isMusic() && mo.getId() != 0) {
+                bind(mo, animated);
+            } else {
+                current = null;
+                titleView.setText(getString(R.string.OEPlayerPreviewTitle));
+                artistView.setText(getString(R.string.OEPlayerPreviewArtist));
+                cover.setShapeId(PlayerArt.getOrCycleMiniShape(null), animated);
+                cover.setMessage(null);
+            }
+            playButton.setPlaying(mo == null || !MediaController.getInstance().isMessagePaused(), animated);
+            return;
+        }
         boolean want = Md3Player.miniEnabled() && mo != null && mo.isMusic() && mo.getId() != 0;
         if (want) {
             bind(mo, animated && shown);
@@ -353,22 +471,54 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
     }
 
     private void applyColors(PlayerColors c) {
-        colors = c;
-        cardBg.setColor(c.primaryContainer);
-        if (Build.VERSION.SDK_INT >= 28) {
-            card.setOutlineSpotShadowColor(c.shadow());
-            card.setOutlineAmbientShadowColor(c.shadow());
+        if (c == null) {
+            return;
         }
+        colors = c;
+        boolean glass = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                && app.exteraless.glass.LiquidGlassConfig.glassMiniPlayer;
+        if (glass && cardGlassDrawable != null) {
+            cardGlassDrawable.setRadius(dp(20));
+            cardGlassDrawable.setShadowAlpha(0f);
+            cardGlassDrawable.setLiquidGlassEffectAllowed(true);
+            cardGlassDrawable.updateColors();
+            cardGlassDrawable.invalidateDisplayList();
+            card.setBackground(cardGlassDrawable);
+            card.setClipToOutline(true);
+            card.setElevation(0);
+            card.invalidateOutline();
+            card.invalidate();
+        } else if (glass) {
+            int fallbackBg = androidx.core.graphics.ColorUtils.setAlphaComponent(dark ? 0xFF1E2025 : 0xFFF2F4F8, 0xCC);
+            cardBg.setColor(app.exteraless.glass.SolegramGlass.tint(fallbackBg, resourcesProvider));
+            cardBg.setStroke(dp(1), dark ? 0x33FFFFFF : 0x55FFFFFF);
+            card.setBackground(cardBg);
+            card.setClipToOutline(true);
+            card.setElevation(dp(3));
+        } else {
+            cardBg.setStroke(0, 0);
+            cardBg.setColor(c.primaryContainer);
+            card.setBackground(cardBg);
+            card.setClipToOutline(true);
+            card.setElevation(dp(3));
+        }
+        if (Build.VERSION.SDK_INT >= 28) {
+            int neutralShadow = 0x22000000;
+            card.setOutlineSpotShadowColor(neutralShadow);
+            card.setOutlineAmbientShadowColor(neutralShadow);
+        }
+        int fg = glass ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider) : c.onPrimaryContainer;
+        int subFg = glass ? ColorUtils.setAlphaComponent(fg, 0xBF) : c.onPrimaryContainer;
         cover.setColors(c.secondaryContainer, c.onSecondaryContainer);
-        titleView.setTextColor(c.onPrimaryContainer);
-        artistView.setTextColor(c.onPrimaryContainer);
-        nextIcon.setColor(c.onPrimaryContainer);
-        closeIcon.setColor(c.onPrimaryContainer);
-        int ripple = ColorUtils.setAlphaComponent(c.onPrimaryContainer, 0x1f);
+        titleView.setTextColor(fg);
+        artistView.setTextColor(subFg);
+        nextIcon.setColor(fg);
+        closeIcon.setColor(fg);
+        int ripple = ColorUtils.setAlphaComponent(fg, 0x1f);
         nextButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
         closeButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
         playButton.setBackground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_CIRCLE_20DP));
-        playButton.setColors(c.onPrimaryContainer, ColorUtils.setAlphaComponent(c.onPrimaryContainer, 46), c.onPrimaryContainer);
+        playButton.setColors(fg, ColorUtils.setAlphaComponent(fg, 46), fg);
         card.setForeground(Theme.createSelectorDrawable(ripple, Theme.RIPPLE_MASK_ALL));
     }
 }

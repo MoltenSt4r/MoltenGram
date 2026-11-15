@@ -3,22 +3,33 @@ package org.telegram.ui.Components.blur3.drawable.color;
 import androidx.core.graphics.ColorUtils;
 
 import org.telegram.messenger.AndroidUtilities;
+import android.graphics.Color;
+
 import org.telegram.messenger.LiteMode;
+import org.telegram.messenger.SharedConfig;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 
 public class BlurredBackgroundColorProviderThemed implements BlurredBackgroundColorProvider {
 
     private final Theme.ResourcesProvider resourcesProvider;
     private final int backgroundColorId;
+    private final boolean useDynamicGlassAlpha;
     private float alpha;
+    private int glassConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
 
     public BlurredBackgroundColorProviderThemed(Theme.ResourcesProvider resourcesProvider, int backgroundColorId) {
-        this(resourcesProvider, backgroundColorId, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f);
+        this.resourcesProvider = resourcesProvider;
+        this.backgroundColorId = backgroundColorId;
+        this.useDynamicGlassAlpha = true;
+        this.alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+        updateColors();
     }
 
     public BlurredBackgroundColorProviderThemed(Theme.ResourcesProvider resourcesProvider, int backgroundColorId, float alpha) {
         this.resourcesProvider = resourcesProvider;
         this.backgroundColorId = backgroundColorId;
+        this.useDynamicGlassAlpha = false;
         this.alpha = alpha;
 
         updateColors();
@@ -31,12 +42,70 @@ public class BlurredBackgroundColorProviderThemed implements BlurredBackgroundCo
 
     private int backgroundColor, shadowColor, strokeColorTop, strokeColorBottom;
 
+    // compact mode draws this glass as in the design: an outline (this key; 0 for none) and soft shadows instead of the white highlight
+    private int compactOutlineKey = -1;
+
+    public BlurredBackgroundColorProviderThemed setCompactOutlineKey(int key) {
+        compactOutlineKey = key;
+        updateColors();
+        return this;
+    }
+
+    private boolean isCompactGlass() {
+        return compactOutlineKey >= 0 && Theme.isCompactMode(resourcesProvider);
+    }
+
+    private boolean hasCompactOutline() {
+        return isCompactGlass() && Color.alpha(Theme.getColor(compactOutlineKey, resourcesProvider)) != 0;
+    }
+
+    @Override
+    public int getOutlineColor() {
+        return isCompactGlass() ? Theme.getColor(compactOutlineKey, resourcesProvider) : 0;
+    }
+
+    @Override
+    public float getOutlineWidth() {
+        return AndroidUtilities.dpf2(0.6f);
+    }
+
+    @Override
+    public int getOutlineShadowColor() {
+        return isCompactGlass() ? Theme.getColor(Theme.key_chat_compact_glassHairline, resourcesProvider) : 0;
+    }
+
+    @Override
+    public float getShadowRadiusOverride() {
+        return isCompactGlass() ? AndroidUtilities.dpf2(2.25f) : -1;
+    }
+
+    @Override
+    public float getShadowDyOverride() {
+        return isCompactGlass() ? AndroidUtilities.dpf2(1) : -1;
+    }
+
     public boolean isDark() {
         final int color = Theme.getColor(backgroundColorId, resourcesProvider);
         return AndroidUtilities.computePerceivedBrightness(color) < .721f;
     }
 
+    private int themeGeneration = ThemeBind.generation();
+
+    // not a view: nothing dispatches updateColors() on theme switches for every owner, so the getters refresh lazily
+    private void checkThemeGeneration() {
+        final int generation = ThemeBind.generation();
+        final int sgVersion = app.exteraless.glass.LiquidGlassConfig.version;
+        if (themeGeneration != generation || glassConfigVersion != sgVersion) {
+            updateColors();
+        }
+    }
+
     public void updateColors() {
+        themeGeneration = ThemeBind.generation();
+        glassConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
+        if (useDynamicGlassAlpha) {
+            alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+        }
         final int color = Theme.getColor(backgroundColorId, resourcesProvider);
         backgroundColor = Theme.multAlpha(color, alpha);
 
@@ -53,21 +122,30 @@ public class BlurredBackgroundColorProviderThemed implements BlurredBackgroundCo
 
     @Override
     public int getShadowColor() {
+        checkThemeGeneration();
+        if (isCompactGlass()) {
+            return Theme.getColor(Theme.key_chat_compact_glassShadow, resourcesProvider);
+        }
         return shadowColor;
     }
 
     @Override
     public int getBackgroundColor() {
+        checkThemeGeneration();
         return backgroundColor;
     }
 
     @Override
     public int getStrokeColorTop() {
+        checkThemeGeneration();
+        if (hasCompactOutline()) return 0;
         return strokeColorTop;
     }
 
     @Override
     public int getStrokeColorBottom() {
+        checkThemeGeneration();
+        if (hasCompactOutline()) return 0;
         return strokeColorBottom;
     }
 }

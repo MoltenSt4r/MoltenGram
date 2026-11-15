@@ -630,6 +630,8 @@ public class NekoChatSettingsActivity extends BaseNekoXSettingsActivity implemen
             types.add(DoubleTap.DOUBLE_TAP_ACTION_REPLY);
             arrayList.add(getString(R.string.AddToSavedMessages));
             types.add(DoubleTap.DOUBLE_TAP_ACTION_SAVE);
+            arrayList.add(getString(R.string.OEDoubleTapSaveToDevice));
+            types.add(DoubleTap.DOUBLE_TAP_ACTION_DOWNLOAD);
             arrayList.add(getString(R.string.Repeat));
             types.add(DoubleTap.DOUBLE_TAP_ACTION_REPEAT);
             arrayList.add(getString(R.string.RepeatAsCopy));

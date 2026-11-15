@@ -5,7 +5,6 @@ import android.os.Build;
 import android.text.Editable;
 import android.text.Html;
 import android.text.Spannable;
-import android.text.SpannableString;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
 import android.text.TextUtils;
@@ -14,13 +13,14 @@ import android.text.style.StyleSpan;
 import android.text.style.URLSpan;
 import android.text.style.UnderlineSpan;
 
-import org.telegram.messenger.CodeHighlighting;
+import org.telegram.utils.code.highlight.CodeHighlighting;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.MediaDataController;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.Components.AnimatedEmojiSpan;
 import org.telegram.ui.Components.QuoteSpan;
 import org.telegram.ui.Components.URLSpanReplacement;
+import app.exteraless.chats.LinkedCustomEmoji;
 import org.xml.sax.Attributes;
 import org.xml.sax.ContentHandler;
 import org.xml.sax.Locator;
@@ -87,14 +87,14 @@ public class CopyUtilities {
                     quotes.add(parsedSpan);
                 }
             } else if (span instanceof AnimatedEmojiSpan) {
-                if (org.telegram.messenger.UserConfig.getInstance(org.telegram.messenger.UserConfig.selectedAccount).isPremium() || !xyz.nextalone.nagram.NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool()) {
+                if (!LinkedCustomEmoji.canSend()) {
                     TLRPC.TL_messageEntityCustomEmoji entity = new TLRPC.TL_messageEntityCustomEmoji();
-                    entity.document_id = ((AnimatedEmojiSpan) span).documentId;
+                    entity.document_id = ((AnimatedEmojiSpan) span).getDocumentId();
                     entity.document = ((AnimatedEmojiSpan) span).document;
                     entities.add(setEntityStartEnd(entity, start, end));
                 } else {
                     TLRPC.TL_messageEntityTextUrl entity = new TLRPC.TL_messageEntityTextUrl();
-                    entity.url = "tg://emoji?id=" + ((AnimatedEmojiSpan) span).documentId;
+                    entity.url = LinkedCustomEmoji.PREFIX + ((AnimatedEmojiSpan) span).getDocumentId();
                     entities.add(setEntityStartEnd(entity, start, end));
                 }
             }

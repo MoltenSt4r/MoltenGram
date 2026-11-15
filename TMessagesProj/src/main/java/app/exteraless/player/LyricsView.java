@@ -261,6 +261,12 @@ public class LyricsView extends FrameLayout {
     }
 
     public void notifyLyricsChanged() {
+        for (int i = 0; i < list.getChildCount(); i++) {
+            View child = list.getChildAt(i);
+            if (child instanceof LineView) {
+                ((LineView) child).resetLayout();
+            }
+        }
         adapter.notifyDataSetChanged();
     }
 
@@ -464,6 +470,17 @@ public class LyricsView extends FrameLayout {
         private int role = ROLE_FUTURE;
         private long lastFrame;
         private float blur = -1f;
+        private int lastTextSize = -1;
+        private int lastAlignment = -1;
+
+        void resetLayout() {
+            layout = null;
+            translationLayout = null;
+            layoutWidth = -1;
+            lastTextSize = -1;
+            lastAlignment = -1;
+            requestLayout();
+        }
 
         LineView(Context context) {
             super(context);
@@ -472,12 +489,6 @@ public class LyricsView extends FrameLayout {
 
         void setText(String value, boolean isPlain, boolean backing, String translation) {
             String displayText = value;
-            if (app.exteraless.appearance.AppearanceConfig.playerLyricsRomanize() && !TextUtils.isEmpty(value) && !isPlain) {
-                String rom = RomanizeHelper.romanize(value);
-                if (!TextUtils.isEmpty(rom) && !rom.equals(value)) {
-                    displayText = value + "\n" + rom;
-                }
-            }
             if (backing && app.exteraless.appearance.AppearanceConfig.playerLyricsSplitRoles() && !TextUtils.isEmpty(displayText)) {
                 if (!displayText.startsWith("(") && !displayText.endsWith(")")) {
                     displayText = "(" + displayText + ")";
@@ -487,13 +498,18 @@ public class LyricsView extends FrameLayout {
             if (TextUtils.isEmpty(displayTranslation)) {
                 displayTranslation = null;
             }
-            if (!TextUtils.equals(text, displayText) || !TextUtils.equals(translationText, displayTranslation) || plain != isPlain || isBacking != backing) {
+            int currentTextSize = app.exteraless.appearance.AppearanceConfig.playerLyricsTextSize();
+            int currentAlignment = app.exteraless.appearance.AppearanceConfig.playerLyricsAlignment();
+            if (!TextUtils.equals(text, displayText) || !TextUtils.equals(translationText, displayTranslation) || plain != isPlain || isBacking != backing || lastTextSize != currentTextSize || lastAlignment != currentAlignment) {
+                lastTextSize = currentTextSize;
+                lastAlignment = currentAlignment;
                 text = displayText;
                 translationText = displayTranslation;
                 plain = isPlain;
                 isBacking = backing;
                 layout = null;
                 translationLayout = null;
+                layoutWidth = -1;
                 requestLayout();
             }
         }
@@ -641,21 +657,47 @@ public class LyricsView extends FrameLayout {
             } else if (live) {
                 int filled = ColorUtils.setAlphaComponent(colorActive, (int) (alpha * baseAlpha));
                 int unfilled = ColorUtils.setAlphaComponent(colorActive, (int) (alpha * baseAlpha * UNFILLED_ALPHA));
-                float height = layout.getHeight();
-                LinearGradient fill = new LinearGradient(0, 0, 0, 1, filled, unfilled, Shader.TileMode.CLAMP);
-                fillMatrix.setScale(1f, Math.max(1f, height * 0.2f));
-                fillMatrix.postTranslate(0, (progress * 1.2f - 0.2f) * height);
-                fill.setLocalMatrix(fillMatrix);
                 paint.setTextSize(textSize());
-                paint.setShader(fill);
-                paint.setColor(0xffffffff);
                 float g = glow(progress);
                 if (g > 0.01f) {
                     paint.setShadowLayer(dp(4 + 2 * g), 0, 0, ColorUtils.setAlphaComponent(colorActive, (int) (g * 0.35f * baseAlpha)));
                 } else {
                     paint.clearShadowLayer();
                 }
-                layout.draw(canvas);
+                int lineCount = layout.getLineCount();
+                float totalWidth = 0f;
+                for (int li = 0; li < lineCount; li++) {
+                    totalWidth += Math.max(1f, layout.getLineWidth(li));
+                }
+                float targetX = progress * totalWidth;
+                float accumulated = 0f;
+                LinearGradient horizFill = new LinearGradient(0, 0, 1, 0, filled, unfilled, Shader.TileMode.CLAMP);
+                for (int li = 0; li < lineCount; li++) {
+                    float lineLeft = layout.getLineLeft(li);
+                    float lineW = Math.max(1f, layout.getLineWidth(li));
+                    int lineTop = layout.getLineTop(li);
+                    int lineBottom = layout.getLineBottom(li);
+                    float lineProg = Math.max(0f, Math.min(1f, (targetX - accumulated) / lineW));
+                    accumulated += lineW;
+                    canvas.save();
+                    canvas.clipRect(-dp(8), lineTop - dp(4), getWidth() + dp(8), lineBottom + dp(4));
+                    if (lineProg <= 0f) {
+                        paint.setShader(null);
+                        paint.setColor(unfilled);
+                    } else if (lineProg >= 1f) {
+                        paint.setShader(null);
+                        paint.setColor(filled);
+                    } else {
+                        float feather = Math.max(dp(10), lineW * 0.14f);
+                        fillMatrix.setScale(feather, 1f);
+                        fillMatrix.postTranslate(lineLeft + lineProg * lineW - feather * 0.5f, 0f);
+                        horizFill.setLocalMatrix(fillMatrix);
+                        paint.setShader(horizFill);
+                        paint.setColor(0xffffffff);
+                    }
+                    layout.draw(canvas);
+                    canvas.restore();
+                }
                 paint.setShader(null);
                 paint.clearShadowLayer();
             } else {

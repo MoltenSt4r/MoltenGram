@@ -21,6 +21,7 @@
     <string name="PluginsInstallReadError">无法读取所选文件。</string>
     <string name="PluginsCrashedTitle">插件已崩溃</string>
     <string name="PluginsCrashedMessage">插件 %1$s 在崩溃后已被停用。</string>
+    <string name="PluginsAutoSafeMode">应用启动后连续多次崩溃，因此已关闭插件（安全模式）。准备好后，请在“插件”中关闭安全模式。</string>
     <string name="PluginsMenuOpenSettings">打开设置</string>
     <string name="PluginsMenuReload">重新加载</string>
     <string name="PluginsMenuCopyId">复制 ID</string>
@@ -199,4 +200,15 @@
     <string name="PluginOverlayOpen">打开设置</string>
     <string name="PluginsSafeModeEnabledNow">安全模式已开启，所有插件已停用。</string>
     <string name="PluginsSafeModeDisabledNow">安全模式已关闭，正在加载插件。</string>
+<string name="PluginActivityExport">导出日志</string>
+<string name="OEPluginLinkEngineDisabled">启用**插件引擎**以打开 **%1$s** 的设置。</string>
+<string name="OEPluginLinkNotFound">插件 **%1$s** 未安装。</string>
+<string name="OEPluginLinkNoSettings">**%1$s** 没有设置项。</string>
+<string name="PluginsExportAll">导出插件</string>
+<string name="PluginsImportAll">导入插件</string>
+<string name="PluginsImportConfirm">从备份安装 %1$d 个插件并恢复其设置？权限不会恢复：请在需要时重新授予。</string>
+<string name="PluginsImportDone">已导入插件：%1$d / %2$d</string>
+<string name="PluginsImportInvalid">此文件不是插件备份</string>
+<string name="PluginsRetryHooks">重新启用钩子</string>
+<string name="PluginsHooksBrokenInfo">应用在启动钩子引擎时连续崩溃了两次，因此插件钩子已被关闭。点按即可重试，重启应用后生效。</string>
 </resources>

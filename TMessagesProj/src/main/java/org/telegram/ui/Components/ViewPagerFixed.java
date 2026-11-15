@@ -1,6 +1,8 @@
 package org.telegram.ui.Components;
 
+import app.exteraless.appearance.Md3ChipTabHelper;
 import app.exteraless.utils.AppUtils;
+import app.exteraless.utils.UIUtil;
 
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.Utilities.swapItems;
@@ -55,6 +57,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.ConnectionsManager;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 import org.telegram.ui.Stories.recorder.HintView2;
 
@@ -107,11 +110,44 @@ public class ViewPagerFixed extends FrameLayout {
                     tabsView.selectTab(nextPosition, currentPosition, currentProgress);
                 }
             }
-            onTabAnimationUpdate(false);
+            onTabAnimationUpdateInternal(false);
         }
     };
     private Rect rect = new Rect();
     private boolean allowDisallowInterceptTouch = true;
+
+    private final ArrayList<OnTabAnimationUpdateListener> onTabAnimationUpdateListeners = new ArrayList<>();
+    private final ArrayList<OnScrollListener> onScrollListeners = new ArrayList<>();
+
+    public void addOnTabAnimationUpdateListener(OnTabAnimationUpdateListener listener) {
+        onTabAnimationUpdateListeners.add(listener);
+    }
+
+    protected final void onTabAnimationUpdateInternal(boolean manual) {
+        for (OnTabAnimationUpdateListener onTabAnimationUpdateListener : onTabAnimationUpdateListeners) {
+            onTabAnimationUpdateListener.onTabAnimationUpdate(manual);
+        }
+
+        onTabAnimationUpdate(manual);
+    }
+
+    public interface OnTabAnimationUpdateListener {
+        void onTabAnimationUpdate(boolean manual);
+    }
+
+    public interface OnScrollListener {
+        void onScrolled(int dx);
+    }
+
+    public void addOnScrollListener(@NonNull OnScrollListener listener) {
+        if (!onScrollListeners.contains(listener)) {
+            onScrollListeners.add(listener);
+        }
+    }
+
+    public void removeOnScrollListener(@NonNull OnScrollListener listener) {
+        onScrollListeners.remove(listener);
+    }
 
     public void onTabAnimationUpdate(boolean manual) {
 
@@ -256,7 +292,7 @@ public class ViewPagerFixed extends FrameLayout {
                 setTranslationX(viewPages[0], viewPages[0].getMeasuredWidth() * progress);
             }
             currentProgress = progress;
-            onTabAnimationUpdate(true);
+            onTabAnimationUpdateInternal(true);
             if (tabsView != null) {
                 tabsView.listView.invalidate();
                 tabsView.listView.invalidateViews();
@@ -274,7 +310,7 @@ public class ViewPagerFixed extends FrameLayout {
                     viewPages[1] = null;
                 }
                 manualScrolling = null;
-                onTabAnimationUpdate(true);
+                onTabAnimationUpdateInternal(true);
                 if (tabsView != null) {
                     tabsView.listView.invalidate();
                     tabsView.listView.invalidateViews();
@@ -352,7 +388,7 @@ public class ViewPagerFixed extends FrameLayout {
                     setTranslationX(viewPages[1], -viewPages[0].getMeasuredWidth() * (1f - progress));
                     setTranslationX(viewPages[0], viewPages[0].getMeasuredWidth() * progress);
                 }
-                onTabAnimationUpdate(false);
+                onTabAnimationUpdateInternal(false);
             }
 
             @Override
@@ -414,7 +450,17 @@ public class ViewPagerFixed extends FrameLayout {
     }
 
     protected void setTranslationX(View view, float tx) {
-        view.setTranslationX(tx);
+        final int translationX = Math.round(tx);
+        final int previousTranslationX = Math.round(view.getTranslationX());
+        view.setTranslationX(translationX);
+        if (view == viewPages[0]) {
+            final int dx = previousTranslationX - translationX;
+            if (dx != 0) {
+                for (int i = 0; i < onScrollListeners.size(); i++) {
+                    onScrollListeners.get(i).onScrolled(dx);
+                }
+            }
+        }
     }
 
     protected void invalidateBlur() {
@@ -440,7 +486,7 @@ public class ViewPagerFixed extends FrameLayout {
         if (tabsView != null) {
             tabsView.selectTab(nextPosition, currentPosition, currentProgress);
         }
-        onTabAnimationUpdate(false);
+        onTabAnimationUpdateInternal(false);
     }
 
     private void updateViewForIndex(int index) {
@@ -461,7 +507,7 @@ public class ViewPagerFixed extends FrameLayout {
                 parent.removeView(v);
             }
             addView(v);
-            v.setTranslationX(getMeasuredWidth());
+            v.setTranslationX(index == 0 ? 0 : getMeasuredWidth());
             viewPages[index] = v;
             adapter.bindView(viewPages[index], adapterPosition, viewTypes[index]);
             viewPages[index].setVisibility(View.VISIBLE);
@@ -480,6 +526,7 @@ public class ViewPagerFixed extends FrameLayout {
                 } else {
                     viewsByType.remove(viewTypes[index]);
                 }
+                v.setTranslationX(index == 0 ? 0 : getMeasuredWidth());
                 addView(v);
                 viewPages[index] = v;
                 viewPages[index].setVisibility(View.VISIBLE);
@@ -554,7 +601,7 @@ public class ViewPagerFixed extends FrameLayout {
                 setTranslationX(viewPages[1], -viewPages[0].getMeasuredWidth());
             }
         }
-        onTabAnimationUpdate(false);
+        onTabAnimationUpdateInternal(false);
         return true;
     }
 
@@ -652,7 +699,7 @@ public class ViewPagerFixed extends FrameLayout {
                     if (tabsView != null) {
                         tabsView.selectTab(nextPosition, currentPosition, currentProgress);
                     }
-                    onTabAnimationUpdate(false);
+                    onTabAnimationUpdateInternal(false);
                 }
             }
             if (maybeStartTracking && !startedTracking) {
@@ -678,7 +725,7 @@ public class ViewPagerFixed extends FrameLayout {
                 if (tabsView != null) {
                     tabsView.selectTab(nextPosition, currentPosition, currentProgress);
                 }
-                onTabAnimationUpdate(false);
+                onTabAnimationUpdateInternal(false);
             }
         } else if (ev == null || ev.getPointerId(0) == startedTrackingPointerId && (ev.getAction() == MotionEvent.ACTION_CANCEL || ev.getAction() == MotionEvent.ACTION_UP || ev.getAction() == MotionEvent.ACTION_POINTER_UP)) {
             if (velocityTracker != null) {
@@ -797,7 +844,7 @@ public class ViewPagerFixed extends FrameLayout {
                             tabsView.setEnabled(true);
                         }
 
-                        onTabAnimationUpdate(false);
+                        onTabAnimationUpdateInternal(false);
                         onScrollEnd();
                         notificationsLocker.unlock();
                     }
@@ -806,7 +853,7 @@ public class ViewPagerFixed extends FrameLayout {
                 tabsAnimationInProgress = true;
                 startedTracking = false;
 
-                onTabAnimationUpdate(false);
+                onTabAnimationUpdateInternal(false);
             } else {
                 maybeStartTracking = false;
                 if (tabsView != null) {
@@ -859,7 +906,7 @@ public class ViewPagerFixed extends FrameLayout {
                 }
                 cancel = true;
             }
-            onTabAnimationUpdate(true);
+            onTabAnimationUpdateInternal(true);
             if (cancel) {
                 //showScrollbars(true);
                 if (tabsAnimation != null) {
@@ -882,7 +929,7 @@ public class ViewPagerFixed extends FrameLayout {
     public void setPosition(int position) {
         if (adapter == null) {
             currentPosition = position;
-            onTabAnimationUpdate(false);
+            onTabAnimationUpdateInternal(false);
         }
         if (tabsAnimation != null) {
             tabsAnimation.cancel();
@@ -902,9 +949,9 @@ public class ViewPagerFixed extends FrameLayout {
             onItemSelected(viewPages[0], oldView, currentPosition, oldPosition);
             setTranslationX(viewPages[0], 0);
             if (tabsView != null) {
-                tabsView.selectTab(currentPosition, nextPosition, currentProgress);
+                tabsView.selectTab(nextPosition, currentPosition, currentProgress);
             }
-            onTabAnimationUpdate(true);
+            onTabAnimationUpdateInternal(true);
         }
     }
 
@@ -917,7 +964,7 @@ public class ViewPagerFixed extends FrameLayout {
                 viewPages[1] = null;
             }
             setTranslationX(viewPages[0], 0);
-            onTabAnimationUpdate(true);
+            onTabAnimationUpdateInternal(true);
         }
     }
 
@@ -1010,7 +1057,7 @@ public class ViewPagerFixed extends FrameLayout {
             if (viewPages[0] != null) {
                 tabsAnimation.playTogether(translateAnimator(viewPages[0], 0));
             }
-            onTabAnimationUpdate(true);
+            onTabAnimationUpdateInternal(true);
 
             tabsView.indicatorProgress2 = 0;
             tabsView.listView.invalidateViews();
@@ -1225,7 +1272,7 @@ public class ViewPagerFixed extends FrameLayout {
                         tabsView.setEnabled(true);
                     }
 
-                    onTabAnimationUpdate(false);
+                    onTabAnimationUpdateInternal(false);
                     onScrollEnd();
                     notificationsLocker.unlock();
                 }
@@ -1234,7 +1281,7 @@ public class ViewPagerFixed extends FrameLayout {
             tabsAnimationInProgress = true;
             startedTracking = false;
 
-            onTabAnimationUpdate(false);
+            onTabAnimationUpdateInternal(false);
         } else {
             maybeStartTracking = false;
             if (tabsView != null) {
@@ -1247,7 +1294,28 @@ public class ViewPagerFixed extends FrameLayout {
         }
     }
 
-    public static class TabsView extends FrameLayout {
+
+    private void removePage(View page) {
+        endItemAnimations(page);
+        removeView(page);
+    }
+
+    private static void endItemAnimations(View view) {
+        if (view instanceof RecyclerView) {
+            RecyclerView.ItemAnimator animator = ((RecyclerView) view).getItemAnimator();
+            if (animator != null) {
+                animator.endAnimations();
+            }
+        }
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = group.getChildCount() - 1; i >= 0; i--) {
+                endItemAnimations(group.getChildAt(i));
+            }
+        }
+    }
+
+    public static class TabsView extends FrameLayout implements Theme.Colorable {
 
         private float overrideFromX;
         private float overrideFromW;
@@ -1295,8 +1363,9 @@ public class ViewPagerFixed extends FrameLayout {
             }
         }
 
-        public class TabView extends View {
+        public class TabView extends View implements Md3ChipTabHelper.ChipPressHost {
 
+            private final Md3ChipTabHelper.PressState md3PressState = new Md3ChipTabHelper.PressState();
             private Tab currentTab;
             private int textHeight;
             private int tabWidth;
@@ -1317,6 +1386,19 @@ public class ViewPagerFixed extends FrameLayout {
 
             public TabView(Context context) {
                 super(context);
+            }
+
+            @Override
+            public void setPressed(boolean pressed) {
+                super.setPressed(pressed);
+                if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE) {
+                    md3PressState.onPressedChanged(this, listView, TabsView.this);
+                }
+            }
+
+            @Override
+            public float getMd3PressProgress() {
+                return md3PressState.getProgress();
             }
 
             public void setTab(Tab tab, int position) {
@@ -1341,6 +1423,14 @@ public class ViewPagerFixed extends FrameLayout {
             @Override
             protected void onDraw(Canvas canvas) {
                 canvas.save();
+                if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE) {
+                    final float pressP = md3PressState.step(this, listView, TabsView.this);
+                    final float pressSX = Md3ChipTabHelper.getPressScaleX(pressP);
+                    final float pressSY = Md3ChipTabHelper.getPressScaleY(pressP);
+                    if (Math.abs(pressSX - 1f) > 0.001f || Math.abs(pressSY - 1f) > 0.001f) {
+                        canvas.scale(pressSX, pressSY, getMeasuredWidth() * 0.5f, getMeasuredHeight() * 0.5f);
+                    }
+                }
                 final float shakeAlpha = this.shakeAlpha.set(reordering);
                 if (shakeAlpha > 0) {
                     if (shaker == null) shaker = new Shaker(this);
@@ -1362,7 +1452,7 @@ public class ViewPagerFixed extends FrameLayout {
                 int unreadOtherKey;
                 int id1;
                 int id2;
-                if (manualScrollingToId != -1) {
+                if (!animatingIndicator && manualScrollingToId != -1) {
                     id1 = manualScrollingToId;
                     id2 = selectedTabId;
                 } else {
@@ -1383,6 +1473,21 @@ public class ViewPagerFixed extends FrameLayout {
 
                 if (selectorType == 9) {
                     textPaint.setColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+                } else if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled()) {
+                    int themeActive = Theme.getColor(activeTextColorKey, resourcesProvider);
+                    int themeInactive = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+                    int activeColor = Md3ChipTabHelper.getTextColor(true, themeActive, themeInactive);
+                    int inactiveColor = Md3ChipTabHelper.getTextColor(false, themeActive, themeInactive);
+                    int targetColor = currentTab.id == id1 ? activeColor : inactiveColor;
+                    int otherColor = currentTab.id == id1 ? inactiveColor : activeColor;
+                    if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
+                        boolean manualDrag = !animatingIndicator && manualScrollingToId != -1;
+                        float rawT = animatingIndicator ? animationTime : animatingIndicatorProgress;
+                        float blendT = Md3ChipTabHelper.getTextTransitionProgress(rawT, manualDrag);
+                        textPaint.setColor(ColorUtils.blendARGB(otherColor, targetColor, blendT));
+                    } else {
+                        textPaint.setColor(targetColor);
+                    }
                 } else if ((animatingIndicator || manualScrollingToId != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
                     textPaint.setColor(ColorUtils.blendARGB(Theme.getColor(otherKey, resourcesProvider), Theme.getColor(key, resourcesProvider), animatingIndicatorProgress));
                 } else {
@@ -1407,7 +1512,11 @@ public class ViewPagerFixed extends FrameLayout {
                     countWidth = (int) (countWidth + (dp(20) - countWidth) * editingStartAnimationProgress);
                 }
 
+                int prevMeasuredTabWidth = tabWidth;
                 tabWidth = currentTab.titleWidth + (countWidth != 0 ? countWidth + dp(6 * (counterText != null ? 1.0f : editingStartAnimationProgress)) : 0);
+                if (prevMeasuredTabWidth != tabWidth && selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled()) {
+                    TabsView.this.invalidate();
+                }
                 int textX = (getMeasuredWidth() - tabWidth) / 2;
                 if (currentTab.title == null && currentText != null || !TextUtils.equals(currentTab.title, currentText)) {
                     currentText = currentTab.title = Emoji.replaceEmoji(currentTab.title, textPaint.getFontMetricsInt(), false);
@@ -1429,8 +1538,12 @@ public class ViewPagerFixed extends FrameLayout {
                 }
 
                 if (counterText != null || currentTab.id != Integer.MAX_VALUE && (isEditing || editingStartAnimationProgress != 0)) {
+                    boolean chipMode = selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled();
                     textCounterPaint.setColor(Theme.getColor(backgroundColorKey, resourcesProvider));
-                    if (Theme.hasThemeKey(unreadKey) && Theme.hasThemeKey(unreadOtherKey)) {
+                    if (chipMode) {
+                        counterPaint.setColor(textPaint.getColor());
+                        textCounterPaint.setColor(UIUtil.getOnAccentColor(counterPaint.getColor()));
+                    } else if (Theme.hasThemeKey(unreadKey) && Theme.hasThemeKey(unreadOtherKey)) {
                         int color1 = Theme.getColor(unreadKey, resourcesProvider);
                         if ((animatingIndicator || manualScrollingToPosition != -1) && (currentTab.id == id1 || currentTab.id == id2)) {
                             int color3 = Theme.getColor(unreadOtherKey, resourcesProvider);
@@ -1519,6 +1632,11 @@ public class ViewPagerFixed extends FrameLayout {
 
         private int scrollingToChild = -1;
         private GradientDrawable selectorDrawable;
+        private final GradientDrawable inactiveChipDrawable = new GradientDrawable();
+        private final float[] chipRadiiScratch = new float[8];
+        private final float[] chipRadiiFrom = new float[8];
+        private final float[] chipRadiiTo = new float[8];
+        private final float[] chipRadiiOut = new float[8];
 
         private int tabLineColorKey = Theme.key_profile_tabSelectedLine;
         private int activeTextColorKey = Theme.key_profile_tabSelectedText;
@@ -1568,25 +1686,32 @@ public class ViewPagerFixed extends FrameLayout {
                 if (!animatingIndicator) {
                     return;
                 }
-                long newTime = SystemClock.elapsedRealtime();
-                long dt = (newTime - lastAnimationTime);
-                if (dt > 17) {
-                    dt = 17;
+            long newTime = SystemClock.elapsedRealtime();
+            long dt = newTime - lastAnimationTime;
+            if (dt > 17) {
+                dt = 17;
+            } else if (dt < 1) {
+                dt = 1;
+            }
+            lastAnimationTime = newTime;
+            final boolean md3 = selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled();
+            final float dur = md3 ? Md3ChipTabHelper.getIndicatorDurationMs(200L) : 200.0f;
+            animationTime += dt / Math.max(1.0f, dur);
+            if (animationTime > 1.0f) {
+                animationTime = 1.0f;
+            }
+            setAnimationIdicatorProgress(md3 ? Md3ChipTabHelper.getStandardProgress(animationTime) : interpolator.getInterpolation(animationTime));
+            if (animationTime < 1.0f) {
+                AndroidUtilities.runOnUIThread(animationRunnable);
+            } else {
+                animatingIndicator = false;
+                manualScrollingToPosition = -1;
+                manualScrollingToId = -1;
+                setEnabled(true);
+                if (delegate != null) {
+                    delegate.onPageScrolled(1.0f);
                 }
-                animationTime += dt / 200.0f;
-                setAnimationIdicatorProgress(interpolator.getInterpolation(animationTime));
-                if (animationTime > 1.0f) {
-                    animationTime = 1.0f;
-                }
-                if (animationTime < 1.0f) {
-                    AndroidUtilities.runOnUIThread(animationRunnable);
-                } else {
-                    animatingIndicator = false;
-                    setEnabled(true);
-                    if (delegate != null) {
-                        delegate.onPageScrolled(1.0f);
-                    }
-                }
+            }
             }
         };
 
@@ -1662,7 +1787,7 @@ public class ViewPagerFixed extends FrameLayout {
 
             if (tabsSelectorType == SELECTOR_TYPE_BUBBLE_STYLE) {
                 listView.setSelectorType(9);
-                listView.setSelectorRadius(6);
+                listView.setSelectorRadius(Md3ChipTabHelper.isEnabled() ? 18 : 6);
             } else {
                 listView.setSelectorType(tabsSelectorType == 10 ? 9 : tabsSelectorType);
                 if (tabsSelectorType == 3) {
@@ -1671,7 +1796,7 @@ public class ViewPagerFixed extends FrameLayout {
                     listView.setSelectorRadius(6);
                 }
             }
-            listView.setSelectorDrawableColor(Theme.getColor(selectorColorKey, resourcesProvider));
+            ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
             listView.setLayoutManager(layoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false) {
                 @Override
                 public void smoothScrollToPosition(RecyclerView recyclerView, RecyclerView.State state, int position) {
@@ -1793,9 +1918,27 @@ public class ViewPagerFixed extends FrameLayout {
                 animatingIndicator = false;
             }
 
+            final boolean md3Bubble = selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled();
+            if (md3Bubble && Md3ChipTabHelper.getAnimMode() == Md3ChipTabHelper.ANIM_NONE) {
+                animationTime = 1f;
+                animatingIndicator = false;
+                manualScrollingToPosition = -1;
+                manualScrollingToId = -1;
+                setEnabled(true);
+                if (delegate != null) {
+                    delegate.onPageSelected(position, scrollingForward);
+                }
+                scrollToChild(currentPosition);
+                setAnimationIdicatorProgress(1.0f);
+                invalidate();
+                return;
+            }
+
             animationTime = 0;
             animatingIndicatorProgress = 0;
             animatingIndicator = true;
+            manualScrollingToPosition = -1;
+            manualScrollingToId = -1;
             setEnabled(false);
 
 
@@ -1805,18 +1948,25 @@ public class ViewPagerFixed extends FrameLayout {
             scrollToChild(currentPosition);
             tabsAnimator = ValueAnimator.ofFloat(0,1f);
             tabsAnimator.addUpdateListener(anm -> {
-                float progress = (float) anm.getAnimatedValue();
-                setAnimationIdicatorProgress(progress);
-                if (delegate != null) {
-                    delegate.onPageScrolled(progress);
+                float raw = (float) anm.getAnimatedValue();
+                if (md3Bubble) {
+                    animationTime = raw;
+                    setAnimationIdicatorProgress(Md3ChipTabHelper.getStandardProgress(raw));
+                } else {
+                    setAnimationIdicatorProgress(raw);
+                    if (delegate != null) {
+                        delegate.onPageScrolled(raw);
+                    }
                 }
             });
-            tabsAnimator.setDuration(indicatorAnimationDuration);
-            tabsAnimator.setInterpolator(indicatorAnimationInterpolator);
+            tabsAnimator.setDuration(md3Bubble ? Md3ChipTabHelper.getIndicatorDurationMs(indicatorAnimationDuration) : indicatorAnimationDuration);
+            tabsAnimator.setInterpolator(md3Bubble ? new android.view.animation.LinearInterpolator() : indicatorAnimationInterpolator);
             tabsAnimator.addListener(new AnimatorListenerAdapter() {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     animatingIndicator = false;
+                    manualScrollingToPosition = -1;
+                    manualScrollingToId = -1;
                     setEnabled(true);
                     if (delegate != null) {
                         delegate.onPageScrolled(1.0f);
@@ -1987,8 +2137,192 @@ public class ViewPagerFixed extends FrameLayout {
 
         private final Paint selectorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
 
+        private void drawMd3ChipLayer(Canvas canvas, int height) {
+            float indicatorXf = 0f;
+            float indicatorWidthf = 0f;
+            float activeChildAlpha = 1f;
+            float activeChildScaleX = 1f;
+            float activeChildScaleY = 1f;
+            float transitionScaleX = 1f;
+            float transitionScaleY = 1f;
+            float transitionAlpha = 1f;
+            View activeTabView = null;
+            int fromPos = currentPosition;
+            int toPos = currentPosition;
+            float cornerT = 1f;
+
+            if (animatingIndicator || manualScrollingToPosition != -1) {
+                int idx1 = animatingIndicator ? previousPosition : currentPosition;
+                int idx2 = animatingIndicator ? currentPosition : manualScrollingToPosition;
+                boolean manualDrag = !animatingIndicator;
+                float rawT = animatingIndicator ? animationTime : animatingIndicatorProgress;
+                float moveT = Md3ChipTabHelper.getPillTravelProgress(rawT, manualDrag);
+                float widthT = Md3ChipTabHelper.getPillWidthProgress(rawT, manualDrag);
+                transitionScaleX = Md3ChipTabHelper.getPillTransitionScaleX(rawT, manualDrag);
+                transitionScaleY = Md3ChipTabHelper.getPillTransitionScaleY(rawT, manualDrag);
+                transitionAlpha = Md3ChipTabHelper.getPillTransitionAlpha(rawT, manualDrag);
+
+                int position = layoutManager.findFirstVisibleItemPosition();
+                RecyclerListView.ViewHolder holder = position != RecyclerListView.NO_POSITION
+                        ? listView.findViewHolderForAdapterPosition(position)
+                        : null;
+                if (holder != null) {
+                    int prevX = positionToX.get(idx1);
+                    int newX = positionToX.get(idx2);
+                    int prevW = positionToWidth.get(idx1);
+                    int newW = positionToWidth.get(idx2);
+                    if (prevW <= 0 && idx1 >= 0 && idx1 < tabs.size()) {
+                        prevW = tabs.get(idx1).getWidth(false, textPaint);
+                    }
+                    if (newW <= 0 && idx2 >= 0 && idx2 < tabs.size()) {
+                        newW = tabs.get(idx2).getWidth(false, textPaint);
+                    }
+                    indicatorWidthf = prevW + (newW - prevW) * widthT;
+                    float prevCenter = prevX + prevW * 0.5f;
+                    float newCenter = newX + newW * 0.5f;
+                    float curCenter = prevCenter + (newCenter - prevCenter) * moveT;
+                    float baseX = curCenter - indicatorWidthf * 0.5f;
+                    if (additionalTabWidth != 0) {
+                        indicatorXf = baseX + dp(tabMarginDp);
+                    } else {
+                        int x = positionToX.get(position);
+                        indicatorXf = baseX - (x - holder.itemView.getLeft()) + dp(tabMarginDp);
+                    }
+                } else {
+                    RecyclerListView.ViewHolder targetHolder = listView.findViewHolderForAdapterPosition(moveT >= 0.5f ? idx2 : idx1);
+                    if (targetHolder != null) {
+                        TabView tv = (TabView) targetHolder.itemView;
+                        int w = tv.tabWidth > 0 ? tv.tabWidth : (tv.currentTab != null ? tv.currentTab.getWidth(false, textPaint) : 0);
+                        indicatorWidthf = w;
+                        indicatorXf = tv.getX() + (tv.getMeasuredWidth() - indicatorWidthf) / 2f;
+                    }
+                }
+                fromPos = idx1;
+                toPos = idx2;
+                cornerT = widthT;
+                RecyclerListView.ViewHolder toHolder = listView.findViewHolderForAdapterPosition(toPos);
+                if (toHolder != null) {
+                    activeTabView = toHolder.itemView;
+                }
+            } else {
+                RecyclerListView.ViewHolder holder = listView.findViewHolderForAdapterPosition(currentPosition);
+                if (holder != null) {
+                    TabView tabView = (TabView) holder.itemView;
+                    int w = tabView.tabWidth;
+                    if (w <= 0) {
+                        w = positionToWidth.get(currentPosition);
+                    }
+                    if (w <= 0 && tabView.currentTab != null) {
+                        w = tabView.currentTab.getWidth(false, textPaint);
+                    }
+                    if (w <= 0) {
+                        w = Math.max(dp(16), tabView.getMeasuredWidth() - dp(tabMarginDp * 2) - additionalTabWidth);
+                    }
+                    indicatorWidthf = w;
+                    indicatorXf = tabView.getX() + (tabView.getMeasuredWidth() - indicatorWidthf) / 2f;
+                    activeChildAlpha = tabView.getAlpha();
+                    activeChildScaleX = tabView.getScaleX();
+                    activeChildScaleY = tabView.getScaleY();
+                    activeTabView = tabView;
+                }
+            }
+
+            float listLeft = listView.getX();
+            indicatorXf += listLeft;
+            int gapH = Md3ChipTabHelper.getSpacingHalfPx();
+            int topPad = getPaddingTop();
+            int botPad = getPaddingBottom();
+            int innerH = Math.max(1, height - topPad - botPad);
+            int vInset = innerH >= dp(40) ? dp(4) : Math.max(dp(2), (innerH - dp(32)) / 2);
+            float chipTop = topPad + vInset;
+            float chipBottom = height - botPad - vInset;
+            float add = additionalTabWidth / 2f;
+            float pillLeft = indicatorWidthf > 0f ? indicatorXf - dp(tabMarginDp) - add + gapH : -1f;
+            float pillRight = indicatorWidthf > 0f ? indicatorXf + indicatorWidthf + dp(tabMarginDp) + add - gapH : -1f;
+
+            int activeThemeColor = Theme.getColor(activeTextColorKey, resourcesProvider);
+            int unactiveThemeColor = Theme.getColor(unactiveTextColorKey, resourcesProvider);
+            int count = Math.max(1, tabs.size());
+            float listAlpha = listView.getAlpha();
+
+            canvas.save();
+            canvas.translate(listView.getTranslationX(), 0);
+            canvas.scale(listView.getScaleX(), 1f, listView.getPivotX() + listLeft, listView.getPivotY());
+
+            for (int i = 0, childCount = listView.getChildCount(); i < childCount; i++) {
+                View tabChild = listView.getChildAt(i);
+                if (!(tabChild instanceof TabView) || tabChild.getVisibility() != VISIBLE) {
+                    continue;
+                }
+                int pos = listView.getChildAdapterPosition(tabChild);
+                if (pos < 0) {
+                    pos = ((TabView) tabChild).currentPosition;
+                }
+                float slotLeft = listLeft + tabChild.getLeft() + tabChild.getTranslationX() + gapH;
+                float slotRight = listLeft + tabChild.getRight() + tabChild.getTranslationX() - gapH;
+                float rawOverlapAlpha = indicatorWidthf > 0f
+                        ? Md3ChipTabHelper.computeOverlapAlpha(slotLeft, slotRight, pillLeft, pillRight)
+                        : 1f;
+                float overlapAlpha = transitionAlpha < 1f
+                        ? 1f - (1f - rawOverlapAlpha) * transitionAlpha
+                        : rawOverlapAlpha;
+                float childAlpha = overlapAlpha * listAlpha * tabChild.getAlpha();
+                if (childAlpha <= 0.01f) {
+                    continue;
+                }
+                float sx = tabChild.getScaleX() * Md3ChipTabHelper.getViewPressScaleX(tabChild);
+                float sy = tabChild.getScaleY() * Md3ChipTabHelper.getViewPressScaleY(tabChild);
+                boolean scaled = Math.abs(sx - 1f) > 0.001f || Math.abs(sy - 1f) > 0.001f;
+                if (scaled) {
+                    canvas.save();
+                    canvas.scale(sx, sy, (slotLeft + slotRight) * 0.5f, (chipTop + chipBottom) * 0.5f);
+                }
+                Md3ChipTabHelper.drawInactiveChip(
+                        canvas, inactiveChipDrawable,
+                        slotLeft, chipTop, slotRight, chipBottom,
+                        pos, count, unactiveThemeColor, childAlpha, chipRadiiScratch
+                );
+                if (scaled) {
+                    canvas.restore();
+                }
+            }
+
+            if (indicatorWidthf > 0f && pillRight > pillLeft && activeChildAlpha * transitionAlpha > 0.01f) {
+                float pillSX = activeChildScaleX * Md3ChipTabHelper.getViewPressScaleX(activeTabView) * transitionScaleX;
+                float pillSY = activeChildScaleY * Md3ChipTabHelper.getViewPressScaleY(activeTabView) * transitionScaleY;
+                Md3ChipTabHelper.drawActivePill(
+                        canvas, selectorDrawable,
+                        pillLeft, chipTop, pillRight, chipBottom,
+                        pillSX, pillSY,
+                        (pillLeft + pillRight) * 0.5f, (chipTop + chipBottom) * 0.5f,
+                        activeThemeColor, listAlpha * activeChildAlpha * transitionAlpha,
+                        fromPos, toPos, count, cornerT,
+                        chipRadiiFrom, chipRadiiTo, chipRadiiOut
+                );
+            }
+            canvas.restore();
+        }
+
         @Override
         protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
+            if (child == listView && selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled()) {
+                final int height = getMeasuredHeight();
+                if (isInHiddenMode && hideProgress != 1f) {
+                    hideProgress += 0.1f;
+                    if (hideProgress > 1f) {
+                        hideProgress = 1f;
+                    }
+                    invalidate();
+                } else if (!isInHiddenMode && hideProgress != 0) {
+                    hideProgress -= 0.12f;
+                    if (hideProgress < 0) {
+                        hideProgress = 0;
+                    }
+                    invalidate();
+                }
+                drawMd3ChipLayer(canvas, height);
+                return super.drawChild(canvas, child, drawingTime);
+            }
             boolean result = super.drawChild(canvas, child, drawingTime);
             if (child == listView) {
                 final int height = getMeasuredHeight();
@@ -2100,13 +2434,24 @@ public class ViewPagerFixed extends FrameLayout {
             super.onMeasure(widthMeasureSpec, heightMeasureSpec);
         }
 
+        @Override
         public void updateColors() {
             if (blurredBackgroundDrawable != null) {
                 blurredBackgroundDrawable.updateColors();
             }
-            selectorDrawable.setColor(Theme.getColor(tabLineColorKey, resourcesProvider));
-            listView.invalidateViews();
-            listView.invalidate();
+            if (selectorDrawable != null) {
+                selectorDrawable.setColor(Theme.getColor(tabLineColorKey, resourcesProvider));
+                if (!Md3ChipTabHelper.isEnabled()) {
+                    selectorDrawable.setStroke(0, 0);
+                }
+            }
+            if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE && listView != null) {
+                listView.setSelectorRadius(Md3ChipTabHelper.isEnabled() ? 18 : 6);
+            }
+            if (listView != null) {
+                listView.invalidateViews();
+                listView.invalidate();
+            }
             invalidate();
         }
 
@@ -2141,6 +2486,8 @@ public class ViewPagerFixed extends FrameLayout {
                 if (animatingIndicator) {
                     AndroidUtilities.cancelRunOnUIThread(animationRunnable);
                     animatingIndicator = false;
+                    manualScrollingToPosition = -1;
+                    manualScrollingToId = -1;
                     setEnabled(true);
                     if (delegate != null) {
                         delegate.onPageScrolled(1.0f);
@@ -2150,6 +2497,9 @@ public class ViewPagerFixed extends FrameLayout {
         }
 
         public void selectTab(int currentPosition, int nextPosition, float progress) {
+            if (selectorType == SELECTOR_TYPE_BUBBLE_STYLE && Md3ChipTabHelper.isEnabled() && animatingIndicator) {
+                return;
+            }
             if (progress < 0) {
                 progress = 0;
             } else if (progress > 1.0f) {

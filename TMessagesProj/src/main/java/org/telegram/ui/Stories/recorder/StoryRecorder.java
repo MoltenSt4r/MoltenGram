@@ -125,9 +125,11 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.SimpleTextView;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.AvatarSpan;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Cells.ShareDialogCell;
+import org.telegram.ui.Components.ForegroundColorSpanThemable;
 import org.telegram.ui.Components.AlertsCreator;
 import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BlurringShader;
@@ -2390,7 +2392,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                     int endIndex = text.toString().indexOf("__");
                     if (endIndex >= 0) {
                         text.replace(endIndex, endIndex + 2, "");
-                        text.setSpan(new ForegroundColorSpan(Theme.getColor(Theme.key_chat_messageLinkIn, resourcesProvider)), startIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                        text.setSpan(new ForegroundColorSpanThemable(Theme.key_chat_messageLinkIn, resourcesProvider), startIndex, endIndex, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                         text.setSpan(new ClickableSpan() {
                             @Override
                             public void updateDrawState(@NonNull TextPaint ds) {
@@ -2955,7 +2957,10 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
 
         startLiveButton = new ButtonWithCounterView(context, resourcesProvider);
         startLiveButton.setRoundRadius(24);
-        startLiveButton.setColor(0xFFDA435C);
+        int liveBtnColor = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        if (liveBtnColor == 0) liveBtnColor = 0xFFDA435C;
+        startLiveButton.setColor(liveBtnColor);
+        startLiveButton.setTextColor(app.exteraless.appearance.AppearanceConfig.contrastOnAccent(liveBtnColor));
         startLiveButton.setText(getString(R.string.LiveStoryStart), false);
         startLiveButton.setAlpha(0f);
         startLiveButton.setScaleX(0.8f);
@@ -7132,8 +7137,8 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         dialog.show();
         View positiveButton = dialog.getButton(AlertDialog.BUTTON_POSITIVE);
         if (positiveButton instanceof TextView) {
-            ((TextView) positiveButton).setTextColor(Theme.getColor(Theme.key_text_RedBold, resourcesProvider));
-            positiveButton.setBackground(Theme.createRadSelectorDrawable(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_text_RedBold, resourcesProvider), (int) (0.2f * 255)), 6, 6));
+            ThemeBind.textColor((TextView) positiveButton, Theme.key_text_RedBold, resourcesProvider);
+            ThemeBind.selectorBackground(positiveButton, Theme.createRadSelectorDrawable(ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_text_RedBold, resourcesProvider), (int) (0.2f * 255)), 6, 6), null, ThemeBind.alpha(Theme.key_text_RedBold, (int) (0.2f * 255)), resourcesProvider);
         }
     }
 
@@ -7198,7 +7203,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 collageLayoutView.setCameraThumb(drawable);
                 if (activity.shouldShowRequestPermissionRationale(Manifest.permission.CAMERA)) {
                     new AlertDialog.Builder(getContext(), resourcesProvider)
-                        .setTopAnimation(R.raw.permission_request_camera, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground))
+                        .setTopAnimation(R.raw.permission_request_camera, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground)).setTopBackgroundColorKey(Theme.key_dialogTopBackground, null)
                         .setMessage(AndroidUtilities.replaceTags(getString(R.string.PermissionNoCameraWithHint)))
                         .setPositiveButton(getString(R.string.PermissionOpenSettings), (dialogInterface, i) -> {
                             try {
@@ -7336,7 +7341,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
                 animateGalleryListView(true);
             } else {
                 new AlertDialog.Builder(getContext(), resourcesProvider)
-                    .setTopAnimation(R.raw.permission_request_folder, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground))
+                    .setTopAnimation(R.raw.permission_request_folder, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground)).setTopBackgroundColorKey(Theme.key_dialogTopBackground, null)
                     .setMessage(AndroidUtilities.replaceTags(getString(R.string.PermissionStorageWithHint)))
                     .setPositiveButton(getString(R.string.PermissionOpenSettings), (dialogInterface, i) -> {
                         try {
@@ -7354,7 +7359,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         } else if (requestCode == 112) {
             if (!granted) {
                 new AlertDialog.Builder(getContext(), resourcesProvider)
-                    .setTopAnimation(R.raw.permission_request_camera, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground))
+                    .setTopAnimation(R.raw.permission_request_camera, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground)).setTopBackgroundColorKey(Theme.key_dialogTopBackground, null)
                     .setMessage(AndroidUtilities.replaceTags(getString(R.string.PermissionNoCameraMicVideo)))
                     .setPositiveButton(getString(R.string.PermissionOpenSettings), (dialogInterface, i) -> {
                         try {
@@ -7372,7 +7377,7 @@ public class StoryRecorder implements NotificationCenter.NotificationCenterDeleg
         } else if (requestCode == 115) {
             if (!granted) {
                 new AlertDialog.Builder(getContext(), resourcesProvider)
-                    .setTopAnimation(R.raw.permission_request_folder, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground))
+                    .setTopAnimation(R.raw.permission_request_folder, AlertsCreator.PERMISSIONS_REQUEST_TOP_ICON_SIZE, false, Theme.getColor(Theme.key_dialogTopBackground)).setTopBackgroundColorKey(Theme.key_dialogTopBackground, null)
                     .setMessage(AndroidUtilities.replaceTags(getString(R.string.PermissionNoAudioStorageStory)))
                     .setPositiveButton(getString(R.string.PermissionOpenSettings), (dialogInterface, i) -> {
                         try {

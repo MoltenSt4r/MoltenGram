@@ -231,6 +231,12 @@
     <string name="StyleModern">Moderno</string>
     <string name="SaveDeletedExclusionMenu">Guardar eliminados</string>
     <string name="SaveDeletedExcluded">Excluir</string>
+    <string name="SaveDeletedExceptionsMode">Excepciones de eliminados</string>
+    <string name="SaveEditedExceptionsMode">Excepciones del historial de ediciones</string>
+    <string name="SaveExceptionsAllExceptSelected">Todos excepto los seleccionados</string>
+    <string name="SaveExceptionsOnlySelected">Solo los seleccionados</string>
+    <string name="SaveExceptionsIncluded">Guardar</string>
+    <string name="SaveEditedExclusionMenu">Guardar ediciones</string>
     <string name="MarkdownParser">Analizador Markdown</string>
     <string name="KeepTranslatorPreferences">Mantener Preferencias del Traductor</string>
     <string name="KeepTranslatorPreferencesNotice">Conservar la configuración actual del traductor al cambiar el idioma de la aplicación.</string>

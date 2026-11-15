@@ -50,4 +50,10 @@
     <string name="OEAiDetails">Подробности</string>
     <string name="OEAiDisableTools">Отключить инструменты</string>
     <string name="OEAiDisableToolsInfo">Проверка плагина уходит одним запросом, как раньше: только первые 48 КБ кода, встроенные данные не расшифровываются</string>
+    <string name="OEAiTelegramHeader">ИИ Telegram</string>
+    <string name="OEAiReplaceEditor">ИИ-редактор</string>
+    <string name="OEAiReplaceEditorInfo">Перевод, смена стиля и проверка черновиков</string>
+    <string name="OEAiReplaceSummaries">Краткие сводки</string>
+    <string name="OEAiReplaceSummariesInfo">Краткое содержание длинных сообщений и постов</string>
+    <string name="OEAiTelegramInfo">Выбранные функции работают через ваш ИИ-сервис вместо серверов Telegram и без ограничений Premium.</string>
 </resources>

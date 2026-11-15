@@ -1,0 +1,19 @@
+// Solegram banner: theme colours that slowly flow and curl like ink in water.
+// Two passes of domain warping bend a smooth sine field; only the colours move.
+uniform float2 size;
+uniform float time;
+layout(color) uniform half4 c1;
+layout(color) uniform half4 c2;
+layout(color) uniform half4 c3;
+layout(color) uniform half4 c4;
+
+half4 main(float2 p) {
+    float2 uv = p / size.y;
+    float t = time;
+    float2 q = uv;
+    q += 0.32 * float2(sin(q.y * 2.1 + t * 0.23), cos(q.x * 1.7 - t * 0.19));
+    q += 0.20 * float2(sin(q.y * 3.4 - t * 0.15 + 1.3), cos(q.x * 2.9 + t * 0.21 + 0.7));
+    float a = smoothstep(0.0, 1.0, 0.5 + 0.5 * sin(q.x * 2.2 + t * 0.13));
+    float b = smoothstep(0.0, 1.0, 0.5 + 0.5 * sin(q.y * 2.7 - q.x * 0.9 + t * 0.11 + 2.0));
+    return mix(mix(c1, c2, a), mix(c3, c4, a), b);
+}

@@ -26,7 +26,8 @@ FALLBACK_BOT_TOKENS = [
 
 def commits():
     try:
-        payload = json.loads(os.environ.get("COMMITS_JSON") or "[]")
+        with open(os.environ["GITHUB_EVENT_PATH"], encoding="utf-8") as event:
+            payload = json.load(event).get("commits") or []
     except Exception:
         payload = []
     out = []
@@ -42,10 +43,12 @@ def head_subject():
     return lines[0] if lines else "без описания"
 
 
-def quote(entries):
+def quote(entries, skipped):
     if not entries:
         return None
     body = [f">• {entry}" for entry in entries]
+    if skipped:
+        body.insert(0, f">…and {skipped} more")
     body[0] = "**" + body[0]
     body[-1] = body[-1] + "||"
     return "\n".join(body)
@@ -93,10 +96,11 @@ def caption(download_url=None):
         tail += f"\n\n🔗 Прямая ссылка: {download_url}"
 
     entries = get_entries()
+    skipped = 0
 
     while True:
         parts = [f"**{TITLE}**"]
-        block = quote(entries)
+        block = quote(entries, skipped)
         if block:
             parts.append(block)
         parts.append(tail)
@@ -104,6 +108,7 @@ def caption(download_url=None):
         if len(text) <= CAPTION_LIMIT or not entries:
             return text[:CAPTION_LIMIT]
         entries = entries[1:]
+        skipped += 1
 
 
 def get_chats():

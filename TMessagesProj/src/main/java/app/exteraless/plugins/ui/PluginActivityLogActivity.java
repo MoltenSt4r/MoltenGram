@@ -3,13 +3,17 @@ package app.exteraless.plugins.ui;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
+import android.text.TextUtils;
 import android.view.View;
+import android.widget.EditText;
 import android.widget.FrameLayout;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.ActionBarMenu;
+import org.telegram.ui.ActionBar.ActionBarMenuItem;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.BulletinFactory;
@@ -18,8 +22,14 @@ import org.telegram.ui.Components.UItem;
 import org.telegram.ui.Components.UniversalAdapter;
 import org.telegram.ui.Components.UniversalRecyclerView;
 
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Date;
+import java.util.Locale;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
@@ -46,6 +56,9 @@ import app.exteraless.plugins.PythonPluginsEngine;
 public class PluginActivityLogActivity extends BaseFragment {
 
     private static final int ID_CLEAR = 1;
+    private static final int MENU_SEARCH = 2;
+    private static final int MENU_EXPORT = 3;
+    private static final int MAX_SEARCH_ROWS = 500;
     /** id строк журнала: база плюс порядковый номер записи. */
     private static final int ID_ENTRY_BASE = 100;
     /** Больше на экране не нужно: журнал показывает поведение, а не аудит. */
@@ -53,6 +66,7 @@ public class PluginActivityLogActivity extends BaseFragment {
 
     private final String pluginId;
     private UniversalRecyclerView listView;
+    private String searchQuery;
     /**
      * Развёрнутые строки — по индексу записи в текущем списке.
      *
@@ -80,9 +94,31 @@ public class PluginActivityLogActivity extends BaseFragment {
             public void onItemClick(int id) {
                 if (id == -1) {
                     finishFragment();
+                } else if (id == MENU_EXPORT) {
+                    exportJournal();
                 }
             }
         });
+        ActionBarMenu menu = actionBar.createMenu();
+        ActionBarMenuItem search = menu.addItem(MENU_SEARCH, R.drawable.outline_header_search)
+                .setIsSearchField(true)
+                .setActionBarMenuItemSearchListener(new ActionBarMenuItem.ActionBarMenuItemSearchListener() {
+                    @Override
+                    public void onSearchCollapse() {
+                        searchQuery = null;
+                        update();
+                    }
+
+                    @Override
+                    public void onTextChanged(EditText editText) {
+                        String text = editText.getText().toString().trim();
+                        searchQuery = text.isEmpty() ? null : text.toLowerCase(Locale.ROOT);
+                        update();
+                    }
+                });
+        search.setSearchFieldHint(getString(R.string.Search));
+        ActionBarMenuItem other = menu.addItem(0, R.drawable.ic_ab_other);
+        other.addSubItem(MENU_EXPORT, R.drawable.msg_shareout, getString(R.string.PluginActivityExport));
 
         FrameLayout contentView = new FrameLayout(context);
         contentView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray));
@@ -98,8 +134,30 @@ public class PluginActivityLogActivity extends BaseFragment {
         return fragmentView;
     }
 
+    private void update() {
+        if (listView != null) {
+            listView.adapter.update(true);
+        }
+    }
+
+    private boolean matches(PluginAuditJournal.Entry entry) {
+        if (searchQuery == null) {
+            return true;
+        }
+        return contains(describe(entry), searchQuery) || contains(entry.event, searchQuery)
+                || contains(entry.detail, searchQuery) || contains(entry.category, searchQuery);
+    }
+
+    private static boolean contains(CharSequence text, String query) {
+        return text != null && text.toString().toLowerCase(Locale.ROOT).contains(query);
+    }
+
     private void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         List<PluginAuditJournal.Entry> entries = PluginAuditJournal.merged(pluginId);
+        if (searchQuery != null) {
+            fillSearch(items, entries);
+            return;
+        }
 
         items.add(UItem.asHeader(getString(R.string.PluginActivityProfile)));
         Map<String, int[]> profile = collectProfile(entries);
@@ -155,6 +213,73 @@ public class PluginActivityLogActivity extends BaseFragment {
 
         items.add(UItem.asButton(ID_CLEAR, getString(R.string.PluginActivityClear)).red());
         items.add(UItem.asShadow(getString(R.string.PluginActivityInfo)));
+    }
+
+    private void fillSearch(ArrayList<UItem> items, List<PluginAuditJournal.Entry> entries) {
+        items.add(UItem.asHeader(getString(R.string.PluginActivityRecent)));
+        int shown = 0;
+        for (int i = entries.size() - 1; i >= 0 && shown < MAX_SEARCH_ROWS; i--) {
+            PluginAuditJournal.Entry entry = entries.get(i);
+            if (!matches(entry)) {
+                continue;
+            }
+            UItem row = UItem.asButton(ID_ENTRY_BASE + i, describe(entry), countAndTime(Math.max(1, entry.count), entry.ts));
+            if (!entry.allowed) {
+                row.red();
+            }
+            items.add(row);
+            if (expanded.contains(i)) {
+                items.add(UItem.asShadow(fullDetail(entry)));
+            }
+            shown++;
+        }
+        if (shown == 0) {
+            items.add(UItem.asShadow(getString(R.string.NoResult)));
+        } else {
+            items.add(UItem.asShadow(null));
+        }
+    }
+
+    private void exportJournal() {
+        final android.app.Activity activity = getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        final List<PluginAuditJournal.Entry> entries = PluginAuditJournal.merged(pluginId);
+        final ArrayList<CharSequence> lines = new ArrayList<>(entries.size());
+        for (PluginAuditJournal.Entry entry : entries) {
+            lines.add(fullDetail(entry));
+        }
+        Plugin plugin = PluginsController.getInstance().getPlugin(pluginId);
+        final String title = plugin != null ? plugin.getDisplayName() + " (" + pluginId + ")" : pluginId;
+        org.telegram.messenger.Utilities.globalQueue.postRunnable(() -> {
+            File dir = AndroidUtilities.getLogsDir();
+            File out = null;
+            if (dir != null) {
+                String safeId = pluginId.replaceAll("[^A-Za-z0-9._-]", "_");
+                String stamp = new SimpleDateFormat("yyyy_MM_dd-HH_mm_ss", Locale.US).format(new Date());
+                out = new File(dir, "audit-" + safeId + "-" + stamp + ".log");
+                try (OutputStream stream = new FileOutputStream(out)) {
+                    StringBuilder sb = new StringBuilder();
+                    sb.append(title).append('\n').append('\n');
+                    for (CharSequence line : lines) {
+                        sb.append(line).append('\n').append('\n');
+                    }
+                    stream.write(sb.toString().getBytes(StandardCharsets.UTF_8));
+                } catch (Exception e) {
+                    org.telegram.messenger.FileLog.e(e);
+                    out = null;
+                }
+            }
+            final File file = out;
+            AndroidUtilities.runOnUIThread(() -> {
+                if (file == null) {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.ErrorOccurred)).show();
+                    return;
+                }
+                tw.nekomimi.nekogram.utils.ShareUtil.shareFile(activity, file);
+            });
+        });
     }
 
     /**

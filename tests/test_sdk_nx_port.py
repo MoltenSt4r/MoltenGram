@@ -968,3 +968,434 @@ def test_plugin_method_named_like_old_internals_survives_attach(sdk):
     plugin._exteraless_attach('test_plugin')
     assert plugin._plugin_id('x') == 'id:x'
     assert plugin.plugin_id == 'test_plugin'
+
+
+def test_log_capture_forwards_lines_with_owner_and_level(loader, monkeypatch):
+    captured = []
+
+    class Bridge:
+        @staticmethod
+        def logStream(owner, level, text):
+            captured.append((owner, level, text))
+
+    monkeypatch.setattr(loader, '_permissions', lambda: Bridge)
+    monkeypatch.setattr(loader, 'caller_plugin_id', lambda: 'admin_tools')
+
+    class Sink:
+        def __init__(self):
+            self.data = ''
+
+        def write(self, text):
+            self.data += text
+            return len(text)
+
+        def flush(self):
+            pass
+
+    sink = Sink()
+    stream = loader._PluginLogStream(sink, 'W')
+    stream.write('first ')
+    stream.write('line\nsecond')
+    stream.write(' line\n')
+    assert sink.data == 'first line\nsecond line\n'
+    assert captured == [('admin_tools', 'W', 'first line'), ('admin_tools', 'W', 'second line')]
+
+    captured.clear()
+    handler = loader._PluginLogHandler()
+    handler.setFormatter(__import__('logging').Formatter('%(name)s: %(message)s'))
+    logger = __import__('logging').getLogger('zwylib.async')
+    logger.addHandler(handler)
+    logger.propagate = False
+    try:
+        logger.error('task failed')
+    finally:
+        logger.removeHandler(handler)
+    assert captured == [('admin_tools', 'E', 'zwylib.async: task failed')]
+
+
+def test_custom_sub_page_rows_keep_their_identity_across_rebuilds(sdk, loader, monkeypatch):
+    factory = object()
+
+    def build():
+        return [sdk.settings.Custom(factory=factory, factory_args=object(),
+                                    create_sub_fragment=lambda cid=cid: [sdk.settings.Text(f'Add filter {cid}')])
+                for cid in (1, 2)]
+
+    record = settings_record(sdk, loader, monkeypatch, [])
+    record.instance.create_settings = build
+    before = json.loads(loader.get_settings_json('test_plugin'))
+    after = json.loads(loader.get_settings_json('test_plugin'))
+    assert [row['row_id'] for row in before] == [row['row_id'] for row in after]
+    assert before[0]['row_id'] != before[1]['row_id']
+
+
+class _Callable:
+
+    def __init__(self, fn):
+        self.fn = fn
+
+    def __call__(self, *args):
+        return self.fn(*args)
+
+
+class _JavaMethodStub:
+
+    def __init__(self, fn, static=False):
+        self.fn = fn
+        self.static = static
+
+    def __get__(self, obj, owner):
+        if obj is None:
+            return _Callable(lambda *args: self.fn(None, *args))
+        if self.static:
+            def through_instance(*args):
+                raise TypeError('static method called through an instance')
+            return _Callable(through_instance)
+        return _Callable(lambda *args: self.fn(obj, *args))
+
+
+def _fake_java_class(loader):
+    class FakeJava:
+        getPluginsDir = _JavaMethodStub(lambda self: '/plugins')
+        isEnabled = _JavaMethodStub(lambda self: True)
+        getEngines = _JavaMethodStub(lambda self: {'python': 'engine'}, static=True)
+
+        def getPythonOnly(self):
+            return 'python'
+
+    FakeJava.__getattr__ = loader._java_getattr(None)
+    return FakeJava
+
+
+def test_plugin_reads_java_getters_as_fields(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: 'some_plugin')
+    obj = _fake_java_class(loader)()
+    assert obj.pluginsDir == '/plugins'
+    assert obj.enabled is True
+    assert obj.engines == {'python': 'engine'}
+    for name in ('pythonOnly', 'missing', '_hidden'):
+        with pytest.raises(AttributeError):
+            getattr(obj, name)
+
+
+def test_sdk_keeps_stock_java_attribute_lookup(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: None)
+    obj = _fake_java_class(loader)()
+    with pytest.raises(AttributeError):
+        obj.pluginsDir
+    assert getattr(obj, 'enabled', None) is None
+
+
+def _fake_reflecting_root(loader, members):
+    reflected = []
+
+    class Root:
+        def __getattribute__(self, name):
+            cls = type(self)
+            if not (name[:2] == '__' or name in cls.__dict__):
+                reflected.append(name)
+                member = members.get(name)
+                if member is not None:
+                    type.__setattr__(cls, name, member)
+            return object.__getattribute__(self, name)
+
+        def __setattr__(self, name, value):
+            cls = type(self)
+            if not (name[:2] == '__' or name in cls.__dict__):
+                reflected.append(name)
+            object.__setattr__(self, name, value)
+
+    type.__setattr__(Root, '__getattr__', loader._java_getattr(None))
+    type.__setattr__(Root, '__setattr__', loader._java_setattr(Root.__dict__['__setattr__']))
+    return Root, reflected
+
+
+def test_proxy_instance_attribute_is_reflected_once(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: None)
+    root, reflected = _fake_reflecting_root(loader, {})
+
+    class Listener(root):
+        def run(self):
+            self.calls += 1
+
+    listener = Listener()
+    listener.calls = 0
+    for _ in range(5):
+        listener.run()
+    assert listener.calls == 5
+    assert reflected.count('calls') == 1
+    assert Listener().__dict__ == {}
+    with pytest.raises(AttributeError):
+        Listener().calls
+
+
+def test_missing_java_attribute_is_reflected_once(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: None)
+    root, reflected = _fake_reflecting_root(loader, {})
+
+    class View(root):
+        pass
+
+    view = View()
+    for _ in range(3):
+        assert getattr(view, 'missing', None) is None
+        assert not hasattr(view, 'missing')
+    assert reflected.count('missing') == 1
+    with pytest.raises(AttributeError):
+        View.missing
+    assert getattr(view, '__missing__', None) is None
+    assert '__missing__' not in View.__dict__
+    assert View.mro()[0] is View
+
+
+def test_absent_marker_yields_to_later_class_attributes(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: None)
+    root, reflected = _fake_reflecting_root(loader, {})
+
+    class View(root):
+        pass
+
+    view = View()
+    assert getattr(view, 'helper', None) is None
+    type.__setattr__(root, 'helper', lambda self: 'patched')
+    assert view.helper() == 'patched'
+    assert View.helper(view) == 'patched'
+
+
+def test_getter_fields_survive_absent_markers(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: 'some_plugin')
+    members = {'getText': _JavaMethodStub(lambda self: 'hello')}
+    root, reflected = _fake_reflecting_root(loader, members)
+
+    class TextView(root):
+        pass
+
+    view = TextView()
+    for _ in range(3):
+        assert view.text == 'hello'
+        assert getattr(view, 'hint', None) is None
+    assert reflected.count('text') == 1
+    assert reflected.count('getText') == 1
+    assert reflected.count('getHint') == 1
+    assert reflected.count('isHint') == 1
+
+
+def test_repeated_java_from_import_is_served_from_cache(loader, monkeypatch):
+    calls = []
+
+    def fake_import(name, globals=None, locals=None, fromlist=(), level=0):
+        calls.append((name, tuple(fromlist or ())))
+        module = types.ModuleType("<java import hook>")
+        for item in fromlist or ():
+            setattr(module, item, f"{name}.{item}")
+        return module
+
+    monkeypatch.setattr(loader, '_original_import', fake_import)
+    monkeypatch.setattr(loader, '_java_from_imports', {})
+    first = loader._sandboxed_import('org.telegram.messenger', fromlist=('AndroidUtilities',))
+    second = loader._sandboxed_import('org.telegram.messenger', fromlist=('AndroidUtilities',))
+    assert second is first
+    assert first.AndroidUtilities == 'org.telegram.messenger.AndroidUtilities'
+    assert calls.count(('org.telegram.messenger', ('AndroidUtilities',))) == 1
+
+    for _ in range(2):
+        loader._sandboxed_import('org.telegram.messenger', fromlist=('SendMessagesHelper',))
+    assert calls.count(('org.telegram.messenger', ('SendMessagesHelper',))) == 2
+
+
+def test_new_proxy_class_methods_are_guarded(loader, monkeypatch):
+    class ProxyClass(type):
+        pass
+
+    class _Class:
+        def __init__(self, interface, methods):
+            self._interface = interface
+            self._methods = methods
+
+        def isInterface(self):
+            return self._interface
+
+        def getName(self):
+            return 'java.util.Comparator'
+
+        def getMethods(self):
+            return self._methods
+
+    class _Method:
+        def __init__(self, name, returns):
+            self._name, self._returns = name, returns
+
+        def getName(self):
+            return self._name
+
+        def getReturnType(self):
+            return types.SimpleNamespace(getName=lambda: self._returns)
+
+    comparator_class = _Class(True, [_Method('compare', 'int')])
+
+    class Comparator:
+        _chaquopy_j_klass = object()
+
+        @staticmethod
+        def getClass():
+            return comparator_class
+
+    chaquopy = types.ModuleType('java.chaquopy')
+    chaquopy.ProxyClass = ProxyClass
+    monkeypatch.setitem(sys.modules, 'java.chaquopy', chaquopy)
+    monkeypatch.setattr(loader, '_proxy_class_type', None)
+    monkeypatch.setattr(loader, '_proxy_defaults_cache', {})
+
+    def compare(self, a, b):
+        raise ValueError('plugin bug')
+
+    proxy = ProxyClass('Listener', (Comparator,), {'compare': compare})
+    plain = type('Plain', (Comparator,), {'compare': compare})
+    loader._guard_new_proxy_class(proxy)
+    loader._guard_new_proxy_class(plain)
+
+    assert proxy.compare(proxy, 1, 2) == 0
+    with pytest.raises(ValueError):
+        plain.compare(plain, 1, 2)
+
+
+def test_set_unsafe_mode_is_refused_from_plugin_code(loader, monkeypatch):
+    monkeypatch.setattr(loader, 'plugin_frame_owner', lambda: 'evil')
+    monkeypatch.setattr(loader, '_unsafe_mode', False)
+    loader.set_unsafe_mode(True)
+    assert loader._unsafe_mode is False
+
+
+def test_unsafe_mode_true_is_confirmed_by_java(loader, monkeypatch):
+    class Bridge:
+        @staticmethod
+        def isUnsafeMode():
+            return False
+
+    monkeypatch.setattr(loader, '_permissions', lambda: Bridge)
+    monkeypatch.setattr(loader, '_unsafe_mode', True)
+    assert loader.unsafe_mode() is False
+
+
+def test_least_trusted_owner_wins_when_plugins_share_the_stack(loader, monkeypatch):
+    class Bridge:
+        @staticmethod
+        def hasPermission(owner, perm):
+            return owner == 'trusted'
+
+    monkeypatch.setattr(loader, '_permissions', lambda: Bridge)
+    assert loader._least_trusted(['trusted', 'isolated']) == 'isolated'
+    assert loader._least_trusted(['isolated', 'trusted']) == 'isolated'
+
+
+def test_plain_class_fast_path_skips_gated_and_aliased_names(loader):
+    assert loader.plain_java_class('java.util.ArrayList')
+    assert not loader.plain_java_class('org.telegram.messenger.SendMessagesHelper')
+    assert not loader.plain_java_class('de.robv.android.xposed.XposedBridge')
+    assert not loader.plain_java_class('app.exteraless.plugins.PluginPermissions')
+    assert not loader.plain_java_class('com.exteragram.messenger.plugins.models.PluginItemFactory')
+    assert not loader.plain_java_class(None)
+
+
+def test_plain_import_fast_path_skips_internal_gated_and_java_roots(loader):
+    assert loader._plain_import('json')
+    assert not loader._plain_import('extera_utils')
+    assert not loader._plain_import('extera_utils.plugin_loader')
+    assert not loader._plain_import('socket')
+    assert not loader._plain_import('java')
+    assert not loader._plain_import('app.exteraless.plugins')
+
+
+def test_cached_internal_import_still_refused_for_plugins(loader, monkeypatch):
+    monkeypatch.setattr(loader, '_direct_plugin_caller', lambda: 'evil')
+    monkeypatch.setattr(loader, '_unsafe_mode', False)
+    monkeypatch.setattr(loader, '_original_import', lambda *a, **k: sys.modules['json'], raising=False)
+    with pytest.raises(ImportError):
+        loader._sandboxed_import('extera_utils.plugin_loader')
+
+
+def test_plugin_can_assign_its_own_client_attribute(sdk):
+    class Poster(sdk.base.BasePlugin):
+        pass
+
+    plugin = Poster()
+    marker = object()
+    plugin.client = marker
+    assert plugin.client is marker
+    del plugin.client
+    assert plugin.client is not marker
+
+
+def test_failed_package_import_leaves_no_orphaned_submodules(loader, monkeypatch, tmp_path):
+    package = tmp_path / "halfpkg"
+    package.mkdir()
+    (package / "__init__.py").write_text(
+        "from .first import *\nfrom .second import *\n__all__ = first.__all__ + second.__all__\n")
+    (package / "first.py").write_text("__all__ = ['A']\nA = 1\n")
+    (package / "second.py").write_text("import halfpkg_missing_dependency\n__all__ = ['B']\nB = 2\n")
+    monkeypatch.syspath_prepend(str(tmp_path))
+    try:
+        before = set(sys.modules)
+        with pytest.raises(ImportError):
+            importlib.import_module("halfpkg")
+        assert "halfpkg.first" in sys.modules
+        loader._drop_orphaned_modules(before)
+        assert "halfpkg.first" not in sys.modules
+        (package / "second.py").write_text("__all__ = ['B']\nB = 2\n")
+        importlib.invalidate_caches()
+        assert importlib.import_module("halfpkg").__all__ == ["A", "B"]
+    finally:
+        for name in [name for name in sys.modules if name.partition(".")[0] == "halfpkg"]:
+            sys.modules.pop(name, None)
+
+
+def test_raw_threads_started_by_a_plugin_carry_its_mark(loader, monkeypatch):
+    started = []
+    marks = []
+    fake_thread = types.ModuleType('_thread')
+
+    def original(function, args, kwargs=None):
+        started.append((function, args, kwargs))
+
+    fake_thread.start_new_thread = original
+    fake_threading = types.ModuleType('threading')
+    fake_threading._start_new_thread = original
+    monkeypatch.setitem(sys.modules, '_thread', fake_thread)
+    monkeypatch.setitem(sys.modules, 'threading', fake_threading)
+    monkeypatch.setattr(loader, 'plugin_frame_owner', lambda: 'p')
+
+    @contextlib.contextmanager
+    def mark(owner):
+        marks.append(owner)
+        yield
+
+    monkeypatch.setattr(loader, 'java_runtime_mark', mark)
+    loader._install_raw_thread_marking()
+    assert fake_threading._start_new_thread is fake_thread.start_new_thread
+    seen = []
+    fake_thread.start_new_thread(lambda x: seen.append(x), (7,))
+    function, args, _ = started[-1]
+    function(*args)
+    assert seen == [7] and marks == ['p']
+
+
+def test_java_path_permission(loader, monkeypatch, tmp_path):
+    file_utils = types.ModuleType('file_utils')
+    file_utils._is_own_path = lambda pid, path: str(path).startswith(str(tmp_path / 'own'))
+    monkeypatch.setitem(sys.modules, 'file_utils', file_utils)
+    assert loader.java_path_permission('p', str(tmp_path / 'own' / 'a.txt')) is None
+    assert loader.java_path_permission('p', '/data/user/0/x/files/cache4.db') == 'messages.read'
+    assert loader.java_path_permission('p', '/data/user/0/x/files/tgnet.dat') == 'hooks'
+    assert loader.java_path_permission('p', '/data/user/0/x/shared_prefs/userconfing.xml') == 'hooks'
+    assert loader.java_path_permission('p', '/data/user/0/x/files/account1/tgnet.dat') == 'hooks'
+    assert loader.java_path_permission('p', '/data/user/0/x/files/other.txt') == 'files'
+
+
+def test_gated_java_import_names_the_missing_permission(loader):
+    exc = ModuleNotFoundError("No module named 'dalvik'", name='dalvik')
+    exc._exteraless_java_import = ('dalvik.system', ('DexClassLoader',))
+    hint = loader._java_import_hint(exc)
+    assert hint == "class dalvik.system.DexClassLoader refused: missing the 'hooks' permission"
+    plain = ModuleNotFoundError("No module named 'org'", name='org')
+    plain._exteraless_java_import = ('org.telegram.messenger', ('NoSuchThing',))
+    assert loader._gated_java_import(plain) is None

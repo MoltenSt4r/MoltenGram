@@ -14,6 +14,7 @@
     <item name="menu_groupbolditalic" type="id"/>
     <item name="menu_delete" type="id"/>
     <item name="menu_translate" type="id"/>
+    <item name="menu_color" type="id"/>
     <item name="parent_tag" type="id"/>
     <item name="object_tag" type="id"/>
     <item name="transparent_tag" type="id"/>
@@ -68,4 +69,6 @@
 
     <item name="tag_view_on_post_draw_state" type="id" />
     <item name="tag_view_on_post_draw_root_state" type="id" />
+    <item name="theme_bind" type="id" />
+    <item name="theme_generation" type="id" />
 </resources>

@@ -50,7 +50,7 @@ public class DrawerMenuItemView extends FrameLayout {
         addView(iconView, LayoutHelper.createFrame(24, 24.0f, Gravity.LEFT | Gravity.CENTER_VERTICAL, 20.0f, 0.0f, 0.0f, 0.0f));
 
         textView = new TextView(context);
-        textView.setTextSize(TypedValue.COMPLEX_UNIT_SP, 15.0f);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15.0f);
         textView.setTypeface(AndroidUtilities.bold());
         textView.setTextColor(Theme.getColor(COLOR_KEY_TEXT));
         textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);

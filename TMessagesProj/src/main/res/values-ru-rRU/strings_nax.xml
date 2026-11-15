@@ -9,6 +9,8 @@
     <string name="ClearMessageDatabase">Очистить базу данных сообщений</string>
     <string name="ClearMessageDatabaseNotification">База данных сообщений очищена.</string>
     <string name="CustomDeletedMark">Подпись для удалённых сообщений</string>
+    <string name="DeletedMarkColor">Цвет метки удалённых сообщений</string>
+    <string name="DeletedMarkColorDefault">По умолчанию</string>
     <string name="HidePremiumSection">Скрыть «Premium» в настройках</string>
     <string name="HideHelpSection">Скрыть «Помощь» в настройках</string>
     <string name="ProviderLLMTranslator">ИИ</string>
@@ -141,7 +143,7 @@
     <string name="SendOfflinePacketAfterOnline">Автоматический офлайн</string>
     <string name="MarkReadAfterSend">Отмечать прочитанным после взаимодействия</string>
     <string name="GhostModeNotice">Долгое нажатие на любую опцию предотвращает её изменение при переключении режима «Призрака».</string>
-    <string name="MarkReadAfterSendNotice">Когда вы отправляете новое сообщение или нажимаете на реакцию, сообщение автоматически отмечается как прочитанное.</string>
+    <string name="MarkReadAfterSendNotice">Когда вы отправляете новое сообщение, нажимаете на реакцию или голосуете в опросе, сообщение автоматически отмечается как прочитанное.</string>
     <string name="SendWithoutSoundRowNotice">Автоматически отправлять исходящие сообщения без звука.</string>
     <string name="GhostReadMessage">Прочитать сообщение</string>
     <string name="GhostModeExcludeRead">Исключить прочтение</string>
@@ -240,6 +242,12 @@
     <string name="StyleModern">Современный</string>
     <string name="SaveDeletedExclusionMenu">Сохранять удалённые</string>
     <string name="SaveDeletedExcluded">Исключить</string>
+    <string name="SaveDeletedExceptionsMode">Исключения для удалённых</string>
+    <string name="SaveEditedExceptionsMode">Исключения для истории изменений</string>
+    <string name="SaveExceptionsAllExceptSelected">Все, кроме выбранных</string>
+    <string name="SaveExceptionsOnlySelected">Только выбранные</string>
+    <string name="SaveExceptionsIncluded">Сохранять</string>
+    <string name="SaveEditedExclusionMenu">Сохранять изменения</string>
     <string name="MarkdownParser">Парсер разметки</string>
     <string name="KeepTranslatorPreferences">Сохранять настройки переводчика</string>
     <string name="KeepTranslatorPreferencesNotice">Сохранять текущие настройки переводчика при смене языка приложения.</string>

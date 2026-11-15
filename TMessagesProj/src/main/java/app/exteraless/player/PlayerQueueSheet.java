@@ -21,6 +21,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.core.graphics.ColorUtils;
+import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
@@ -149,6 +150,61 @@ public class PlayerQueueSheet extends BottomSheet implements NotificationCenter.
         list.setVerticalScrollBarEnabled(false);
         list.setSelectorDrawableColor(0);
         list.setOnItemClickListener((view, position) -> onItemClick(position));
+
+        ItemTouchHelper itemTouchHelper = new ItemTouchHelper(new ItemTouchHelper.SimpleCallback(ItemTouchHelper.UP | ItemTouchHelper.DOWN, 0) {
+            @Override
+            public boolean onMove(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder source, @NonNull RecyclerView.ViewHolder target) {
+                int fromPos = source.getAdapterPosition();
+                int toPos = target.getAdapterPosition();
+                if (fromPos == RecyclerView.NO_POSITION || toPos == RecyclerView.NO_POSITION || fromPos == toPos) {
+                    return false;
+                }
+                ArrayList<MessageObject> playlist = MediaController.getInstance().getPlaylist();
+                int fromIndex = direct() ? fromPos : (playlist.size() - 1 - fromPos);
+                int toIndex = direct() ? toPos : (playlist.size() - 1 - toPos);
+                if (fromIndex >= 0 && fromIndex < playlist.size() && toIndex >= 0 && toIndex < playlist.size()) {
+                    MessageObject item = playlist.remove(fromIndex);
+                    playlist.add(toIndex, item);
+                    adapter.notifyItemMoved(fromPos, toPos);
+                    return true;
+                }
+                return false;
+            }
+
+            @Override
+            public void onSwiped(@NonNull RecyclerView.ViewHolder viewHolder, int direction) {
+            }
+
+            @Override
+            public boolean isLongPressDragEnabled() {
+                return true;
+            }
+
+            @Override
+            public void onSelectedChanged(RecyclerView.ViewHolder viewHolder, int actionState) {
+                super.onSelectedChanged(viewHolder, actionState);
+                if (actionState == ItemTouchHelper.ACTION_STATE_DRAG) {
+                    if (container != null) {
+                        container.requestDisallowInterceptTouchEvent(true);
+                    }
+                    if (viewHolder != null && viewHolder.itemView != null) {
+                        viewHolder.itemView.animate().scaleX(1.02f).scaleY(1.02f).setDuration(150).start();
+                    }
+                }
+            }
+
+            @Override
+            public void clearView(@NonNull RecyclerView recyclerView, @NonNull RecyclerView.ViewHolder viewHolder) {
+                super.clearView(recyclerView, viewHolder);
+                if (container != null) {
+                    container.requestDisallowInterceptTouchEvent(false);
+                }
+                if (viewHolder != null && viewHolder.itemView != null) {
+                    viewHolder.itemView.animate().scaleX(1f).scaleY(1f).setDuration(150).start();
+                }
+            }
+        });
+        itemTouchHelper.attachToRecyclerView(list);
         list.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {

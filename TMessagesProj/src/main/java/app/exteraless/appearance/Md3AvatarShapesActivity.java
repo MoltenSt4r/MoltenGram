@@ -36,6 +36,7 @@ import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
+import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.CubicBezierInterpolator;
@@ -62,6 +63,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
 
     private static final int TYPE_SHAPE_EDITOR = 100;
 
+    private int byIdRow;
     private int editorRow;
     private int resetRow;
     private int infoRow;
@@ -73,6 +75,7 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
     protected void updateRows() {
         super.updateRows();
 
+        byIdRow = addRow("avatarShapesById");
         editorRow = addRow("Md3AvatarShapeEditor");
         resetRow = addRow("Md3AvatarShapesReset");
         infoRow = addRow("Md3AvatarShapesInfo");
@@ -105,7 +108,9 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
 
         @Override
         public int getItemViewType(int position) {
-            if (position == editorRow) {
+            if (position == byIdRow) {
+                return TYPE_CHECK;
+            } else if (position == editorRow) {
                 return TYPE_SHAPE_EDITOR;
             } else if (position == resetRow) {
                 return TYPE_TEXT;
@@ -129,7 +134,10 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position, boolean partial) {
             int viewType = holder.getItemViewType();
-            if (viewType == TYPE_SHAPE_EDITOR) {
+            if (position == byIdRow) {
+                TextCheckCell cell = (TextCheckCell) holder.itemView;
+                cell.setTextAndCheck("Форма по ID пользователя", AppearanceConfig.avatarShapesById(), true);
+            } else if (viewType == TYPE_SHAPE_EDITOR) {
                 ShapeEditorCard card = (ShapeEditorCard) holder.itemView;
                 currentEditorCard = card;
                 card.bind();
@@ -146,7 +154,14 @@ public class Md3AvatarShapesActivity extends BaseNekoSettingsActivity {
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
-        if (position == resetRow) {
+        if (position == byIdRow) {
+            boolean nextVal = !AppearanceConfig.avatarShapesById();
+            AppearanceConfig.avatarShapesById.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+            notifyAvatarsChanged();
+        } else if (position == resetRow) {
             AppearanceConfig.avatarShapeUsers.setConfigInt(0);
             AppearanceConfig.avatarShapeBots.setConfigInt(0);
             AppearanceConfig.avatarShapeGroups.setConfigInt(0);

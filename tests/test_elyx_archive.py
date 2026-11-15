@@ -129,3 +129,29 @@ def test_extract_rejects_too_many_members(
     with pytest.raises(archive_module.ElyxArchiveError, match="entry limit"):
         archive_module.extract_archive(
             str(archive_path), str(plugins_dir), "too_many")
+
+
+@pytest.fixture(scope="module")
+def metadata_module():
+    if corpus.PYTHON_ROOT not in sys.path:
+        sys.path.insert(0, corpus.PYTHON_ROOT)
+    try:
+        return importlib.import_module("elyx_runtime.metadata")
+    except Exception as exc:
+        pytest.skip(f"elyx_runtime.metadata is not importable here: {exc}")
+
+
+def test_manifest_permissions_reach_the_installer(metadata_module):
+    meta = metadata_module.build_metadata({
+        "id": "kangel_plugins_manager", "name": "Kangel Plugins Manager",
+        "permissions": ["messages.read", "messages.send", "network", "files",
+                        "intents", "settings", "hooks"]})
+    assert meta["permissions_declared"] is True
+    assert meta["permissions"] == ["messages.read", "messages.send", "network", "files",
+                                   "intents", "settings", "hooks"]
+    bare = metadata_module.build_metadata({"id": "plain_plugin", "name": "Plain"})
+    assert bare["permissions_declared"] is False
+    assert bare["permissions"] == []
+    with pytest.raises(metadata_module.MetainfoError):
+        metadata_module.build_metadata({"id": "typo_plugin", "name": "Typo",
+                                        "permissions": ["netwrok"]})

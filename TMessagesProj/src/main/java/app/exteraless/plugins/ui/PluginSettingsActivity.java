@@ -31,6 +31,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.RadioColorCell;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.EditTextBoldCursor;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RecyclerListView;
@@ -351,7 +352,9 @@ public class PluginSettingsActivity extends BasePreferencesActivity {
             JSONObject row = rowOf(item);
             if (row != null && (targetSetting.equals(optNonEmpty(row, "key"))
                     || targetSetting.equals(optNonEmpty(row, "link_alias")))) {
-                layoutManager.scrollToPositionWithOffset(i, AndroidUtilities.dp(48));
+                final int position = i;
+                layoutManager.scrollToPositionWithOffset(position, AndroidUtilities.dp(48));
+                AndroidUtilities.runOnUIThread(() -> listView.highlightRow(() -> position), 200);
                 targetSetting = null;
                 return;
             }
@@ -366,7 +369,8 @@ public class PluginSettingsActivity extends BasePreferencesActivity {
     public void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         reloadRows();
         if (rows.isEmpty()) {
-            items.add(UItem.asShadow(ID_NOT_LOADED, getString(R.string.PluginsNotLoaded)));
+            boolean loaded = lastJson != null && lastJson.trim().startsWith("[");
+            items.add(UItem.asShadow(ID_NOT_LOADED, getString(loaded ? R.string.PluginsNoSettings : R.string.PluginsNotLoaded)));
             return;
         }
         final HashMap<String, Integer> occurrences = new HashMap<>();
@@ -777,11 +781,22 @@ public class PluginSettingsActivity extends BasePreferencesActivity {
     public boolean onLongClick(UItem item, View view, int position, float x, float y) {
         JSONObject row = rowOf(item);
         String callbackId = row == null ? null : optNonEmpty(row, "long_callback_id");
-        if (callbackId == null) {
-            return row != null && "custom".equals(row.optString("type"))
-                    && PluginsController.getInstance().dispatchSettingsCustomClick(pluginId, item, view, true);
+        if (callbackId != null) {
+            PluginsController.getInstance().dispatchSettingClick(pluginId, callbackId, view);
+            return true;
         }
-        PluginsController.getInstance().dispatchSettingClick(pluginId, callbackId, view);
+        if (row != null && "custom".equals(row.optString("type"))
+                && PluginsController.getInstance().dispatchSettingsCustomClick(pluginId, item, view, true)) {
+            return true;
+        }
+        String linkAlias = row == null ? null : optNonEmpty(row, "link_alias");
+        if (linkAlias == null || pluginId == null) {
+            return false;
+        }
+        AndroidUtilities.addToClipboard(PluginsController.settingsLink(pluginId, linkAlias));
+        if (AndroidUtilities.shouldShowClipboardToast()) {
+            BulletinFactory.of(this).createCopyLinkBulletin().show();
+        }
         return true;
     }
 

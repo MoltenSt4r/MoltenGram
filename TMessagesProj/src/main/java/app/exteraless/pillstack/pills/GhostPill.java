@@ -58,6 +58,7 @@ public class GhostPill extends BasePill implements NotificationCenter.Notificati
         textView.setIncludeFontPadding(false);
         textView.setTypeface(AndroidUtilities.bold());
         textView.adaptWidth = true;
+        shrinkAfterTextChange(textView);
         layout.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
 
         setLoadingTargetView(layout);

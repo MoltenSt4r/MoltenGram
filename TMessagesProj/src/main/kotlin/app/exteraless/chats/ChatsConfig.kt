@@ -258,6 +258,9 @@ object ChatsConfig {
     @JvmField
     val showFeedInChatMenu = addConfig("OEChatsShowFeedInChatMenu", ConfigItem.configTypeBool, true)
 
+    @JvmField
+    val showRepostToStory = addConfig("OEChatsMenuRepostStory", ConfigItem.configTypeBool, true)
+
     /** Результаты вычислений: показывать результат после «=» и вставлять его пробелом. */
     @JvmField
     val mathResults = addConfig("OEChatsMathResults", ConfigItem.configTypeBool, true)
@@ -266,12 +269,21 @@ object ChatsConfig {
     @JvmField
     val removeMessageTail = addConfig("OEChatsRemoveMessageTail", ConfigItem.configTypeBool, true)
 
+    @JvmField
+    val unreadCapsule = addConfig("OEChatsUnreadCapsule", ConfigItem.configTypeBool, false)
+
     /** Показывать результаты опроса до голосования (только UI). */
     @JvmField
     val showResultsBeforeVoting = addConfig("OEChatsShowResultsBeforeVoting", ConfigItem.configTypeBool, false)
 
     @JvmField
     val hideChannelSearchButton = addConfig("OEChatsHideChannelSearchButton", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val hideCallButton = addConfig("OEChatsHideCallButton", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val hideMoneyButton = addConfig("OEChatsHideMoneyButton", ConfigItem.configTypeBool, false)
 
     @JvmField
     val translateInSheet = addConfig("OEChatsTranslateInSheet", ConfigItem.configTypeBool, false)
@@ -391,6 +403,12 @@ object ChatsConfig {
     fun showFeedInChatMenu(): Boolean {
         ensureLoaded()
         return showFeedInChatMenu.Bool()
+    }
+
+    @JvmStatic
+    fun showRepostToStory(): Boolean {
+        ensureLoaded()
+        return showRepostToStory.Bool()
     }
 
     @JvmStatic

@@ -46,7 +46,7 @@ import xyz.nextalone.nagram.NaConfig;
 public class ChatThemeController extends BaseController {
 
     private final long reloadTimeoutMs = 2 * 60 * 60 * 1000;
-    public static volatile DispatchQueue chatThemeQueue = new DispatchQueue("chatThemeQueue");
+    public static volatile DispatchQueue2 chatThemeQueue = new DispatchQueue2("chatThemeQueue");
 
     private final HashMap<Long, Bitmap> themeIdWallpaperThumbMap = new HashMap<>();
     private List<EmojiThemes> allChatThemes;
@@ -356,17 +356,21 @@ public class ChatThemeController extends BaseController {
     }
 
     public void saveChatWallpaper(long dialogId, TLRPC.WallPaper wallPaper) {
+        if (wallPaper == null && getMessagesController().uploadingWallpaperInfo != null && getMessagesController().uploadingWallpaperInfo.dialogId == dialogId) {
+            return;
+        }
         if (wallPaper != null) {
-            if (wallPaper.document == null) {
-                return;
-            }
-            SerializedData data = new SerializedData(wallPaper.getObjectSize());
-            wallPaper.serializeToStream(data);
-            String wallpaperString = Utilities.bytesToHex(data.toByteArray());
+            try {
+                SerializedData data = new SerializedData(wallPaper.getObjectSize());
+                wallPaper.serializeToStream(data);
+                String wallpaperString = Utilities.bytesToHex(data.toByteArray());
 
-            getEmojiSharedPreferences().edit()
-                    .putString("chatWallpaper_" + currentAccount + "_" + dialogId, wallpaperString)
-                    .apply();
+                getEmojiSharedPreferences().edit()
+                        .putString("chatWallpaper_" + currentAccount + "_" + dialogId, wallpaperString)
+                        .apply();
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
         } else {
             getEmojiSharedPreferences().edit()
                     .remove("chatWallpaper_" + currentAccount + "_" + dialogId)
@@ -375,35 +379,30 @@ public class ChatThemeController extends BaseController {
     }
 
     public TLRPC.WallPaper getDialogWallpaper(long dialogId) {
-        // Перенос exteraGram 12.9.0:ChatThemeController:950 — «Индивидуальные
-        // темы в чатах». NagramX-условие рядом про своё: показ обоев премиума.
-        if (!AppearanceConfig.customThemes()) {
-            return null;
-        }
-        if (!NaConfig.INSTANCE.getPremiumItemCustomWallpaper().Bool()) {
-            return null;
-        }
+        TLRPC.WallPaper wallPaper = null;
         if (dialogId >= 0) {
             TLRPC.UserFull userFull = getMessagesController().getUserFull(dialogId);
-            if (userFull != null) {
-                return userFull.wallpaper;
+            if (userFull != null && userFull.wallpaper != null) {
+                wallPaper = userFull.wallpaper;
             }
         } else {
             TLRPC.ChatFull chatFull = getMessagesController().getChatFull(-dialogId);
-            if (chatFull != null) {
-                return chatFull.wallpaper;
+            if (chatFull != null && chatFull.wallpaper != null) {
+                wallPaper = chatFull.wallpaper;
             }
         }
-        String wallpaperString = getEmojiSharedPreferences().getString("chatWallpaper_" + currentAccount + "_" + dialogId, null);
-        if (wallpaperString != null) {
-            SerializedData serializedData = new SerializedData(Utilities.hexToBytes(wallpaperString));
-            try {
-                return TLRPC.WallPaper.TLdeserialize(serializedData, serializedData.readInt32(true), true);
-            } catch (Throwable e) {
-                FileLog.e(e);
+        if (wallPaper == null) {
+            String wallpaperString = getEmojiSharedPreferences().getString("chatWallpaper_" + currentAccount + "_" + dialogId, null);
+            if (wallpaperString != null) {
+                SerializedData serializedData = new SerializedData(Utilities.hexToBytes(wallpaperString));
+                try {
+                    wallPaper = TLRPC.WallPaper.TLdeserialize(serializedData, serializedData.readInt32(true), true);
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
             }
         }
-        return null;
+        return wallPaper;
     }
 
     public void preloadAllWallpaperImages(boolean isDark) {
@@ -794,11 +793,13 @@ public class ChatThemeController extends BaseController {
             if (userFull != null) {
                 userFull.wallpaper = wallpaper;
                 userFull.flags |= 16777216;
+                saveChatWallpaper(dialogId, wallpaper);
                 getMessagesStorage().updateUserInfo(userFull, false);
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.userInfoDidLoad, dialogId, userFull);
             } else if (chatFull != null) {
                 chatFull.wallpaper = wallpaper;
                 chatFull.flags2 |= 128;
+                saveChatWallpaper(dialogId, wallpaper);
                 getMessagesStorage().updateChatInfo(chatFull, false);
                 NotificationCenter.getInstance(currentAccount).postNotificationName(NotificationCenter.chatInfoDidLoad, chatFull, 0, false, false);
             }

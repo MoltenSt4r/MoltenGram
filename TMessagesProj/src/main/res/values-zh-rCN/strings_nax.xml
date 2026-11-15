@@ -231,6 +231,12 @@
     <string name="StyleModern">现代</string>
     <string name="SaveDeletedExclusionMenu">保存已删除</string>
     <string name="SaveDeletedExcluded">排除</string>
+    <string name="SaveDeletedExceptionsMode">已删除消息例外</string>
+    <string name="SaveEditedExceptionsMode">编辑历史例外</string>
+    <string name="SaveExceptionsAllExceptSelected">除所选外全部</string>
+    <string name="SaveExceptionsOnlySelected">仅所选</string>
+    <string name="SaveExceptionsIncluded">保存</string>
+    <string name="SaveEditedExclusionMenu">保存编辑记录</string>
     <string name="MarkdownParser">Markdown 解析器</string>
     <string name="KeepTranslatorPreferences">保留翻译偏好</string>
     <string name="KeepTranslatorPreferencesNotice">更改应用语言时保留当前翻译器设置。</string>

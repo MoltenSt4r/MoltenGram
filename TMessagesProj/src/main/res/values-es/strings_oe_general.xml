@@ -62,15 +62,6 @@
     <string name="OEGeneralAyuMomentsDisableAll">Desactivar todas las funciones de AyuMoments</string>
     <string name="OELastActivityFormatted">última actividad %1$s</string>
     <string name="OELastActivityDateFormatted">última actividad %1$s</string>
-    <string name="OEGeneralLastFm">Last.fm</string>
-    <string name="OEGeneralLastFmHint">nombre de usuario</string>
-    <string name="OEGeneralLastFmNotSet">Sin establecer</string>
-    <string name="OEGeneralLastFmApplied">Música del perfil actualizada</string>
-    <string name="OEGeneralLastFmNoMusic">Primero establece la música del perfil</string>
-    <string name="OEGeneralLastFmFailed">No se pudo actualizar la música del perfil</string>
-    <string name="OEGeneralLastFmNoFile">No se pudo descargar la pista</string>
-    <string name="OEGeneralLastFmNoUpload">Se agotó el tiempo de subida</string>
-    <string name="OEGeneralLastFmAbout">Esta función se apoya en la música del perfil: escribe bytes ocultos con tu nombre de usuario de Last.fm en tu última pista del perfil. En cuanto estableces un nombre de usuario, esa pista se vuelve a subir con el cambio.\n\nCuando desactivas la función, la pista se restaura a su estado original.</string>
     <string name="OEGeneralNotificationsHeader">Notificaciones</string>
     <string name="OEGeneralPushStatus">Estado de push</string>
     <string name="OEGeneralPushStatusBlocked">bloqueadas por el sistema</string>
@@ -125,4 +116,21 @@
     <string name="OEAyuDatabaseImportFailed">No se pudo importar este archivo</string>
     <string name="OEAyuRegexReversed">Inverso</string>
     <string name="OEAyuRegexReversedInfo">Ocultar los mensajes que no coinciden con la expresión</string>
+<string name="OEUpdaterChecking">Buscando actualizaciones…</string>
+<string name="OEUpdaterLatest">Tienes la última versión</string>
+<string name="OEUpdaterAvailable">La versión %1$s está disponible</string>
+<string name="OEUpdaterFailedInfo">Revisa tu conexión e inténtalo de nuevo</string>
+<string name="OEUpdaterCheckedJustNow">Comprobado justo ahora</string>
+<string name="OEUpdaterCheckedAt">Comprobado %1$s</string>
+<string name="OEUpdaterCheckAgain">Volver a comprobar</string>
+<string name="OEUpdaterChannel">Comprobación automática</string>
+<string name="OEUpdaterChannelOff">Desactivado</string>
+<string name="OEUpdaterChannelStable">Versiones</string>
+<string name="OEUpdaterChannelBeta">Beta</string>
+<string name="OEUpdaterChannelOffInfo">Las actualizaciones solo se comprueban al tocar el logotipo.</string>
+<string name="OEUpdaterChannelStableInfo">Las nuevas versiones en GitHub se comprueban cada 6 horas.</string>
+<string name="OEUpdaterChannelBetaInfo">También ofrece las versiones preliminares de GitHub antes de que sean versiones.</string>
+<string name="OEUpdaterAllReleases">Todas las versiones en GitHub</string>
+<string name="OELiteFollowSystemSaver">Seguir el ahorro de batería del sistema</string>
+<string name="OELiteFollowSystemSaverInfo">El ahorro de energía se activa junto con el ahorro de batería del sistema.</string>
 </resources>

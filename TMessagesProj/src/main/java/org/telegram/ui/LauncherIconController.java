@@ -44,7 +44,7 @@ public class LauncherIconController {
             } catch (Exception ignored) {}
         }
         if (!hasEnabled) {
-            setIcon(LauncherIcon.MOLTENGRAM);
+            setIcon(LauncherIcon.MOLTENGRAM_CLASSIC);
         }
     }
 
@@ -53,7 +53,7 @@ public class LauncherIconController {
         if (ctx == null) return false;
         int i = ctx.getPackageManager().getComponentEnabledSetting(icon.getComponentName(ctx));
         return i == PackageManager.COMPONENT_ENABLED_STATE_ENABLED
-                || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.MOLTENGRAM;
+                || i == PackageManager.COMPONENT_ENABLED_STATE_DEFAULT && icon == LauncherIcon.MOLTENGRAM_CLASSIC;
     }
 
     public static void setIcon(LauncherIcon icon) {
@@ -78,7 +78,7 @@ public class LauncherIconController {
                 return icon;
             }
         }
-        return LauncherIcon.MOLTENGRAM;
+        return LauncherIcon.MOLTENGRAM_CLASSIC;
     }
 
     public static android.graphics.drawable.Drawable createIconPreviewDrawable(Context context, LauncherIcon icon, int sizeDp) {
@@ -101,11 +101,11 @@ public class LauncherIconController {
     }
 
     public enum LauncherIcon {
-        // MoltenGram (15 curated styles)
-        MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
-                R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF7E1D0A),
+        // MoltenGram (Classic first and default)
         MOLTENGRAM_CLASSIC("MoltenGramClassicIcon", R.drawable.moltengram_icon_background,
                 0, R.string.AppIconMoltenGramClassic, IconGroup.MOLTENGRAM, "@moltenst4r", "Signature molten terracotta flame", 0xFF7E1D0A),
+        MOLTENGRAM("MoltenGramIcon", R.drawable.moltengram_adaptive_icon_background,
+                R.drawable.moltengram_icon_foreground, R.string.AppIconMoltenGramDefault, IconGroup.MOLTENGRAM, "@moltenst4r", "Monet Material You adaptive", 0xFF7E1D0A),
         MOLTENGRAM_PROTON("MoltenGramProtonIcon", R.drawable.moltengram_proton_icon_background,
                 0, R.string.AppIconMoltenGramProton, IconGroup.MOLTENGRAM, "@moltenst4r", "Proton cyber aesthetics", 0xFF6D4AFF),
         MOLTENGRAM_SAD("MoltenGramSadIcon", R.drawable.moltengram_sad_icon_background,
@@ -152,6 +152,12 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramPizza, IconGroup.MOLTENGRAM, "@moltenst4r", "Italian pizza party slices", 0xFFFF9800),
         MOLTENGRAM_YINYANG("MoltenGramYinYangIcon", R.drawable.moltengram_yinyang_icon_background,
                 0, R.string.AppIconMoltenGramYinYang, IconGroup.MOLTENGRAM, "@moltenst4r", "Harmonious yin-yang balance", 0xFFFFFFFF),
+        MOLTENGRAM_RAGE("MoltenGramRageIcon", R.drawable.moltengram_rage_icon_background,
+                0, R.string.AppIconMoltenGramRage, IconGroup.MOLTENGRAM, "@moltenst4r", "Fiery crimson plane on dark textured concrete", 0xFFD32F2F, false),
+        MOLTENGRAM_AERO("MoltenGramAeroIcon", R.drawable.moltengram_aero_icon_background,
+                0, R.string.AppIconMoltenGramAero, IconGroup.MOLTENGRAM, "@moltenst4r", "Frutiger Aero sky, bubble and classic cursor", 0xFF0078D7, false),
+        MOLTENGRAM_STONE("MoltenGramStoneIcon", R.drawable.moltengram_stone_icon_background,
+                0, R.string.AppIconMoltenGramStone, IconGroup.MOLTENGRAM, "@moltenst4r", "Carved textured granite plane on slate gradient", 0xFF788591, false),
 
         // Telegram
         TELEGRAM("TelegramIcon", R.drawable.icon_background_sa, R.mipmap.icon_foreground_sa, R.string.AppIconTelegramOriginal, IconGroup.TELEGRAM, "@telegram", "The classic paper plane", 0xFF143854),

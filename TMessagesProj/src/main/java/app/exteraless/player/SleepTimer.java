@@ -122,6 +122,10 @@ public class SleepTimer {
         return Math.max(0, targetTimeMs - SystemClock.elapsedRealtime());
     }
 
+    public long getRemainingTime() {
+        return getRemainingMs();
+    }
+
     public String getFormattedRemaining() {
         if (!running) return "";
         if (endOfTrack) return getString(R.string.OEAppearancePlayerSleepTimerEnd);

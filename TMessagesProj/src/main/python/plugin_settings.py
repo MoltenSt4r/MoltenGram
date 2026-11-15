@@ -36,6 +36,47 @@ def _decode(raw, default=None):
         return default
 
 
+_TRUE_WORDS = ("true", "1", "yes", "on")
+_FALSE_WORDS = ("false", "0", "no", "off", "")
+
+
+def coerce_value(value, default):
+    if value is None or default is None:
+        return value
+    if isinstance(default, bool):
+        if isinstance(value, bool):
+            return value
+        if isinstance(value, str):
+            word = value.strip().lower()
+            if word in _TRUE_WORDS:
+                return True
+            if word in _FALSE_WORDS:
+                return False
+            return default
+        if isinstance(value, (int, float)):
+            return bool(value)
+        return default
+    if isinstance(value, str) and isinstance(default, (int, float)):
+        try:
+            return type(default)(value.strip())
+        except ValueError:
+            return default
+    return value
+
+
+def decode_values(raw):
+    data = _decode(raw, {})
+    if not isinstance(data, dict):
+        return {}
+    return {key: _decode(value, value) if isinstance(value, str) else value
+            for key, value in data.items()}
+
+
+def encode_values(values):
+    return {str(key): _json.dumps(value, ensure_ascii=False)
+            for key, value in dict(values).items()}
+
+
 def _load_plugin(plugin_id):
     if _bridge is None:
         return {}
@@ -43,10 +84,7 @@ def _load_plugin(plugin_id):
         raw = _bridge.exportSettings(plugin_id)
     except Exception:
         return {}
-    data = _decode(raw, {})
-    if not isinstance(data, dict):
-        return {}
-    return {key: _decode(value, value) for key, value in data.items()}
+    return decode_values(raw)
 
 
 def _snapshot(values):
@@ -67,7 +105,7 @@ def _cached(plugin_id):
 
 def get_setting(plugin_id, key, default=None):
     with _lock:
-        return _cached(plugin_id).get(key, default)
+        return coerce_value(_cached(plugin_id).get(key, default), default)
 
 
 def set_setting(plugin_id, key, value, reload_settings=False):

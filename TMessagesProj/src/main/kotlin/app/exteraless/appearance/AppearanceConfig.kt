@@ -1,13 +1,18 @@
 package app.exteraless.appearance
 
 import android.content.SharedPreferences
+import android.os.Build
+import com.google.android.material.color.utilities.Hct
+import com.google.android.material.color.utilities.SchemeTonalSpot
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader
 import org.telegram.messenger.FileLog
+import org.telegram.ui.ActionBar.Theme
 import org.telegram.ui.Components.blur3.GlassOutlineStyle
 import tw.nekomimi.nekogram.NekoConfig
 import tw.nekomimi.nekogram.NekoXConfig
 import tw.nekomimi.nekogram.config.ConfigItem
+import tw.nekomimi.nekogram.helpers.MonetHelper
 import xyz.nextalone.nagram.NaConfig
 
 /**
@@ -168,6 +173,17 @@ object AppearanceConfig {
         return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else fabShape()
     }
 
+    /** Форма дополнительной мини-кнопки FAB (камера / истории). */
+    @JvmField
+    val subFabShape = addConfig("OEAppearanceSubFabShape", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun subFabShape(): Int {
+        ensureLoaded()
+        val s = subFabShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else 0
+    }
+
     /** Размер основной кнопки FAB в активном режиме в dp (36..96). */
     @JvmField
     val fabActiveSize = addConfig("OEAppearanceFabActiveSize", ConfigItem.configTypeInt, 56)
@@ -223,6 +239,22 @@ object AppearanceConfig {
     fun md3FabItems(): String {
         ensureLoaded()
         return md3FabItems.String()
+    }
+
+    const val FAB_ITEM_STYLE_CAPSULE = 0
+    const val FAB_ITEM_STYLE_CARD = 1
+    const val FAB_ITEM_STYLE_FILLED_TONAL = 2
+    const val FAB_ITEM_STYLE_OUTLINE = 3
+
+    /** Стиль пунктов меню MD3 Speed-Dial FAB (0 = Капсула, 1 = Карточка, 2 = Акцентная заливка, 3 = Контур/Стекло). */
+    @JvmField
+    val md3FabItemStyle = addConfig("OEAppearanceMd3FabItemStyle", ConfigItem.configTypeInt, FAB_ITEM_STYLE_CAPSULE)
+
+    @JvmStatic
+    fun md3FabItemStyle(): Int {
+        ensureLoaded()
+        val s = md3FabItemStyle.Int()
+        return if (s in 0..3) s else FAB_ITEM_STYLE_CAPSULE
     }
 
     /** Размер основной кнопки FAB в dp (48, 56, 64, 72). По умолчанию 56. */
@@ -371,6 +403,17 @@ object AppearanceConfig {
         return customThemes.Bool()
     }
 
+    /** Выразительные цвета Material 3 переключателя (пастельная дорожка, насыщенный ползунок). */
+    @JvmField
+    val switchExpressiveColors =
+        addConfig("OEAppearanceSwitchExpressiveColors", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun switchExpressiveColors(): Boolean {
+        ensureLoaded()
+        return switchExpressiveColors.Bool()
+    }
+
     /** Шрифт Ndot для названий заголовков, окон, плеера и настроек. */
     @JvmField
     val ndotFontHeaders =
@@ -413,6 +456,26 @@ object AppearanceConfig {
     val glassMessageMenu =
         addConfig("OEAppearanceGlassMessageMenu", ConfigItem.configTypeBool, true)
 
+    @JvmField
+    val liquidGlassNavBar =
+        addConfig("OEAppearanceLiquidGlassNavBar", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val liquidGlassFab =
+        addConfig("OEAppearanceLiquidGlassFab", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun liquidGlassNavBar(): Boolean {
+        ensureLoaded()
+        return liquidGlassNavBar.Bool()
+    }
+
+    @JvmStatic
+    fun liquidGlassFab(): Boolean {
+        ensureLoaded()
+        return liquidGlassFab.Bool()
+    }
+
     @JvmStatic
     fun glassMessageMenu(): Boolean {
         ensureLoaded()
@@ -440,7 +503,7 @@ object AppearanceConfig {
     /** Стеклянные полупрозрачные сообщения (матовое стекло по глобальному стилю размытия) */
     @JvmField
     val glassMessages =
-        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, true)
+        addConfig("OEAppearanceGlassMessages", ConfigItem.configTypeBool, false)
 
     /** Прозрачность / матовость стеклянных сообщений (5%..85%) */
     @JvmField
@@ -523,7 +586,7 @@ object AppearanceConfig {
     /** 3D-эффект цилиндрического скролла списков и чатов */
     @JvmField
     val chat3dScroll =
-        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, true)
+        addConfig("OEAppearanceChat3dScroll", ConfigItem.configTypeBool, false)
 
     /** Сила 3D-эффекта наклона (legacy-индекс для обратной совместимости) */
     @JvmField
@@ -684,6 +747,118 @@ object AppearanceConfig {
     val lrclibAllowed =
         addConfig("OEPlayerLrclibAllowed", ConfigItem.configTypeBool, false)
 
+    // ---- Стиль и визуальный редактор плеера (exteraless MD3) ----
+
+    @JvmField
+    val playerCoverStyle = addConfig("OEPlayerCoverStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerCoverSize = addConfig("OEPlayerCoverSize", ConfigItem.configTypeInt, 100)
+
+    @JvmField
+    val playerCoverRadius = addConfig("OEPlayerCoverRadius", ConfigItem.configTypeInt, 28)
+
+    @JvmField
+    val playerDiscSpin = addConfig("OEPlayerDiscSpin", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerCoverSwipe = addConfig("OEPlayerCoverSwipe", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerTitleAlign = addConfig("OEPlayerTitleAlign", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerTitleSize = addConfig("OEPlayerTitleSize", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerTitleAbove = addConfig("OEPlayerTitleAbove", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerOrder = addConfig("OEPlayerOrder", ConfigItem.configTypeString, "")
+
+    @JvmField
+    val playerShowActions = addConfig("OEPlayerShowActions", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowModes = addConfig("OEPlayerShowModes", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowLike = addConfig("OEPlayerShowLike", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerShowSource = addConfig("OEPlayerShowSource", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerWavy = addConfig("OEPlayerWavy", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerControlsSize = addConfig("OEPlayerControlsSize", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerActionsStyle = addConfig("OEPlayerActionsStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerColors = addConfig("OEPlayerColors", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerBackground = addConfig("OEPlayerBackground", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerCoverExtend = addConfig("OEPlayerCoverExtend", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniCover = addConfig("OEPlayerMiniCover", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniShape = addConfig("OEPlayerMiniShape", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniProgress = addConfig("OEPlayerMiniProgress", ConfigItem.configTypeInt, 0)
+
+    @JvmField
+    val playerMiniColors = addConfig("OEPlayerMiniColors", ConfigItem.configTypeInt, 1)
+
+    @JvmField
+    val playerMiniCompact = addConfig("OEPlayerMiniCompact", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerMiniArtist = addConfig("OEPlayerMiniArtist", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniPrevious = addConfig("OEPlayerMiniPrevious", ConfigItem.configTypeBool, false)
+
+    @JvmField
+    val playerMiniNext = addConfig("OEPlayerMiniNext", ConfigItem.configTypeBool, true)
+
+    @JvmField
+    val playerMiniClose = addConfig("OEPlayerMiniClose", ConfigItem.configTypeBool, true)
+
+    /** Волнистая линия прогресса в мини-плеере: по умолчанию true. */
+    @JvmField
+    val playerMiniWavy = addConfig("OEPlayerMiniWavy", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun playerMiniWavy(): Boolean {
+        ensureLoaded()
+        return playerMiniWavy.Bool()
+    }
+
+    @JvmField
+    val playerMiniTop = addConfig("OEPlayerMiniTop", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun playerStyleItems(): List<ConfigItem> {
+        ensureLoaded()
+        return listOf(
+            playerCoverStyle, playerCoverSize, playerCoverRadius, playerDiscSpin, playerCoverSwipe,
+            playerTitleAlign, playerTitleSize, playerTitleAbove, playerOrder, playerShowActions,
+            playerShowModes, playerShowLike, playerShowSource, playerWavy, playerControlsSize, playerActionsStyle,
+            playerColors, playerBackground, playerCoverExtend, playerMiniCover, playerMiniShape, playerMiniProgress,
+            playerMiniColors, playerMiniCompact, playerMiniArtist, playerMiniPrevious, playerMiniNext,
+            playerMiniClose
+        )
+    }
+
     // ---- Расширенные настройки плеера (MetroList / Material 3) ----
 
     /** Стиль фона плеера: 0 — Следовать теме / Цвет обложки, 1 — Размытая обложка, 2 — Градиент. */
@@ -706,6 +881,225 @@ object AppearanceConfig {
     fun playerSeekbarStyle(): Int {
         ensureLoaded()
         return playerSeekbarStyle.Int()
+    }
+
+    @JvmField
+    val playerActionButtons = addConfig("OEPlayerActionButtons", ConfigItem.configTypeString, "speed,lyrics,playlist,sleep,queue")
+
+    @JvmStatic
+    fun playerActionButtons(): String {
+        ensureLoaded()
+        val s = playerActionButtons.String()
+        return if (s.isNullOrEmpty()) "speed,lyrics,playlist,sleep,queue" else s
+    }
+
+    @JvmField
+    val playerSeekbarIndicator = addConfig("OEPlayerSeekbarIndicator", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun playerSeekbarIndicator(): Int {
+        ensureLoaded()
+        return playerSeekbarIndicator.Int()
+    }
+
+    @JvmField
+    val playerSeekbarThickness = addConfig("OEPlayerSeekbarThickness", ConfigItem.configTypeInt, 4)
+
+    @JvmStatic
+    fun playerSeekbarThickness(): Int {
+        ensureLoaded()
+        val v = playerSeekbarThickness.Int()
+        return if (v in 2..16) v else 4
+    }
+
+    /** Включает MD3 / волнистый прогресс-бар на аудиосообщениях (музыке) в чатах. */
+    @JvmField
+    val chatMediaSeekbarEnabled = addConfig("OEAppearanceChatMediaSeekbarEnabled", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun chatMediaSeekbarEnabled(): Boolean {
+        ensureLoaded()
+        return chatMediaSeekbarEnabled.Bool()
+    }
+
+    /** Включает MD3 / волнистый прогресс-бар в классическом аудиоплеере. */
+    @JvmField
+    val classicPlayerSeekbarEnabled = addConfig("OEAppearanceClassicPlayerSeekbarEnabled", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun classicPlayerSeekbarEnabled(): Boolean {
+        ensureLoaded()
+        return classicPlayerSeekbarEnabled.Bool()
+    }
+
+    /** Стиль линии для медиа в чатах и классического плеера: 0 = волнистая (MD3), 1 = прямая MD3. */
+    @JvmField
+    val mediaSeekbarStyle = addConfig("OEAppearanceMediaSeekbarStyle", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun mediaSeekbarStyle(): Int {
+        ensureLoaded()
+        val v = mediaSeekbarStyle.Int()
+        return if (v in 0..1) v else 0
+    }
+
+    /** Индикатор для медиа в чатах и классического плеера: 0 = чёрточка, 1 = кружочек, 2 = без всего. */
+    @JvmField
+    val mediaSeekbarIndicator = addConfig("OEAppearanceMediaSeekbarIndicator", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun mediaSeekbarIndicator(): Int {
+        ensureLoaded()
+        val v = mediaSeekbarIndicator.Int()
+        return if (v in 0..2) v else 0
+    }
+
+
+    /** Толщина слайдеров MD3 (SeekBarView): по умолчанию 8 dp. */
+    @JvmField
+    val sliderThickness = addConfig("OEAppearanceSliderThickness", ConfigItem.configTypeInt, 8)
+
+    @JvmStatic
+    fun sliderThickness(): Int {
+        ensureLoaded()
+        val v = sliderThickness.Int()
+        return v.coerceIn(2, 24)
+    }
+
+    // ---- QR-код (MD3 и кастомизация) ----
+
+    const val QR_SHAPE_ROUNDED = 0
+    const val QR_SHAPE_DOTS = 1
+    const val QR_SHAPE_SQUIRCLE = 2
+    const val QR_SHAPE_DIAMOND = 3
+    const val QR_SHAPE_SQUARE = 4
+
+    const val QR_COLOR_MONET_PRIMARY = 0
+    const val QR_COLOR_MONET_SECONDARY = 1
+    const val QR_COLOR_MONET_TERTIARY = 2
+    const val QR_COLOR_THEME_ACCENT = 3
+    const val QR_COLOR_SCENE_DEFAULT = 4
+
+    @JvmField
+    val md3QrShare =
+        addConfig("OEAppearanceMd3QrShare", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun md3QrShare(): Boolean {
+        ensureLoaded()
+        return md3QrShare.Bool()
+    }
+
+    @JvmField
+    val freeQrPremium =
+        addConfig("OEAppearanceFreeQrPremium", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun freeQrPremium(): Boolean {
+        ensureLoaded()
+        return freeQrPremium.Bool()
+    }
+
+    @JvmField
+    val md3QrCode =
+        addConfig("OEAppearanceMd3QrCode", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun md3QrCode(): Boolean {
+        ensureLoaded()
+        return md3QrCode.Bool()
+    }
+
+    @JvmField
+    val md3QrShape =
+        addConfig("OEAppearanceMd3QrShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_SQUARE)
+
+    @JvmStatic
+    fun md3QrShape(): Int {
+        ensureLoaded()
+        val s = md3QrShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_SQUARE
+    }
+
+    @JvmField
+    val md3QrPixelShape =
+        addConfig("OEAppearanceMd3QrPixelShape", ConfigItem.configTypeInt, QR_SHAPE_ROUNDED)
+
+    @JvmStatic
+    fun md3QrPixelShape(): Int {
+        ensureLoaded()
+        val s = md3QrPixelShape.Int()
+        return if (s in 0..4) s else QR_SHAPE_ROUNDED
+    }
+
+    @JvmField
+    val md3QrColorSource =
+        addConfig("OEAppearanceMd3QrColorSource", ConfigItem.configTypeInt, QR_COLOR_MONET_PRIMARY)
+
+    @JvmStatic
+    fun md3QrColorSource(): Int {
+        ensureLoaded()
+        val c = md3QrColorSource.Int()
+        return if (c in 0..4) c else QR_COLOR_MONET_PRIMARY
+    }
+
+    @JvmField
+    val md3QrTopRightShape =
+        addConfig("OEAppearanceMd3QrTopRightShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_CLOVER_4)
+
+    @JvmStatic
+    fun md3QrTopRightShape(): Int {
+        ensureLoaded()
+        val s = md3QrTopRightShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_CLOVER_4
+    }
+
+    @JvmField
+    val md3QrBottomLeftShape =
+        addConfig("OEAppearanceMd3QrBottomLeftShape", ConfigItem.configTypeInt, Md3AvatarShapes.SHAPE_BURST)
+
+    @JvmStatic
+    fun md3QrBottomLeftShape(): Int {
+        ensureLoaded()
+        val s = md3QrBottomLeftShape.Int()
+        return if (s in 0 until Md3AvatarShapes.SHAPES_COUNT) s else Md3AvatarShapes.SHAPE_BURST
+    }
+
+    @JvmStatic
+    fun getMd3QrColor(): Int {
+        if (!md3QrCode()) return 0
+        val source = md3QrColorSource()
+        if (source == QR_COLOR_SCENE_DEFAULT) return 0
+        return when (source) {
+            QR_COLOR_MONET_PRIMARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("primary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_featuredStickers_addButton)
+                }
+            }
+            QR_COLOR_MONET_SECONDARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("secondary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_chats_actionBackground)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_chats_actionBackground)
+                }
+            }
+            QR_COLOR_MONET_TERTIARY -> {
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.getColorOrNull("tertiary")
+                        ?: org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_switchTrackChecked)
+                } else {
+                    org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_switchTrackChecked)
+                }
+            }
+            QR_COLOR_THEME_ACCENT -> {
+                org.telegram.ui.ActionBar.Theme.getColor(org.telegram.ui.ActionBar.Theme.key_windowBackgroundWhiteBlueHeader)
+            }
+            else -> 0
+        }
     }
 
     /** Стиль кнопок плеера: 0 — Цвета обложки (динамический), 1 — Акцент темы (Monet). */
@@ -1053,6 +1447,16 @@ object AppearanceConfig {
     }
 
     @JvmField
+    val playerLyricsAudioRecognition =
+        addConfig("OEAppearancePlayerLyricsAudioRecognition", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun playerLyricsAudioRecognition(): Boolean {
+        ensureLoaded()
+        return playerLyricsAudioRecognition.Bool()
+    }
+
+    @JvmField
     val profileMusicCard =
         addConfig("OEAppearanceProfileMusicCard", ConfigItem.configTypeBool, true)
 
@@ -1171,6 +1575,28 @@ object AppearanceConfig {
         return showFeedUnreadCounter.Bool()
     }
 
+    /** Скрыть аватарки каналов в ленте */
+    @JvmField
+    val hideFeedChannelAvatars =
+        addConfig("OEAppearanceFeedHideChannelAvatars", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun hideFeedChannelAvatars(): Boolean {
+        ensureLoaded()
+        return hideFeedChannelAvatars.Bool()
+    }
+
+    /** Скрыть вкладку Аккаунты в корне настроек */
+    @JvmField
+    val hideSettingsAccounts =
+        addConfig("OEAppearanceHideSettingsAccounts", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun hideSettingsAccounts(): Boolean {
+        ensureLoaded()
+        return hideSettingsAccounts.Bool()
+    }
+
     @JvmStatic
     fun navigationDrawer(): Boolean {
         ensureLoaded()
@@ -1233,22 +1659,42 @@ object AppearanceConfig {
         return mediaGroupCarousel.Bool()
     }
 
+    @JvmField
+    val avatarShapesById =
+        addConfig("OEAppearanceAvatarShapesById", ConfigItem.configTypeBool, false)
+
     @JvmStatic
-    fun getAvatarShape(peerType: Int): Int {
+    fun avatarShapesById(): Boolean {
         ensureLoaded()
-        return when (peerType) {
+        return avatarShapesById.Bool()
+    }
+
+    @JvmStatic
+    @JvmOverloads
+    fun getAvatarShape(peerType: Int, peerId: Long = 0L): Int {
+        ensureLoaded()
+        val typeShape = when (peerType) {
             Md3AvatarShapes.PEER_TYPE_BOT -> avatarShapeBots.Int()
             Md3AvatarShapes.PEER_TYPE_GROUP -> avatarShapeGroups.Int()
             Md3AvatarShapes.PEER_TYPE_CHANNEL -> avatarShapeChannels.Int()
             Md3AvatarShapes.PEER_TYPE_SELF -> avatarShapeSelf.Int()
             else -> avatarShapeUsers.Int()
         }
+        if (typeShape != 0) {
+            return typeShape
+        }
+        if (avatarShapesById.Bool() && peerId != 0L && peerType != Md3AvatarShapes.PEER_TYPE_SELF) {
+            val absId = Math.abs(peerId)
+            return (absId % (Md3AvatarShapes.SHAPES_COUNT - 1).toLong()).toInt() + 1
+        }
+        return 0
     }
 
     @JvmStatic
     fun hasAnyCustomAvatarShape(): Boolean {
         ensureLoaded()
-        return avatarShapeUsers.Int() != 0 ||
+        return avatarShapesById.Bool() ||
+                avatarShapeUsers.Int() != 0 ||
                 avatarShapeBots.Int() != 0 ||
                 avatarShapeGroups.Int() != 0 ||
                 avatarShapeChannels.Int() != 0 ||
@@ -1543,6 +1989,52 @@ object AppearanceConfig {
         }
         NaConfig.customTitleUserName.setConfigBool(false)
         preferences.edit().putBoolean(TITLE_TEXT_MIGRATED, true).apply()
+    }
+
+    /** Возвращает тёмный или светлый контраст в оттенке фона (HCT tone 18 / 96). */
+    @JvmStatic
+    fun contrastOnAccent(bgColor: Int): Int {
+        val hct = Hct.fromInt(bgColor)
+        hct.tone = if (AndroidUtilities.computePerceivedBrightness(bgColor) > 0.55f) 18.0 else 96.0
+        return hct.toInt()
+    }
+
+    /** Возвращает цвет из Monet (если активна Monet-тема) либо из текущей активной темы через SchemeTonalSpot. */
+    @JvmStatic
+    fun resolveThemeToken(token: String, defaultColor: Int): Int {
+        val activeTheme = Theme.getActiveTheme()
+        if (Build.VERSION.SDK_INT >= 31 && activeTheme != null && activeTheme.isMonet()) {
+            val mc = MonetHelper.getColorOrNull(token)
+            if (mc != null && mc != 0) return mc
+        }
+        var seed = Theme.getColor(Theme.key_featuredStickers_addButton)
+        if (seed == 0) seed = Theme.getColor(Theme.key_chats_actionBackground)
+        if (seed == 0) seed = if (defaultColor != 0) defaultColor else 0xFF4285F4.toInt()
+        val scheme = SchemeTonalSpot(Hct.fromInt(seed), Theme.isCurrentThemeDark(), 0.0)
+        return when (token) {
+            "primary" -> scheme.primary
+            "on_primary" -> scheme.onPrimary
+            "primary_container" -> scheme.primaryContainer
+            "on_primary_container" -> scheme.onPrimaryContainer
+            "secondary" -> scheme.secondary
+            "on_secondary" -> scheme.onSecondary
+            "secondary_container" -> scheme.secondaryContainer
+            "on_secondary_container" -> scheme.onSecondaryContainer
+            "tertiary" -> scheme.tertiary
+            "on_tertiary" -> scheme.onTertiary
+            "tertiary_container" -> scheme.tertiaryContainer
+            "on_tertiary_container" -> scheme.onTertiaryContainer
+            "surface_container_high" -> scheme.surfaceContainerHigh
+            "surface" -> scheme.surface
+            "on_surface" -> scheme.onSurface
+            "a1_600" -> seed
+            "a1_400" -> { val h = Hct.fromInt(seed); h.tone = 60.0; h.toInt() }
+            "a1_800" -> { val h = Hct.fromInt(seed); h.tone = 24.0; h.toInt() }
+            "a1_900" -> { val h = Hct.fromInt(seed); h.tone = 14.0; h.toInt() }
+            "a2_600" -> scheme.secondary
+            "a3_600" -> scheme.tertiary
+            else -> if (defaultColor != 0) defaultColor else seed
+        }
     }
 
     /** Сбрасывает настройки экрана Appearance к значениям по умолчанию. */

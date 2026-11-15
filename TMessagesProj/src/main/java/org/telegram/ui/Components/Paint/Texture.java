@@ -30,13 +30,11 @@ public class Texture {
     }
 
     public void cleanResources(boolean recycleBitmap) {
-        if (texture == 0) {
-            return;
+        if (texture != 0) {
+            int[] textures = new int[]{texture};
+            GLES20.glDeleteTextures(1, textures, 0);
+            texture = 0;
         }
-
-        int[] textures = new int[]{texture};
-        GLES20.glDeleteTextures(1, textures, 0);
-        texture = 0;
 
         if (recycleBitmap && bitmap != null && !bitmap.isRecycled()) {
             bitmap.recycle();

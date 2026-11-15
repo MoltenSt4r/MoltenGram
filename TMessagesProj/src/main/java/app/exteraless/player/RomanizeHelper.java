@@ -146,9 +146,6 @@ public final class RomanizeHelper {
         if (TextUtils.isEmpty(text)) {
             return text;
         }
-        if (hasCyrillic(text)) {
-            return romanizeCyrillic(text);
-        }
         if (hasHangul(text)) {
             return romanizeKorean(text);
         }
