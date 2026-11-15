@@ -20327,7 +20327,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
             boolean drewWallpaperBitmap = false;
             boolean drewRuntimeGlass = false;
-            float offsetX = inParentSpace ? 0f : getX();
+            float offsetX = (inParentSpace ? 0f : getX()) - (slidingOffsetX + animationOffsetX);
             float offsetY = inParentSpace ? 0f : getY();
             ViewParent p = getParent();
             int pHeight = parentHeight;
