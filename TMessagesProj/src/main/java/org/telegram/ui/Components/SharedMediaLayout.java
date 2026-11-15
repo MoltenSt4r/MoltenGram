@@ -3549,13 +3549,17 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
                 setVisibleHeight(lastVisibleHeight);
             });
 
-            BlurredBackgroundDrawable filterTabsViewBackground = iBlur3FactoryLiquidGlass.create(scrollSlidingTextTabStrip, glassColors);
-            filterTabsViewBackground.setRadius(dp(18));
-            filterTabsViewBackground.setPadding(dp(6.666f));
+            if (!app.exteraless.appearance.AppearanceConfig.chipFoldersEnabled.Bool()) {
+                BlurredBackgroundDrawable filterTabsViewBackground = iBlur3FactoryLiquidGlass.create(scrollSlidingTextTabStrip, glassColors);
+                filterTabsViewBackground.setRadius(dp(18));
+                filterTabsViewBackground.setPadding(dp(6.666f));
+                scrollSlidingTextTabStrip.setBlurredBackground(filterTabsViewBackground);
+            } else {
+                scrollSlidingTextTabStrip.setBlurredBackground(null);
+            }
             scrollSlidingTextTabStrip.setPadding(0, dp(7), 0, dp(7));
             scrollSlidingTextTabStrip.setClipToPadding(false);
             scrollSlidingTextTabStrip.setBackground(null);
-            scrollSlidingTextTabStrip.setBlurredBackground(filterTabsViewBackground);
             scrollSlidingTextTabStrip.setOpen(false);
             // the glass of the tabs (inset by its padding) 6dp from the sides of the screen
             addView(scrollSlidingTextTabStrip, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 50, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 6 - TABS_GLASS_INSET_DP, 0, 6 - TABS_GLASS_INSET_DP, 0));

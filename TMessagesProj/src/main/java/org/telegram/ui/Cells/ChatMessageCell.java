@@ -1744,7 +1744,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         boolean dark = isDark();
         int tintAlpha = Math.round((dark ? 0x4C : 0x30) * alphaInternal);
         int bubbleTintColor = ColorUtils.setAlphaComponent(dark ? 0xFF141418 : 0xFFFFFFFF, Math.max(0, Math.min(255, tintAlpha)));
-        if (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+        if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
             bubbleTintColor = app.exteraless.glass.SolegramGlass.tint(bubbleTintColor, resourcesProvider);
         }
         glassTintPaint.setStyle(Paint.Style.FILL);
@@ -20204,7 +20204,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public boolean shouldDrawGlassBubble() {
         return (app.exteraless.appearance.AppearanceConfig.glassMessages()
-                || (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassMessages))
+                || (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMessages))
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()
                 && currentMessageObject != null
                 && !currentMessageObject.shouldDrawWithoutBackground()
@@ -20297,9 +20297,30 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             glassBubblePath.rewind();
             glassBubblePath.addRoundRect(glassRectF, glassRadii, Path.Direction.CW);
 
-            float opacityNorm = Math.max(0.05f, Math.min(0.85f, app.exteraless.appearance.AppearanceConfig.glassMessagesOpacity() / 100f));
-            float refractionNorm = Math.max(0f, Math.min(1f, app.exteraless.appearance.AppearanceConfig.glassMessagesRefraction() / 100f));
-            float strokeDp = Math.max(0f, Math.min(3.0f, app.exteraless.appearance.AppearanceConfig.glassMessagesStrokeWidth() / 10f));
+            final boolean liquidGlassOn = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                    && app.exteraless.glass.LiquidGlassConfig.glassMessages;
+            final float opacityNorm;
+            final float refractionNorm;
+            final float thicknessNorm;
+            final float dispersionNorm;
+            final float highlightNorm;
+            final float strokeDp;
+            if (liquidGlassOn) {
+                opacityNorm = Math.max(0.05f, Math.min(0.88f, (app.exteraless.glass.LiquidGlassConfig.glassOpacity / 100f) * 0.65f));
+                refractionNorm = Math.max(0f, Math.min(2.2f, app.exteraless.glass.LiquidGlassConfig.glassRefraction / 100f));
+                thicknessNorm = Math.max(0.25f, Math.min(2.2f, app.exteraless.glass.LiquidGlassConfig.glassThickness / 100f));
+                dispersionNorm = Math.max(0f, Math.min(2.0f, app.exteraless.glass.LiquidGlassConfig.glassDispersion / 100f));
+                highlightNorm = Math.max(0.15f, Math.min(2.5f, app.exteraless.glass.LiquidGlassConfig.glassHighlight / 100f));
+                float rimFactor = 0.6f + 0.4f * (app.exteraless.glass.LiquidGlassConfig.glassRim / 100f);
+                strokeDp = Math.max(0.4f, Math.min(3.5f, 1.15f * highlightNorm * rimFactor));
+            } else {
+                opacityNorm = Math.max(0.05f, Math.min(0.85f, app.exteraless.appearance.AppearanceConfig.glassMessagesOpacity() / 100f));
+                refractionNorm = Math.max(0f, Math.min(1f, app.exteraless.appearance.AppearanceConfig.glassMessagesRefraction() / 100f));
+                thicknessNorm = 1f;
+                dispersionNorm = 0f;
+                highlightNorm = 1f;
+                strokeDp = Math.max(0f, Math.min(3.0f, app.exteraless.appearance.AppearanceConfig.glassMessagesStrokeWidth() / 10f));
+            }
 
             boolean drewWallpaperBitmap = false;
             float offsetX = inParentSpace ? 0f : getX();
@@ -20360,11 +20381,25 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         glassShaderMatrix.postScale(lensScale, lensScale, cx, cy);
                         cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
                         glassBitmapPaint.setStyle(Paint.Style.STROKE);
-                        glassBitmapPaint.setStrokeWidth(AndroidUtilities.dpf2(5f + 11f * refractionNorm));
-                        glassBitmapPaint.setAlpha(Math.round(alphaInt * (0.45f + 0.45f * refractionNorm)));
+                        glassBitmapPaint.setStrokeWidth(AndroidUtilities.dpf2((5f + 11f * refractionNorm) * thicknessNorm));
+                        glassBitmapPaint.setAlpha(Math.min(255, Math.round(alphaInt * (0.45f + 0.35f * Math.min(1.5f, refractionNorm)))));
                         canvas.save();
                         canvas.clipPath(glassBubblePath);
                         canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                        if (dispersionNorm > 0.05f) {
+                            float dispOffset = AndroidUtilities.dpf2(1.4f * dispersionNorm);
+                            glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFFFF6878, PorterDuff.Mode.MULTIPLY));
+                            glassBitmapPaint.setAlpha(Math.min(200, Math.round(alphaInt * 0.28f * Math.min(1.5f, dispersionNorm))));
+                            glassShaderMatrix.postTranslate(-dispOffset, -dispOffset * 0.5f);
+                            cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                            canvas.drawPath(glassBubblePath, glassBitmapPaint);
+
+                            glassBitmapPaint.setColorFilter(new android.graphics.PorterDuffColorFilter(0xFF5CE1FF, PorterDuff.Mode.MULTIPLY));
+                            glassShaderMatrix.postTranslate(dispOffset * 2f, dispOffset);
+                            cachedGlassBitmapShader.setLocalMatrix(glassShaderMatrix);
+                            canvas.drawPath(glassBubblePath, glassBitmapPaint);
+                            glassBitmapPaint.setColorFilter(null);
+                        }
                         canvas.restore();
                         glassBitmapPaint.setStyle(Paint.Style.FILL);
                     }
@@ -20383,7 +20418,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 int veilAlpha = Math.round(255f * (drewWallpaperBitmap ? opacityNorm : Math.min(0.92f, opacityNorm + 0.14f)) * alphaInternal);
                 baseVeilColor = ColorUtils.setAlphaComponent(0xFFFFFFFF, Math.max(0, Math.min(255, veilAlpha)));
             }
-            if (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
+            if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassTint != 0) {
                 baseVeilColor = app.exteraless.glass.SolegramGlass.tint(baseVeilColor, resourcesProvider);
             }
             glassTintPaint.setStyle(Paint.Style.FILL);
@@ -20433,7 +20468,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     float gx1 = (bLeft + bRight) * 0.5f + cosA * bw * 0.55f;
                     float gy1 = (bTop + bBottom) * 0.5f + sinA * bh * 0.55f;
 
-                    float glareBoost = 0.55f + 0.45f * refractionNorm;
+                    float glareBoost = Math.max(0.25f, Math.min(2.0f, (0.55f + 0.45f * Math.min(1.2f, refractionNorm)) * highlightNorm));
                     int aPeak = Math.min(255, Math.round((dark ? 0xD8 : 0xF0) * glareBoost * alphaInternal));
                     int aMid = Math.min(255, Math.round((dark ? 0x68 : 0x98) * glareBoost * alphaInternal));
                     int aLow = Math.min(255, Math.round((dark ? 0x34 : 0x58) * glareBoost * alphaInternal));
@@ -20443,6 +20478,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     int c1 = ColorUtils.setAlphaComponent(accentBright, aMid);
                     int c2 = ColorUtils.setAlphaComponent(coolEdge, aLow);
                     int c3 = ColorUtils.setAlphaComponent(0xFFFFFFFF, aBot);
+                    if (liquidGlassOn) {
+                        c0 = app.exteraless.glass.SolegramGlass.highlight(c0, true);
+                        c1 = app.exteraless.glass.SolegramGlass.highlight(c1, true);
+                        c2 = app.exteraless.glass.SolegramGlass.highlight(c2, false);
+                        c3 = app.exteraless.glass.SolegramGlass.highlight(c3, false);
+                    }
 
                     LinearGradient glareGrad = new LinearGradient(
                             gx0, gy0, gx1, gy1,
@@ -20460,10 +20501,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     glassStrokePaint.setShader(null);
                     glassStrokePaint.setStyle(Paint.Style.STROKE);
                     glassStrokePaint.setStrokeWidth(strokeWidth);
-                    glassStrokePaint.setColor(ColorUtils.setAlphaComponent(
+                    int solidStrokeColor = ColorUtils.setAlphaComponent(
                             dark ? 0xFFFFFFFF : 0xFF000000,
-                            Math.min(255, Math.round((dark ? 0x48 : 0x36) * (0.55f + 0.45f * refractionNorm) * alphaInternal))
-                    ));
+                            Math.min(255, Math.round((dark ? 0x48 : 0x36) * (0.55f + 0.45f * Math.min(1.2f, refractionNorm)) * highlightNorm * alphaInternal))
+                    );
+                    glassStrokePaint.setColor(liquidGlassOn ? app.exteraless.glass.SolegramGlass.highlight(solidStrokeColor, true) : solidStrokeColor);
                     canvas.drawPath(glassStrokePath, glassStrokePaint);
                 }
             }
@@ -25265,7 +25307,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public int getThemedColor(int key) {
         if ((app.exteraless.appearance.AppearanceConfig.glassMessages()
-                || (app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassMessages))
+                || (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMessages))
                 && org.telegram.messenger.SharedConfig.chatBlurEnabled()) {
             key = mapGlassOutColorKey(key);
         }

@@ -320,6 +320,8 @@ public class Md3SpeedDialView extends FrameLayout {
     private final FragmentFloatingButton mainFab;
     private final FragmentFloatingButton storiesFab;
     private final Theme.ResourcesProvider resourcesProvider;
+    private org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory liquidGlassFactory;
+    private org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory blurGlassFactory;
     private boolean isOpen;
 
     public Md3SpeedDialView(@NonNull Context context,
@@ -348,6 +350,14 @@ public class Md3SpeedDialView extends FrameLayout {
                 (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 70));
 
         setVisibility(GONE);
+        rebuildItems();
+    }
+
+    public void setGlassFactories(
+            org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory liquidFactory,
+            org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory blurFactory) {
+        this.liquidGlassFactory = liquidFactory;
+        this.blurGlassFactory = blurFactory;
         rebuildItems();
     }
 
@@ -1482,6 +1492,9 @@ public class Md3SpeedDialView extends FrameLayout {
         private final ImageView iconView;
         private final TextView textView;
         private final SpeedDialAction action;
+        private int currentCornerRadius;
+        private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable glassDrawable;
+        private org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable frostedGlassDrawable;
 
         public CapsuleItemView(Context context, SpeedDialAction action) {
             super(context);
@@ -1494,16 +1507,14 @@ public class Md3SpeedDialView extends FrameLayout {
             final int h = dp(48);
             final int rad = h / 2;
             int itemStyle = AppearanceConfig.md3FabItemStyle();
-            final int cornerRad = (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_CARD) ? dp(12) :
-                    (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_FILLED_TONAL) ? dp(16) :
-                    (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_OUTLINE) ? dp(20) : rad;
+            currentCornerRadius = resolveCornerRadius(itemStyle, rad);
 
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
                 setElevation(dp(3));
                 setOutlineProvider(new ViewOutlineProvider() {
                     @Override
                     public void getOutline(View view, Outline outline) {
-                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), cornerRad);
+                        outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), currentCornerRadius);
                     }
                 });
                 setClipToOutline(true);
@@ -1531,13 +1542,97 @@ public class Md3SpeedDialView extends FrameLayout {
             });
         }
 
+        private int resolveCornerRadius(int itemStyle, int defaultRad) {
+            return (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_CARD) ? dp(12) :
+                    (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_FILLED_TONAL) ? dp(16) :
+                    (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_OUTLINE) ? dp(20) : defaultRad;
+        }
+
+        @Override
+        protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+            super.onSizeChanged(w, h, oldw, oldh);
+            if (glassDrawable != null) {
+                glassDrawable.setBounds(0, 0, w, h);
+            }
+            if (frostedGlassDrawable != null) {
+                frostedGlassDrawable.setBounds(0, 0, w, h);
+            }
+        }
+
         public void updateColors() {
             final int h = dp(48);
             final int rad = h / 2;
             int itemStyle = AppearanceConfig.md3FabItemStyle();
+            currentCornerRadius = resolveCornerRadius(itemStyle, rad);
+            invalidateOutline();
             int themeBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider);
             int themeAccent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
             int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
+
+            final boolean liquidActive = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+            final boolean isGlassOrOutline = itemStyle == AppearanceConfig.FAB_ITEM_STYLE_OUTLINE;
+            final boolean useLiquid = liquidActive && (app.exteraless.glass.LiquidGlassConfig.glassFab || isGlassOrOutline);
+            final boolean useFrosted = !useLiquid && isGlassOrOutline;
+
+            if (useLiquid || useFrosted) {
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                    setElevation(0);
+                }
+                final org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory factory =
+                        useLiquid ? liquidGlassFactory : blurGlassFactory;
+                org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable activeDrawable = null;
+                if (factory != null) {
+                    if (useLiquid) {
+                        if (glassDrawable == null) {
+                            glassDrawable = factory.create(this, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+                        }
+                        glassDrawable.setLiquidGlassEffectAllowed(true);
+                        activeDrawable = glassDrawable;
+                    } else {
+                        if (frostedGlassDrawable == null) {
+                            frostedGlassDrawable = factory.create(this, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+                        }
+                        frostedGlassDrawable.setLiquidGlassEffectAllowed(false);
+                        activeDrawable = frostedGlassDrawable;
+                    }
+                }
+                if (activeDrawable != null) {
+                    activeDrawable.setBounds(0, 0, getWidth(), getHeight());
+                    activeDrawable.setPadding(0);
+                    activeDrawable.setShadowAlpha(0f);
+                    activeDrawable.setRadius(currentCornerRadius);
+                    activeDrawable.updateColors();
+                    activeDrawable.invalidateDisplayList();
+                    setBackground(activeDrawable);
+                } else {
+                    boolean dark = Theme.isCurrentThemeDark();
+                    int baseFill = dark ? 0xFF1D2228 : 0xFFF3F6FA;
+                    int tintedFill = useLiquid
+                            ? ColorUtils.setAlphaComponent(app.exteraless.glass.SolegramGlass.tint(baseFill, resourcesProvider), 0xB8)
+                            : Theme.multAlpha(themeBg, 0.90f);
+                    int strokeColor = useLiquid
+                            ? (dark ? 0x38FFFFFF : 0x55FFFFFF)
+                            : Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider), 0.22f);
+                    GradientDrawable gd = new GradientDrawable();
+                    gd.setCornerRadius(currentCornerRadius);
+                    gd.setColor(tintedFill);
+                    gd.setStroke(dp(useLiquid ? 1f : 1.5f), strokeColor);
+                    setBackground(gd);
+                }
+                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                    setForeground(Theme.createSimpleSelectorRoundRectDrawable(currentCornerRadius, 0, pressedColor));
+                }
+                int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
+                iconView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
+                textView.setTextColor(textColor);
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.LOLLIPOP) {
+                setElevation(dp(3));
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+                setForeground(null);
+            }
 
             if (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_FILLED_TONAL) {
                 int containerBg = ColorUtils.blendARGB(themeBg, themeAccent, 0.28f);
@@ -1549,17 +1644,6 @@ public class Md3SpeedDialView extends FrameLayout {
                 int cardBg = ColorUtils.blendARGB(themeBg, themeAccent, 0.10f);
                 int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
                 setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(12), cardBg, pressedColor));
-                iconView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
-                textView.setTextColor(textColor);
-            } else if (itemStyle == AppearanceConfig.FAB_ITEM_STYLE_OUTLINE) {
-                int glassBg = Theme.multAlpha(themeBg, 0.90f);
-                int strokeColor = Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider), 0.22f);
-                GradientDrawable gd = new GradientDrawable();
-                gd.setCornerRadius(dp(20));
-                gd.setColor(glassBg);
-                gd.setStroke(dp(1.5f), strokeColor);
-                setBackground(gd);
-                int textColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider);
                 iconView.setColorFilter(new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN));
                 textView.setTextColor(textColor);
             } else {

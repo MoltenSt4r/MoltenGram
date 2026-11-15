@@ -53,6 +53,8 @@
 <string name="AppIconMoltenGramPizza">Пицца</string>
 <string name="AppIconMoltenGramYinYang">Инь-Ян</string>
 <string name="AppIconMoltenGramRage">Rage</string>
+<string name="AppIconMoltenGramAero">Aero</string>
+<string name="AppIconMoltenGramStone">Stone</string>
 <string name="CreateQuote">Создать цитату</string>
 <string name="QuoteSent">Цитата отправлена</string>
 <string name="QuoteCopied">Цитата скопирована в буфер обмена</string>

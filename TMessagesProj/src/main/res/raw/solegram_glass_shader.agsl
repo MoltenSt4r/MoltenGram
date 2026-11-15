@@ -34,7 +34,8 @@ half4 main(in float2 fragCoord) {
   float2 uv = fragCoord;
   float2 offset = float2(0.0);
   half edge = 0.0;
-  {
+  half maxRadius = max(max(radius.x, radius.y), max(radius.z, radius.w));
+  if (maxRadius >= 2.0) {
     half sdX = sdfRect(p + half2(1.0, 0.0), radius);
     half sdY = sdfRect(p + half2(0.0, 1.0), radius);
 

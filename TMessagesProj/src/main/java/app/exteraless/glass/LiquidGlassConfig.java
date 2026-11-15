@@ -13,6 +13,8 @@ import org.telegram.ui.Components.blur3.GlassOutlineStyle;
 import org.telegram.ui.LaunchActivity;
 import org.telegram.utils.glass.GlassEngine;
 
+import java.util.concurrent.CopyOnWriteArrayList;
+
 import tw.nekomimi.nekogram.NekoConfig;
 
 /**
@@ -23,11 +25,33 @@ public final class LiquidGlassConfig {
 
     private static final String PREFIX = "MG_";
     private static final String KEY_DEFAULTS_VERSION = PREFIX + "glassDefaultsVersion";
-    private static final int GLASS_DEFAULTS_VERSION = 2;
+    private static final int GLASS_DEFAULTS_VERSION = 3;
 
     public static volatile int version = 1;
 
-    public static boolean glassOn = true;
+    public interface Listener {
+        void onLiquidGlassConfigChanged();
+    }
+
+    private static final CopyOnWriteArrayList<Listener> listeners = new CopyOnWriteArrayList<>();
+
+    public static void addListener(Listener listener) {
+        if (listener != null && !listeners.contains(listener)) {
+            listeners.add(listener);
+        }
+    }
+
+    public static void removeListener(Listener listener) {
+        if (listener != null) {
+            listeners.remove(listener);
+        }
+    }
+
+    public static boolean isLiquidGlassEnabled() {
+        return Build.VERSION.SDK_INT >= 33 && glassOn && LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS);
+    }
+
+    public static boolean glassOn = false;
     public static int glassThickness = 75;
     public static int glassRefraction = 35;
     public static int glassIndex = 130;
@@ -70,7 +94,12 @@ public final class LiquidGlassConfig {
                 if (savedVer == 0) {
                     writeGlassDefaults(editor);
                 } else {
-                    editor.putBoolean(PREFIX + "liquidControls", false);
+                    if (savedVer < 2) {
+                        editor.putBoolean(PREFIX + "liquidControls", false);
+                    }
+                    if (savedVer < 3) {
+                        editor.putBoolean(PREFIX + "glassOn", false);
+                    }
                 }
                 editor.putInt(KEY_DEFAULTS_VERSION, GLASS_DEFAULTS_VERSION).commit();
                 if (savedVer == 0) {
@@ -85,7 +114,7 @@ public final class LiquidGlassConfig {
 
     public static void reload() {
         final SharedPreferences p = prefs();
-        glassOn = p.getBoolean(PREFIX + "glassOn", true);
+        glassOn = p.getBoolean(PREFIX + "glassOn", false);
         glassThickness = p.getInt(PREFIX + "glassThickness", 75);
         glassRefraction = p.getInt(PREFIX + "glassRefraction", 35);
         glassIndex = p.getInt(PREFIX + "glassIndex", 130);
@@ -113,7 +142,7 @@ public final class LiquidGlassConfig {
     }
 
     private static void writeGlassDefaults(SharedPreferences.Editor editor) {
-        editor.putBoolean(PREFIX + "glassOn", true)
+        editor.putBoolean(PREFIX + "glassOn", false)
             .putInt(PREFIX + "glassThickness", 75)
             .putInt(PREFIX + "glassRefraction", 35)
             .putInt(PREFIX + "glassIndex", 130)
@@ -153,6 +182,8 @@ public final class LiquidGlassConfig {
                 app.exteraless.appearance.AppearanceConfig.glassMessages.setConfigBool(value);
             } catch (Throwable ignore) {
             }
+        } else if ("glassOn".equals(key) && value) {
+            enableTexturedGlass();
         }
         reload();
         notifyChanged();
@@ -185,6 +216,13 @@ public final class LiquidGlassConfig {
         Theme.reloadAllResources(ApplicationLoader.applicationContext);
         GlassOutlineStyle.dispatchChange();
         GlassEngine.bumpGeneration();
+        for (Listener listener : listeners) {
+            try {
+                listener.onLiquidGlassConfigChanged();
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
+        }
     }
 
     public static boolean canBlurWindows() {

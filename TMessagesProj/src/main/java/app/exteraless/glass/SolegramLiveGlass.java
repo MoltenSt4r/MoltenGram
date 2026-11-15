@@ -84,7 +84,7 @@ public final class SolegramLiveGlass implements GlassSource, org.telegram.ui.Com
 
     /** Live glass can be drawn: Android 13+, liquid glass and the chat blur on (power saving turns them off). */
     public static boolean available() {
-        return Build.VERSION.SDK_INT >= 33 && !failed && SharedConfig.chatBlurEnabled() && LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS);
+        return Build.VERSION.SDK_INT >= 33 && !failed && SharedConfig.chatBlurEnabled() && LiquidGlassConfig.isLiquidGlassEnabled();
     }
 
     /** Something went wrong on this device: live glass is off until the app restarts, popups keep their plain look. */

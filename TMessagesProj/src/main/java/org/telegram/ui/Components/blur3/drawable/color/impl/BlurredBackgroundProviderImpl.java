@@ -21,10 +21,10 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider mainTabs(Theme.ResourcesProvider resourcesProvider) {
         final BlurredBackgroundProviderBuilder builder = new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                if (app.exteraless.glass.LiquidGlassConfig.glassOn) {
+                if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
                     return solegramPanelColor(r);
                 }
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = app.exteraless.glass.SolegramGlass.alpha(false);
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTabs, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
@@ -38,10 +38,10 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider topPanel(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                if (app.exteraless.glass.LiquidGlassConfig.glassOn) {
+                if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
                     return solegramPanelColor(r);
                 }
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = app.exteraless.glass.SolegramGlass.alpha(false);
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = Theme.getColor(Theme.key_glass_targetMainTopPanel, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
@@ -71,7 +71,7 @@ public class BlurredBackgroundProviderImpl {
                         return ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_windowBackgroundWhite, r), 255);
                     }
 
-                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -108,7 +108,10 @@ public class BlurredBackgroundProviderImpl {
                     if (!LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR)) {
                         return Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground);
                     }
-                    return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), isDark ? 0.85f : 0.825f);
+                    final float alpha = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                            ? app.exteraless.glass.SolegramGlass.menuAlpha(isDark)
+                            : (isDark ? 0.85f : 0.825f);
+                    return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground), alpha);
                 })
                 .setStrokeColorTop(0x44FFFFFF, 0)
                 .setStrokeColorBottom(0x22FFFFFF, 0)
@@ -120,8 +123,12 @@ public class BlurredBackgroundProviderImpl {
 
     public static BlurredBackgroundProvider scrimMenuBackground(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
-            .setBackgroundColor((r, isDark) ->
-                Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), isDark ? 0.85f : 0.825f))
+            .setBackgroundColor((r, isDark) -> {
+                final float alpha = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                        ? app.exteraless.glass.SolegramGlass.menuAlpha(isDark)
+                        : (isDark ? 0.85f : 0.825f);
+                return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, r), alpha);
+            })
             .setStrokeColorTop(0x44FFFFFF, 0)
             .setStrokeColorBottom(0x22FFFFFF, 0)
             .setShadowColor(0x26000000, 0)
@@ -133,7 +140,7 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider attachMenuSearch(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -162,7 +169,7 @@ public class BlurredBackgroundProviderImpl {
                         return ColorUtils.setAlphaComponent(Theme.getColor(Theme.key_chat_messagePanelBackground, r), 255);
                     }
 
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -223,7 +230,7 @@ public class BlurredBackgroundProviderImpl {
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
                     }
 
-                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                     return Theme.multAlpha(colorBg, alpha);
                 })
@@ -245,7 +252,8 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider simpleActionBar(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.80f;
+                final float alpha = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                        ? app.exteraless.glass.SolegramGlass.alpha(true) : 0.80f;
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundGray, r);
                 final int colorTarget = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 return solveSrcColor(colorBg, colorTarget, alpha);
@@ -278,7 +286,7 @@ public class BlurredBackgroundProviderImpl {
                             Theme.key_actionBarDefault : Theme.key_chat_topPanelBackground, r), 255);
                 }
 
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                 final int colorBg = Theme.getColor(Theme.key_chat_topPanelBackground, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
@@ -314,7 +322,7 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider bulletin(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = app.exteraless.glass.SolegramGlass.alpha(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+                final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                 final int colorBg = Theme.getColor(Theme.key_undo_background, r);
                 return Theme.multAlpha(colorBg, alpha);
             })
@@ -330,7 +338,9 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider hint(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
             .setBackgroundColor((r, isDark) -> {
-                final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.82f : 0.76f;
+                final float alpha = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                        ? Math.max(0.35f, Math.min(0.90f, app.exteraless.glass.SolegramGlass.alpha(true) * (0.82f / 0.85f)))
+                        : 0.76f;
                 final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                 final int colorTarget = 0xFF282828;
                 return isDark ? Theme.multAlpha(0xFF111111, 0.9f) : solveSrcColor(colorBg, colorTarget, alpha);
@@ -350,7 +360,7 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider inputFieldShareAlert(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = Theme.getColor(Theme.key_windowBackgroundWhite, r);
                     final int colorTarget = Theme.getColor(Theme.key_chat_messagePanelBackground, r);
                     return solveSrcColor(colorBg, colorTarget, alpha);
@@ -366,7 +376,7 @@ public class BlurredBackgroundProviderImpl {
     public static BlurredBackgroundProvider photoViewer(Theme.ResourcesProvider resourcesProvider) {
         return new BlurredBackgroundProviderBuilder(resourcesProvider)
                 .setBackgroundColor((r, isDark) -> {
-                    final float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
+                    final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
                     final int colorBg = 0xFF000000;
                     final int colorTarget = 0xFF1A1A1A;
                     return 0; // solveSrcColor(colorBg, colorTarget, alpha);
@@ -411,7 +421,7 @@ public class BlurredBackgroundProviderImpl {
     }
 
     private static int solegramPanelColor(Theme.ResourcesProvider r) {
-        final float alpha = app.exteraless.glass.SolegramGlass.alpha(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS));
+        final float alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
         return Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhite, r), alpha);
     }
 

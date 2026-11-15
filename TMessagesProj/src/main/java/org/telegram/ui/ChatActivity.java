@@ -3051,18 +3051,15 @@ public class ChatActivity extends BaseFragment implements
             glassBackgroundSourceFrostedRenderNode.setUnderSource(navbarContentSourceWallpaper);
 
             glassBackgroundDrawableFactoryFrosted = new BlurredBackgroundDrawableViewFactory(glassBackgroundSourceFrostedRenderNode);
-            glassBackgroundDrawableFactoryFrosted.setLiquidGlassEffectAllowed(true);
+            glassBackgroundDrawableFactoryFrosted.setLiquidGlassEffectAllowed(false);
 
-            if (LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS)) {
-                glassBackgroundSourceRenderNode = new GlassSourceRenderNode(navbarContentSourceWallpaper);
-                glassBackgroundSourceRenderNode.setScrollableNoiseSuppressor(scrollableViewNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
-                glassBackgroundSourceRenderNode.setUnderSource(navbarContentSourceWallpaper);
-                glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(glassBackgroundSourceRenderNode);
-                glassBackgroundDrawableFactory.setLiquidGlassEffectAllowed(true);
-            } else {
-                glassBackgroundSourceRenderNode = null;
-                glassBackgroundDrawableFactory = glassBackgroundDrawableFactoryFrosted;
-            }
+            glassBackgroundSourceRenderNode = new GlassSourceRenderNode(navbarContentSourceWallpaper);
+            glassBackgroundSourceRenderNode.setScrollableNoiseSuppressor(scrollableViewNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_GLASS);
+            glassBackgroundSourceRenderNode.setUnderSource(navbarContentSourceWallpaper);
+            glassBackgroundDrawableFactory = new BlurredBackgroundDrawableViewFactory(
+                    glassBackgroundSourceRenderNode, glassBackgroundSourceFrostedRenderNode, navbarContentSourceWallpaper);
+            glassBackgroundDrawableFactory.setLiquidGlassEffectAllowed(true);
+            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(8) : dp(48));
         } else {
             scrollableViewNoiseSuppressor = null;
             recommendedAdditionalSizeY = 0;
@@ -3087,6 +3084,7 @@ public class ChatActivity extends BaseFragment implements
 
     private NotificationCenter.ObserversGroup observersGroup;
     private NotificationCenter.ObserversGroup globalObserversGroup;
+    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = this::updateChatGlassConfig;
 
     @Override
     public boolean onFragmentCreate() {
@@ -3306,6 +3304,7 @@ public class ChatActivity extends BaseFragment implements
 
         // exteraless plugins: реестр пунктов меняется, когда плагин включают/выключают.
         NotificationCenter.getGlobalInstance().addObserver(this, NotificationCenter.pluginMenuItemsUpdated);
+        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
 
         if (chatMode != MODE_SCHEDULED) {
             if (threadMessageId == 0) {
@@ -3850,6 +3849,7 @@ public class ChatActivity extends BaseFragment implements
 
         getNotificationCenter().removeObserver(this, NotificationCenter.closeChats);
         NotificationCenter.getGlobalInstance().removeObserver(this, NotificationCenter.pluginMenuItemsUpdated);
+        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
 
         if (chatMode == 0 && AndroidUtilities.isTablet()) {
             getNotificationCenter().postNotificationName(NotificationCenter.openedChatChanged, dialog_id, getTopicId(), true);
@@ -4114,7 +4114,7 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 final boolean isThemeLight = themeDelegate != null && !themeDelegate.isDark();
-                if (isThemeLight) {
+                if (isThemeLight && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
                     return ColorUtils.setAlphaComponent(super.getBackgroundColor(), 216);
                 }
                 return super.getBackgroundColor();
@@ -4136,7 +4136,7 @@ public class ChatActivity extends BaseFragment implements
                 }
 
                 final boolean isThemeLight = themeDelegate != null && !themeDelegate.isDark();
-                if (isThemeLight) {
+                if (isThemeLight && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
                     return ColorUtils.setAlphaComponent(super.getBackgroundColor(), 216);
                 }
                 return super.getBackgroundColor();
@@ -40359,7 +40359,8 @@ public class ChatActivity extends BaseFragment implements
     }
 
     public GlassSourceRenderNode getGlassSource() {
-        return LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? glassBackgroundSourceRenderNode : glassBackgroundSourceFrostedRenderNode;
+        return app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                ? glassBackgroundSourceRenderNode : glassBackgroundSourceFrostedRenderNode;
     }
 
     public void setGlassSourceInvalidationCallback(Runnable callback) {
@@ -53290,6 +53291,29 @@ public class ChatActivity extends BaseFragment implements
         return topicsTabs != null ? topicsTabs.getTabsVisibleSpaceWithPadding(position, dp(7)) : 0;
     }
 
+    private void updateChatGlassConfig() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && glassBackgroundDrawableFactory != null) {
+            glassBackgroundDrawableFactory.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(8) : dp(48));
+        }
+        selectedBackgroundDelegateThemeColors();
+        if (actionBar != null) {
+            actionBar.updateColors();
+            actionBar.invalidate();
+        }
+        if (chatInputViewsContainer != null) {
+            chatInputViewsContainer.invalidate();
+        }
+        if (chatListView != null) {
+            chatListView.invalidateViews();
+            chatListView.invalidate();
+        }
+        invalidateGlassSources();
+        glassEngine.invalidate();
+        if (contentView != null) {
+            invalidateAllGlassAttachedViews();
+        }
+    }
+
     private void invalidateBlurCaptures(int flags) {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || scrollableViewNoiseSuppressor == null) {
             return;
@@ -53297,8 +53321,11 @@ public class ChatActivity extends BaseFragment implements
 
         if (BitwiseUtils.hasFlag(flags, GlassEngine.FLAG_INVALIDATED_POSITIONS)) {
             GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
-            glassPositionsArray.outset(dp(48), dp(48));
-            glassPositionsArray.clip(0, chatListView.getY(), chatListView.getWidth(), chatListView.getY() + chatListView.getHeight());
+            final int outsetPx = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(16) : dp(48);
+            glassPositionsArray.outset(outsetPx, outsetPx);
+            if (chatListView != null && contentView != null) {
+                glassPositionsArray.clip(0, Math.min(0f, chatListView.getY()), Math.max(contentView.getWidth(), chatListView.getWidth()), Math.max(contentView.getHeight(), chatListView.getY() + chatListView.getHeight()));
+            }
             scrollableViewNoiseSuppressor.setupRenderNodes(glassPositionsArray);
         }
 

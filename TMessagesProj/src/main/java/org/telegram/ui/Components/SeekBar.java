@@ -74,11 +74,19 @@ public class SeekBar {
     private View parentView;
     private float alpha = 1f;
     private boolean playing;
+    private float customWaveAmplitude;
+    private long customWaveLastTime;
     private Path customWavePath;
     private Paint customWavePaint;
 
     public void setPlaying(boolean value) {
-        playing = value;
+        if (playing != value) {
+            playing = value;
+            customWaveLastTime = SystemClock.uptimeMillis();
+            if (parentView != null) {
+                parentView.postInvalidateOnAnimation();
+            }
+        }
     }
 
     public SeekBar(View parent) {
@@ -271,7 +279,10 @@ public class SeekBar {
         int style = app.exteraless.appearance.AppearanceConfig.mediaSeekbarStyle(); // 0 = wavy, 1 = straight MD3
         int indicator = app.exteraless.appearance.AppearanceConfig.mediaSeekbarIndicator(); // 0 = bar, 1 = dot, 2 = none
         float thickness = Math.max(AndroidUtilities.dpf2(2.2f), Math.min(AndroidUtilities.dpf2(4.2f), AndroidUtilities.dpf2(app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness() * 0.65f)));
-        float gap = indicator == 2 ? 0f : AndroidUtilities.dp(4f);
+        float indicatorHalf = indicator == 0
+                ? AndroidUtilities.dpf2(2.8f) * 0.5f
+                : (indicator == 1 ? AndroidUtilities.dpf2(pressed ? 6.5f : 5f) : 0f);
+        float gap = indicator == 2 ? 0f : indicatorHalf + AndroidUtilities.dpf2(3f);
 
         float inactiveStart = Math.min(right, thumbCx + gap);
         if (right > inactiveStart) {
@@ -288,9 +299,25 @@ public class SeekBar {
             }
         }
 
+        long now = SystemClock.uptimeMillis();
+        float dt = customWaveLastTime > 0 ? Math.min(48L, Math.max(0L, now - customWaveLastTime)) : 16L;
+        customWaveLastTime = now;
+        float targetAmp = (style == 0 && playing) ? 1f : 0f;
+        if (customWaveAmplitude != targetAmp) {
+            float delta = dt / 220f;
+            if (customWaveAmplitude < targetAmp) {
+                customWaveAmplitude = Math.min(1f, customWaveAmplitude + delta);
+            } else {
+                customWaveAmplitude = Math.max(0f, customWaveAmplitude - delta);
+            }
+        }
+
         float activeEnd = Math.max(left, thumbCx - gap);
         if (activeEnd > left) {
-            if (style == 0) {
+            float halfStroke = thickness * 0.5f;
+            float waveStart = left + halfStroke;
+            float waveEnd = activeEnd - halfStroke;
+            if (style == 0 && customWaveAmplitude > 0.001f && waveEnd - waveStart > AndroidUtilities.dpf2(2f)) {
                 if (customWavePath == null) {
                     customWavePath = new Path();
                 }
@@ -303,32 +330,37 @@ public class SeekBar {
                 customWavePaint.setColor(progressColor);
                 customWavePaint.setStrokeWidth(thickness);
 
-                float amp = AndroidUtilities.dpf2(2.1f);
+                float amp = AndroidUtilities.dpf2(1.5f) * customWaveAmplitude;
                 float wavelength = AndroidUtilities.dpf2(16f);
-                float phase = playing ? ((SystemClock.uptimeMillis() % 1200L) / 1200f) * (float) (2.0 * Math.PI) : 0f;
-                float step = AndroidUtilities.dpf2(1.8f);
+                float phase = ((now % 1200L) / 1200f) * (float) (2.0 * Math.PI);
+                float step = AndroidUtilities.dpf2(1.6f);
+                float taper = AndroidUtilities.dpf2(4.5f);
                 customWavePath.rewind();
                 boolean first = true;
-                for (float x = left; x <= activeEnd; x += step) {
-                    float edgeFade = Math.min(1f, Math.min((x - left) / AndroidUtilities.dp(3.5f), (activeEnd - x) / AndroidUtilities.dp(3.5f)));
-                    float y = cy + (float) Math.sin((x - left) / wavelength * 2.0 * Math.PI - phase) * amp * Math.max(0f, edgeFade);
+                for (float x = waveStart; ; x += step) {
+                    float sx = Math.min(x, waveEnd);
+                    float u = Math.max(0f, Math.min(1f, Math.min((sx - waveStart) / taper, (waveEnd - sx) / taper)));
+                    float smoothFade = u * u * (3f - 2f * u);
+                    float y = cy + (float) Math.sin((sx - left) / wavelength * 2.0 * Math.PI - phase) * amp * smoothFade;
                     if (first) {
-                        customWavePath.moveTo(x, y);
+                        customWavePath.moveTo(sx, y);
                         first = false;
                     } else {
-                        customWavePath.lineTo(x, y);
+                        customWavePath.lineTo(sx, y);
+                    }
+                    if (sx >= waveEnd) {
+                        break;
                     }
                 }
-                customWavePath.lineTo(activeEnd, cy);
                 canvas.drawPath(customWavePath, customWavePaint);
-                if (playing && parentView != null) {
-                    parentView.invalidate();
-                }
             } else {
                 paint.setColor(progressColor);
                 rect.set(left, cy - thickness * 0.55f, activeEnd, cy + thickness * 0.55f);
                 canvas.drawRoundRect(rect, thickness * 0.55f, thickness * 0.55f, paint);
             }
+        }
+        if (((style == 0 && playing) || Math.abs(customWaveAmplitude - targetAmp) > 0.001f) && parentView != null) {
+            parentView.postInvalidateOnAnimation();
         }
 
         paint.setColor(circleColor);

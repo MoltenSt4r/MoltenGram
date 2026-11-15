@@ -470,7 +470,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         iBlur3FactoryGlass.setSourceRootView(viewPositionWatcher, contentView);
         iBlur3FactoryGlass.setLiquidGlassEffectAllowed(true);
 
-        tabsViewBackground = iBlur3FactoryGlass.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
+        BlurredBackgroundDrawableViewFactory iBlur3FactoryTabs = new BlurredBackgroundDrawableViewFactory(
+            iBlur3SourceTabGlass != null ? iBlur3SourceTabGlass : iBlur3SourceColor,
+            iBlur3SourceTabFrosted != null ? iBlur3SourceTabFrosted : iBlur3SourceColor,
+            iBlur3SourceColor);
+        iBlur3FactoryTabs.setSourceRootView(viewPositionWatcher, contentView);
+        iBlur3FactoryTabs.setLiquidGlassEffectAllowed(!MainTabsUiHelper.isMaterial3NavigationBar());
+
+        tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
         tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
         tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
         tabsView.setBackground(tabsViewBackground);
@@ -1277,11 +1284,14 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             .add(NotificationCenter.appUpdateLoading)
             .add(NotificationCenter.needSetDayNightTheme);
 
+        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
+
         return super.onFragmentCreate();
     }
 
     @Override
     public void onFragmentDestroy() {
+        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
         Bulletin.removeDelegate(this);
         Bulletin.removeDelegate(contentView);
 
@@ -1376,6 +1386,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (miniPlayer == null) {
             return;
         }
+        blur3_updateFragmentsGlass();
         for (int a = 0, N = fragmentsArr.size(); a < N; a++) {
             final BaseFragment fragment = fragmentsArr.valueAt(a).fragment;
             if (fragment instanceof TabFragmentDelegate) {
@@ -1547,6 +1558,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
     private final @NonNull GlassSourceColor iBlur3SourceColor;
     private final @Nullable GlassSourceRenderNode iBlur3SourceTabGlass;
     private final @Nullable GlassSourceRenderNode iBlur3SourceTabFrosted;
+    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = () -> {
+        if (miniPlayer != null) {
+            miniPlayer.applyStyle(false);
+        }
+        blur3_updateColors();
+    };
 
     /** The one the tabs draw now; null with the blur off, they are on the color then. */
     @Nullable
@@ -1555,7 +1572,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (!settings.isBlurEnabled) {
             return null;
         }
-        return settings.isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33 ? iBlur3SourceTabGlass : iBlur3SourceTabFrosted;
+        return app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                && settings.isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33
+                ? iBlur3SourceTabGlass : iBlur3SourceTabFrosted;
     }
 
     private final RectF fragmentPosition = new RectF();
@@ -1567,6 +1586,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         iBlur3SourceTabGlass.invalidateDisplayListForDrawables();
         iBlur3SourceTabFrosted.invalidateDisplayListForDrawables();
         blur3_invalidateBlur();
+        if (miniPlayer != null && miniPlayer.getVisibility() == View.VISIBLE) {
+            miniPlayer.invalidateGlass();
+        }
         if (tabsView != null) {
             tabsView.invalidate();
         }
@@ -1583,6 +1605,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             iBlur3SourceTabGlass.invalidateRenderer();
             iBlur3SourceTabFrosted.invalidateRenderer();
             blur3_invalidateBlur();
+            if (miniPlayer != null && miniPlayer.getVisibility() == View.VISIBLE) {
+                miniPlayer.invalidateGlass();
+            }
         }
     }
 
@@ -1595,7 +1620,12 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final int updateLayoutHeight = updateLayoutWrapper != null && updateLayoutWrapper.isUpdateLayoutVisible() ? dp(UpdateLayoutWrapper.HEIGHT) : 0;
         MainTabsUiHelper.setBlurBounds(tabsCapturePosition, contentView, navigationBarHeight + updateLayoutHeight);
         final int bottom = (int) tabsCapturePosition.bottom;
-        final int top = (int) tabsCapturePosition.top;
+        int top = (int) tabsCapturePosition.top;
+        if (miniPlayer != null && miniPlayer.getVisibleOffset() > 0
+                && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                && app.exteraless.glass.LiquidGlassConfig.glassMiniPlayer) {
+            top = Math.max(0, top - (int) Math.ceil(miniPlayer.getVisibleOffset() + dp(16)));
+        }
 
         for (int a = 0, N = fragmentsArr.size(); a < N; a++) {
             final BaseFragment fragment = fragmentsArr.valueAt(a).fragment;
@@ -1639,6 +1669,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         blur3_updateFadeColors();
         if (tabsViewBackground != null) {
             tabsViewBackground.updateColors();
+        }
+        if (miniPlayer != null) {
+            miniPlayer.applyStyle(false);
+            miniPlayer.invalidateGlass();
         }
         blur3_invalidateBlur();
         if (fadeView != null) {

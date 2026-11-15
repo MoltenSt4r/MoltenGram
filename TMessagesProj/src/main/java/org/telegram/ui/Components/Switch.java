@@ -322,6 +322,7 @@ public class Switch extends View implements Theme.Colorable {
                 @Override
                 public void onAnimationEnd(Animator animation) {
                     checkAnimator = null;
+                    invalidate();
                 }
             });
             checkAnimator.start();
@@ -600,16 +601,16 @@ public class Switch extends View implements Theme.Colorable {
 
     private void solegramDrawLiquid(Canvas canvas) {
         final float w = getMeasuredWidth(), h = getMeasuredHeight();
-        final float trackW = Math.min(w - AndroidUtilities.dp(1), AndroidUtilities.dp(36));
-        final float trackH = Math.min(h * 0.9f, trackW / 1.95f);
+        final float trackW = Math.min(w - AndroidUtilities.dp(4), AndroidUtilities.dp(46));
+        final float trackH = Math.min(h - AndroidUtilities.dp(4), trackW / 1.95f);
         final float left = (w - trackW) / 2f, top = (h - trackH) / 2f;
         solegramTrack.set(left, top, left + trackW, top + trackH);
 
-        final float active = solegramActive.set(checkAnimator != null ? 1f : 0f);
+        final float active = solegramActive.set((checkAnimator != null || isPressed()) ? 1f : 0f);
         final float inset = AndroidUtilities.dpf2(2);
         final float restH = trackH - inset * 2f, restW = restH * 1.42f;
         final float from = left + inset + restW / 2f, to = left + trackW - inset - restW / 2f;
-        final float room = Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.3f) / restH;
+        final float room = Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.24f) / restH;
         final float roomX = (2f * Math.min(from, w - to)) / restW;
         final float maxScale = Math.max(1f, Math.min(room, roomX));
         final float a = Math.max(0f, Math.min(1f, active));
@@ -618,14 +619,10 @@ public class Switch extends View implements Theme.Colorable {
         final float thumbW = restW * scale * (1f + stretch), thumbH = restH * scale * (1f - stretch * 0.22f);
         final float halfW = thumbW / 2f;
         final float cx = Math.max(halfW, Math.min(w - halfW, from + (to - from) * progress));
-        if (a > 0.01f) {
-            canvas.save();
-            app.exteraless.glass.LiquidControls.clipOutThumb(canvas, cx, h / 2f, thumbW, thumbH);
-            solegramDrawTrack(canvas, trackH / 2f);
-            canvas.restore();
-        } else {
-            solegramDrawTrack(canvas, trackH / 2f);
-        }
+        canvas.save();
+        app.exteraless.glass.LiquidControls.clipOutThumb(canvas, cx, h / 2f, thumbW, thumbH);
+        solegramDrawTrack(canvas, trackH / 2f);
+        canvas.restore();
         if (solegramLens == null) {
             solegramLens = new app.exteraless.glass.LiquidControls.Lens();
         }

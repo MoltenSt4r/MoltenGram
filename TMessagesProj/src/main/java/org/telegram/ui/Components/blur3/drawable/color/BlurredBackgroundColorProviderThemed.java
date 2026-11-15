@@ -14,15 +14,22 @@ public class BlurredBackgroundColorProviderThemed implements BlurredBackgroundCo
 
     private final Theme.ResourcesProvider resourcesProvider;
     private final int backgroundColorId;
+    private final boolean useDynamicGlassAlpha;
     private float alpha;
+    private int glassConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
 
     public BlurredBackgroundColorProviderThemed(Theme.ResourcesProvider resourcesProvider, int backgroundColorId) {
-        this(resourcesProvider, backgroundColorId, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f);
+        this.resourcesProvider = resourcesProvider;
+        this.backgroundColorId = backgroundColorId;
+        this.useDynamicGlassAlpha = true;
+        this.alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+        updateColors();
     }
 
     public BlurredBackgroundColorProviderThemed(Theme.ResourcesProvider resourcesProvider, int backgroundColorId, float alpha) {
         this.resourcesProvider = resourcesProvider;
         this.backgroundColorId = backgroundColorId;
+        this.useDynamicGlassAlpha = false;
         this.alpha = alpha;
 
         updateColors();
@@ -87,13 +94,18 @@ public class BlurredBackgroundColorProviderThemed implements BlurredBackgroundCo
     // not a view: nothing dispatches updateColors() on theme switches for every owner, so the getters refresh lazily
     private void checkThemeGeneration() {
         final int generation = ThemeBind.generation();
-        if (themeGeneration != generation) {
+        final int sgVersion = app.exteraless.glass.LiquidGlassConfig.version;
+        if (themeGeneration != generation || glassConfigVersion != sgVersion) {
             updateColors();
         }
     }
 
     public void updateColors() {
         themeGeneration = ThemeBind.generation();
+        glassConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
+        if (useDynamicGlassAlpha) {
+            alpha = app.exteraless.glass.SolegramGlass.alpha(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled());
+        }
         final int color = Theme.getColor(backgroundColorId, resourcesProvider);
         backgroundColor = Theme.multAlpha(color, alpha);
 

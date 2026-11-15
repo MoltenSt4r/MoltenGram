@@ -145,6 +145,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             } else {
                 animatingIndicator = false;
                 setEnabled(true);
+                refreshChipTabStyles();
                 if (delegate != null) {
                     delegate.onPageScrolled(1.0f);
                 }
@@ -354,8 +355,8 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         if (newTab == null || prevTab == null) {
             return;
         }
-        int newColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
-        int prevColor = processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+        int newColor = isChipFoldersEnabled() ? getChipTextColor(true) : processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
+        int prevColor = isChipFoldersEnabled() ? getChipTextColor(false) : processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
 
         int r1 = Color.red(newColor);
         int g1 = Color.green(newColor);
@@ -448,7 +449,9 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
     BlurredBackgroundDrawable backgroundDrawable;
     public void setBlurredBackground(BlurredBackgroundDrawable background) {
         backgroundDrawable = background;
-        backgroundDrawable.setCallback(this);
+        if (backgroundDrawable != null) {
+            backgroundDrawable.setCallback(this);
+        }
     }
 
     public final Path clipPath = new Path();
@@ -625,25 +628,160 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         return app.exteraless.appearance.AppearanceConfig.chipFoldersEnabled.Bool();
     }
 
-    private float getChipCornerRadius(boolean active) {
-        if (!isChipFoldersEnabled()) {
-            return AndroidUtilities.dpf2(10);
-        }
-        int shape = app.exteraless.appearance.AppearanceConfig.chipFoldersShape.Int();
-        switch (shape) {
-            case 0: return dp(20);
-            case 1: return dp(12);
-            case 2: return dp(8);
-            case 3: return dp(4);
-            case 4: return dp(14);
-            case 5: return dp(active
-                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusActive.Int()
-                    : app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusInactive.Int());
-            default: return dp(20);
+    private int getChipSpacingHalfPx() {
+        int spacing = app.exteraless.appearance.AppearanceConfig.chipFoldersSpacing.Int();
+        switch (spacing) {
+            case 0: return Math.max(1, dp(1.5f));
+            case 2: return dp(5);
+            case 3: return Math.max(dp(1), dp(app.exteraless.appearance.AppearanceConfig.chipFoldersCustomSpacing.Int()) / 2);
+            case 1:
+            default: return dp(3);
         }
     }
 
-    private void applyChipTabStyle(TextView tab, boolean active) {
+    private int getChipVerticalInsetPx() {
+        return getPaddingTop() >= dp(5) ? dp(1) : dp(5);
+    }
+
+    private float[] getChipCornerRadii(boolean active, int index, int count) {
+        if (!isChipFoldersEnabled()) {
+            float rad = AndroidUtilities.dpf2(10);
+            return new float[]{rad, rad, rad, rad, rad, rad, rad, rad};
+        }
+        int shape = app.exteraless.appearance.AppearanceConfig.chipFoldersShape.Int();
+        switch (shape) {
+            case 0: {
+                float r = dp(20);
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+            case 1: {
+                float r = dp(12);
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+            case 2: {
+                float r = dp(8);
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+            case 3: {
+                float r = dp(4);
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+            case 4: {
+                float r = dp(active ? 20 : 10);
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+            case 5: {
+                if (active) {
+                    float r = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusActive.Int());
+                    return new float[]{r, r, r, r, r, r, r, r};
+                }
+                float outer = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusOuter.Int());
+                float inner = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusInner.Int());
+                if (count <= 1) {
+                    return new float[]{outer, outer, outer, outer, outer, outer, outer, outer};
+                } else if (index <= 0) {
+                    return new float[]{outer, outer, inner, inner, inner, inner, outer, outer};
+                } else if (index >= count - 1) {
+                    return new float[]{inner, inner, outer, outer, outer, outer, inner, inner};
+                } else {
+                    return new float[]{inner, inner, inner, inner, inner, inner, inner, inner};
+                }
+            }
+            case 6: {
+                if (active) {
+                    float r = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusAltActive.Int());
+                    return new float[]{r, r, r, r, r, r, r, r};
+                }
+                float outer = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusAltOuter.Int());
+                float inner = dp(app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusInner.Int());
+                if (count <= 1) {
+                    return new float[]{outer, outer, outer, outer, outer, outer, outer, outer};
+                } else if (index <= 0) {
+                    return new float[]{outer, outer, inner, inner, inner, inner, outer, outer};
+                } else if (index >= count - 1) {
+                    return new float[]{inner, inner, outer, outer, outer, outer, inner, inner};
+                } else {
+                    return new float[]{inner, inner, inner, inner, inner, inner, inner, inner};
+                }
+            }
+            case 7:
+            default: {
+                float r = dp(active
+                        ? app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusCustomActive.Int()
+                        : app.exteraless.appearance.AppearanceConfig.chipFoldersRadiusInactive.Int());
+                return new float[]{r, r, r, r, r, r, r, r};
+            }
+        }
+    }
+
+    private int getChipActiveFillColor() {
+        int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
+        boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
+        int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
+        if (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int() != 0) {
+            return app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int();
+        }
+        if (style == 1) {
+            return 0;
+        }
+        int accent = md3Colors ? app.exteraless.appearance.AppearanceConfig.resolveThemeToken("primary", activeTextColor) : activeTextColor;
+        if (style == 2) {
+            return Theme.multAlpha(accent, 0.18f);
+        }
+        return accent;
+    }
+
+    private int getChipInactiveFillColor() {
+        int unactiveTextColor = processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+        boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
+        int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
+        if (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int() != 0) {
+            return app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int();
+        }
+        if (style == 1 || style == 2) {
+            return 0;
+        }
+        return md3Colors
+                ? app.exteraless.appearance.AppearanceConfig.resolveThemeToken("surface_container_high", Theme.multAlpha(unactiveTextColor, 0.14f))
+                : Theme.multAlpha(unactiveTextColor, 0.14f);
+    }
+
+    private int getChipTextColor(boolean active) {
+        int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
+        int unactiveTextColor = processColor(Theme.getColor(unactiveTextColorKey, resourcesProvider));
+        boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
+        int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
+        if (active) {
+            if (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int() != 0) {
+                return app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int();
+            }
+            if (style == 0) {
+                return app.exteraless.utils.UIUtil.getOnAccentColor(getChipActiveFillColor());
+            }
+            return md3Colors ? app.exteraless.appearance.AppearanceConfig.resolveThemeToken("primary", activeTextColor) : activeTextColor;
+        } else {
+            if (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int() != 0) {
+                return app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int();
+            }
+            if (md3Colors && style == 0) {
+                return app.exteraless.appearance.AppearanceConfig.resolveThemeToken("on_surface", unactiveTextColor);
+            }
+            return unactiveTextColor;
+        }
+    }
+
+    private void refreshChipTabStyles() {
+        int count = tabsContainer.getChildCount();
+        for (int a = 0; a < count; a++) {
+            View child = tabsContainer.getChildAt(a);
+            if (child instanceof TextView) {
+                applyChipTabStyle((TextView) child, a, count, currentPosition == a);
+            }
+        }
+        invalidate();
+    }
+
+    private void applyChipTabStyle(TextView tab, int index, int count, boolean active) {
         if (tab == null) {
             return;
         }
@@ -659,36 +797,27 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             );
             return;
         }
-        boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
         int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
-        int textColor = active
-                ? (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int() != 0
-                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextActive.Int()
-                    : activeTextColor)
-                : (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int() != 0
-                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorTextInactive.Int()
-                    : unactiveTextColor);
-        tab.setTextColor(textColor);
+        tab.setTextColor(getChipTextColor(active));
 
-        int inactiveFill = (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int() != 0)
-                ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorInactive.Int()
-                : (style == 1 || style == 3 ? 0 : Theme.multAlpha(unactiveTextColor, 0.10f));
-        android.graphics.drawable.GradientDrawable bg = new android.graphics.drawable.GradientDrawable();
-        bg.setCornerRadius(getChipCornerRadius(false));
-        bg.setColor(inactiveFill);
-        if (style == 1) {
-            bg.setStroke(dp(1), Theme.multAlpha(unactiveTextColor, 0.28f));
+        float[] radii = getChipCornerRadii(active, index, count);
+        GradientDrawable bg = new GradientDrawable();
+        bg.setCornerRadii(radii);
+        bg.setColor(active ? 0 : getChipInactiveFillColor());
+        if (!active && style == 1) {
+            bg.setStroke(dp(1.2f), Theme.multAlpha(unactiveTextColor, 0.35f));
         }
-        android.graphics.drawable.Drawable ripple = Theme.createSelectorDrawable(
-                Theme.multAlpha(activeTextColor, 0.16f),
-                Theme.RIPPLE_MASK_ROUNDRECT_6DP,
-                Math.max(dp(4), Math.round(getChipCornerRadius(false)))
+        GradientDrawable mask = new GradientDrawable();
+        mask.setCornerRadii(radii);
+        mask.setColor(Color.WHITE);
+        android.graphics.drawable.RippleDrawable ripple = new android.graphics.drawable.RippleDrawable(
+                android.content.res.ColorStateList.valueOf(Theme.multAlpha(activeTextColor, 0.16f)),
+                bg,
+                mask
         );
-        android.graphics.drawable.LayerDrawable layered = new android.graphics.drawable.LayerDrawable(new android.graphics.drawable.Drawable[]{ bg, ripple });
-        int gap = app.exteraless.appearance.AppearanceConfig.chipFoldersSpacing.Int() == 2
-                ? Math.max(dp(2), dp(app.exteraless.appearance.AppearanceConfig.chipFoldersCustomSpacing.Int()) / 2)
-                : dp(3);
-        tab.setBackground(new InsetDrawable(layered, gap, dp(5), gap, dp(5)));
+        int gap = getChipSpacingHalfPx();
+        int vInset = getChipVerticalInsetPx();
+        tab.setBackground(new InsetDrawable(ripple, gap, vInset, gap, vInset));
     }
 
     public void finishAddingTabs() {
@@ -696,7 +825,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         for (int a = 0; a < count; a++) {
             TextView tab = (TextView) tabsContainer.getChildAt(a);
             tab.setTag(currentPosition == a ? activeTextColorKey : unactiveTextColorKey);
-            applyChipTabStyle(tab, currentPosition == a);
+            applyChipTabStyle(tab, a, count, currentPosition == a);
             if (useMinimalWidth) {
                 if (
                     prevPositionToWidth.size() != positionToWidth.size() ||
@@ -730,19 +859,19 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         int count = tabsContainer.getChildCount();
         for (int a = 0; a < count; a++) {
             TextView tab = (TextView) tabsContainer.getChildAt(a);
-            applyChipTabStyle(tab, currentPosition == a);
+            applyChipTabStyle(tab, a, count, currentPosition == a);
         }
         int activeTextColor = processColor(Theme.getColor(activeTextColorKey, resourcesProvider));
         if (isChipFoldersEnabled()) {
             boolean md3Colors = app.exteraless.appearance.AppearanceConfig.chipFoldersMd3Colors.Bool();
             int style = app.exteraless.appearance.AppearanceConfig.chipFoldersStyle.Int();
-            float rad = getChipCornerRadius(true);
-            selectorDrawable.setCornerRadii(new float[]{rad, rad, rad, rad, rad, rad, rad, rad});
-            int activeFill = (!md3Colors && app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int() != 0)
-                    ? app.exteraless.appearance.AppearanceConfig.chipFoldersColorActive.Int()
-                    : Theme.multAlpha(activeTextColor, style == 3 ? 0.12f : 0.22f);
+            selectorDrawable.setCornerRadii(getChipCornerRadii(true, currentPosition, count));
+            int activeFill = getChipActiveFillColor();
             selectorDrawable.setColor(activeFill);
-            selectorDrawable.setStroke(style == 1 ? dp(1.2f) : 0, style == 1 ? Theme.multAlpha(activeTextColor, 0.85f) : 0);
+            int strokeColor = md3Colors
+                    ? app.exteraless.appearance.AppearanceConfig.resolveThemeToken("primary", activeTextColor)
+                    : activeTextColor;
+            selectorDrawable.setStroke(style == 1 ? dp(1.5f) : 0, style == 1 ? strokeColor : 0);
         } else {
             float rad = AndroidUtilities.dpf2(10);
             selectorDrawable.setCornerRadii(new float[]{rad, rad, rad, rad, rad, rad, rad, rad});
@@ -790,7 +919,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         canvas.save();
-        if (backgroundDrawable != null) {
+        if (backgroundDrawable != null && !isChipFoldersEnabled()) {
             if (rectT.set(1f) < 1) {
                 checkBoundsAndClipping();
             }
@@ -829,8 +958,6 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
     @Override
     protected boolean drawChild(Canvas canvas, View child, long drawingTime) {
         if (child == tabsContainer) {
-            final boolean result = super.drawChild(canvas, child, drawingTime);
-
             final int height = getMeasuredHeight();
             float l = indicatorX + indicatorXAnimationDx;
             float r = l + indicatorWidth + indicatorWidthAnimationDx;
@@ -842,24 +969,25 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
             }
             int wasAlpha = selectorDrawable.getAlpha();
             selectorDrawable.setAlpha((int) (wasAlpha * tabsContainer.getAlpha()));
-//            selectorDrawable.setBounds(
-//                (int) l,
-//                height - dpr(4),
-//                (int) r,
-//                height
-//            );
-            int chipInsetH = isChipFoldersEnabled() ? dp(3) : dp(4);
-            int chipInsetV = isChipFoldersEnabled() ? dp(5) : dp(4);
+            int chipInsetH = isChipFoldersEnabled() ? getChipSpacingHalfPx() : dp(4);
+            int chipInsetV = isChipFoldersEnabled() ? getChipVerticalInsetPx() : dp(4);
             selectorDrawable.setBounds(
                 getPaddingLeft() + (int) l + chipInsetH,
                 getPaddingTop() + chipInsetV,
                 getPaddingLeft() + (int) r - chipInsetH,
                 height - getPaddingBottom() - chipInsetV
             );
-            selectorDrawable.draw(canvas);
-            selectorDrawable.setAlpha(wasAlpha);
-
-            return result;
+            if (isChipFoldersEnabled()) {
+                selectorDrawable.setCornerRadii(getChipCornerRadii(true, currentPosition, tabsContainer.getChildCount()));
+                selectorDrawable.draw(canvas);
+                selectorDrawable.setAlpha(wasAlpha);
+                return super.drawChild(canvas, child, drawingTime);
+            } else {
+                final boolean result = super.drawChild(canvas, child, drawingTime);
+                selectorDrawable.draw(canvas);
+                selectorDrawable.setAlpha(wasAlpha);
+                return result;
+            }
         }
         return super.drawChild(canvas, child, drawingTime);
     }
@@ -1032,6 +1160,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         if (progress >= 1.0f) {
             currentPosition = position;
             selectedTabId = id;
+            refreshChipTabStyles();
         }
     }
 
@@ -1055,6 +1184,7 @@ public class ScrollSlidingTextTabStrip extends HorizontalScrollView implements T
         for (int a = 0; a < tabsContainer.getChildCount(); a++) {
             tabsContainer.getChildAt(a).setSelected(a == position);
         }
+        refreshChipTabStyles();
         if (first == position && position > 1) {
             scrollToChild(position - 1, true);
         } else {

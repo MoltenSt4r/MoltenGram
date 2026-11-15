@@ -178,12 +178,48 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
     private BlurredBackgroundDrawable fabGlassDrawable;
 
     public void setGlassFactory(org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory factory) {
-        if (isSubButton || factory == null) {
+        if (factory == null) {
             return;
         }
         fabGlassDrawable = factory.create(this, org.telegram.ui.Components.blur3.drawable.color.impl.BlurredBackgroundProviderImpl.topPanel(resourcesProvider));
+        configureFabGlassDrawable(getWidth(), getHeight());
         updateColors();
         invalidate();
+    }
+
+    private void configureFabGlassDrawable(int w, int h) {
+        if (fabGlassDrawable == null || w <= 0 || h <= 0) {
+            return;
+        }
+        fabGlassDrawable.setBounds(0, 0, w, h);
+        fabGlassDrawable.setPadding(isSubButton ? dp(5.66f) : 0);
+        fabGlassDrawable.setShadowAlpha(0f);
+        final float rad;
+        if (isSubButton) {
+            rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
+        } else {
+            int activeShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+            if (activeShape == 0) {
+                rad = Math.min(w, h) / 2f;
+            } else if (activeShape == 1) {
+                rad = dp(app.exteraless.appearance.AppearanceConfig.fabCornerRadius(Math.round(Math.min(w, h) / AndroidUtilities.density)));
+            } else {
+                rad = Math.min(w, h) * 0.28f;
+            }
+        }
+        fabGlassDrawable.setRadius(rad);
+    }
+
+    private boolean isGlassFabActive() {
+        return fabGlassDrawable != null
+                && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                && app.exteraless.glass.LiquidGlassConfig.glassFab;
+    }
+
+    private int resolveGlassFabIconColor(int iconColorCode, int defIcon) {
+        return iconColorCode == 0
+                ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider)
+                : app.exteraless.utils.UIUtil.resolveFabIconColor(0, iconColorCode, defIcon);
     }
 
     private Drawable themedBackground;
@@ -204,13 +240,23 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             int customBg = app.exteraless.utils.UIUtil.resolveFabColor(customBgCode, 0);
 
             int customIconCode = app.exteraless.appearance.AppearanceConfig.subFabIconColor();
-            int iconCol = app.exteraless.utils.UIUtil.resolveFabIconColor(customBgCode, customIconCode, defIcon);
+            boolean useGlassSub = isGlassFabActive();
+            int iconCol = useGlassSub
+                    ? resolveGlassFabIconColor(customIconCode, defIcon)
+                    : app.exteraless.utils.UIUtil.resolveFabIconColor(customBgCode, customIconCode, defIcon);
             currentIconColor = iconCol;
 
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(iconCol);
 
-            if (customBgCode != 0) {
+            if (useGlassSub) {
+                fabGlassDrawable.setShadowAlpha(0f);
+                fabGlassDrawable.updateColors();
+                int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
+                int pressedColor = Theme.getColor(Theme.key_listSelector, resourcesProvider);
+                setBackground(Theme.createInsetRoundRectDrawable(pressedColor, rad, dp(6)));
+                invalidate();
+            } else if (customBgCode != 0) {
                 int rad = dp(app.exteraless.appearance.AppearanceConfig.squareFab() ? 10 : 18);
                 int pressedColor = androidx.core.graphics.ColorUtils.blendARGB(customBg, 0xFF000000, 0.2f);
                 setBackground(Theme.createSimpleSelectorRoundRectDrawable(rad, customBg, pressedColor));
@@ -238,13 +284,18 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             int mainColor = app.exteraless.utils.UIUtil.resolveFabColor(mainBgCode, defBg);
 
             int mainIconCode = app.exteraless.appearance.AppearanceConfig.fabIconColor();
-            boolean useGlassFab = fabGlassDrawable != null && app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassFab;
-            int iconCol = (useGlassFab && mainIconCode == 0)
-                    ? Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider)
+            boolean useGlassFab = isGlassFabActive();
+            int iconCol = useGlassFab
+                    ? resolveGlassFabIconColor(mainIconCode, defIcon)
                     : app.exteraless.utils.UIUtil.resolveFabIconColor(mainBgCode, mainIconCode, defIcon);
             if (fabGlassDrawable != null) {
+                fabGlassDrawable.setShadowAlpha(0f);
                 fabGlassDrawable.updateColors();
             }
+            int activeShape = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+            setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
+            setClipToOutline(useGlassFab && (activeShape == 0 || activeShape == 1));
+            invalidateOutline();
             currentIconColor = iconCol;
 
             imageView.setColorFilter(iconCol, PorterDuff.Mode.SRC_IN);
@@ -305,9 +356,8 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         }
 
         updateShapePath(w, h);
-        if (fabGlassDrawable != null && !isSubButton && app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassFab) {
-            fabGlassDrawable.setBounds(0, 0, w, h);
-            fabGlassDrawable.setRadius(app.exteraless.appearance.AppearanceConfig.fabShape() == app.exteraless.appearance.Md3AvatarShapes.SHAPE_SQUARE ? dp(16) : Math.min(w, h) / 2f);
+        if (!isSubButton && isGlassFabActive()) {
+            configureFabGlassDrawable(w, h);
             canvas.save();
             canvas.clipPath(shapePath);
             fabGlassDrawable.draw(canvas);
@@ -352,7 +402,10 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         int targetIconCode = (targetColorCode == app.exteraless.appearance.AppearanceConfig.fabActiveColor())
                 ? app.exteraless.appearance.AppearanceConfig.fabActiveIconColor()
                 : app.exteraless.appearance.AppearanceConfig.fabIconColor();
-        final int targetIconColor = app.exteraless.utils.UIUtil.resolveFabIconColor(targetColorCode, targetIconCode, defIcon);
+        final boolean useGlassFab = !isSubButton && isGlassFabActive();
+        final int targetIconColor = useGlassFab
+                ? resolveGlassFabIconColor(targetIconCode, defIcon)
+                : app.exteraless.utils.UIUtil.resolveFabIconColor(targetColorCode, targetIconCode, defIcon);
 
         final int startColor = fabBgPaint.getColor() != 0 ? fabBgPaint.getColor() : targetColor;
         final int startIconColor = currentIconColor != 0 ? currentIconColor : targetIconColor;
@@ -378,6 +431,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
             progressView.setProgressColor(targetIconColor);
             currentIconColor = targetIconColor;
+            setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
+            setClipToOutline(useGlassFab && (targetShape == 0 || targetShape == 1));
+            invalidateOutline();
             applyFabSize(targetSizeDp);
             setActiveTranslationY(targetShiftY);
             invalidate();
@@ -431,6 +487,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 imageView.setColorFilter(targetIconColor, PorterDuff.Mode.SRC_IN);
                 progressView.setProgressColor(targetIconColor);
                 currentIconColor = targetIconColor;
+                setTranslationZ(useGlassFab ? 0f : dpf2(0.5f));
+                setClipToOutline(useGlassFab && (targetShapeId == 0 || targetShapeId == 1));
+                invalidateOutline();
                 applyFabSize(targetSizeDp);
                 setActiveTranslationY(targetShiftY);
                 invalidate();
@@ -512,11 +571,19 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         if (iBlur3Background != null) {
             iBlur3Background.setBounds(0, 0, w, h);
         }
+        configureFabGlassDrawable(w, h);
     }
 
     @Override
     public void draw(@NonNull Canvas canvas) {
-        if (iBlur3Background != null) {
+        if (isSubButton && isGlassFabActive()) {
+            int w = getWidth();
+            int h = getHeight();
+            if (w > 0 && h > 0) {
+                configureFabGlassDrawable(w, h);
+                fabGlassDrawable.draw(canvas);
+            }
+        } else if (iBlur3Background != null) {
             iBlur3Background.draw(canvas);
         }
         super.draw(canvas);

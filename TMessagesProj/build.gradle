@@ -54,6 +54,7 @@ def verCode = (runNum && runNum.isInteger()) ? (baseCode + runNum.toInteger()) :
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
 def appCodename = (project.hasProperty('APP_CODENAME') ? APP_CODENAME : 'Tiramisu')
+def stagingCodename = (project.hasProperty('STAGING_CODENAME') ? project.property('STAGING_CODENAME').toString() : 'Titanium')
 
 def keystorePwd = null
 def alias = null
@@ -289,7 +290,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             matchingFallbacks = ['release', 'staging', 'debug']
             signingConfig = hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
-            buildConfigField 'String', 'BUILD_CODENAME', '"Titanium"'
+            buildConfigField 'String', 'BUILD_CODENAME', '"' + stagingCodename + '"'
         }
 
         release {

@@ -194,20 +194,19 @@ public final class LiquidControls {
             }
             shader.setFloatUniform("center", cx, cy);
             shader.setFloatUniform("halfSize", w / 2f, h / 2f);
+            final float ls = (sliderLens ? 0.58f : 0.48f) + (sliderLens ? 0.42f : 0.52f) * a;
             if (sliderLens) {
-                // a slider's thumb is a thicker drop over a thin track: the middle magnifies it well, towards the
-                // rim the glass curves it hard and splits its colours, so the distortion shows on a plain line too
-                shader.setFloatUniform("magnify", 1f + 0.42f * a);
-                shader.setFloatUniform("bend", h * 0.62f * a);
-                shader.setFloatUniform("dispersion", 0.75f * a);
-                shader.setFloatUniform("light", 0.95f * a);
+                shader.setFloatUniform("magnify", 1f + 0.16f + 0.28f * a);
+                shader.setFloatUniform("bend", h * (0.42f + 0.22f * a));
+                shader.setFloatUniform("dispersion", 0.48f * ls);
+                shader.setFloatUniform("light", 0.72f + 0.28f * a);
             } else {
-                shader.setFloatUniform("magnify", 1f + 0.2f * a);
-                shader.setFloatUniform("bend", h * 0.42f * a);
-                shader.setFloatUniform("dispersion", 0.4f * a);
-                shader.setFloatUniform("light", 0.85f * a);
+                shader.setFloatUniform("magnify", 1f + 0.12f + 0.14f * a);
+                shader.setFloatUniform("bend", h * (0.34f + 0.14f * a));
+                shader.setFloatUniform("dispersion", 0.32f * ls);
+                shader.setFloatUniform("light", 0.68f + 0.28f * a);
             }
-            final float body = (sliderLens ? 0.04f : 0.06f) * a; // a faint white glass body, premultiplied
+            final float body = (sliderLens ? 0.10f : 0.14f) * (1f - 0.55f * a); // subtle frosted crystal body tint, premultiplied
             shader.setFloatUniform("tint", body, body, body, body);
             node.setRenderEffect(RenderEffect.createRuntimeShaderEffect(shader, "img"));
             canvas.drawRenderNode(node);
@@ -285,16 +284,16 @@ public final class LiquidControls {
             }
         }
 
-        // lens: the track under the thumb, magnified in the middle and bent at the curved rim
+        // lens: real liquid glass lens even at rest, magnifying & clearing further while pressed/moving
         boolean shaderLens = false;
-        if (a > 0.01f && lens != null) {
+        if (lens != null) {
             shaderLens = glass != null && glass.draw(canvas, viewWidth, viewHeight, cx, cy, width, height, a, lens);
             if (!shaderLens) {
                 canvas.save();
                 path.rewind();
                 path.addRoundRect(rect, r, r, Path.Direction.CW);
                 canvas.clipPath(path);
-                final float magnify = 1f + (sliderLens ? 0.3f : 0.24f) * a;
+                final float magnify = 1f + (sliderLens ? 0.14f + 0.24f * a : 0.10f + 0.16f * a);
                 canvas.scale(magnify, magnify, cx, cy);
                 lens.draw(canvas);
                 canvas.restore();
@@ -302,12 +301,13 @@ public final class LiquidControls {
             rect.set(cx - width / 2f, cy - height / 2f, cx + width / 2f, cy + height / 2f);
         }
 
-        // white body fades to a faint tint (demo: background opacity 1 -> 0.1)
-        fillPaint.setColor(((int) (255 * (1f - (sliderLens ? 0.94f : 0.9f) * a)) << 24) | 0xFFFFFF);
+        // translucent frosted sheen (subtle crystal milk at rest, ultra-clear glass while active)
+        final int coatAlpha = (int) (255 * ((sliderLens ? 0.16f : 0.22f) * (1f - 0.70f * a)));
+        fillPaint.setColor((coatAlpha << 24) | 0xFFFFFF);
         canvas.drawRoundRect(rect, r, r, fillPaint);
 
         if (Build.VERSION.SDK_INT < 28) {
-            // no shadow layers on hardware canvases before Android 9: a hairline keeps the white pill visible on white
+            // no shadow layers on hardware canvases before Android 9: a hairline keeps the glass pill visible on white
             rimPaint.setShader(null);
             rimPaint.setStrokeWidth(Math.max(1f, dpf2(0.8f)));
             rimPaint.setColor(0x26000000);
@@ -315,10 +315,10 @@ public final class LiquidControls {
         }
 
         // specular rim: bright where light hits (top-left), soft at the opposite edge (the shader lens has its own)
-        if (a > 0.01f && !shaderLens) {
+        if (!shaderLens) {
             rimPaint.setStrokeWidth(Math.max(1f, dpf2(1.2f)));
             rimPaint.setColor(0xFFFFFFFF);
-            final int light = (int) (210 * a);
+            final int light = (int) (185 + 45 * a);
             rimPaint.setShader(new LinearGradient(rect.left, rect.top, rect.right, rect.bottom,
                 new int[]{(light << 24) | 0xFFFFFF, ((light / 6) << 24) | 0xFFFFFF, ((light / 2) << 24) | 0xFFFFFF},
                 new float[]{0f, 0.55f, 1f}, Shader.TileMode.CLAMP));

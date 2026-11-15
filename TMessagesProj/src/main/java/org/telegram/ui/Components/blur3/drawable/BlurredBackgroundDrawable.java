@@ -902,7 +902,7 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
 
     private void solegramCheckAutoLiquid() {
         boolean auto = false;
-        if (app.exteraless.glass.LiquidGlassConfig.glassOn && !boundProps.boundsWithPadding.isEmpty()) {
+        if (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && !boundProps.boundsWithPadding.isEmpty()) {
             final float w = boundProps.body.width(), h = boundProps.body.height();
             float minRadius = Float.MAX_VALUE;
             for (float r : boundProps.radii) {
@@ -923,19 +923,32 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
     /* Liquid glass and the glass settings */
 
     private boolean liquidGlassEffectAllowed;
+    private boolean liquidGlassSuppressed;
     private int glassSettingsGeneration = GlassEngine.getGlassSettingsGenerationId();
     private int solegramConfigVersion = app.exteraless.glass.LiquidGlassConfig.version;
 
     /** The screen wants the liquid glass here: it is drawn while the glass settings have it on (Android 13+). */
     public void setLiquidGlassEffectAllowed() {
-        if (!liquidGlassEffectAllowed) {
-            liquidGlassEffectAllowed = true;
+        setLiquidGlassEffectAllowed(true);
+    }
+
+    public void setLiquidGlassEffectAllowed(boolean allowed) {
+        final boolean suppressed = !allowed;
+        if (liquidGlassEffectAllowed != allowed || liquidGlassSuppressed != suppressed) {
+            liquidGlassEffectAllowed = allowed;
+            liquidGlassSuppressed = suppressed;
             implInvalidated = true;
+            invalidateDisplayList();
+            invalidateSelf();
         }
     }
 
     private boolean isLiquidGlassEffectEnabled() {
-        return (liquidGlassEffectAllowed || solegramAutoLiquid) && getGlassSettings().isLiquidGlassEnabled && Build.VERSION.SDK_INT >= 33;
+        return !liquidGlassSuppressed
+                && (liquidGlassEffectAllowed || solegramAutoLiquid)
+                && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                && getGlassSettings().isLiquidGlassEnabled
+                && Build.VERSION.SDK_INT >= 33;
     }
 
     private GlassSource pickSource() {
@@ -963,6 +976,8 @@ public class BlurredBackgroundDrawable extends GlassDrawable implements Theme.Co
         final int sgVer = app.exteraless.glass.LiquidGlassConfig.version;
         if (solegramConfigVersion != sgVer) {
             solegramConfigVersion = sgVer;
+            solegramCheckAutoLiquid();
+            implInvalidated = true;
             updateColors();
             invalidateDisplayList();
             invalidateSelf();

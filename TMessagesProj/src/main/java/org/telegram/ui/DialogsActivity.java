@@ -566,6 +566,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private FragmentFloatingButton floatingButton3;
     private FragmentFloatingButton floatingButtonStories;
     private app.exteraless.components.Md3SpeedDialView speedDialView;
+    private BlurredBackgroundDrawable searchTabsViewBackground;
+    private BlurredBackgroundDrawable topPanelLayoutBackground;
+    private BlurredBackgroundDrawable filterTabsViewBackground;
+    private BlurredBackgroundDrawable searchFieldBackground;
+    private final app.exteraless.glass.LiquidGlassConfig.Listener glassConfigListener = this::updateDialogsGlassConfig;
     private ButtonWithCounterView addChatsToCommunityButton;
     private ChatActivityFadeView communityBottomFadeView;
     private ChatAvatarContainer avatarContainer;
@@ -990,15 +995,49 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
 
             final boolean isThemeLight = resourceProvider != null ? !resourceProvider.isDark() : !Theme.isCurrentThemeDark();
+            final boolean glassActive = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+            final boolean useLiquidHeader = top
+                    && glassActive
+                    && app.exteraless.glass.LiquidGlassConfig.glassMainHeader
+                    && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders
+                    && iBlur3SourceGlass != null;
+
+            final int oldScrimColor = blurScrimPaint.getColor();
+            final int oldScrimAlpha = blurScrimPaint.getAlpha();
+
+            if (useLiquidHeader) {
+                final float coverProgress = Math.max(searchAnimationProgress, progressToActionMode);
+                final float restAlpha = Math.max(0.25f, Math.min(0.92f, app.exteraless.glass.SolegramGlass.alpha(true) * 0.72f));
+                final int blurAlpha = Math.round(255f * AndroidUtilities.lerp(restAlpha, isThemeLight ? 0.85f : 0.9f, coverProgress));
+
+                canvas.save();
+                canvas.translate(0, -y);
+                iBlur3SourceGlass.draw(canvas, rectTmp.left, rectTmp.top + y, rectTmp.right, rectTmp.bottom + y);
+                canvas.restore();
+
+                blurScrimPaint.setColor(app.exteraless.glass.SolegramGlass.tint(oldScrimColor, resourceProvider));
+                blurScrimPaint.setAlpha(blurAlpha);
+                canvas.drawRect(rectTmp, blurScrimPaint);
+                blurScrimPaint.setColor(oldScrimColor);
+                blurScrimPaint.setAlpha(oldScrimAlpha);
+                return;
+            }
+
             int blurAlpha = isThemeLight ? 216 : ChatActivity.ACTION_BAR_BLUR_ALPHA;
+            if (glassActive && top) {
+                blurAlpha = app.exteraless.glass.SolegramGlass.headerScrimAlpha(blurAlpha);
+            }
             canvas.save();
             canvas.translate(0, -y);
             iBlur3SourceGlassFrosted.draw(canvas, rectTmp.left, rectTmp.top + y, rectTmp.right, rectTmp.bottom + y);
             canvas.restore();
 
-            final int oldScrimAlpha = blurScrimPaint.getAlpha();
+            if (glassActive) {
+                blurScrimPaint.setColor(app.exteraless.glass.SolegramGlass.tint(oldScrimColor, resourceProvider));
+            }
             blurScrimPaint.setAlpha(blurAlpha);
             canvas.drawRect(rectTmp, blurScrimPaint);
+            blurScrimPaint.setColor(oldScrimColor);
             blurScrimPaint.setAlpha(oldScrimAlpha);
         }
 
@@ -2793,9 +2832,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             iBlur3SourceGlassFrosted.setUnderSource(iBlur3SourceColor);
             iBlur3SourceGlassFrosted.setScrollableNoiseSuppressor(scrollableViewNoiseSuppressor, DownscaleScrollableNoiseSuppressor.DRAW_FROSTED_GLASS);
 
-            iBlur3FactoryLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass);
+            iBlur3FactoryLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlass, iBlur3SourceGlassFrosted, iBlur3SourceColor);
             iBlur3FactoryLiquidGlass.setLiquidGlassEffectAllowed(true);
-            iBlur3FactoryLiquidGlass.setOutset(LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? dp(8) : dp(48));
+            iBlur3FactoryLiquidGlass.setOutset(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() ? dp(8) : dp(48));
 
             iBlur3FactoryFrostedLiquidGlass = new BlurredBackgroundDrawableViewFactory(iBlur3SourceGlassFrosted);
             iBlur3FactoryFrostedLiquidGlass.setLiquidGlassEffectAllowed(true);
@@ -2984,6 +3023,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         LastSeenHelper.preload();
+        app.exteraless.glass.LiquidGlassConfig.addListener(glassConfigListener);
 
         return true;
     }
@@ -3126,7 +3166,12 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
     @Override
     public void onFragmentDestroy() {
+        app.exteraless.glass.LiquidGlassConfig.removeListener(glassConfigListener);
         super.onFragmentDestroy();
+        searchTabsViewBackground = null;
+        topPanelLayoutBackground = null;
+        filterTabsViewBackground = null;
+        searchFieldBackground = null;
         if (observersGroup != null) {
             observersGroup.removeAllObservers();
             observersGroup = null;
@@ -4890,10 +4935,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         searchTabsAndFiltersLayout = new SearchTabsAndFiltersLayout(getContext());
         contentView.addView(searchTabsAndFiltersLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, SEARCH_TABS_HEIGHT, Gravity.TOP, 4, 0, 4, 0));
 
-        BlurredBackgroundDrawableViewFactory headerBlurFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
-        BlurredBackgroundDrawable searchTabsViewBackground = headerBlurFactory.create(searchTabsAndFiltersLayout, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+        searchTabsViewBackground = iBlur3FactoryLiquidGlass.create(searchTabsAndFiltersLayout, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
         searchTabsViewBackground.setRadius(dp(18));
         searchTabsViewBackground.setPadding(dp(6.666f));
+        searchTabsViewBackground.setLiquidGlassEffectAllowed(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders);
         searchTabsAndFiltersLayout.setPadding(0, dp(7), 0, dp(7));
         searchTabsAndFiltersLayout.setBlurredBackground(searchTabsViewBackground);
 
@@ -4909,6 +4954,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         floatingButtonStories = new FragmentFloatingButton(context, resourceProvider, true);
         floatingButtonStories.setContentDescription(getString(R.string.StoryPrivacyButtonPost));
         floatingButtonStories.setImageResource(R.drawable.camera);
+        floatingButtonStories.setGlassFactory(iBlur3FactoryLiquidGlass);
         floatingButtonStories.setOnClickListener(v -> openStoriesRecorder());
         contentView.addView(floatingButtonStories, FragmentFloatingButton.createSubButtonLayoutParams());
 
@@ -4916,6 +4962,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         floatingButton3.setGlassFactory(iBlur3FactoryLiquidGlass);
 
         speedDialView = new app.exteraless.components.Md3SpeedDialView(context, this, floatingButton3, floatingButtonStories, resourceProvider);
+        speedDialView.setGlassFactories(iBlur3FactoryLiquidGlass, iBlur3FactoryBlur);
         contentView.addView(speedDialView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
         contentView.addView(floatingButton3, FragmentFloatingButton.createDefaultLayoutParams());
@@ -4992,10 +5039,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             });
 
-            BlurredBackgroundDrawableViewFactory topPanelFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
-            BlurredBackgroundDrawable topPanelLayoutBackground = topPanelFactory.create(topPanelLayout)
+            topPanelLayoutBackground = iBlur3FactoryLiquidGlass.create(topPanelLayout)
                 .setColorProvider(BlurredBackgroundProviderImpl.topPanel(resourceProvider))
                 .setPadding(dp(7));
+            topPanelLayoutBackground.setLiquidGlassEffectAllowed(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders);
 
             topPanelLayout.setPadding(dp(11), dp(21), dp(11), dp(21));
             topPanelLayout.setBlurredBackground(topPanelLayoutBackground);
@@ -5340,18 +5387,19 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         if (filterTabsView != null) {
-            BlurredBackgroundDrawableViewFactory foldersFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassFolders) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
-            BlurredBackgroundDrawable filterTabsViewBackground = foldersFactory.create(filterTabsView, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+            filterTabsViewBackground = iBlur3FactoryLiquidGlass.create(filterTabsView, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
             filterTabsViewBackground.setRadius(dp(18));
             filterTabsViewBackground.setPadding(dp(6.666f));
+            filterTabsViewBackground.setLiquidGlassEffectAllowed(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassFolders);
             filterTabsView.setPadding(0, dp(7), 0, dp(7));
             filterTabsView.setBlurredBackground(filterTabsViewBackground);
             contentView.addView(filterTabsView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 36 + 7 + 7, Gravity.TOP, 4, 0, 4, 0));
         }
 
         if (fragmentSearchField != null) {
-            BlurredBackgroundDrawableViewFactory searchFactory = (app.exteraless.glass.LiquidGlassConfig.glassOn && !app.exteraless.glass.LiquidGlassConfig.glassMainHeader) ? iBlur3FactoryFade : iBlur3FactoryLiquidGlass;
-            fragmentSearchField.setupBlurredBackground(searchFactory.create(fragmentSearchField, BlurredBackgroundProviderImpl.topPanel(resourceProvider)));
+            searchFieldBackground = iBlur3FactoryLiquidGlass.create(fragmentSearchField, BlurredBackgroundProviderImpl.topPanel(resourceProvider));
+            searchFieldBackground.setLiquidGlassEffectAllowed(app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders);
+            fragmentSearchField.setupBlurredBackground(searchFieldBackground);
         }
 
         dialogStoriesCell = new DialogStoriesCell(context, this, currentAccount, isArchive() ? DialogStoriesCell.TYPE_ARCHIVE : DialogStoriesCell.TYPE_DIALOGS) {
@@ -6838,7 +6886,11 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             topBubblesFadeView.setTranslationY(fadeViewT - searchOffset);
             final float s = lerp(dp(7), dp(50), Math.min(topPanelsVisibility, filtersTabVisibility));
             topBubblesFadeView.setPosition(s, Math.min(dp(40), topPanelsHeight + filtersTabHeight - s));
-            topBubblesFadeView.setAlpha(Math.max(filtersTabVisibility, topPanelsVisibility));
+            final float baseAlpha = Math.max(filtersTabVisibility, topPanelsVisibility);
+            final float fadeScale = (app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                    && app.exteraless.glass.LiquidGlassConfig.glassMainHeader
+                    && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders) ? 0.12f : 1f;
+            topBubblesFadeView.setAlpha(baseAlpha * fadeScale);
         }
     }
 
@@ -9247,6 +9299,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 storyHint.setTranslationY(baseTranslationY - storiesOffset);
             }
         }
+        glassEngine.invalidate();
     }
 
     public boolean storiesEnabled = !NaConfig.INSTANCE.getDisableStories().Bool();
@@ -14553,10 +14606,94 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     private IBlur3Capture iBlur3Capture;
 
     private final ArrayList<RectF> iBlur3Positions = new ArrayList<>();
+    private final ArrayList<RectF> iBlur3DynamicPool = new ArrayList<>();
     private final RectF iBlur3PositionActionBar = new RectF();
-    private final RectF iBlur3PositionMainTabs = new RectF(); {
-        iBlur3Positions.add(iBlur3PositionActionBar);
-        iBlur3Positions.add(iBlur3PositionMainTabs);
+    private final RectF iBlur3PositionMainTabs = new RectF();
+    private final RectF iBlur3TmpRect = new RectF();
+
+    private void addDynamicCaptureRect(float left, float top, float right, float bottom, int poolIndex) {
+        while (iBlur3DynamicPool.size() <= poolIndex) {
+            iBlur3DynamicPool.add(new RectF());
+        }
+        RectF dst = iBlur3DynamicPool.get(poolIndex);
+        dst.set(left, top, right, bottom);
+        iBlur3Positions.add(dst);
+    }
+
+    private boolean isCoveredByExistingPositions(RectF rect) {
+        for (int i = 0, n = iBlur3Positions.size(); i < n; i++) {
+            if (iBlur3Positions.get(i).contains(rect)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private int appendExpandedViewCaptureRect(View view, int expandPx, int poolIndex) {
+        if (view == null || fragmentView == null || view.getVisibility() != View.VISIBLE || view.getAlpha() <= 0f) {
+            return poolIndex;
+        }
+        if (ViewPositionWatcher.computeRectInParent(view, fragmentView, iBlur3TmpRect)
+                && iBlur3TmpRect.width() > 0 && iBlur3TmpRect.height() > 0) {
+            iBlur3TmpRect.inset(-expandPx, -expandPx);
+            iBlur3TmpRect.intersect(0, 0, fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
+            if (!iBlur3TmpRect.isEmpty() && !isCoveredByExistingPositions(iBlur3TmpRect)) {
+                addDynamicCaptureRect(iBlur3TmpRect.left, iBlur3TmpRect.top, iBlur3TmpRect.right, iBlur3TmpRect.bottom, poolIndex);
+                return poolIndex + 1;
+            }
+        }
+        return poolIndex;
+    }
+
+    private void updateDialogsGlassConfig() {
+        final boolean liquidActive = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+        final boolean liquidHeaders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
+        final boolean liquidFolders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFolders;
+
+        iBlur3FactoryLiquidGlass.setOutset(liquidActive ? dp(8) : dp(48));
+        if (searchTabsViewBackground != null) {
+            searchTabsViewBackground.setLiquidGlassEffectAllowed(liquidHeaders);
+            searchTabsViewBackground.updateColors();
+        }
+        if (topPanelLayoutBackground != null) {
+            topPanelLayoutBackground.setLiquidGlassEffectAllowed(liquidHeaders);
+            topPanelLayoutBackground.updateColors();
+        }
+        if (filterTabsViewBackground != null) {
+            filterTabsViewBackground.setLiquidGlassEffectAllowed(liquidFolders);
+            filterTabsViewBackground.updateColors();
+        }
+        if (searchFieldBackground != null) {
+            searchFieldBackground.setLiquidGlassEffectAllowed(liquidHeaders);
+            searchFieldBackground.updateColors();
+        }
+        if (floatingButton3 != null) {
+            floatingButton3.updateColors();
+        }
+        if (floatingButtonStories != null) {
+            floatingButtonStories.updateColors();
+        }
+        if (speedDialView != null) {
+            speedDialView.updateColors();
+        }
+        if (filterTabsView != null) {
+            filterTabsView.updateColors();
+        }
+        if (topPanelLayout != null) {
+            topPanelLayout.updateColors();
+        }
+        if (fragmentSearchField != null) {
+            fragmentSearchField.updateColors();
+        }
+        if (topBubblesFadeView != null) {
+            final float topPanelsVisibility = topPanelLayout != null ? topPanelLayout.getMetadata().getTotalVisibility() : 0f;
+            final float filtersTabVisibility = animatorFilterTabsVisible != null ? animatorFilterTabsVisible.getFloatValue() : 0f;
+            topBubblesFadeView.setAlpha(Math.max(filtersTabVisibility, topPanelsVisibility) * (liquidHeaders ? 0.12f : 1f));
+        }
+        glassEngine.invalidate();
+        if (fragmentView != null) {
+            fragmentView.invalidate();
+        }
     }
 
     private void invalidateBlurCaptures(int flags) {
@@ -14580,22 +14717,40 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             iBlur3PositionActionBar.set(0, -additionalList, fragmentView.getMeasuredWidth(), lerp(actionBarHeight, actionBarHeightSearch, animatorSearchVisible.getFloatValue()) + additionalList );
 
+            final boolean liquidActive = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled();
+            iBlur3Positions.clear();
+            iBlur3Positions.add(iBlur3PositionActionBar);
+
             boolean hasBottomBlur = false;
             if (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()) {
                 app.exteraless.appearance.MainTabsUiHelper.setBlurBounds(iBlur3PositionMainTabs, fragmentView, navigationBarHeight);
-                iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
-
+                if (miniPlayerInset > 0 && liquidActive && app.exteraless.glass.LiquidGlassConfig.glassMiniPlayer) {
+                    iBlur3PositionMainTabs.top = Math.max(0f, iBlur3PositionMainTabs.top - miniPlayerInset - dp(24));
+                }
+                iBlur3PositionMainTabs.inset(0, liquidActive ? 0 : -dp(48));
+                iBlur3Positions.add(iBlur3PositionMainTabs);
                 hasBottomBlur = true;
             } else if (commentView != null && chatInputViewsContainer != null) {
                 iBlur3PositionMainTabs.set(0,
                     fragmentView.getMeasuredHeight() - calculateListViewPaddingBottom(),
                     fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
-                iBlur3PositionMainTabs.inset(0, LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0 : -dp(48));
-
+                iBlur3PositionMainTabs.inset(0, liquidActive ? 0 : -dp(48));
+                iBlur3Positions.add(iBlur3PositionMainTabs);
                 hasBottomBlur = true;
             }
 
-            scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3Positions, hasBottomBlur ? 2 : 1);
+            int poolIdx = 0;
+            final org.telegram.utils.glass.positions.GlassPositionsArray glassPositionsArray = glassEngine.getAllVisibleDrawablesWithDisplayListPositionsMerged();
+            for (int i = 0, n = glassPositionsArray.size(); i < n; i++) {
+                final RectF rect = glassPositionsArray.get(i);
+                if (rect.width() > 0 && rect.height() > 0 && !isCoveredByExistingPositions(rect)) {
+                    addDynamicCaptureRect(rect.left, rect.top, rect.right, rect.bottom, poolIdx++);
+                }
+            }
+            poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx);
+            appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx);
+
+            scrollableViewNoiseSuppressor.setupRenderNodes(iBlur3Positions, iBlur3Positions.size());
         }
         scrollableViewNoiseSuppressor.invalidateResultRenderNodes(iBlur3Capture, fragmentView.getMeasuredWidth(), fragmentView.getMeasuredHeight());
     }

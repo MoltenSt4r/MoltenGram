@@ -1675,7 +1675,8 @@ public class FilterTabsView extends FrameLayout {
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
         if (blurredBackgroundDrawable != null && getBackground() != blurredBackgroundDrawable
-                && app.exteraless.glass.LiquidGlassConfig.glassOn && app.exteraless.glass.LiquidGlassConfig.glassFolders) {
+                && !app.exteraless.appearance.AppearanceConfig.chipFoldersEnabled.Bool()
+                && app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.glassFolders) {
             blurredBackgroundDrawable.setBounds(0, 0, getWidth(), getHeight());
             blurredBackgroundDrawable.draw(canvas);
         }
