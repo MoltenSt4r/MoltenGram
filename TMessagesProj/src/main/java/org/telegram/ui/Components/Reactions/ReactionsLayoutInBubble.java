@@ -1432,7 +1432,17 @@ public class ReactionsLayoutInBubble {
                 if (visibleReaction.isStar) {
 
                 } else if (visibleReaction.emojicon != null) {
-                    if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) {
+                    if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
+                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
+                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
+                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
+                        }
+                        previewImageReceiver = new ImageReceiver(parent);
+                        previewImageReceiver.setLayerNum(7);
+                        previewImageReceiver.onAttachedToWindow();
+                        previewImageReceiver.setRoundRadius(dp(14));
+                        previewImageReceiver.setImageBitmap(emojiDrawable);
+                    } else if (app.exteraless.OpenExteraConfig.useNotoForBigReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji()) {
                         Drawable thumb = Emoji.getEmojiDrawable(visibleReaction.emojicon);
                         if (thumb instanceof Emoji.EmojiDrawable) {
                             ((Emoji.EmojiDrawable) thumb).fullSize = false;
@@ -1449,16 +1459,6 @@ public class ReactionsLayoutInBubble {
                         } else {
                             previewImageReceiver.setImageBitmap(thumb);
                         }
-                    } else if (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions()) {
-                        Drawable emojiDrawable = Emoji.getEmojiDrawable(visibleReaction.emojicon);
-                        if (emojiDrawable instanceof Emoji.EmojiDrawable) {
-                            ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
-                        }
-                        previewImageReceiver = new ImageReceiver(parent);
-                        previewImageReceiver.setLayerNum(7);
-                        previewImageReceiver.onAttachedToWindow();
-                        previewImageReceiver.setRoundRadius(dp(14));
-                        previewImageReceiver.setImageBitmap(emojiDrawable);
                     } else {
                         TLRPC.TL_availableReaction r = MediaDataController.getInstance(currentAccount).getReactionsMap().get(visibleReaction.emojicon);
                         if (r != null && r.activate_animation != null) {
