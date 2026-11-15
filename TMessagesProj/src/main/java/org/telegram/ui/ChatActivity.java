@@ -5552,6 +5552,8 @@ public class ChatActivity extends BaseFragment implements
                 super.setItemAnimator(animator);
             }
 
+            private BlurredBackgroundDrawable replyButtonGlassDrawable;
+
             private void drawReplyButton(Canvas canvas) {
                 if (slidingView == null || Thread.currentThread() != Looper.getMainLooper().getThread()) {
                     return;
@@ -5621,75 +5623,101 @@ public class ChatActivity extends BaseFragment implements
                 float clearScale = slidingBeyondMax ? 0f : 1f - fillProgress;
 
                 boolean isDark = ColorUtils.calculateLuminance(getThemedColor(Theme.key_windowBackgroundWhite)) <= 0.5f;
-                if (iconProgress != 0) {
-                    AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (x + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f));
-                    Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
-                    if (fillProgress == 0) {
-                        int outlineAlpha = outlineActionBackgroundPaint.getAlpha();
-                        outlineActionBackgroundPaint.setAlpha((int) (outlineAlpha * iconProgress));
-                        canvas.drawArc(AndroidUtilities.rectTmp, -90, 360 * progress, false, outlineActionBackgroundPaint);
-                        outlineActionBackgroundPaint.setAlpha(outlineAlpha);
+                final boolean liquidReplyGlass = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && glassBackgroundDrawableFactory != null;
+                if (liquidReplyGlass) {
+                    if (iconProgress != 0) {
+                        if (replyButtonGlassDrawable == null) {
+                            replyButtonGlassDrawable = glassBackgroundDrawableFactory.create(this, blurredBackgroundButtonsColorProvider);
+                        }
+                        final int radius = Math.max(1, Math.round(AndroidUtilities.dp(16) * scale));
+                        final int pad = AndroidUtilities.dp(7);
+                        replyButtonGlassDrawable.setRadius(radius);
+                        replyButtonGlassDrawable.setPadding(pad);
+                        replyButtonGlassDrawable.setBounds((int) x - radius - pad, (int) y - radius - pad, (int) x + radius + pad, (int) y + radius + pad);
+                        replyButtonGlassDrawable.setAlpha((int) (255 * Math.min(1f, iconProgress)));
+                        replyButtonGlassDrawable.draw(canvas);
+                        if (fillProgress == 0) {
+                            AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (x + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f));
+                            int outlineAlpha = outlineActionBackgroundPaint.getAlpha();
+                            outlineActionBackgroundPaint.setAlpha((int) (outlineAlpha * iconProgress));
+                            canvas.drawArc(AndroidUtilities.rectTmp, -90, 360 * progress, false, outlineActionBackgroundPaint);
+                            outlineActionBackgroundPaint.setAlpha(outlineAlpha);
+                        }
+                    } else if (replyButtonGlassDrawable != null) {
+                        replyButtonGlassDrawable.setAlpha(0);
+                        replyButtonGlassDrawable.setBounds(0, 0, 0, 0);
+                    }
+                } else {
+                    if (iconProgress != 0) {
+                        AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y - AndroidUtilities.dp(16) * scale + outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (x + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f), (int) (y + AndroidUtilities.dp(16) * scale - outlineActionBackgroundPaint.getStrokeWidth() / 2f));
+                        Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
+                        if (fillProgress == 0) {
+                            int outlineAlpha = outlineActionBackgroundPaint.getAlpha();
+                            outlineActionBackgroundPaint.setAlpha((int) (outlineAlpha * iconProgress));
+                            canvas.drawArc(AndroidUtilities.rectTmp, -90, 360 * progress, false, outlineActionBackgroundPaint);
+                            outlineActionBackgroundPaint.setAlpha(outlineAlpha);
 
-                        if (themeDelegate.hasGradientService()) {
-                            outlineAlpha = outlineActionBackgroundDarkenPaint.getAlpha();
-                            if (isDark) {
-                                outlineActionBackgroundDarkenPaint.setColor(Color.WHITE);
+                            if (themeDelegate.hasGradientService()) {
+                                outlineAlpha = outlineActionBackgroundDarkenPaint.getAlpha();
+                                if (isDark) {
+                                    outlineActionBackgroundDarkenPaint.setColor(Color.WHITE);
+                                }
+                                outlineActionBackgroundDarkenPaint.setAlpha((int) (outlineAlpha * iconProgress));
+                                canvas.drawArc(AndroidUtilities.rectTmp, -90, 360 * progress, false, outlineActionBackgroundDarkenPaint);
                             }
-                            outlineActionBackgroundDarkenPaint.setAlpha((int) (outlineAlpha * iconProgress));
-                            canvas.drawArc(AndroidUtilities.rectTmp, -90, 360 * progress, false, outlineActionBackgroundDarkenPaint);
                         }
                     }
-                }
-                AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale), (int) (y - AndroidUtilities.dp(16) * scale), (int) (x + AndroidUtilities.dp(16) * scale), (int) (y + AndroidUtilities.dp(16) * scale));
-                Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
-                path.rewind();
-                path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16) * scale, AndroidUtilities.dp(16) * scale, Path.Direction.CW);
-
-                int wasAlpha = chatActionBackgroundPaint.getAlpha();
-                chatActionBackgroundPaint.setAlpha((int) (iconProgress * 0.6f * progress * wasAlpha));
-                canvas.drawPath(path, chatActionBackgroundPaint);
-                chatActionBackgroundPaint.setAlpha(wasAlpha);
-
-                if (themeDelegate.hasGradientService()) {
-                    wasAlpha = Theme.chat_actionBackgroundGradientDarkenPaint.getAlpha();
-                    if (isDark) {
-                        Theme.chat_actionBackgroundGradientDarkenPaint.setColor(Color.WHITE);
-                    }
-                    Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha((int) (iconProgress * 0.6f * progress * wasAlpha));
-                    canvas.drawPath(path, Theme.chat_actionBackgroundGradientDarkenPaint);
-                    Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha(wasAlpha);
-                }
-
-                if (clearScale != 0f) {
-                    AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * clearScale), (int) (y - AndroidUtilities.dp(16) * clearScale), (int) (x + AndroidUtilities.dp(16) * clearScale), (int) (y + AndroidUtilities.dp(16) * clearScale));
+                    AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale), (int) (y - AndroidUtilities.dp(16) * scale), (int) (x + AndroidUtilities.dp(16) * scale), (int) (y + AndroidUtilities.dp(16) * scale));
+                    Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
                     path.rewind();
-                    path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16), AndroidUtilities.dp(16), Path.Direction.CW);
+                    path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16) * scale, AndroidUtilities.dp(16) * scale, Path.Direction.CW);
 
-                    canvas.save();
-                    canvas.clipPath(path, Region.Op.DIFFERENCE);
-                }
+                    int wasAlpha = chatActionBackgroundPaint.getAlpha();
+                    chatActionBackgroundPaint.setAlpha((int) (iconProgress * 0.6f * progress * wasAlpha));
+                    canvas.drawPath(path, chatActionBackgroundPaint);
+                    chatActionBackgroundPaint.setAlpha(wasAlpha);
 
-                AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale), (int) (y - AndroidUtilities.dp(16) * scale), (int) (x + AndroidUtilities.dp(16) * scale), (int) (y + AndroidUtilities.dp(16) * scale));
-                Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
-                path.rewind();
-                path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16) * scale, AndroidUtilities.dp(16) * scale, Path.Direction.CW);
-
-                wasAlpha = chatActionBackgroundPaint.getAlpha();
-                chatActionBackgroundPaint.setAlpha((int) (iconProgress * 0.4f * wasAlpha));
-                canvas.drawPath(path, chatActionBackgroundPaint);
-                chatActionBackgroundPaint.setAlpha(wasAlpha);
-
-                if (themeDelegate.hasGradientService()) {
-                    wasAlpha = Theme.chat_actionBackgroundGradientDarkenPaint.getAlpha();
-                    if (isDark) {
-                        Theme.chat_actionBackgroundGradientDarkenPaint.setColor(Color.WHITE);
+                    if (themeDelegate.hasGradientService()) {
+                        wasAlpha = Theme.chat_actionBackgroundGradientDarkenPaint.getAlpha();
+                        if (isDark) {
+                            Theme.chat_actionBackgroundGradientDarkenPaint.setColor(Color.WHITE);
+                        }
+                        Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha((int) (iconProgress * 0.6f * progress * wasAlpha));
+                        canvas.drawPath(path, Theme.chat_actionBackgroundGradientDarkenPaint);
+                        Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha(wasAlpha);
                     }
-                    Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha((int) (iconProgress * 0.4f * wasAlpha));
-                    canvas.drawPath(path, Theme.chat_actionBackgroundGradientDarkenPaint);
-                    Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha(wasAlpha);
-                }
-                if (clearScale != 0f) {
-                    canvas.restore();
+
+                    if (clearScale != 0f) {
+                        AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * clearScale), (int) (y - AndroidUtilities.dp(16) * clearScale), (int) (x + AndroidUtilities.dp(16) * clearScale), (int) (y + AndroidUtilities.dp(16) * clearScale));
+                        path.rewind();
+                        path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16), AndroidUtilities.dp(16), Path.Direction.CW);
+
+                        canvas.save();
+                        canvas.clipPath(path, Region.Op.DIFFERENCE);
+                    }
+
+                    AndroidUtilities.rectTmp.set((int) (x - AndroidUtilities.dp(16) * scale), (int) (y - AndroidUtilities.dp(16) * scale), (int) (x + AndroidUtilities.dp(16) * scale), (int) (y + AndroidUtilities.dp(16) * scale));
+                    Theme.applyServiceShaderMatrix(getMeasuredWidth(), AndroidUtilities.displaySize.y, 0, getY() + AndroidUtilities.rectTmp.top);
+                    path.rewind();
+                    path.addRoundRect(AndroidUtilities.rectTmp, AndroidUtilities.dp(16) * scale, AndroidUtilities.dp(16) * scale, Path.Direction.CW);
+
+                    wasAlpha = chatActionBackgroundPaint.getAlpha();
+                    chatActionBackgroundPaint.setAlpha((int) (iconProgress * 0.4f * wasAlpha));
+                    canvas.drawPath(path, chatActionBackgroundPaint);
+                    chatActionBackgroundPaint.setAlpha(wasAlpha);
+
+                    if (themeDelegate.hasGradientService()) {
+                        wasAlpha = Theme.chat_actionBackgroundGradientDarkenPaint.getAlpha();
+                        if (isDark) {
+                            Theme.chat_actionBackgroundGradientDarkenPaint.setColor(Color.WHITE);
+                        }
+                        Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha((int) (iconProgress * 0.4f * wasAlpha));
+                        canvas.drawPath(path, Theme.chat_actionBackgroundGradientDarkenPaint);
+                        Theme.chat_actionBackgroundGradientDarkenPaint.setAlpha(wasAlpha);
+                    }
+                    if (clearScale != 0f) {
+                        canvas.restore();
+                    }
                 }
 
                 float outerRingProgress = slidingOuterRingProgress.getValue() / springMultiplier;
@@ -6075,6 +6103,10 @@ public class ChatActivity extends BaseFragment implements
                         if (trackAnimationProgress == 1f || trackAnimationProgress == 0f) {
                             slidingViewSetOffset(0);
                             slidingView = null;
+                            if (replyButtonGlassDrawable != null) {
+                                replyButtonGlassDrawable.setAlpha(0);
+                                replyButtonGlassDrawable.setBounds(0, 0, 0, 0);
+                            }
                         }
                         invalidate();
                     }

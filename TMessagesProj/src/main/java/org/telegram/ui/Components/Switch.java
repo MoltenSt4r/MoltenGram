@@ -610,9 +610,7 @@ public class Switch extends View implements Theme.Colorable {
         final float inset = AndroidUtilities.dpf2(2);
         final float restH = trackH - inset * 2f, restW = restH * 1.42f;
         final float from = left + inset + restW / 2f, to = left + trackW - inset - restW / 2f;
-        final float room = Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.24f) / restH;
-        final float roomX = (2f * Math.min(from, w - to)) / restW;
-        final float maxScale = Math.max(1f, Math.min(room, roomX));
+        final float maxScale = Math.max(1f, Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.28f) / restH);
         final float a = Math.max(0f, Math.min(1f, active));
         final float scale = 1f + (maxScale - 1f) * a;
         final float stretch = solegramStretchStep();
