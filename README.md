@@ -85,8 +85,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 <!-- Credits & License Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=4">
-  <img src="assets/credit-light.svg?v=4" height="18" alt="MoltenGram FOSS Telegram Client">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=5">
+  <img src="assets/credit-light.svg?v=5" height="18" alt="MoltenGram FOSS Telegram Client">
 </picture>
 
 <br>
