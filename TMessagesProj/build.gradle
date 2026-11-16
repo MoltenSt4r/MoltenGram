@@ -304,7 +304,7 @@ android {
             proguardFiles getDefaultProguardFile('proguard-android-optimize.txt'), 'proguard-rules.pro'
             matchingFallbacks = ['release', 'staging', 'debug']
             signingConfig = hasReleaseKeystore ? signingConfigs.release : signingConfigs.debug
-            buildConfigField 'String', 'BUILD_CODENAME', '"Glintvein"'
+            buildConfigField 'String', 'BUILD_CODENAME', '"Glintvein"' // v13.2.1
         }
     }
 
