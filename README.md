@@ -2,8 +2,8 @@
 
 <!-- Hero Header Banner -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark-v2.svg">
-  <img src="assets/hero-light-v2.svg" width="100%" alt="MoltenGram — Material 3 Expressive Telegram Client">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark-v2.svg?v=6">
+  <img src="assets/hero-light-v2.svg?v=6" width="100%" alt="MoltenGram — Material 3 Expressive Telegram Client">
 </picture>
 
 <!-- Social & Communities Link Strip -->
