@@ -1,6 +1,6 @@
 name: Update F-Droid Repository
 
-# Auto-sync trigger for release v12.10.6
+# Auto-sync trigger for release v13.2.1
 on:
   workflow_run:
     workflows: ["Release Build"]
@@ -17,9 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to build F-Droid repo for (e.g. v12.10.6)'
+        description: 'Release tag to build F-Droid repo for (e.g. v13.2.1)'
         required: false
-        default: 'v12.10.6'
+        default: 'v13.2.1'
 
 permissions:
   contents: write
@@ -42,14 +42,14 @@ jobs:
       - name: Clean intermediate GitHub Release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v12.10.6' }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v13.2.1' }}
         run: |
           python3 << 'EOF'
           import json, os, urllib.request
 
           repo = "${{ github.repository }}"
           token = os.environ.get("GITHUB_TOKEN", "")
-          tag = os.environ.get("TAG", "v12.10.6")
+          tag = os.environ.get("TAG", "v13.2.1")
 
           headers = {
               "Authorization": f"token {token}",
@@ -123,7 +123,7 @@ jobs:
       - name: Build F-Droid repository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v12.10.6' }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v13.2.1' }}
         run: |
           set -ex
 
@@ -167,7 +167,7 @@ jobs:
           python3 << 'PYEOF'
           import json, urllib.request, os
           repo = "${{ github.repository }}"
-          tag = os.environ.get("TAG", "v12.10.6")
+          tag = os.environ.get("TAG", "v13.2.1")
           url = f"https://api.github.com/repos/{repo}/releases/tags/{tag}"
           print(f"Fetching release info: {url}")
           headers = {"User-Agent": "fdroid-builder"}
