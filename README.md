@@ -24,23 +24,15 @@
 
 <br>
 
-<!-- Release Badges Strip in Warm M3 Palette -->
+<!-- Rounded Material 3 Pill Action Strip -->
 <p align="center">
-  <a href="https://github.com/MoltenSt4r/MoltenGram/releases/tag/v13.2.1"><img src="https://img.shields.io/badge/RELEASE-v13.2.1--GLINTVEIN-FE8A73?style=for-the-badge&logo=telegram&logoColor=150D0C&labelColor=261614" alt="Release v13.2.1 Glintvein"></a>
-  <a href="https://www.moltenstar.space/release"><img src="https://img.shields.io/badge/APK-DIRECT_DOWNLOAD-FFD8D1?style=for-the-badge&logo=android&logoColor=150D0C&labelColor=261614" alt="Direct APK Download"></a>
-  <a href="https://moltenst4r.github.io/MoltenGram/fdroid/repo"><img src="https://img.shields.io/badge/F--DROID-REPOSITORY-FE8A73?style=for-the-badge&logo=fdroid&logoColor=150D0C&labelColor=261614" alt="F-Droid Repository"></a>
-  <a href="https://t.me/MoltenGram"><img src="https://img.shields.io/badge/TELEGRAM-@MOLTENGRAM-FFD8D1?style=for-the-badge&logo=telegram&logoColor=150D0C&labelColor=261614" alt="Telegram Channel"></a>
-</p>
-
-<!-- Technology Chips -->
-<p align="center">
-  <img src="https://img.shields.io/badge/Design-Material_3_Expressive-FE8A73?style=flat-square&labelColor=261614" alt="Material 3 Expressive">
-  <img src="https://img.shields.io/badge/Glass-AGSL_Liquid_Glass-FFD8D1?style=flat-square&labelColor=261614" alt="AGSL Liquid Glass">
-  <img src="https://img.shields.io/badge/Palette-Warm_Coral_%23FE8A73-FE8A73?style=flat-square&labelColor=261614" alt="Warm Coral Palette">
-  <img src="https://img.shields.io/badge/Base-Telegram_v13.2.1-FFD8D1?style=flat-square&labelColor=261614" alt="Telegram 13.2.1">
-  <img src="https://img.shields.io/badge/Android-8.0+-FE8A73?style=flat-square&labelColor=261614" alt="Android 8.0+">
-  <img src="https://img.shields.io/badge/Package-com.moltengram.app-FFD8D1?style=flat-square&labelColor=261614" alt="Package Name">
-  <img src="https://img.shields.io/badge/License-GPL--3.0-FE8A73?style=flat-square&labelColor=261614" alt="GPL-3.0 License">
+  <a href="https://github.com/MoltenSt4r/MoltenGram/releases/tag/v13.2.1"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-release-dark.svg"><img src="assets/pill-release-light.svg" height="40" alt="Release v13.2.1 Glintvein"></picture></a>
+  &nbsp;
+  <a href="https://www.moltenstar.space/release"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-apk-dark.svg"><img src="assets/pill-apk-light.svg" height="40" alt="Download APK"></picture></a>
+  &nbsp;
+  <a href="https://moltenst4r.github.io/MoltenGram/fdroid/repo"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-fdroid-dark.svg"><img src="assets/pill-fdroid-light.svg" height="40" alt="F-Droid Repo"></picture></a>
+  &nbsp;
+  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg"><img src="assets/pill-tg-light.svg" height="40" alt="Telegram @MoltenGram"></picture></a>
 </p>
 
 <br>
@@ -62,10 +54,11 @@
 </a>
 
 <p align="center">
-  <a href="https://www.moltenstar.space/release"><img src="https://img.shields.io/badge/Stable-v13.2.1_Glintvein-FE8A73?style=for-the-badge&labelColor=261614" alt="Stable Release"></a>
-  <a href="https://www.moltenstar.space/beta"><img src="https://img.shields.io/badge/Beta-Pre--release-FFD8D1?style=for-the-badge&labelColor=261614" alt="Beta Channel"></a>
-  <a href="https://www.moltenstar.space/canary"><img src="https://img.shields.io/badge/Canary-Nightly_CI-FE8A73?style=for-the-badge&labelColor=261614" alt="Canary Channel"></a>
-  <a href="https://t.me/MoltenGramBot"><img src="https://img.shields.io/badge/Support-@MoltenGramBot-FFD8D1?style=for-the-badge&labelColor=261614" alt="Support Bot"></a>
+  <a href="https://www.moltenstar.space/beta"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg"><img src="assets/pill-beta-light.svg" height="40" alt="Beta Channel"></picture></a>
+  &nbsp;
+  <a href="https://www.moltenstar.space/canary"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg"><img src="assets/pill-canary-light.svg" height="40" alt="Canary Channel"></picture></a>
+  &nbsp;
+  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg"><img src="assets/pill-support-light.svg" height="40" alt="Support @MoltenGramBot"></picture></a>
 </p>
 
 <br>
