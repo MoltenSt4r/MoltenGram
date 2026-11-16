@@ -26,21 +26,19 @@
 
 <!-- Rounded Material 3 Pill Action Strip -->
 <p align="center">
-  <a href="https://github.com/MoltenSt4r/MoltenGram/releases/tag/v13.2.1"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-release-dark.svg?v=beta1"><img src="assets/pill-release-light.svg?v=beta1" height="40" alt="Release v13.2.1 Glintvein"></picture></a>
+  <a href="https://beta.moltenstar.space/download/beta"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg?v=beta2"><img src="assets/pill-beta-light.svg?v=beta2" height="40" alt="Download Release APK"></picture></a>
   &nbsp;
-  <a href="https://beta.moltenstar.space/download/beta"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-apk-dark.svg?v=beta1"><img src="assets/pill-apk-light.svg?v=beta1" height="40" alt="Download APK"></picture></a>
+  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=beta2"><img src="assets/pill-tg-light.svg?v=beta2" height="40" alt="Telegram @MoltenGram"></picture></a>
   &nbsp;
-  <a href="https://moltenst4r.github.io/MoltenGram/fdroid/repo"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-fdroid-dark.svg?v=beta1"><img src="assets/pill-fdroid-light.svg?v=beta1" height="40" alt="F-Droid Repo"></picture></a>
-  &nbsp;
-  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=beta1"><img src="assets/pill-tg-light.svg?v=beta1" height="40" alt="Telegram @MoltenGram"></picture></a>
+  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=beta2"><img src="assets/pill-support-light.svg?v=beta2" height="40" alt="Support @MoltenGramBot"></picture></a>
 </p>
 
 <br>
 
 <!-- What's New in v13.2.1 «Glintvein» Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/whatsnew-dark.svg?v=beta1">
-  <img src="assets/whatsnew-light.svg?v=beta1" width="100%" alt="What's New in v13.2.1 Glintvein">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/whatsnew-dark.svg?v=beta2">
+  <img src="assets/whatsnew-light.svg?v=beta2" width="100%" alt="What's New in v13.2.1 Glintvein">
 </picture>
 
 <br>
@@ -48,18 +46,10 @@
 <!-- Download & Channels Card -->
 <a href="https://beta.moltenstar.space/download/beta">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/download-dark.svg?v=beta1">
-    <img src="assets/download-light.svg?v=beta1" width="100%" alt="Download and Channels">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/download-dark.svg?v=beta2">
+    <img src="assets/download-light.svg?v=beta2" width="100%" alt="Download and Channels">
   </picture>
 </a>
-
-<p align="center">
-  <a href="https://beta.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg?v=beta1"><img src="assets/pill-beta-light.svg?v=beta1" height="40" alt="Beta Channel"></picture></a>
-  &nbsp;
-  <a href="https://canary.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=beta1"><img src="assets/pill-canary-light.svg?v=beta1" height="40" alt="Canary Channel"></picture></a>
-  &nbsp;
-  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=beta1"><img src="assets/pill-support-light.svg?v=beta1" height="40" alt="Support @MoltenGramBot"></picture></a>
-</p>
 
 <br>
 
@@ -72,8 +62,8 @@
 <br>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/build-dark.svg?v=beta1">
-  <img src="assets/build-light.svg?v=beta1" width="100%" alt="Architecture and Build Stack">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/build-dark.svg?v=beta2">
+  <img src="assets/build-light.svg?v=beta2" width="100%" alt="Architecture and Build Stack">
 </picture>
 
 <details>
@@ -95,8 +85,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 <!-- Credits & License Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=beta1">
-  <img src="assets/credit-light.svg?v=beta1" width="100%" alt="Credits and Acknowledgments">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=beta2">
+  <img src="assets/credit-light.svg?v=beta2" height="18" alt="MoltenGram FOSS Telegram Client">
 </picture>
 
 <br>
