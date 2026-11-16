@@ -2,8 +2,8 @@
 
 <!-- Hero Header Banner -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark-v2.svg?v=canary3">
-  <img src="assets/hero-light-v2.svg?v=canary3" width="100%" alt="MoltenGram — Material 3 Expressive Telegram Client">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/hero-dark-v2.svg?v=canary4">
+  <img src="assets/hero-light-v2.svg?v=canary4" width="100%" alt="MoltenGram — Material 3 Expressive Telegram Client">
 </picture>
 
 <!-- Social & Communities Link Strip -->
@@ -26,19 +26,19 @@
 
 <!-- Rounded Material 3 Pill Action Strip -->
 <p align="center">
-  <a href="https://canary.moltenstar.space/download/canary"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=canary3"><img src="assets/pill-canary-light.svg?v=canary3" height="40" alt="Download Release APK"></picture></a>
+  <a href="https://canary.moltenstar.space/download/canary"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=canary4"><img src="assets/pill-canary-light.svg?v=canary4" height="40" alt="Download Release APK"></picture></a>
   &nbsp;
-  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=canary3"><img src="assets/pill-tg-light.svg?v=canary3" height="40" alt="Telegram @MoltenGram"></picture></a>
+  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=canary4"><img src="assets/pill-tg-light.svg?v=canary4" height="40" alt="Telegram @MoltenGram"></picture></a>
   &nbsp;
-  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=canary3"><img src="assets/pill-support-light.svg?v=canary3" height="40" alt="Support @MoltenGramBot"></picture></a>
+  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=canary4"><img src="assets/pill-support-light.svg?v=canary4" height="40" alt="Support @MoltenGramBot"></picture></a>
 </p>
 
 <br>
 
 <!-- What's New in v13.2.1 «Glintvein» Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/whatsnew-dark.svg?v=canary3">
-  <img src="assets/whatsnew-light.svg?v=canary3" width="100%" alt="What's New in v13.2.1 Glintvein">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/whatsnew-dark.svg?v=canary4">
+  <img src="assets/whatsnew-light.svg?v=canary4" width="100%" alt="What's New in v13.2.1 Glintvein">
 </picture>
 
 <br>
@@ -46,8 +46,8 @@
 <!-- Download & Channels Card -->
 <a href="https://canary.moltenstar.space/download/canary">
   <picture>
-    <source media="(prefers-color-scheme: dark)" srcset="assets/download-dark.svg?v=canary3">
-    <img src="assets/download-light.svg?v=canary3" width="100%" alt="Download and Channels">
+    <source media="(prefers-color-scheme: dark)" srcset="assets/download-dark.svg?v=canary4">
+    <img src="assets/download-light.svg?v=canary4" width="100%" alt="Download and Channels">
   </picture>
 </a>
 
@@ -62,8 +62,8 @@
 <br>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/build-dark.svg?v=canary3">
-  <img src="assets/build-light.svg?v=canary3" width="100%" alt="Architecture and Build Stack">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/build-dark.svg?v=canary4">
+  <img src="assets/build-light.svg?v=canary4" width="100%" alt="Architecture and Build Stack">
 </picture>
 
 <details>
@@ -85,8 +85,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 <!-- Credits & License Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=canary3">
-  <img src="assets/credit-light.svg?v=canary3" height="18" alt="MoltenGram FOSS Telegram Client">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=canary4">
+  <img src="assets/credit-light.svg?v=canary4" height="18" alt="MoltenGram FOSS Telegram Client">
 </picture>
 
 <br>
