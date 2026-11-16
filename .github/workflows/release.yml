@@ -140,37 +140,38 @@ jobs:
         if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
           tag_name: v13.2.1
-          name: MoltenGram v13.2.1 «Глинтвейн»
+          name: MoltenGram v13.2.1 «Glintvein»
           make_latest: true
           body: |
-            ### 🍷 Релиз MoltenGram v13.2.1 «Глинтвейн»
+            ### 🍷 MoltenGram v13.2.1 «Glintvein»
 
-            Крупное обновление со всеми изменениями с прошлой беты **«Cacao»**:
+            **📦 Telegram 13.2.1 Base:**
+            - Updated Telegram codebase and native libraries (`tlottie`, `voip`, `androidxMedia`) to **13.2.1**.
 
-            **📦 Обновление базы Telegram 13.2.1:**
-            - Обновление кодовой базы и нативных библиотек (`tlottie`, `voip`, `androidxMedia`) до **Telegram 13.2.1**.
+            **🫧 Liquid Glass:**
+            - New AGSL-powered **Liquid Glass** engine with real-time refraction, dispersion, and optical rim lighting across panels, menus, toolbars, FAB, and message bubbles.
+            - Live glass optics and tint customization without restarting the app.
+            - Redesigned **Liquid Glass** switches: white pill at rest and transparent refracting lens when pressed or toggled.
+            - Fixed 1:1 glass resolution for reply panel & emoji mention popups (`:kiss`, etc.), removed bottom bar / SpeedDial blur seams, fixed stories hitbox when SpeedDial FAB is open, and made glass message bubble backgrounds move smoothly during swipe-to-reply.
 
-            **🫧 Liquid Glass (Жидкое стекло):**
-            - Новый движок **Liquid Glass** на базе AGSL-шейдеров с реальным преломлением, дисперсией и оптическим ободком для панелей, меню, тулбаров, FAB и сообщений.
-            - Живые настройки оптики и тонирования стекла с мгновенным обновлением без перезапуска.
-            - Обновлённые переключатели **Liquid Glass**: белая капсула в покое и прозрачная преломляющая линза при нажатии/переключении.
-            - Исправлено 1:1 разрешение стекла для панели ответа и меню эмодзи (`:kiss` и др.), убран шов размытия у нижней панели и SpeedDial FAB, исправлен хитбокс кнопки историй при открытом FAB, а фон стеклянного бабла плавно двигается вместе с сообщением при смахивании (swipe-to-reply).
+            **🎨 Material 3, QR & Appearance:**
+            - **MD3 QR Card & Scanner:** 44 avatar shapes, diverse MD3 pixel styles, MoltenGram logo, Monet accent colors, separate username display, and opaque scanner.
+            - **Material 3 UI:** updated tabs, StoryRecorder, monotone SimpleActionBar in settings, folder & search chips, floating bottom bar, and active theme colors for FAB/QR/Player.
+            - **Icons & Emojis:** added **Aero** and **Stone** launcher icons, system emoji pack support, and fixed **Noto Color** animated WebP emojis & system reaction priority.
+            - **Free Customization:** unlocked profile styles, colored text, themes, and channel-to-story repost toggle.
 
-            **🎨 Material 3, QR и внешний вид:**
-            - **MD3 QR-визитка и сканер:** 44 формы аватара, разнообразные формы пикселей, логотип MoltenGram, акценты Monet, отдельный юзернейм и непрозрачный сканер.
-            - **Material 3 интерфейс:** обновлённые вкладки, StoryRecorder, монохромный SimpleActionBar в настройках, чипсы папок и поиска, плавающая нижняя панель и активные цвета темы для FAB/QR/плеера.
-            - **Новые иконки и эмодзи:** добавлены иконки лаунчера **Aero** и **Stone**, поддержка системного набора эмодзи и исправлены анимированные WebP-эмодзи **Noto Color**.
-            - **Бесплатная кастомизация:** бесплатные стили профиля, цветной текст, темы и переключатель репоста каналов в истории.
+            **🎵 ExteraLess Player:**
+            - Built-in ExteraLess player editor and settings.
+            - Horizontal karaoke lyrics highlight, paused wavy seekbar, and updated icons/spacing.
 
-            **🎵 Плеер ExteraLess:**
-            - Встроенный редактор и настройки плеера в стиле ExteraLess.
-            - Горизонтальная подсветка караоке-текста песен, волнистый ползунок воспроизведения на паузе и обновлённые иконки/отступы.
+            **🎙️ Voice Changer:**
+            - Fixed voice changer recording pipeline (`AudioRecorderV2` bypass + pitch shifter ring buffer) and redesigned the settings UI with one-tap preset chips, grouped controls, and a mic test right at the top.
 
-            **🤖 Боты и стриминг:**
-            - Вход и профиль по токену бота (`Bot Token Profile`) и поддержка стриминга набора текста в реальном времени (`Live Typing Stream`) с кнопкой запуска/управления стримом.
+            **🤖 Bots & Streaming:**
+            - Bot token login & profile support (`Bot Token Profile`) and **Live Typing Stream** with a stream control button.
 
-            **🔧 Исправления и стабильность:**
-            - Исправлены краши и визуальные артефакты в профилях, настройках, поиске, плагинах и чатах, а также вычищены остатки отладочных элементов.
+            **🔧 Stability & Fixes:**
+            - Fixed crashes and UI glitches across profiles, settings, search, plugins, and chats.
           files: TMessagesProj/build/outputs/apk/release/*.apk
       - name: Send APK to Telegram
         continue-on-error: true
