@@ -26,13 +26,11 @@
 
 <!-- Rounded Material 3 Pill Action Strip -->
 <p align="center">
-  <a href="https://github.com/MoltenSt4r/MoltenGram/releases/tag/v13.2.1"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-release-dark.svg?v=2"><img src="assets/pill-release-light.svg?v=2" height="40" alt="Release v13.2.1 Glintvein"></picture></a>
+  <a href="https://www.moltenstar.space/release"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-apk-dark.svg?v=3"><img src="assets/pill-apk-light.svg?v=3" height="40" alt="Download Release APK"></picture></a>
   &nbsp;
-  <a href="https://www.moltenstar.space/release"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-apk-dark.svg?v=2"><img src="assets/pill-apk-light.svg?v=2" height="40" alt="Download APK"></picture></a>
+  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=3"><img src="assets/pill-tg-light.svg?v=3" height="40" alt="Telegram @MoltenGram"></picture></a>
   &nbsp;
-  <a href="https://moltenst4r.github.io/MoltenGram/fdroid/repo"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-fdroid-dark.svg?v=2"><img src="assets/pill-fdroid-light.svg?v=2" height="40" alt="F-Droid Repo"></picture></a>
-  &nbsp;
-  <a href="https://t.me/MoltenGram"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-tg-dark.svg?v=2"><img src="assets/pill-tg-light.svg?v=2" height="40" alt="Telegram @MoltenGram"></picture></a>
+  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=3"><img src="assets/pill-support-light.svg?v=3" height="40" alt="Support @MoltenGramBot"></picture></a>
 </p>
 
 <br>
@@ -52,14 +50,6 @@
     <img src="assets/download-light.svg?v=2" width="100%" alt="Download and Channels">
   </picture>
 </a>
-
-<p align="center">
-  <a href="https://beta.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg?v=2"><img src="assets/pill-beta-light.svg?v=2" height="40" alt="Beta Channel"></picture></a>
-  &nbsp;
-  <a href="https://canary.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=2"><img src="assets/pill-canary-light.svg?v=2" height="40" alt="Canary Channel"></picture></a>
-  &nbsp;
-  <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=2"><img src="assets/pill-support-light.svg?v=2" height="40" alt="Support @MoltenGramBot"></picture></a>
-</p>
 
 <br>
 
@@ -95,8 +85,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 <!-- Credits & License Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=3">
-  <img src="assets/credit-light.svg?v=3" width="100%" alt="Credits and Acknowledgments">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=4">
+  <img src="assets/credit-light.svg?v=4" height="18" alt="MoltenGram FOSS Telegram Client">
 </picture>
 
 <br>
