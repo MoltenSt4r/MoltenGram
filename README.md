@@ -54,9 +54,9 @@
 </a>
 
 <p align="center">
-  <a href="https://www.moltenstar.space/beta"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg?v=2"><img src="assets/pill-beta-light.svg?v=2" height="40" alt="Beta Channel"></picture></a>
+  <a href="https://beta.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-beta-dark.svg?v=2"><img src="assets/pill-beta-light.svg?v=2" height="40" alt="Beta Channel"></picture></a>
   &nbsp;
-  <a href="https://www.moltenstar.space/canary"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=2"><img src="assets/pill-canary-light.svg?v=2" height="40" alt="Canary Channel"></picture></a>
+  <a href="https://canary.moltenstar.space"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-canary-dark.svg?v=2"><img src="assets/pill-canary-light.svg?v=2" height="40" alt="Canary Channel"></picture></a>
   &nbsp;
   <a href="https://t.me/MoltenGramBot"><picture><source media="(prefers-color-scheme: dark)" srcset="assets/pill-support-dark.svg?v=2"><img src="assets/pill-support-light.svg?v=2" height="40" alt="Support @MoltenGramBot"></picture></a>
 </p>
@@ -95,8 +95,8 @@ echo "sdk.dir=/path/to/Android/Sdk" > local.properties
 
 <!-- Credits & License Card -->
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=2">
-  <img src="assets/credit-light.svg?v=2" width="100%" alt="Credits and Acknowledgments">
+  <source media="(prefers-color-scheme: dark)" srcset="assets/credit-dark.svg?v=3">
+  <img src="assets/credit-light.svg?v=3" width="100%" alt="Credits and Acknowledgments">
 </picture>
 
 <br>
