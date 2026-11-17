@@ -97,6 +97,41 @@ def test_cinema_icon_assets_exist_and_centered():
         assert abs(cy - center_y) <= 2.0, f"Glyph Y center {cy} not aligned with canvas center {center_y} in {dens}"
 
 
+def test_nothing_icon_assets_exist_and_centered():
+    for dens, bg_sz, mip_sz in DENSITIES:
+        bg_file = os.path.join(RES_DIR, f"drawable-{dens}", "moltengram_nothing_icon_background.png")
+        sq_file = os.path.join(RES_DIR, f"mipmap-{dens}", "ic_launcher_moltengram_nothing.png")
+        rnd_file = os.path.join(RES_DIR, f"mipmap-{dens}", "ic_launcher_moltengram_nothing_round.png")
+
+        assert os.path.exists(bg_file), f"Missing {bg_file}"
+        assert os.path.exists(sq_file), f"Missing {sq_file}"
+        assert os.path.exists(rnd_file), f"Missing {rnd_file}"
+
+        bg_im = Image.open(bg_file)
+        assert bg_im.size == (bg_sz, bg_sz)
+
+        safe_radius = bg_sz * 36.0 / 108.0
+        center_x = bg_sz / 2.0
+        center_y = bg_sz / 2.0
+
+        min_x, min_y, max_x, max_y = bg_sz, bg_sz, 0, 0
+        for y in range(bg_sz):
+            for x in range(bg_sz):
+                p = bg_im.getpixel((x, y))
+                if p[0] > 30 or p[1] > 30 or p[2] > 30:
+                    if x < min_x: min_x = x
+                    if x > max_x: max_x = x
+                    if y < min_y: min_y = y
+                    if y > max_y: max_y = y
+                    dist = math.hypot(x - center_x, y - center_y)
+                    assert dist <= safe_radius, f"Pixel at ({x},{y}) exceeds safe radius {safe_radius} in {dens}"
+
+        cx = (min_x + max_x) / 2.0
+        cy = (min_y + max_y) / 2.0
+        assert abs(cx - center_x) <= 2.0, f"Nothing glyph X center {cx} not aligned with {center_x} in {dens}"
+        assert abs(cy - center_y) <= 2.0, f"Nothing glyph Y center {cy} not aligned with {center_y} in {dens}"
+
+
 def test_fdroid_workflow_has_large_file_filter():
     with open(FDROID_PATH, "r", encoding="utf-8") as f:
         fdroid = f.read()
