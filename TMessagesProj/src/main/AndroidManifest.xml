@@ -1389,8 +1389,6 @@
             android:name="miui.continuity.policy"
             android:value="5" />
 
-        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
-
     </application>
 
 </manifest>

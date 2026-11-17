@@ -153,7 +153,7 @@ public class LauncherIconController {
         MOLTENGRAM_YINYANG("MoltenGramYinYangIcon", R.drawable.moltengram_yinyang_icon_background,
                 0, R.string.AppIconMoltenGramYinYang, IconGroup.MOLTENGRAM, "@moltenst4r", "Harmonious yin-yang balance", 0xFFFFFFFF),
         MOLTENGRAM_RAGE("MoltenGramRageIcon", R.drawable.moltengram_rage_icon_background,
-                0, R.string.AppIconMoltenGramRage, IconGroup.MOLTENGRAM, "@moltenst4r", "Fiery crimson plane on dark textured concrete", 0xFFD32F2F),
+                0, R.string.AppIconMoltenGramRage, IconGroup.MOLTENGRAM, "@moltenst4r", "Fiery crimson plane on dark textured concrete", 0xFFD32F2F, false),
         MOLTENGRAM_AERO("MoltenGramAeroIcon", R.drawable.moltengram_aero_icon_background,
                 0, R.string.AppIconMoltenGramAero, IconGroup.MOLTENGRAM, "@moltenst4r", "Frutiger Aero sky, bubble and classic cursor", 0xFF0078D7),
         MOLTENGRAM_STONE("MoltenGramStoneIcon", R.drawable.moltengram_stone_icon_background,
