@@ -101,4 +101,7 @@ def test_fdroid_workflow_has_large_file_filter():
     with open(FDROID_PATH, "r", encoding="utf-8") as f:
         fdroid = f.read()
 
+    assert "nonstandardwebroot: true" in fdroid, "fdroid.yml must set nonstandardwebroot: true"
+    assert "mirrors:" in fdroid, "fdroid.yml must configure download mirror"
+    assert "https://github.com/MoltenSt4r/MoltenGram/releases/download" in fdroid
     assert "find deploy/ -type f -size +95M -exec rm" in fdroid, "fdroid.yml must filter files >= 95M before git push"
