@@ -21,7 +21,8 @@ public class LauncherIconController {
         "org.telegram.messenger.MoltenGramHalloweenIcon",
         "org.telegram.messenger.MoltenGramKraftIcon",
         "org.telegram.messenger.MoltenGramHoloIcon",
-        "org.telegram.messenger.MoltenGramNeonIcon"
+        "org.telegram.messenger.MoltenGramNeonIcon",
+        "org.telegram.messenger.MoltenGramDottedIcon"
     };
 
     public static void tryFixLauncherIconIfNeeded() {
@@ -116,8 +117,6 @@ public class LauncherIconController {
                 0, R.string.AppIconMoltenGramBurning, IconGroup.MOLTENGRAM, "@moltenst4r", "Blazing fiery inferno", 0xFFFF5722),
         MOLTENGRAM_ANOTHERCHANCE("MoltenGramAnotherChanceIcon", R.drawable.moltengram_anotherchance_icon_background,
                 0, R.string.AppIconMoltenGramAnotherChance, IconGroup.MOLTENGRAM, "@moltenst4r", "Another chance renewal", 0xFF00897B),
-        MOLTENGRAM_DOTTED("MoltenGramDottedIcon", R.drawable.moltengram_dotted_icon_background,
-                0, R.string.AppIconMoltenGramDotted, IconGroup.MOLTENGRAM, "@moltenst4r", "Nothing OS glyph dot matrix", 0xFFFFFFFF),
         MOLTENGRAM_CINEMA("MoltenGramCinemaIcon", R.drawable.moltengram_cinema_icon_background,
                 0, R.string.AppIconMoltenGramCinema, IconGroup.MOLTENGRAM, "@moltenst4r", "Cinema movie tape style", 0xFF9A9B8A),
         MOLTENGRAM_SUNRISE("MoltenGramSunriseIcon", R.drawable.moltengram_sunrise_icon_background,

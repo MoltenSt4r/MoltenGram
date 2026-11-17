@@ -151,6 +151,8 @@ jobs:
           repo_name: "MoltenGram F-Droid Repository"
           repo_description: "Official F-Droid repository for MoltenGram"
           archive_older: 0
+          mirrors:
+            - "https://github.com/MoltenSt4r/MoltenGram/releases/download/$TAG"
           keystore: keystore.p12
           keystorepass: android
           repo_keyalias: moltengram
@@ -210,6 +212,12 @@ jobs:
           mkdir -p deploy/fdroid
           cp -r fdroid_ws/repo deploy/fdroid/
           touch deploy/.nojekyll deploy/fdroid/.nojekyll
+
+          # GitHub enforces a 100 MB hard file size limit on git pushes.
+          # The release APK is ~107 MB, which caused 'Push to gh-pages' to fail with pre-receive hook declined.
+          # Remove files >= 95 MB from the git deploy directory so git push to gh-pages succeeds.
+          # F-Droid clients will download the APK directly from the GitHub Release mirror configured in config.yml.
+          find deploy/ -type f -size +95M -exec rm -v {} +
 
           cat > deploy/robots.txt << 'EOF'
           User-agent: *
