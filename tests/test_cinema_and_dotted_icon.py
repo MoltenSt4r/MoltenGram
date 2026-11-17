@@ -38,10 +38,27 @@ def test_cinema_icon_declared_in_code_and_manifest():
     with open(LIC_PATH, "r", encoding="utf-8") as f:
         lic = f.read()
     assert "MOLTENGRAM_CINEMA" in lic, "MOLTENGRAM_CINEMA must be declared in LauncherIconController"
+    # Ensure MOLTENGRAM_RAGE has hasBleed=true (default) and not false
+    rage_match = re.search(r'MOLTENGRAM_RAGE\([^)]+\)', lic)
+    assert rage_match is not None, "MOLTENGRAM_RAGE must be declared in LauncherIconController"
+    assert "false" not in rage_match.group(0), "MOLTENGRAM_RAGE must not set hasBleed=false"
 
     with open(MANIFEST_PATH, "r", encoding="utf-8") as f:
         manifest = f.read()
     assert "MoltenGramCinemaIcon" in manifest, "MoltenGramCinemaIcon must be declared in AndroidManifest"
+
+
+def test_rage_icon_assets_no_mirrored_edges():
+    for dens, bg_sz, _ in DENSITIES:
+        bg_file = os.path.join(RES_DIR, f"drawable-{dens}", "moltengram_rage_icon_background.png")
+        assert os.path.exists(bg_file)
+        im = Image.open(bg_file).convert("RGB")
+        w, h = im.size
+        for y in range(h):
+            for x in range(w):
+                if x < 10 or x >= w - 10 or y < 10 or y >= h - 10:
+                    r, g, b = im.getpixel((x, y))
+                    assert not (r > 100 and r > g + 30 and r > b + 30), f"Edge red pixel found in {dens} at ({x},{y})"
 
 
 def test_cinema_icon_assets_exist_and_centered():
@@ -80,10 +97,8 @@ def test_cinema_icon_assets_exist_and_centered():
         assert abs(cy - center_y) <= 2.0, f"Glyph Y center {cy} not aligned with canvas center {center_y} in {dens}"
 
 
-def test_fdroid_workflow_has_mirrors_and_large_file_filter():
+def test_fdroid_workflow_has_large_file_filter():
     with open(FDROID_PATH, "r", encoding="utf-8") as f:
         fdroid = f.read()
 
-    assert "mirrors:" in fdroid, "fdroid.yml must configure download mirror"
-    assert "https://github.com/MoltenSt4r/MoltenGram/releases/download" in fdroid
     assert "find deploy/ -type f -size +95M -exec rm" in fdroid, "fdroid.yml must filter files >= 95M before git push"

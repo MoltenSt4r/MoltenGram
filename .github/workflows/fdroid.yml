@@ -151,8 +151,6 @@ jobs:
           repo_name: "MoltenGram F-Droid Repository"
           repo_description: "Official F-Droid repository for MoltenGram"
           archive_older: 0
-          mirrors:
-            - "https://github.com/MoltenSt4r/MoltenGram/releases/download/$TAG"
           keystore: keystore.p12
           keystorepass: android
           repo_keyalias: moltengram
