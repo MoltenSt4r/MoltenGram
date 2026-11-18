@@ -248,4 +248,8 @@
 <string name="OEAppearancePlayerMediaSeekbarStyle">Вид линии медиаползунка</string>
 <string name="OEAppearancePlayerMediaSeekbarIndicator">Индикатор медиаползунка</string>
 <string name="OEPlayerSeekbarIndicatorNone">Без всего</string>
+<string name="OEAppearanceSongrecFetchCover">Подставлять обложки</string>
+<string name="OEAppearanceSongrecFetchCoverDesc">Автоматически находить и подставлять обложки альбомов для треков с помощью SongRec</string>
+<string name="OEAppearanceSongrecBackgroundRecognition">Фоновое распознавание треков</string>
+<string name="OEAppearanceSongrecBackgroundRecognitionDesc">Распознавать трек сразу при воспроизведении в фоне, чтобы обложка и текст были готовы при открытии плеера</string>
 </resources>

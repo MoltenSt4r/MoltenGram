@@ -1457,6 +1457,34 @@ object AppearanceConfig {
     }
 
     @JvmField
+    val songrecFetchCover =
+        addConfig("OEAppearanceSongrecFetchCover", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun songrecFetchCover(): Boolean {
+        ensureLoaded()
+        return songrecFetchCover.Bool()
+    }
+
+    @JvmField
+    val lyricsSongrecCover = songrecFetchCover
+
+    @JvmStatic
+    fun lyricsSongrecCover(): Boolean {
+        return songrecFetchCover()
+    }
+
+    @JvmField
+    val songrecBackgroundRecognition =
+        addConfig("OEAppearanceSongrecBackgroundRecognition", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun songrecBackgroundRecognition(): Boolean {
+        ensureLoaded()
+        return songrecBackgroundRecognition.Bool()
+    }
+
+    @JvmField
     val profileMusicCard =
         addConfig("OEAppearanceProfileMusicCard", ConfigItem.configTypeBool, true)
 

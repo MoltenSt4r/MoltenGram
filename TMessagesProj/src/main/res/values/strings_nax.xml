@@ -453,4 +453,8 @@
     <string name="md3_avatar_shape_custom">Customized</string>
     <string name="media_group_carousel">Media Albums as Carousel</string>
     <string name="media_group_carousel_desc">Display grouped photos and videos in chats as a horizontal Material Design 3 carousel.</string>
+    <string name="OEAppearanceSongrecFetchCover">Fetch album art</string>
+    <string name="OEAppearanceSongrecFetchCoverDesc">Automatically find and apply album art to tracks using SongRec recognition</string>
+    <string name="OEAppearanceSongrecBackgroundRecognition">Background song recognition</string>
+    <string name="OEAppearanceSongrecBackgroundRecognitionDesc">Recognize tracks automatically in the background during playback so covers and lyrics are ready when opening the player</string>
 </resources>

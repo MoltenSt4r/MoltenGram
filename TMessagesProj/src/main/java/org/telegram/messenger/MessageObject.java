@@ -12102,7 +12102,16 @@ public class MessageObject {
         return audioPlayerDuration;
     }
 
+    public String customArtworkUrl;
+
+    public void setCustomArtworkUrl(String url) {
+        this.customArtworkUrl = url;
+    }
+
     public String getArtworkUrl(boolean small) {
+        if (!TextUtils.isEmpty(customArtworkUrl)) {
+            return customArtworkUrl;
+        }
         return getArtworkUrl(getDocument(), small);
     }
 

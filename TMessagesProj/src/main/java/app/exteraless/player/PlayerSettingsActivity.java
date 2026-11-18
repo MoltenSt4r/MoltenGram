@@ -84,6 +84,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsHeaderRow;
     private int lyricsPreviewRow;
     private int lyricsAudioRecognitionRow;
+    private int songrecFetchCoverRow;
+    private int songrecBackgroundRecognitionRow;
     private int lyricsExperimentalRow;
     private int lyricsSourcesRow;
     private int lyricsPriorityRow;
@@ -140,6 +142,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
         lyricsAudioRecognitionRow = addRow("lyricsAudioRecognition");
+        songrecFetchCoverRow = addRow("songrecFetchCover");
+        songrecBackgroundRecognitionRow = addRow("songrecBackgroundRecognition");
         lyricsExperimentalRow = addRow("lyricsExperimental");
         lyricsSourcesRow = addRow("lyricsSources");
         lyricsPriorityRow = addRow("lyricsPriority");
@@ -247,6 +251,18 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         } else if (position == lyricsAudioRecognitionRow) {
             boolean nextVal = !AppearanceConfig.playerLyricsAudioRecognition();
             AppearanceConfig.playerLyricsAudioRecognition.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == songrecFetchCoverRow) {
+            boolean nextVal = !AppearanceConfig.songrecFetchCover();
+            AppearanceConfig.songrecFetchCover.setConfigBool(nextVal);
+            if (view instanceof TextCheckCell) {
+                ((TextCheckCell) view).setChecked(nextVal);
+            }
+        } else if (position == songrecBackgroundRecognitionRow) {
+            boolean nextVal = !AppearanceConfig.songrecBackgroundRecognition();
+            AppearanceConfig.songrecBackgroundRecognition.setConfigBool(nextVal);
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(nextVal);
             }
@@ -431,7 +447,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == seekbarWavyRow || position == miniPlayerWavyRow || position == chatMediaSeekbarRow || position == classicPlayerSeekbarRow
                     || position == pauseOnMuteRow || position == resumeOnBluetoothRow
-                    || position == lyricsAudioRecognitionRow || position == lyricsExperimentalRow
+                    || position == lyricsAudioRecognitionRow || position == songrecFetchCoverRow || position == songrecBackgroundRecognitionRow || position == lyricsExperimentalRow
                     || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
             } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
@@ -500,6 +516,10 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setTextAndCheck("Возобновлять при подключении Bluetooth", AppearanceConfig.playerResumeOnBluetooth(), true);
                 } else if (position == lyricsAudioRecognitionRow) {
                     cell.setTextAndValueAndCheck(getString(R.string.OEAppearancePlayerLyricsAudioRecognition), getString(R.string.OEAppearancePlayerLyricsAudioRecognitionDesc), AppearanceConfig.playerLyricsAudioRecognition(), true, true);
+                } else if (position == songrecFetchCoverRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceSongrecFetchCover), getString(R.string.OEAppearanceSongrecFetchCoverDesc), AppearanceConfig.songrecFetchCover(), true, true);
+                } else if (position == songrecBackgroundRecognitionRow) {
+                    cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceSongrecBackgroundRecognition), getString(R.string.OEAppearanceSongrecBackgroundRecognitionDesc), AppearanceConfig.songrecBackgroundRecognition(), true, true);
                 } else if (position == lyricsExperimentalRow) {
                     cell.setTextAndCheck(getString(R.string.OEAppearancePlayerLyricsExperimental), AppearanceConfig.playerLyricsExperimental(), true);
                 } else if (position == lyricsTranslateRow) {

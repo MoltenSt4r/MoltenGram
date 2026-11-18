@@ -438,4 +438,8 @@
     <string name="md3_avatar_shape_custom">Настроено</string>
     <string name="media_group_carousel">Альбомы медиа как карусель</string>
     <string name="media_group_carousel_desc">Отображать сгруппированные фото и видео в чатах в виде горизонтальной карусели Material Design 3.</string>
+    <string name="OEAppearanceSongrecFetchCover">Подставлять обложки</string>
+    <string name="OEAppearanceSongrecFetchCoverDesc">Автоматически находить и подставлять обложки альбомов для треков с помощью SongRec</string>
+    <string name="OEAppearanceSongrecBackgroundRecognition">Фоновое распознавание треков</string>
+    <string name="OEAppearanceSongrecBackgroundRecognitionDesc">Распознавать трек сразу при воспроизведении в фоне, чтобы обложка и текст были готовы при открытии плеера</string>
 </resources>

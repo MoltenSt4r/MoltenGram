@@ -188,7 +188,35 @@ public final class PlayerArt {
         return info != null ? info.getCover() : null;
     }
 
+    private static final LruCache<String, String> songrecCovers = new LruCache<>(64);
+
+    public static void setSongrecCover(MessageObject messageObject, String coverUrl) {
+        if (messageObject == null || TextUtils.isEmpty(coverUrl)) {
+            return;
+        }
+        String key = key(messageObject);
+        if (key != null) {
+            songrecCovers.put(key, coverUrl);
+        }
+        messageObject.setCustomArtworkUrl(coverUrl);
+    }
+
+    public static String getSongrecCover(MessageObject messageObject) {
+        if (messageObject == null) {
+            return null;
+        }
+        if (!TextUtils.isEmpty(messageObject.customArtworkUrl)) {
+            return messageObject.customArtworkUrl;
+        }
+        String key = key(messageObject);
+        return key != null ? songrecCovers.get(key) : null;
+    }
+
     public static ImageLocation thumbLocation(MessageObject messageObject) {
+        String songrec = getSongrecCover(messageObject);
+        if (!TextUtils.isEmpty(songrec)) {
+            return ImageLocation.getForPath(songrec);
+        }
         TLRPC.Document document = messageObject.getDocument();
         TLRPC.PhotoSize thumb = document != null ? FileLoader.getClosestPhotoSizeWithSize(document.thumbs, 360) : null;
         if (!(thumb instanceof TLRPC.TL_photoSize) && !(thumb instanceof TLRPC.TL_photoSizeProgressive)) {
@@ -205,7 +233,11 @@ public final class PlayerArt {
     }
 
     public static ImageLocation fullLocation(MessageObject messageObject) {
-        String url = messageObject.getArtworkUrl(false);
+        String songrec = getSongrecCover(messageObject);
+        if (!TextUtils.isEmpty(songrec)) {
+            return ImageLocation.getForPath(songrec);
+        }
+        String url = messageObject != null ? messageObject.getArtworkUrl(false) : null;
         return TextUtils.isEmpty(url) ? null : ImageLocation.getForPath(url);
     }
 

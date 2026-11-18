@@ -419,11 +419,19 @@ public final class OnlineLyrics {
         });
     }
 
+    public static void prefetch(Query query) {
+        if (query == null) return;
+        fetch(query, (lyrics, status) -> { });
+    }
+
     // SongRec audio recognition (powered by Shazam discovery engine)
     private static Found requestSongRec(Query q) {
         if (!TextUtils.isEmpty(q.filePath) && new java.io.File(q.filePath).exists()) {
             SongRecognizer.Result r = SongRecognizer.recognize(q.filePath);
             if (r != null) {
+                if (app.exteraless.appearance.AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(r.coverUrl)) {
+                    SongRecognizer.downloadAndCacheCover(r.coverUrl);
+                }
                 Query rq = new Query(r.artist, r.title, null, q.duration);
                 Found f = null;
                 try { f = requestLrclib(rq); } catch (Exception ignore) { }
@@ -471,6 +479,20 @@ public final class OnlineLyrics {
 
                 String recognizedTitle = track.optString("title");
                 String recognizedArtist = track.optString("subtitle");
+                JSONObject images = track.optJSONObject("images");
+                String coverUrl = null;
+                if (images != null) {
+                    if (images.has("coverarthq")) {
+                        coverUrl = images.optString("coverarthq");
+                    } else if (images.has("coverart")) {
+                        coverUrl = images.optString("coverart");
+                    } else if (images.has("background")) {
+                        coverUrl = images.optString("background");
+                    }
+                }
+                if (app.exteraless.appearance.AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(coverUrl)) {
+                    SongRecognizer.downloadAndCacheCover(coverUrl);
+                }
 
                 // Only require strict match when both title and artist are given in query.
                 // If query is missing artist or looks like a file name, trust the top SongRec recognition hit!

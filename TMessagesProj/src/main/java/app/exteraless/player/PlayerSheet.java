@@ -75,7 +75,11 @@ import org.telegram.ui.LaunchActivity;
 import java.text.DecimalFormat;
 import java.text.DecimalFormatSymbols;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Locale;
+import java.util.Map;
+import java.util.Set;
 
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.Md3AvatarShapesActivity;
@@ -1238,6 +1242,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.messagePlayingPlayStateChanged) {
             updatePlayState(true);
             updateProgress();
+            if (current != null && MediaController.getInstance().isPlayingMessage(current)) {
+                triggerBackgroundRecognition(current);
+            }
         } else if (id == NotificationCenter.messagePlayingProgressDidChanged) {
             updateProgress();
         } else if (id == NotificationCenter.audioInfoLoaded) {
@@ -1249,6 +1256,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     lyricsKey = null;
                     loadLyrics();
                 }
+                triggerBackgroundRecognition(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {
             MessageObject mo = current;
@@ -1259,6 +1267,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     lyricsKey = null;
                     loadLyrics();
                 }
+                triggerBackgroundRecognition(mo);
             }
         } else if (id == NotificationCenter.musicIdsLoaded) {
             updateLike(true);
@@ -1301,6 +1310,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 loadLyrics();
             }
         }
+        triggerBackgroundRecognition(mo);
         updateHeader();
         updateLike(animated);
         updateModes(animated);
@@ -2327,7 +2337,126 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         root.invalidate();
     }
 
+    private static final Map<String, OnlineLyrics.Query> recognizedQueries = new HashMap<>();
+    private final Set<String> pendingSongRec = new HashSet<>();
+
+    private void triggerBackgroundRecognition(MessageObject mo) {
+        if (mo == null || !AppearanceConfig.songrecBackgroundRecognition()) {
+            return;
+        }
+        String key = PlayerArt.key(mo);
+        if (key == null || recognizedQueries.containsKey(key)) {
+            return;
+        }
+        synchronized (pendingSongRec) {
+            if (pendingSongRec.contains(key)) {
+                return;
+            }
+            pendingSongRec.add(key);
+        }
+
+        Utilities.globalQueue.postRunnable(() -> {
+            try {
+                File localFile = null;
+                if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
+                    File f = new File(mo.messageOwner.attachPath);
+                    if (f.exists()) localFile = f;
+                }
+                if (localFile == null || !localFile.exists()) {
+                    if (mo.messageOwner != null) {
+                        File f = FileLoader.getInstance(mo.currentAccount).getPathToMessage(mo.messageOwner);
+                        if (f != null && f.exists()) localFile = f;
+                    }
+                }
+                if (localFile == null || !localFile.exists()) {
+                    if (mo.getDocument() != null) {
+                        File f = FileLoader.getInstance(mo.currentAccount).getPathToAttach(mo.getDocument(), true);
+                        if (f != null && f.exists()) localFile = f;
+                    }
+                }
+
+                if (localFile == null || !localFile.exists()) {
+                    synchronized (pendingSongRec) {
+                        pendingSongRec.remove(key);
+                    }
+                    return;
+                }
+
+                String rawArtist = mo.getMusicAuthor(false);
+                String rawTitle = mo.getMusicTitle(false);
+                boolean bogusArtist = TextUtils.isEmpty(rawArtist) || OnlineLyrics.isBogusArtist(rawArtist);
+                boolean genericTitle = TextUtils.isEmpty(rawTitle) || isGenericTrackTitle(rawTitle);
+
+                SongRecognizer.Result result = SongRecognizer.recognize(localFile.getAbsolutePath());
+                if (result == null) {
+                    synchronized (pendingSongRec) {
+                        pendingSongRec.remove(key);
+                    }
+                    return;
+                }
+
+                OnlineLyrics.Query recognizedQ = new OnlineLyrics.Query(result.artist, result.title, null, (int) Math.round(mo.getDuration()));
+                recognizedQ.filePath = localFile.getAbsolutePath();
+                recognizedQueries.put(key, recognizedQ);
+
+                // 1. Pre-fetch lyrics with recognized artist and title into OnlineLyrics cache
+                OnlineLyrics.fetch(recognizedQ, (lyrics, status) -> {
+                    if (lyrics != null) {
+                        AndroidUtilities.runOnUIThread(() -> {
+                            if (TextUtils.equals(currentKey, key) && lyricsMode && (currentLyrics == null || lyricsView.getState() != LyricsView.STATE_LYRICS)) {
+                                showLyrics(lyrics);
+                            }
+                        });
+                    }
+                });
+
+                // 2. If songrecFetchCover is enabled, set recognized cover art on player's album art view / MessageObject
+                if (AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(result.coverUrl)) {
+                    File coverFile = SongRecognizer.downloadAndCacheCover(result.coverUrl);
+                    String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : result.coverUrl;
+                    PlayerArt.setSongrecCover(mo, coverPath);
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (TextUtils.equals(currentKey, key)) {
+                            cover.setImage(coverPath, null, null);
+                            smallCover.setImage(coverPath, null, null);
+                        }
+                    });
+                }
+
+                // If track had bogus artist or generic title, update header views
+                if (bogusArtist || genericTitle) {
+                    AndroidUtilities.runOnUIThread(() -> {
+                        if (TextUtils.equals(currentKey, key)) {
+                            if (!TextUtils.isEmpty(result.title)) {
+                                titleView.setText(result.title);
+                                smallTitle.setText(result.title);
+                            }
+                            if (!TextUtils.isEmpty(result.artist)) {
+                                artistView.setText(result.artist);
+                                smallArtist.setText(result.artist);
+                            }
+                        }
+                    });
+                }
+            } catch (Throwable e) {
+                FileLog.e(e);
+            } finally {
+                synchronized (pendingSongRec) {
+                    pendingSongRec.remove(key);
+                }
+            }
+        });
+    }
+
     private OnlineLyrics.Query query(MessageObject mo) {
+        if (mo == null) {
+            return new OnlineLyrics.Query(null, null, null, 0);
+        }
+        String key = PlayerArt.key(mo);
+        OnlineLyrics.Query recognized = key != null ? recognizedQueries.get(key) : null;
+        if (recognized != null && recognized.valid()) {
+            return recognized;
+        }
         String album = null;
         String artist = mo.getMusicAuthor(false);
         String title = mo.getMusicTitle(false);

@@ -229,7 +229,8 @@ public class CoverImage extends FrameLayout {
             }
         }
 
-        String key = PlayerArt.key(messageObject) + (file != null ? ":f" : "");
+        String songrec = PlayerArt.getSongrecCover(messageObject);
+        String key = PlayerArt.key(messageObject) + (file != null ? ":f" : "") + (!TextUtils.isEmpty(songrec) ? ":s" + songrec.hashCode() : "");
         if (key != null && key.equals(currentKey)) {
             message = messageObject;
             return;
@@ -238,7 +239,10 @@ public class CoverImage extends FrameLayout {
         message = messageObject;
 
         boolean hasCover = false;
-        if (file != null) {
+        if (!TextUtils.isEmpty(songrec)) {
+            imageView.setImage(songrec, null, null);
+            hasCover = true;
+        } else if (file != null) {
             imageView.setImageBitmap(file);
             onBitmap(file);
             hasCover = true;
