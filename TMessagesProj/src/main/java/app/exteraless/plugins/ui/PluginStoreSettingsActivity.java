@@ -3,25 +3,42 @@ package app.exteraless.plugins.ui;
 import static org.telegram.messenger.LocaleController.getString;
 
 import android.content.Context;
+import android.graphics.PorterDuff;
+import android.graphics.PorterDuffColorFilter;
 import android.text.InputType;
+import android.text.TextUtils;
 import android.util.TypedValue;
+import android.view.Gravity;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.EditText;
 import android.widget.FrameLayout;
+import android.widget.ImageView;
+import android.widget.LinearLayout;
+import android.widget.TextView;
 
+import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.RecyclerView;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ContactsController;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.R;
+import org.telegram.tgnet.ConnectionsManager;
+import org.telegram.tgnet.TLObject;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.TextCell;
 import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
+import org.telegram.ui.Components.AvatarDrawable;
+import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.ui.Components.LayoutHelper;
+import org.telegram.ui.Components.RecyclerListView;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -255,10 +272,146 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
+    public static class ChannelSourceCell extends FrameLayout {
+        private final BackupImageView avatarImageView;
+        private final AvatarDrawable avatarDrawable;
+        private final TextView nameTextView;
+        private final TextView statusTextView;
+        private final ImageView optionsImageView;
+        private boolean needDivider;
+        private String currentUsername;
+
+        public ChannelSourceCell(Context context) {
+            super(context);
+            setLayoutParams(new RecyclerView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(58)));
+            setBackground(Theme.getSelectorDrawable(false));
+
+            avatarImageView = new BackupImageView(context);
+            avatarImageView.setRoundRadius(AndroidUtilities.dp(20));
+            addView(avatarImageView, LayoutHelper.createFrame(40, 40, Gravity.LEFT | Gravity.CENTER_VERTICAL, 16, 0, 0, 0));
+
+            avatarDrawable = new AvatarDrawable();
+            avatarDrawable.setScaleSize(0.85f);
+
+            LinearLayout textCol = new LinearLayout(context);
+            textCol.setOrientation(LinearLayout.VERTICAL);
+            textCol.setGravity(Gravity.CENTER_VERTICAL);
+            addView(textCol, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL, 70, 0, 48, 0));
+
+            nameTextView = new TextView(context);
+            nameTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+            nameTextView.setTypeface(AndroidUtilities.bold());
+            nameTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
+            nameTextView.setSingleLine(true);
+            nameTextView.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(nameTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+            statusTextView = new TextView(context);
+            statusTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+            statusTextView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText));
+            statusTextView.setSingleLine(true);
+            statusTextView.setEllipsize(TextUtils.TruncateAt.END);
+            textCol.addView(statusTextView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
+
+            optionsImageView = new ImageView(context);
+            optionsImageView.setImageResource(R.drawable.ic_ab_other);
+            optionsImageView.setScaleType(ImageView.ScaleType.CENTER);
+            optionsImageView.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayIcon), PorterDuff.Mode.MULTIPLY));
+            addView(optionsImageView, LayoutHelper.createFrame(40, 40, Gravity.RIGHT | Gravity.CENTER_VERTICAL, 0, 0, 8, 0));
+
+            setWillNotDraw(false);
+        }
+
+        public void setChannel(String rawUsername, boolean isCustom, boolean divider, int currentAccount, Runnable onResolved) {
+            this.needDivider = divider;
+            String clean = rawUsername != null ? rawUsername.trim() : "";
+            if (clean.startsWith("@")) clean = clean.substring(1);
+            this.currentUsername = clean;
+
+            TLObject obj = MessagesController.getInstance(currentAccount).getUserOrChat(clean);
+            if (obj == null) {
+                for (TLRPC.Chat c : MessagesController.getInstance(currentAccount).getChats().values()) {
+                    if (c != null && clean.equalsIgnoreCase(c.username)) {
+                        obj = c;
+                        break;
+                    }
+                }
+            }
+
+            if (obj instanceof TLRPC.Chat) {
+                TLRPC.Chat chat = (TLRPC.Chat) obj;
+                nameTextView.setText(chat.title != null ? chat.title : "@" + clean);
+                statusTextView.setText("@" + clean + (isCustom ? " • " + LocaleController.getString(R.string.Custom) : ""));
+                avatarDrawable.setInfo(currentAccount, chat);
+                avatarImageView.setForUserOrChat(chat, avatarDrawable);
+            } else if (obj instanceof TLRPC.User) {
+                TLRPC.User user = (TLRPC.User) obj;
+                nameTextView.setText(ContactsController.formatName(user.first_name, user.last_name));
+                statusTextView.setText("@" + clean + (isCustom ? " • " + LocaleController.getString(R.string.Custom) : ""));
+                avatarDrawable.setInfo(currentAccount, user);
+                avatarImageView.setForUserOrChat(user, avatarDrawable);
+            } else {
+                nameTextView.setText("@" + clean);
+                statusTextView.setText(isCustom ? LocaleController.getString(R.string.Custom) : LocaleController.getString(R.string.Channel));
+                avatarDrawable.setInfo(5, clean, null);
+                avatarImageView.setImageDrawable(avatarDrawable);
+
+                final String requestUsername = clean;
+                TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                req.username = requestUsername;
+                ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                    if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                        TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
+                        MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                        MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                        if (requestUsername.equalsIgnoreCase(this.currentUsername)) {
+                            if (!peer.chats.isEmpty()) {
+                                TLRPC.Chat resolvedChat = peer.chats.get(0);
+                                nameTextView.setText(resolvedChat.title != null ? resolvedChat.title : "@" + requestUsername);
+                                avatarDrawable.setInfo(currentAccount, resolvedChat);
+                                avatarImageView.setForUserOrChat(resolvedChat, avatarDrawable);
+                            } else if (!peer.users.isEmpty()) {
+                                TLRPC.User resolvedUser = peer.users.get(0);
+                                nameTextView.setText(ContactsController.formatName(resolvedUser.first_name, resolvedUser.last_name));
+                                avatarDrawable.setInfo(currentAccount, resolvedUser);
+                                avatarImageView.setForUserOrChat(resolvedUser, avatarDrawable);
+                            }
+                        }
+                        if (onResolved != null) {
+                            onResolved.run();
+                        }
+                    }
+                }));
+            }
+            invalidate();
+        }
+
+        @Override
+        protected void onDraw(android.graphics.Canvas canvas) {
+            super.onDraw(canvas);
+            if (needDivider) {
+                canvas.drawLine(AndroidUtilities.dp(70), getMeasuredHeight() - 1, getMeasuredWidth(), getMeasuredHeight() - 1, Theme.dividerPaint);
+            }
+        }
+    }
+
     private class ListAdapter extends BaseListAdapter {
+
+        private static final int TYPE_CHANNEL_SOURCE = 999;
 
         public ListAdapter(Context context) {
             super(context);
+        }
+
+        @NonNull
+        @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(@NonNull ViewGroup parent, int viewType) {
+            if (viewType == TYPE_CHANNEL_SOURCE) {
+                ChannelSourceCell cell = new ChannelSourceCell(mContext);
+                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                return new RecyclerListView.Holder(cell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
@@ -269,7 +422,9 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_CHECK;
             } else if (position == pageSizeRow) {
                 return TYPE_SETTINGS;
-            } else if (position == addChannelRow || (position >= channelsStartRow && position < channelsEndRow) || position == clearCacheRow) {
+            } else if (position >= channelsStartRow && position < channelsEndRow) {
+                return TYPE_CHANNEL_SOURCE;
+            } else if (position == addChannelRow || position == clearCacheRow) {
                 return TYPE_TEXT;
             } else if (position == infoRow) {
                 return TYPE_INFO_PRIVACY;
@@ -282,6 +437,21 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
+                case TYPE_CHANNEL_SOURCE: {
+                    ChannelSourceCell cell = (ChannelSourceCell) holder.itemView;
+                    int idx = position - channelsStartRow;
+                    if (idx >= 0 && idx < currentChannels.size()) {
+                        String ch = currentChannels.get(idx);
+                        boolean isCustom = config.isCustomChannel(ch);
+                        boolean divider = (idx != currentChannels.size() - 1);
+                        cell.setChannel(ch, isCustom, divider, currentAccount, () -> {
+                            if (listAdapter != null) {
+                                listAdapter.notifyItemChanged(position);
+                            }
+                        });
+                    }
+                    break;
+                }
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == searchHeaderRow) {
@@ -297,13 +467,6 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
                     TextCell cell = (TextCell) holder.itemView;
                     if (position == addChannelRow) {
                         cell.setTextAndIcon(getString(R.string.PluginsStoreSettingsAddChannel), R.drawable.msg_add, true);
-                    } else if (position >= channelsStartRow && position < channelsEndRow) {
-                        int idx = position - channelsStartRow;
-                        if (idx >= 0 && idx < currentChannels.size()) {
-                            String ch = currentChannels.get(idx);
-                            boolean isCustom = config.isCustomChannel(ch);
-                            cell.setTextAndValueAndIcon("@" + ch, isCustom ? getString(R.string.Custom) : null, R.drawable.msg_channel, idx != currentChannels.size() - 1);
-                        }
                     } else if (position == clearCacheRow) {
                         cell.setTextAndIcon(getString(R.string.PluginsStoreSettingsClearCache), R.drawable.msg_delete, false);
                     }

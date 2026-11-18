@@ -99,7 +99,7 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
         headerView.setOrientation(LinearLayout.VERTICAL);
         content.addView(headerView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
 
-        headerView.addView(createIcon(context, plugin),
+        headerView.addView(createIcon(context, plugin, file),
                 LayoutHelper.createLinear(72, 72, Gravity.CENTER_HORIZONTAL, 0, 22, 0, 0));
 
         TextView name = new TextView(context);
@@ -383,10 +383,11 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
      * появляется позже остального листа — это нормально и лучше, чем держать
      * лист закрытым до её приезда.
      */
-    private static android.view.View createIcon(Context context, Plugin plugin) {
+    private static android.view.View createIcon(Context context, Plugin plugin, File file) {
         FrameLayout frame = new FrameLayout(context);
         org.telegram.ui.Components.BackupImageView image =
                 new org.telegram.ui.Components.BackupImageView(context);
+        image.setRoundRadius(AndroidUtilities.dp(16));
         ImageView fallback = new ImageView(context);
         fallback.setScaleType(ImageView.ScaleType.FIT_CENTER);
         fallback.setImageResource(R.drawable.msg_plugins);
@@ -394,10 +395,27 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
                 Theme.getColor(Theme.key_windowBackgroundWhiteBlueIcon), PorterDuff.Mode.SRC_IN));
         frame.addView(fallback, LayoutHelper.createFrame(56, 56, Gravity.CENTER));
         frame.addView(image, LayoutHelper.createFrame(72, 72, Gravity.CENTER));
-        image.setVisibility(android.view.View.GONE);
-        // Наш значок стоит до тех пор, пока не приедет иконка плагина: она
-        // может и не приехать, а пустое место вместо неё — хуже заглушки.
-        PluginIcons.apply(image, plugin, () -> fallback.setVisibility(android.view.View.GONE));
+
+        if (plugin != null && file != null && file.exists()) {
+            if (TextUtils.isEmpty(plugin.icon) || (!plugin.icon.startsWith("/") && !plugin.icon.startsWith("http") && !plugin.icon.startsWith("emoji/"))) {
+                String extracted = PluginIcons.extractIconFromFile(file, plugin.icon);
+                if (!TextUtils.isEmpty(extracted)) {
+                    plugin.icon = extracted;
+                }
+            }
+        }
+
+        boolean applied = PluginIcons.apply(image, plugin, () -> {
+            image.setVisibility(android.view.View.VISIBLE);
+            fallback.setVisibility(android.view.View.GONE);
+        });
+        if (applied) {
+            image.setVisibility(android.view.View.VISIBLE);
+            fallback.setVisibility(android.view.View.GONE);
+        } else {
+            image.setVisibility(android.view.View.GONE);
+            fallback.setVisibility(android.view.View.VISIBLE);
+        }
         return frame;
     }
 

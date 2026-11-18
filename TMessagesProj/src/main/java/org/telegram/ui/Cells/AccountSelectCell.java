@@ -53,33 +53,43 @@ public class AccountSelectCell extends FrameLayout {
         avatarDrawable = new AvatarDrawable();
         avatarDrawable.setTextSize(dp(12));
 
-        imageView = new BackupImageView(context);
-        imageView.setRoundRadius(dp(18));
-        addView(imageView, LayoutHelper.createFrame(36, 36, Gravity.LEFT | Gravity.TOP, 10, 10, 0, 0));
-
-        textView = new SimpleTextView(context);
-        textView.setTextSize(15);
-        textView.setTypeface(AndroidUtilities.bold());
-        textView.setEllipsizeByGradient(true);
-        textView.setMaxLines(1);
-        textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
-
         if (hasInfo) {
-            addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 61, 7, 8, 0));
-            ThemeBind.textColor(textView, Theme.key_voipgroup_nameText);
+            imageView = new BackupImageView(context);
+            imageView.setRoundRadius(dp(20));
+            addView(imageView, LayoutHelper.createFrame(40, 40, Gravity.LEFT | Gravity.CENTER_VERTICAL, 14, 0, 0, 0));
+
+            textView = new SimpleTextView(context);
+            textView.setTextSize(12);
+            textView.setTypeface(AndroidUtilities.bold());
+            textView.setEllipsizeByGradient(true);
+            textView.setMaxLines(1);
+            textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+            addView(textView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 66, 10, 12, 0));
+            ThemeBind.textColor(textView, Theme.key_voipgroup_lastSeenText);
             textView.setText(LocaleController.getString(R.string.VoipGroupDisplayAs));
 
             infoTextView = new EmojiTextView(context);
-            ThemeBind.textColor(infoTextView, Theme.key_voipgroup_lastSeenText);
+            ThemeBind.textColor(infoTextView, Theme.key_voipgroup_nameText);
             infoTextView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            infoTextView.setTypeface(AndroidUtilities.bold());
             infoTextView.setLines(1);
             infoTextView.setMaxLines(1);
             infoTextView.setSingleLine(true);
             infoTextView.setMaxWidth(dp(320));
             infoTextView.setGravity(Gravity.LEFT | Gravity.TOP);
             infoTextView.setEllipsize(TextUtils.TruncateAt.END);
-            addView(infoTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 61, 27, 8, 0));
+            addView(infoTextView, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 66, 28, 12, 0));
         } else {
+            imageView = new BackupImageView(context);
+            imageView.setRoundRadius(dp(18));
+            addView(imageView, LayoutHelper.createFrame(36, 36, Gravity.LEFT | Gravity.TOP, 10, 10, 0, 0));
+
+            textView = new SimpleTextView(context);
+            textView.setTextSize(15);
+            textView.setTypeface(AndroidUtilities.bold());
+            textView.setEllipsizeByGradient(true);
+            textView.setMaxLines(1);
+            textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
             addView(textView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.LEFT | Gravity.TOP, 61, 0, 52, 0));
             ThemeBind.textColor(textView, Theme.key_actionBarDefaultSubmenuItem);
 
@@ -92,7 +102,7 @@ public class AccountSelectCell extends FrameLayout {
     }
 
     private int width() {
-        return (int) Math.max(dp(196), dp(61 + 8 + (checkImageView != null ? 50 : 0)) + Math.max(
+        return (int) Math.max(dp(200), dp(66 + 12 + (checkImageView != null ? 50 : 0)) + Math.max(
             textView.getTextPaint().measureText(textView.getText().toString()),
             (infoTextView != null ? infoTextView.getPaint().measureText(infoTextView.getText().toString()) : 0)
         ));
@@ -100,12 +110,13 @@ public class AccountSelectCell extends FrameLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        int height = infoTextView != null ? dp(58) : dp(56);
         if (checkImageView != null || infoTextView != null && getLayoutParams().width != LayoutHelper.WRAP_CONTENT) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         } else if (MeasureSpec.getMode(widthMeasureSpec) == MeasureSpec.AT_MOST) {
-            super.onMeasure(MeasureSpec.makeMeasureSpec(width(), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(MeasureSpec.makeMeasureSpec(width(), MeasureSpec.AT_MOST), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         } else {
-            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(dp(56), MeasureSpec.EXACTLY));
+            super.onMeasure(widthMeasureSpec, MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
         }
     }
 

@@ -419,6 +419,142 @@ def test_accept_decline_view_state_and_animation_safety():
     )
 
 
+def test_group_call_popup_menu_md3_card_container():
+    """Verify GroupCallActivity popup menu uses expressive Material Design 3 rounded card container."""
+    activity_path = os.path.join(UI_DIR, "GroupCallActivity.java")
+    assert os.path.isfile(activity_path), f"GroupCallActivity.java must exist at {activity_path}"
+    with open(activity_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Must define Md3PopupCardDrawable with radius 20dp-24dp
+    assert "class Md3PopupCardDrawable extends Drawable" in content, (
+        "GroupCallActivity must define Md3PopupCardDrawable for popup menu container"
+    )
+    assert "popupCardDrawable = new Md3PopupCardDrawable(0xFF232A33, 24);" in content or \
+           "Md3PopupCardDrawable" in content, (
+        "GroupCallActivity must instantiate Md3PopupCardDrawable with 24dp radius"
+    )
+    # Must set background drawable on popup layout
+    assert "popupLayout.setBackgroundDrawable(popupCardDrawable);" in content, (
+        "GroupCallActivity popupLayout must use Md3PopupCardDrawable"
+    )
+    # Must clip to 24dp outline
+    assert "popupLayout.setClipToOutline(true);" in content, (
+        "GroupCallActivity popupLayout must enable setClipToOutline(true)"
+    )
+    assert "outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), AndroidUtilities.dp(24));" in content, (
+        "GroupCallActivity popupLayout must define 24dp round rect outline provider"
+    )
+
+
+def test_group_call_profile_avatar_preview_card_styling():
+    """Verify AccountSelectCell and GroupCallActivity style profile avatar preview as MD3 card item."""
+    cell_path = os.path.join(UI_DIR, "Cells/AccountSelectCell.java")
+    activity_path = os.path.join(UI_DIR, "GroupCallActivity.java")
+    assert os.path.isfile(cell_path), f"AccountSelectCell.java must exist at {cell_path}"
+    with open(cell_path, "r", encoding="utf-8") as f:
+        cell_content = f.read()
+    with open(activity_path, "r", encoding="utf-8") as f:
+        act_content = f.read()
+
+    # AccountSelectCell must use 40x40 avatar with 20dp round radius
+    assert "imageView.setRoundRadius(dp(20));" in cell_content, (
+        "AccountSelectCell must use 20dp round radius for profile avatar"
+    )
+    assert "LayoutHelper.createFrame(40, 40, Gravity.LEFT | Gravity.CENTER_VERTICAL, 14, 0, 0, 0)" in cell_content, (
+        "AccountSelectCell must use 40x40 vertically centered avatar layout"
+    )
+    # AccountSelectCell must measure 58dp height for info layout
+    assert "dp(58)" in cell_content, (
+        "AccountSelectCell must measure 58dp height for info mode"
+    )
+    # GroupCallActivity must add item with 58dp height and 20dp rounded selector
+    assert "otherItem.addSubItem(user_item, accountSelectCell, LayoutHelper.WRAP_CONTENT, dp(58));" in act_content, (
+        "GroupCallActivity must add user_item with 58dp height"
+    )
+    assert "Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_voipgroup_listSelector), 20, 20, 12, 12)" in act_content, (
+        "GroupCallActivity must apply 20dp/12dp rounded selector to accountSelectCell"
+    )
+
+
+def test_group_call_popup_menu_items_expressive_typography_and_ripples():
+    """Verify popup menu items have bold expressive typography, tactile animation, and semantic colors."""
+    activity_path = os.path.join(UI_DIR, "GroupCallActivity.java")
+    with open(activity_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Subitems must use bold typography
+    assert "soundItem.getTextView().setTypeface(AndroidUtilities.bold());" in content, (
+        "soundItem must use bold typography"
+    )
+    assert "noiseItem.getTextView().setTypeface(AndroidUtilities.bold());" in content, (
+        "noiseItem must use bold typography"
+    )
+    assert "leaveItem.getTextView().setTypeface(AndroidUtilities.bold());" in content, (
+        "leaveItem must use bold typography"
+    )
+    # leaveItem must use semantic destructive red 0xFFF01D2C
+    assert "leaveItem.setColors(0xFFF01D2C, 0xFFF01D2C);" in content, (
+        "leaveItem must use semantic destructive red 0xFFF01D2C"
+    )
+    assert "leaveItem.updateSelectorBackground(false, true, 20);" in content, (
+        "leaveItem must use 20dp bottom rounded selector"
+    )
+    # Subtle MD3 divider
+    assert "soundItemDivider = otherItem.addDivider(0x14FFFFFF);" in content, (
+        "soundItemDivider must use subtle translucent 0x14FFFFFF color"
+    )
+
+
+def test_group_call_user_options_menu_md3_card_containers():
+    """Verify GroupCallActivity replaces legacy popup_fixed_alert with 20dp MD3 rounded cards."""
+    activity_path = os.path.join(UI_DIR, "GroupCallActivity.java")
+    with open(activity_path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # User options volume and buttons layouts must use 20dp rounded rect drawables
+    assert "Theme.createRoundRectDrawable(dp(20), color)" in content, (
+        "GroupCallActivity user options menu must use Theme.createRoundRectDrawable(dp(20), color)"
+    )
+
+
+def test_live_stream_viewer_pill_and_action_controls_md3():
+    """Verify viewer pill ('В ЭФИРЕ / 1 зритель') and controls have expressive MD3 pill styling."""
+    stories_path = os.path.join(UI_DIR, "Stories/PeerStoriesView.java")
+    group_call_path = os.path.join(UI_DIR, "GroupCallActivity.java")
+    sheet_path = os.path.join(UI_DIR, "GroupCallSheet.java")
+
+    assert os.path.isfile(stories_path), f"PeerStoriesView.java must exist at {stories_path}"
+    assert os.path.isfile(sheet_path), f"GroupCallSheet.java must exist at {sheet_path}"
+
+    with open(stories_path, "r", encoding="utf-8") as f:
+        stories_content = f.read()
+    with open(group_call_path, "r", encoding="utf-8") as f:
+        gc_content = f.read()
+    with open(sheet_path, "r", encoding="utf-8") as f:
+        sheet_content = f.read()
+
+    # PeerStoriesView live badge must use 0xFFEE3E4C semantic red and pill capsule
+    assert "bg.setColor(0xFFEE3E4C);" in stories_content, (
+        "PeerStoriesView LiveStoryBadge must use semantic red 0xFFEE3E4C"
+    )
+    assert "rect.height() / 2f" in stories_content, (
+        "PeerStoriesView LiveStoryBadge must render capsule pill shape"
+    )
+    # GroupCallActivity live label must use bold typography and 12dp pill radius
+    assert "liveLabelTextView.setTypeface(AndroidUtilities.bold());" in gc_content, (
+        "GroupCallActivity liveLabelTextView must use bold typography"
+    )
+    assert "canvas.drawRoundRect(rect, dp(12), dp(12), liveLabelPaint);" in gc_content, (
+        "GroupCallActivity liveLabelTextView must render 12dp pill shape"
+    )
+    # GroupCallSheet hero icon must use 24dp rounded squircle
+    assert "Theme.createRoundRectDrawable(dp(24), Theme.getColor(Theme.key_featuredStickers_addButton" in sheet_content, (
+        "GroupCallSheet must use 24dp rounded MD3 container for hero icon"
+    )
+
+
+
 
 
 

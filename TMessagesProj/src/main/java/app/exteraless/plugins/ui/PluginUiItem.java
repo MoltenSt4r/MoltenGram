@@ -38,6 +38,14 @@ final class PluginUiItem extends UItem {
         return item;
     }
 
+    static PluginUiItem check(int id, CharSequence text, android.graphics.drawable.Drawable drawable) {
+        PluginUiItem item = new PluginUiItem(UniversalAdapter.VIEW_TYPE_CHECK);
+        item.id = id;
+        item.text = text;
+        item.drawable = drawable;
+        return item;
+    }
+
     static UItem engineToggle(int id, CharSequence text, boolean checked) {
         return EngineToggleFactory.of(id, text, checked);
     }
@@ -67,6 +75,7 @@ final class PluginUiItem extends UItem {
         if (viewType == UniversalAdapter.VIEW_TYPE_CHECK) {
             return checked == item.checked
                     && iconResId == item.iconResId
+                    && java.util.Objects.equals(drawable, item.drawable)
                     && multiline == item.multiline
                     && TextUtils.equals(text, item.text)
                     && TextUtils.equals(textValue, item.textValue);

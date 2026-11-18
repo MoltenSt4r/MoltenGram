@@ -153,7 +153,7 @@ public class GroupCallSheet {
         linearLayout.setPadding(dp(14), 0, dp(14), dp(8));
 
         final FrameLayout imageBackgroundView = new FrameLayout(context);
-        ThemeBind.fillBackground(imageBackgroundView, Theme.createCircleDrawable(dp(80), Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)), ThemeBind.of(Theme.key_featuredStickers_addButton), resourcesProvider);
+        ThemeBind.fillBackground(imageBackgroundView, Theme.createRoundRectDrawable(dp(24), Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider)), ThemeBind.of(Theme.key_featuredStickers_addButton), resourcesProvider);
         final ImageView imageView = new ImageView(context);
         imageView.setImageResource(R.drawable.filled_calls_users);
         imageBackgroundView.addView(imageView, LayoutHelper.createFrame(56, 56, Gravity.CENTER));

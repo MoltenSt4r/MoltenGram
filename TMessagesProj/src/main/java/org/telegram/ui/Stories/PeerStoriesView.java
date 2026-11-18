@@ -5268,15 +5268,15 @@ public class PeerStoriesView extends SizeNotifierFrameLayout implements Notifica
                         private final Text text = new Text(getString(R.string.LiveStoryBadge), 9, AndroidUtilities.bold());
                         @Override
                         public int getSize(@NonNull Paint paint, CharSequence charSequence, int i, int i1, @Nullable Paint.FontMetricsInt fontMetricsInt) {
-                            return (int) (text.getWidth() + dp(12));
+                            return (int) (text.getWidth() + dp(14));
                         }
                         @Override
                         public void draw(@NonNull Canvas canvas, CharSequence text, int start, int end, float x, int top, int y, int bottom, @NonNull Paint paint) {
                             final float cy = (top + bottom) / 2f + dp(1.33f);
-                            rect.set(x, cy - dp(7), x + this.text.getWidth() + dp(12), cy + dp(7));
-                            bg.setColor(0xFFF7424E);
+                            rect.set(x, cy - dp(8), x + this.text.getWidth() + dp(14), cy + dp(8));
+                            bg.setColor(0xFFEE3E4C);
                             canvas.drawRoundRect(rect, rect.height() / 2f, rect.height() / 2f, bg);
-                            this.text.draw(canvas, dp(6) + x, cy, 0xFFFFFFFF, 1.0f);
+                            this.text.draw(canvas, dp(7) + x, cy, 0xFFFFFFFF, 1.0f);
                         }
                     }, 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     sb.append("  ");
