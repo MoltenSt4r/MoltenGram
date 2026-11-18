@@ -102,8 +102,6 @@ def test_player_settings_activity_songrec_toggles():
 def test_localization_strings_songrec():
     """Verify localization resources in English and Russian for SongRec settings."""
     files_to_check = [
-        (os.path.join(RES_DIR, "values/strings_nax.xml"), "Fetch album art", "Background song recognition"),
-        (os.path.join(RES_DIR, "values-ru-rRU/strings_nax.xml"), "Подставлять обложки", "Фоновое распознавание треков"),
         (os.path.join(RES_DIR, "values/strings_oe_player.xml"), "Fetch album art", "Background song recognition"),
         (os.path.join(RES_DIR, "values-ru-rRU/strings_oe_player.xml"), "Подставлять обложки", "Фоновое распознавание треков"),
     ]
