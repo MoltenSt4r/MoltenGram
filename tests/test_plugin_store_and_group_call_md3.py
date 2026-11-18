@@ -115,9 +115,9 @@ def test_plugin_store_activity_background_updates_and_install():
         "PluginStoreActivity must have executeBackgroundInstall worker"
     )
 
-    # Verify actionButton in StorePluginCell calls installInBackground on update
-    assert "installInBackground(p," in content, (
-        "StorePluginCell actionButton must invoke installInBackground directly on update"
+    # Verify installInBackground is invoked on install/update
+    assert "installInBackground(plugin," in content or "installInBackground(p," in content, (
+        "PluginStoreActivity must invoke installInBackground on install/update"
     )
 
 

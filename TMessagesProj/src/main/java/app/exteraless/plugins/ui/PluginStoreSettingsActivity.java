@@ -341,18 +341,18 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
             if (obj instanceof TLRPC.Chat) {
                 TLRPC.Chat chat = (TLRPC.Chat) obj;
                 nameTextView.setText(chat.title != null ? chat.title : "@" + clean);
-                statusTextView.setText("@" + clean + (isCustom ? " • " + LocaleController.getString(R.string.Custom) : ""));
+                statusTextView.setText("@" + clean);
                 avatarDrawable.setInfo(currentAccount, chat);
                 avatarImageView.setForUserOrChat(chat, avatarDrawable);
             } else if (obj instanceof TLRPC.User) {
                 TLRPC.User user = (TLRPC.User) obj;
                 nameTextView.setText(ContactsController.formatName(user.first_name, user.last_name));
-                statusTextView.setText("@" + clean + (isCustom ? " • " + LocaleController.getString(R.string.Custom) : ""));
+                statusTextView.setText("@" + clean);
                 avatarDrawable.setInfo(currentAccount, user);
                 avatarImageView.setForUserOrChat(user, avatarDrawable);
             } else {
                 nameTextView.setText("@" + clean);
-                statusTextView.setText(isCustom ? LocaleController.getString(R.string.Custom) : LocaleController.getString(R.string.Channel));
+                statusTextView.setText("@" + clean);
                 avatarDrawable.setInfo(5, clean, null);
                 avatarImageView.setImageDrawable(avatarDrawable);
 

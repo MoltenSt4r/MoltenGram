@@ -388,7 +388,7 @@ public class PluginStoreActivity extends BaseFragment {
     private final StorePluginDelegate pluginDelegate = new StorePluginDelegate() {
         @Override
         public void onInstallClick(StorePlugin plugin) {
-            downloadAndInstall(plugin);
+            installInBackground(plugin, null);
         }
 
         @Override
@@ -3246,7 +3246,7 @@ public class PluginStoreActivity extends BaseFragment {
                 if (plugin.document != null && plugin.document.thumbs != null && !plugin.document.thumbs.isEmpty()) {
                     TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(plugin.document.thumbs, 120);
                     if (thumbSize != null) {
-                        iconView.setImage(ImageLocation.getForDocument(thumbSize, plugin.document), "50_50", categoryFallback, null, plugin.document);
+                        iconView.setImage(ImageLocation.getForDocument(thumbSize, plugin.document), "50_50", categoryFallback, plugin.document);
                         iconView.setVisibility(VISIBLE);
                         defaultIconView.setVisibility(GONE);
                         iconApplied = true;
@@ -3380,12 +3380,7 @@ public class PluginStoreActivity extends BaseFragment {
                     actionButton.setText(getString(R.string.PluginsStoreUpdate));
                     actionButton.setEnabled(true);
                     actionButton.setOnClickListener(v -> {
-                        actionButton.setText(getString(R.string.PluginsStoreDownloading));
-                        actionButton.setEnabled(false);
-                        installInBackground(p, () -> {
-                            actionButton.setEnabled(true);
-                            updateRows();
-                        });
+                        if (delegate != null) delegate.onInstallClick(p);
                     });
                 } else {
                     btnBg.setColor(Theme.getColor(Theme.key_windowBackgroundGray));
