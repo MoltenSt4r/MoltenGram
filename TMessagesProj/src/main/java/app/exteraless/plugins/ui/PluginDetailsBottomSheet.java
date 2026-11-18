@@ -579,7 +579,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         if (!iconApplied && target.document != null && target.document.thumbs != null && !target.document.thumbs.isEmpty()) {
             TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(target.document.thumbs, 120);
             if (thumbSize != null) {
-                iconView.setImage(ImageLocation.getForDocument(thumbSize, target.document), "64_64", categoryFallback, null, target.document);
+                iconView.setImage(ImageLocation.getForDocument(thumbSize, target.document), "64_64", categoryFallback, target.document);
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
                 iconApplied = true;

@@ -2640,6 +2640,22 @@ public class PluginStoreActivity extends BaseFragment {
         openTelegramLinkSafely(target, plugin, true);
     }
 
+    public void downloadAndInstall(StorePlugin plugin) {
+        if (plugin == null) return;
+        persistPluginIcon(plugin);
+
+        StorePlugin docCandidate = findCandidateWithDocument(plugin);
+        if (docCandidate != null && docCandidate.document != null) {
+            downloadDocumentAndInstall(plugin, docCandidate);
+            return;
+        }
+
+        String target = !TextUtils.isEmpty(plugin.channelPost) ? plugin.channelPost :
+                (!TextUtils.isEmpty(plugin.link) ? plugin.link :
+                        (!TextUtils.isEmpty(plugin.sourceChannel) ? plugin.sourceChannel : plugin.author));
+        openTelegramLinkSafely(target, plugin, true);
+    }
+
     public void installInBackground(StorePlugin plugin, Runnable onComplete) {
         if (plugin == null) {
             if (onComplete != null) onComplete.run();
@@ -2779,8 +2795,8 @@ public class PluginStoreActivity extends BaseFragment {
                                     String fName = FileLoader.getDocumentFileName(doc);
                                     if (fName != null && (fName.endsWith(".plugin") || fName.endsWith(".py") || fName.endsWith(".eaf") || fName.endsWith(".elyx"))) {
                                         StorePlugin sp = new StorePlugin();
-                                        sp.id = extractPluginId(fName, msg.message);
-                                        sp.name = extractPluginName(fName, msg.message);
+                                        sp.id = fName.replaceAll("\\.[^.]+$", "").toLowerCase(Locale.ROOT).replace(" ", "_");
+                                        sp.name = cleanPluginName(fName);
                                         sp.version = extractVersion(fName, msg.message);
                                         sp.document = doc;
                                         sp.message = msg;
@@ -3202,7 +3218,7 @@ public class PluginStoreActivity extends BaseFragment {
             if (!isAttachedToWindow()) {
                 return;
             }
-            if (isIconLoaded && iconView.getDrawable() != null) {
+            if (isIconLoaded && iconView.getImageReceiver().getDrawable() != null) {
                 return;
             }
 
@@ -3393,7 +3409,7 @@ public class PluginStoreActivity extends BaseFragment {
             }
 
             if (isAttachedToWindow()) {
-                if (pluginChanged || !isIconLoaded || (p != null && !TextUtils.isEmpty(p.icon) && iconView.getDrawable() == null)) {
+                if (pluginChanged || !isIconLoaded || (p != null && !TextUtils.isEmpty(p.icon) && iconView.getImageReceiver().getDrawable() == null)) {
                     isIconLoaded = false;
                     loadIcon();
                 }
