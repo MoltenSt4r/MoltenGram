@@ -22,6 +22,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.telegram.messenger.FileLog;
 import org.webrtc.ContextUtils;
 import org.webrtc.Logging;
 

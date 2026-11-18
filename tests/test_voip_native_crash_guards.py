@@ -150,3 +150,17 @@ def test_video_capturer_device_handler_null_guard():
     )
 
 
+def test_tor_strings_neutral_compliance():
+    """Verify Tor strings do not contain censorship circumvention / обход блокировок claims."""
+    ru_path = os.path.join(REPO_ROOT, "TMessagesProj/src/main/res/values-ru-rRU/strings_nax.xml")
+    en_path = os.path.join(REPO_ROOT, "TMessagesProj/src/main/res/values/strings_nax.xml")
+    for path in (ru_path, en_path):
+        assert os.path.isfile(path), f"File not found: {path}"
+        with open(path, "r", encoding="utf-8") as f:
+            content = f.read()
+        assert "обхода блокировок" not in content, f"{path} must not contain 'обхода блокировок'"
+        assert "обход блокировок" not in content, f"{path} must not contain 'обход блокировок'"
+        assert "censorship circumvention" not in content, f"{path} must not contain 'censorship circumvention'"
+
+
+

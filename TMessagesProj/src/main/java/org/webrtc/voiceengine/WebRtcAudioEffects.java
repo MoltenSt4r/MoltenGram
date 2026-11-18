@@ -19,6 +19,7 @@ import androidx.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.SharedConfig;
 import org.webrtc.Logging;
 
