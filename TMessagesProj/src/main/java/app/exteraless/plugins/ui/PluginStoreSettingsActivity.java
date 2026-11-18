@@ -420,6 +420,7 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
             String clean = rawUsername != null ? rawUsername.trim() : "";
             if (clean.startsWith("@")) clean = clean.substring(1);
             this.currentUsername = clean;
+            final String finalClean = clean;
 
             long numericId = 0;
             try {
@@ -451,7 +452,7 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
                                 TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
                                 MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
                                 MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
-                                if (!peer.chats.isEmpty() && clean.equals(currentUsername)) {
+                                if (!peer.chats.isEmpty() && finalClean.equals(currentUsername)) {
                                     TLRPC.Chat resolvedChat = peer.chats.get(0);
                                     nameTextView.setText(resolvedChat.title != null ? resolvedChat.title : (knownTitle != null ? knownTitle : ("ID: " + finalNumericId)));
                                     statusTextView.setText(resolvedChat.username != null ? "@" + resolvedChat.username : (knownUsername != null ? "@" + knownUsername : ("ID: " + finalNumericId)));
