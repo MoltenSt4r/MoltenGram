@@ -4801,14 +4801,19 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 			}
 			if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && communicationDeviceListener == null) {
 				communicationDeviceListener = device -> {
-					bluetoothScoConnecting = false;
-					bluetoothScoActive = VoipAudioManager.isBluetoothDevice(device);
-					if (bluetoothScoActive) {
-						needSwitchToBluetoothAfterScoActivates = false;
-						currentBluetoothDeviceName = device.getProductName().toString();
-					}
-					for (StateListener l : stateListeners) {
-						l.onAudioSettingsChanged();
+					try {
+						bluetoothScoConnecting = false;
+						bluetoothScoActive = VoipAudioManager.isBluetoothDevice(device);
+						if (bluetoothScoActive && device != null) {
+							needSwitchToBluetoothAfterScoActivates = false;
+							CharSequence pName = device.getProductName();
+							currentBluetoothDeviceName = pName != null ? pName.toString() : null;
+						}
+						for (StateListener l : stateListeners) {
+							l.onAudioSettingsChanged();
+						}
+					} catch (Throwable e) {
+						FileLog.e(e);
 					}
 				};
 				am.addOnCommunicationDeviceChangedListener(AndroidUtilities::runOnUIThread, communicationDeviceListener);
@@ -4834,10 +4839,14 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 					bldr.setSmallIcon(R.drawable.call);
 				}
 				foregroundStarted = true;
-				if (Build.VERSION.SDK_INT >= 33) {
-					startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build(), lastForegroundType = getCurrentForegroundType());
-				} else {
-					startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build());
+				try {
+					if (Build.VERSION.SDK_INT >= 33) {
+						startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build(), lastForegroundType = getCurrentForegroundType());
+					} else {
+						startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build());
+					}
+				} catch (Throwable e) {
+					FileLog.e(e);
 				}
 			} else {
 				NotificationsController.checkOtherNotificationsChannel();
@@ -4846,10 +4855,14 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 						.setShowWhen(false);
 				bldr.setSmallIcon(R.drawable.call);
 				foregroundStarted = true;
-				if (Build.VERSION.SDK_INT >= 33) {
-					startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build(), lastForegroundType = getCurrentForegroundType());
-				} else {
-					startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build());
+				try {
+					if (Build.VERSION.SDK_INT >= 33) {
+						startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build(), lastForegroundType = getCurrentForegroundType());
+					} else {
+						startForeground(foregroundId = ID_ONGOING_CALL_NOTIFICATION, foregroundNotification = bldr.build());
+					}
+				} catch (Throwable e) {
+					FileLog.e(e);
 				}
 			}
 		}
@@ -4863,7 +4876,8 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 				if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
 					AudioDeviceInfo device = VoipAudioManager.get().findBluetoothDevice();
 					if (device != null) {
-						currentBluetoothDeviceName = device.getProductName().toString();
+						CharSequence pName = device.getProductName();
+						currentBluetoothDeviceName = pName != null ? pName.toString() : null;
 					}
 					updateBluetoothHeadsetState(device != null);
 					for (StateListener l : stateListeners) {
@@ -5454,10 +5468,14 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 			incomingNotification = builder.getNotification();
 		}
 		foregroundStarted = true;
-		if (Build.VERSION.SDK_INT >= 33) {
-			startForeground(foregroundId = ID_INCOMING_CALL_NOTIFICATION, foregroundNotification = incomingNotification, lastForegroundType = getCurrentForegroundType());
-		} else {
-			startForeground(foregroundId = ID_INCOMING_CALL_NOTIFICATION, foregroundNotification = incomingNotification);
+		try {
+			if (Build.VERSION.SDK_INT >= 33) {
+				startForeground(foregroundId = ID_INCOMING_CALL_NOTIFICATION, foregroundNotification = incomingNotification, lastForegroundType = getCurrentForegroundType());
+			} else {
+				startForeground(foregroundId = ID_INCOMING_CALL_NOTIFICATION, foregroundNotification = incomingNotification);
+			}
+		} catch (Throwable e) {
+			FileLog.e(e);
 		}
 		startRingtoneAndVibration();
 	}
@@ -5481,6 +5499,9 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 			);
 		}
 		int type = 0;
+		if (Build.VERSION.SDK_INT >= 30) {
+			type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_PHONE_CALL;
+		}
 		if (context.checkSelfPermission(Manifest.permission.CAMERA) == PackageManager.PERMISSION_GRANTED) {
 			type |= ServiceInfo.FOREGROUND_SERVICE_TYPE_CAMERA;
 		}
@@ -5495,13 +5516,17 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 	}
 
 	public void updateCurrentForegroundType() {
-		if (lastForegroundType != getCurrentForegroundType() && foregroundStarted) {
-			stopForeground(true);
-			if (Build.VERSION.SDK_INT >= 33) {
-				startForeground(foregroundId, foregroundNotification, lastForegroundType = getCurrentForegroundType());
-			} else {
-				startForeground(foregroundId, foregroundNotification);
+		try {
+			int currentType = getCurrentForegroundType();
+			if (lastForegroundType != currentType && foregroundStarted) {
+				if (Build.VERSION.SDK_INT >= 33) {
+					startForeground(foregroundId, foregroundNotification, lastForegroundType = currentType);
+				} else {
+					startForeground(foregroundId, foregroundNotification);
+				}
 			}
+		} catch (Throwable e) {
+			FileLog.e(e);
 		}
 	}
 

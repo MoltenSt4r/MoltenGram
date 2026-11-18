@@ -2,16 +2,19 @@ package org.telegram.messenger.voip;
 
 import static android.content.Context.AUDIO_SERVICE;
 
+import android.content.Context;
 import android.media.AudioDeviceInfo;
 import android.media.AudioManager;
 import android.os.Build;
-
 
 import androidx.annotation.RequiresApi;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.Utilities;
+
+import java.util.List;
 
 public class VoipAudioManager {
 
@@ -40,7 +43,11 @@ public class VoipAudioManager {
             return;
         }
         Utilities.globalQueue.postRunnable(() -> {
-            audioManager.setSpeakerphoneOn(on);
+            try {
+                audioManager.setSpeakerphoneOn(on);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
         });
     }
 
@@ -50,11 +57,16 @@ public class VoipAudioManager {
      */
     public boolean isSpeakerphoneOn() {
         if (isSpeakerphoneOn == null) {
-            AudioManager audioManager = getAudioManager();
-            if (audioManager == null) {
+            try {
+                AudioManager audioManager = getAudioManager();
+                if (audioManager == null) {
+                    return false;
+                }
+                return audioManager.isSpeakerphoneOn();
+            } catch (Throwable e) {
+                FileLog.e(e);
                 return false;
             }
-            return audioManager.isSpeakerphoneOn();
         }
         return isSpeakerphoneOn;
     }
@@ -68,72 +80,127 @@ public class VoipAudioManager {
         if (device == null) {
             return false;
         }
-        int type = device.getType();
-        if (type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
-            return true;
+        try {
+            int type = device.getType();
+            if (type == AudioDeviceInfo.TYPE_BLUETOOTH_SCO) {
+                return true;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && type == AudioDeviceInfo.TYPE_HEARING_AID) {
+                return true;
+            }
+            return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER);
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return false;
         }
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P && type == AudioDeviceInfo.TYPE_HEARING_AID) {
-            return true;
-        }
-        return Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && (type == AudioDeviceInfo.TYPE_BLE_HEADSET || type == AudioDeviceInfo.TYPE_BLE_SPEAKER);
     }
 
     public AudioDeviceInfo findBluetoothDevice() {
         if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S) {
             return null;
         }
-        for (AudioDeviceInfo device : getAudioManager().getAvailableCommunicationDevices()) {
-            if (isBluetoothDevice(device)) {
-                return device;
+        try {
+            AudioManager am = getAudioManager();
+            if (am == null) {
+                return null;
             }
+            List<AudioDeviceInfo> devices = am.getAvailableCommunicationDevices();
+            if (devices != null) {
+                for (AudioDeviceInfo device : devices) {
+                    if (isBluetoothDevice(device)) {
+                        return device;
+                    }
+                }
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
         return null;
     }
 
     public boolean isBluetoothOn() {
-        AudioManager audioManager = getAudioManager();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            return isBluetoothDevice(audioManager.getCommunicationDevice());
+        try {
+            AudioManager audioManager = getAudioManager();
+            if (audioManager == null) {
+                return false;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                return isBluetoothDevice(audioManager.getCommunicationDevice());
+            }
+            return audioManager.isBluetoothScoOn();
+        } catch (Throwable e) {
+            FileLog.e(e);
+            return false;
         }
-        return audioManager.isBluetoothScoOn();
     }
 
     public void startBluetooth() {
-        final AudioManager audioManager = getAudioManager();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            AudioDeviceInfo device = findBluetoothDevice();
-            if (device == null) {
+        try {
+            final AudioManager audioManager = getAudioManager();
+            if (audioManager == null) {
                 return;
             }
-            isSpeakerphoneOn = false;
-            Utilities.globalQueue.postRunnable(() -> audioManager.setCommunicationDevice(device));
-        } else {
-            audioManager.startBluetoothSco();
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                AudioDeviceInfo device = findBluetoothDevice();
+                if (device == null) {
+                    return;
+                }
+                isSpeakerphoneOn = false;
+                Utilities.globalQueue.postRunnable(() -> {
+                    try {
+                        audioManager.setCommunicationDevice(device);
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                });
+            } else {
+                audioManager.startBluetoothSco();
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
     }
 
     public void stopBluetooth() {
-        final AudioManager audioManager = getAudioManager();
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            Utilities.globalQueue.postRunnable(() -> {
-                if (isBluetoothDevice(audioManager.getCommunicationDevice())) {
-                    audioManager.clearCommunicationDevice();
-                }
-            });
-        } else {
-            audioManager.stopBluetoothSco();
+        try {
+            final AudioManager audioManager = getAudioManager();
+            if (audioManager == null) {
+                return;
+            }
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                Utilities.globalQueue.postRunnable(() -> {
+                    try {
+                        if (isBluetoothDevice(audioManager.getCommunicationDevice())) {
+                            audioManager.clearCommunicationDevice();
+                        }
+                    } catch (Throwable e) {
+                        FileLog.e(e);
+                    }
+                });
+            } else {
+                audioManager.stopBluetoothSco();
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
     }
 
     public void setBluetoothOn(boolean on) {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            if (on) {
-                startBluetooth();
+        try {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                if (on) {
+                    startBluetooth();
+                } else {
+                    stopBluetooth();
+                }
             } else {
-                stopBluetooth();
+                AudioManager am = getAudioManager();
+                if (am != null) {
+                    am.setBluetoothScoOn(on);
+                }
             }
-        } else {
-            getAudioManager().setBluetoothScoOn(on);
+        } catch (Throwable e) {
+            FileLog.e(e);
         }
     }
 
@@ -145,12 +212,16 @@ public class VoipAudioManager {
                 return;
             }
             boolean isBluetoothOn = isBluetoothOn();
-            boolean isSpeakerphoneOn = audioManager.isSpeakerphoneOn();
+            boolean isSpeakerphoneOn = isSpeakerphoneOn();
             AndroidUtilities.runOnUIThread(() -> onDone.run(isBluetoothOn, isSpeakerphoneOn));
         });
     }
 
     private AudioManager getAudioManager() {
-        return (AudioManager) ApplicationLoader.applicationContext.getSystemService(AUDIO_SERVICE);
+        Context context = ApplicationLoader.applicationContext;
+        if (context == null) {
+            return null;
+        }
+        return (AudioManager) context.getSystemService(AUDIO_SERVICE);
     }
 }

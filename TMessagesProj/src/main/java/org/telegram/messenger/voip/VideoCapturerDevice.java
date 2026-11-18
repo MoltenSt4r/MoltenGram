@@ -375,9 +375,18 @@ public class VideoCapturerDevice {
 
     public static EglBase getEglBase() {
         if (eglBase == null) {
-            eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+            try {
+                eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
         }
         return eglBase;
+    }
+
+    public static EglBase.Context getEglBaseContext() {
+        EglBase base = getEglBase();
+        return base != null ? base.getEglBaseContext() : null;
     }
 
     private static native CapturerObserver nativeGetJavaVideoCapturerObserver(long ptr);
