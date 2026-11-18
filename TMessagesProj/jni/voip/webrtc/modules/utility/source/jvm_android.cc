@@ -221,8 +221,9 @@ std::string JNIEnvironment::JavaToStdString(const jstring& j_string) {
 // static
 void JVM::Initialize(JavaVM* jvm) {
   RTC_LOG(LS_INFO) << "JVM::Initialize";
-  RTC_CHECK(!g_jvm);
-  g_jvm = new JVM(jvm);
+  if (!g_jvm) {
+    g_jvm = new JVM(jvm);
+  }
 }
 
 void JVM::Initialize(JavaVM* jvm, jobject context) {

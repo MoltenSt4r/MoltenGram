@@ -4981,7 +4981,7 @@ public class VoIPService extends Service implements SensorEventListener, AudioMa
 
 		if (Build.VERSION.SDK_INT >= 21) {
 			WebRtcAudioTrack.setAudioTrackUsageAttribute(hasRtmpStream() ? AudioAttributes.USAGE_MEDIA : AudioAttributes.USAGE_VOICE_COMMUNICATION);
-			WebRtcAudioTrack.setAudioStreamType(hasRtmpStream() ? AudioManager.USE_DEFAULT_STREAM_TYPE : AudioManager.STREAM_VOICE_CALL);
+			WebRtcAudioTrack.setAudioStreamType(hasRtmpStream() ? AudioManager.STREAM_MUSIC : AudioManager.STREAM_VOICE_CALL);
 		}
 
 		needPlayEndSound = true;
