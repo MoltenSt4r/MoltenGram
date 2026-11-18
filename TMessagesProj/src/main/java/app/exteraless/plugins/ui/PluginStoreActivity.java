@@ -388,7 +388,7 @@ public class PluginStoreActivity extends BaseFragment {
     private final StorePluginDelegate pluginDelegate = new StorePluginDelegate() {
         @Override
         public void onInstallClick(StorePlugin plugin) {
-            installInBackground(plugin, null);
+            downloadAndInstall(plugin);
         }
 
         @Override
@@ -801,31 +801,82 @@ public class PluginStoreActivity extends BaseFragment {
 
     private void resolveKnownChannels() {
         List<String> sourceChannels = config.getSourceChannels();
-        for (String username : sourceChannels) {
-            boolean already = false;
-            for (TLRPC.Chat c : activeSourceChats) {
-                if (c != null && c.username != null && c.username.equalsIgnoreCase(username)) {
-                    already = true;
-                    break;
-                }
-            }
-            if (!already) {
-                TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
-                req.username = username;
-                ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> {
-                    if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
-                        TLRPC.TL_contacts_resolvedPeer r = (TLRPC.TL_contacts_resolvedPeer) res;
-                        if (r != null && !r.chats.isEmpty()) {
-                            TLRPC.Chat c = r.chats.get(0);
-                            AndroidUtilities.runOnUIThread(() -> {
-                                if (!isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
-                                    activeSourceChats.add(c);
-                                    searchChatBatch(c, 0, null, null);
-                                }
-                            });
-                        }
+        for (String rawIdentifier : sourceChannels) {
+            if (TextUtils.isEmpty(rawIdentifier)) continue;
+            long parsedId = 0;
+            try {
+                parsedId = Long.parseLong(rawIdentifier.trim());
+            } catch (Exception ignored) {}
+
+            if (parsedId != 0) {
+                final long targetId = parsedId;
+                boolean already = false;
+                for (TLRPC.Chat c : activeSourceChats) {
+                    if (c != null && c.id == targetId) {
+                        already = true;
+                        break;
                     }
-                });
+                }
+                if (already) continue;
+
+                TLRPC.Chat cached = MessagesController.getInstance(currentAccount).getChat(targetId);
+                if (cached != null) {
+                    if (!isBlockedChannel(cached) && !containsChat(activeSourceChats, cached)) {
+                        activeSourceChats.add(cached);
+                        final TLRPC.Chat chatToSearch = cached;
+                        AndroidUtilities.runOnUIThread(() -> searchChatBatch(chatToSearch, 0, null, null));
+                    }
+                    continue;
+                }
+
+                String knownUsername = PluginStoreConfig.getKnownUsernameForId(targetId);
+                if (!TextUtils.isEmpty(knownUsername)) {
+                    TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                    req.username = knownUsername;
+                    ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> {
+                        if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                            TLRPC.TL_contacts_resolvedPeer r = (TLRPC.TL_contacts_resolvedPeer) res;
+                            if (r != null && !r.chats.isEmpty()) {
+                                TLRPC.Chat c = r.chats.get(0);
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    if (!isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
+                                        activeSourceChats.add(c);
+                                        searchChatBatch(c, 0, null, null);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
+            } else {
+                String username = rawIdentifier.trim();
+                if (username.startsWith("@")) username = username.substring(1);
+                final String finalUsername = username;
+                boolean already = false;
+                for (TLRPC.Chat c : activeSourceChats) {
+                    if (c != null && c.username != null && c.username.equalsIgnoreCase(finalUsername)) {
+                        already = true;
+                        break;
+                    }
+                }
+                if (!already) {
+                    TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                    req.username = finalUsername;
+                    ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> {
+                        if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                            TLRPC.TL_contacts_resolvedPeer r = (TLRPC.TL_contacts_resolvedPeer) res;
+                            if (r != null && !r.chats.isEmpty()) {
+                                TLRPC.Chat c = r.chats.get(0);
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    if (!isBlockedChannel(c) && !containsChat(activeSourceChats, c)) {
+                                        activeSourceChats.add(c);
+                                        searchChatBatch(c, 0, null, null);
+                                    }
+                                });
+                            }
+                        }
+                    });
+                }
             }
         }
     }
@@ -879,17 +930,6 @@ public class PluginStoreActivity extends BaseFragment {
                             sp.message = msg;
                             sp.chat = chat;
                             sp.icon = parseIconFromText(msg.message);
-                            if (TextUtils.isEmpty(sp.icon) && msg.entities != null) {
-                                for (TLRPC.MessageEntity ent : msg.entities) {
-                                    if (ent instanceof TLRPC.TL_messageEntityCustomEmoji) {
-                                        long docId = ((TLRPC.TL_messageEntityCustomEmoji) ent).document_id;
-                                        if (docId != 0) {
-                                            sp.icon = "emoji/" + docId;
-                                            break;
-                                        }
-                                    }
-                                }
-                            }
                             if (TextUtils.isEmpty(sp.icon)) {
                                 sp.icon = ApplicationLoader.applicationContext
                                         .getSharedPreferences(PluginsConstants.PREFS_NAME, Context.MODE_PRIVATE)
@@ -1655,17 +1695,6 @@ public class PluginStoreActivity extends BaseFragment {
         }
         if (changed) {
             scheduleUiRefresh();
-        }
-
-        if (config.isAutoUpdateEnabled()) {
-            for (StorePlugin np : newPlugins) {
-                if (np != null && np.isInstalled() && np.hasUpdate() && np.document != null) {
-                    if (!autoUpdatedPluginIds.contains(np.id)) {
-                        autoUpdatedPluginIds.add(np.id);
-                        installInBackground(np, null);
-                    }
-                }
-            }
         }
     }
 
@@ -2912,9 +2941,7 @@ public class PluginStoreActivity extends BaseFragment {
     public void onResume() {
         super.onResume();
         invalidateInstalledPluginsCache();
-        if (!activeSourceChats.isEmpty()) {
-            resolveKnownChannels();
-        }
+        resolveKnownChannels();
         if (chipsLayout != null && getContext() != null) {
             buildChips(getContext());
         }

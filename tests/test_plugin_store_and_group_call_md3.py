@@ -107,7 +107,7 @@ def test_plugin_store_activity_background_updates_and_install():
         "PluginStoreActivity must implement checkBackgroundUpdates"
     )
 
-    # Verify background install method exists and runs without blocking UI
+    # Verify background install worker exists
     assert "void installInBackground(StorePlugin plugin, Runnable onComplete)" in content, (
         "PluginStoreActivity must implement installInBackground"
     )
@@ -115,9 +115,9 @@ def test_plugin_store_activity_background_updates_and_install():
         "PluginStoreActivity must have executeBackgroundInstall worker"
     )
 
-    # Verify installInBackground is invoked on install/update
-    assert "installInBackground(plugin," in content or "installInBackground(p," in content, (
-        "PluginStoreActivity must invoke installInBackground on install/update"
+    # Verify interactive install prompts confirmation via downloadAndInstall rather than silent background install
+    assert "downloadAndInstall(plugin)" in content, (
+        "PluginStoreActivity must delegate onInstallClick to downloadAndInstall to prompt confirmation dialog"
     )
 
 
@@ -269,4 +269,153 @@ def test_archive_icon_auto_discovery_simulation():
             entry = zf.getEntry("assets/icon.png") if hasattr(zf, "getEntry") else zf.getinfo("assets/icon.png")
             assert entry is not None
             assert entry.file_size > 0
+
+
+def test_plugin_store_config_channel_binding_by_numeric_id():
+    """Verify PluginStoreConfig uses numeric IDs for default channels, defines known channel mappings, and migrates schema."""
+    path = os.path.join(PLUGINS_UI_DIR, "PluginStoreConfig.java")
+    assert os.path.isfile(path), f"PluginStoreConfig.java must exist at {path}"
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    expected_numeric_ids = [
+        "2349438816",
+        "3490813925",
+        "2329949330",
+        "2443058177",
+        "2467705421",
+        "2475313399",
+        "2521243181",
+        "2554450010",
+        "2618027830",
+        "2672610568",
+        "2782987927",
+        "2813564336"
+    ]
+
+    # Verify DEFAULT_CHANNELS contains all 12 numeric IDs
+    assert "public static final List<String> DEFAULT_CHANNELS" in content, (
+        "DEFAULT_CHANNELS list must be defined in PluginStoreConfig"
+    )
+    for ch_id in expected_numeric_ids:
+        assert f'"{ch_id}"' in content, f"DEFAULT_CHANNELS must include numeric ID {ch_id}"
+
+    # Verify KNOWN_CHANNEL_USERNAMES and KNOWN_CHANNEL_NAMES maps defined
+    assert "KNOWN_CHANNEL_USERNAMES" in content, "KNOWN_CHANNEL_USERNAMES map must be defined"
+    assert "KNOWN_CHANNEL_NAMES" in content, "KNOWN_CHANNEL_NAMES map must be defined"
+    assert "getKnownUsernameForId(long id)" in content or "getKnownUsernameForId" in content, (
+        "getKnownUsernameForId helper must be defined"
+    )
+    assert "getKnownTitleForId(long id)" in content or "getKnownTitleForId" in content, (
+        "getKnownTitleForId helper must be defined"
+    )
+    assert "getKnownIdForUsername(String username)" in content or "getKnownIdForUsername" in content, (
+        "getKnownIdForUsername helper must be defined"
+    )
+
+    # Verify schema version migration cleans legacy channels
+    assert 'prefs.getInt("channels_schema_version", 0) < 3' in content, (
+        "Schema migration must check channels_schema_version < 3"
+    )
+    assert 'putInt("channels_schema_version", 3)' in content, (
+        "Schema migration must advance channels_schema_version to 3"
+    )
+    assert 'clean.matches("\\\\d+")' in content or 'clean.matches("\\d+")' in content, (
+        "Schema migration must keep numeric IDs in custom_channels"
+    )
+
+
+def test_plugin_store_settings_numeric_id_support_and_resolution():
+    """Verify PluginStoreSettingsActivity resolves usernames to chat IDs, displays numeric channels, and handles options dialog."""
+    path = os.path.join(PLUGINS_UI_DIR, "PluginStoreSettingsActivity.java")
+    assert os.path.isfile(path), f"PluginStoreSettingsActivity.java must exist at {path}"
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Verify showAddChannelDialog resolves usernames to chat IDs and saves by ID
+    assert "showAddChannelDialog" in content, "showAddChannelDialog must exist"
+    assert "targetChatId = peer.chats.get(0).id" in content or "peer.chats.get(0).id" in content, (
+        "showAddChannelDialog must extract resolved chat ID"
+    )
+    assert "config.addSourceChannel(String.valueOf(targetChatId))" in content, (
+        "showAddChannelDialog must save resolved channel by numeric ID"
+    )
+    assert 'clean.matches("\\\\d+")' in content or 'clean.matches("\\d+")' in content, (
+        "showAddChannelDialog must support entering numeric ID directly"
+    )
+
+    # Verify ChannelSourceCell displays numeric channels and loads avatars via MessagesController or resolves known usernames
+    assert "Long.parseLong(clean)" in content or "numericId" in content, (
+        "ChannelSourceCell must parse numeric channel ID"
+    )
+    assert "MessagesController.getInstance(currentAccount).getChat(numericId)" in content, (
+        "ChannelSourceCell must check MessagesController for cached chat by numeric ID"
+    )
+    assert "PluginStoreConfig.getKnownUsernameForId(numericId)" in content, (
+        "ChannelSourceCell must look up known username by numeric ID"
+    )
+    assert "PluginStoreConfig.getKnownTitleForId(numericId)" in content, (
+        "ChannelSourceCell must look up known title by numeric ID"
+    )
+
+    # Verify showChannelOptionsDialog supports numeric IDs
+    assert "showChannelOptionsDialog" in content, "showChannelOptionsDialog must exist"
+    assert "Long.parseLong(channel.trim())" in content or "numericId = Long.parseLong" in content, (
+        "showChannelOptionsDialog must support parsing numeric channel ID"
+    )
+    assert "PluginStoreConfig.getKnownUsernameForId(numericId)" in content or "PluginStoreConfig.getKnownUsernameForId(targetChatId)" in content, (
+        "showChannelOptionsDialog must look up known username for numeric ID"
+    )
+
+
+def test_plugin_store_no_blind_custom_emoji_capture():
+    """Verify searchChatBatch in PluginStoreActivity has NO blind custom emoji capture (no emoji/ docId)."""
+    path = os.path.join(PLUGINS_UI_DIR, "PluginStoreActivity.java")
+    assert os.path.isfile(path), f"PluginStoreActivity.java must exist at {path}"
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Blind custom emoji capture sets sp.icon = "emoji/" + docId on any MessageEntityCustomEmoji
+    # This caused bullet points / chevrons to be captured as plugin icons.
+    assert 'sp.icon = "emoji/"' not in content and 'sp.icon = "emoji/" + docId' not in content, (
+        "PluginStoreActivity must NOT have blind custom emoji capture assigning bullet/chevron emojis as icons"
+    )
+    assert 'TL_messageEntityCustomEmoji' not in content, (
+        "PluginStoreActivity searchChatBatch must not blindly capture TL_messageEntityCustomEmoji"
+    )
+
+
+def test_plugin_store_restored_confirmation_dialog_and_no_silent_autoinstall():
+    """Verify pluginDelegate.onInstallClick prompts confirmation dialog and mergePlugins has no silent auto-install."""
+    path = os.path.join(PLUGINS_UI_DIR, "PluginStoreActivity.java")
+    assert os.path.isfile(path), f"PluginStoreActivity.java must exist at {path}"
+    with open(path, "r", encoding="utf-8") as f:
+        content = f.read()
+
+    # Verify pluginDelegate.onInstallClick calls downloadAndInstall(plugin), NOT silent installInBackground
+    assert "downloadAndInstall(plugin)" in content, (
+        "pluginDelegate.onInstallClick must call downloadAndInstall to prompt user confirmation dialog"
+    )
+
+    # Verify downloadAndInstall triggers confirmation dialog via showInstallDialog
+    assert "triggerInstallDialogForFile" in content, (
+        "downloadAndInstall must call triggerInstallDialogForFile"
+    )
+    assert "PluginsController.getInstance().showInstallDialog" in content, (
+        "triggerInstallDialogForFile must invoke PluginsController.showInstallDialog to present PluginInstallBottomSheet"
+    )
+
+    # Verify mergePlugins has NO silent background auto-install
+    merge_start = content.find("private void mergePlugins(List<StorePlugin> newPlugins)")
+    assert merge_start != -1, "mergePlugins method must exist in PluginStoreActivity"
+    merge_end = content.find("public List<StorePlugin> getPluginVersions", merge_start)
+    merge_body = content[merge_start:merge_end] if merge_end != -1 else content[merge_start:merge_start + 1500]
+
+    assert "installInBackground" not in merge_body, (
+        "mergePlugins must NOT perform silent background auto-install on new or updated plugins"
+    )
+    assert "autoUpdatedPluginIds" not in merge_body, (
+        "mergePlugins must NOT track or execute silent auto-updates"
+    )
+
 

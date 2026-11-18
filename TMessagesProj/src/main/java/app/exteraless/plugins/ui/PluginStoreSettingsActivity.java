@@ -212,15 +212,61 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
 
         builder.setPositiveButton(getString(R.string.Add), (dialog, which) -> {
             String input = editText.getText().toString().trim();
-            if (config.addSourceChannel(input)) {
+            if (TextUtils.isEmpty(input)) return;
+            String clean = input;
+            if (clean.startsWith("https://t.me/")) clean = clean.substring("https://t.me/".length());
+            else if (clean.startsWith("http://t.me/")) clean = clean.substring("http://t.me/".length());
+            else if (clean.startsWith("t.me/")) clean = clean.substring("t.me/".length());
+            if (clean.startsWith("@")) clean = clean.substring(1);
+
+            if (clean.matches("\\d+")) {
+                if (config.addSourceChannel(clean)) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.PluginsStoreSettingsAddChannelSuccess)).show();
+                    updateRows();
+                    if (listAdapter != null) listAdapter.notifyDataSetChanged();
+                } else {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsStoreSettingsAddChannelError)).show();
+                }
+                return;
+            }
+
+            String knownId = PluginStoreConfig.getKnownIdForUsername(clean);
+            if (knownId != null) {
+                config.addSourceChannel(knownId);
                 BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.PluginsStoreSettingsAddChannelSuccess)).show();
                 updateRows();
-                if (listAdapter != null) {
-                    listAdapter.notifyDataSetChanged();
-                }
-            } else {
-                BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsStoreSettingsAddChannelError)).show();
+                if (listAdapter != null) listAdapter.notifyDataSetChanged();
+                return;
             }
+
+            final String usernameToResolve = clean;
+            TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+            req.username = usernameToResolve;
+            ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                    TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
+                    MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                    MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                    long targetChatId = 0;
+                    if (!peer.chats.isEmpty()) {
+                        targetChatId = peer.chats.get(0).id;
+                    }
+                    if (targetChatId != 0) {
+                        config.addSourceChannel(String.valueOf(targetChatId));
+                        BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.PluginsStoreSettingsAddChannelSuccess)).show();
+                        updateRows();
+                        if (listAdapter != null) listAdapter.notifyDataSetChanged();
+                        return;
+                    }
+                }
+                if (config.addSourceChannel(usernameToResolve)) {
+                    BulletinFactory.of(this).createSimpleBulletin(R.raw.done, getString(R.string.PluginsStoreSettingsAddChannelSuccess)).show();
+                    updateRows();
+                    if (listAdapter != null) listAdapter.notifyDataSetChanged();
+                } else {
+                    BulletinFactory.of(this).createErrorBulletin(getString(R.string.PluginsStoreSettingsAddChannelError)).show();
+                }
+            }));
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
@@ -228,16 +274,63 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
 
     private void showChannelOptionsDialog(String channel) {
         if (getParentActivity() == null) return;
+        long numericId = 0;
+        try {
+            numericId = Long.parseLong(channel.trim());
+        } catch (Exception ignored) {}
+
+        String title = channel;
+        if (numericId != 0) {
+            String knownUsername = PluginStoreConfig.getKnownUsernameForId(numericId);
+            String knownTitle = PluginStoreConfig.getKnownTitleForId(numericId);
+            title = knownTitle != null ? knownTitle : (knownUsername != null ? "@" + knownUsername : ("ID: " + numericId));
+        } else {
+            title = channel.startsWith("@") ? channel : "@" + channel;
+        }
+
         AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
-        builder.setTitle("@" + channel);
+        builder.setTitle(title);
 
         CharSequence[] items = new CharSequence[]{
                 getString(R.string.PluginsStoreOpenChannel),
                 getString(R.string.Delete)
         };
 
+        final long targetChatId = numericId;
         builder.setItems(items, (dialog, which) -> {
             if (which == 0) {
+                if (targetChatId != 0) {
+                    TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(targetChatId);
+                    if (chat != null) {
+                        android.os.Bundle args = new android.os.Bundle();
+                        args.putLong("chat_id", chat.id);
+                        presentFragment(new org.telegram.ui.ChatActivity(args));
+                        return;
+                    }
+                    String knownUsername = PluginStoreConfig.getKnownUsernameForId(targetChatId);
+                    if (!TextUtils.isEmpty(knownUsername)) {
+                        TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                        req.username = knownUsername;
+                        ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                            if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                                TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
+                                MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                                MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                                if (!peer.chats.isEmpty()) {
+                                    android.os.Bundle args = new android.os.Bundle();
+                                    args.putLong("chat_id", peer.chats.get(0).id);
+                                    presentFragment(new org.telegram.ui.ChatActivity(args));
+                                    return;
+                                }
+                            }
+                            BulletinFactory.of(this)
+                                    .createSimpleBulletin(R.drawable.msg_info, "Канал недоступен")
+                                    .show();
+                        }));
+                        return;
+                    }
+                }
+
                 String cleanChannel = channel != null ? channel.trim() : "";
                 if (cleanChannel.startsWith("@")) {
                     cleanChannel = cleanChannel.substring(1);
@@ -328,60 +421,104 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
             if (clean.startsWith("@")) clean = clean.substring(1);
             this.currentUsername = clean;
 
-            TLObject obj = MessagesController.getInstance(currentAccount).getUserOrChat(clean);
-            if (obj == null) {
-                for (TLRPC.Chat c : MessagesController.getInstance(currentAccount).getChats().values()) {
-                    if (c != null && clean.equalsIgnoreCase(c.username)) {
-                        obj = c;
-                        break;
+            long numericId = 0;
+            try {
+                numericId = Long.parseLong(clean);
+            } catch (Exception ignored) {}
+
+            if (numericId != 0) {
+                TLRPC.Chat chat = MessagesController.getInstance(currentAccount).getChat(numericId);
+                String knownUsername = PluginStoreConfig.getKnownUsernameForId(numericId);
+                String knownTitle = PluginStoreConfig.getKnownTitleForId(numericId);
+
+                if (chat != null) {
+                    nameTextView.setText(chat.title != null ? chat.title : (knownTitle != null ? knownTitle : ("ID: " + numericId)));
+                    statusTextView.setText(chat.username != null ? "@" + chat.username : (knownUsername != null ? "@" + knownUsername : ("ID: " + numericId)));
+                    avatarDrawable.setInfo(currentAccount, chat);
+                    avatarImageView.setForUserOrChat(chat, avatarDrawable);
+                } else {
+                    nameTextView.setText(knownTitle != null ? knownTitle : ("ID: " + numericId));
+                    statusTextView.setText(knownUsername != null ? "@" + knownUsername : ("ID: " + numericId));
+                    avatarDrawable.setInfo(5, knownTitle != null ? knownTitle : String.valueOf(numericId), null);
+                    avatarImageView.setImageDrawable(avatarDrawable);
+
+                    if (!TextUtils.isEmpty(knownUsername)) {
+                        final long finalNumericId = numericId;
+                        TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                        req.username = knownUsername;
+                        ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                            if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                                TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
+                                MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                                MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                                if (!peer.chats.isEmpty() && clean.equals(currentUsername)) {
+                                    TLRPC.Chat resolvedChat = peer.chats.get(0);
+                                    nameTextView.setText(resolvedChat.title != null ? resolvedChat.title : (knownTitle != null ? knownTitle : ("ID: " + finalNumericId)));
+                                    statusTextView.setText(resolvedChat.username != null ? "@" + resolvedChat.username : (knownUsername != null ? "@" + knownUsername : ("ID: " + finalNumericId)));
+                                    avatarDrawable.setInfo(currentAccount, resolvedChat);
+                                    avatarImageView.setForUserOrChat(resolvedChat, avatarDrawable);
+                                    if (onResolved != null) onResolved.run();
+                                }
+                            }
+                        }));
                     }
                 }
-            }
-
-            if (obj instanceof TLRPC.Chat) {
-                TLRPC.Chat chat = (TLRPC.Chat) obj;
-                nameTextView.setText(chat.title != null ? chat.title : "@" + clean);
-                statusTextView.setText("@" + clean);
-                avatarDrawable.setInfo(currentAccount, chat);
-                avatarImageView.setForUserOrChat(chat, avatarDrawable);
-            } else if (obj instanceof TLRPC.User) {
-                TLRPC.User user = (TLRPC.User) obj;
-                nameTextView.setText(ContactsController.formatName(user.first_name, user.last_name));
-                statusTextView.setText("@" + clean);
-                avatarDrawable.setInfo(currentAccount, user);
-                avatarImageView.setForUserOrChat(user, avatarDrawable);
             } else {
-                nameTextView.setText("@" + clean);
-                statusTextView.setText("@" + clean);
-                avatarDrawable.setInfo(5, clean, null);
-                avatarImageView.setImageDrawable(avatarDrawable);
-
-                final String requestUsername = clean;
-                TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
-                req.username = requestUsername;
-                ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
-                    if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
-                        TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
-                        MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
-                        MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
-                        if (requestUsername.equalsIgnoreCase(this.currentUsername)) {
-                            if (!peer.chats.isEmpty()) {
-                                TLRPC.Chat resolvedChat = peer.chats.get(0);
-                                nameTextView.setText(resolvedChat.title != null ? resolvedChat.title : "@" + requestUsername);
-                                avatarDrawable.setInfo(currentAccount, resolvedChat);
-                                avatarImageView.setForUserOrChat(resolvedChat, avatarDrawable);
-                            } else if (!peer.users.isEmpty()) {
-                                TLRPC.User resolvedUser = peer.users.get(0);
-                                nameTextView.setText(ContactsController.formatName(resolvedUser.first_name, resolvedUser.last_name));
-                                avatarDrawable.setInfo(currentAccount, resolvedUser);
-                                avatarImageView.setForUserOrChat(resolvedUser, avatarDrawable);
-                            }
-                        }
-                        if (onResolved != null) {
-                            onResolved.run();
+                TLObject obj = MessagesController.getInstance(currentAccount).getUserOrChat(clean);
+                if (obj == null) {
+                    for (TLRPC.Chat c : MessagesController.getInstance(currentAccount).getChats().values()) {
+                        if (c != null && clean.equalsIgnoreCase(c.username)) {
+                            obj = c;
+                            break;
                         }
                     }
-                }));
+                }
+
+                if (obj instanceof TLRPC.Chat) {
+                    TLRPC.Chat chat = (TLRPC.Chat) obj;
+                    nameTextView.setText(chat.title != null ? chat.title : "@" + clean);
+                    statusTextView.setText("@" + clean);
+                    avatarDrawable.setInfo(currentAccount, chat);
+                    avatarImageView.setForUserOrChat(chat, avatarDrawable);
+                } else if (obj instanceof TLRPC.User) {
+                    TLRPC.User user = (TLRPC.User) obj;
+                    nameTextView.setText(ContactsController.formatName(user.first_name, user.last_name));
+                    statusTextView.setText("@" + clean);
+                    avatarDrawable.setInfo(currentAccount, user);
+                    avatarImageView.setForUserOrChat(user, avatarDrawable);
+                } else {
+                    nameTextView.setText("@" + clean);
+                    statusTextView.setText("@" + clean);
+                    avatarDrawable.setInfo(5, clean, null);
+                    avatarImageView.setImageDrawable(avatarDrawable);
+
+                    final String requestUsername = clean;
+                    TLRPC.TL_contacts_resolveUsername req = new TLRPC.TL_contacts_resolveUsername();
+                    req.username = requestUsername;
+                    ConnectionsManager.getInstance(currentAccount).sendRequest(req, (res, err) -> AndroidUtilities.runOnUIThread(() -> {
+                        if (res instanceof TLRPC.TL_contacts_resolvedPeer) {
+                            TLRPC.TL_contacts_resolvedPeer peer = (TLRPC.TL_contacts_resolvedPeer) res;
+                            MessagesController.getInstance(currentAccount).putUsers(peer.users, false);
+                            MessagesController.getInstance(currentAccount).putChats(peer.chats, false);
+                            if (requestUsername.equalsIgnoreCase(this.currentUsername)) {
+                                if (!peer.chats.isEmpty()) {
+                                    TLRPC.Chat resolvedChat = peer.chats.get(0);
+                                    nameTextView.setText(resolvedChat.title != null ? resolvedChat.title : "@" + requestUsername);
+                                    avatarDrawable.setInfo(currentAccount, resolvedChat);
+                                    avatarImageView.setForUserOrChat(resolvedChat, avatarDrawable);
+                                } else if (!peer.users.isEmpty()) {
+                                    TLRPC.User resolvedUser = peer.users.get(0);
+                                    nameTextView.setText(ContactsController.formatName(resolvedUser.first_name, resolvedUser.last_name));
+                                    avatarDrawable.setInfo(currentAccount, resolvedUser);
+                                    avatarImageView.setForUserOrChat(resolvedUser, avatarDrawable);
+                                }
+                            }
+                            if (onResolved != null) {
+                                onResolved.run();
+                            }
+                        }
+                    }));
+                }
             }
             invalidate();
         }
