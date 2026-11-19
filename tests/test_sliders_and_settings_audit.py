@@ -86,6 +86,7 @@ def test_settings_search_indexing_deeplinks_and_subgrouping():
     assert "chatsMoreRow" in chats and "messagesMoreRow" in chats and "collapsibleGroups" in chats
 
     other = _read("TMessagesProj/src/main/java/app/exteraless/settings/OpenExteraOtherActivity.java")
+    assert "import android.view.ViewGroup;" in other
     assert "experimentalMoreRow" in other and "collapsibleGroups" in other
 
     player = _read("TMessagesProj/src/main/java/app/exteraless/player/PlayerSettingsActivity.java")
