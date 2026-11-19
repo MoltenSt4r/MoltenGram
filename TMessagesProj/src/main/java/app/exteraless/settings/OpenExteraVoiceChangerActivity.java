@@ -856,8 +856,8 @@ public class OpenExteraVoiceChangerActivity extends BaseNekoSettingsActivity {
                     VoiceChangerController.getInstance().resetState();
                     updateSelection();
                     scrollToChip(index);
-                    if (listAdapter != null) {
-                        listAdapter.refreshSliders();
+                    if (listAdapter instanceof ListAdapter) {
+                        ((ListAdapter) listAdapter).refreshSliders();
                     }
                 });
 
