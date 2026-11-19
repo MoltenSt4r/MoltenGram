@@ -22,9 +22,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -276,13 +278,30 @@ public final class OnlineLyrics {
     }
 
     private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static final Map<String, List<Callback>> inFlightFetches = new HashMap<>();
 
     public static void fetch(Query query, Callback callback) {
         String key = query.key();
         Lyrics hit = memory.get(key);
         if (hit != null) {
-            callback.onResult(hit, OK);
+            if (callback != null) {
+                callback.onResult(hit, OK);
+            }
             return;
+        }
+        synchronized (inFlightFetches) {
+            List<Callback> waiters = inFlightFetches.get(key);
+            if (waiters != null) {
+                if (callback != null) {
+                    waiters.add(callback);
+                }
+                return;
+            }
+            waiters = new ArrayList<>();
+            if (callback != null) {
+                waiters.add(callback);
+            }
+            inFlightFetches.put(key, waiters);
         }
         queue.postRunnable(() -> {
             Lyrics result = readDisk(key);
@@ -414,7 +433,15 @@ public final class OnlineLyrics {
                 } else if (finalStatus == NOT_FOUND) {
                     missing.add(key);
                 }
-                callback.onResult(lyrics, finalStatus);
+                List<Callback> waiters;
+                synchronized (inFlightFetches) {
+                    waiters = inFlightFetches.remove(key);
+                }
+                if (waiters != null) {
+                    for (Callback cb : waiters) {
+                        cb.onResult(lyrics, finalStatus);
+                    }
+                }
             });
         });
     }

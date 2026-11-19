@@ -2040,7 +2040,7 @@ public class PluginStoreActivity extends BaseFragment {
         }
     }
 
-    private static final java.util.Set<String> prefetchingIcons = new java.util.HashSet<>();
+    private static final java.util.Map<String, java.util.List<Runnable>> prefetchCallbacks = new java.util.HashMap<>();
 
     public static void prefetchPluginIcon(int currentAccount, StorePlugin plugin, Runnable onReady) {
         if (plugin == null) {
@@ -2145,11 +2145,19 @@ public class PluginStoreActivity extends BaseFragment {
             return;
         }
 
-        synchronized (prefetchingIcons) {
-            if (prefetchingIcons.contains(attachFileName)) {
+        synchronized (prefetchCallbacks) {
+            java.util.List<Runnable> list = prefetchCallbacks.get(attachFileName);
+            if (list != null) {
+                if (onReady != null) {
+                    list.add(onReady);
+                }
                 return;
             }
-            prefetchingIcons.add(attachFileName);
+            list = new java.util.ArrayList<>();
+            if (onReady != null) {
+                list.add(onReady);
+            }
+            prefetchCallbacks.put(attachFileName, list);
         }
 
         final TLRPC.Document finalDoc = doc;
@@ -2165,8 +2173,9 @@ public class PluginStoreActivity extends BaseFragment {
 
             NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoaded);
             NotificationCenter.getInstance(currentAccount).removeObserver(holder[0], NotificationCenter.fileLoadFailed);
-            synchronized (prefetchingIcons) {
-                prefetchingIcons.remove(attachFileName);
+            final java.util.List<Runnable> callbacks;
+            synchronized (prefetchCallbacks) {
+                callbacks = prefetchCallbacks.remove(attachFileName);
             }
 
             if (id == NotificationCenter.fileLoaded) {
@@ -2188,9 +2197,13 @@ public class PluginStoreActivity extends BaseFragment {
                                         .putString("plugin_icon_" + targetNormId, icon)
                                         .apply();
                             }
-                            AndroidUtilities.runOnUIThread(() -> {
-                                if (onReady != null) onReady.run();
-                            });
+                            if (callbacks != null && !callbacks.isEmpty()) {
+                                AndroidUtilities.runOnUIThread(() -> {
+                                    for (Runnable cb : callbacks) {
+                                        if (cb != null) cb.run();
+                                    }
+                                });
+                            }
                         }
                     }
                 });
@@ -3233,6 +3246,9 @@ public class PluginStoreActivity extends BaseFragment {
             isIconLoaded = false;
             iconView.setTag(null);
             iconView.clearImage();
+            iconView.setColorFilter(null);
+            iconView.setEmojiColorFilter(null);
+            iconView.setAnimatedEmojiDrawable(null);
             iconView.setImageDrawable(null);
             iconView.setVisibility(GONE);
             defaultIconView.setVisibility(VISIBLE);

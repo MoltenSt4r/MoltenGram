@@ -723,10 +723,29 @@ public class EditTextCaption extends EditTextBoldCursor implements FloatingToolb
                 }
             }
             String hex = String.format("%06X", (0xFFFFFF & color));
-            editable.insert(start, "\u200B");
             String colorUrl = app.exteraless.chats.ColoredTextHelper.PREFIX + "?c=" + hex + "&len=" + len;
-            editable.setSpan(createUrlSpan(colorUrl), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-            editable.setSpan(new android.text.style.ForegroundColorSpan(color), start + 1, start + 1 + len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            boolean reusedMarker = false;
+            if (start > 0 && editable.charAt(start - 1) == '\u200B') {
+                URLSpanReplacement[] prevUrls = editable.getSpans(start - 1, start, URLSpanReplacement.class);
+                if (prevUrls != null) {
+                    for (URLSpanReplacement prevUrl : prevUrls) {
+                        if (app.exteraless.chats.ColoredTextHelper.isColorUrl(prevUrl.getURL())) {
+                            editable.removeSpan(prevUrl);
+                            reusedMarker = true;
+                        }
+                    }
+                }
+            }
+            int colorStart;
+            if (reusedMarker) {
+                editable.setSpan(createUrlSpan(colorUrl), start - 1, start, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                colorStart = start;
+            } else {
+                editable.insert(start, "\u200B");
+                editable.setSpan(createUrlSpan(colorUrl), start, start + 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                colorStart = start + 1;
+            }
+            editable.setSpan(new android.text.style.ForegroundColorSpan(color), colorStart, colorStart + len, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             if (delegate != null) {
                 delegate.onSpansChanged();
             }

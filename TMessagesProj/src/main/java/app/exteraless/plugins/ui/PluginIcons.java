@@ -5,6 +5,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.ColorFilter;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.drawable.Drawable;
@@ -18,6 +19,7 @@ import org.telegram.messenger.DocumentObject;
 import org.telegram.messenger.Emoji;
 import org.telegram.messenger.ImageLocation;
 import org.telegram.messenger.MediaDataController;
+import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.R;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.TLRPC;
@@ -184,6 +186,35 @@ public final class PluginIcons {
                 }
             }
 
+            // B2. Fallback scan of other .json/.yaml/.yml/.py entries in the zip if not found in standard candidates
+            java.util.Enumeration<? extends ZipEntry> metaEntries = zip.entries();
+            int metaChecked = 0;
+            while (metaEntries.hasMoreElements() && metaChecked < 50) {
+                ZipEntry entry = metaEntries.nextElement();
+                metaChecked++;
+                if (entry.isDirectory() || entry.getSize() <= 0 || entry.getSize() > 256 * 1024) continue;
+                String lower = entry.getName().toLowerCase(Locale.ROOT);
+                if (lower.endsWith(".json") || lower.endsWith(".yaml") || lower.endsWith(".yml") || lower.endsWith(".py")) {
+                    try (InputStream is = zip.getInputStream(entry)) {
+                        String icon = parseStreamForIcon(is, 250);
+                        if (!TextUtils.isEmpty(icon)) {
+                            ZipEntry iconEntry = zip.getEntry(icon);
+                            if (iconEntry == null && icon.startsWith("/")) {
+                                iconEntry = zip.getEntry(icon.substring(1));
+                            }
+                            if (iconEntry == null) {
+                                iconEntry = zip.getEntry("assets/" + icon);
+                            }
+                            if (iconEntry != null && !iconEntry.isDirectory()) {
+                                File extracted = extractEntryToCache(zip, iconEntry, file.getName());
+                                if (extracted != null) return extracted.getAbsolutePath();
+                            }
+                            return icon;
+                        }
+                    } catch (Exception ignored) {}
+                }
+            }
+
             // C. Look for candidate image entries directly in the zip
             String[] directImageEntries = {
                 "icon.png", "icon.webp", "icon.jpg", "icon.jpeg",
@@ -268,6 +299,9 @@ public final class PluginIcons {
                 Matcher cm = COMMENT_ICON_PATTERN.matcher(line);
                 if (cm.find()) {
                     String icon = cm.group(1);
+                    if (TextUtils.isEmpty(icon)) {
+                        icon = cm.group(2);
+                    }
                     if (!TextUtils.isEmpty(icon)) {
                         return icon.trim();
                     }
@@ -360,11 +394,27 @@ public final class PluginIcons {
         return apply(imageView, icon, null, onLoaded);
     }
 
+    private static ColorFilter getTextColorFilter() {
+        ColorFilter cf = Theme.getAnimatedEmojiColorFilter(null);
+        if (cf != null) {
+            return cf;
+        }
+        return new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText), PorterDuff.Mode.SRC_IN);
+    }
+
     public static boolean apply(BackupImageView imageView, String icon, Drawable fallbackDrawable, Runnable onLoaded) {
         if (imageView == null || TextUtils.isEmpty(icon)) {
-            if (imageView != null && fallbackDrawable != null) {
-                imageView.setImageDrawable(fallbackDrawable);
-                imageView.setVisibility(android.view.View.VISIBLE);
+            if (imageView != null) {
+                imageView.setColorFilter(null);
+                imageView.setEmojiColorFilter(null);
+                imageView.setAnimatedEmojiDrawable(null);
+                if (fallbackDrawable != null) {
+                    imageView.setImageDrawable(fallbackDrawable);
+                    imageView.setVisibility(android.view.View.VISIBLE);
+                } else {
+                    imageView.setImageDrawable(null);
+                    imageView.setVisibility(android.view.View.GONE);
+                }
             }
             return false;
         }
@@ -373,6 +423,8 @@ public final class PluginIcons {
         // 1. Direct Web / HTTP Image URL
         if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
             imageView.setTag("plugin_web_" + trimmed);
+            imageView.setColorFilter(null);
+            imageView.setEmojiColorFilter(null);
             imageView.setAnimatedEmojiDrawable(null);
             imageView.setImage(trimmed, "100_100", fallbackDrawable);
             imageView.setVisibility(android.view.View.VISIBLE);
@@ -391,6 +443,8 @@ public final class PluginIcons {
                     Bitmap bmp = BitmapFactory.decodeByteArray(decoded, 0, decoded.length);
                     if (bmp != null) {
                         imageView.setTag("plugin_base64_" + decoded.length);
+                        imageView.setColorFilter(null);
+                        imageView.setEmojiColorFilter(null);
                         imageView.setAnimatedEmojiDrawable(null);
                         imageView.setImageBitmap(bmp);
                         imageView.setVisibility(android.view.View.VISIBLE);
@@ -407,6 +461,8 @@ public final class PluginIcons {
             File f = new File(filePath);
             if (f.exists() && f.length() > 0) {
                 imageView.setTag("plugin_file_" + filePath);
+                imageView.setColorFilter(null);
+                imageView.setEmojiColorFilter(null);
                 imageView.setAnimatedEmojiDrawable(null);
                 imageView.setImage(filePath, "100_100", fallbackDrawable);
                 imageView.setVisibility(android.view.View.VISIBLE);
@@ -433,6 +489,8 @@ public final class PluginIcons {
                     Drawable d = ContextCompat.getDrawable(ctx, resId);
                     if (d != null) {
                         imageView.setTag("plugin_res_" + resId);
+                        imageView.setColorFilter(null);
+                        imageView.setEmojiColorFilter(null);
                         imageView.setAnimatedEmojiDrawable(null);
                         imageView.setImageDrawable(d);
                         imageView.setVisibility(android.view.View.VISIBLE);
@@ -451,6 +509,8 @@ public final class PluginIcons {
                 long docId = Long.parseLong(trimmed.substring("emoji/".length()).trim());
                 if (docId != 0) {
                     imageView.setTag("plugin_emoji_" + docId);
+                    imageView.setColorFilter(null);
+                    imageView.setEmojiColorFilter(getTextColorFilter());
                     imageView.setVisibility(android.view.View.VISIBLE);
                     AnimatedEmojiDrawable emojiDrawable = AnimatedEmojiDrawable.make(UserConfig.selectedAccount, AnimatedEmojiDrawable.CACHE_TYPE_MESSAGES, docId);
                     imageView.setAnimatedEmojiDrawable(emojiDrawable);
@@ -468,6 +528,8 @@ public final class PluginIcons {
             Drawable emojiDrawable = Emoji.getEmojiDrawable(trimmed);
             if (emojiDrawable != null) {
                 imageView.setTag("plugin_unicode_" + trimmed);
+                imageView.setColorFilter(null);
+                imageView.setEmojiColorFilter(null);
                 imageView.setAnimatedEmojiDrawable(null);
                 imageView.setImageDrawable(emojiDrawable);
                 imageView.setVisibility(android.view.View.VISIBLE);
@@ -514,6 +576,8 @@ public final class PluginIcons {
 
         final String tag = "plugin_icon_" + pack + "_" + index;
         imageView.setTag(tag);
+        imageView.setColorFilter(null);
+        imageView.setEmojiColorFilter(null);
         imageView.setAnimatedEmojiDrawable(null);
         if (fallbackDrawable != null) {
             imageView.setImageDrawable(fallbackDrawable);
@@ -535,10 +599,18 @@ public final class PluginIcons {
                     }
                     int safeIndex = index < set.documents.size() ? index : (index % set.documents.size());
                     TLRPC.Document document = set.documents.get(safeIndex);
+                    boolean isTextColor = MessageObject.isTextColorEmoji(document)
+                            || (set.set != null && set.set.text_color);
+                    if (isTextColor) {
+                        imageView.setColorFilter(getTextColorFilter());
+                    } else {
+                        imageView.setColorFilter(null);
+                    }
                     Drawable thumb = DocumentObject.getSvgThumb(document,
-                            Theme.key_windowBackgroundWhiteGrayIcon, 0.2f);
+                            isTextColor ? Theme.key_windowBackgroundWhiteBlackText : Theme.key_windowBackgroundWhiteGrayIcon,
+                            isTextColor ? 0.5f : 0.2f);
                     imageView.setImage(ImageLocation.getForDocument(document), "100_100",
-                            thumb != null ? thumb : fallbackDrawable, 0, document);
+                            thumb != null ? thumb : fallbackDrawable, 0, set);
                     imageView.setVisibility(android.view.View.VISIBLE);
                     imageView.invalidate();
                     if (onLoaded != null) {

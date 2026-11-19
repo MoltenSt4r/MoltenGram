@@ -396,20 +396,26 @@ public class PluginInstallBottomSheet extends com.exteragram.messenger.plugins.u
         frame.addView(fallback, LayoutHelper.createFrame(56, 56, Gravity.CENTER));
         frame.addView(image, LayoutHelper.createFrame(72, 72, Gravity.CENTER));
 
-        if (plugin != null && file != null && file.exists()) {
-            if (TextUtils.isEmpty(plugin.icon) || (!plugin.icon.startsWith("/") && !plugin.icon.startsWith("http") && !plugin.icon.startsWith("emoji/"))) {
-                String extracted = PluginIcons.extractIconFromFile(file, plugin.icon);
+        String iconToApply = plugin != null ? plugin.icon : null;
+        if (file != null && file.exists()) {
+            if (TextUtils.isEmpty(iconToApply) || (!iconToApply.startsWith("/") && !iconToApply.startsWith("http") && !iconToApply.startsWith("emoji/"))) {
+                String extracted = PluginIcons.extractIconFromFile(file, iconToApply);
                 if (!TextUtils.isEmpty(extracted)) {
-                    plugin.icon = extracted;
+                    iconToApply = extracted;
+                    if (plugin != null) {
+                        plugin.icon = extracted;
+                    }
                 }
             }
         }
 
-        boolean applied = PluginIcons.apply(image, plugin, () -> {
+        final boolean[] loaded = { false };
+        boolean applied = PluginIcons.apply(image, iconToApply, () -> {
+            loaded[0] = true;
             image.setVisibility(android.view.View.VISIBLE);
             fallback.setVisibility(android.view.View.GONE);
         });
-        if (applied) {
+        if (applied && loaded[0]) {
             image.setVisibility(android.view.View.VISIBLE);
             fallback.setVisibility(android.view.View.GONE);
         } else {

@@ -556,6 +556,9 @@ public class PluginDetailsBottomSheet extends BottomSheet {
     private void bindIcon(BackupImageView iconView, ImageView defaultIconView, PluginStoreActivity.StorePlugin target) {
         if (target == null) return;
         iconView.setTag(null);
+        iconView.setColorFilter(null);
+        iconView.setEmojiColorFilter(null);
+        iconView.setAnimatedEmojiDrawable(null);
         iconView.setImageDrawable(null);
 
         boolean iconApplied = false;
