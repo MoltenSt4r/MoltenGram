@@ -1326,7 +1326,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final float isProfile = 1f - MathUtils.clamp(Math.abs(getPositionProfile() - animatedPosition), 0, 1);
         final float hide = 1f - AndroidUtilities.getNavigationBarThirdButtonsFactor(0, 1f, navigationBarHeight);
         float alpha = (1f - isProfile * hide) * animatorTabsVisible.getFloatValue() * (1f - speedDialDimProgress);
-        if (tabletLayout) {
+        if (tabletLayout || MainTabsUiHelper.isExpressiveToolbar()) {
             alpha = 0.0f;
         }
 

@@ -34,7 +34,7 @@ public final class MainTabsUiHelper {
     private MainTabsUiHelper() {
     }
 
-    public static final int EXPRESSIVE_TOOLBAR_HEIGHT_DP = 60;
+    public static final int EXPRESSIVE_TOOLBAR_HEIGHT_DP = 62;
     public static final int EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP = 12;
 
     public static boolean isExpressiveToolbar() {
@@ -91,7 +91,7 @@ public final class MainTabsUiHelper {
     /** В iOS-стиле капсула на 4dp выше, но таб внутри остаётся 48dp — лишнее уходит в паддинг. */
     public static int getTabsInnerPaddingVertical() {
         if (isExpressiveToolbar()) {
-            return AndroidUtilities.dp(6);
+            return AndroidUtilities.dp(7);
         }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
@@ -104,7 +104,7 @@ public final class MainTabsUiHelper {
 
     public static int getTabsInnerPaddingHorizontal() {
         if (isExpressiveToolbar()) {
-            return AndroidUtilities.dp(6);
+            return AndroidUtilities.dp(10);
         }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
@@ -145,9 +145,9 @@ public final class MainTabsUiHelper {
     /** Сдвиг кнопки «написать» над панелью: в M3 64 (или 64 + margin в плавающей капсуле). */
     public static int getTabsFabOffsetDp() {
         if (isExpressiveToolbar()) {
-            // Капсула стоит в 12dp над navBar и имеет высоту 60dp (центр на 42dp).
+            // Капсула стоит в 12dp над navBar и имеет высоту 62dp (центр на 43dp).
             // FAB имеет default marginBottom 14dp и размер fabSize (центр на 14 + fabSize/2).
-            return 28 - AppearanceConfig.fabSize() / 2;
+            return 29 - AppearanceConfig.fabSize() / 2;
         }
         if (isMaterial3FloatingGlass()) {
             return 64 + MainTabsHelper.getMainTabsMargin();
@@ -176,7 +176,7 @@ public final class MainTabsUiHelper {
         if (isExpressiveToolbar()) {
             final int fabSize = AppearanceConfig.fabSize();
             final boolean fabLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
-            final int fabReserve = AndroidUtilities.dp(20 + fabSize + 10);
+            final int fabReserve = AndroidUtilities.dp(20 + fabSize + 8);
             final int sidePad = AndroidUtilities.dp(12);
             wrapper.setPadding(
                     leftInset + (fabLeft ? fabReserve : sidePad),

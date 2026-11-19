@@ -181,7 +181,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         this.expressiveExpandFactor = expandFactor;
         final float iconSize = dp(22);
         final float collapsedX = (slotWidth - iconSize) / 2f;
-        final float expandedX = dp(13);
+        final float expandedX = dp(16);
         final float iconX = lerp(collapsedX, expandedX, expandFactor);
         this.expressiveIconX = iconX;
         if (backupImageView != null) {
@@ -189,7 +189,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         } else {
             imageView.setTranslationX(iconX);
         }
-        textView.setTranslationX(iconX + iconSize + dp(6));
+        textView.setTranslationX(iconX + iconSize + dp(8));
         final float textAlpha = MathUtils.clamp((expandFactor - 0.18f) / 0.82f, 0f, 1f);
         textView.setAlpha(textAlpha);
         invalidate();
