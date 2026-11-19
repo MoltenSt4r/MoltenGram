@@ -586,7 +586,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         o.setBlur(true);
         o.translate(0, -dp(4));
         o.setGravity(Gravity.LEFT);
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -604,7 +604,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         o.setBlur(true);
         o.translate(0, -dp(4));
         o.setGravity(Gravity.LEFT);
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -639,7 +639,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
         o.setBlur(true);
         o.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -700,7 +700,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 //        o.setBlur(true);
         o.translate(-dp(8), -dp(4));
         o.setMaxHeight(Math.min(dp(560), Math.max(dp(320), AndroidUtilities.displaySize.y - dp(120))));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.setGravity(Gravity.LEFT);
         o.show();
@@ -853,7 +853,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         o.setBlur(true);
         o.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, button);
         o.setScrimViewBackground(bg);
         o.show();
 
@@ -1383,12 +1383,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
 
         final boolean fabLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
-        final int innerW = wrapperW - tabsViewWrapper.getPaddingLeft() - tabsViewWrapper.getPaddingRight();
         final int fabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
-        final int fabReserveInWrapper = dp(20 + fabSize + 8) - dp(12);
-        final float maxShift = Math.max(0f, (capsuleW - innerW) / 2f + fabReserveInWrapper);
-        final float targetShift = fabLeft ? maxShift : -maxShift;
-        tabsView.setTranslationX(targetShift * fabFactor);
+        final int fabReserveInWrapper = Math.max(0, dp(20 + fabSize + 8) - dp(12));
+        final float reserve = fabReserveInWrapper * fabFactor;
+        tabsView.setTranslationX(0f);
+        tabsView.setExpressiveFabInsets(fabLeft ? reserve : 0f, fabLeft ? 0f : reserve);
     }
 
     private void checkUi_miniPlayer() {
@@ -1855,7 +1854,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                     new Intent(ApplicationLoader.applicationContext, LaunchActivity.class)
                 )
             );
-            setupPopupMenuStyle(o);
+            setupPopupMenuStyle(o, button);
             o.show();
             return true;
         }
@@ -1868,7 +1867,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         ItemOptions o = ItemOptions.makeOptions(this, button);
         addChatsMenuItems(o, button);
-        setupPopupMenuStyle(o);
+        setupPopupMenuStyle(o, button);
         o.show();
         return true;
     }
@@ -1894,11 +1893,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
     }
 
-    private void setupPopupMenuStyle(ItemOptions options) {
+    private void setupPopupMenuStyle(ItemOptions options, View anchor) {
         options.setGravity(Gravity.CENTER_HORIZONTAL);
         options.setBlur(true);
         options.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         options.setScrimViewBackground(bg);
     }
 

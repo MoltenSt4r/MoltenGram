@@ -1,5 +1,10 @@
 package app.exteraless.appearance;
 
+import android.graphics.Canvas;
+import android.graphics.ColorFilter;
+import android.graphics.Paint;
+import android.graphics.PixelFormat;
+import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
@@ -10,6 +15,9 @@ import android.view.ViewGroup;
 import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.Nullable;
+
 import app.exteraless.player.PlayerColors;
 import me.vkryl.android.animator.BoolAnimator;
 
@@ -18,6 +26,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.blur3.drawable.color.BlurredBackgroundProviderBuilder;
+import org.telegram.ui.Components.glass.GlassTabView;
 import org.telegram.ui.MainTabsLayout;
 
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
@@ -134,10 +143,10 @@ public final class MainTabsUiHelper {
         return isMaterial3NavigationBar() ? 0 : AndroidUtilities.dp(MainTabsHelper.getMainTabsHeight() / 2f);
     }
 
-    /** В M3 и iOS-стиле панель растянута на всю ширину. */
+    /** В M3, iOS-стиле и Expressive панель растянута на всю доступную ширину. */
     public static int getTabsViewWidth() {
         if (isExpressiveToolbar()) {
-            return LayoutHelper.WRAP_CONTENT;
+            return LayoutHelper.MATCH_PARENT;
         }
         return isMaterial3NavigationBar() || isIosNavigationBar() ? LayoutHelper.MATCH_PARENT : MainTabsHelper.getTabsViewWidth();
     }
@@ -183,9 +192,9 @@ public final class MainTabsUiHelper {
             );
             if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams flp) {
                 final int desiredGravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
-                if (flp.gravity != desiredGravity || flp.width != LayoutHelper.WRAP_CONTENT) {
+                if (flp.gravity != desiredGravity || flp.width != LayoutHelper.MATCH_PARENT) {
                     flp.gravity = desiredGravity;
-                    flp.width = LayoutHelper.WRAP_CONTENT;
+                    flp.width = LayoutHelper.MATCH_PARENT;
                     layout.setLayoutParams(flp);
                 }
             }
@@ -321,6 +330,57 @@ public final class MainTabsUiHelper {
         background.setDuration(value ? 100L : 200L);
         background.setInterpolator(value ? CubicBezierInterpolator.Emphasized : CubicBezierInterpolator.EmphasizedAccelerate);
         background.setValue(value, animated);
+    }
+
+    public static Drawable createMainTabsScrimBackground(Theme.ResourcesProvider resourcesProvider, View anchor) {
+        if (isExpressiveToolbar() && anchor instanceof GlassTabView tab) {
+            final int[] colors = new int[4];
+            resolveExpressiveColors(resourcesProvider, colors);
+            final boolean selected = tab.isTabSelected();
+            final int fillColor = selected ? colors[1] : colors[0];
+            final int strokeColor = selected ? 0 : Theme.multAlpha(colors[3], 0.16f);
+            final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            fillPaint.setColor(fillColor);
+            final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1f));
+            strokePaint.setColor(strokeColor);
+            final RectF rectF = new RectF();
+            return new Drawable() {
+                @Override
+                public void draw(@NonNull Canvas canvas) {
+                    final Rect b = getBounds();
+                    final float slotW = tab.getExpressiveSlotWidth();
+                    final float drawW = (slotW > 0f && slotW <= b.width()) ? slotW : b.width();
+                    rectF.set(b.left, b.top, b.left + drawW, b.bottom);
+                    final float r = rectF.height() / 2f;
+                    canvas.drawRoundRect(rectF, r, r, fillPaint);
+                    if (strokeColor != 0) {
+                        final float inset = strokePaint.getStrokeWidth() / 2f;
+                        rectF.inset(inset, inset);
+                        canvas.drawRoundRect(rectF, r - inset, r - inset, strokePaint);
+                    }
+                }
+
+                @Override
+                public void setAlpha(int alpha) {
+                    fillPaint.setAlpha(alpha);
+                    strokePaint.setAlpha(alpha);
+                }
+
+                @Override
+                public void setColorFilter(@Nullable ColorFilter colorFilter) {
+                    fillPaint.setColorFilter(colorFilter);
+                    strokePaint.setColorFilter(colorFilter);
+                }
+
+                @Override
+                public int getOpacity() {
+                    return PixelFormat.TRANSLUCENT;
+                }
+            };
+        }
+        return createMainTabsScrimBackground(resourcesProvider, false);
     }
 
     public static Drawable createMainTabsScrimBackground(Theme.ResourcesProvider resourcesProvider, boolean circle) {

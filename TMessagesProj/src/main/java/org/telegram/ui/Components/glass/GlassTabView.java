@@ -201,6 +201,10 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         }
     }
 
+    public float getExpressiveSlotWidth() {
+        return expressiveSlotWidth;
+    }
+
     private void applyMainTabsMaterial3() {
         mainTabMaterial3 = true;
         MainTabsUiHelper.applyMaterial3MainTabStyle(textView, isSelectedAnimator);

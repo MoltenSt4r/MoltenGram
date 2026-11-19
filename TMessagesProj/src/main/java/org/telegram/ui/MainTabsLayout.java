@@ -1368,14 +1368,29 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         invalidate();
     }
 
+    private float expressiveFabLeftInsetPx;
+    private float expressiveFabRightInsetPx;
+
+    public void setExpressiveFabInsets(float leftInsetPx, float rightInsetPx) {
+        final float clampedLeft = Math.max(0f, leftInsetPx);
+        final float clampedRight = Math.max(0f, rightInsetPx);
+        if (Math.abs(expressiveFabLeftInsetPx - clampedLeft) > 0.25f
+                || Math.abs(expressiveFabRightInsetPx - clampedRight) > 0.25f) {
+            expressiveFabLeftInsetPx = clampedLeft;
+            expressiveFabRightInsetPx = clampedRight;
+            updateExpressivePositions(false);
+            invalidate();
+        }
+    }
+
     public float getExpressiveCapsuleWidth() {
         return expressiveCapsuleRect.isEmpty() ? getMeasuredWidth() : expressiveCapsuleRect.width();
     }
 
     private void measureExpressiveToolbar(int widthMeasureSpec, int heightMeasureSpec) {
-        final int wrapperW = MeasureSpec.getSize(widthMeasureSpec);
+        final int fullW = MeasureSpec.getSize(widthMeasureSpec);
         final int fabReserve = dp(20 + AppearanceConfig.fabSize() + 8) - dp(12);
-        final int availW = Math.max(dp(180), wrapperW - Math.max(0, fabReserve));
+        final int availW = Math.max(dp(180), fullW - Math.max(0, fabReserve));
         final int height = MeasureSpec.getSize(heightMeasureSpec);
         final int tabHeight = Math.max(0, height - getPaddingTop() - getPaddingBottom());
         final int childCount = getChildCount();
@@ -1451,9 +1466,9 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         final int allowedMaxExtra = Math.max(0, Math.min(newDesiredExtra, availW - minSum));
         expressiveMaxExtraPx = allowedMaxExtra;
 
-        final int measuredW = Math.min(availW, minSum + allowedMaxExtra);
-        setMeasuredDimension(measuredW, height);
+        setMeasuredDimension(fullW, height);
 
+        final int maxChildSlot = visibleCount > 0 ? Math.max(iconSlot, (fullW - padH) / visibleCount) : iconSlot;
         final boolean unconstrainedText = (minSum + newDesiredExtra) <= availW;
         final int maxTextWidthAllowed = unconstrainedText ? 0 : Math.max(dp(24), allowedMaxExtra - newPillPadDiff);
         for (int a = 0; a < childCount; a++) {
@@ -1469,7 +1484,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 ((GlassTabView) child).setExpressiveTextMaxWidth(maxTextWidthAllowed);
             }
             child.measure(
-                    MeasureSpec.makeMeasureSpec(iconSlot + extra, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(maxChildSlot + extra, MeasureSpec.EXACTLY),
                     MeasureSpec.makeMeasureSpec(tabHeight, MeasureSpec.EXACTLY));
         }
 
@@ -1484,12 +1499,11 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         final int childCount = getChildCount();
         final int iconSlot = expressiveIconSlotPx > 0 ? expressiveIconSlotPx : dp(54);
         final int pillPadDiff = Math.max(0, dp(66) - iconSlot);
-        final int gap = expressiveGapPx;
         final int padLeft = getPaddingLeft();
         final int padRight = getPaddingRight();
 
-        float curTabsW = 0f;
-        float targetTabsW = 0f;
+        float curExpandSum = 0f;
+        float targetExpandSum = 0f;
         int visibleSeen = 0;
         int selectedIndex = -1;
         for (int a = 0; a < childCount; a++) {
@@ -1497,16 +1511,12 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             if (!isViewVisible(child)) {
                 continue;
             }
-            if (visibleSeen > 0) {
-                curTabsW += gap;
-                targetTabsW += gap;
-            }
             final boolean isSelected = child instanceof GlassTabView && ((GlassTabView) child).isTabSelected();
             final float expand = child instanceof GlassTabView ? ((GlassTabView) child).getExpressiveExpandFactor() : (isSelected ? 1f : 0f);
             final float labelW = (expressiveLabelWidths != null && a < expressiveLabelWidths.length) ? expressiveLabelWidths[a] : 0f;
             final float maxExtra = labelW > 0 ? Math.min(expressiveMaxExtraPx, pillPadDiff + (float) Math.ceil(labelW) + dp(6)) : 0f;
-            curTabsW += iconSlot + expand * maxExtra;
-            targetTabsW += iconSlot + (isSelected ? maxExtra : 0f);
+            curExpandSum += expand * maxExtra;
+            targetExpandSum += isSelected ? maxExtra : 0f;
             if (isSelected) {
                 selectedIndex = a;
             }
@@ -1518,14 +1528,18 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             return;
         }
 
-        final float curCapsuleW = padLeft + curTabsW + padRight;
-        final float targetCapsuleW = padLeft + targetTabsW + padRight;
-        final float cLeft = (w - curCapsuleW) / 2f;
-        final float cRight = cLeft + curCapsuleW;
+        final float cLeft = Math.max(0f, expressiveFabLeftInsetPx);
+        final float cRight = Math.max(cLeft + dp(120), w - Math.max(0f, expressiveFabRightInsetPx));
         expressiveCapsuleRect.set(cLeft, 0f, cRight, getHeight());
 
+        final float innerCapsuleW = Math.max(0f, (cRight - cLeft) - padLeft - padRight);
+        final float gap = visibleSeen > 1 ? dp(4) : 0f;
+        final float gapsTotal = Math.max(0, visibleSeen - 1) * gap;
+        final float curSlotW = Math.max(dp(34), (innerCapsuleW - gapsTotal - curExpandSum) / visibleSeen);
+        final float targetSlotW = Math.max(dp(34), (innerCapsuleW - gapsTotal - targetExpandSum) / visibleSeen);
+
         float x = cLeft + padLeft;
-        float xTarget = (w - targetCapsuleW) / 2f + padLeft;
+        float xTarget = cLeft + padLeft;
         float newTargetPillLeft = -1f;
         float newTargetPillRight = -1f;
 
@@ -1538,8 +1552,8 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             final float expand = child instanceof GlassTabView ? ((GlassTabView) child).getExpressiveExpandFactor() : (isSelected ? 1f : 0f);
             final float labelW = (expressiveLabelWidths != null && a < expressiveLabelWidths.length) ? expressiveLabelWidths[a] : 0f;
             final float maxExtra = labelW > 0 ? Math.min(expressiveMaxExtraPx, pillPadDiff + (float) Math.ceil(labelW) + dp(6)) : 0f;
-            final float curW = iconSlot + expand * maxExtra;
-            final float targetW = iconSlot + (isSelected ? maxExtra : 0f);
+            final float curW = curSlotW + expand * maxExtra;
+            final float targetW = targetSlotW + (isSelected ? maxExtra : 0f);
 
             child.setTranslationX(x - child.getLeft());
             if (child instanceof GlassTabView) {
@@ -1556,7 +1570,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         }
 
         if (newTargetPillLeft >= 0f && newTargetPillRight > newTargetPillLeft) {
-            if (!expressiveHasInitialPill || !animated) {
+            if (!expressiveHasInitialPill || (!animated && !expressivePillLeftSpring.isRunning() && !expressivePillRightSpring.isRunning())) {
                 expressivePillLeftSpring.cancel();
                 expressivePillRightSpring.cancel();
                 expressivePillLeft = newTargetPillLeft;
