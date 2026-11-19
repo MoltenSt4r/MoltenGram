@@ -837,10 +837,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 } else if (which == 1) {
                     AppearanceConfig.newNavigationBarStyle.setConfigBool(true);
                     AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
-                    leaveFloatingBottomNavigation();
+                    if (MainTabsLayout.isBottomNavigationHidden()) {
+                        MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
+                    } else {
+                        leaveFloatingBottomNavigation();
+                    }
                 } else {
                     AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
-                    leaveFloatingBottomNavigation();
+                    if (MainTabsLayout.isBottomNavigationHidden()) {
+                        MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
+                    } else {
+                        leaveFloatingBottomNavigation();
+                    }
                 }
                 rebuildAll();
                 rebuildRowsAndNotify();
