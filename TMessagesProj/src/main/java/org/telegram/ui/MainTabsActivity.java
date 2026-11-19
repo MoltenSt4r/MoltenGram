@@ -513,8 +513,21 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         });
         onMiniPlayerOffsetChanged();
 
-        tabsViewWrapper = new FrameLayout(context);
+        tabsViewWrapper = new FrameLayout(context) {
+            @Override
+            public boolean onTouchEvent(MotionEvent event) {
+                if (MainTabsUiHelper.isExpressiveToolbar()) {
+                    return false;
+                }
+                return super.onTouchEvent(event);
+            }
+        };
         tabsViewWrapper.setOnClickListener(v -> {});
+        tabsView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (MainTabsUiHelper.isExpressiveToolbar()) {
+                checkUi_expressiveToolbarShift();
+            }
+        });
         // В M3 панель во всю ширину,
         // высота досчитывается вместе с нижним системным отступом в applyTabsBottomInset
         tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeight(0), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));

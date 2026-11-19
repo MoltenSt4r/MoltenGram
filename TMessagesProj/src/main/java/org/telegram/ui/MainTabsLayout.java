@@ -811,6 +811,12 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             }
             return true;
         }
+        if (MainTabsUiHelper.isExpressiveToolbar() && !expressiveCapsuleRect.isEmpty()) {
+            if (ev.getActionMasked() == MotionEvent.ACTION_DOWN
+                    && !expressiveCapsuleRect.contains(ev.getX(), ev.getY())) {
+                return false;
+            }
+        }
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
             lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
                     && !MainTabsUiHelper.isMaterial3NavigationBar()
@@ -822,7 +828,14 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             return handled || lensTracking;
         }
         clickHelper.onTouchEvent(this, ev);
-        return super.dispatchTouchEvent(ev);
+        final boolean handled = super.dispatchTouchEvent(ev);
+        if (!handled && MainTabsUiHelper.isExpressiveToolbar()
+                && getVisibility() == View.VISIBLE && getAlpha() > 0.05f
+                && !expressiveCapsuleRect.isEmpty()
+                && expressiveCapsuleRect.contains(ev.getX(), ev.getY())) {
+            return true;
+        }
+        return handled;
     }
 
     @Override
@@ -1410,6 +1423,25 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             }
             gap = Math.min(gap, dp(3));
             minSum = padH + visibleCount * iconSlot + Math.max(0, visibleCount - 1) * gap;
+        } else if (minSum + desiredMaxExtra < availW && visibleCount > 0) {
+            // Expand icon slots (and gap if needed) so the toolbar fills availW and sits tightly next to the FAB
+            final int textExtra = maxTextPx > 0 ? maxTextPx + dp(6) : 0;
+            final int gapTotal = Math.max(0, visibleCount - 1) * gap;
+            final int targetSlotsTotal = availW - padH - gapTotal - textExtra;
+            int expandedSlot = targetSlotsTotal / visibleCount;
+            if (expandedSlot < dp(66) && visibleCount > 1) {
+                expandedSlot = (targetSlotsTotal - dp(66)) / (visibleCount - 1);
+            }
+            if (expandedSlot > iconSlot) {
+                final int maxSlot = visibleCount > 1 ? dp(88) : expandedSlot;
+                iconSlot = Math.min(expandedSlot, maxSlot);
+                final int newPillPad = Math.max(0, dp(66) - iconSlot);
+                final int used = padH + visibleCount * iconSlot + gapTotal + newPillPad + textExtra;
+                if (used < availW && visibleCount > 1) {
+                    gap += (availW - used) / (visibleCount - 1);
+                }
+                minSum = padH + visibleCount * iconSlot + Math.max(0, visibleCount - 1) * gap;
+            }
         }
         expressiveIconSlotPx = iconSlot;
         expressiveGapPx = gap;
