@@ -238,6 +238,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     private String lyricsKey;
     private String lyricsQueryKey;
     private boolean lyricsLoadingInFlight;
+    private int lyricsRequestId;
     private Runnable pendingLoadingRunnable;
     private boolean seeking;
     private float seekProgress;
@@ -1217,6 +1218,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         if (colorAnimator != null) {
             colorAnimator.cancel();
         }
+        cancelPendingLoading();
+        lyricsLoadingInFlight = false;
+        isTranslatingLyrics = false;
+        lyricsRequestId++;
     }
 
     public static void onModesChanged() {
@@ -1254,6 +1259,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
+                if (args != null && args.length > 0 && args[0] instanceof MessageObject
+                        && !TextUtils.equals(PlayerArt.key((MessageObject) args[0]), currentKey)) {
+                    return;
+                }
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
                 if (lyricsMode && lyricsView.getState() != LyricsView.STATE_LYRICS && lyricsView.getState() != LyricsView.STATE_INSTRUMENTAL) {
@@ -1308,13 +1317,21 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                     animateColors(PlayerColors.fromSeed(fallbackSeed, dark), animated);
                 }
             }
+            lyricsRequestId++;
             cancelPendingLoading();
             currentLyrics = null;
             lyricsKey = null;
             lyricsQueryKey = null;
             lyricsLoadingInFlight = false;
+            isTranslatingLyrics = false;
+            if (translateButton != null) {
+                translateButton.setAlpha(1.0f);
+            }
+            sourceView.setText(null);
             if (lyricsMode) {
                 loadLyrics();
+            } else {
+                lyricsView.showState(LyricsView.STATE_OFFER);
             }
         }
         triggerBackgroundRecognition(mo);
@@ -1327,7 +1344,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
     }
 
     private void onSeed(MessageObject mo, int seed) {
-        if (mo == current && AppearanceConfig.playerColorStyle() != 1) {
+        if ((mo == current || (mo != null && TextUtils.equals(PlayerArt.key(mo), currentKey))) && AppearanceConfig.playerColorStyle() != 1) {
             animateColors(PlayerColors.fromSeed(seed, dark), true);
         }
     }
@@ -2350,7 +2367,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         root.invalidate();
     }
 
-    private static final Map<String, OnlineLyrics.Query> recognizedQueries = new HashMap<>();
+    private static final Map<String, OnlineLyrics.Query> recognizedQueries = new java.util.concurrent.ConcurrentHashMap<>();
     private final Set<String> pendingSongRec = new HashSet<>();
 
     private void triggerBackgroundRecognition(MessageObject mo) {
@@ -2358,7 +2375,15 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         String key = PlayerArt.key(mo);
-        if (key == null || recognizedQueries.containsKey(key)) {
+        if (key == null) {
+            return;
+        }
+        if (recognizedQueries.containsKey(key)) {
+            return;
+        }
+        OnlineLyrics.Query artRecognized = PlayerArt.getRecognizedQuery(key);
+        if (artRecognized != null && artRecognized.valid()) {
+            recognizedQueries.put(key, artRecognized);
             return;
         }
         synchronized (pendingSongRec) {
@@ -2411,12 +2436,15 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 OnlineLyrics.Query recognizedQ = new OnlineLyrics.Query(result.artist, result.title, null, (int) Math.round(mo.getDuration()));
                 recognizedQ.filePath = localFile.getAbsolutePath();
                 recognizedQueries.put(key, recognizedQ);
+                PlayerArt.putRecognizedQuery(key, recognizedQ);
 
                 // 1. Pre-fetch lyrics with recognized artist and title into OnlineLyrics cache
                 OnlineLyrics.fetch(recognizedQ, (lyrics, status) -> {
                     if (lyrics != null) {
                         AndroidUtilities.runOnUIThread(() -> {
-                            if (TextUtils.equals(currentKey, key) && lyricsMode && (currentLyrics == null || lyricsView.getState() != LyricsView.STATE_LYRICS)) {
+                            if (!closing && TextUtils.equals(currentKey, key) && lyricsMode && (currentLyrics == null || lyricsView.getState() != LyricsView.STATE_LYRICS)) {
+                                lyricsKey = key;
+                                lyricsQueryKey = recognizedQ.key();
                                 showLyrics(lyrics);
                             }
                         });
@@ -2424,12 +2452,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 });
 
                 // 2. If songrecFetchCover is enabled, set recognized cover art on player's album art view / MessageObject
-                if (AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(result.coverUrl)) {
+                if (AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(result.coverUrl) && PlayerArt.fileCover(mo) == null) {
                     File coverFile = SongRecognizer.downloadAndCacheCover(result.coverUrl);
                     String coverPath = (coverFile != null && coverFile.exists()) ? coverFile.getAbsolutePath() : result.coverUrl;
                     PlayerArt.setSongrecCover(mo, coverPath);
                     AndroidUtilities.runOnUIThread(() -> {
-                        if (TextUtils.equals(currentKey, key)) {
+                        if (!closing && TextUtils.equals(currentKey, key)) {
                             cover.setMessage(mo);
                             smallCover.setMessage(mo);
                         }
@@ -2439,7 +2467,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 // If track had bogus artist or generic title, update header views
                 if (bogusArtist || genericTitle) {
                     AndroidUtilities.runOnUIThread(() -> {
-                        if (TextUtils.equals(currentKey, key)) {
+                        if (!closing && TextUtils.equals(currentKey, key)) {
                             if (!TextUtils.isEmpty(result.title)) {
                                 titleView.setText(result.title);
                                 smallTitle.setText(result.title);
@@ -2467,6 +2495,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         String key = PlayerArt.key(mo);
         OnlineLyrics.Query recognized = key != null ? recognizedQueries.get(key) : null;
+        if (recognized == null && key != null) {
+            recognized = PlayerArt.getRecognizedQuery(key);
+        }
         if (recognized != null && recognized.valid()) {
             return recognized;
         }
@@ -2535,14 +2566,19 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
-    private void scheduleLoadingState(String key) {
+    private void scheduleLoadingState(String key, int reqId) {
         cancelPendingLoading();
+        if (currentLyrics == null) {
+            lyricsView.showState(LyricsView.STATE_LOADING);
+            sourceView.setText(null);
+            return;
+        }
         if (lyricsView.getState() == LyricsView.STATE_LOADING) {
             return;
         }
         pendingLoadingRunnable = () -> {
             pendingLoadingRunnable = null;
-            if (TextUtils.equals(key, currentKey) && lyricsLoadingInFlight
+            if (!closing && reqId == lyricsRequestId && TextUtils.equals(key, currentKey) && lyricsLoadingInFlight
                     && lyricsView.getState() != LyricsView.STATE_LYRICS
                     && lyricsView.getState() != LyricsView.STATE_INSTRUMENTAL) {
                 lyricsView.showState(LyricsView.STATE_LOADING);
@@ -2608,10 +2644,11 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             showLyrics(cached);
             return;
         }
+        final int reqId = ++lyricsRequestId;
         lyricsLoadingInFlight = true;
-        scheduleLoadingState(key);
+        scheduleLoadingState(key, reqId);
         OnlineLyrics.loadCached(q, (lyrics, status) -> {
-            if (!TextUtils.equals(key, currentKey)) {
+            if (closing || reqId != lyricsRequestId || !TextUtils.equals(key, currentKey)) {
                 return;
             }
             if (lyrics != null) {
@@ -2640,14 +2677,15 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             lyricsView.showState(LyricsView.STATE_NOT_FOUND);
             return;
         }
+        final int reqId = ++lyricsRequestId;
         lyricsQueryKey = q.key();
         lyricsLoadingInFlight = true;
-        scheduleLoadingState(key);
+        scheduleLoadingState(key, reqId);
         OnlineLyrics.fetch(q, (lyrics, status) -> {
-            cancelPendingLoading();
-            if (!TextUtils.equals(key, currentKey)) {
+            if (closing || reqId != lyricsRequestId || !TextUtils.equals(key, currentKey)) {
                 return;
             }
+            cancelPendingLoading();
             lyricsLoadingInFlight = false;
             if (lyrics != null) {
                 showLyrics(lyrics);
@@ -2728,10 +2766,10 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         tw.nekomimi.nekogram.translate.Translator.translate(sb.toString(), new tw.nekomimi.nekogram.translate.Translator.Companion.TranslateCallBack() {
             @Override
             public void onSuccess(@org.jetbrains.annotations.NotNull String translation) {
-                isTranslatingLyrics = false;
-                if (currentLyrics != targetLyrics) {
+                if (closing || currentLyrics != targetLyrics) {
                     return;
                 }
+                isTranslatingLyrics = false;
                 String[] split = translation.split("\n");
                 for (int i = 0; i < targetLyrics.lines.size(); i++) {
                     if (i < split.length) {
@@ -2754,6 +2792,9 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
 
             @Override
             public void onFailed(boolean unsupported, @org.jetbrains.annotations.NotNull String message) {
+                if (closing || currentLyrics != targetLyrics) {
+                    return;
+                }
                 isTranslatingLyrics = false;
                 if (showFeedback && root != null) {
                     BulletinFactory.of(root, colors.provider(resourcesProvider))

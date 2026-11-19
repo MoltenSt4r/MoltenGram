@@ -207,6 +207,7 @@ public final class SongRecognizer {
         if (TextUtils.isEmpty(coverUrl)) {
             return null;
         }
+        File temp = null;
         try {
             File dir = getCoversDir();
             if (dir == null) return null;
@@ -215,28 +216,40 @@ public final class SongRecognizer {
             if (target.exists() && target.length() > 0) {
                 return target;
             }
-            File temp = new File(dir, name + ".tmp");
+            temp = new File(dir, name + "." + UUID.randomUUID().toString() + ".tmp");
             HttpURLConnection conn = (HttpURLConnection) new URL(coverUrl).openConnection();
             conn.setConnectTimeout(5_000);
             conn.setReadTimeout(6_000);
             conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)");
             conn.setRequestProperty("Connection", "Keep-Alive");
-            if (conn.getResponseCode() == 200) {
-                try (InputStream in = conn.getInputStream();
-                     FileOutputStream out = new FileOutputStream(temp)) {
-                    byte[] buf = new byte[8192];
-                    int n;
-                    while ((n = in.read(buf)) > 0) {
-                        out.write(buf, 0, n);
+            try {
+                if (conn.getResponseCode() == 200) {
+                    try (InputStream in = conn.getInputStream();
+                         FileOutputStream out = new FileOutputStream(temp)) {
+                        byte[] buf = new byte[8192];
+                        int n;
+                        while ((n = in.read(buf)) > 0) {
+                            out.write(buf, 0, n);
+                        }
+                    }
+                    if (temp.length() > 0) {
+                        if (target.exists() && target.length() > 0) {
+                            return target;
+                        }
+                        if (temp.renameTo(target)) {
+                            return target;
+                        }
                     }
                 }
-                if (temp.length() > 0 && temp.renameTo(target)) {
-                    return target;
-                }
+            } finally {
+                conn.disconnect();
             }
-            conn.disconnect();
         } catch (Throwable e) {
             FileLog.e(e);
+        } finally {
+            if (temp != null && temp.exists()) {
+                temp.delete();
+            }
         }
         return null;
     }

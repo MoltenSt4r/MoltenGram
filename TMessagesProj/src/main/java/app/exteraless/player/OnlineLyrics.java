@@ -109,7 +109,11 @@ public final class OnlineLyrics {
         }
 
         public String key() {
-            return (artist == null ? "" : artist.toLowerCase(Locale.ROOT)) + "\u0001" + (title == null ? "" : title.toLowerCase(Locale.ROOT)) + "\u0001" + duration;
+            String base = (artist == null ? "" : artist.toLowerCase(Locale.ROOT)) + "\u0001" + (title == null ? "" : title.toLowerCase(Locale.ROOT)) + "\u0001" + duration;
+            if (TextUtils.isEmpty(artist) && !TextUtils.isEmpty(filePath)) {
+                return base + "\u0001" + Utilities.MD5(filePath);
+            }
+            return base;
         }
 
         public boolean valid() {
@@ -277,7 +281,8 @@ public final class OnlineLyrics {
         });
     }
 
-    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static final ExecutorService fetchExecutor = Executors.newFixedThreadPool(4);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(6);
     private static final Map<String, List<Callback>> inFlightFetches = new HashMap<>();
 
     private static String stripExtras(String s) {
@@ -313,7 +318,7 @@ public final class OnlineLyrics {
             }
             inFlightFetches.put(key, waiters);
         }
-        queue.postRunnable(() -> {
+        fetchExecutor.execute(() -> {
             Lyrics result = readDisk(key);
             int status = OK;
             if (result == null) {

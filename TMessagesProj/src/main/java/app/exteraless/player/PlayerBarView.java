@@ -154,6 +154,10 @@ public class PlayerBarView extends FrameLayout implements NotificationCenter.Not
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
+                if (args != null && args.length > 0 && args[0] instanceof MessageObject
+                        && !TextUtils.equals(PlayerArt.key((MessageObject) args[0]), currentKey)) {
+                    return;
+                }
                 cover.setMessage(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {

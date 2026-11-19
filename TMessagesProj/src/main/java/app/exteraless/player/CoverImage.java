@@ -76,7 +76,7 @@ public class CoverImage extends FrameLayout {
         imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
         imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
-            if (set) {
+            if (set && message != null) {
                 onBitmap(imageReceiver.getBitmap());
             }
         });
@@ -218,6 +218,8 @@ public class CoverImage extends FrameLayout {
             currentTrackKey = null;
             lastCheckedAttachTrackKey = null;
             message = null;
+            imageView.getImageReceiver().setCrossfadeWithOldImage(false);
+            imageView.clearImage();
             imageView.setImageDrawable(null);
             return;
         }
@@ -225,13 +227,16 @@ public class CoverImage extends FrameLayout {
         imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
         String trackKey = PlayerArt.key(messageObject);
         Bitmap file = PlayerArt.fileCover(messageObject);
+        if (file != null && file.isRecycled()) {
+            file = null;
+        }
         // Fallback for local files if not yet playing or AudioInfo not cached in MediaController
         if (file == null) {
             java.io.File local = PlayerArt.localFile(messageObject);
             if (local != null && local.exists()) {
                 try {
                     AudioInfo info = AudioInfo.getAudioInfo(local);
-                    if (info != null && info.getCover() != null) {
+                    if (info != null && info.getCover() != null && !info.getCover().isRecycled()) {
                         file = info.getCover();
                         PlayerArt.putEmbeddedCover(trackKey, file);
                     }
@@ -251,7 +256,10 @@ public class CoverImage extends FrameLayout {
         currentTrackKey = trackKey;
         message = messageObject;
 
-        imageView.getImageReceiver().setCrossfadeWithOldImage(true);
+        if (!sameTrack) {
+            imageView.getImageReceiver().clearImage();
+        }
+        imageView.getImageReceiver().setCrossfadeWithOldImage(sameTrack);
         imageView.getImageReceiver().setCrossfadeDuration(200);
 
         Bitmap oldBmp = sameTrack ? imageView.getImageReceiver().getBitmap() : null;
@@ -289,16 +297,22 @@ public class CoverImage extends FrameLayout {
         morphProgress = 1f;
         fromShapeId = -1;
         toShapeId = -1;
+        currentKey = null;
+        currentTrackKey = null;
+        lastCheckedAttachTrackKey = null;
+        message = null;
+        imageView.clearImage();
         imageView.setImageDrawable(null);
     }
 
     private void onBitmap(Bitmap bitmap) {
         final MessageObject target = message;
-        if (bitmap == null || target == null || listener == null) {
+        if (bitmap == null || bitmap.isRecycled() || target == null || listener == null) {
             return;
         }
+        final String targetTrackKey = PlayerArt.key(target);
         PlayerArt.requestSeed(target, bitmap, fallbackSeed, seed -> {
-            if (target == message && listener != null) {
+            if (listener != null && (target == message || (targetTrackKey != null && TextUtils.equals(targetTrackKey, currentTrackKey)))) {
                 listener.onSeed(target, seed);
             }
         });

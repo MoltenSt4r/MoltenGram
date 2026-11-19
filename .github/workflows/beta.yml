@@ -10,11 +10,6 @@ on:
       - '.github/**'
       - '!.github/workflows/beta.yml'
   workflow_dispatch:
-    inputs:
-      publish:
-        description: 'Post the APK to the Telegram channel'
-        type: boolean
-        default: true
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -109,11 +104,11 @@ jobs:
           export BUILD_TIMESTAMP=$(date +%s)
           echo "build_timestamp=$BUILD_TIMESTAMP" >> "$GITHUB_OUTPUT"
           export NATIVE_TARGET=arm64-v8a
-          ./gradlew TMessagesProj:assembleStaging -PSTAGING_CODENAME=StarAnise
+          ./gradlew TMessagesProj:assembleStaging -PSTAGING_CODENAME=Lemon
       - name: Upload arm64-v8a Artifact
         uses: actions/upload-artifact@v7
         with:
-          name: Beta-StarAnise
+          name: Beta-Lemon
           path: |
             TMessagesProj/build/outputs/apk/staging/*.apk
 
@@ -121,43 +116,13 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
-          tag_name: v13.2.1-beta-staranise
+          tag_name: v13.2.1-beta-lemon
           target_commitish: ${{ github.sha }}
-          name: MoltenGram v13.2.1 Beta «StarAnise»
+          name: MoltenGram v13.2.1 Beta «Lemon»
           prerelease: true
           make_latest: false
+          generate_release_notes: true
           body: |
-            ### ✨ MoltenGram v13.2.1 Beta «StarAnise»
-
-            **Вход по токену бота:**
-            - Отдельное окно редактирования профиля бота (имя, описание «О боте», описание «Что умеет этот бот?» с выбором языка, загрузка и удаление аватарки, копирование `@username`, просмотр баннера описания)
-            - Кнопка **Live-печати** (`SendMessageTextDraftAction`) в поле ввода личных чатов с живым стримингом набираемого текста
-
-            **Liquid Glass и интерфейс:**
-            - Исправлен сброс тонизации Liquid Glass при выключении и доработано отображение мини-плеера и волнистой шкалы аудиосообщений
-            - Исправлено переключение и сохранение тёмных/дневных тем чата и локальных обоев без глобального сброса темы
-            - Добавлен скрытый профиль и синхронизация бесплатных эмодзи-статусов через скрытые теги и бота-синхронизатора
+            ### ✨ MoltenGram v13.2.1 Beta «Lemon»
           files: |
             TMessagesProj/build/outputs/apk/staging/*.apk
-
-      - name: Send APK to Telegram
-        continue-on-error: true
-        if: ${{ (github.event_name != 'workflow_dispatch' || inputs.publish) && !contains(github.event.head_commit.message, '[skip publish]') }}
-        env:
-          TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_API_ID: ${{ secrets.TG_API_ID || '39205442' }}
-          TG_API_HASH: ${{ secrets.TG_API_HASH || '1090b570704d1d97975994ee9c177dba' }}
-          TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
-          RELEASE_TITLE: "MoltenGram v13.2.1 Beta «StarAnise»"
-          COMMIT_SHA: ${{ github.sha }}
-          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
-          COMMITS_JSON: ${{ toJSON(github.event.commits) }}
-          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          APK_GLOB: "TMessagesProj/build/outputs/apk/staging/*.apk"
-        run: |
-          if [ -z "$TG_BOT_TOKEN" ] || [ -z "$TG_CHAT_ID" ]; then
-            echo "секреты Telegram (TG_BOT_TOKEN или TG_CHAT_ID) не заданы — отправка пропущена"
-            exit 0
-          fi
-          pip install --quiet kurigram tgcrypto
-          python3 .github/scripts/send_apk.py

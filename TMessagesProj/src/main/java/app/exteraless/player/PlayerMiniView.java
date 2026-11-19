@@ -384,6 +384,10 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         } else if (id == NotificationCenter.audioInfoLoaded) {
             MessageObject mo = current;
             if (mo != null && PlayerArt.isPlaying(mo)) {
+                if (args != null && args.length > 0 && args[0] instanceof MessageObject
+                        && !TextUtils.equals(PlayerArt.key((MessageObject) args[0]), currentKey)) {
+                    return;
+                }
                 cover.setMessage(mo);
             }
         } else if (id == NotificationCenter.fileLoaded) {
@@ -414,6 +418,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
                 bind(mo, animated);
             } else {
                 current = null;
+                currentKey = null;
                 titleView.setText(getString(R.string.OEPlayerPreviewTitle));
                 artistView.setText(getString(R.string.OEPlayerPreviewArtist));
                 cover.setShapeId(PlayerArt.getOrCycleMiniShape(null), animated);

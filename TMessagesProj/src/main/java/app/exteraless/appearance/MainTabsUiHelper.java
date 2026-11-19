@@ -10,6 +10,7 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.ShapeDrawable;
+import android.os.Build;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
@@ -19,6 +20,8 @@ import android.widget.TextView;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.core.graphics.ColorUtils;
+
+import com.google.android.material.color.utilities.Hct;
 
 import app.exteraless.player.PlayerColors;
 import me.vkryl.android.animator.BoolAnimator;
@@ -32,6 +35,7 @@ import org.telegram.ui.Components.glass.GlassTabView;
 import org.telegram.ui.MainTabsLayout;
 
 import tw.nekomimi.nekogram.helpers.MainTabsHelper;
+import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 /**
  * Material 3 для нижней панели вкладок.
@@ -263,6 +267,8 @@ public final class MainTabsUiHelper {
         rectF.set(0, top, view.getMeasuredWidth(), bottom);
     }
 
+    private static final double NEUTRAL_CHROMA_THRESHOLD = 18.0;
+
     /**
      * Токены Material 3 Expressive Vibrant Toolbar из активной темы:
      * [0] = containerColor (primaryContainer),
@@ -274,22 +280,68 @@ public final class MainTabsUiHelper {
         final int surfaceBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider) | 0xff000000;
         final double surfaceLum = ColorUtils.calculateLuminance(surfaceBg);
         final boolean isDark = surfaceLum < 0.5;
-        final PlayerColors colors = PlayerColors.fromSeed(
-                resolveExpressiveSeed(resourcesProvider),
-                isDark);
+
+        int rawPrimaryContainer = 0;
+        int rawPrimary = 0;
+        int rawOnPrimary = 0;
+        int rawOnPrimaryContainer = 0;
+        boolean resolvedFromMonet = false;
+
+        final Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
+        if (resourcesProvider == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
+                && activeTheme != null && activeTheme.isMonet()) {
+            final String suffix = isDark ? "_dark" : "_light";
+            final Integer monetPrimary = MonetHelper.getColorOrNull("primary" + suffix);
+            final Integer monetContainer = MonetHelper.getColorOrNull("primary_container" + suffix);
+            final Integer monetOnPrimary = MonetHelper.getColorOrNull("on_primary" + suffix);
+            final Integer monetOnContainer = MonetHelper.getColorOrNull("on_primary_container" + suffix);
+            if (monetPrimary != null && monetContainer != null
+                    && Color.alpha(monetPrimary) != 0 && Color.alpha(monetContainer) != 0) {
+                rawPrimary = monetPrimary | 0xff000000;
+                rawPrimaryContainer = monetContainer | 0xff000000;
+                rawOnPrimary = monetOnPrimary != null && Color.alpha(monetOnPrimary) != 0
+                        ? (monetOnPrimary | 0xff000000)
+                        : (isDark ? 0xff000000 : 0xffffffff);
+                rawOnPrimaryContainer = monetOnContainer != null && Color.alpha(monetOnContainer) != 0
+                        ? (monetOnContainer | 0xff000000)
+                        : (isDark ? 0xffffffff : 0xff000000);
+                resolvedFromMonet = true;
+            }
+        }
+
+        if (!resolvedFromMonet) {
+            final int seed = resolveExpressiveSeed(resourcesProvider);
+            final Hct seedHct = Hct.fromInt(seed);
+            final double seedChroma = seedHct.getChroma();
+            if (seedChroma < NEUTRAL_CHROMA_THRESHOLD) {
+                // Preserve low-chroma neutral/grey-beige themes instead of letting
+                // SchemeTonalSpot force chroma=36 (which turns warm grey/beige olive-yellow).
+                final double hue = seedHct.getHue();
+                rawPrimaryContainer = Hct.from(hue, seedChroma, isDark ? 30.0 : 90.0).toInt() | 0xff000000;
+                rawPrimary = Hct.from(hue, seedChroma, isDark ? 80.0 : 40.0).toInt() | 0xff000000;
+                rawOnPrimary = Hct.from(hue, seedChroma, isDark ? 20.0 : 100.0).toInt() | 0xff000000;
+                rawOnPrimaryContainer = Hct.from(hue, seedChroma, isDark ? 90.0 : 10.0).toInt() | 0xff000000;
+            } else {
+                final PlayerColors colors = PlayerColors.fromSeed(seed, isDark);
+                rawPrimaryContainer = colors.primaryContainer;
+                rawPrimary = colors.primary;
+                rawOnPrimary = colors.onPrimary;
+                rawOnPrimaryContainer = colors.onPrimaryContainer;
+            }
+        }
 
         final float surfaceBlend = isDark ? (surfaceLum < 0.005 ? 0.55f : 0.38f) : 0.30f;
-        final int containerColor = ColorUtils.blendARGB(colors.primaryContainer, surfaceBg, surfaceBlend);
-        final int activePillColor = colors.primary;
+        final int containerColor = ColorUtils.blendARGB(rawPrimaryContainer, surfaceBg, surfaceBlend);
+        final int activePillColor = rawPrimary;
 
-        int activeContent = colors.onPrimary;
+        int activeContent = rawOnPrimary;
         if (ColorUtils.calculateContrast(activeContent, activePillColor) < 4.5) {
             activeContent = ColorUtils.calculateContrast(Color.WHITE, activePillColor)
                     >= ColorUtils.calculateContrast(Color.BLACK, activePillColor)
                     ? Color.WHITE : Color.BLACK;
         }
 
-        int inactiveContent = colors.onPrimaryContainer;
+        int inactiveContent = rawOnPrimaryContainer;
         if (ColorUtils.calculateContrast(inactiveContent, containerColor) < 4.5) {
             final int fallbackInk = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider) | 0xff000000;
             if (ColorUtils.calculateContrast(fallbackInk, containerColor) >= 4.5) {
@@ -306,13 +358,6 @@ public final class MainTabsUiHelper {
     }
 
     private static int resolveExpressiveSeed(Theme.ResourcesProvider resourcesProvider) {
-        final Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
-        if (activeTheme != null) {
-            final Theme.ThemeAccent accent = activeTheme.getAccent(false);
-            if (accent != null && Color.alpha(accent.accentColor) != 0) {
-                return accent.accentColor | 0xff000000;
-            }
-        }
         final int[] candidateKeys = {
                 Theme.key_featuredStickers_addButton,
                 Theme.key_chats_actionBackground,
@@ -324,6 +369,13 @@ public final class MainTabsUiHelper {
             final int color = Theme.getColor(key, resourcesProvider);
             if (Color.alpha(color) != 0) {
                 return color | 0xff000000;
+            }
+        }
+        final Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
+        if (activeTheme != null) {
+            final Theme.ThemeAccent accent = activeTheme.getAccent(false);
+            if (accent != null && Color.alpha(accent.accentColor) != 0) {
+                return accent.accentColor | 0xff000000;
             }
         }
         return 0xff4285f4;

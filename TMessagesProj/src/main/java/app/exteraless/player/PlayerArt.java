@@ -183,22 +183,23 @@ public final class PlayerArt {
     public static Bitmap fileCover(MessageObject messageObject) {
         String key = key(messageObject);
         if (key != null) {
+            Bitmap emb = embeddedCovers.get(key);
+            if (emb != null && !emb.isRecycled()) {
+                return emb;
+            }
             if (AppearanceConfig.songrecFetchCover()) {
                 Bitmap b = songrecBitmapCovers.get(key);
-                if (b != null) {
+                if (b != null && !b.isRecycled()) {
                     return b;
                 }
-            }
-            Bitmap b = embeddedCovers.get(key);
-            if (b != null) {
-                return b;
             }
         }
         if (!isPlaying(messageObject)) {
             return null;
         }
         AudioInfo info = MediaController.getInstance().getAudioInfo();
-        return info != null ? info.getCover() : null;
+        Bitmap cover = info != null ? info.getCover() : null;
+        return cover != null && !cover.isRecycled() ? cover : null;
     }
 
     private static final LruCache<String, Bitmap> embeddedCovers = new LruCache<>(24);
@@ -266,7 +267,7 @@ public final class PlayerArt {
     }
 
     public static void putEmbeddedCover(String key, Bitmap bmp) {
-        if (key != null && bmp != null) {
+        if (key != null && bmp != null && !bmp.isRecycled()) {
             embeddedCovers.put(key, bmp);
         }
     }
@@ -303,7 +304,7 @@ public final class PlayerArt {
     }
 
     private static void applyCoverFile(MessageObject mo, String key, String path) {
-        if (TextUtils.isEmpty(path)) {
+        if (mo == null || key == null || TextUtils.isEmpty(path) || !TextUtils.equals(key, key(mo))) {
             return;
         }
         Bitmap bmp = null;
@@ -311,8 +312,12 @@ public final class PlayerArt {
             bmp = android.graphics.BitmapFactory.decodeFile(path);
         } catch (Throwable ignore) {
         }
-        final Bitmap fb = bmp;
-        AndroidUtilities.runOnUIThread(() -> setSongrecCover(mo, path));
+        final Bitmap fb = (bmp != null && !bmp.isRecycled()) ? bmp : null;
+        AndroidUtilities.runOnUIThread(() -> {
+            if (TextUtils.equals(key, key(mo))) {
+                setSongrecCover(mo, path);
+            }
+        });
         if (fb != null) {
             songrecBitmapCovers.put(key, fb);
             AndroidUtilities.runOnUIThread(() -> requestSeed(mo, fb, 0xff5a6472, seed -> {}));
@@ -437,6 +442,9 @@ public final class PlayerArt {
     }
 
     public static void requestSeed(MessageObject messageObject, Bitmap bitmap, int fallback, SeedCallback callback) {
+        if (bitmap == null || bitmap.isRecycled()) {
+            return;
+        }
         String key = key(messageObject);
         if (key == null) {
             return;
