@@ -250,7 +250,12 @@ public class CoverImage extends FrameLayout {
         currentTrackKey = trackKey;
         message = messageObject;
 
-        Bitmap oldBmp = imageView.getImageReceiver().getBitmap();
+        imageView.getImageReceiver().setCrossfadeWithOldImage(sameTrack);
+        if (!sameTrack) {
+            imageView.clearImage();
+        }
+
+        Bitmap oldBmp = sameTrack ? imageView.getImageReceiver().getBitmap() : null;
         Drawable keepThumb = (sameTrack && oldBmp != null && !oldBmp.isRecycled())
                 ? new BitmapDrawable(getResources(), oldBmp)
                 : null;

@@ -378,12 +378,13 @@ public class WavySeekBar extends View {
                 float barH = Math.max(strokeW + dp(isMaterial3 ? 12 : 8), dp(isMaterial3 ? 24 : 18));
                 rect.set(x - thumbW / 2f, cy - barH / 2f, x + thumbW / 2f, cy + barH / 2f);
                 canvas.drawRoundRect(rect, dpf2(2f), dpf2(2f), fillPaint);
-                if (isMaterial3) {
-                    canvas.drawCircle(stopX, cy, strokeW / 2f, fillPaint);
-                }
             } else if (indicator == 0) {
                 canvas.drawCircle(x, cy, thumbRadius, fillPaint);
             }
+        }
+        // MD3 Expressive stop dot at the right end of the track
+        if (stopX > restX + dp(1)) {
+            canvas.drawCircle(stopX, cy, Math.max(dpf2(2f), strokeW * 0.4f), fillPaint);
         }
 
         if (!frozen && (amplitude > 0f || targetAmp != amplitude)) {

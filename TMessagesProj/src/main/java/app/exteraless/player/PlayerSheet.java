@@ -1848,6 +1848,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 canvas.drawCircle(zeroX, cy, AndroidUtilities.dp(2f), activePaint);
             }
 
+            // MD3 stop dot at the right end of the track
+            float endDotX = right - trackRadius;
+            if (endDotX > inactiveLeft + AndroidUtilities.dp(2)) {
+                canvas.drawCircle(endDotX, cy, AndroidUtilities.dp(2f), activePaint);
+            }
+
             // MD3 thumb pill
             rectF.set(thumbX - thumbWidth / 2f, cy - thumbHeight / 2f, thumbX + thumbWidth / 2f, cy + thumbHeight / 2f);
             canvas.drawRoundRect(rectF, thumbRadius, thumbRadius, thumbPaint);
