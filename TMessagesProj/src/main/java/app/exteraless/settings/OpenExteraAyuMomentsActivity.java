@@ -212,7 +212,7 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
 
     @Override
     public int getSearchGuid() {
-        return 27000;
+        return 33000;
     }
 
     @Override

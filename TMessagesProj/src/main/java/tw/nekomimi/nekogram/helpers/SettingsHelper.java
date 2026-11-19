@@ -60,6 +60,7 @@ public class SettingsHelper {
     private static final String HOST_EXTERAMS = "exterams";
     private static final String HOST_MOLTENGRAM = "moltengram";
     private static final String HOST_MGSETTINGS = "mgsettings";
+    private static final String HOST_EXTERASETTINGS = "exterasettings";
 
     private static final Map<String, String> SEARCH_TITLE_ALIASES = new HashMap<>();
     private static final Map<String, String> TRANSLATOR_ROWS = new HashMap<>();
@@ -140,6 +141,36 @@ public class SettingsHelper {
         SEARCH_TITLE_ALIASES.put("OEPlayer:crossfadeDuration", "OEAppearancePlayerCrossfadeDuration");
         SEARCH_TITLE_ALIASES.put("OEPlayer:playlists", "OEPlayerLocalPlaylists");
         SEARCH_TITLE_ALIASES.put("OEPlayer:sleepTimer", "OEAppearancePlayerSleepTimer");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:chatMediaSeekbar", "OEAppearancePlayerChatSeekbar");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:classicPlayerSeekbar", "OEAppearancePlayerClassicSeekbar");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:mediaSeekbarStyle", "OEAppearancePlayerMediaSeekbarStyle");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:mediaSeekbarIndicator", "OEAppearancePlayerMediaSeekbarIndicator");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:songrecFetchCover", "OEAppearanceSongrecFetchCover");
+        SEARCH_TITLE_ALIASES.put("OEPlayer:songrecBackgroundRecognition", "OEAppearanceSongrecBackgroundRecognition");
+        SEARCH_TITLE_ALIASES.put("OEAppearance:md3SwitchSize", "OEAppearanceSwitchSize");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:torSettings", "TorSettingsTitle");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:lastfm", "OEGeneralLastFm");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:shizukuBoost", "OEGeneralShizukuNotificationBoost");
+        SEARCH_TITLE_ALIASES.put("OEGeneral:updates", "OpenExteraUpdates");
+        SEARCH_TITLE_ALIASES.put("OEChats:pluginCommandSuggestions", "OEPluginCommandSuggestions");
+        SEARCH_TITLE_ALIASES.put("OEChats:pluginCommandPrefixes", "OEPluginCommandPrefixes");
+        SEARCH_TITLE_ALIASES.put("OEChats:customCommands", "CustomCommandsTitle");
+        SEARCH_TITLE_ALIASES.put("OEChats:customEmojiStatus", "OECustomEmojiStatus");
+        SEARCH_TITLE_ALIASES.put("OEChats:freeProfileAppearance", "OEFreeProfileAppearance");
+        SEARCH_TITLE_ALIASES.put("OEChats:botProfileSync", "OEBotProfileSync");
+        SEARCH_TITLE_ALIASES.put("OEChats:coloredText", "OEColoredText");
+        SEARCH_TITLE_ALIASES.put("OEChats:groqApiKey", "LlmProviderGroqKey");
+        SEARCH_TITLE_ALIASES.put("OETools:voiceChanger", "OEVoiceChanger");
+        SEARCH_TITLE_ALIASES.put("OETools:ayuMoments", "OEGeneralAyuMoments");
+        SEARCH_TITLE_ALIASES.put("OETools:tor", "TorSettingsTitle");
+        SEARCH_TITLE_ALIASES.put("OETools:deviceSpoof", "DeviceSpoofing");
+        SEARCH_TITLE_ALIASES.put("OETools:shizuku", "ShizukuSettings");
+        SEARCH_TITLE_ALIASES.put("OECloud:cloudUpload", "OECloudUpload");
+        SEARCH_TITLE_ALIASES.put("OECloud:cloudRestore", "OECloudRestore");
+        SEARCH_TITLE_ALIASES.put("OECloud:cloudClear", "OECloudClear");
+        SEARCH_TITLE_ALIASES.put("OECloud:cloudAutoSync", "OECloudAutoSync");
+        SEARCH_TITLE_ALIASES.put("OECloud:cloudApiKeys", "CloudConfigIncludeApiKeys");
+        SEARCH_TITLE_ALIASES.put("PluginsStoreSettings:hideOldVersions", "PluginsStoreSettingsHideOld");
         MOVED_ROWS.put("chats:translateInSheet", "general");
         MOVED_ROWS.put("other:unlimitedPinnedDialogs", "general");
         MOVED_ROWS.put("other:glyph", "general");
@@ -268,6 +299,11 @@ public class SettingsHelper {
             "ghost_mode", "ghost",
             "device_spoof", "devicespoof", "spoof",
             "voice_changer", "voicechanger",
+            "tools", "exteraless_tools", "moltengram_tools", "exterams_tools",
+            "liquid_glass", "liquidglass", "glass",
+            "openclip", "open_clip", "clip",
+            "vosk", "vosk_settings",
+            "fab", "fab_appearance", "md3_fab",
             "translator", "translate", "t", "emoji", "about", "passcode", "send_logs",
             "iconpacks", "pillstackweather"));
 
@@ -298,6 +334,12 @@ public class SettingsHelper {
             int qIdx = sub.indexOf('?');
             if (qIdx >= 0) sub = sub.substring(0, qIdx);
             return EXTERALESS_SCREENS.contains(sub);
+        }
+        if (path.startsWith(HOST_EXTERASETTINGS + "/")) {
+            String sub = path.substring(HOST_EXTERASETTINGS.length() + 1);
+            int qIdx = sub.indexOf('?');
+            if (qIdx >= 0) sub = sub.substring(0, qIdx);
+            return EXTERALESS_SCREENS.contains(sub) || EXTERALESS_SCREENS.contains(sub.toLowerCase());
         }
         return false;
     }
@@ -351,6 +393,21 @@ public class SettingsHelper {
             case "devicespoof":
             case "spoof":
                 return HOST_MOLTENGRAM + "/device_spoof";
+            case "tools":
+            case "exteraless_tools":
+            case "moltengram_tools":
+            case "exterams_tools":
+                return HOST_MOLTENGRAM + "/tools";
+            case "cloud":
+            case "exteraless_cloud":
+                return HOST_MOLTENGRAM + "/cloud";
+            case "liquid_glass":
+            case "liquidglass":
+            case "glass":
+                return HOST_MOLTENGRAM + "/liquid_glass";
+            case "voice_changer":
+            case "voicechanger":
+                return HOST_MOLTENGRAM + "/voice_changer";
             default:
                 return HOST_MOLTENGRAM + "/" + key;
         }
@@ -372,6 +429,7 @@ public class SettingsHelper {
         String prefix0 = segments.get(0).toLowerCase();
         boolean hasHostPrefix = HOST_MOLTENGRAM.equals(prefix0) || HOST_MGSETTINGS.equals(prefix0)
                 || HOST_EXTERAMS.equals(prefix0) || HOST_EXTERALESS.equals(prefix0)
+                || HOST_EXTERASETTINGS.equals(prefix0)
                 || HOST_NAGRAM.equals(prefix0) || "neko".equals(prefix0) || "ms".equals(prefix0);
 
         String targetScreen = uri.getQueryParameter("target");
@@ -502,6 +560,31 @@ public class SettingsHelper {
                 case "voice_changer":
                 case "voicechanger":
                     fragment = neko_fragment = new app.exteraless.settings.OpenExteraVoiceChangerActivity();
+                    break;
+                case "liquid_glass":
+                case "liquidglass":
+                case "glass":
+                    fragment = new app.exteraless.settings.LiquidGlassSettingsActivity();
+                    break;
+                case "openclip":
+                case "open_clip":
+                case "clip":
+                    fragment = neko_fragment = new app.exteraless.clip.OpenClipSettingsActivity();
+                    break;
+                case "vosk":
+                case "vosk_settings":
+                    fragment = neko_fragment = new app.exteraless.speech.VoskSettingsActivity();
+                    break;
+                case "fab":
+                case "fab_appearance":
+                case "md3_fab":
+                    fragment = neko_fragment = new app.exteraless.appearance.Md3FabAppearanceActivity();
+                    break;
+                case "pillstackweather":
+                    fragment = neko_fragment = new WeatherSettingsActivity();
+                    break;
+                case "iconpacks":
+                    fragment = neko_fragment = new IconPacksActivity();
                     break;
                 default:
                     unknown.run();
@@ -783,6 +866,41 @@ public class SettingsHelper {
             case "spoof":
                 fallback = "device_spoof";
                 break;
+            case "voice_changer":
+            case "voicechanger":
+                fallback = "voice_changer";
+                break;
+            case "tools":
+            case "exteraless_tools":
+            case "moltengram_tools":
+            case "exterams_tools":
+                fallback = "tools";
+                break;
+            case "liquid_glass":
+            case "liquidglass":
+            case "glass":
+                fallback = "liquid_glass";
+                break;
+            case "openclip":
+            case "open_clip":
+            case "clip":
+                fallback = "openclip";
+                break;
+            case "vosk":
+            case "vosk_settings":
+                fallback = "vosk";
+                break;
+            case "fab":
+            case "fab_appearance":
+            case "md3_fab":
+                fallback = "fab";
+                break;
+            case "pillstackweather":
+                fallback = "pillstackweather";
+                break;
+            case "iconpacks":
+                fallback = "iconpacks";
+                break;
             default:
                 return null;
         }
@@ -860,18 +978,28 @@ public class SettingsHelper {
         exteralessFragments.add(new ChipFoldersSettingsActivity());
         exteralessFragments.add(new TextAnimationSettingsActivity());
         exteralessFragments.add(new OpenExteraGlyphActivity());
+        exteralessFragments.add(new OpenExteraCloudActivity());
         exteralessFragments.add(new app.exteraless.appearance.Md3AvatarShapesActivity());
         exteralessFragments.add(new app.exteraless.appearance.Md3FabAppearanceActivity());
         exteralessFragments.add(new app.exteraless.spoof.DeviceSpoofActivity());
+        exteralessFragments.add(new app.exteraless.clip.OpenClipSettingsActivity());
+        exteralessFragments.add(new app.exteraless.speech.VoskSettingsActivity());
+        exteralessFragments.add(new WeatherSettingsActivity());
+        exteralessFragments.add(new IconPacksActivity());
+        exteralessFragments.add(new GhostModeActivity());
 
         String e_title = getString(R.string.OpenExtera);
-        for (BaseNekoSettingsActivity fragment : exteralessFragments) {
+        for (int fragIdx = 0; fragIdx < exteralessFragments.size(); fragIdx++) {
+            BaseNekoSettingsActivity fragment = exteralessFragments.get(fragIdx);
             try {
                 fragment.buildRowsForSearch();
             } catch (Exception e) {
                 continue;
             }
             int uid = fragment.getSearchGuid();
+            if (uid == 0) {
+                uid = 900000 + fragIdx * 1000;
+            }
             int drawable = fragment.getSearchIcon();
             String f_title = fragment.getSearchTitle();
             for (Map.Entry<Integer, String> entry : fragment.getSearchRows().entrySet()) {
@@ -915,6 +1043,46 @@ public class SettingsHelper {
                 navUid + 5, "Навигация и плавающая кнопка", e_title, navTitle, navIcon,
                 () -> callback.presentFragment(new app.exteraless.settings.OpenExteraAppNavigationActivity())
         ));
+
+        String glassTitle = getString(R.string.SG_GlassSettings);
+        int glassUid = 994000;
+        int glassIcon = R.drawable.msg_theme;
+        int[] glassResIds = {
+                R.string.SG_GlassEnable,
+                R.string.SG_GlassThickness,
+                R.string.SG_GlassRefraction,
+                R.string.SG_GlassIndex,
+                R.string.SG_GlassDispersion,
+                R.string.SG_GlassRim,
+                R.string.SG_GlassOpacity,
+                R.string.SG_GlassBlur,
+                R.string.SG_GlassHighlight,
+                R.string.SG_GlassPreviewLook,
+                R.string.SG_GlassShadow,
+                R.string.SG_GlassVibrancy,
+                R.string.SG_LiquidControls,
+                R.string.SG_HeaderButtons,
+                R.string.SG_FrostedHeaders,
+                R.string.SG_GlassMainHeader,
+                R.string.SG_GlassFolders,
+                R.string.SG_GlassFab,
+                R.string.SG_GlassMiniPlayer,
+                R.string.SG_GlassMessages,
+                R.string.SG_GlassMenus,
+                R.string.SG_GlassDialogs,
+                R.string.SG_GlassSheets,
+                R.string.SG_GlassTintColor,
+                R.string.SG_GlassResetDefaults
+        };
+        for (int i = 0; i < glassResIds.length; i++) {
+            String title = getString(glassResIds[i]);
+            if (title != null && !title.isEmpty()) {
+                items.add(new SettingsSearchResult(
+                        glassUid + i + 1, title, e_title, glassTitle, glassIcon,
+                        () -> callback.presentFragment(new app.exteraless.settings.LiquidGlassSettingsActivity())
+                ));
+            }
+        }
 
         String n_title = getString(R.string.Language);
         for (BaseNekoXSettingsActivity fragment: fragments) {

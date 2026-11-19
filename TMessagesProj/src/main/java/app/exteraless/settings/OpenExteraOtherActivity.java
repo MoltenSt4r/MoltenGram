@@ -65,6 +65,7 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     private static final long DELETE_ACCOUNT_DELAY = 30_000L;
 
     private static final int ETG_IMPORT_REQUEST_CODE = 22;
+    private static final int TYPE_COLLAPSE = 100;
 
     private int updatesHeaderRow;
     private int updatesRow;
@@ -76,6 +77,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     private int voiceEnhancementsRow;
     private int enhancedVideoBitrateRow;
     private int sensitiveContentRow;
+    private int experimentalMoreRow;
+    private boolean experimentalMoreExpanded;
     private int experimentalDividerRow;
     private boolean sensitiveEnabled;
     private boolean sensitiveCanChange;
@@ -127,9 +130,16 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
         experimentalHeaderRow = addRow("experimentalHeader");
         localPremiumRow = addRow("localPremium");
         unlimitedPinnedDialogsRow = addRow("unlimitedPinnedDialogs", "UnlimitedPinnedDialogs");
-        voiceEnhancementsRow = addRow("noiseSuppressAndVoiceEnhance", "NoiseSuppressAndVoiceEnhance");
-        enhancedVideoBitrateRow = addRow("enhancedVideoBitrate", "EnhancedVideoBitrate");
-        sensitiveContentRow = addRow("sensitiveDisableFiltering", "SensitiveDisableFiltering");
+        experimentalMoreRow = addRow();
+        if (experimentalMoreExpanded) {
+            voiceEnhancementsRow = addRow("noiseSuppressAndVoiceEnhance", "NoiseSuppressAndVoiceEnhance");
+            enhancedVideoBitrateRow = addRow("enhancedVideoBitrate", "EnhancedVideoBitrate");
+            sensitiveContentRow = addRow("sensitiveDisableFiltering", "SensitiveDisableFiltering");
+        } else {
+            voiceEnhancementsRow = -1;
+            enhancedVideoBitrateRow = -1;
+            sensitiveContentRow = -1;
+        }
         experimentalDividerRow = addRow();
 
         exportEtgRow = addRow("exportEtgSettings");
@@ -180,7 +190,19 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    protected java.util.List<CollapsibleGroup> collapsibleGroups() {
+        return java.util.Collections.singletonList(
+                new CollapsibleGroup(() -> experimentalMoreExpanded, expanded -> experimentalMoreExpanded = expanded));
+    }
+
+    @Override
     protected void onItemClick(View view, int position, float x, float y) {
+        if (position == experimentalMoreRow) {
+            experimentalMoreExpanded = !experimentalMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        }
         if (position == updatesRow) {
             presentFragment(new OpenExteraUpdatesActivity());
         } else if (position == localPremiumRow) {
@@ -465,8 +487,28 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
         }
 
         @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            if (viewType == TYPE_COLLAPSE) {
+                org.telegram.ui.Cells.CollapseTextCell cell =
+                        new org.telegram.ui.Cells.CollapseTextCell(mContext, resourcesProvider);
+                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
+                cell.setLayoutParams(new RecyclerView.LayoutParams(
+                        RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new org.telegram.ui.Components.RecyclerListView.Holder(cell);
+            }
+            return super.onCreateViewHolder(parent, viewType);
+        }
+
+        @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
+                case TYPE_COLLAPSE: {
+                    org.telegram.ui.Cells.CollapseTextCell cell =
+                            (org.telegram.ui.Cells.CollapseTextCell) holder.itemView;
+                    cell.set(getString(experimentalMoreExpanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !experimentalMoreExpanded);
+                    break;
+                }
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == updatesHeaderRow) {
@@ -553,6 +595,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
             } else if (position == glyphDividerRow
                     || position == bottomDividerRow) {
                 return TYPE_INFO_PRIVACY;
+            } else if (position == experimentalMoreRow) {
+                return TYPE_COLLAPSE;
             } else if (position == updatesRow || position == exportEtgRow || position == importEtgRow
                     || position == resetSettingsRow || position == deleteAccountRow
                     || position == glyphRow) {

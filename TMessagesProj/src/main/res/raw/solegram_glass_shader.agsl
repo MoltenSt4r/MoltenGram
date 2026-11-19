@@ -13,10 +13,10 @@ uniform float4 foreground_color_premultiplied;
 uniform float dispersion;
 uniform float rim;
 
-half sdfRect(half2 p, half4 r) {
+float sdfRect(float2 p, float4 r) {
   r.xy = (p.x > 0.0) ? r.xy : r.zw;
   r.x  = (p.y > 0.0) ? r.x  : r.y;
-  half2 q = abs(p) - size + r.x;
+  float2 q = abs(p) - size + r.x;
   return length(max(q, 0.0)) + min(max(q.x, q.y), 0.0) - r.x;
 }
 
@@ -27,64 +27,82 @@ half4 srcOver(half4 src, half4 dst) {
 }
 
 half4 main(in float2 fragCoord) {
-  half2 p = fragCoord - center;
-  half sdRaw = sdfRect(p, radius);
+  float2 p = fragCoord - center;
+  float sdRaw = sdfRect(p, radius);
   // past the edge the lens goes on as at the edge: the outline clips it, but a downsampled glass is upscaled over it
-  half sd = min(sdRaw, 0.0);
+  float sd = min(sdRaw, 0.0);
   float2 uv = fragCoord;
   float2 offset = float2(0.0);
-  half edge = 0.0;
-  half maxRadius = max(max(radius.x, radius.y), max(radius.z, radius.w));
+  float edge = 0.0;
+  float maxRadius = max(max(radius.x, radius.y), max(radius.z, radius.w));
+  float safeThickness = max(thickness, 0.001);
   if (rim < 0.0) {
     // Custom vector contour clipped externally by Path: full refractive bevel dome driven by Liquid Glass sliders without a fixed circular halo seam.
-    half2 halfSize = max(size, half2(1.0));
-    half2 u = p / halfSize;
-    half rCircle = length(u);
-    half rBox = max(abs(u.x), abs(u.y));
-    half t = clamp(mix(rCircle, rBox, 0.30), 0.0, 1.0);
-    half2 dir = rCircle > 0.0001 ? (u / rCircle) : half2(0.0);
-    half minHalf = max(min(halfSize.x, halfSize.y), 1.0);
-    half bevelFrac = clamp(thickness / minHalf, 0.12, 1.0);
-    half bevelT = clamp((t - (1.0 - bevelFrac)) / bevelFrac, 0.0, 1.0);
-    half domeSin = clamp(0.12 * t + 0.80 * bevelT * bevelT, 0.0, 0.92);
-    half domeCos = sqrt(max(1.0 - domeSin * domeSin, 0.01));
-    half3 normal = half3(dir * domeSin, domeCos);
+    float2 halfSize = max(size, float2(1.0));
+    float2 u = p / halfSize;
+    float rCircle = length(u);
+    float rBox = max(abs(u.x), abs(u.y));
+    float t = clamp(mix(rCircle, rBox, 0.30), 0.0, 1.0);
+    float2 dir = rCircle > 0.0001 ? (u / rCircle) : float2(0.0);
+    float minHalf = max(min(halfSize.x, halfSize.y), 1.0);
+    float bevelFrac = clamp(safeThickness / minHalf, 0.12, 1.0);
+    float bevelT = clamp((t - (1.0 - bevelFrac)) / bevelFrac, 0.0, 1.0);
+    float domeSin = clamp(0.12 * t + 0.80 * bevelT * bevelT, 0.0, 0.92);
+    float domeCos = sqrt(max(1.0 - domeSin * domeSin, 0.01));
+    float3 normal = float3(dir * domeSin, domeCos);
 
-    half3 refract_vec = refract(half3(0.0, 0.0, -1.0), normal, 1.0 / refract_index);
-    half h = thickness * sqrt(max(1.0 - bevelT * bevelT, 0.0));
-    half refract_length = (h + 8.0 * thickness) / max(-refract_vec.z, 0.15);
+    float3 refract_vec = refract(float3(0.0, 0.0, -1.0), normal, 1.0 / refract_index);
+    float h = safeThickness * sqrt(max(1.0 - bevelT * bevelT, 0.0));
+    float refract_length = (h + 8.0 * safeThickness) / max(-refract_vec.z, 0.15);
 
     offset = refract_vec.xy * refract_length * refract_intensity;
     uv += offset;
     edge = bevelT;
   } else if (maxRadius >= 2.0) {
-    half sdX = sdfRect(p + half2(1.0, 0.0), radius);
-    half sdY = sdfRect(p + half2(0.0, 1.0), radius);
+    float sdX = sdfRect(p + float2(0.5, 0.0), radius) - sdfRect(p - float2(0.5, 0.0), radius);
+    float sdY = sdfRect(p + float2(0.0, 0.5), radius) - sdfRect(p - float2(0.0, 0.5), radius);
+    float2 grad = float2(sdX, sdY);
+    float gradLen = length(grad);
+    float2 gradDir = gradLen > 0.0001 ? grad / gradLen : float2(0.0);
 
-    half n_cos = max(thickness + sd, 0.0) / thickness;
-    half n_cos2 = n_cos * n_cos;
-    half n_sin = sqrt(1.0 - n_cos2);
-    half3 normal = normalize(half3((sdX - sdRaw) * n_cos, (sdY - sdRaw) * n_cos, n_sin));
+    float n_cos = clamp((safeThickness + sd) / safeThickness, 0.0, 1.0);
+    float n_cos_soft = n_cos * 0.96;
+    float n_sin = sqrt(max(1.0 - n_cos_soft * n_cos_soft, 0.02));
+    float3 normal = normalize(float3(gradDir * n_cos_soft, n_sin));
 
-    half3 refract_vec = refract(half3(0.0, 0.0, -1.0), normal, 1.0 / refract_index);
-    half h = sd < -thickness ? thickness : sqrt(sd * (-2.0 * thickness - sd));
-    half refract_length = (h + 8.0 * thickness) / -refract_vec.z;
+    float3 refract_vec = refract(float3(0.0, 0.0, -1.0), normal, 1.0 / refract_index);
+    float h = sd < -safeThickness ? safeThickness : sqrt(max(sd * (-2.0 * safeThickness - sd), 0.0));
+    float refract_length = (h + 8.0 * safeThickness) / max(-refract_vec.z, 0.15);
 
     offset = refract_vec.xy * refract_length * refract_intensity;
+    float maxOffset = max(min(size.x, size.y) * 0.75, safeThickness * 4.0);
+    float offsetLen = length(offset);
+    if (offsetLen > maxOffset) {
+      offset *= maxOffset / offsetLen;
+    }
     uv += offset;
     edge = n_cos;
   }
   // on a small shape the edge samples past the far side: stay within the shape, whatever the grid of a downsampled node
-  uv = clamp(uv, center - size + 0.5, center + size - 0.5);
+  float2 halfBounds = max(size - 0.5, float2(0.0));
+  float2 minUV = center - halfBounds;
+  float2 maxUV = center + halfBounds;
+  uv = clamp(uv, minUV, maxUV);
 
   half4 color = img.eval(uv);
-  half disp = dispersion;
+  float disp = dispersion;
   if (disp > 0.0 && (rim < 0.0 || sdRaw < 0.0)) {
+    float2 dispOffset = offset * disp;
+    float dispLen = length(dispOffset);
+    float maxDisp = max(safeThickness * 0.35, 3.5);
+    if (dispLen > maxDisp) {
+      dispOffset *= maxDisp / dispLen;
+    }
     // five taps across the spectrum instead of three hard copies: soft rainbow fringes along the bevel
-    half4 c0 = img.eval(clamp(uv + offset * disp, center - size + 0.5, center + size - 0.5));
-    half4 c1 = img.eval(clamp(uv + offset * disp * 0.5, center - size + 0.5, center + size - 0.5));
-    half4 c3 = img.eval(clamp(uv - offset * disp * 0.5, center - size + 0.5, center + size - 0.5));
-    half4 c4 = img.eval(clamp(uv - offset * disp, center - size + 0.5, center + size - 0.5));
+    half4 c0 = img.eval(clamp(uv + dispOffset, minUV, maxUV));
+    half4 c1 = img.eval(clamp(uv + dispOffset * 0.5, minUV, maxUV));
+    half4 c3 = img.eval(clamp(uv - dispOffset * 0.5, minUV, maxUV));
+    half4 c4 = img.eval(clamp(uv - dispOffset, minUV, maxUV));
     color = half4(c0.r * 0.45 + c1.r * 0.35 + color.r * 0.2,
                   c1.g * 0.2 + color.g * 0.55 + c3.g * 0.25,
                   color.b * 0.1 + c3.b * 0.4 + c4.b * 0.5,
@@ -95,22 +113,25 @@ half4 main(in float2 fragCoord) {
     // light from the top left, as on real glass: the edges facing it and the opposite ones shine, the flanks
     // much less; a crisp line right on the outline gives the glass its edge, a soft glow across the bevel its
     // thickness, and a faint shade along the far inner edge its depth (it used to be one even glow all round)
-    half2 n2 = half2(sdfRect(p + half2(1.0, 0.0), radius) - sd, sdfRect(p + half2(0.0, 1.0), radius) - sd);
-    half nl = length(n2);
-    n2 = nl > 0.0001 ? n2 / nl : half2(0.0, -1.0);
-    half facing = dot(n2, half2(-0.7071, -0.7071));
-    half lit = 0.3 + 0.7 * facing * facing;
-    half near = facing > 0.0 ? 1.0 : 0.7;
-    half strength = rim / 0.35;                                  // the setting, 0..1
-    half lineK = 0.2 + 0.55 * strength;
-    half glowK = 0.05 + 0.25 * strength;
-    half outline = 1.0 - smoothstep(0.8, 2.8, -sd);
-    half e = edge * edge;
-    half spec = clamp((lineK * outline + glowK * e * e) * lit * near, 0.0, 1.0);
+    float2 n2 = float2(
+      sdfRect(p + float2(0.5, 0.0), radius) - sdfRect(p - float2(0.5, 0.0), radius),
+      sdfRect(p + float2(0.0, 0.5), radius) - sdfRect(p - float2(0.0, 0.5), radius)
+    );
+    float nl = length(n2);
+    n2 = nl > 0.0001 ? n2 / nl : float2(0.0, -1.0);
+    float facing = dot(n2, float2(-0.70710678, -0.70710678));
+    float lit = 0.3 + 0.7 * facing * facing;
+    float near = facing > 0.0 ? 1.0 : 0.7;
+    float strength = rim / 0.35;                                  // the setting, 0..1
+    float lineK = 0.2 + 0.55 * strength;
+    float glowK = 0.05 + 0.25 * strength;
+    float outline = 1.0 - smoothstep(0.8, 2.8, -sd);
+    float e = edge * edge;
+    half spec = half(clamp((lineK * outline + glowK * e * e) * lit * near, 0.0, 1.0));
     // screen blend, premultiplied: bright on dark glass, gentle on light
     color.rgb = color.rgb + half3(spec) * (half3(color.a) - color.rgb);
-    half far = facing < 0.0 ? -facing : 0.0;
-    color.rgb *= 1.0 - 0.07 * strength * far * e;
+    float far = facing < 0.0 ? -facing : 0.0;
+    color.rgb *= half(1.0 - 0.07 * strength * far * e);
   }
 
   return srcOver(half4(foreground_color_premultiplied), color);

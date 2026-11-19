@@ -114,6 +114,21 @@ public class PluginStoreSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    public int getSearchGuid() {
+        return 32000;
+    }
+
+    @Override
+    public int getSearchIcon() {
+        return R.drawable.msg_settings_old;
+    }
+
+    @Override
+    public String getSearchPrefix() {
+        return "PluginsStoreSettings";
+    }
+
+    @Override
     protected BaseListAdapter createAdapter(Context context) {
         return new ListAdapter(context);
     }

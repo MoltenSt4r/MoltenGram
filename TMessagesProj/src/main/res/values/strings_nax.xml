@@ -453,4 +453,7 @@
     <string name="md3_avatar_shape_custom">Customized</string>
     <string name="media_group_carousel">Media Albums as Carousel</string>
     <string name="media_group_carousel_desc">Display grouped photos and videos in chats as a horizontal Material Design 3 carousel.</string>
+    <string name="OEAppearanceSwitchSize">Switch size</string>
+    <string name="OEShowMoreOptions">Show more</string>
+    <string name="OEShowLessOptions">Show less</string>
 </resources>

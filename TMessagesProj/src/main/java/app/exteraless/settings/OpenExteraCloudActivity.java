@@ -95,7 +95,7 @@ public class OpenExteraCloudActivity extends BaseNekoSettingsActivity {
 
     @Override
     public int getSearchGuid() {
-        return 28000;
+        return 30000;
     }
 
     @Override

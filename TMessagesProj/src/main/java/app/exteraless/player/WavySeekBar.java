@@ -335,7 +335,7 @@ public class WavySeekBar extends View {
         float capHalf = strokeW / 2f;
         float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
         float waveEnd = (indicator == 2) ? x : (x - thumbRadius - visualGap - capHalf);
-        float stopX = right - dp(1);
+        float stopX = right - capHalf;
         float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
         float lambda = dp(34);
         float step = dp(2);
@@ -384,7 +384,8 @@ public class WavySeekBar extends View {
         }
         // MD3 Expressive stop dot at the right end of the track
         if (stopX > restX + dp(1)) {
-            canvas.drawCircle(stopX, cy, Math.max(dpf2(2f), strokeW * 0.4f), fillPaint);
+            float dotRadius = strokeW < dp(4) ? Math.min(dpf2(2f), strokeW * 0.35f) : dpf2(2f);
+            canvas.drawCircle(stopX, cy, dotRadius, fillPaint);
         }
 
         if (!frozen && (amplitude > 0f || targetAmp != amplitude)) {

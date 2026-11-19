@@ -438,4 +438,7 @@
     <string name="md3_avatar_shape_custom">Настроено</string>
     <string name="media_group_carousel">Альбомы медиа как карусель</string>
     <string name="media_group_carousel_desc">Отображать сгруппированные фото и видео в чатах в виде горизонтальной карусели Material Design 3.</string>
+    <string name="OEAppearanceSwitchSize">Размер тумблера</string>
+    <string name="OEShowMoreOptions">Показать ещё</string>
+    <string name="OEShowLessOptions">Свернуть</string>
 </resources>

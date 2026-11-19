@@ -79,6 +79,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int classicPlayerSeekbarRow;
     private int mediaSeekbarStyleRow;
     private int mediaSeekbarIndicatorRow;
+    private int appearanceMoreRow;
     private int appearanceShadowRow;
 
     private int lyricsHeaderRow;
@@ -93,7 +94,11 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int lyricsAlignmentRow;
     private int lyricsAutoscrollRow;
     private int lyricsTextSizeRow;
+    private int lyricsMoreRow;
     private int lyricsShadowRow;
+
+    private boolean appearanceMoreExpanded;
+    private boolean lyricsMoreExpanded;
 
     private int audioHeaderRow;
     private int miniPreviewRow;
@@ -125,32 +130,45 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         colorStyleRow = addRow("colorStyle");
         coverShapeRow = addRow("coverShape");
         miniCoverShapeRow = addRow("miniCoverShape");
-        swipeTrackRow = addRow("swipeTrack");
-        cropCoverRow = addRow("cropCover");
-        keepScreenOnRow = addRow("keepScreenOn");
-        actionButtonsRow = addRow("actionButtons");
         seekbarWavyRow = addRow("seekbarWavy");
-        miniPlayerWavyRow = addRow("miniPlayerWavy");
         seekbarThicknessRow = addRow("seekbarThickness");
         seekbarIndicatorRow = addRow("seekbarIndicator");
-        chatMediaSeekbarRow = addRow("chatMediaSeekbar");
-        classicPlayerSeekbarRow = addRow("classicPlayerSeekbar");
-        mediaSeekbarStyleRow = addRow("mediaSeekbarStyle");
-        mediaSeekbarIndicatorRow = addRow("mediaSeekbarIndicator");
+        appearanceMoreRow = addRow();
+        if (appearanceMoreExpanded) {
+            swipeTrackRow = addRow("swipeTrack");
+            cropCoverRow = addRow("cropCover");
+            keepScreenOnRow = addRow("keepScreenOn");
+            actionButtonsRow = addRow("actionButtons");
+            miniPlayerWavyRow = addRow("miniPlayerWavy");
+            chatMediaSeekbarRow = addRow("chatMediaSeekbar");
+            classicPlayerSeekbarRow = addRow("classicPlayerSeekbar");
+            mediaSeekbarStyleRow = addRow("mediaSeekbarStyle");
+            mediaSeekbarIndicatorRow = addRow("mediaSeekbarIndicator");
+        } else {
+            swipeTrackRow = cropCoverRow = keepScreenOnRow = actionButtonsRow = -1;
+            miniPlayerWavyRow = chatMediaSeekbarRow = classicPlayerSeekbarRow = -1;
+            mediaSeekbarStyleRow = mediaSeekbarIndicatorRow = -1;
+        }
         appearanceShadowRow = addRow();
 
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
         lyricsAudioRecognitionRow = addRow("lyricsAudioRecognition");
-        songrecFetchCoverRow = addRow("songrecFetchCover");
-        songrecBackgroundRecognitionRow = addRow("songrecBackgroundRecognition");
-        lyricsExperimentalRow = addRow("lyricsExperimental");
         lyricsSourcesRow = addRow("lyricsSources");
-        lyricsPriorityRow = addRow("lyricsPriority");
         lyricsTranslateRow = addRow("lyricsTranslate");
         lyricsAlignmentRow = addRow("lyricsAlignment");
-        lyricsAutoscrollRow = addRow("lyricsAutoscroll");
         lyricsTextSizeRow = addRow("lyricsTextSize");
+        lyricsMoreRow = addRow();
+        if (lyricsMoreExpanded) {
+            songrecFetchCoverRow = addRow("songrecFetchCover");
+            songrecBackgroundRecognitionRow = addRow("songrecBackgroundRecognition");
+            lyricsExperimentalRow = addRow("lyricsExperimental");
+            lyricsPriorityRow = addRow("lyricsPriority");
+            lyricsAutoscrollRow = addRow("lyricsAutoscroll");
+        } else {
+            songrecFetchCoverRow = songrecBackgroundRecognitionRow = -1;
+            lyricsExperimentalRow = lyricsPriorityRow = lyricsAutoscrollRow = -1;
+        }
         lyricsShadowRow = addRow();
 
         // Audio
@@ -170,7 +188,25 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    protected java.util.List<CollapsibleGroup> collapsibleGroups() {
+        return java.util.Arrays.asList(
+                new CollapsibleGroup(() -> appearanceMoreExpanded, expanded -> appearanceMoreExpanded = expanded),
+                new CollapsibleGroup(() -> lyricsMoreExpanded, expanded -> lyricsMoreExpanded = expanded));
+    }
+
+    @Override
     protected void onItemClick(View view, int position, float x, float y) {
+        if (position == appearanceMoreRow) {
+            appearanceMoreExpanded = !appearanceMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        } else if (position == lyricsMoreRow) {
+            lyricsMoreExpanded = !lyricsMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        }
         if (position == bgStyleRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerBackgroundStyleTheme),
@@ -417,6 +453,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     private static final int TYPE_SLIDER = 101;
+    private static final int TYPE_COLLAPSE = 102;
 
     private class ListAdapter extends BaseListAdapter {
 
@@ -426,7 +463,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         protected boolean isSectionContent(int viewType) {
-            if (viewType == TYPE_SLIDER) {
+            if (viewType == TYPE_SLIDER || viewType == TYPE_COLLAPSE) {
                 return true;
             }
             return super.isSectionContent(viewType);
@@ -435,13 +472,15 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int type = holder.getItemViewType();
-            return type == TYPE_CHECK || type == TYPE_SETTINGS;
+            return type == TYPE_CHECK || type == TYPE_SETTINGS || type == TYPE_COLLAPSE;
         }
 
         @Override
         public int getItemViewType(int position) {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
+            } else if (position == appearanceMoreRow || position == lyricsMoreRow) {
+                return TYPE_COLLAPSE;
             } else if (position == seekbarThicknessRow) {
                 return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
@@ -469,13 +508,24 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 return new RecyclerListView.Holder(cell);
             }
+            if (viewType == TYPE_COLLAPSE) {
+                org.telegram.ui.Cells.CollapseTextCell cell = new org.telegram.ui.Cells.CollapseTextCell(mContext, getResourceProvider());
+                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
+                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                return new RecyclerListView.Holder(cell);
+            }
             return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             int type = holder.getItemViewType();
-            if (type == TYPE_SLIDER) {
+            if (type == TYPE_COLLAPSE) {
+                org.telegram.ui.Cells.CollapseTextCell cell = (org.telegram.ui.Cells.CollapseTextCell) holder.itemView;
+                boolean expanded = position == appearanceMoreRow ? appearanceMoreExpanded : lyricsMoreExpanded;
+                cell.set(getString(expanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !expanded);
+            } else if (type == TYPE_SLIDER) {
                 if (position == seekbarThicknessRow) {
                     SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
                     SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 2, 16, val -> val + " dp");
@@ -1119,6 +1169,11 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
+    }
+
+    @Override
+    public int getSearchGuid() {
+        return 31000;
     }
 
     @Override

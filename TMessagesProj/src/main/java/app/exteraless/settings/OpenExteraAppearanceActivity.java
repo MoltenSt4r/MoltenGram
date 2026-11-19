@@ -85,6 +85,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     /** Слайдер толщины обводки и бликов стеклянных сообщений */
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
     private static final int TYPE_SLIDER_THICKNESS = 110;
+    private static final int TYPE_SWITCH_SIZE = 111;
     private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
@@ -138,6 +139,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3SliderThicknessRow;
     private int md3SwitchRow;
     private int md3SwitchExpressiveColorsRow;
+    private int md3SwitchSizeRow;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
@@ -273,6 +275,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // Переключатели
         md3SwitchRow = addRow("md3Switch");
         md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
+        md3SwitchSizeRow = addRow("md3SwitchSize");
         // Регуляция толщины слайдеров снаружи
         md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
 
@@ -1400,6 +1403,28 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     sliderThickness.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = sliderThickness;
                     break;
+                case TYPE_SWITCH_SIZE:
+                    AvatarCornersSeekBar sliderSwitchSize = new AvatarCornersSeekBar(mContext,
+                            val -> {
+                                AppearanceConfig.switchSize.setConfigInt(val);
+                                if (listView != null) {
+                                    for (int i = 0; i < listView.getChildCount(); i++) {
+                                        invalidateSwitchesRecursive(listView.getChildAt(i));
+                                    }
+                                }
+                                if (parentLayout != null) {
+                                    parentLayout.rebuildAllFragmentViews(false, false);
+                                }
+                            },
+                            70, 130,
+                            getString(R.string.OEAppearanceSwitchSize),
+                            "70%",
+                            "130%");
+                    sliderSwitchSize.setValueSuffix("%");
+                    sliderSwitchSize.setValue(AppearanceConfig.switchSize());
+                    sliderSwitchSize.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderSwitchSize;
+                    break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1699,6 +1724,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setValue(AppearanceConfig.sliderThickness());
                     break;
                 }
+                case TYPE_SWITCH_SIZE: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.switchSize());
+                    break;
+                }
                 case TYPE_DETAIL_SETTINGS: {
                     // Иконка слева, подпись под заголовком.
                     TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
@@ -1785,6 +1815,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_GLASS_STROKE_SLIDER;
             } else if (position == md3SliderThicknessRow) {
                 return TYPE_SLIDER_THICKNESS;
+            } else if (position == md3SwitchSizeRow) {
+                return TYPE_SWITCH_SIZE;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow
@@ -2033,6 +2065,21 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         rebuildRowsAndNotify();
         if (parentLayout != null) {
             parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+        }
+    }
+
+    private static void invalidateSwitchesRecursive(View view) {
+        if (view instanceof org.telegram.ui.Components.Switch) {
+            view.requestLayout();
+            view.invalidate();
+            return;
+        }
+        view.invalidate();
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                invalidateSwitchesRecursive(group.getChildAt(i));
+            }
         }
     }
 
