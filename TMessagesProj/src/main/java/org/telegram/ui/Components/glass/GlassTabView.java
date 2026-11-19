@@ -126,6 +126,9 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     private void checkVisualWidth() {
+        if (mainTabExpressive) {
+            return;
+        }
         if (hasVisualWidth) {
             final float offset = (visualWidth - getMeasuredWidth()) / 2f;
             imageView.setTranslationX(offset);
@@ -139,6 +142,64 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     private float gestureSelectedOverride;
     private boolean skipDrawSelector;
     private boolean mainTabMaterial3;
+    private boolean mainTabExpressive;
+    private float expressiveSlotWidth;
+    private float expressiveExpandFactor;
+    private float expressiveIconX;
+
+    private void applyMainTabsExpressiveToolbar() {
+        mainTabExpressive = true;
+        textView.setVisibility(VISIBLE);
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13f);
+        textView.setIncludeFontPadding(false);
+        textView.setGravity(Gravity.LEFT | Gravity.CENTER_VERTICAL);
+        textView.setLayoutParams(LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        isSelectedAnimator.setDuration(360L);
+        isSelectedAnimator.setInterpolator(CubicBezierInterpolator.Emphasized);
+        if (backupImageView != null) {
+            backupImageView.setLayoutParams(LayoutHelper.createFrame(22, 22, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        } else {
+            imageView.setLayoutParams(LayoutHelper.createFrame(22, 22, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        }
+        setExpressiveLayoutState(dp(44), isTabSelected() ? 1f : 0f);
+    }
+
+    public boolean isMainTabExpressive() {
+        return mainTabExpressive;
+    }
+
+    public float getExpressiveExpandFactor() {
+        return isSelectedAnimator.getFloatValue();
+    }
+
+    public float getExpressiveSlotWidth() {
+        return expressiveSlotWidth;
+    }
+
+    public void setExpressiveLayoutState(float slotWidth, float expandFactor) {
+        this.expressiveSlotWidth = slotWidth;
+        this.expressiveExpandFactor = expandFactor;
+        final float iconSize = dp(22);
+        final float collapsedX = (slotWidth - iconSize) / 2f;
+        final float expandedX = dp(13);
+        final float iconX = lerp(collapsedX, expandedX, expandFactor);
+        this.expressiveIconX = iconX;
+        if (backupImageView != null) {
+            backupImageView.setTranslationX(iconX);
+        } else {
+            imageView.setTranslationX(iconX);
+        }
+        textView.setTranslationX(iconX + iconSize + dp(6));
+        final float textAlpha = MathUtils.clamp((expandFactor - 0.18f) / 0.82f, 0f, 1f);
+        textView.setAlpha(textAlpha);
+        invalidate();
+    }
+
+    public void setExpressiveTextMaxWidth(int maxWidthPx) {
+        if (mainTabExpressive) {
+            textView.setMaxWidth(Math.max(0, maxWidthPx));
+        }
+    }
 
     private void applyMainTabsMaterial3() {
         mainTabMaterial3 = true;
@@ -167,9 +228,9 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
-        final float viewWidth = hasVisualWidth ? visualWidth : getWidth();
+        final float viewWidth = mainTabExpressive && expressiveSlotWidth > 0 ? expressiveSlotWidth : (hasVisualWidth ? visualWidth : getWidth());
         final float selectedFactor = hasGestureSelectedOverride ? gestureSelectedOverride : isSelectedAnimator.getFloatValue();
-        if (selectedFactor > 0 && !skipDrawSelector) {
+        if (selectedFactor > 0 && !skipDrawSelector && !mainTabExpressive) {
             final float alpha = mainTabMaterial3
                     ? selectedIndicatorAlphaAnimator.getFloatValue()
                     : AnimatorUtils.DECELERATE_INTERPOLATOR.getInterpolation(selectedFactor);
@@ -200,14 +261,21 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
             canvas.saveLayer(0, 0, viewWidth, getHeight(), null);
         }
 
-        super.dispatchDraw(canvas);
+        if (mainTabExpressive && expressiveSlotWidth > 0) {
+            canvas.save();
+            canvas.clipRect(0, 0, Math.max(0f, expressiveSlotWidth - dp(4)), getHeight());
+            super.dispatchDraw(canvas);
+            canvas.restore();
+        } else {
+            super.dispatchDraw(canvas);
+        }
 
         if (hasCounter > 0) {
             canvas.save();
 
             final float gap = dpf2(1.33f);
-            final float cx = viewWidth / 2f + dpf2(11);
-            final float cy = MainTabsUiHelper.getMainTabCounterCenterY(mainTabMaterial3, getHeight());
+            final float cx = mainTabExpressive ? (expressiveIconX + dp(11) + dpf2(8)) : (viewWidth / 2f + dpf2(11));
+            final float cy = mainTabExpressive ? (getHeight() / 2f - dpf2(8)) : MainTabsUiHelper.getMainTabCounterCenterY(mainTabMaterial3, getHeight());
             final float height = dpf2(16);
             final float width = Math.max(height, counter.getCurrentWidth() + dp(8));
             final float rOuter = dpf2(9.333f);
@@ -281,6 +349,9 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     public void onFactorChanged(int id, float factor, float fraction, FactorAnimator callee) {
         if (id == ANIMATOR_ID_IS_SELECTED) {
             applyColors();
+            if (mainTabExpressive && getParent() instanceof android.view.View) {
+                ((android.view.View) getParent()).invalidate();
+            }
         }
         invalidate();
     }
@@ -300,8 +371,30 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         textView.setTextColor(colorText);
     }
 
+    private void refreshThemeColors() {
+        if (mainTabExpressive) {
+            int[] ex = new int[4];
+            MainTabsUiHelper.resolveExpressiveColors(resourcesProvider, ex);
+            colorDefault = ex[3];
+            colorSelected = ex[2];
+            colorSelectedText = ex[2];
+        } else {
+            colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
+            colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
+            colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        }
+    }
+
     @Override
     public void updateColors() {
+        if (mainTabExpressive) {
+            int[] ex = new int[4];
+            MainTabsUiHelper.resolveExpressiveColors(resourcesProvider, ex);
+            if (colorDefault != ex[3] || colorSelected != ex[2] || colorSelectedText != ex[2]) {
+                updateColorsLottie();
+            }
+            return;
+        }
         // every theme frame: applyColors allocates a color filter, so only when a color changed
         if (colorDefault != Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider) ||
             colorSelected != Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider) ||
@@ -318,9 +411,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     public void updateColorsLottie() {
-        colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        refreshThemeColors();
         applyColors();
         invalidate();
     }
@@ -469,18 +560,19 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.textView.setText(LocaleController.getString(stringRes));
         tab.checkPlayAnimation(false);
         tab.imageView.setLayoutParams(LayoutHelper.createFrame(24, 24, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 4, 0, 0));
-        if (MainTabsUiHelper.isMaterial3NavigationBar()) {
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            tab.applyMainTabsExpressiveToolbar();
+        } else if (MainTabsUiHelper.isMaterial3NavigationBar()) {
             tab.applyMainTabsMaterial3();
         }
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.refreshThemeColors();
         tab.applyColors();
         return tab;
     }
 
     public static GlassTabView createAvatar(Context context, Theme.ResourcesProvider resourcesProvider, int currentAccount, @StringRes int stringRes) {
         GlassTabView tab = new GlassTabView(context);
+        tab.resourcesProvider = resourcesProvider;
         tab.textView.setText(LocaleController.getString(stringRes));
         tab.imageView.setVisibility(GONE);
 
@@ -493,12 +585,12 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         tab.backupImageView = backupImageView;
 
         tab.addView(backupImageView, LayoutHelper.createFrame(22, 22, Gravity.CENTER_HORIZONTAL | Gravity.TOP, 0, 5, 0, 0));
-        if (MainTabsUiHelper.isMaterial3NavigationBar()) {
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            tab.applyMainTabsExpressiveToolbar();
+        } else if (MainTabsUiHelper.isMaterial3NavigationBar()) {
             tab.applyMainTabsMaterial3();
         }
-        tab.colorDefault = Theme.getColor(Theme.key_glass_tabUnselected, resourcesProvider);
-        tab.colorSelected = Theme.getColor(Theme.key_glass_tabSelected, resourcesProvider);
-        tab.colorSelectedText = Theme.getColor(Theme.key_glass_tabSelectedText, resourcesProvider);
+        tab.refreshThemeColors();
         tab.applyColors();
         return tab;
     }
@@ -773,6 +865,9 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
     }
 
     public void setMainTabsCompact(boolean compact) {
+        if (mainTabExpressive) {
+            return;
+        }
         if (textView.getVisibility() == (compact ? GONE : VISIBLE)) {
             return;
         }

@@ -481,7 +481,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
         tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
         tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
-        tabsView.setBackground(tabsViewBackground);
+        tabsView.setBackground(MainTabsUiHelper.isExpressiveToolbar() ? null : tabsViewBackground);
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            tabsView.updateExpressiveColors();
+        }
 
         BlurredBackgroundDrawableViewFactory iBlur3FactoryFade = new BlurredBackgroundDrawableViewFactory(iBlur3SourceColor);
         iBlur3FactoryFade.setSourceRootView(viewPositionWatcher, contentView);
@@ -514,8 +517,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsViewWrapper.setOnClickListener(v -> {});
         // В M3 панель во всю ширину,
         // высота досчитывается вместе с нижним системным отступом в applyTabsBottomInset
-        tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeightDp(), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeight(0), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
         tabsViewWrapper.setClipToPadding(false);
+        tabsViewWrapper.setClipChildren(false);
         contentView.addView(tabsViewWrapper, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
 
         updateLayoutWrapper = new UpdateLayoutWrapper(context);
@@ -1173,7 +1177,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         ViewGroup.MarginLayoutParams lp;
         {
-            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive()) ? dp(24) : 0;
             final int height = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
             lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
             if (lp.height != height) {
@@ -1708,12 +1712,16 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             tabsViewBackground.invalidateDisplayList();
         }
         if (tabsView != null && tabsViewWrapper != null) {
+            tabsView.setBackground(MainTabsUiHelper.isExpressiveToolbar() ? null : tabsViewBackground);
+            if (MainTabsUiHelper.isExpressiveToolbar()) {
+                tabsView.updateExpressiveColors();
+            }
             MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
             MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, insetLeft, insetRight);
         }
         if (fadeView != null && updateLayoutWrapper != null) {
             final int updateLayoutHeight = updateLayoutWrapper.isUpdateLayoutVisible() ? dp(UpdateLayoutWrapper.HEIGHT) : 0;
-            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive()) ? dp(24) : 0;
             final int fadeHeight = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
             final ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
             if (lp != null && lp.height != fadeHeight) {

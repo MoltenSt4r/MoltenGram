@@ -11,6 +11,7 @@
     <string name="OEGeneralDoNotTranslate">Nie tłumacz</string>
     <string name="OEGeneralTranslateInfo">Przycisk „Przetłumacz” pojawi się w menu kontekstowym wiadomości.</string>
     <string name="OEBottomNavigationModeFloating">Pływający</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (z FAB)</string>
     <string name="OEGeneralSectionHeader">Ogólne</string>
     <string name="OEGeneralDisableNumberRounding">Wyłącz zaokrąglanie liczb</string>
     <string name="OEGeneralDisableNumberRoundingValue">1.23K → 1,234</string>

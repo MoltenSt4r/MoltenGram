@@ -4,10 +4,13 @@ import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.graphics.drawable.InsetDrawable;
 import android.graphics.drawable.ShapeDrawable;
+import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
+import android.widget.FrameLayout;
 import android.widget.TextView;
 
+import app.exteraless.player.PlayerColors;
 import me.vkryl.android.animator.BoolAnimator;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -31,8 +34,15 @@ public final class MainTabsUiHelper {
     private MainTabsUiHelper() {
     }
 
+    public static final int EXPRESSIVE_TOOLBAR_HEIGHT_DP = 60;
+    public static final int EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP = 12;
+
+    public static boolean isExpressiveToolbar() {
+        return MainTabsLayout.isBottomNavigationExpressive();
+    }
+
     public static boolean isMaterial3NavigationBar() {
-        return AppearanceConfig.newNavigationBarStyle() && !MainTabsLayout.isBottomNavigationFloating();
+        return AppearanceConfig.newNavigationBarStyle() && !MainTabsLayout.isBottomNavigationFloating() && !isExpressiveToolbar();
     }
 
     /** MD3-навигация при включённом Liquid Glass: плавающая стеклянная капсула с MD3-индикатором внутри. */
@@ -46,7 +56,7 @@ public final class MainTabsUiHelper {
      * поэтому все размеры считаются через MainTabsHelper. M3 приоритетнее.
      */
     public static boolean isIosNavigationBar() {
-        return AppearanceConfig.iosNavigationBarStyle() && !isMaterial3NavigationBar();
+        return AppearanceConfig.iosNavigationBarStyle() && !isMaterial3NavigationBar() && !isExpressiveToolbar();
     }
 
     /** В iOS-стиле и MD3+LiquidGlass обёртка добавляет к системным инсетам 8dp по бокам. */
@@ -56,6 +66,9 @@ public final class MainTabsUiHelper {
 
     /** M3 — 64dp (при Liquid Glass — с плавающими отступами), иначе высота из MainTabsHelper. */
     public static int getTabsViewHeightDp() {
+        if (isExpressiveToolbar()) {
+            return EXPRESSIVE_TOOLBAR_HEIGHT_DP + EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP + 8;
+        }
         if (isMaterial3FloatingGlass()) {
             return 64 + MainTabsHelper.getMainTabsMargin() * 2;
         }
@@ -64,6 +77,9 @@ public final class MainTabsUiHelper {
 
     /** M3 — dp(64) плюс системный отступ снизу, при Liquid Glass — плавающая капсула. */
     public static int getTabsViewHeight(int bottomInset) {
+        if (isExpressiveToolbar()) {
+            return AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_HEIGHT_DP);
+        }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(64 + MainTabsHelper.getMainTabsMargin() * 2);
         }
@@ -74,6 +90,9 @@ public final class MainTabsUiHelper {
 
     /** В iOS-стиле капсула на 4dp выше, но таб внутри остаётся 48dp — лишнее уходит в паддинг. */
     public static int getTabsInnerPaddingVertical() {
+        if (isExpressiveToolbar()) {
+            return AndroidUtilities.dp(6);
+        }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
         }
@@ -84,6 +103,9 @@ public final class MainTabsUiHelper {
     }
 
     public static int getTabsInnerPaddingHorizontal() {
+        if (isExpressiveToolbar()) {
+            return AndroidUtilities.dp(6);
+        }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
         }
@@ -92,6 +114,9 @@ public final class MainTabsUiHelper {
 
     /** В M3 без Liquid Glass подложка без отступа от краёв; при Liquid Glass — плавающая капсула. */
     public static int getBackgroundInset() {
+        if (isExpressiveToolbar()) {
+            return 0;
+        }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin() - 0.334f);
         }
@@ -100,6 +125,9 @@ public final class MainTabsUiHelper {
 
     /** В M3 без Liquid Glass подложка прямоугольная, иначе скругление в половину высоты. */
     public static float getBackgroundRadius() {
+        if (isExpressiveToolbar()) {
+            return AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_HEIGHT_DP / 2f);
+        }
         if (isMaterial3FloatingGlass()) {
             return AndroidUtilities.dp(32f);
         }
@@ -108,11 +136,19 @@ public final class MainTabsUiHelper {
 
     /** В M3 и iOS-стиле панель растянута на всю ширину. */
     public static int getTabsViewWidth() {
+        if (isExpressiveToolbar()) {
+            return LayoutHelper.WRAP_CONTENT;
+        }
         return isMaterial3NavigationBar() || isIosNavigationBar() ? LayoutHelper.MATCH_PARENT : MainTabsHelper.getTabsViewWidth();
     }
 
     /** Сдвиг кнопки «написать» над панелью: в M3 64 (или 64 + margin в плавающей капсуле). */
     public static int getTabsFabOffsetDp() {
+        if (isExpressiveToolbar()) {
+            // Капсула стоит в 12dp над navBar и имеет высоту 60dp (центр на 42dp).
+            // FAB имеет default marginBottom 14dp и размер fabSize (центр на 14 + fabSize/2).
+            return 28 - AppearanceConfig.fabSize() / 2;
+        }
         if (isMaterial3FloatingGlass()) {
             return 64 + MainTabsHelper.getMainTabsMargin();
         }
@@ -124,6 +160,10 @@ public final class MainTabsUiHelper {
         final int paddingH = getTabsInnerPaddingHorizontal();
         final int paddingV = getTabsInnerPaddingVertical();
         layout.setPadding(paddingH, paddingV, paddingH, paddingV);
+        if (isExpressiveToolbar()) {
+            layout.setMaxWidth(0);
+            return;
+        }
         layout.setMaxWidth(isMaterial3NavigationBar() || isIosNavigationBar() ? 0 : legacyMaxWidthPx);
     }
 
@@ -133,9 +173,39 @@ public final class MainTabsUiHelper {
      */
     public static void applyTabsBottomInset(MainTabsLayout layout, View wrapper, int bottomInset, int leftInset, int rightInset) {
         applyTabsBottomInset(layout, bottomInset);
+        if (isExpressiveToolbar()) {
+            final int fabSize = AppearanceConfig.fabSize();
+            final boolean fabLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
+            final int fabReserve = AndroidUtilities.dp(20 + fabSize + 10);
+            final int sidePad = AndroidUtilities.dp(12);
+            wrapper.setPadding(
+                    leftInset + (fabLeft ? fabReserve : sidePad),
+                    0,
+                    rightInset + (fabLeft ? sidePad : fabReserve),
+                    bottomInset + AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP)
+            );
+            if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams flp) {
+                final int desiredGravity = Gravity.BOTTOM | (fabLeft ? Gravity.LEFT : Gravity.RIGHT);
+                if (flp.gravity != desiredGravity || flp.width != LayoutHelper.WRAP_CONTENT) {
+                    flp.gravity = desiredGravity;
+                    flp.width = LayoutHelper.WRAP_CONTENT;
+                    layout.setLayoutParams(flp);
+                }
+            }
+            return;
+        }
         final int side = getWrapperSideInset();
         final boolean insetInWrapper = !isMaterial3NavigationBar() || isMaterial3FloatingGlass();
         wrapper.setPadding(leftInset + side, 0, rightInset + side, insetInWrapper ? bottomInset : 0);
+        if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams flp) {
+            final int desiredWidth = getTabsViewWidth();
+            final int desiredGravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
+            if (flp.gravity != desiredGravity || flp.width != desiredWidth) {
+                flp.gravity = desiredGravity;
+                flp.width = desiredWidth;
+                layout.setLayoutParams(flp);
+            }
+        }
     }
 
     public static void applyTabsBottomInset(MainTabsLayout layout, int bottomInset) {
@@ -145,7 +215,7 @@ public final class MainTabsUiHelper {
             lp.height = height;
             layout.setLayoutParams(lp);
         }
-        final int paddingBottom = getTabsInnerPaddingVertical() + (isMaterial3NavigationBar() && !isMaterial3FloatingGlass() ? bottomInset : 0);
+        final int paddingBottom = getTabsInnerPaddingVertical() + (isMaterial3NavigationBar() && !isMaterial3FloatingGlass() && !isExpressiveToolbar() ? bottomInset : 0);
         if (layout.getPaddingBottom() != paddingBottom) {
             layout.setPadding(layout.getPaddingLeft(), layout.getPaddingTop(), layout.getPaddingRight(), paddingBottom);
         }
@@ -168,7 +238,10 @@ public final class MainTabsUiHelper {
     public static void setBlurBounds(RectF rectF, View view, int bottomInset) {
         final int bottom;
         final int top;
-        if (isMaterial3FloatingGlass()) {
+        if (isExpressiveToolbar()) {
+            bottom = view.getMeasuredHeight() - bottomInset - AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP);
+            top = bottom - AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_HEIGHT_DP);
+        } else if (isMaterial3FloatingGlass()) {
             bottom = view.getMeasuredHeight() - bottomInset - AndroidUtilities.dp(MainTabsHelper.getMainTabsMargin());
             top = bottom - AndroidUtilities.dp(64);
         } else if (isMaterial3NavigationBar()) {
@@ -179,6 +252,23 @@ public final class MainTabsUiHelper {
             top = bottom - AndroidUtilities.dp(MainTabsHelper.getMainTabsHeight());
         }
         rectF.set(0, top, view.getMeasuredWidth(), bottom);
+    }
+
+    /**
+     * Токены Monet для Expressive Toolbar (как в Shevery / Material 3 Expressive Vibrant Toolbar):
+     * [0] = containerColor (primaryContainer),
+     * [1] = activePillColor (primary),
+     * [2] = activeContentColor (onPrimary),
+     * [3] = inactiveContentColor (onPrimaryContainer).
+     */
+    public static void resolveExpressiveColors(Theme.ResourcesProvider resourcesProvider, int[] out4) {
+        final PlayerColors colors = PlayerColors.fromSeed(
+                PlayerColors.noCoverSeed(resourcesProvider),
+                PlayerColors.isDark(resourcesProvider));
+        out4[0] = colors.primaryContainer;
+        out4[1] = colors.primary;
+        out4[2] = colors.onPrimary;
+        out4[3] = colors.onPrimaryContainer;
     }
 
     public static void setMainTabSelectedIndicatorBounds(RectF rectF, float width, int height) {

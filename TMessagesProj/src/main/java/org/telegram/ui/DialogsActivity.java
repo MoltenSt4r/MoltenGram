@@ -3049,7 +3049,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         BirthdayController.getInstance(currentAccount).check();
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         LastSeenHelper.preload();
@@ -3341,7 +3341,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         filterTabsView = null;
         selectedDialogs.clear();
 
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         maximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
@@ -7559,7 +7559,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public boolean bottomOffsetAnimated() {
-                return !MainTabsLayout.isBottomNavigationFloating();
+                return !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive();
             }
 
             @Override
@@ -7758,7 +7758,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 showArchiveHelp();
             }
         }
-        if (canShowStoryHint && !storyHintShown && storyHint != null && storiesEnabled) {
+        if (canShowStoryHint && !storyHintShown && storyHint != null && storiesEnabled && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
             storyHintShown = true;
             canShowStoryHint = false;
             storyHint.show();
@@ -9274,7 +9274,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             floatingButton3.setButtonVisible(isVisible, animated);
         }
         if (floatingButtonStories != null) {
-            floatingButtonStories.setButtonVisible(isVisible && !NaConfig.INSTANCE.getDisableStories().Bool(), animated);
+            floatingButtonStories.setButtonVisible(
+                    isVisible && !NaConfig.INSTANCE.getDisableStories().Bool() && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar(),
+                    animated);
         }
     }
 
@@ -9350,7 +9352,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final boolean storiesEnabled = getMessagesController().storiesEnabled();
         if (this.storiesEnabled != storiesEnabled) {
             updateFloatingButtonOffset();
-            if (!this.storiesEnabled && storiesEnabled && storyHint != null) {
+            if (!this.storiesEnabled && storiesEnabled && storyHint != null && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
                 storyHint.show();
             }
             this.storiesEnabled = storiesEnabled;
@@ -14714,7 +14716,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final boolean liquidHeaders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
         final boolean liquidFolders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFolders;
 
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         iBlur3FactoryLiquidGlass.setOutset(liquidActive ? dp(8) : dp(48));
@@ -14845,7 +14847,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (glassFabActive) {
                 poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx, dynamicMaxBottom);
-                if (!speedDialOpen) {
+                if (!speedDialOpen && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
                     appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx, dynamicMaxBottom);
                 }
             }
@@ -14866,7 +14868,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private int getListViewFloatingTabsPadding() {
-        if (commentView != null || !hasMainTabs || !MainTabsLayout.isBottomNavigationFloating()) {
+        if (commentView != null || !hasMainTabs || (!MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive())) {
             return 0;
         }
         return dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp());

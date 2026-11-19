@@ -11,6 +11,7 @@
     <string name="OEGeneralDoNotTranslate">عدم الترجمة</string>
     <string name="OEGeneralTranslateInfo">سيظهر زر «ترجمة» في قائمة سياق الرسالة.</string>
     <string name="OEBottomNavigationModeFloating">عائم</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (مع FAB)</string>
     <string name="OEGeneralSectionHeader">عام</string>
     <string name="OEGeneralDisableNumberRounding">تعطيل تقريب الأرقام</string>
     <string name="OEGeneralDisableNumberRoundingValue">1.23K → 1,234</string>

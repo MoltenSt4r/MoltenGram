@@ -45,6 +45,7 @@ import org.telegram.ui.Components.AnimatedLinearLayout;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.glass.GlassTabView;
 
+import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.appearance.MainTabsUiHelper;
 
 import java.util.HashSet;
@@ -63,14 +64,20 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     public static final int BOTTOM_NAVIGATION_MODE_SHOW = 0;
     public static final int BOTTOM_NAVIGATION_MODE_HIDE = 1;
     public static final int BOTTOM_NAVIGATION_MODE_FLOATING = 2;
+    public static final int BOTTOM_NAVIGATION_MODE_EXPRESSIVE = 3;
 
     private static final String KEY_BOTTOM_NAVIGATION_FLOATING = "OEAppearanceBottomNavigationFloating";
+    private static final String KEY_BOTTOM_NAVIGATION_EXPRESSIVE = "OEAppearanceBottomNavigationExpressive";
 
     private static Boolean bottomNavigationFloating;
+    private static Boolean bottomNavigationExpressive;
 
     public static int getBottomNavigationMode() {
         if (isBottomNavigationHidden()) {
             return BOTTOM_NAVIGATION_MODE_HIDE;
+        }
+        if (isBottomNavigationExpressive()) {
+            return BOTTOM_NAVIGATION_MODE_EXPRESSIVE;
         }
         return isBottomNavigationFloating() ? BOTTOM_NAVIGATION_MODE_FLOATING : BOTTOM_NAVIGATION_MODE_SHOW;
     }
@@ -78,10 +85,15 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     public static void setBottomNavigationMode(int mode) {
         NaConfig.INSTANCE.getHideBottomNavigationBar().setConfigBool(mode == BOTTOM_NAVIGATION_MODE_HIDE);
         final boolean floating = mode == BOTTOM_NAVIGATION_MODE_FLOATING;
+        final boolean expressive = mode == BOTTOM_NAVIGATION_MODE_EXPRESSIVE;
         bottomNavigationFloating = floating;
+        bottomNavigationExpressive = expressive;
         final SharedPreferences preferences = getBottomNavigationPreferences();
         if (preferences != null) {
-            preferences.edit().putBoolean(KEY_BOTTOM_NAVIGATION_FLOATING, floating).apply();
+            preferences.edit()
+                    .putBoolean(KEY_BOTTOM_NAVIGATION_FLOATING, floating)
+                    .putBoolean(KEY_BOTTOM_NAVIGATION_EXPRESSIVE, expressive)
+                    .apply();
         }
     }
 
@@ -105,6 +117,20 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             bottomNavigationFloating = preferences.getBoolean(KEY_BOTTOM_NAVIGATION_FLOATING, false);
         }
         return bottomNavigationFloating;
+    }
+
+    public static boolean isBottomNavigationExpressive() {
+        if (isBottomNavigationHidden()) {
+            return false;
+        }
+        if (bottomNavigationExpressive == null) {
+            final SharedPreferences preferences = getBottomNavigationPreferences();
+            if (preferences == null) {
+                return false;
+            }
+            bottomNavigationExpressive = preferences.getBoolean(KEY_BOTTOM_NAVIGATION_EXPRESSIVE, false);
+        }
+        return bottomNavigationExpressive;
     }
 
     private static SharedPreferences getBottomNavigationPreferences() {
@@ -132,6 +158,10 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            measureExpressiveToolbar(widthMeasureSpec, heightMeasureSpec);
+            return;
+        }
         int width = MeasureSpec.getSize(widthMeasureSpec);
         final int height = MeasureSpec.getSize(heightMeasureSpec);
         final int tabHeight = height - getPaddingTop() - getPaddingBottom();
@@ -327,12 +357,20 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     @Override
     protected void onLayout(boolean changed, int l, int t, int r, int b) {
         super.onLayout(changed, l, t, r, b);
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            updateExpressivePositions(false);
+            return;
+        }
         checkVisualWidth();
     }
 
     @Override
     protected void onItemsChanged() {
         super.onItemsChanged();
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            updateExpressivePositions(true);
+            return;
+        }
         checkVisualWidth();
     }
 
@@ -357,6 +395,10 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             if (child instanceof GlassTabView) {
                 ((GlassTabView) child).setSelected(child == tab, animated);
             }
+        }
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            updateExpressivePositions(animated);
+            invalidate();
         }
     }
 
@@ -405,6 +447,10 @@ public class MainTabsLayout extends AnimatedLinearLayout {
 
     @Override
     protected void dispatchDraw(@NonNull Canvas canvas) {
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            drawExpressiveToolbar(canvas);
+            return;
+        }
         if (lensShown) {
             drawLens(canvas);
             return;
@@ -529,6 +575,15 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             View child = parent.getChildAt(i);
 
             if (child.getVisibility() != View.VISIBLE) continue;
+
+            if (child instanceof GlassTabView && ((GlassTabView) child).isMainTabExpressive()) {
+                final float left = child.getX();
+                final float right = left + ((GlassTabView) child).getExpressiveSlotWidth();
+                if (x >= left && x <= right && y >= child.getY() && y <= child.getY() + child.getHeight()) {
+                    return child;
+                }
+                continue;
+            }
 
             if (x >= child.getLeft() && x <= child.getRight()
                     && y >= child.getTop() && y <= child.getBottom()) {
@@ -757,7 +812,9 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             return true;
         }
         if (ev.getActionMasked() == MotionEvent.ACTION_DOWN) {
-            lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && !MainTabsUiHelper.isMaterial3NavigationBar();
+            lensMode = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()
+                    && !MainTabsUiHelper.isMaterial3NavigationBar()
+                    && !MainTabsUiHelper.isExpressiveToolbar();
         }
         if (lensMode) {
             lensTouch(ev);
@@ -1129,7 +1186,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 continue;
             }
 
-            float centerX = view.getX() + view.getWidth() * 0.5f;
+            float centerX = getCenterX(view);
 
             if (centerX < min) min = centerX;
             if (centerX > max) max = centerX;
@@ -1161,7 +1218,7 @@ public class MainTabsLayout extends AnimatedLinearLayout {
                 continue;
             }
 
-            float centerX = view.getX() + view.getWidth() * 0.5f;
+            float centerX = getCenterX(view);
             float distance = Math.abs(centerX - x);
 
             if (distance < nearestDistance) {
@@ -1222,6 +1279,287 @@ public class MainTabsLayout extends AnimatedLinearLayout {
     }
 
     private static float getCenterX(View v) {
+        if (v instanceof GlassTabView && ((GlassTabView) v).isMainTabExpressive()) {
+            return v.getX() + ((GlassTabView) v).getExpressiveSlotWidth() * 0.5f;
+        }
         return v.getX() + v.getWidth() * 0.5f;
+    }
+
+    // ---- Material 3 Expressive Floating Toolbar ----
+
+    private int expressiveIconSlotPx;
+    private int expressiveGapPx;
+    private int expressiveMaxExtraPx;
+    private float[] expressiveLabelWidths;
+
+    private final Paint expressiveContainerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint expressiveStrokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint expressivePillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final RectF expressiveCapsuleRect = new RectF();
+    private final RectF expressivePillRect = new RectF();
+    private boolean expressiveColorsInitialized;
+    private boolean expressiveHasInitialPill;
+    private float expressivePillLeft;
+    private float expressivePillRight;
+    private float expressivePillTargetLeft = -1f;
+    private float expressivePillTargetRight = -1f;
+
+    private final SpringAnimation expressivePillLeftSpring = new SpringAnimation(this, new FloatPropertyCompat<MainTabsLayout>("expressivePillLeft") {
+        @Override
+        public float getValue(MainTabsLayout object) {
+            return object.expressivePillLeft;
+        }
+
+        @Override
+        public void setValue(MainTabsLayout object, float value) {
+            object.expressivePillLeft = value;
+            object.invalidate();
+        }
+    });
+
+    private final SpringAnimation expressivePillRightSpring = new SpringAnimation(this, new FloatPropertyCompat<MainTabsLayout>("expressivePillRight") {
+        @Override
+        public float getValue(MainTabsLayout object) {
+            return object.expressivePillRight;
+        }
+
+        @Override
+        public void setValue(MainTabsLayout object, float value) {
+            object.expressivePillRight = value;
+            object.invalidate();
+        }
+    });
+
+    {
+        expressivePillLeftSpring.setSpring(new SpringForce()
+                .setStiffness(340f)
+                .setDampingRatio(0.76f));
+        expressivePillRightSpring.setSpring(new SpringForce()
+                .setStiffness(340f)
+                .setDampingRatio(0.76f));
+        expressiveStrokePaint.setStyle(Paint.Style.STROKE);
+    }
+
+    public void updateExpressiveColors() {
+        final int[] colors = new int[4];
+        MainTabsUiHelper.resolveExpressiveColors(resourcesProvider, colors);
+        expressiveContainerPaint.setColor(colors[0]);
+        expressivePillPaint.setColor(colors[1]);
+        expressiveStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
+        expressiveStrokePaint.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(colors[3], 28));
+        final int shadowColor = Theme.isCurrentThemeDark() ? 0x55000000 : 0x26000000;
+        if (Build.VERSION.SDK_INT >= 28) {
+            expressiveContainerPaint.setShadowLayer(dp(8), 0, dp(2), shadowColor);
+        }
+        expressiveColorsInitialized = true;
+        invalidate();
+    }
+
+    private void measureExpressiveToolbar(int widthMeasureSpec, int heightMeasureSpec) {
+        final int availW = MeasureSpec.getSize(widthMeasureSpec);
+        final int height = MeasureSpec.getSize(heightMeasureSpec);
+        final int tabHeight = Math.max(0, height - getPaddingTop() - getPaddingBottom());
+        final int childCount = getChildCount();
+
+        if (expressiveLabelWidths == null || expressiveLabelWidths.length < childCount) {
+            expressiveLabelWidths = new float[childCount];
+        }
+
+        int visibleCount = 0;
+        int maxTextPx = 0;
+        for (int a = 0; a < childCount; a++) {
+            final View child = getChildAt(a);
+            if (!isViewVisible(child)) {
+                expressiveLabelWidths[a] = 0f;
+                continue;
+            }
+            float w = 0f;
+            if (child instanceof GlassTabView) {
+                w = ((GlassTabView) child).measureTextWidth(13f);
+            }
+            expressiveLabelWidths[a] = w;
+            maxTextPx = Math.max(maxTextPx, (int) Math.ceil(w));
+            visibleCount++;
+        }
+        visibleChildCount = visibleCount;
+
+        if (visibleCount == 0) {
+            setMeasuredDimension(0, height);
+            calculateTotalSizesAfterMeasure();
+            return;
+        }
+
+        final int padH = getPaddingLeft() + getPaddingRight();
+        int iconSlot = dp(44);
+        int gap = dp(2);
+        int minSum = padH + visibleCount * iconSlot + Math.max(0, visibleCount - 1) * gap;
+        if (minSum + dp(56) > availW && visibleCount > 3) {
+            iconSlot = dp(38);
+            gap = dp(1);
+            minSum = padH + visibleCount * iconSlot + Math.max(0, visibleCount - 1) * gap;
+        }
+        expressiveIconSlotPx = iconSlot;
+        expressiveGapPx = gap;
+
+        final int desiredMaxExtra = maxTextPx > 0 ? dp(10) + maxTextPx : 0;
+        final int allowedMaxExtra = Math.max(0, Math.min(desiredMaxExtra, availW - minSum));
+        expressiveMaxExtraPx = allowedMaxExtra;
+
+        final int measuredW = Math.min(availW, minSum + allowedMaxExtra);
+        setMeasuredDimension(measuredW, height);
+
+        final int maxTextWidthAllowed = Math.max(0, allowedMaxExtra - dp(10));
+        for (int a = 0; a < childCount; a++) {
+            final View child = getChildAt(a);
+            if (!isViewVisible(child)) {
+                child.measure(MeasureSpec.makeMeasureSpec(0, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(tabHeight, MeasureSpec.EXACTLY));
+                continue;
+            }
+            final int extra = expressiveLabelWidths[a] > 0
+                    ? Math.min(allowedMaxExtra, dp(10) + (int) Math.ceil(expressiveLabelWidths[a]))
+                    : 0;
+            if (child instanceof GlassTabView) {
+                ((GlassTabView) child).setExpressiveTextMaxWidth(maxTextWidthAllowed);
+            }
+            child.measure(
+                    MeasureSpec.makeMeasureSpec(iconSlot + extra, MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(tabHeight, MeasureSpec.EXACTLY));
+        }
+
+        calculateTotalSizesAfterMeasure();
+    }
+
+    private void updateExpressivePositions(boolean animated) {
+        final int w = getWidth();
+        if (w <= 0) {
+            return;
+        }
+        final int childCount = getChildCount();
+        final boolean alignRight = AppearanceConfig.fabAlignment() != AppearanceConfig.FAB_ALIGN_LEFT;
+        final int iconSlot = expressiveIconSlotPx > 0 ? expressiveIconSlotPx : dp(44);
+        final int gap = expressiveGapPx;
+        final int padLeft = getPaddingLeft();
+        final int padRight = getPaddingRight();
+
+        float curTabsW = 0f;
+        float targetTabsW = 0f;
+        int visibleSeen = 0;
+        int selectedIndex = -1;
+        for (int a = 0; a < childCount; a++) {
+            final View child = getChildAt(a);
+            if (!isViewVisible(child)) {
+                continue;
+            }
+            if (visibleSeen > 0) {
+                curTabsW += gap;
+                targetTabsW += gap;
+            }
+            final boolean isSelected = child instanceof GlassTabView && ((GlassTabView) child).isTabSelected();
+            final float expand = child instanceof GlassTabView ? ((GlassTabView) child).getExpressiveExpandFactor() : (isSelected ? 1f : 0f);
+            final float labelW = (expressiveLabelWidths != null && a < expressiveLabelWidths.length) ? expressiveLabelWidths[a] : 0f;
+            final float maxExtra = labelW > 0 ? Math.min(expressiveMaxExtraPx, dp(10) + (float) Math.ceil(labelW)) : 0f;
+            curTabsW += iconSlot + expand * maxExtra;
+            targetTabsW += iconSlot + (isSelected ? maxExtra : 0f);
+            if (isSelected) {
+                selectedIndex = a;
+            }
+            visibleSeen++;
+        }
+
+        if (visibleSeen == 0) {
+            expressiveCapsuleRect.setEmpty();
+            return;
+        }
+
+        final float curCapsuleW = padLeft + curTabsW + padRight;
+        final float targetCapsuleW = padLeft + targetTabsW + padRight;
+        final float cLeft = alignRight ? (w - curCapsuleW) : 0f;
+        final float cRight = cLeft + curCapsuleW;
+        expressiveCapsuleRect.set(cLeft, 0f, cRight, getHeight());
+
+        float x = cLeft + padLeft;
+        float xTarget = (alignRight ? (w - targetCapsuleW) : 0f) + padLeft;
+        float newTargetPillLeft = -1f;
+        float newTargetPillRight = -1f;
+
+        for (int a = 0; a < childCount; a++) {
+            final View child = getChildAt(a);
+            if (!isViewVisible(child)) {
+                continue;
+            }
+            final boolean isSelected = a == selectedIndex;
+            final float expand = child instanceof GlassTabView ? ((GlassTabView) child).getExpressiveExpandFactor() : (isSelected ? 1f : 0f);
+            final float labelW = (expressiveLabelWidths != null && a < expressiveLabelWidths.length) ? expressiveLabelWidths[a] : 0f;
+            final float maxExtra = labelW > 0 ? Math.min(expressiveMaxExtraPx, dp(10) + (float) Math.ceil(labelW)) : 0f;
+            final float curW = iconSlot + expand * maxExtra;
+            final float targetW = iconSlot + (isSelected ? maxExtra : 0f);
+
+            child.setTranslationX(x - child.getLeft());
+            if (child instanceof GlassTabView) {
+                ((GlassTabView) child).setExpressiveLayoutState(curW, expand);
+            }
+
+            if (isSelected) {
+                newTargetPillLeft = xTarget;
+                newTargetPillRight = xTarget + targetW;
+            }
+
+            x += curW + gap;
+            xTarget += targetW + gap;
+        }
+
+        if (newTargetPillLeft >= 0f && newTargetPillRight > newTargetPillLeft) {
+            if (!expressiveHasInitialPill || !animated) {
+                expressivePillLeftSpring.cancel();
+                expressivePillRightSpring.cancel();
+                expressivePillLeft = newTargetPillLeft;
+                expressivePillRight = newTargetPillRight;
+                expressivePillTargetLeft = newTargetPillLeft;
+                expressivePillTargetRight = newTargetPillRight;
+                expressiveHasInitialPill = true;
+            } else if (Math.abs(expressivePillTargetLeft - newTargetPillLeft) > 0.5f
+                    || Math.abs(expressivePillTargetRight - newTargetPillRight) > 0.5f) {
+                expressivePillTargetLeft = newTargetPillLeft;
+                expressivePillTargetRight = newTargetPillRight;
+                expressivePillLeftSpring.animateToFinalPosition(newTargetPillLeft);
+                expressivePillRightSpring.animateToFinalPosition(newTargetPillRight);
+            }
+        }
+    }
+
+    private void drawExpressiveToolbar(@NonNull Canvas canvas) {
+        if (!expressiveColorsInitialized) {
+            updateExpressiveColors();
+        }
+        updateExpressivePositions(true);
+
+        if (!expressiveCapsuleRect.isEmpty()) {
+            final float r = expressiveCapsuleRect.height() / 2f;
+            canvas.drawRoundRect(expressiveCapsuleRect, r, r, expressiveContainerPaint);
+            final float strokeInset = expressiveStrokePaint.getStrokeWidth() / 2f;
+            expressiveCapsuleRect.inset(strokeInset, strokeInset);
+            canvas.drawRoundRect(expressiveCapsuleRect, r - strokeInset, r - strokeInset, expressiveStrokePaint);
+            expressiveCapsuleRect.inset(-strokeInset, -strokeInset);
+        }
+
+        if (expressiveHasInitialPill && expressivePillRight > expressivePillLeft) {
+            final float top = getPaddingTop();
+            final float bottom = getHeight() - getPaddingBottom();
+            final float left = Math.max(expressiveCapsuleRect.left + getPaddingLeft(), expressivePillLeft);
+            final float right = Math.min(expressiveCapsuleRect.right - getPaddingRight(), expressivePillRight);
+            if (right > left && bottom > top) {
+                expressivePillRect.set(left, top, right, bottom);
+                final float r = expressivePillRect.height() / 2f;
+                canvas.drawRoundRect(expressivePillRect, r, r, expressivePillPaint);
+            }
+        }
+
+        super.dispatchDraw(canvas);
+
+        if (speedDialDimProgress > 0.001f && !expressiveCapsuleRect.isEmpty()) {
+            speedDialDimPaint.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(android.graphics.Color.BLACK, Math.round(140f * speedDialDimProgress)));
+            final float r = expressiveCapsuleRect.height() / 2f;
+            canvas.drawRoundRect(expressiveCapsuleRect, r, r, speedDialDimPaint);
+        }
     }
 }

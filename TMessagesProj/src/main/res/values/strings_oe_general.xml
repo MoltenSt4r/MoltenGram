@@ -15,6 +15,7 @@
 
     <!-- App Navigation -->
     <string name="OEBottomNavigationModeFloating">Floating</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (with FAB)</string>
 
     <!-- General -->
     <string name="OEGeneralSectionHeader">General</string>

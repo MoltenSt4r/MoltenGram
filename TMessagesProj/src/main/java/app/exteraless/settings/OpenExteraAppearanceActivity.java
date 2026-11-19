@@ -1977,7 +1977,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     }
 
     private static void leaveFloatingBottomNavigation() {
-        if (MainTabsLayout.isBottomNavigationFloating()) {
+        if (MainTabsLayout.isBottomNavigationFloating() || MainTabsLayout.isBottomNavigationExpressive()) {
             MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
         }
     }
