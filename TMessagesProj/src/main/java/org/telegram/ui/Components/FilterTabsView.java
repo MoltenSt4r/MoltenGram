@@ -1223,7 +1223,11 @@ public class FilterTabsView extends FrameLayout {
         listView.setItemAnimator(itemAnimator);
         listView.setSelectorType(9);
         listView.setSelectorRadius(6);
-        ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
+        if (Md3ChipTabHelper.isEnabled()) {
+            listView.setSelectorDrawableColor(0);
+        } else {
+            ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
+        }
         listView.setLayoutManager(layoutManager = new LinearLayoutManager(context, LinearLayoutManager.HORIZONTAL, false) {
 
             @Override
@@ -1534,7 +1538,11 @@ public class FilterTabsView extends FrameLayout {
         activeTextColorKey = active;
         unactiveTextColorKey = unactive;
         selectorDrawable.setColor(Theme.getColor(tabLineColorKey, resourcesProvider));
-        ThemeBind.listSelectorColor(listView, selector, resourcesProvider);
+        if (Md3ChipTabHelper.isEnabled()) {
+            listView.setSelectorDrawableColor(0);
+        } else {
+            ThemeBind.listSelectorColor(listView, selector, resourcesProvider);
+        }
 
         listView.invalidateViews();
         listView.invalidate();
@@ -1550,7 +1558,11 @@ public class FilterTabsView extends FrameLayout {
         aUnactiveTextColorKey = unactive;
         aBackgroundColorKey = background;
         selectorColorKey = selector;
-        ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
+        if (Md3ChipTabHelper.isEnabled()) {
+            listView.setSelectorDrawableColor(0);
+        } else {
+            ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
+        }
 
         colorChangeAnimator = new AnimatorSet();
         colorChangeAnimator.playTogether(ObjectAnimator.ofFloat(this, COLORS, 0.0f, 1.0f));
@@ -1936,6 +1948,11 @@ public class FilterTabsView extends FrameLayout {
             blurredBackgroundDrawable.updateColors();
         }
         if (listView != null) {
+            if (Md3ChipTabHelper.isEnabled()) {
+                listView.setSelectorDrawableColor(0);
+            } else {
+                ThemeBind.listSelectorColor(listView, selectorColorKey, resourcesProvider);
+            }
             listView.invalidateViews();
             listView.invalidate();
         }

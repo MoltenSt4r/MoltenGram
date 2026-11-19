@@ -138,6 +138,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3SliderThicknessRow;
     private int md3SwitchRow;
     private int md3SwitchExpressiveColorsRow;
+    private int navBarStyleRow;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
@@ -273,6 +274,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // Переключатели
         md3SwitchRow = addRow("md3Switch");
         md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
+        navBarStyleRow = addRow("navBarStyle");
         // Регуляция толщины слайдеров снаружи
         md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
 
@@ -815,6 +817,35 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     }
                 } else if (parentLayout != null) {
                     parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                }
+            });
+            showDialog(builder.create());
+            return;
+        } else if (position == navBarStyleRow) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(getString(R.string.OEAppearanceNewNavigationBarStyle));
+            CharSequence[] options = {
+                    getString(R.string.Default),
+                    "Material 3",
+                    "M3 Expressive"
+            };
+            builder.setItems(options, (dialog, which) -> {
+                if (which == 2) {
+                    MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_EXPRESSIVE);
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
+                    AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
+                } else if (which == 1) {
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(true);
+                    AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
+                    leaveFloatingBottomNavigation();
+                } else {
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
+                    leaveFloatingBottomNavigation();
+                }
+                rebuildAll();
+                rebuildRowsAndNotify();
+                if (parentLayout != null) {
+                    parentLayout.rebuildAllFragmentViews(false, false);
                 }
             });
             showDialog(builder.create());
@@ -1625,6 +1656,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int cur = NaConfig.INSTANCE.getSwitchStyle().Int();
                         String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3" : getString(R.string.Default));
                         cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
+                    } else if (position == navBarStyleRow) {
+                        String name = MainTabsLayout.isBottomNavigationExpressive()
+                                ? "M3 Expressive"
+                                : (AppearanceConfig.newNavigationBarStyle.Bool() ? "Material 3" : getString(R.string.Default));
+                        cell.setTextAndValue(getString(R.string.OEAppearanceNewNavigationBarStyle), name, true);
                     } else if (position == md3QrTopRightShapeRow) {
                         LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
                         boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
@@ -1822,7 +1858,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow
-                    || position == md3SwitchRow || position == md3QrShapeRow
+                    || position == md3SwitchRow || position == navBarStyleRow || position == md3QrShapeRow
                     || position == md3QrPixelShapeRow
                     || position == md3QrColorSourceRow
                     || position == md3QrTopRightShapeRow

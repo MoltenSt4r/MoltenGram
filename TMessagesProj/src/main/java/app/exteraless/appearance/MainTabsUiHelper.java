@@ -195,7 +195,8 @@ public final class MainTabsUiHelper {
         final boolean insetInWrapper = !isMaterial3NavigationBar() || isMaterial3FloatingGlass();
         wrapper.setPadding(leftInset + side, 0, rightInset + side, insetInWrapper ? bottomInset : 0);
         if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams flp) {
-            final int desiredWidth = getTabsViewWidth();
+            final int rawWidth = getTabsViewWidth();
+            final int desiredWidth = rawWidth < 0 ? rawWidth : AndroidUtilities.dp(rawWidth);
             final int desiredGravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
             if (flp.gravity != desiredGravity || flp.width != desiredWidth) {
                 flp.gravity = desiredGravity;
