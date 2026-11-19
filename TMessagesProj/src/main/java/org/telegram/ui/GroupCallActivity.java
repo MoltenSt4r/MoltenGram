@@ -31,6 +31,7 @@ import android.graphics.ColorMatrix;
 import android.graphics.ColorMatrixColorFilter;
 import android.graphics.LinearGradient;
 import android.graphics.Matrix;
+import android.graphics.Outline;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.PixelFormat;
@@ -64,6 +65,7 @@ import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewConfiguration;
 import android.view.ViewGroup;
+import android.view.ViewOutlineProvider;
 import android.view.ViewTreeObserver;
 import android.view.Window;
 import android.view.WindowManager;
@@ -4832,7 +4834,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         liveLabelTextView.setMaxLines(1);
         liveLabelTextView.setGravity(Gravity.CENTER);
         liveLabelTextView.setTypeface(AndroidUtilities.bold());
-        liveLabelTextView.setPadding(dp(8), dp(0), dp(8), dp(0));
+        liveLabelTextView.setPadding(dp(10), dp(2), dp(10), dp(2));
         liveLabelTextView.setTag(-1);
         if (!isRtmpStream()) {
             liveLabelTextView.setVisibility(View.GONE);
@@ -4841,7 +4843,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         titleLayout = new LinearLayout(getContext());
         titleLayout.setOrientation(LinearLayout.HORIZONTAL);
         titleLayout.addView(titleTextView, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
-        titleLayout.addView(liveLabelTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 18, 6, 4, 0,0));
+        titleLayout.addView(liveLabelTextView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 20, 8, 3, 0, 0));
 
         containerView.addView(actionBarBackground, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.TOP, 0, 0, 0, 0));
         containerView.addView(titleLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.LEFT, 23, 0, 48, 0));
@@ -4874,15 +4876,35 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             containerView.addView(undoView[a], LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.LEFT, 8, 0, 8, 8));
         }
 
+        ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout = otherItem.getPopupLayout();
+        popupLayout.setFitItems(true);
+        popupLayout.setClipChildren(true);
+        Md3PopupCardDrawable popupCardDrawable = new Md3PopupCardDrawable(0xFF232A33, 24);
+        popupLayout.setBackgroundDrawable(popupCardDrawable);
+        popupLayout.setOutlineProvider(new ViewOutlineProvider() {
+            @Override
+            public void getOutline(View view, Outline outline) {
+                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), AndroidUtilities.dp(24));
+            }
+        });
+        popupLayout.setClipToOutline(true);
+
         accountSelectCell = new AccountSelectCell(context, true);
         accountSelectCell.setTag(R.id.fit_width_tag, 240);
-        otherItem.addSubItem(user_item, accountSelectCell, LayoutHelper.WRAP_CONTENT, dp(48));
+        otherItem.addSubItem(user_item, accountSelectCell, LayoutHelper.WRAP_CONTENT, dp(58));
         otherItem.setShowSubmenuByMove(false);
-        ThemeBind.selectorBackground(accountSelectCell, Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_voipgroup_listSelector), 6, 6), null, ThemeBind.of(Theme.key_voipgroup_listSelector));
+        ThemeBind.selectorBackground(accountSelectCell, Theme.createRadSelectorDrawable(Theme.getColor(Theme.key_voipgroup_listSelector), 20, 20, 12, 12), null, ThemeBind.of(Theme.key_voipgroup_listSelector));
+        ScaleStateListAnimator.apply(accountSelectCell, 0.04f, 1.5f);
+
         everyoneItem = otherItem.addSubItem(eveyone_can_speak_item, 0, getString(R.string.VoipGroupAllCanSpeak), true);
-        everyoneItem.updateSelectorBackground(true, false);
+        everyoneItem.updateSelectorBackground(true, false, 16);
+        everyoneItem.getTextView().setTypeface(AndroidUtilities.bold());
+        ScaleStateListAnimator.apply(everyoneItem, 0.04f, 1.5f);
+
         adminItem = otherItem.addSubItem(admin_can_speak_item, 0, getString(R.string.VoipGroupOnlyAdminsCanSpeak), true);
-        adminItem.updateSelectorBackground(false, true);
+        adminItem.updateSelectorBackground(false, true, 16);
+        adminItem.getTextView().setTypeface(AndroidUtilities.bold());
+        ScaleStateListAnimator.apply(adminItem, 0.04f, 1.5f);
 
         everyoneItem.setCheckColor(Theme.key_voipgroup_checkMenu);
         everyoneItem.setColors(Theme.getColor(Theme.key_voipgroup_checkMenu), Theme.getColor(Theme.key_voipgroup_checkMenu));
@@ -4896,33 +4918,85 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
         soundDrawablePaint.setStrokeCap(Paint.Cap.ROUND);
         soundItem = otherItem.addSubItem(sound_item, R.drawable.msg_voice_speaker, null, getString(R.string.VoipGroupAudio), true, false);
         soundItem.setItemHeight(56);
+        soundItem.getTextView().setTypeface(AndroidUtilities.bold());
+        soundItem.setSubtextColor(Theme.getColor(Theme.key_voipgroup_lastSeenText));
+        soundItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(soundItem, 0.04f, 1.5f);
 
         noiseItem = otherItem.addSubItem(noise_item, R.drawable.msg_noise_on, null, getString(R.string.VoipNoiseCancellation), true, false);
         noiseItem.setItemHeight(56);
+        noiseItem.getTextView().setTypeface(AndroidUtilities.bold());
+        noiseItem.setSubtextColor(Theme.getColor(Theme.key_voipgroup_lastSeenText));
+        noiseItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(noiseItem, 0.04f, 1.5f);
 
-        soundItemDivider = otherItem.addDivider(ColorUtils.blendARGB(Theme.getColor(Theme.key_voipgroup_actionBar), Color.BLACK, 0.3f));
-        ((ViewGroup.MarginLayoutParams) soundItemDivider.getLayoutParams()).topMargin = 0;
-        ((ViewGroup.MarginLayoutParams) soundItemDivider.getLayoutParams()).bottomMargin = 0;
+        soundItemDivider = otherItem.addDivider(0x14FFFFFF);
+        if (soundItemDivider.getLayoutParams() instanceof ViewGroup.MarginLayoutParams) {
+            ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) soundItemDivider.getLayoutParams();
+            lp.topMargin = dp(4);
+            lp.bottomMargin = dp(4);
+            lp.leftMargin = dp(16);
+            lp.rightMargin = dp(16);
+        }
+
         editTitleItem = otherItem.addSubItem(edit_item, R.drawable.msg_edit, recordCallDrawable, ChatObject.isChannelOrGiga(currentChat) ? getString(R.string.VoipChannelEditTitle) : getString(R.string.VoipGroupEditTitle), true, false);
+        editTitleItem.setItemHeight(50);
+        editTitleItem.getTextView().setTypeface(AndroidUtilities.bold());
+        editTitleItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(editTitleItem, 0.04f, 1.5f);
+
         permissionItem = otherItem.addSubItem(permission_item, R.drawable.msg_permissions, recordCallDrawable, getString(R.string.VoipGroupEditPermissions), false, false);
+        permissionItem.setItemHeight(50);
+        permissionItem.getTextView().setTypeface(AndroidUtilities.bold());
+        permissionItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(permissionItem, 0.04f, 1.5f);
+
         inviteItem = otherItem.addSubItem(share_invite_link_item, R.drawable.msg_link, getString(R.string.VoipGroupShareInviteLink));
+        inviteItem.setItemHeight(50);
+        inviteItem.getTextView().setTypeface(AndroidUtilities.bold());
+        inviteItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(inviteItem, 0.04f, 1.5f);
+
         recordCallDrawable = new RecordCallDrawable();
         screenItem = otherItem.addSubItem(screen_capture_item, R.drawable.msg_screencast, getString(R.string.VoipChatStartScreenCapture));
+        screenItem.setItemHeight(50);
+        screenItem.getTextView().setTypeface(AndroidUtilities.bold());
+        screenItem.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(screenItem, 0.04f, 1.5f);
+
         recordItem = otherItem.addSubItem(start_record_item, 0, recordCallDrawable, getString(R.string.VoipGroupRecordCall), true, false);
+        recordItem.setItemHeight(50);
+        recordItem.getTextView().setTypeface(AndroidUtilities.bold());
+        recordItem.updateSelectorBackground(false, false, 14);
         recordCallDrawable.setParentView(recordItem.getImageView());
+        ScaleStateListAnimator.apply(recordItem, 0.04f, 1.5f);
 
         enableComments = otherItem.addSubItem(comments_enable_item, R.drawable.menu_stream_comments_24, getString(R.string.VoipChannelEnableComments));
+        enableComments.setItemHeight(50);
+        enableComments.getTextView().setTypeface(AndroidUtilities.bold());
+        enableComments.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(enableComments, 0.04f, 1.5f);
+
         disableComments = otherItem.addSubItem(comments_disable_item, R.drawable._menu_stream_comments_off_24, getString(R.string.VoipChannelDisableComments));
+        disableComments.setItemHeight(50);
+        disableComments.getTextView().setTypeface(AndroidUtilities.bold());
+        disableComments.updateSelectorBackground(false, false, 14);
+        ScaleStateListAnimator.apply(disableComments, 0.04f, 1.5f);
 
         leaveItem = otherItem.addSubItem(leave_item, R.drawable.msg_cancel, isConference() ? getString(R.string.VoipGroupEndConference) : ChatObject.isChannelOrGiga(currentChat) ? getString(R.string.VoipChannelEndChat) : getString(R.string.VoipGroupEndChat));
+        leaveItem.setItemHeight(50);
+        leaveItem.getTextView().setTypeface(AndroidUtilities.bold());
+        leaveItem.setColors(0xFFF01D2C, 0xFFF01D2C);
+        leaveItem.updateSelectorBackground(false, true, 20);
+        ScaleStateListAnimator.apply(leaveItem, 0.04f, 1.5f);
+
         otherItem.setPopupItemsSelectorColor(Theme.getColor(Theme.key_voipgroup_listSelector));
-        otherItem.getPopupLayout().setFitItems(true);
 
         enableComments.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
         disableComments.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
         soundItem.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
         noiseItem.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
-        leaveItem.setColors(Theme.getColor(Theme.key_voipgroup_leaveCallMenu), Theme.getColor(Theme.key_voipgroup_leaveCallMenu));
+        leaveItem.setColors(0xFFF01D2C, 0xFFF01D2C);
         inviteItem.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
         editTitleItem.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
         permissionItem.setColors(Theme.getColor(Theme.key_voipgroup_actionBarItems), Theme.getColor(Theme.key_voipgroup_actionBarItems));
@@ -8027,8 +8101,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
         int color = AndroidUtilities.getOffsetColor(Theme.getColor(Theme.key_voipgroup_listViewBackgroundUnscrolled), Theme.getColor(Theme.key_voipgroup_listViewBackground), colorProgress, 1.0f);
         if (volumeLayout != null && !view.isSelfUser() && !participant.muted_by_you && (!participant.muted || participant.can_self_unmute)) {
-            Drawable shadowDrawable = getContext().getResources().getDrawable(R.drawable.popup_fixed_alert).mutate();
-            shadowDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY));
+            Drawable shadowDrawable = Theme.createRoundRectDrawable(dp(20), color);
             volumeLayout.setBackgroundDrawable(shadowDrawable);
             linearLayout.addView(volumeLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 0));
 
@@ -8038,8 +8111,7 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
 
         buttonsLayout.setMinimumWidth(dp(240));
         buttonsLayout.setOrientation(LinearLayout.VERTICAL);
-        Drawable shadowDrawable = getContext().getResources().getDrawable(R.drawable.popup_fixed_alert).mutate();
-        shadowDrawable.setColorFilter(new PorterDuffColorFilter(color, PorterDuff.Mode.MULTIPLY));
+        Drawable shadowDrawable = Theme.createRoundRectDrawable(dp(20), color);
         buttonsLayout.setBackgroundDrawable(shadowDrawable);
         linearLayout.addView(buttonsLayout, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, volumeSlider != null ? -8 : 0, 0, 0));
 
@@ -9658,6 +9730,82 @@ public class GroupCallActivity extends BottomSheet implements NotificationCenter
             }
         }
         return super.dispatchKeyEvent(event);
+    }
+
+    public static class Md3PopupCardDrawable extends Drawable {
+        private final Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF rect = new RectF();
+        private final Rect padding = new Rect();
+        private int color;
+        private final float radius;
+
+        public Md3PopupCardDrawable(int color, float radiusDp) {
+            this.color = color;
+            this.radius = AndroidUtilities.dp(radiusDp);
+            paint.setColor(color);
+            strokePaint.setStyle(Paint.Style.STROKE);
+            strokePaint.setStrokeWidth(AndroidUtilities.dp(1));
+            strokePaint.setColor(0x14FFFFFF);
+            int pad = AndroidUtilities.dp(8);
+            padding.set(pad, pad, pad, pad);
+        }
+
+        public void setColor(int color) {
+            this.color = color;
+            paint.setColor(color);
+            paint.setColorFilter(null);
+            invalidateSelf();
+        }
+
+        public int getColor() {
+            return color;
+        }
+
+        public float getRadius() {
+            return radius;
+        }
+
+        @Override
+        public void setBounds(int left, int top, int right, int bottom) {
+            super.setBounds(left, top, right, bottom);
+            rect.set(left, top, right, bottom);
+        }
+
+        @Override
+        public void setBounds(Rect bounds) {
+            super.setBounds(bounds);
+            rect.set(bounds);
+        }
+
+        @Override
+        public boolean getPadding(Rect padding) {
+            padding.set(this.padding);
+            return true;
+        }
+
+        @Override
+        public void draw(@NonNull Canvas canvas) {
+            canvas.drawRoundRect(rect, radius, radius, paint);
+            canvas.drawRoundRect(rect, radius, radius, strokePaint);
+        }
+
+        @Override
+        public void setAlpha(int alpha) {
+            paint.setAlpha(alpha);
+            strokePaint.setAlpha((int) (alpha * (0x14 / 255.0f)));
+        }
+
+        @Override
+        public void setColorFilter(@Nullable ColorFilter colorFilter) {
+            paint.setColorFilter(colorFilter);
+            invalidateSelf();
+        }
+
+        @Override
+        public int getOpacity() {
+            return PixelFormat.TRANSLUCENT;
+        }
     }
 
     public class WatchersView extends LinearLayout {

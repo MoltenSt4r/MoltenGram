@@ -248,4 +248,10 @@
 <string name="OEAppearancePlayerMediaSeekbarStyle">Chat &amp; classic seekbar shape</string>
 <string name="OEAppearancePlayerMediaSeekbarIndicator">Chat &amp; classic seekbar thumb</string>
 <string name="OEPlayerSeekbarIndicatorNone">None</string>
+<string name="OEAppearanceSongrecFetchCover">Fetch album art</string>
+<string name="OEAppearanceSongrecFetchCoverDesc">Automatically find and apply album art to tracks using SongRec recognition</string>
+<string name="OEAppearanceSongrecBackgroundRecognition">Background song recognition</string>
+<string name="OEAppearanceSongrecBackgroundRecognitionDesc">Recognize tracks automatically in the background during playback so covers and lyrics are ready when opening the player</string>
+<string name="OEAppearancePlayerAppearanceMore">Additional appearance settings</string>
+<string name="OEAppearancePlayerLyricsMore">Additional lyrics &amp; covers</string>
 </resources>

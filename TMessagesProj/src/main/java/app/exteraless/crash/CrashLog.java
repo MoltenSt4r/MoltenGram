@@ -6,9 +6,6 @@ import android.os.Debug;
 import android.os.Process;
 import android.os.SystemClock;
 
-import com.google.firebase.crashlytics.CustomKeysAndValues;
-import com.google.firebase.crashlytics.FirebaseCrashlytics;
-
 import org.json.JSONObject;
 import org.lsposed.hiddenapibypass.HiddenApiBypass;
 import org.telegram.messenger.ApplicationLoader;
@@ -259,60 +256,12 @@ public final class CrashLog {
             return;
         }
         final File file = outOfMemoryFile(context);
-        if (!file.exists()) {
-            return;
-        }
-        try {
-            final String text = read(file);
-            if (text == null || !AndroidUtil.shouldEnableCrashlytics()) {
-                return;
-            }
-            final JSONObject json = new JSONObject(text);
-            final CustomKeysAndValues.Builder keys = new CustomKeysAndValues.Builder();
-            for (Iterator<String> it = json.keys(); it.hasNext(); ) {
-                final String name = it.next();
-                final Object value = json.opt(name);
-                if (value instanceof Number) {
-                    keys.putLong("oom_" + name, ((Number) value).longValue());
-                } else {
-                    keys.putString("oom_" + name, String.valueOf(value));
-                }
-            }
-            final OutOfMemoryError error = new OutOfMemoryError(json.optString("message"));
-            error.setStackTrace(new StackTraceElement[]{
-                    new StackTraceElement(CrashLog.class.getName(), "heapExhausted", "CrashLog.java", -1)
-            });
-            FirebaseCrashlytics.getInstance().recordException(error, keys.build());
-        } catch (Throwable ignore) {
-        } finally {
+        if (file.exists()) {
             file.delete();
         }
     }
 
     public static void putCrashlyticsKeys(Throwable error) {
-        try {
-            FirebaseCrashlytics.getInstance().setCustomKey("hooked", AndroidUtil.hasHookFrames(error));
-        } catch (Throwable ignore) {
-        }
-        try {
-            final StringBuilder ids = new StringBuilder();
-            final PluginsController controller = PluginsController.peekInstance();
-            if (controller != null) {
-                for (Plugin plugin : controller.plugins.values()) {
-                    if (plugin.isEnabled()) {
-                        if (ids.length() > 0) {
-                            ids.append(',');
-                        }
-                        ids.append(plugin.getId());
-                    }
-                }
-            }
-            if (ids.length() > MAX_KEY_LENGTH) {
-                ids.setLength(MAX_KEY_LENGTH);
-            }
-            FirebaseCrashlytics.getInstance().setCustomKey("plugins", ids.toString());
-        } catch (Throwable ignore) {
-        }
     }
 
     public static String take() {

@@ -136,6 +136,7 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
     public void onCreate() {
         audioManager = (AudioManager) getSystemService(AUDIO_SERVICE);
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.audioInfoLoaded);
             NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.messagePlayingDidSeek);
             NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
             NotificationCenter.getInstance(a).addObserver(this, NotificationCenter.httpFileDidLoad);
@@ -436,6 +437,38 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
             albumArt = audioInfo != null ? audioInfo.getSmallCover() : null;
             fullAlbumArt = audioInfo != null ? audioInfo.getCover() : null;
 
+            if (fullAlbumArt == null) {
+                fullAlbumArt = app.exteraless.player.PlayerArt.fileCover(messageObject);
+            }
+            if (fullAlbumArt == null) {
+                String songrec = app.exteraless.player.PlayerArt.getSongrecCover(messageObject);
+                if (!TextUtils.isEmpty(songrec)) {
+                    try {
+                        fullAlbumArt = android.graphics.BitmapFactory.decodeFile(songrec);
+                    } catch (Throwable ignore) {
+                    }
+                }
+            }
+            if (fullAlbumArt == null) {
+                java.io.File local = app.exteraless.player.PlayerArt.localFile(messageObject);
+                if (local != null && local.exists()) {
+                    try {
+                        AudioInfo info = AudioInfo.getAudioInfo(local);
+                        if (info != null && info.getCover() != null) {
+                            fullAlbumArt = info.getCover();
+                            albumArt = info.getSmallCover();
+                        }
+                    } catch (Throwable ignore) {
+                    }
+                }
+            }
+            if (albumArt == null && fullAlbumArt != null) {
+                albumArt = fullAlbumArt;
+            }
+            if (fullAlbumArt == null && albumArt != null) {
+                fullAlbumArt = albumArt;
+            }
+
             loadingFilePath = null;
             imageReceiver.setImageBitmap((BitmapDrawable) null);
             if (albumArt == null && !TextUtils.isEmpty(artworkUrl)) {
@@ -510,7 +543,9 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
                 NotificationsController.checkOtherNotificationsChannel();
                 bldr.setChannelId(NotificationsController.OTHER_NOTIFICATIONS_CHANNEL);
             }
-            if (albumArt != null) {
+            if (fullAlbumArt != null && !fullAlbumArt.isRecycled()) {
+                bldr.setLargeIcon(fullAlbumArt);
+            } else if (albumArt != null && !albumArt.isRecycled()) {
                 bldr.setLargeIcon(albumArt);
             } else {
                 bldr.setLargeIcon(albumArtPlaceholder);
@@ -585,6 +620,10 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
                     .putString(MediaMetadataCompat.METADATA_KEY_ALBUM, audioInfo != null && messageObject.isMusic() ? audioInfo.getAlbum() : null);
             if (fullAlbumArt != null && !fullAlbumArt.isRecycled()) {
                 meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, fullAlbumArt);
+                meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, fullAlbumArt);
+            } else if (albumArt != null && !albumArt.isRecycled()) {
+                meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt);
+                meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, albumArt);
             }
 
             mediaSession.setMetadata(meta.build());
@@ -880,6 +919,7 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
                     .build());
         }
         for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
+            NotificationCenter.getInstance(a).removeObserver(this, NotificationCenter.audioInfoLoaded);
             NotificationCenter.getInstance(a).removeObserver(this, NotificationCenter.messagePlayingDidSeek);
             NotificationCenter.getInstance(a).removeObserver(this, NotificationCenter.messagePlayingPlayStateChanged);
             NotificationCenter.getInstance(a).removeObserver(this, NotificationCenter.httpFileDidLoad);
@@ -895,6 +935,11 @@ public class MusicPlayerService extends Service implements NotificationCenter.No
                 createNotification(messageObject, false);
             } else {
                 stopSelf();
+            }
+        } else if (id == NotificationCenter.audioInfoLoaded) {
+            MessageObject messageObject = MediaController.getInstance().getPlayingMessageObject();
+            if (messageObject != null) {
+                createNotification(messageObject, false);
             }
         } else if (id == NotificationCenter.messagePlayingDidSeek) {
             MessageObject messageObject = MediaController.getInstance().getPlayingMessageObject();

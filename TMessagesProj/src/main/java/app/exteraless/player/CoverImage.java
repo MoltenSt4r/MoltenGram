@@ -9,6 +9,7 @@ import android.graphics.Canvas;
 import android.graphics.Paint;
 import android.graphics.Path;
 import android.graphics.RectF;
+import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.view.MotionEvent;
@@ -43,6 +44,8 @@ public class CoverImage extends FrameLayout {
     private final int noteSizeDp;
     private int radius;
     private String currentKey;
+    private String currentTrackKey;
+    private String lastCheckedAttachTrackKey;
     private MessageObject message;
     private int fallbackSeed;
     private Listener listener;
@@ -66,8 +69,11 @@ public class CoverImage extends FrameLayout {
         imageView = new BackupImageView(context);
         imageView.setFocusable(false);
         imageView.setClickable(false);
+        imageView.getImageReceiver().setCrossfadeWithOldImage(true);
+        imageView.getImageReceiver().setCrossfadeDuration(200);
         addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
+        imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
         imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
             if (set) {
@@ -209,53 +215,67 @@ public class CoverImage extends FrameLayout {
     public void setMessage(MessageObject messageObject) {
         if (messageObject == null) {
             currentKey = null;
+            currentTrackKey = null;
+            lastCheckedAttachTrackKey = null;
             message = null;
             imageView.setImageDrawable(null);
             return;
         }
 
+        imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
+        String trackKey = PlayerArt.key(messageObject);
         Bitmap file = PlayerArt.fileCover(messageObject);
         // Fallback for local files if not yet playing or AudioInfo not cached in MediaController
-        if (file == null && messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
-            try {
-                File f = new File(messageObject.messageOwner.attachPath);
-                if (f.exists()) {
-                    AudioInfo info = AudioInfo.getAudioInfo(f);
+        if (file == null) {
+            java.io.File local = PlayerArt.localFile(messageObject);
+            if (local != null && local.exists()) {
+                try {
+                    AudioInfo info = AudioInfo.getAudioInfo(local);
                     if (info != null && info.getCover() != null) {
                         file = info.getCover();
+                        PlayerArt.putEmbeddedCover(trackKey, file);
                     }
+                } catch (Throwable ignore) {
                 }
-            } catch (Exception ignored) {
             }
         }
 
-        String key = PlayerArt.key(messageObject) + (file != null ? ":f" : "");
+        String songrec = PlayerArt.getSongrecCover(messageObject);
+        String key = trackKey + (file != null ? ":f" : "") + (!TextUtils.isEmpty(songrec) ? ":s" + songrec.hashCode() : "");
         if (key != null && key.equals(currentKey)) {
             message = messageObject;
             return;
         }
+        boolean sameTrack = trackKey != null && trackKey.equals(currentTrackKey);
         currentKey = key;
+        currentTrackKey = trackKey;
         message = messageObject;
 
-        boolean hasCover = false;
+        imageView.getImageReceiver().setCrossfadeWithOldImage(true);
+        imageView.getImageReceiver().setCrossfadeDuration(200);
+
+        Bitmap oldBmp = sameTrack ? imageView.getImageReceiver().getBitmap() : null;
+        Drawable keepThumb = (sameTrack && oldBmp != null && !oldBmp.isRecycled())
+                ? new BitmapDrawable(getResources(), oldBmp)
+                : null;
+
         if (file != null) {
             imageView.setImageBitmap(file);
             onBitmap(file);
-            hasCover = true;
+        } else if (!TextUtils.isEmpty(songrec)) {
+            imageView.setImage(songrec, null, keepThumb);
         } else {
             ImageLocation full = PlayerArt.fullLocation(messageObject);
             ImageLocation thumb = PlayerArt.thumbLocation(messageObject);
             if (full != null) {
                 imageView.setImage(full, null, thumb, null, null, 0, 1, messageObject);
-                hasCover = true;
             } else if (thumb != null) {
                 imageView.setImage(null, null, thumb, null, null, 0, 1, messageObject);
-                hasCover = true;
             } else if (messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.message) &&
                     (messageObject.messageOwner.message.startsWith("http://") || messageObject.messageOwner.message.startsWith("https://"))) {
-                imageView.setImage(messageObject.messageOwner.message, null, null);
-                hasCover = true;
+                imageView.setImage(messageObject.messageOwner.message, null, keepThumb);
             } else {
+                imageView.clearImage();
                 imageView.setImageDrawable(null);
             }
         }
@@ -342,7 +362,7 @@ public class CoverImage extends FrameLayout {
             }
         }
 
-        if (!imageView.getImageReceiver().hasBitmapImage()) {
+        if (!imageView.getImageReceiver().hasBitmapImage() && !imageView.getImageReceiver().isCrossfadingWithOldImage()) {
             if (hasShape && shapePath != null) {
                 canvas.drawPath(shapePath, placeholderPaint);
             } else {

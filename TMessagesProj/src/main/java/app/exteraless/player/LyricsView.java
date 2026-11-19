@@ -204,6 +204,13 @@ public class LyricsView extends FrameLayout {
     }
 
     public void showState(int newState) {
+        if (state == newState && (newState != STATE_LYRICS || lyrics != null)) {
+            if (newState == STATE_LYRICS) {
+                list.setVisibility(VISIBLE);
+                empty.setVisibility(GONE);
+            }
+            return;
+        }
         state = newState;
         if (newState == STATE_LYRICS) {
             list.setVisibility(VISIBLE);
@@ -247,6 +254,10 @@ public class LyricsView extends FrameLayout {
     }
 
     public void setLyrics(Lyrics value, long positionMs) {
+        if (state == STATE_LYRICS && lyrics == value && value != null) {
+            setPosition(positionMs);
+            return;
+        }
         lyrics = value;
         state = STATE_LYRICS;
         list.setVisibility(VISIBLE);

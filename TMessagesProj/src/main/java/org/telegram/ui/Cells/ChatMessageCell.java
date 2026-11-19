@@ -20327,7 +20327,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
             boolean drewWallpaperBitmap = false;
             boolean drewRuntimeGlass = false;
-            float offsetX = (inParentSpace ? 0f : getX()) - (slidingOffsetX + animationOffsetX);
+            float offsetX = inParentSpace ? 0f : getX();
             float offsetY = inParentSpace ? 0f : getY();
             ViewParent p = getParent();
             int pHeight = parentHeight;
@@ -25116,7 +25116,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (isSideMenued && !currentMessageObject.isOutOwner() && currentPosition != null) {
             tx += dp(ChatActivity.SIDE_MENU_WIDTH - (needDrawAvatar() ? 48 : 0)) * sideMenuAlpha;
         }
-        setTranslationX(tx);
+        if (getTranslationX() != tx) {
+            setTranslationX(tx);
+            if (shouldDrawGlassBubble()) {
+                invalidate();
+            }
+        }
     }
 
     public float getNonAnimationTranslationX(boolean update) {

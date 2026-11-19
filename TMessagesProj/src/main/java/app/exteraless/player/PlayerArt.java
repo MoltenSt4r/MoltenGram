@@ -181,6 +181,19 @@ public final class PlayerArt {
     }
 
     public static Bitmap fileCover(MessageObject messageObject) {
+        String key = key(messageObject);
+        if (key != null) {
+            if (AppearanceConfig.songrecFetchCover()) {
+                Bitmap b = songrecBitmapCovers.get(key);
+                if (b != null) {
+                    return b;
+                }
+            }
+            Bitmap b = embeddedCovers.get(key);
+            if (b != null) {
+                return b;
+            }
+        }
         if (!isPlaying(messageObject)) {
             return null;
         }
@@ -188,7 +201,217 @@ public final class PlayerArt {
         return info != null ? info.getCover() : null;
     }
 
+    private static final LruCache<String, Bitmap> embeddedCovers = new LruCache<>(24);
+    private static final LruCache<String, Bitmap> songrecBitmapCovers = new LruCache<>(24);
+    private static final java.util.Map<String, OnlineLyrics.Query> recognizedQueries = new java.util.concurrent.ConcurrentHashMap<>();
+    private static final java.util.Set<String> preloading = java.util.concurrent.ConcurrentHashMap.newKeySet();
+    private static final java.util.concurrent.ExecutorService preloadExecutor = java.util.concurrent.Executors.newFixedThreadPool(3);
+
+    public static void putRecognizedQuery(String key, OnlineLyrics.Query q) {
+        if (key != null && q != null) {
+            recognizedQueries.put(key, q);
+        }
+    }
+
+    public static OnlineLyrics.Query getRecognizedQuery(String key) {
+        return key == null ? null : recognizedQueries.get(key);
+    }
+
+    public static void preloadPlaylistAhead(MessageObject current) {
+        if (current == null) {
+            return;
+        }
+        ArrayList<MessageObject> list = MediaController.getInstance().getPlaylist();
+        ArrayList<MessageObject> targets = new ArrayList<>();
+        targets.add(current);
+        if (list != null && !list.isEmpty()) {
+            String ck = key(current);
+            int idx = -1;
+            for (int i = 0; i < list.size(); i++) {
+                if (TextUtils.equals(key(list.get(i)), ck)) {
+                    idx = i;
+                    break;
+                }
+            }
+            if (idx >= 0) {
+                int n = list.size();
+                targets.add(list.get((idx + 1) % n));
+                if (n > 2) {
+                    targets.add(list.get((idx + 2) % n));
+                    targets.add(list.get((idx - 1 + n) % n));
+                }
+            }
+        }
+        for (MessageObject mo : targets) {
+            preloadTrackInBackground(mo);
+        }
+    }
+
+    public static void preloadTrackInBackground(MessageObject mo) {
+        final String key = key(mo);
+        if (key == null || mo.getDocument() == null && TextUtils.isEmpty(mo.messageOwner != null ? mo.messageOwner.attachPath : null)) {
+            return;
+        }
+        if (!preloading.add(key)) {
+            return;
+        }
+        preloadExecutor.execute(() -> {
+            try {
+                preloadWorker(mo, key);
+            } catch (Throwable ignore) {
+            } finally {
+                preloading.remove(key);
+            }
+        });
+    }
+
+    public static void putEmbeddedCover(String key, Bitmap bmp) {
+        if (key != null && bmp != null) {
+            embeddedCovers.put(key, bmp);
+        }
+    }
+
+    public static java.io.File localFile(MessageObject mo) {
+        java.io.File f = null;
+        if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
+            f = new java.io.File(mo.messageOwner.attachPath);
+            if (f.exists()) {
+                return f;
+            }
+        }
+        try {
+            if (mo.messageOwner != null) {
+                f = FileLoader.getInstance(mo.currentAccount).getPathToMessage(mo.messageOwner);
+                if (f != null && f.exists()) {
+                    return f;
+                }
+            }
+            if (mo.getDocument() != null) {
+                f = FileLoader.getInstance(mo.currentAccount).getPathToAttach(mo.getDocument());
+                if (f != null && f.exists()) {
+                    return f;
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return null;
+    }
+
+    private static void notifyCover(MessageObject mo) {
+        AndroidUtilities.runOnUIThread(() -> org.telegram.messenger.NotificationCenter.getInstance(mo.currentAccount)
+            .postNotificationName(org.telegram.messenger.NotificationCenter.audioInfoLoaded, mo));
+    }
+
+    private static void applyCoverFile(MessageObject mo, String key, String path) {
+        if (TextUtils.isEmpty(path)) {
+            return;
+        }
+        Bitmap bmp = null;
+        try {
+            bmp = android.graphics.BitmapFactory.decodeFile(path);
+        } catch (Throwable ignore) {
+        }
+        final Bitmap fb = bmp;
+        AndroidUtilities.runOnUIThread(() -> setSongrecCover(mo, path));
+        if (fb != null) {
+            songrecBitmapCovers.put(key, fb);
+            AndroidUtilities.runOnUIThread(() -> requestSeed(mo, fb, 0xff5a6472, seed -> {}));
+        }
+        notifyCover(mo);
+    }
+
+    private static void preloadWorker(MessageObject mo, String key) {
+        java.io.File local = localFile(mo);
+        boolean hasCover = embeddedCovers.get(key) != null;
+        if (local != null && !hasCover) {
+            try {
+                AudioInfo info = AudioInfo.getAudioInfo(local);
+                if (info != null && info.getCover() != null) {
+                    final Bitmap c = info.getCover();
+                    embeddedCovers.put(key, c);
+                    hasCover = true;
+                    AndroidUtilities.runOnUIThread(() -> requestSeed(mo, c, 0xff5a6472, seed -> {}));
+                    notifyCover(mo);
+                }
+            } catch (Throwable ignore) {
+            }
+        }
+        if (local == null && mo.getDocument() != null) {
+            AndroidUtilities.runOnUIThread(() -> FileLoader.getInstance(mo.currentAccount)
+                .loadFile(mo.getDocument(), mo, FileLoader.PRIORITY_NORMAL, 0));
+        }
+        boolean hasThumb = false;
+        if (mo.getDocument() != null) {
+            TLRPC.PhotoSize th = FileLoader.getClosestPhotoSizeWithSize(mo.getDocument().thumbs, 360);
+            hasThumb = th instanceof TLRPC.TL_photoSize || th instanceof TLRPC.TL_photoSizeProgressive;
+        }
+        if (hasCover) {
+            return;
+        }
+        boolean fetchCover = AppearanceConfig.songrecFetchCover();
+        if (fetchCover && songrecBitmapCovers.get(key) != null) {
+            return;
+        }
+        SongRecognizer.Result result = null;
+        if (local != null && (AppearanceConfig.songrecBackgroundRecognition() || AppearanceConfig.playerLyricsAudioRecognition())) {
+            result = SongRecognizer.recognize(local.getAbsolutePath());
+            if (result != null && !TextUtils.isEmpty(result.title)) {
+                OnlineLyrics.Query q = new OnlineLyrics.Query(result.artist, result.title, null, (int) Math.round(mo.getDuration()));
+                q.filePath = local.getAbsolutePath();
+                putRecognizedQuery(key, q);
+                OnlineLyrics.fetch(q, (l, st) -> {});
+            }
+        }
+        if (!fetchCover) {
+            return;
+        }
+        String coverPath = null;
+        if (result != null) {
+            if (!TextUtils.isEmpty(result.localCoverPath) && new java.io.File(result.localCoverPath).exists()) {
+                coverPath = result.localCoverPath;
+            } else if (!TextUtils.isEmpty(result.coverUrl)) {
+                java.io.File f = SongRecognizer.downloadAndCacheCover(result.coverUrl);
+                coverPath = f != null ? f.getAbsolutePath() : null;
+            }
+        }
+        if (coverPath == null) {
+            String artist = result != null && !TextUtils.isEmpty(result.artist) ? result.artist : mo.getMusicAuthor();
+            String title = result != null && !TextUtils.isEmpty(result.title) ? result.title : mo.getMusicTitle();
+            java.io.File f = SongRecognizer.fetchCoverByMetadata(artist, title);
+            coverPath = f != null ? f.getAbsolutePath() : null;
+        }
+        applyCoverFile(mo, key, coverPath);
+    }
+
+    private static final LruCache<String, String> songrecCovers = new LruCache<>(64);
+
+    public static void setSongrecCover(MessageObject messageObject, String coverUrl) {
+        if (messageObject == null || TextUtils.isEmpty(coverUrl)) {
+            return;
+        }
+        String key = key(messageObject);
+        if (key != null) {
+            songrecCovers.put(key, coverUrl);
+        }
+        messageObject.setCustomArtworkUrl(coverUrl);
+    }
+
+    public static String getSongrecCover(MessageObject messageObject) {
+        if (messageObject == null || !AppearanceConfig.songrecFetchCover()) {
+            return null;
+        }
+        if (!TextUtils.isEmpty(messageObject.customArtworkUrl)) {
+            return messageObject.customArtworkUrl;
+        }
+        String key = key(messageObject);
+        return key != null ? songrecCovers.get(key) : null;
+    }
+
     public static ImageLocation thumbLocation(MessageObject messageObject) {
+        String songrec = getSongrecCover(messageObject);
+        if (!TextUtils.isEmpty(songrec)) {
+            return ImageLocation.getForPath(songrec);
+        }
         TLRPC.Document document = messageObject.getDocument();
         TLRPC.PhotoSize thumb = document != null ? FileLoader.getClosestPhotoSizeWithSize(document.thumbs, 360) : null;
         if (!(thumb instanceof TLRPC.TL_photoSize) && !(thumb instanceof TLRPC.TL_photoSizeProgressive)) {
@@ -205,7 +428,11 @@ public final class PlayerArt {
     }
 
     public static ImageLocation fullLocation(MessageObject messageObject) {
-        String url = messageObject.getArtworkUrl(false);
+        String songrec = getSongrecCover(messageObject);
+        if (!TextUtils.isEmpty(songrec)) {
+            return ImageLocation.getForPath(songrec);
+        }
+        String url = messageObject != null ? messageObject.getArtworkUrl(false) : null;
         return TextUtils.isEmpty(url) ? null : ImageLocation.getForPath(url);
     }
 

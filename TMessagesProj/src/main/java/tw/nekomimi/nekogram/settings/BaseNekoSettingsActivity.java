@@ -96,6 +96,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     public static final int TYPE_FLICKER = 15;
     public static final int TYPE_CHECK2 = 16;
     public static final int TYPE_CHECKBOX2 = 17;
+    public static final int TYPE_COLLAPSIBLE_HEADER = 18;
 
     protected BlurredRecyclerView listView;
     protected BaseListAdapter listAdapter;
@@ -454,7 +455,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int type = holder.getItemViewType();
-            return type == TYPE_SETTINGS || type == TYPE_CHECK || type == TYPE_NOTIFICATION_CHECK || type == TYPE_DETAIL_SETTINGS || type == TYPE_TEXT | type == TYPE_CHECKBOX || type == TYPE_RADIO || type == TYPE_ACCOUNT || type == TYPE_EMOJI || type == TYPE_EMOJI_SELECTION || type == TYPE_CREATION || type == TYPE_CHECK2 || type == TYPE_CHECKBOX2;
+            return type == TYPE_SETTINGS || type == TYPE_CHECK || type == TYPE_NOTIFICATION_CHECK || type == TYPE_DETAIL_SETTINGS || type == TYPE_TEXT | type == TYPE_CHECKBOX || type == TYPE_RADIO || type == TYPE_ACCOUNT || type == TYPE_EMOJI || type == TYPE_EMOJI_SELECTION || type == TYPE_CREATION || type == TYPE_CHECK2 || type == TYPE_CHECKBOX2 || type == TYPE_COLLAPSIBLE_HEADER;
         }
 
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position, boolean partial) {
@@ -479,7 +480,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
          */
         protected void applySectionBackground(@NonNull RecyclerView.ViewHolder holder, int position) {
             int viewType = holder.getItemViewType();
-            if (!isSectionContent(viewType)) {
+            if (!isSectionContent(viewType) || viewType == TYPE_COLLAPSIBLE_HEADER) {
                 return;
             }
             int radiusDp = app.exteraless.appearance.AppearanceConfig.sectionRadius();
@@ -628,6 +629,9 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
                     checkBoxCell.setEnabled(true);
                     view = checkBoxCell;
                     view.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    break;
+                case TYPE_COLLAPSIBLE_HEADER:
+                    view = new tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell(mContext, resourcesProvider);
                     break;
             }
             // noinspection ConstantConditions

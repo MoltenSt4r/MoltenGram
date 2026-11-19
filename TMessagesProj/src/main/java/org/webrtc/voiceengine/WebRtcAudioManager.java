@@ -22,6 +22,7 @@ import androidx.annotation.Keep;
 import androidx.annotation.Nullable;
 import java.util.Timer;
 import java.util.TimerTask;
+import org.telegram.messenger.FileLog;
 import org.webrtc.ContextUtils;
 import org.webrtc.Logging;
 
@@ -307,9 +308,14 @@ public class WebRtcAudioManager {
     if (Build.VERSION.SDK_INT < 17) {
       return WebRtcAudioUtils.getDefaultSampleRateHz();
     }
-    String sampleRateString = audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE);
-    return (sampleRateString == null) ? WebRtcAudioUtils.getDefaultSampleRateHz()
-                                      : Integer.parseInt(sampleRateString);
+    try {
+      String sampleRateString = audioManager != null ? audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_SAMPLE_RATE) : null;
+      return (sampleRateString == null || sampleRateString.isEmpty()) ? WebRtcAudioUtils.getDefaultSampleRateHz()
+                                                                     : Integer.parseInt(sampleRateString);
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return WebRtcAudioUtils.getDefaultSampleRateHz();
+    }
   }
 
   // Returns the native output buffer size for low-latency output streams.
@@ -318,9 +324,14 @@ public class WebRtcAudioManager {
     if (Build.VERSION.SDK_INT < 17) {
       return DEFAULT_FRAME_PER_BUFFER;
     }
-    String framesPerBuffer =
-        audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER);
-    return framesPerBuffer == null ? DEFAULT_FRAME_PER_BUFFER : Integer.parseInt(framesPerBuffer);
+    try {
+      String framesPerBuffer =
+          audioManager != null ? audioManager.getProperty(AudioManager.PROPERTY_OUTPUT_FRAMES_PER_BUFFER) : null;
+      return (framesPerBuffer == null || framesPerBuffer.isEmpty()) ? DEFAULT_FRAME_PER_BUFFER : Integer.parseInt(framesPerBuffer);
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return DEFAULT_FRAME_PER_BUFFER;
+    }
   }
 
   // Returns true if the device supports an audio effect (AEC or NS).

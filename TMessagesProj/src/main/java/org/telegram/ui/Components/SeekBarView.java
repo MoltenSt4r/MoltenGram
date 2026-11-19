@@ -909,6 +909,15 @@ public class SeekBarView extends FrameLayout implements Theme.Colorable {
             postInvalidateOnAnimation();
         }
 
+        // MD3 stop dot at the right end of the track
+        float endDotX = right - trackStroke * 0.5f;
+        if (endDotX > inactiveStart + AndroidUtilities.dp(2)) {
+            float dotRadius = trackStroke < AndroidUtilities.dp(4)
+                    ? Math.min(AndroidUtilities.dpf2(2f), trackStroke * 0.35f)
+                    : AndroidUtilities.dpf2(2f);
+            canvas.drawCircle(endDotX, cy, dotRadius, outerPaint1);
+        }
+
         if (indicator == 0) {
             float barW = AndroidUtilities.dpf2(3.5f);
             float barH = AndroidUtilities.dpf2(pressed ? 20f : 16f);

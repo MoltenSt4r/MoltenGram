@@ -3,12 +3,20 @@ package app.exteraless.player;
 import android.media.MediaCodec;
 import android.media.MediaExtractor;
 import android.media.MediaFormat;
+import android.text.TextUtils;
 import android.util.Base64;
+import android.util.LruCache;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.Utilities;
 
 import java.io.ByteArrayOutputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
 import java.net.HttpURLConnection;
@@ -21,6 +29,7 @@ import java.util.List;
 import java.util.TimeZone;
 import java.util.UUID;
 import java.util.zip.CRC32;
+import java.util.zip.GZIPInputStream;
 
 /**
  * Настоящее распознавание аудио по отпечатку — порт генератора подписи SongRec
@@ -35,30 +44,244 @@ public final class SongRecognizer {
     public static final class Result {
         public final String title;
         public final String artist;
+        public final String coverUrl;
+        public String localCoverPath;
 
-        Result(String title, String artist) {
+        public Result(String title, String artist) {
+            this(title, artist, null);
+        }
+
+        public Result(String title, String artist, String coverUrl) {
             this.title = title;
             this.artist = artist;
+            this.coverUrl = coverUrl;
+        }
+
+        public String getEffectiveCover() {
+            if (!TextUtils.isEmpty(localCoverPath) && new File(localCoverPath).exists()) {
+                return localCoverPath;
+            }
+            return coverUrl;
         }
     }
 
     private static final int SAMPLE_RATE = 16000;
-    private static final int SEGMENT_SECONDS = 12;
+    private static final int SEGMENT_SECONDS = 6;
+
+    private static final LruCache<String, Result> MEM_CACHE = new LruCache<>(128);
+    private static final ThreadLocal<Generator> GENERATOR_CACHE = ThreadLocal.withInitial(Generator::new);
 
     private SongRecognizer() {
     }
 
+    private static File getCacheDir() {
+        if (ApplicationLoader.applicationContext == null) {
+            return null;
+        }
+        File dir = new File(ApplicationLoader.applicationContext.getCacheDir(), "songrec");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    private static File getCoversDir() {
+        if (ApplicationLoader.applicationContext == null) {
+            return null;
+        }
+        File dir = new File(ApplicationLoader.applicationContext.getCacheDir(), "songrec_covers");
+        if (!dir.exists()) {
+            dir.mkdirs();
+        }
+        return dir;
+    }
+
+    private static Result readDiskCache(String cacheKey) {
+        try {
+            File dir = getCacheDir();
+            if (dir == null) return null;
+            File f = new File(dir, cacheKey + ".json");
+            if (!f.exists()) return null;
+            byte[] bytes = new byte[(int) f.length()];
+            try (FileInputStream in = new FileInputStream(f)) {
+                int read = 0;
+                while (read < bytes.length) {
+                    int r = in.read(bytes, read, bytes.length - read);
+                    if (r < 0) break;
+                    read += r;
+                }
+            }
+            JSONObject obj = new JSONObject(new String(bytes, StandardCharsets.UTF_8));
+            String title = obj.optString("title", null);
+            String artist = obj.optString("artist", null);
+            String coverUrl = obj.optString("coverUrl", null);
+            String localCoverPath = obj.optString("localCoverPath", null);
+            if (title != null) {
+                Result r = new Result(title, artist, coverUrl);
+                r.localCoverPath = localCoverPath;
+                return r;
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        return null;
+    }
+
+    private static void writeDiskCache(String cacheKey, Result result) {
+        try {
+            File dir = getCacheDir();
+            if (dir == null || result == null) return;
+            File f = new File(dir, cacheKey + ".json");
+            JSONObject obj = new JSONObject();
+            obj.put("title", result.title);
+            obj.put("artist", result.artist);
+            if (result.coverUrl != null) obj.put("coverUrl", result.coverUrl);
+            if (result.localCoverPath != null) obj.put("localCoverPath", result.localCoverPath);
+            try (FileOutputStream out = new FileOutputStream(f)) {
+                out.write(obj.toString().getBytes(StandardCharsets.UTF_8));
+            }
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+    }
+
+    private static String httpGet(String u) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(6000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0");
+            try (java.io.InputStream in = c.getInputStream();
+                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    out.write(buf, 0, n);
+                }
+                return out.toString("UTF-8");
+            } finally {
+                c.disconnect();
+            }
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    public static File fetchCoverByMetadata(String artist, String title) {
+        if (TextUtils.isEmpty(title)) {
+            return null;
+        }
+        String term = ((TextUtils.isEmpty(artist) ? "" : artist + " ") + title).trim();
+        try {
+            String q = java.net.URLEncoder.encode(term, "UTF-8");
+            String body = httpGet("https://itunes.apple.com/search?term=" + q + "&media=music&entity=song&limit=1");
+            if (body != null) {
+                JSONArray arr = new JSONObject(body).optJSONArray("results");
+                if (arr != null && arr.length() > 0) {
+                    String art = arr.getJSONObject(0).optString("artworkUrl100", null);
+                    if (!TextUtils.isEmpty(art)) {
+                        File f = downloadAndCacheCover(art.replace("100x100bb", "600x600bb"));
+                        if (f != null) {
+                            return f;
+                        }
+                    }
+                }
+            }
+            body = httpGet("https://api.deezer.com/search?q=" + q + "&limit=1");
+            if (body != null) {
+                JSONArray arr = new JSONObject(body).optJSONArray("data");
+                if (arr != null && arr.length() > 0) {
+                    JSONObject album = arr.getJSONObject(0).optJSONObject("album");
+                    String art = album != null ? album.optString("cover_xl", null) : null;
+                    if (!TextUtils.isEmpty(art)) {
+                        return downloadAndCacheCover(art);
+                    }
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return null;
+    }
+
+    public static File downloadAndCacheCover(String coverUrl) {
+        if (TextUtils.isEmpty(coverUrl)) {
+            return null;
+        }
+        try {
+            File dir = getCoversDir();
+            if (dir == null) return null;
+            String name = Utilities.MD5(coverUrl) + ".jpg";
+            File target = new File(dir, name);
+            if (target.exists() && target.length() > 0) {
+                return target;
+            }
+            File temp = new File(dir, name + ".tmp");
+            HttpURLConnection conn = (HttpURLConnection) new URL(coverUrl).openConnection();
+            conn.setConnectTimeout(5_000);
+            conn.setReadTimeout(6_000);
+            conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Android; Mobile)");
+            conn.setRequestProperty("Connection", "Keep-Alive");
+            if (conn.getResponseCode() == 200) {
+                try (InputStream in = conn.getInputStream();
+                     FileOutputStream out = new FileOutputStream(temp)) {
+                    byte[] buf = new byte[8192];
+                    int n;
+                    while ((n = in.read(buf)) > 0) {
+                        out.write(buf, 0, n);
+                    }
+                }
+                if (temp.length() > 0 && temp.renameTo(target)) {
+                    return target;
+                }
+            }
+            conn.disconnect();
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
+        return null;
+    }
+
     /** Блокирующий вызов: вызывать только из фонового потока. */
     public static Result recognize(String path) {
+        if (TextUtils.isEmpty(path)) {
+            return null;
+        }
+        File file = new File(path);
+        if (!file.exists()) {
+            return null;
+        }
+        String cacheKey = Utilities.MD5(path + ":" + file.length() + ":" + file.lastModified());
+        Result cached = MEM_CACHE.get(cacheKey);
+        if (cached != null) {
+            return cached;
+        }
+        Result disk = readDiskCache(cacheKey);
+        if (disk != null) {
+            MEM_CACHE.put(cacheKey, disk);
+            return disk;
+        }
+
         try {
             short[] pcm = decodeSegment(path, SEGMENT_SECONDS);
             if (pcm == null || pcm.length < SAMPLE_RATE * 3) {
                 return null;
             }
-            Generator gen = new Generator();
+            Generator gen = GENERATOR_CACHE.get();
+            gen.reset();
             gen.process(pcm);
             byte[] sig = gen.encode(pcm.length);
-            return query(sig, pcm.length * 1000L / SAMPLE_RATE);
+            Result res = query(sig, pcm.length * 1000L / SAMPLE_RATE);
+            if (res != null) {
+                if (!TextUtils.isEmpty(res.coverUrl)) {
+                    File coverFile = downloadAndCacheCover(res.coverUrl);
+                    if (coverFile != null && coverFile.exists()) {
+                        res.localCoverPath = coverFile.getAbsolutePath();
+                    }
+                }
+                MEM_CACHE.put(cacheKey, res);
+                writeDiskCache(cacheKey, res);
+            }
+            return res;
         } catch (Throwable e) {
             FileLog.e(e);
             return null;
@@ -67,7 +290,7 @@ public final class SongRecognizer {
 
     // ------------------------------------------------------------------ decoding
 
-    /** Декодирует ~seconds секунд из середины файла в 16 кГц моно. */
+    /** Декодирует только первые seconds секунд файла в 16 кГц моно (без полного декодирования). */
     private static short[] decodeSegment(String path, int seconds) throws Exception {
         MediaExtractor extractor = new MediaExtractor();
         MediaCodec codec = null;
@@ -88,11 +311,8 @@ public final class SongRecognizer {
                 return null;
             }
             extractor.selectTrack(track);
-            long durationUs = format.containsKey(MediaFormat.KEY_DURATION) ? format.getLong(MediaFormat.KEY_DURATION) : 0;
-            long wantUs = seconds * 1_000_000L;
-            if (durationUs > wantUs + 2_000_000L) {
-                extractor.seekTo((durationUs - wantUs) / 2, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
-            }
+            // Декодируем первые seconds секунд с самого начала файла без лишнего перемоточного поиска
+            extractor.seekTo(0, MediaExtractor.SEEK_TO_PREVIOUS_SYNC);
 
             codec = MediaCodec.createDecoderByType(format.getString(MediaFormat.KEY_MIME));
             codec.configure(format, null, null, 0);
@@ -102,15 +322,15 @@ public final class SongRecognizer {
             int channels = format.getInteger(MediaFormat.KEY_CHANNEL_COUNT);
             boolean floatPcm = false;
 
-            ShortList mono = new ShortList(srcRate * (seconds + 1));
             long needSrc = (long) srcRate * seconds;
+            ShortList mono = new ShortList((int) needSrc + srcRate);
             MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
             boolean inputDone = false;
             boolean outputDone = false;
             int idle = 0;
             while (!outputDone && mono.size < needSrc && idle < 200) {
                 if (!inputDone) {
-                    int in = codec.dequeueInputBuffer(10_000);
+                    int in = codec.dequeueInputBuffer(5_000);
                     if (in >= 0) {
                         ByteBuffer buf = codec.getInputBuffer(in);
                         int n = buf == null ? -1 : extractor.readSampleData(buf, 0);
@@ -123,7 +343,7 @@ public final class SongRecognizer {
                         }
                     }
                 }
-                int out = codec.dequeueOutputBuffer(info, 10_000);
+                int out = codec.dequeueOutputBuffer(info, 5_000);
                 if (out == MediaCodec.INFO_OUTPUT_FORMAT_CHANGED) {
                     MediaFormat of = codec.getOutputFormat();
                     srcRate = of.getInteger(MediaFormat.KEY_SAMPLE_RATE);
@@ -145,6 +365,7 @@ public final class SongRecognizer {
                                 float s = 0;
                                 for (int c = 0; c < channels; c++) s += ob.getFloat();
                                 mono.add((short) Math.max(-32768, Math.min(32767, s / channels * 32767f)));
+                                if (mono.size >= needSrc) break;
                             }
                         } else {
                             int frames = info.size / 2 / channels;
@@ -152,11 +373,12 @@ public final class SongRecognizer {
                                 int s = 0;
                                 for (int c = 0; c < channels; c++) s += ob.getShort();
                                 mono.add((short) (s / channels));
+                                if (mono.size >= needSrc) break;
                             }
                         }
                     }
                     codec.releaseOutputBuffer(out, false);
-                    if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0) {
+                    if ((info.flags & MediaCodec.BUFFER_FLAG_END_OF_STREAM) != 0 || mono.size >= needSrc) {
                         outputDone = true;
                     }
                 } else {
@@ -259,6 +481,21 @@ public final class SongRecognizer {
 
         private final double[] re = new double[2048];
         private final double[] im = new double[2048];
+
+        void reset() {
+            java.util.Arrays.fill(ring, (short) 0);
+            ringIndex = 0;
+            for (int i = 0; i < 256; i++) {
+                java.util.Arrays.fill(fftOutputs[i], 0f);
+                java.util.Arrays.fill(spreadOutputs[i], 0f);
+            }
+            fftIndex = 0;
+            spreadIndex = 0;
+            spreadWritten = 0;
+            for (int i = 0; i < 4; i++) {
+                bands[i].clear();
+            }
+        }
 
         void process(short[] pcm) {
             for (int off = 0; off + 128 <= pcm.length; off += 128) {
@@ -445,12 +682,14 @@ public final class SongRecognizer {
         HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
         try {
             c.setRequestMethod("POST");
-            c.setConnectTimeout(10_000);
-            c.setReadTimeout(15_000);
+            c.setConnectTimeout(5_000);
+            c.setReadTimeout(6_000);
             c.setDoOutput(true);
             c.setRequestProperty("Content-Type", "application/json");
             c.setRequestProperty("Content-Language", "en_US");
             c.setRequestProperty("User-Agent", "Dalvik/2.1.0 (Linux; U; Android 13; Pixel 7 Build/TQ3A.230805.001)");
+            c.setRequestProperty("Accept-Encoding", "gzip, deflate");
+            c.setRequestProperty("Connection", "Keep-Alive");
             try (OutputStream os = c.getOutputStream()) {
                 os.write(body.toString().getBytes(StandardCharsets.UTF_8));
             }
@@ -458,10 +697,14 @@ public final class SongRecognizer {
                 return null;
             }
             ByteArrayOutputStream buf = new ByteArrayOutputStream();
-            try (InputStream is = c.getInputStream()) {
+            InputStream rawIs = c.getInputStream();
+            InputStream is = "gzip".equalsIgnoreCase(c.getContentEncoding()) ? new GZIPInputStream(rawIs) : rawIs;
+            try {
                 byte[] b = new byte[8192];
                 int n;
                 while ((n = is.read(b)) > 0) buf.write(b, 0, n);
+            } finally {
+                is.close();
             }
             JSONObject root = new JSONObject(buf.toString("UTF-8"));
             JSONObject track = root.optJSONObject("track");
@@ -472,7 +715,19 @@ public final class SongRecognizer {
             if (title == null || title.isEmpty()) {
                 return null;
             }
-            return new Result(title, track.optString("subtitle", null));
+            String artist = track.optString("subtitle", null);
+            String coverUrl = null;
+            JSONObject images = track.optJSONObject("images");
+            if (images != null) {
+                if (images.has("coverarthq")) {
+                    coverUrl = images.optString("coverarthq", null);
+                } else if (images.has("coverart")) {
+                    coverUrl = images.optString("coverart", null);
+                } else if (images.has("background")) {
+                    coverUrl = images.optString("background", null);
+                }
+            }
+            return new Result(title, artist, coverUrl);
         } finally {
             c.disconnect();
         }

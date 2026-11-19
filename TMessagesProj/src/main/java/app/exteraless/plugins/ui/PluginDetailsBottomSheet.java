@@ -554,14 +554,22 @@ public class PluginDetailsBottomSheet extends BottomSheet {
     }
 
     private void bindIcon(BackupImageView iconView, ImageView defaultIconView, PluginStoreActivity.StorePlugin target) {
+        if (target == null) return;
         iconView.setTag(null);
+        iconView.setColorFilter(null);
+        iconView.setEmojiColorFilter(null);
+        iconView.setAnimatedEmojiDrawable(null);
         iconView.setImageDrawable(null);
 
         boolean iconApplied = false;
         Context ctx = getContext() != null ? getContext() : ApplicationLoader.applicationContext;
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton);
+        if (accent == 0) accent = 0xff00d2b4;
+        Drawable categoryFallback = PluginIcons.createCategoryFallbackDrawable(ctx, target.category, accent, 16);
+        defaultIconView.setImageDrawable(categoryFallback);
 
         if (!TextUtils.isEmpty(target.icon)) {
-            iconApplied = PluginIcons.apply(iconView, target.icon, null, () -> {
+            iconApplied = PluginIcons.apply(iconView, target.icon, categoryFallback, () -> {
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
             });
@@ -574,7 +582,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
         if (!iconApplied && target.document != null && target.document.thumbs != null && !target.document.thumbs.isEmpty()) {
             TLRPC.PhotoSize thumbSize = FileLoader.getClosestPhotoSizeWithSize(target.document.thumbs, 120);
             if (thumbSize != null) {
-                iconView.setImage(ImageLocation.getForDocument(thumbSize, target.document), "64_64", null, null, target.document);
+                iconView.setImage(ImageLocation.getForDocument(thumbSize, target.document), "64_64", categoryFallback, target.document);
                 iconView.setVisibility(View.VISIBLE);
                 defaultIconView.setVisibility(View.GONE);
                 iconApplied = true;
@@ -590,7 +598,7 @@ public class PluginDetailsBottomSheet extends BottomSheet {
             }
             if (!TextUtils.isEmpty(savedIcon)) {
                 target.icon = savedIcon;
-                iconApplied = PluginIcons.apply(iconView, savedIcon, null, () -> {
+                iconApplied = PluginIcons.apply(iconView, savedIcon, categoryFallback, () -> {
                     iconView.setVisibility(View.VISIBLE);
                     defaultIconView.setVisibility(View.GONE);
                 });
@@ -603,15 +611,28 @@ public class PluginDetailsBottomSheet extends BottomSheet {
 
         if (!iconApplied) {
             Plugin installed = target.findInstalledPlugin();
-            if (installed != null && !TextUtils.isEmpty(installed.icon)) {
-                target.icon = installed.icon;
-                iconApplied = PluginIcons.apply(iconView, installed.icon, null, () -> {
-                    iconView.setVisibility(View.VISIBLE);
-                    defaultIconView.setVisibility(View.GONE);
-                });
-                if (iconApplied) {
-                    iconView.setVisibility(View.VISIBLE);
-                    defaultIconView.setVisibility(View.GONE);
+            if (installed != null) {
+                if (!TextUtils.isEmpty(installed.icon)) {
+                    target.icon = installed.icon;
+                } else if (!TextUtils.isEmpty(installed.path)) {
+                    File instFile = new File(installed.path);
+                    if (instFile.exists()) {
+                        String extracted = PluginIcons.extractIconFromFile(instFile);
+                        if (!TextUtils.isEmpty(extracted)) {
+                            target.icon = extracted;
+                            installed.icon = extracted;
+                        }
+                    }
+                }
+                if (!TextUtils.isEmpty(target.icon)) {
+                    iconApplied = PluginIcons.apply(iconView, target.icon, categoryFallback, () -> {
+                        iconView.setVisibility(View.VISIBLE);
+                        defaultIconView.setVisibility(View.GONE);
+                    });
+                    if (iconApplied) {
+                        iconView.setVisibility(View.VISIBLE);
+                        defaultIconView.setVisibility(View.GONE);
+                    }
                 }
             }
         }

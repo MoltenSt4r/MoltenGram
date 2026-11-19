@@ -28,17 +28,73 @@ public class PluginStoreConfig {
     public static final int MAX_PAGE_SIZE = 100;
 
     public static final List<String> DEFAULT_CHANNELS = Collections.unmodifiableList(Arrays.asList(
-            "QuantaPlugins",
-            "rndev_plugins",
-            "bleizixPlugins",
-            "TheDotted",
-            "zwyPlugins",
-            "CactusPlugins",
-            "PESSDES_Plugins",
-            "ytilities",
-            "anivPlugins",
-            "exteragram_utilities"
+            "2349438816",
+            "3490813925",
+            "2329949330",
+            "2443058177",
+            "2467705421",
+            "2475313399",
+            "2521243181",
+            "2554450010",
+            "2618027830",
+            "2672610568",
+            "2782987927",
+            "2813564336"
     ));
+
+    public static final java.util.Map<String, String> KNOWN_CHANNEL_USERNAMES;
+    public static final java.util.Map<String, String> KNOWN_CHANNEL_NAMES;
+    static {
+        java.util.Map<String, String> uMap = new java.util.HashMap<>();
+        uMap.put("2349438816", "mishabotov");
+        uMap.put("3490813925", "anivPlugins");
+        uMap.put("2329949330", "ytilities");
+        uMap.put("2443058177", "PESSDES_Plugins");
+        uMap.put("2467705421", "CactusPlugins");
+        uMap.put("2475313399", "shikaatuxplugins");
+        uMap.put("2521243181", "zwyPlugins");
+        uMap.put("2554450010", "TheDotted");
+        uMap.put("2618027830", "bleizixPlugins");
+        uMap.put("2672610568", "meeownnews");
+        uMap.put("2782987927", "swagnonher");
+        uMap.put("2813564336", "RnPlugins");
+        KNOWN_CHANNEL_USERNAMES = Collections.unmodifiableMap(uMap);
+
+        java.util.Map<String, String> tMap = new java.util.HashMap<>();
+        tMap.put("2349438816", "ми ха ил котики и плагины");
+        tMap.put("3490813925", "aniv Plugins");
+        tMap.put("2329949330", "Ytilities");
+        tMap.put("2443058177", "PESSDES Plugins");
+        tMap.put("2467705421", "Колючие дополнения!");
+        tMap.put("2475313399", "ШИШКИНЫ ЗАМЫСЛЫ");
+        tMap.put("2521243181", "zwyPlugins");
+        tMap.put("2554450010", "Dotted");
+        tMap.put("2618027830", "bleizix's plugins");
+        tMap.put("2672610568", "мяуньюс. / новости и плагины");
+        tMap.put("2782987927", "SWAGA");
+        tMap.put("2813564336", "RnDev");
+        KNOWN_CHANNEL_NAMES = Collections.unmodifiableMap(tMap);
+    }
+
+    public static String getKnownUsernameForId(long id) {
+        return KNOWN_CHANNEL_USERNAMES.get(String.valueOf(id));
+    }
+
+    public static String getKnownTitleForId(long id) {
+        return KNOWN_CHANNEL_NAMES.get(String.valueOf(id));
+    }
+
+    public static String getKnownIdForUsername(String username) {
+        if (TextUtils.isEmpty(username)) return null;
+        String clean = username.trim();
+        if (clean.startsWith("@")) clean = clean.substring(1);
+        for (java.util.Map.Entry<String, String> entry : KNOWN_CHANNEL_USERNAMES.entrySet()) {
+            if (entry.getValue().equalsIgnoreCase(clean)) {
+                return entry.getKey();
+            }
+        }
+        return null;
+    }
 
     private static volatile PluginStoreConfig instance;
     private final SharedPreferences prefs;
@@ -56,6 +112,31 @@ public class PluginStoreConfig {
 
     private PluginStoreConfig() {
         prefs = ApplicationLoader.applicationContext.getSharedPreferences("plugin_store_config", Context.MODE_PRIVATE);
+        checkMigration();
+    }
+
+    private void checkMigration() {
+        if (prefs == null) return;
+        if (prefs.getInt("channels_schema_version", 0) < 3) {
+            Set<String> custom = getStringSetSafe("custom_channels");
+            Set<String> newCustom = new HashSet<>();
+            if (custom != null) {
+                for (String c : custom) {
+                    if (TextUtils.isEmpty(c)) continue;
+                    String clean = c.trim();
+                    if (clean.startsWith("@")) clean = clean.substring(1);
+                    String mappedId = getKnownIdForUsername(clean);
+                    if (mappedId == null && clean.matches("\\d+")) {
+                        newCustom.add(clean);
+                    }
+                }
+            }
+            prefs.edit()
+                    .putInt("channels_schema_version", 3)
+                    .putStringSet("custom_channels", newCustom)
+                    .remove("removed_channels")
+                    .apply();
+        }
     }
 
     private Set<String> getStringSetSafe(String key) {
@@ -110,16 +191,25 @@ public class PluginStoreConfig {
         }
         if (clean.isEmpty() || clean.contains("/") || clean.contains("?")) return false;
 
+        String mappedId = getKnownIdForUsername(clean);
+        if (mappedId != null) {
+            clean = mappedId;
+        }
+
         Set<String> custom = new HashSet<>(getStringSafeFallback("custom_channels"));
         custom.add(clean);
         prefs.edit().putStringSet("custom_channels", custom).apply();
 
         // Also remove from removed set if it was previously removed
         Set<String> removed = getStringSetSafe("removed_channels");
-        if (removed != null && removed.contains(clean.toLowerCase(Locale.ROOT))) {
-            Set<String> newRemoved = new HashSet<>(removed);
-            newRemoved.remove(clean.toLowerCase(Locale.ROOT));
-            prefs.edit().putStringSet("removed_channels", newRemoved).apply();
+        if (removed != null) {
+            String lower = clean.toLowerCase(Locale.ROOT);
+            if (removed.contains(lower) || (mappedId != null && removed.contains(mappedId.toLowerCase(Locale.ROOT)))) {
+                Set<String> newRemoved = new HashSet<>(removed);
+                newRemoved.remove(lower);
+                if (mappedId != null) newRemoved.remove(mappedId.toLowerCase(Locale.ROOT));
+                prefs.edit().putStringSet("removed_channels", newRemoved).apply();
+            }
         }
         return true;
     }
@@ -128,16 +218,19 @@ public class PluginStoreConfig {
         if (TextUtils.isEmpty(channel)) return;
         String clean = channel.trim();
         if (clean.startsWith("@")) clean = clean.substring(1);
+        String mappedId = getKnownIdForUsername(clean);
 
         Set<String> custom = getStringSetSafe("custom_channels");
-        if (custom != null && custom.contains(clean)) {
+        if (custom != null && (custom.contains(clean) || (mappedId != null && custom.contains(mappedId)))) {
             Set<String> newCustom = new HashSet<>(custom);
             newCustom.remove(clean);
+            if (mappedId != null) newCustom.remove(mappedId);
             prefs.edit().putStringSet("custom_channels", newCustom).apply();
         }
 
         Set<String> removed = new HashSet<>(getStringSafeFallback("removed_channels"));
         removed.add(clean.toLowerCase(Locale.ROOT));
+        if (mappedId != null) removed.add(mappedId.toLowerCase(Locale.ROOT));
         prefs.edit().putStringSet("removed_channels", removed).apply();
     }
 
@@ -145,8 +238,9 @@ public class PluginStoreConfig {
         if (TextUtils.isEmpty(channel)) return false;
         String clean = channel.trim();
         if (clean.startsWith("@")) clean = clean.substring(1);
+        String mappedId = getKnownIdForUsername(clean);
         for (String def : DEFAULT_CHANNELS) {
-            if (def.equalsIgnoreCase(clean)) return false;
+            if (def.equalsIgnoreCase(clean) || (mappedId != null && def.equalsIgnoreCase(mappedId))) return false;
         }
         return true;
     }

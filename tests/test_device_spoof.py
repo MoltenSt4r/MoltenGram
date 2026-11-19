@@ -3,7 +3,7 @@ import re
 import json
 import pytest
 
-REPO_ROOT = "/root/ExteraMS"
+REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 JAVA_SPOOF_DIR = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/app/exteraless/spoof")
 CONNECTIONS_MANAGER = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/org/telegram/tgnet/ConnectionsManager.java")
 LOGIN_ACTIVITY = os.path.join(REPO_ROOT, "TMessagesProj/src/main/java/org/telegram/ui/LoginActivity.java")

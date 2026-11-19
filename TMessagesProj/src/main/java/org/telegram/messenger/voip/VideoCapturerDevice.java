@@ -58,7 +58,11 @@ public class VideoCapturerDevice {
         Logging.d("VideoCapturerDevice", "device model = " + Build.MANUFACTURER + Build.MODEL);
         AndroidUtilities.runOnUIThread(() -> {
             if (eglBase == null) {
-                eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+                try {
+                    eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+                } catch (Throwable e) {
+                    FileLog.e(e);
+                }
             }
             instance[screencast ? 1 : 0] = this;
             thread = new HandlerThread("CallThread");
@@ -336,28 +340,30 @@ public class VideoCapturerDevice {
                     break;
                 }
             }
-            handler.post(() -> {
-                if (videoCapturer instanceof ScreenCapturerAndroid) {
-                    WebRtcAudioRecord audioRecord = WebRtcAudioRecord.Instance;
-                    if (audioRecord != null) {
-                        audioRecord.stopDeviceAudioRecord();
+            if (handler != null) {
+                handler.post(() -> {
+                    if (videoCapturer instanceof ScreenCapturerAndroid) {
+                        WebRtcAudioRecord audioRecord = WebRtcAudioRecord.Instance;
+                        if (audioRecord != null) {
+                            audioRecord.stopDeviceAudioRecord();
+                        }
                     }
-                }
-                if (videoCapturer != null) {
-                    FileLog.d("VideoCapturerDevice onDestroy: videoCapturer.stopCapture");
-                    try {
-                        videoCapturer.stopCapture();
-                    } catch (InterruptedException e) {
-                        throw new RuntimeException(e);
+                    if (videoCapturer != null) {
+                        FileLog.d("VideoCapturerDevice onDestroy: videoCapturer.stopCapture");
+                        try {
+                            videoCapturer.stopCapture();
+                        } catch (InterruptedException e) {
+                            throw new RuntimeException(e);
+                        }
+                        videoCapturer.dispose();
+                        videoCapturer = null;
                     }
-                    videoCapturer.dispose();
-                    videoCapturer = null;
-                }
-                if (videoCapturerSurfaceTextureHelper != null) {
-                    videoCapturerSurfaceTextureHelper.dispose();
-                    videoCapturerSurfaceTextureHelper = null;
-                }
-            });
+                    if (videoCapturerSurfaceTextureHelper != null) {
+                        videoCapturerSurfaceTextureHelper.dispose();
+                        videoCapturerSurfaceTextureHelper = null;
+                    }
+                });
+            }
             try {
                 thread.quitSafely();
             } catch (Exception e) {
@@ -366,18 +372,24 @@ public class VideoCapturerDevice {
         });
     }
 
-    private EglBase.Context getSharedEGLContext() {
-        if (eglBase == null) {
-            eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
-        }
-        return eglBase != null ? eglBase.getEglBaseContext() : null;
+    public static EglBase.Context getSharedEGLContext() {
+        return getEglBaseContext();
     }
 
     public static EglBase getEglBase() {
         if (eglBase == null) {
-            eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+            try {
+                eglBase = EglBase.create(null, EglBase.CONFIG_PLAIN);
+            } catch (Throwable e) {
+                FileLog.e(e);
+            }
         }
         return eglBase;
+    }
+
+    public static EglBase.Context getEglBaseContext() {
+        EglBase base = getEglBase();
+        return base != null ? base.getEglBaseContext() : null;
     }
 
     private static native CapturerObserver nativeGetJavaVideoCapturerObserver(long ptr);

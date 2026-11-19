@@ -447,6 +447,9 @@ public class PluginCell extends FrameLayout implements NotificationCenter.Notifi
 
         if (updateIcon) {
             imageView.setTag(null);
+            imageView.setColorFilter(null);
+            imageView.setEmojiColorFilter(null);
+            imageView.setAnimatedEmojiDrawable(null);
             imageView.setImageDrawable(null);
             imageView.setVisibility(GONE);
             PluginIcons.apply(imageView, model.plugin, this::requestLayout);

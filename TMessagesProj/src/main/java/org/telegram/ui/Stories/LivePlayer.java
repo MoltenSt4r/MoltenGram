@@ -199,7 +199,7 @@ public class LivePlayer implements NotificationCenter.NotificationCenterDelegate
     private void configureAudio() {
         if (Build.VERSION.SDK_INT >= 21) {
             WebRtcAudioTrack.setAudioTrackUsageAttribute(AudioAttributes.USAGE_MEDIA);
-            WebRtcAudioTrack.setAudioStreamType(AudioManager.USE_DEFAULT_STREAM_TYPE);
+            WebRtcAudioTrack.setAudioStreamType(AudioManager.STREAM_MUSIC);
         }
 
         final AudioManager am = (AudioManager) context.getSystemService(Context.AUDIO_SERVICE);
