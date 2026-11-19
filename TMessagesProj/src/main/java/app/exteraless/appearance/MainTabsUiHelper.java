@@ -338,13 +338,8 @@ public final class MainTabsUiHelper {
             resolveExpressiveColors(resourcesProvider, colors);
             final boolean selected = tab.isTabSelected();
             final int fillColor = selected ? colors[1] : colors[0];
-            final int strokeColor = selected ? 0 : Theme.multAlpha(colors[3], 0.16f);
             final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
             fillPaint.setColor(fillColor);
-            final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            strokePaint.setStyle(Paint.Style.STROKE);
-            strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1f));
-            strokePaint.setColor(strokeColor);
             final RectF rectF = new RectF();
             return new Drawable() {
                 @Override
@@ -355,23 +350,16 @@ public final class MainTabsUiHelper {
                     rectF.set(b.left, b.top, b.left + drawW, b.bottom);
                     final float r = rectF.height() / 2f;
                     canvas.drawRoundRect(rectF, r, r, fillPaint);
-                    if (strokeColor != 0) {
-                        final float inset = strokePaint.getStrokeWidth() / 2f;
-                        rectF.inset(inset, inset);
-                        canvas.drawRoundRect(rectF, r - inset, r - inset, strokePaint);
-                    }
                 }
 
                 @Override
                 public void setAlpha(int alpha) {
                     fillPaint.setAlpha(alpha);
-                    strokePaint.setAlpha(alpha);
                 }
 
                 @Override
                 public void setColorFilter(@Nullable ColorFilter colorFilter) {
                     fillPaint.setColorFilter(colorFilter);
-                    strokePaint.setColorFilter(colorFilter);
                 }
 
                 @Override

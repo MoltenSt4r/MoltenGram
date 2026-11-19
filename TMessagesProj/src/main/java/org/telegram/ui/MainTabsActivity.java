@@ -1385,9 +1385,8 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final boolean fabLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
         final int fabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
         final int fabReserveInWrapper = Math.max(0, dp(20 + fabSize + 8) - dp(12));
-        final float reserve = fabReserveInWrapper * fabFactor;
         tabsView.setTranslationX(0f);
-        tabsView.setExpressiveFabInsets(fabLeft ? reserve : 0f, fabLeft ? 0f : reserve);
+        tabsView.setExpressiveFabInsets(fabLeft ? fabReserveInWrapper : 0f, fabLeft ? 0f : fabReserveInWrapper, fabFactor);
     }
 
     private void checkUi_miniPlayer() {

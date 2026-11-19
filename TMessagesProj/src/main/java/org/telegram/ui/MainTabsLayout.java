@@ -1357,27 +1357,26 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         final int[] colors = new int[4];
         MainTabsUiHelper.resolveExpressiveColors(resourcesProvider, colors);
         expressiveContainerPaint.setColor(colors[0]);
+        expressiveContainerPaint.clearShadowLayer();
         expressivePillPaint.setColor(colors[1]);
-        expressiveStrokePaint.setStrokeWidth(AndroidUtilities.dpf2(0.6f));
-        expressiveStrokePaint.setColor(androidx.core.graphics.ColorUtils.setAlphaComponent(colors[3], 28));
-        final int shadowColor = Theme.isCurrentThemeDark() ? 0x55000000 : 0x26000000;
-        if (Build.VERSION.SDK_INT >= 28) {
-            expressiveContainerPaint.setShadowLayer(dp(8), 0, dp(2), shadowColor);
-        }
         expressiveColorsInitialized = true;
         invalidate();
     }
 
     private float expressiveFabLeftInsetPx;
     private float expressiveFabRightInsetPx;
+    private float expressiveFabFactor;
 
-    public void setExpressiveFabInsets(float leftInsetPx, float rightInsetPx) {
+    public void setExpressiveFabInsets(float leftInsetPx, float rightInsetPx, float fabFactor) {
         final float clampedLeft = Math.max(0f, leftInsetPx);
         final float clampedRight = Math.max(0f, rightInsetPx);
+        final float clampedFactor = Math.max(0f, Math.min(1f, fabFactor));
         if (Math.abs(expressiveFabLeftInsetPx - clampedLeft) > 0.25f
-                || Math.abs(expressiveFabRightInsetPx - clampedRight) > 0.25f) {
+                || Math.abs(expressiveFabRightInsetPx - clampedRight) > 0.25f
+                || Math.abs(expressiveFabFactor - clampedFactor) > 0.002f) {
             expressiveFabLeftInsetPx = clampedLeft;
             expressiveFabRightInsetPx = clampedRight;
+            expressiveFabFactor = clampedFactor;
             updateExpressivePositions(false);
             invalidate();
         }
@@ -1528,18 +1527,32 @@ public class MainTabsLayout extends AnimatedLinearLayout {
             return;
         }
 
-        final float cLeft = Math.max(0f, expressiveFabLeftInsetPx);
-        final float cRight = Math.max(cLeft + dp(120), w - Math.max(0f, expressiveFabRightInsetPx));
-        expressiveCapsuleRect.set(cLeft, 0f, cRight, getHeight());
-
-        final float innerCapsuleW = Math.max(0f, (cRight - cLeft) - padLeft - padRight);
         final float gap = visibleSeen > 1 ? dp(4) : 0f;
         final float gapsTotal = Math.max(0, visibleSeen - 1) * gap;
-        final float curSlotW = Math.max(dp(34), (innerCapsuleW - gapsTotal - curExpandSum) / visibleSeen);
-        final float targetSlotW = Math.max(dp(34), (innerCapsuleW - gapsTotal - targetExpandSum) / visibleSeen);
+        final float compactSlot = visibleSeen <= 3 ? dp(62) : (visibleSeen == 4 ? dp(54) : dp(44));
+        final float compactCurW = Math.min(w, padLeft + padRight + visibleSeen * compactSlot + gapsTotal + curExpandSum);
+        final float compactTargetW = Math.min(w, padLeft + padRight + visibleSeen * compactSlot + gapsTotal + targetExpandSum);
+        final float compactCurLeft = (w - compactCurW) / 2f;
+        final float compactCurRight = compactCurLeft + compactCurW;
+        final float compactTargetLeft = (w - compactTargetW) / 2f;
+        final float compactTargetRight = compactTargetLeft + compactTargetW;
+
+        final float withFabLeft = Math.max(0f, expressiveFabLeftInsetPx);
+        final float withFabRight = Math.max(withFabLeft + dp(120), w - Math.max(0f, expressiveFabRightInsetPx));
+
+        final float cLeft = AndroidUtilities.lerp(compactCurLeft, withFabLeft, expressiveFabFactor);
+        final float cRight = AndroidUtilities.lerp(compactCurRight, withFabRight, expressiveFabFactor);
+        final float tLeft = AndroidUtilities.lerp(compactTargetLeft, withFabLeft, expressiveFabFactor);
+        final float tRight = AndroidUtilities.lerp(compactTargetRight, withFabRight, expressiveFabFactor);
+        expressiveCapsuleRect.set(cLeft, 0f, cRight, getHeight());
+
+        final float innerCurW = Math.max(0f, (cRight - cLeft) - padLeft - padRight);
+        final float innerTargetW = Math.max(0f, (tRight - tLeft) - padLeft - padRight);
+        final float curSlotW = Math.max(dp(34), (innerCurW - gapsTotal - curExpandSum) / visibleSeen);
+        final float targetSlotW = Math.max(dp(34), (innerTargetW - gapsTotal - targetExpandSum) / visibleSeen);
 
         float x = cLeft + padLeft;
-        float xTarget = cLeft + padLeft;
+        float xTarget = tLeft + padLeft;
         float newTargetPillLeft = -1f;
         float newTargetPillRight = -1f;
 
@@ -1597,10 +1610,6 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         if (!expressiveCapsuleRect.isEmpty()) {
             final float r = expressiveCapsuleRect.height() / 2f;
             canvas.drawRoundRect(expressiveCapsuleRect, r, r, expressiveContainerPaint);
-            final float strokeInset = expressiveStrokePaint.getStrokeWidth() / 2f;
-            expressiveCapsuleRect.inset(strokeInset, strokeInset);
-            canvas.drawRoundRect(expressiveCapsuleRect, r - strokeInset, r - strokeInset, expressiveStrokePaint);
-            expressiveCapsuleRect.inset(-strokeInset, -strokeInset);
         }
 
         if (expressiveHasInitialPill && expressivePillRight > expressivePillLeft) {
