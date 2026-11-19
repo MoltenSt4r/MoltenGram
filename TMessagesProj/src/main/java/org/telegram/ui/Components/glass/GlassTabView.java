@@ -197,7 +197,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
 
     public void setExpressiveTextMaxWidth(int maxWidthPx) {
         if (mainTabExpressive) {
-            textView.setMaxWidth(Math.max(0, maxWidthPx));
+            textView.setMaxWidth(maxWidthPx <= 0 ? Integer.MAX_VALUE : maxWidthPx);
         }
     }
 
@@ -261,7 +261,7 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
             canvas.saveLayer(0, 0, viewWidth, getHeight(), null);
         }
 
-        if (mainTabExpressive && expressiveSlotWidth > 0) {
+        if (mainTabExpressive && expressiveSlotWidth > 0 && expressiveExpandFactor < 0.99f) {
             canvas.save();
             canvas.clipRect(0, 0, Math.max(0f, expressiveSlotWidth - dp(4)), getHeight());
             super.dispatchDraw(canvas);

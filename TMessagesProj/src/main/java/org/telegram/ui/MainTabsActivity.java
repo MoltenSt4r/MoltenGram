@@ -1333,6 +1333,49 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         fadeView.setAlpha(alpha);
         fadeView.setTranslationY(isProfile * dp(48));
         fadeView.setVisibility(alpha > 0 ? View.VISIBLE : View.GONE);
+        checkUi_expressiveToolbarShift();
+    }
+
+    private void checkUi_expressiveToolbarShift() {
+        if (tabsView == null || tabsViewWrapper == null) {
+            return;
+        }
+        if (!MainTabsUiHelper.isExpressiveToolbar() || viewPager == null || tabletLayout) {
+            tabsView.setTranslationX(0f);
+            return;
+        }
+        final int wrapperW = tabsViewWrapper.getWidth();
+        final float capsuleW = tabsView.getExpressiveCapsuleWidth();
+        if (wrapperW <= 0 || capsuleW <= 0f) {
+            return;
+        }
+
+        final float animatedPos = viewPager.getPositionAnimated();
+        float fabFactor = 0f;
+        final int posChats = getPositionChats();
+        if (posChats >= 0 && !NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool()) {
+            fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posChats - animatedPos), 0f, 1f));
+        }
+        if (!isFeedTabEnabled() && !MainTabsHelper.isContactsTabHidden()) {
+            final int posContacts = getPositionContacts();
+            if (posContacts >= 0) {
+                fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posContacts - animatedPos), 0f, 1f));
+            }
+        }
+        if (MainTabsHelper.isCallsTabShown(currentAccount)) {
+            final int posCalls = getPositionCallsOrSettings();
+            if (posCalls >= 0) {
+                fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posCalls - animatedPos), 0f, 1f));
+            }
+        }
+
+        final int fabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+        final boolean fabLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        final int fabReserveInWrapper = dp(20 + fabSize + 8) - dp(12);
+        final float centeredEdge = (wrapperW - capsuleW) / 2f;
+        final float maxShift = Math.max(0f, fabReserveInWrapper - centeredEdge);
+        final float targetShift = fabLeft ? maxShift : -maxShift;
+        tabsView.setTranslationX(targetShift * fabFactor);
     }
 
     private void checkUi_miniPlayer() {

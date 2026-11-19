@@ -174,18 +174,15 @@ public final class MainTabsUiHelper {
     public static void applyTabsBottomInset(MainTabsLayout layout, View wrapper, int bottomInset, int leftInset, int rightInset) {
         applyTabsBottomInset(layout, bottomInset);
         if (isExpressiveToolbar()) {
-            final int fabSize = AppearanceConfig.fabSize();
-            final boolean fabLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
-            final int fabReserve = AndroidUtilities.dp(20 + fabSize + 8);
             final int sidePad = AndroidUtilities.dp(12);
             wrapper.setPadding(
-                    leftInset + (fabLeft ? fabReserve : sidePad),
+                    leftInset + sidePad,
                     0,
-                    rightInset + (fabLeft ? sidePad : fabReserve),
+                    rightInset + sidePad,
                     bottomInset + AndroidUtilities.dp(EXPRESSIVE_TOOLBAR_BOTTOM_MARGIN_DP)
             );
             if (layout.getLayoutParams() instanceof FrameLayout.LayoutParams flp) {
-                final int desiredGravity = Gravity.BOTTOM | (fabLeft ? Gravity.LEFT : Gravity.RIGHT);
+                final int desiredGravity = Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL;
                 if (flp.gravity != desiredGravity || flp.width != LayoutHelper.WRAP_CONTENT) {
                     flp.gravity = desiredGravity;
                     flp.width = LayoutHelper.WRAP_CONTENT;
