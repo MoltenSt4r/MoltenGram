@@ -1384,7 +1384,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         final boolean fabLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
         final int innerW = wrapperW - tabsViewWrapper.getPaddingLeft() - tabsViewWrapper.getPaddingRight();
-        final float maxShift = Math.max(0f, (innerW - capsuleW) / 2f);
+        final int fabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+        final int fabReserveInWrapper = dp(20 + fabSize + 8) - dp(12);
+        final float maxShift = Math.max(0f, (capsuleW - innerW) / 2f + fabReserveInWrapper);
         final float targetShift = fabLeft ? maxShift : -maxShift;
         tabsView.setTranslationX(targetShift * fabFactor);
     }
