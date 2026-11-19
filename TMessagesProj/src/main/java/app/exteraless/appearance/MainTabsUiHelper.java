@@ -1,6 +1,7 @@
 package app.exteraless.appearance;
 
 import android.graphics.Canvas;
+import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Paint;
 import android.graphics.PixelFormat;
@@ -262,7 +263,7 @@ public final class MainTabsUiHelper {
     }
 
     /**
-     * Токены Monet для Expressive Toolbar (как в Shevery / Material 3 Expressive Vibrant Toolbar):
+     * Токены Material 3 Expressive Vibrant Toolbar из активной темы:
      * [0] = containerColor (primaryContainer),
      * [1] = activePillColor (primary),
      * [2] = activeContentColor (onPrimary),
@@ -270,12 +271,29 @@ public final class MainTabsUiHelper {
      */
     public static void resolveExpressiveColors(Theme.ResourcesProvider resourcesProvider, int[] out4) {
         final PlayerColors colors = PlayerColors.fromSeed(
-                PlayerColors.noCoverSeed(resourcesProvider),
+                resolveExpressiveSeed(resourcesProvider),
                 PlayerColors.isDark(resourcesProvider));
         out4[0] = colors.primaryContainer;
         out4[1] = colors.primary;
         out4[2] = colors.onPrimary;
         out4[3] = colors.onPrimaryContainer;
+    }
+
+    private static int resolveExpressiveSeed(Theme.ResourcesProvider resourcesProvider) {
+        final int[] candidateKeys = {
+                Theme.key_featuredStickers_addButton,
+                Theme.key_chats_actionBackground,
+                Theme.key_glass_tabSelected,
+                Theme.key_windowBackgroundWhiteBlueText4,
+                Theme.key_actionBarDefault
+        };
+        for (int key : candidateKeys) {
+            final int color = Theme.getColor(key, resourcesProvider);
+            if (Color.alpha(color) != 0) {
+                return color | 0xff000000;
+            }
+        }
+        return 0xff4285f4;
     }
 
     public static void setMainTabSelectedIndicatorBounds(RectF rectF, float width, int height) {

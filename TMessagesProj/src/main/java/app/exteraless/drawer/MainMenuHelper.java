@@ -338,7 +338,7 @@ public final class MainMenuHelper {
                 return new MenuItemInfo(R.drawable.ic_gram, LocaleController.getString(R.string.WalletTitle),
                         () -> fragment.presentFragment(new WalletActivity()), null);
             case EXTERALESS_SETTINGS:
-                return new MenuItemInfo(R.drawable.exteraless_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences),
+                return new MenuItemInfo(R.drawable.exterams_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences),
                         () -> fragment.presentFragment(new OpenExteraSettingsActivity()), null);
             case KILL_APP:
                 return new MenuItemInfo(R.drawable.msg_leave, LocaleController.getString(R.string.OEKillApp),
@@ -487,7 +487,7 @@ public final class MainMenuHelper {
             case WALLET -> isWalletAvailable(UserConfig.selectedAccount)
                     ? new MenuItemInfo(R.drawable.ic_gram, LocaleController.getString(R.string.WalletTitle), null, null)
                     : null;
-            case EXTERALESS_SETTINGS -> new MenuItemInfo(R.drawable.exteraless_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences), null, null);
+            case EXTERALESS_SETTINGS -> new MenuItemInfo(R.drawable.exterams_icon_tile, LocaleController.getString(R.string.OpenExteraPreferences), null, null);
             case KILL_APP -> new MenuItemInfo(R.drawable.msg_leave, LocaleController.getString(R.string.OEKillApp), null, null);
             default -> null;
         };
