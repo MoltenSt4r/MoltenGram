@@ -50,45 +50,15 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
 
 public class DeviceSpoofActivity extends BaseNekoSettingsActivity {
 
-    private static final int TYPE_COLLAPSIBLE_HEADER = 88;
+    private static final int TYPE_COLLAPSIBLE_HEADER = BaseNekoSettingsActivity.TYPE_COLLAPSIBLE_HEADER;
 
-    public static class CollapsibleHeaderCell extends FrameLayout {
-        private final TextView textView;
-        private final ImageView arrowView;
-
+    public static class CollapsibleHeaderCell extends tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell {
         public CollapsibleHeaderCell(Context context) {
             super(context);
-
-            LinearLayout container = new LinearLayout(context);
-            container.setOrientation(LinearLayout.HORIZONTAL);
-            container.setGravity(Gravity.CENTER_VERTICAL);
-
-            textView = new TextView(context);
-            textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
-            textView.setTypeface(AndroidUtilities.headerTypeface());
-            textView.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText));
-            container.addView(textView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL));
-
-            arrowView = new ImageView(context);
-            Drawable d = getResources().getDrawable(R.drawable.arrow_more).mutate();
-            d.setColorFilter(new PorterDuffColorFilter(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText2), PorterDuff.Mode.MULTIPLY));
-            arrowView.setImageDrawable(d);
-            LinearLayout.LayoutParams arrowLp = LayoutHelper.createLinear(16, 16, Gravity.CENTER_VERTICAL);
-            arrowLp.leftMargin = AndroidUtilities.dp(6);
-            container.addView(arrowView, arrowLp);
-
-            addView(container, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 21, 0, 21, 0));
-
-            setBackground(Theme.createSimpleSelectorRoundRectDrawable(
-                    AndroidUtilities.dp(8), 0, Theme.multAlpha(Theme.getColor(Theme.key_listSelector), 0.35f)
-            ));
-            setMinimumHeight(AndroidUtilities.dp(48));
         }
 
-        public void set(CharSequence title, boolean expanded) {
-            textView.setText(title);
-            arrowView.animate().cancel();
-            arrowView.setRotation(expanded ? 180 : 0);
+        public CollapsibleHeaderCell(Context context, Theme.ResourcesProvider resourcesProvider) {
+            super(context, resourcesProvider);
         }
     }
 

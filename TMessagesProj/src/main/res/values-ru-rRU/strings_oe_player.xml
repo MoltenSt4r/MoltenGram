@@ -252,4 +252,6 @@
 <string name="OEAppearanceSongrecFetchCoverDesc">Автоматически находить и подставлять обложки альбомов для треков с помощью SongRec</string>
 <string name="OEAppearanceSongrecBackgroundRecognition">Фоновое распознавание треков</string>
 <string name="OEAppearanceSongrecBackgroundRecognitionDesc">Распознавать трек сразу при воспроизведении в фоне, чтобы обложка и текст были готовы при открытии плеера</string>
+<string name="OEAppearancePlayerAppearanceMore">Дополнительные параметры</string>
+<string name="OEAppearancePlayerLyricsMore">Дополнительно: текст и обложки</string>
 </resources>

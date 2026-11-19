@@ -464,7 +464,6 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     private static final int TYPE_SLIDER = 101;
-    private static final int TYPE_COLLAPSE = 102;
 
     private class ListAdapter extends BaseListAdapter {
 
@@ -474,7 +473,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         @Override
         protected boolean isSectionContent(int viewType) {
-            if (viewType == TYPE_SLIDER || viewType == TYPE_COLLAPSE) {
+            if (viewType == TYPE_SLIDER || viewType == TYPE_COLLAPSIBLE_HEADER) {
                 return true;
             }
             return super.isSectionContent(viewType);
@@ -483,7 +482,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int type = holder.getItemViewType();
-            return type == TYPE_CHECK || type == TYPE_SETTINGS || type == TYPE_COLLAPSE;
+            return type == TYPE_CHECK || type == TYPE_SETTINGS || type == TYPE_COLLAPSIBLE_HEADER || super.isEnabled(holder);
         }
 
         @Override
@@ -491,7 +490,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (position == appearanceHeaderRow || position == lyricsHeaderRow || position == audioHeaderRow) {
                 return TYPE_HEADER;
             } else if (position == appearanceMoreRow || position == lyricsMoreRow) {
-                return TYPE_COLLAPSE;
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == seekbarThicknessRow) {
                 return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
@@ -519,23 +518,19 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 return new RecyclerListView.Holder(cell);
             }
-            if (viewType == TYPE_COLLAPSE) {
-                org.telegram.ui.Cells.CollapseTextCell cell = new org.telegram.ui.Cells.CollapseTextCell(mContext, getResourceProvider());
-                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-                cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
-                cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                return new RecyclerListView.Holder(cell);
-            }
             return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             int type = holder.getItemViewType();
-            if (type == TYPE_COLLAPSE) {
-                org.telegram.ui.Cells.CollapseTextCell cell = (org.telegram.ui.Cells.CollapseTextCell) holder.itemView;
-                boolean expanded = position == appearanceMoreRow ? appearanceMoreExpanded : lyricsMoreExpanded;
-                cell.set(getString(expanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !expanded);
+            if (type == TYPE_COLLAPSIBLE_HEADER) {
+                tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell = (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
+                if (position == appearanceMoreRow) {
+                    cell.set(getString(R.string.OEAppearancePlayerAppearanceMore), appearanceMoreExpanded);
+                } else if (position == lyricsMoreRow) {
+                    cell.set(getString(R.string.OEAppearancePlayerLyricsMore), lyricsMoreExpanded);
+                }
             } else if (type == TYPE_SLIDER) {
                 if (position == seekbarThicknessRow) {
                     SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;

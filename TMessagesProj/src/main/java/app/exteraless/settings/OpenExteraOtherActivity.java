@@ -66,7 +66,6 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     private static final long DELETE_ACCOUNT_DELAY = 30_000L;
 
     private static final int ETG_IMPORT_REQUEST_CODE = 22;
-    private static final int TYPE_COLLAPSE = 100;
 
     private int updatesHeaderRow;
     private int updatesRow;
@@ -489,25 +488,16 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
-            if (viewType == TYPE_COLLAPSE) {
-                org.telegram.ui.Cells.CollapseTextCell cell =
-                        new org.telegram.ui.Cells.CollapseTextCell(mContext, resourcesProvider);
-                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-                cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
-                cell.setLayoutParams(new RecyclerView.LayoutParams(
-                        RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                return new org.telegram.ui.Components.RecyclerListView.Holder(cell);
-            }
             return super.onCreateViewHolder(parent, viewType);
         }
 
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
-                case TYPE_COLLAPSE: {
-                    org.telegram.ui.Cells.CollapseTextCell cell =
-                            (org.telegram.ui.Cells.CollapseTextCell) holder.itemView;
-                    cell.set(getString(experimentalMoreExpanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !experimentalMoreExpanded);
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell =
+                            (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
+                    cell.set(getString(R.string.OEOtherExperimentalMore), experimentalMoreExpanded);
                     break;
                 }
                 case TYPE_HEADER: {
@@ -597,7 +587,7 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
                     || position == bottomDividerRow) {
                 return TYPE_INFO_PRIVACY;
             } else if (position == experimentalMoreRow) {
-                return TYPE_COLLAPSE;
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == updatesRow || position == exportEtgRow || position == importEtgRow
                     || position == resetSettingsRow || position == deleteAccountRow
                     || position == glyphRow) {

@@ -95,7 +95,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     /** Круглая галочка внутри группы. */
     private static final int TYPE_ROUND_CHECK = 105;
     private static final int TYPE_WIDE_CHANNEL_PREVIEW = 106;
-    private static final int TYPE_COLLAPSE = 107;
 
     /** Размер стикеров по умолчанию: к нему возвращает кнопка сброса в шапке. */
     private static final float STICKER_SIZE_DEFAULT = 14.0f;
@@ -2287,14 +2286,6 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     view = checkBoxCell;
                     break;
                 }
-                case TYPE_COLLAPSE: {
-                    org.telegram.ui.Cells.CollapseTextCell cell =
-                            new org.telegram.ui.Cells.CollapseTextCell(mContext, resourcesProvider);
-                    cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-                    cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
-                    view = cell;
-                    break;
-                }
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -2311,7 +2302,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 return false;
             }
             if (type == TYPE_SET_REACTION || type == TYPE_EXPANDABLE_SWITCH
-                    || type == TYPE_ROUND_CHECK || type == TYPE_COLLAPSE) {
+                    || type == TYPE_ROUND_CHECK || type == TYPE_COLLAPSIBLE_HEADER) {
                 return true;
             }
             return super.isEnabled(holder);
@@ -2324,7 +2315,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         @Override
         protected boolean isSectionContent(int viewType) {
             if (viewType == TYPE_EXPANDABLE_SWITCH || viewType == TYPE_ROUND_CHECK
-                    || viewType == TYPE_WIDE_CHANNEL_PREVIEW || viewType == TYPE_COLLAPSE) {
+                    || viewType == TYPE_WIDE_CHANNEL_PREVIEW || viewType == TYPE_COLLAPSIBLE_HEADER) {
                 return true;
             }
             return super.isSectionContent(viewType);
@@ -2333,10 +2324,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
-                case TYPE_COLLAPSE: {
+                case TYPE_COLLAPSIBLE_HEADER: {
                     boolean expanded = position == chatsMoreRow ? chatsMoreExpanded : messagesMoreExpanded;
-                    ((org.telegram.ui.Cells.CollapseTextCell) holder.itemView).set(
-                            getString(expanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !expanded);
+                    ((tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView).set(
+                            getString(position == chatsMoreRow ? R.string.OEChatsChatsMore : R.string.OEChatsMessagesMore), expanded);
                     break;
                 }
                 case TYPE_SET_REACTION:
@@ -2943,7 +2934,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapRow) return TYPE_DOUBLE_TAP;
             if (position == wideChannelPostsPreviewRow) return TYPE_WIDE_CHANNEL_PREVIEW;
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
-            if (position == chatsMoreRow || position == messagesMoreRow) return TYPE_COLLAPSE;
+            if (position == chatsMoreRow || position == messagesMoreRow) return TYPE_COLLAPSIBLE_HEADER;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
             if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;

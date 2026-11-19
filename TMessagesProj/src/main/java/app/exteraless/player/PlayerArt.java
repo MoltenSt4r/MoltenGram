@@ -265,7 +265,13 @@ public final class PlayerArt {
         });
     }
 
-    private static java.io.File localFile(MessageObject mo) {
+    public static void putEmbeddedCover(String key, Bitmap bmp) {
+        if (key != null && bmp != null) {
+            embeddedCovers.put(key, bmp);
+        }
+    }
+
+    public static java.io.File localFile(MessageObject mo) {
         java.io.File f = null;
         if (mo.messageOwner != null && !TextUtils.isEmpty(mo.messageOwner.attachPath)) {
             f = new java.io.File(mo.messageOwner.attachPath);
@@ -339,7 +345,7 @@ public final class PlayerArt {
             TLRPC.PhotoSize th = FileLoader.getClosestPhotoSizeWithSize(mo.getDocument().thumbs, 360);
             hasThumb = th instanceof TLRPC.TL_photoSize || th instanceof TLRPC.TL_photoSizeProgressive;
         }
-        if (hasCover || hasThumb) {
+        if (hasCover) {
             return;
         }
         boolean fetchCover = AppearanceConfig.songrecFetchCover();

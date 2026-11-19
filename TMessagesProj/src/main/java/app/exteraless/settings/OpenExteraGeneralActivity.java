@@ -76,7 +76,6 @@ import xyz.nextalone.nagram.NaConfig;
 public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implements ShizukuController.Listener {
 
     private static final int TYPE_SLIDE = 100;
-    private static final int TYPE_COLLAPSE = 101;
     private static final int PUSH_SERVICE_IN_APP = 0;
     private static final int PUSH_SERVICE_UNIFIED = 2;
 
@@ -1282,15 +1281,6 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                         RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
                 return new org.telegram.ui.Components.RecyclerListView.Holder(slide);
             }
-            if (viewType == TYPE_COLLAPSE) {
-                org.telegram.ui.Cells.CollapseTextCell cell =
-                        new org.telegram.ui.Cells.CollapseTextCell(mContext, resourcesProvider);
-                cell.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
-                cell.setColor(Theme.key_windowBackgroundWhiteBlueText4);
-                cell.setLayoutParams(new RecyclerView.LayoutParams(
-                        RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                return new org.telegram.ui.Components.RecyclerListView.Holder(cell);
-            }
             return super.onCreateViewHolder(parent, viewType);
         }
 
@@ -1318,11 +1308,11 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                     }
                     break;
                 }
-                case TYPE_COLLAPSE: {
-                    org.telegram.ui.Cells.CollapseTextCell cell =
-                            (org.telegram.ui.Cells.CollapseTextCell) holder.itemView;
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell =
+                            (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
                     boolean expanded = position == archiveMoreRow ? archiveMoreExpanded : notificationsMoreExpanded;
-                    cell.set(getString(expanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions), !expanded);
+                    cell.set(getString(position == archiveMoreRow ? R.string.OEGeneralArchiveMore : R.string.OEGeneralNotificationsMore), expanded);
                     break;
                 }
                 case TYPE_SLIDE: {
@@ -1507,7 +1497,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
             } else if (position == networkDividerRow) {
                 return TYPE_SHADOW;
             } else if (position == archiveMoreRow || position == notificationsMoreRow) {
-                return TYPE_COLLAPSE;
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == downloadSpeedRow) {
                 return TYPE_SLIDE;
             } else if (position == dnsTypeRow || position == customDoHRow

@@ -456,4 +456,9 @@
     <string name="OEAppearanceSwitchSize">Switch size</string>
     <string name="OEShowMoreOptions">Show more</string>
     <string name="OEShowLessOptions">Show less</string>
+    <string name="OEGeneralArchiveMore">Additional archive settings</string>
+    <string name="OEGeneralNotificationsMore">Additional notification settings</string>
+    <string name="OEChatsChatsMore">Additional chat settings</string>
+    <string name="OEChatsMessagesMore">Additional message settings</string>
+    <string name="OEOtherExperimentalMore">Additional experimental settings</string>
 </resources>

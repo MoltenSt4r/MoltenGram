@@ -226,18 +226,17 @@ public class CoverImage extends FrameLayout {
         String trackKey = PlayerArt.key(messageObject);
         Bitmap file = PlayerArt.fileCover(messageObject);
         // Fallback for local files if not yet playing or AudioInfo not cached in MediaController
-        if (file == null && !TextUtils.equals(trackKey, lastCheckedAttachTrackKey)
-                && messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.attachPath)) {
-            lastCheckedAttachTrackKey = trackKey;
-            try {
-                File f = new File(messageObject.messageOwner.attachPath);
-                if (f.exists()) {
-                    AudioInfo info = AudioInfo.getAudioInfo(f);
+        if (file == null) {
+            java.io.File local = PlayerArt.localFile(messageObject);
+            if (local != null && local.exists()) {
+                try {
+                    AudioInfo info = AudioInfo.getAudioInfo(local);
                     if (info != null && info.getCover() != null) {
                         file = info.getCover();
+                        PlayerArt.putEmbeddedCover(trackKey, file);
                     }
+                } catch (Throwable ignore) {
                 }
-            } catch (Exception ignored) {
             }
         }
 
@@ -252,21 +251,19 @@ public class CoverImage extends FrameLayout {
         currentTrackKey = trackKey;
         message = messageObject;
 
-        imageView.getImageReceiver().setCrossfadeWithOldImage(sameTrack);
-        if (!sameTrack) {
-            imageView.clearImage();
-        }
+        imageView.getImageReceiver().setCrossfadeWithOldImage(true);
+        imageView.getImageReceiver().setCrossfadeDuration(200);
 
         Bitmap oldBmp = sameTrack ? imageView.getImageReceiver().getBitmap() : null;
         Drawable keepThumb = (sameTrack && oldBmp != null && !oldBmp.isRecycled())
                 ? new BitmapDrawable(getResources(), oldBmp)
                 : null;
 
-        if (!TextUtils.isEmpty(songrec)) {
-            imageView.setImage(songrec, null, keepThumb);
-        } else if (file != null) {
+        if (file != null) {
             imageView.setImageBitmap(file);
             onBitmap(file);
+        } else if (!TextUtils.isEmpty(songrec)) {
+            imageView.setImage(songrec, null, keepThumb);
         } else {
             ImageLocation full = PlayerArt.fullLocation(messageObject);
             ImageLocation thumb = PlayerArt.thumbLocation(messageObject);
@@ -277,7 +274,8 @@ public class CoverImage extends FrameLayout {
             } else if (messageObject.messageOwner != null && !TextUtils.isEmpty(messageObject.messageOwner.message) &&
                     (messageObject.messageOwner.message.startsWith("http://") || messageObject.messageOwner.message.startsWith("https://"))) {
                 imageView.setImage(messageObject.messageOwner.message, null, keepThumb);
-            } else if (!sameTrack || !imageView.getImageReceiver().hasBitmapImage()) {
+            } else {
+                imageView.clearImage();
                 imageView.setImageDrawable(null);
             }
         }

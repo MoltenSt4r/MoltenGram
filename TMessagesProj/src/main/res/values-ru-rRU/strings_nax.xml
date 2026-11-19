@@ -441,4 +441,9 @@
     <string name="OEAppearanceSwitchSize">Размер тумблера</string>
     <string name="OEShowMoreOptions">Показать ещё</string>
     <string name="OEShowLessOptions">Свернуть</string>
+    <string name="OEGeneralArchiveMore">Дополнительные настройки архива</string>
+    <string name="OEGeneralNotificationsMore">Дополнительные настройки уведомлений</string>
+    <string name="OEChatsChatsMore">Дополнительные настройки чатов</string>
+    <string name="OEChatsMessagesMore">Дополнительные настройки сообщений</string>
+    <string name="OEOtherExperimentalMore">Дополнительные эксперименты</string>
 </resources>
