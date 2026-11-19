@@ -18,6 +18,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.graphics.ColorUtils;
 
 import app.exteraless.player.PlayerColors;
 import me.vkryl.android.animator.BoolAnimator;
@@ -270,16 +271,48 @@ public final class MainTabsUiHelper {
      * [3] = inactiveContentColor (onPrimaryContainer).
      */
     public static void resolveExpressiveColors(Theme.ResourcesProvider resourcesProvider, int[] out4) {
+        final int surfaceBg = Theme.getColor(Theme.key_windowBackgroundWhite, resourcesProvider) | 0xff000000;
+        final double surfaceLum = ColorUtils.calculateLuminance(surfaceBg);
+        final boolean isDark = surfaceLum < 0.5;
         final PlayerColors colors = PlayerColors.fromSeed(
                 resolveExpressiveSeed(resourcesProvider),
-                PlayerColors.isDark(resourcesProvider));
-        out4[0] = colors.primaryContainer;
-        out4[1] = colors.primary;
-        out4[2] = colors.onPrimary;
-        out4[3] = colors.onPrimaryContainer;
+                isDark);
+
+        final float surfaceBlend = isDark ? (surfaceLum < 0.005 ? 0.55f : 0.38f) : 0.30f;
+        final int containerColor = ColorUtils.blendARGB(colors.primaryContainer, surfaceBg, surfaceBlend);
+        final int activePillColor = colors.primary;
+
+        int activeContent = colors.onPrimary;
+        if (ColorUtils.calculateContrast(activeContent, activePillColor) < 4.5) {
+            activeContent = ColorUtils.calculateContrast(Color.WHITE, activePillColor)
+                    >= ColorUtils.calculateContrast(Color.BLACK, activePillColor)
+                    ? Color.WHITE : Color.BLACK;
+        }
+
+        int inactiveContent = colors.onPrimaryContainer;
+        if (ColorUtils.calculateContrast(inactiveContent, containerColor) < 4.5) {
+            final int fallbackInk = Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, resourcesProvider) | 0xff000000;
+            if (ColorUtils.calculateContrast(fallbackInk, containerColor) >= 4.5) {
+                inactiveContent = fallbackInk;
+            } else {
+                inactiveContent = isDark ? Color.WHITE : Color.BLACK;
+            }
+        }
+
+        out4[0] = containerColor;
+        out4[1] = activePillColor;
+        out4[2] = activeContent;
+        out4[3] = inactiveContent;
     }
 
     private static int resolveExpressiveSeed(Theme.ResourcesProvider resourcesProvider) {
+        final Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
+        if (activeTheme != null) {
+            final Theme.ThemeAccent accent = activeTheme.getAccent(false);
+            if (accent != null && Color.alpha(accent.accentColor) != 0) {
+                return accent.accentColor | 0xff000000;
+            }
+        }
         final int[] candidateKeys = {
                 Theme.key_featuredStickers_addButton,
                 Theme.key_chats_actionBackground,

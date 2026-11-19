@@ -408,6 +408,11 @@ public class GlassTabView extends FrameLayout implements MainTabsLayout.Tab, Fac
         colors.add(Theme.key_glass_tabUnselected);
         colors.add(Theme.key_glass_tabSelected);
         colors.add(Theme.key_glass_tabSelectedText);
+        colors.add(Theme.key_windowBackgroundWhite);
+        colors.add(Theme.key_featuredStickers_addButton);
+        colors.add(Theme.key_chats_actionBackground);
+        colors.add(Theme.key_windowBackgroundWhiteBlueText4);
+        colors.add(Theme.key_actionBarDefault);
     }
 
     public void updateColorsLottie() {

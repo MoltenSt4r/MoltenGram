@@ -1360,6 +1360,12 @@ public class MainTabsLayout extends AnimatedLinearLayout {
         expressiveContainerPaint.clearShadowLayer();
         expressivePillPaint.setColor(colors[1]);
         expressiveColorsInitialized = true;
+        for (int i = 0; i < getChildCount(); i++) {
+            final View child = getChildAt(i);
+            if (child instanceof GlassTabView tab) {
+                tab.updateColors();
+            }
+        }
         invalidate();
     }
 
