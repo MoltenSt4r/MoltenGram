@@ -7,6 +7,7 @@ import android.text.TextUtils;
 import android.util.Base64;
 import android.util.LruCache;
 
+import org.json.JSONArray;
 import org.json.JSONObject;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
@@ -142,6 +143,64 @@ public final class SongRecognizer {
         } catch (Throwable e) {
             FileLog.e(e);
         }
+    }
+
+    private static String httpGet(String u) {
+        try {
+            HttpURLConnection c = (HttpURLConnection) new URL(u).openConnection();
+            c.setConnectTimeout(5000);
+            c.setReadTimeout(6000);
+            c.setRequestProperty("User-Agent", "Mozilla/5.0");
+            try (java.io.InputStream in = c.getInputStream();
+                 java.io.ByteArrayOutputStream out = new java.io.ByteArrayOutputStream()) {
+                byte[] buf = new byte[4096];
+                int n;
+                while ((n = in.read(buf)) > 0) {
+                    out.write(buf, 0, n);
+                }
+                return out.toString("UTF-8");
+            } finally {
+                c.disconnect();
+            }
+        } catch (Throwable e) {
+            return null;
+        }
+    }
+
+    public static File fetchCoverByMetadata(String artist, String title) {
+        if (TextUtils.isEmpty(title)) {
+            return null;
+        }
+        String term = ((TextUtils.isEmpty(artist) ? "" : artist + " ") + title).trim();
+        try {
+            String q = java.net.URLEncoder.encode(term, "UTF-8");
+            String body = httpGet("https://itunes.apple.com/search?term=" + q + "&media=music&entity=song&limit=1");
+            if (body != null) {
+                JSONArray arr = new JSONObject(body).optJSONArray("results");
+                if (arr != null && arr.length() > 0) {
+                    String art = arr.getJSONObject(0).optString("artworkUrl100", null);
+                    if (!TextUtils.isEmpty(art)) {
+                        File f = downloadAndCacheCover(art.replace("100x100bb", "600x600bb"));
+                        if (f != null) {
+                            return f;
+                        }
+                    }
+                }
+            }
+            body = httpGet("https://api.deezer.com/search?q=" + q + "&limit=1");
+            if (body != null) {
+                JSONArray arr = new JSONObject(body).optJSONArray("data");
+                if (arr != null && arr.length() > 0) {
+                    JSONObject album = arr.getJSONObject(0).optJSONObject("album");
+                    String art = album != null ? album.optString("cover_xl", null) : null;
+                    if (!TextUtils.isEmpty(art)) {
+                        return downloadAndCacheCover(art);
+                    }
+                }
+            }
+        } catch (Throwable ignore) {
+        }
+        return null;
     }
 
     public static File downloadAndCacheCover(String coverUrl) {

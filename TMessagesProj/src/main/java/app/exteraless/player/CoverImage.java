@@ -73,6 +73,7 @@ public class CoverImage extends FrameLayout {
         imageView.getImageReceiver().setCrossfadeDuration(200);
         addView(imageView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
 
+        imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
         note = PlayerIcon.stroke(PlayerIcon.NOTE, noteSizeDp);
         imageView.getImageReceiver().setDelegate((imageReceiver, set, thumb, memCache) -> {
             if (set) {
@@ -221,6 +222,7 @@ public class CoverImage extends FrameLayout {
             return;
         }
 
+        imageView.getImageReceiver().setAspectFit(!AppearanceConfig.playerCropCover());
         String trackKey = PlayerArt.key(messageObject);
         Bitmap file = PlayerArt.fileCover(messageObject);
         // Fallback for local files if not yet playing or AudioInfo not cached in MediaController

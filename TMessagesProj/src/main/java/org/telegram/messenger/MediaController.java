@@ -2050,6 +2050,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.fileLoaded || id == NotificationCenter.httpFileDidLoad) {
             String fileName = (String) args[0];
+            if (playingMessageObject != null && playingMessageObject.isMusic()) {
+                app.exteraless.player.PlayerArt.preloadPlaylistAhead(playingMessageObject);
+            }
             if (playingMessageObject != null && playingMessageObject.currentAccount == account) {
                 String file = FileLoader.getAttachFileName(playingMessageObject.getDocument());
                 if (file.equals(fileName)) {
@@ -3951,6 +3954,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         }
         isSilent = silent;
         checkVolumeBarUI();
+        if (messageObject.isMusic()) {
+            app.exteraless.player.PlayerArt.preloadPlaylistAhead(messageObject);
+        }
         if ((audioPlayer != null || videoPlayer != null) && isSamePlayingMessage(messageObject)) {
             if (isPaused) {
                 resumeAudio(messageObject);

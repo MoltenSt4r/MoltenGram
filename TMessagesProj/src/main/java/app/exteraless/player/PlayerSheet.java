@@ -1286,6 +1286,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         boolean changed = !TextUtils.equals(key, currentKey);
         current = mo;
         currentKey = key;
+        PlayerArt.preloadPlaylistAhead(mo);
         titleView.setText(mo.getMusicTitle());
         artistView.setText(mo.getMusicAuthor());
         smallTitle.setText(mo.getMusicTitle());

@@ -215,7 +215,7 @@ public final class OnlineLyrics {
 
         if (queryDuration > 0 && candDuration > 0) {
             int diff = Math.abs(queryDuration - candDuration);
-            if (diff > 12) {
+            if (diff > (app.exteraless.appearance.AppearanceConfig.playerLyricsExperimental() ? 30 : 12)) {
                 return false;
             }
         }
@@ -279,6 +279,16 @@ public final class OnlineLyrics {
 
     private static final ExecutorService executor = Executors.newFixedThreadPool(4);
     private static final Map<String, List<Callback>> inFlightFetches = new HashMap<>();
+
+    private static String stripExtras(String s) {
+        if (s == null) {
+            return null;
+        }
+        String r = s.replaceAll("\\s*[\\(\\[\\{][^\\)\\]\\}]*[\\)\\]\\}]", " ");
+        r = r.replaceAll("(?i)\\s+(feat\\.?|ft\\.?|featuring)\\s+.*$", "");
+        r = r.replaceAll("(?i)\\s*-\\s*(official.*|remaster.*|remix.*|live.*|lyrics?.*)$", "");
+        return r.trim();
+    }
 
     public static void fetch(Query query, Callback callback) {
         String key = query.key();
@@ -396,6 +406,40 @@ public final class OnlineLyrics {
                         }
                     } catch (Throwable e) {
                         FileLog.e(e);
+                    }
+                }
+
+                // 3b. Experimental: retry with stripped title/artist across all sources
+                if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsExperimental()) {
+                    Query sq = new Query(stripExtras(currentQ.artist), stripExtras(currentQ.title), currentQ.album, currentQ.duration);
+                    sq.filePath = currentQ.filePath;
+                    if (!TextUtils.isEmpty(sq.title) && !sq.key().equals(currentQ.key())) {
+                        Found[] fs = new Found[6];
+                        for (int i = 0; i < 6 && bestOnline == null; i++) {
+                            try {
+                                switch (i) {
+                                    case 0: fs[i] = requestLrclib(sq); break;
+                                    case 1: fs[i] = requestBetterLyrics(sq); break;
+                                    case 2: fs[i] = requestPaxsenix(sq); break;
+                                    case 3: fs[i] = requestLyricsPlus(sq); break;
+                                    case 4: fs[i] = requestKuGou(sq); break;
+                                    default: fs[i] = requestZemer(sq); break;
+                                }
+                            } catch (Throwable e) {
+                                FileLog.e(e);
+                            }
+                            if (fs[i] != null && fs[i].lyrics != null && fs[i].lyrics.synced) {
+                                bestOnline = fs[i];
+                            }
+                        }
+                        for (int i = 0; i < 6 && bestOnline == null; i++) {
+                            if (fs[i] != null && fs[i].lyrics != null) {
+                                bestOnline = fs[i];
+                            }
+                        }
+                        if (bestOnline != null) {
+                            currentQ = sq;
+                        }
                     }
                 }
 
