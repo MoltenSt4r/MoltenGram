@@ -189,8 +189,10 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         items.add(UItem.asButton(ID_BOTTOM_NAVIGATION_BAR, getString(R.string.OEBottomNavigationBarMode),
                 bottomNavigationModes()[MainTabsLayout.getBottomNavigationMode()]));
         if (hasBottomTabs()) {
-            items.add(UItem.asCheck(ID_HIDE_TAB_TITLES, getString(R.string.MainTabsHideTitles))
-                    .setChecked(NaConfig.INSTANCE.getMainTabsHideTitles().Bool()));
+            if (!MainTabsLayout.isBottomNavigationExpressive()) {
+                items.add(UItem.asCheck(ID_HIDE_TAB_TITLES, getString(R.string.MainTabsHideTitles))
+                        .setChecked(NaConfig.INSTANCE.getMainTabsHideTitles().Bool()));
+            }
             items.add(UItem.asCheck(ID_HIDE_CONTACTS_TAB, getString(R.string.MainTabsHideContacts))
                     .setChecked(NaConfig.INSTANCE.getMainTabsHideContacts().Bool()));
             items.add(UItem.asCheck(ID_HIDE_CALLS_TAB, getString(R.string.MainTabsHideCallsSettings))
@@ -694,7 +696,8 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
             showChoice(getString(R.string.OEBottomNavigationBarMode), bottomNavigationModes(),
                     MainTabsLayout.getBottomNavigationMode(), which -> {
                         MainTabsLayout.setBottomNavigationMode(which);
-                        if (which == MainTabsLayout.BOTTOM_NAVIGATION_MODE_FLOATING) {
+                        if (which == MainTabsLayout.BOTTOM_NAVIGATION_MODE_FLOATING
+                                || which == MainTabsLayout.BOTTOM_NAVIGATION_MODE_EXPRESSIVE) {
                             AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
                         }
                         // Со скрытой панелью «Настройки» доступны только из меню; следить за этим
@@ -969,6 +972,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
                 getString(R.string.OEBottomNavigationModeShow),
                 getString(R.string.OEBottomNavigationModeHide),
                 getString(R.string.OEBottomNavigationModeFloating),
+                getString(R.string.OEBottomNavigationModeExpressive),
         };
     }
 

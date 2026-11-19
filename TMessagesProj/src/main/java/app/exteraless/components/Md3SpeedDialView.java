@@ -517,6 +517,7 @@ public class Md3SpeedDialView extends FrameLayout {
         }
 
         final boolean showStoriesFab = storiesFab != null
+                && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()
                 && (!(storiesFab instanceof org.telegram.ui.Components.FragmentFloatingButton)
                 || ((org.telegram.ui.Components.FragmentFloatingButton) storiesFab).getButtonVisible());
 

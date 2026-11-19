@@ -431,6 +431,7 @@ public class TelegramMediaSession {
                         audioInfo != null && messageObject.isMusic() ? audioInfo.getAlbum() : null);
         if (albumArt != null && !albumArt.isRecycled()) {
             meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ALBUM_ART, albumArt);
+            meta.putBitmap(MediaMetadataCompat.METADATA_KEY_ART, albumArt);
         }
         session.setMetadata(meta.build());
     }

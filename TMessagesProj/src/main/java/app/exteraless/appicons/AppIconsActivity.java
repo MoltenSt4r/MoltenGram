@@ -52,6 +52,7 @@ public class AppIconsActivity extends BaseFragment {
     private ContentView contentView;
     private AppIconHeroView heroView;
     private RecyclerListView listView;
+    private Adapter adapter;
     private GridLayoutManager layoutManager;
     private FrameLayout buttonContainer;
     private ButtonWithCounterView button;
@@ -106,7 +107,9 @@ public class AppIconsActivity extends BaseFragment {
         listView = new RecyclerListView(context, getResourceProvider());
         layoutManager = new GridLayoutManager(context, 4);
         listView.setLayoutManager(layoutManager);
-        listView.setAdapter(new Adapter());
+        adapter = new Adapter();
+        listView.setAdapter(adapter);
+        listView.setItemAnimator(null);
         listView.setClipToPadding(false);
         listView.setVerticalScrollBarEnabled(false);
         listView.setSelectorDrawableColor(Color.TRANSPARENT);
@@ -171,6 +174,7 @@ public class AppIconsActivity extends BaseFragment {
         if (icon == previewIcon) {
             return;
         }
+        LauncherIcon oldIcon = previewIcon;
         previewIcon = icon;
         heroView.set(icon);
         animateTint(AppIcons.tint(AppIcons.accent(getContext(), icon)));
@@ -180,6 +184,16 @@ public class AppIconsActivity extends BaseFragment {
             if (child instanceof AppIconCell) {
                 AppIconCell cell = (AppIconCell) child;
                 cell.set(cell.getIcon(), cell.getIcon() == previewIcon, true);
+            }
+        }
+        if (adapter != null) {
+            int oldPos = icons.indexOf(oldIcon);
+            int newPos = icons.indexOf(icon);
+            if (oldPos != -1) {
+                adapter.notifyItemChanged(oldPos);
+            }
+            if (newPos != -1) {
+                adapter.notifyItemChanged(newPos);
             }
         }
     }
@@ -431,6 +445,18 @@ public class AppIconsActivity extends BaseFragment {
         public void onBindViewHolder(@NonNull RecyclerView.ViewHolder holder, int position) {
             LauncherIcon icon = icons.get(position);
             ((AppIconCell) holder.itemView).set(icon, icon == previewIcon, false);
+        }
+
+        @Override
+        public void onViewAttachedToWindow(@NonNull RecyclerView.ViewHolder holder) {
+            super.onViewAttachedToWindow(holder);
+            if (holder.itemView instanceof AppIconCell) {
+                AppIconCell cell = (AppIconCell) holder.itemView;
+                LauncherIcon icon = cell.getIcon();
+                if (icon != null) {
+                    cell.set(icon, icon == previewIcon, false);
+                }
+            }
         }
     }
 }

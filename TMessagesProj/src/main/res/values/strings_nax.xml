@@ -415,7 +415,7 @@
     <string name="TorExitCountryTitle">Exit Node (Country)</string>
     <string name="TorBridgeType">Connection Mode</string>
     <string name="TorBridgeConfigTitle">Select Connection Mode</string>
-    <string name="TorBridgeConfigSubtitle">Direct connection to Tor or bridges for censorship circumvention.</string>
+    <string name="TorBridgeConfigSubtitle">Direct connection to Tor or bridges for resilient connection.</string>
     <string name="TorBridgeDirect">Direct Connection (No Bridges)</string>
     <string name="TorBridgeCustom">Tor Bridges</string>
     <string name="TorAutoGetBridges">Get Bridges</string>
@@ -436,7 +436,7 @@
     <string name="TorExitIpChecking">Detecting IP...</string>
     <string name="TorExitIpPing">%1$d ms</string>
     <string name="TorExitIpCheckTap">Tap to check IP</string>
-    <string name="TorInfoPrivacy">Embedded Tor provides anonymity and robust censorship circumvention. When active, all network traffic is encrypted and routed through the decentralized Tor network.</string>
+    <string name="TorInfoPrivacy">Embedded Tor provides enhanced privacy and encrypted routing. When active, all network traffic is encrypted and routed through the decentralized Tor network.</string>
     <string name="TorDiagnosticsTitle">Tor Diagnostics</string>
     <string name="TorDiagnosticsSubtitle">IP-safe connection events</string>
     <string name="TorDiagnosticsClear">Clear Log</string>
@@ -453,4 +453,12 @@
     <string name="md3_avatar_shape_custom">Customized</string>
     <string name="media_group_carousel">Media Albums as Carousel</string>
     <string name="media_group_carousel_desc">Display grouped photos and videos in chats as a horizontal Material Design 3 carousel.</string>
+    <string name="OEAppearanceSwitchSize">Switch size</string>
+    <string name="OEShowMoreOptions">Show more</string>
+    <string name="OEShowLessOptions">Show less</string>
+    <string name="OEGeneralArchiveMore">Additional archive settings</string>
+    <string name="OEGeneralNotificationsMore">Additional notification settings</string>
+    <string name="OEChatsChatsMore">Additional chat settings</string>
+    <string name="OEChatsMessagesMore">Additional message settings</string>
+    <string name="OEOtherExperimentalMore">Additional experimental settings</string>
 </resources>

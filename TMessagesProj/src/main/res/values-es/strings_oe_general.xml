@@ -11,6 +11,7 @@
     <string name="OEGeneralDoNotTranslate">No traducir</string>
     <string name="OEGeneralTranslateInfo">El botón «Traducir» aparecerá en el menú contextual del mensaje.</string>
     <string name="OEBottomNavigationModeFloating">Flotante</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (con FAB)</string>
     <string name="OEGeneralSectionHeader">General</string>
     <string name="OEGeneralDisableNumberRounding">Desactivar el redondeo de números</string>
     <string name="OEGeneralDisableNumberRoundingValue">1.23K → 1,234</string>

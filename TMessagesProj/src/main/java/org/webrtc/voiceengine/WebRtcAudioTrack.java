@@ -66,7 +66,18 @@ public class WebRtcAudioTrack {
   }
 
   public static synchronized void setAudioStreamType(int type) {
-    streamType = type;
+    if (type == AudioManager.USE_DEFAULT_STREAM_TYPE || type < 0) {
+      streamType = (usageAttribute == AudioAttributes.USAGE_MEDIA) ? AudioManager.STREAM_MUSIC : AudioManager.STREAM_VOICE_CALL;
+    } else {
+      streamType = type;
+    }
+  }
+
+  private static int getResolvedStreamType() {
+    if (streamType == AudioManager.USE_DEFAULT_STREAM_TYPE || streamType < 0) {
+      return (usageAttribute == AudioAttributes.USAGE_MEDIA) ? AudioManager.STREAM_MUSIC : AudioManager.STREAM_VOICE_CALL;
+    }
+    return streamType;
   }
 
   private static int getDefaultUsageAttribute() {
@@ -296,9 +307,6 @@ public class WebRtcAudioTrack {
       return -1;
     }
     try {
-      // Create an AudioTrack object and initialize its associated audio buffer.
-      // The size of this buffer determines how long an AudioTrack can play
-      // before running out of data.
       if (Build.VERSION.SDK_INT >= 21) {
         // If we are on API level 21 or higher, it is possible to use a special AudioTrack
         // constructor that uses AudioAttributes and AudioFormat as input. It allows us to
@@ -312,7 +320,7 @@ public class WebRtcAudioTrack {
         audioTrack =
             createAudioTrackOnLowerThanLollipop(sampleRate, channelConfig, minBufferSizeInBytes);
       }
-    } catch (IllegalArgumentException e) {
+    } catch (Throwable e) {
       reportWebRtcAudioTrackInitError(e.getMessage());
       releaseAudioResources();
       return -1;
@@ -396,7 +404,12 @@ public class WebRtcAudioTrack {
     threadChecker.checkIsOnValidThread();
     Logging.d(TAG, "getStreamMaxVolume");
     assertTrue(audioManager != null);
-    return audioManager.getStreamMaxVolume(streamType);
+    try {
+      return audioManager.getStreamMaxVolume(getResolvedStreamType());
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return 10;
+    }
   }
 
   // Set current volume level for a phone call audio stream.
@@ -408,14 +421,24 @@ public class WebRtcAudioTrack {
       Logging.e(TAG, "The device implements a fixed volume policy.");
       return false;
     }
-    audioManager.setStreamVolume(streamType, volume, 0);
-    return true;
+    try {
+      audioManager.setStreamVolume(getResolvedStreamType(), volume, 0);
+      return true;
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return false;
+    }
   }
 
   private boolean isVolumeFixed() {
     if (Build.VERSION.SDK_INT < 21)
       return false;
-    return audioManager.isVolumeFixed();
+    try {
+      return audioManager.isVolumeFixed();
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return false;
+    }
   }
 
   /** Get current volume level for a phone call audio stream. */
@@ -423,7 +446,12 @@ public class WebRtcAudioTrack {
     threadChecker.checkIsOnValidThread();
     Logging.d(TAG, "getStreamVolume");
     assertTrue(audioManager != null);
-    return audioManager.getStreamVolume(streamType);
+    try {
+      return audioManager.getStreamVolume(getResolvedStreamType());
+    } catch (Throwable e) {
+      FileLog.e(e);
+      return 0;
+    }
   }
 
   private void logMainParameters() {
@@ -444,8 +472,13 @@ public class WebRtcAudioTrack {
     Logging.d(TAG, "createAudioTrackOnLollipopOrHigher");
     // TODO(henrika): use setPerformanceMode(int) with PERFORMANCE_MODE_LOW_LATENCY to control
     // performance when Android O is supported. Add some logging in the mean time.
-    final int nativeOutputSampleRate =
-        AudioTrack.getNativeOutputSampleRate(streamType);
+    int nativeOutputSampleRate;
+    try {
+      nativeOutputSampleRate = AudioTrack.getNativeOutputSampleRate(getResolvedStreamType());
+    } catch (Throwable e) {
+      FileLog.e(e);
+      nativeOutputSampleRate = sampleRateInHz;
+    }
     Logging.d(TAG, "nativeOutputSampleRate: " + nativeOutputSampleRate);
     if (sampleRateInHz != nativeOutputSampleRate) {
       Logging.w(TAG, "Unable to use fast mode since requested sample rate is not native");
@@ -472,31 +505,43 @@ public class WebRtcAudioTrack {
   @SuppressWarnings("deprecation") // Deprecated in API level 25.
   private static AudioTrack createAudioTrackOnLowerThanLollipop(
       int sampleRateInHz, int channelConfig, int bufferSizeInBytes) {
-    return new AudioTrack(streamType, sampleRateInHz, channelConfig,
+    return new AudioTrack(getResolvedStreamType(), sampleRateInHz, channelConfig,
         AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes, AudioTrack.MODE_STREAM);
   }
 
   private void logBufferSizeInFrames() {
     if (Build.VERSION.SDK_INT >= 23) {
-      Logging.d(TAG, "AudioTrack: "
-              // The effective size of the AudioTrack buffer that the app writes to.
-              + "buffer size in frames: " + audioTrack.getBufferSizeInFrames());
+      try {
+        Logging.d(TAG, "AudioTrack: "
+                // The effective size of the AudioTrack buffer that the app writes to.
+                + "buffer size in frames: " + (audioTrack != null ? audioTrack.getBufferSizeInFrames() : -1));
+      } catch (Throwable e) {
+        FileLog.e(e);
+      }
     }
   }
 
   private int getBufferSizeInFrames() {
-    if (Build.VERSION.SDK_INT >= 23) {
-      return audioTrack.getBufferSizeInFrames();
+    if (Build.VERSION.SDK_INT >= 23 && audioTrack != null) {
+      try {
+        return audioTrack.getBufferSizeInFrames();
+      } catch (Throwable e) {
+        FileLog.e(e);
+      }
     }
     return -1;
   }
 
   private void logBufferCapacityInFrames() {
     if (Build.VERSION.SDK_INT >= 24) {
-      Logging.d(TAG,
-          "AudioTrack: "
-              // Maximum size of the AudioTrack buffer in frames.
-              + "buffer capacity in frames: " + audioTrack.getBufferCapacityInFrames());
+      try {
+        Logging.d(TAG,
+            "AudioTrack: "
+                // Maximum size of the AudioTrack buffer in frames.
+                + "buffer capacity in frames: " + (audioTrack != null ? audioTrack.getBufferCapacityInFrames() : -1));
+      } catch (Throwable e) {
+        FileLog.e(e);
+      }
     }
   }
 

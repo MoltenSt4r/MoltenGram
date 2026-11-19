@@ -481,7 +481,10 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         tabsViewBackground = iBlur3FactoryTabs.create(tabsView, BlurredBackgroundProviderImpl.mainTabs(resourceProvider));
         tabsViewBackground.setRadius(MainTabsUiHelper.getBackgroundRadius());
         tabsViewBackground.setPadding(MainTabsUiHelper.getBackgroundInset());
-        tabsView.setBackground(tabsViewBackground);
+        tabsView.setBackground(MainTabsUiHelper.isExpressiveToolbar() ? null : tabsViewBackground);
+        if (MainTabsUiHelper.isExpressiveToolbar()) {
+            tabsView.updateExpressiveColors();
+        }
 
         BlurredBackgroundDrawableViewFactory iBlur3FactoryFade = new BlurredBackgroundDrawableViewFactory(iBlur3SourceColor);
         iBlur3FactoryFade.setSourceRootView(viewPositionWatcher, contentView);
@@ -510,12 +513,26 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         });
         onMiniPlayerOffsetChanged();
 
-        tabsViewWrapper = new FrameLayout(context);
+        tabsViewWrapper = new FrameLayout(context) {
+            @Override
+            public boolean onTouchEvent(MotionEvent event) {
+                if (MainTabsUiHelper.isExpressiveToolbar()) {
+                    return false;
+                }
+                return super.onTouchEvent(event);
+            }
+        };
         tabsViewWrapper.setOnClickListener(v -> {});
+        tabsView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+            if (MainTabsUiHelper.isExpressiveToolbar()) {
+                checkUi_expressiveToolbarShift();
+            }
+        });
         // В M3 панель во всю ширину,
         // высота досчитывается вместе с нижним системным отступом в applyTabsBottomInset
-        tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeightDp(), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
+        tabsViewWrapper.addView(tabsView, LayoutHelper.createFrame(MainTabsUiHelper.getTabsViewWidth(), MainTabsUiHelper.getTabsViewHeight(0), Gravity.BOTTOM | Gravity.CENTER_HORIZONTAL));
         tabsViewWrapper.setClipToPadding(false);
+        tabsViewWrapper.setClipChildren(false);
         contentView.addView(tabsViewWrapper, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM));
 
         updateLayoutWrapper = new UpdateLayoutWrapper(context);
@@ -569,7 +586,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         o.setBlur(true);
         o.translate(0, -dp(4));
         o.setGravity(Gravity.LEFT);
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -587,7 +604,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         o.setBlur(true);
         o.translate(0, -dp(4));
         o.setGravity(Gravity.LEFT);
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -622,7 +639,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
         o.setBlur(true);
         o.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.show();
         return true;
@@ -683,7 +700,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 //        o.setBlur(true);
         o.translate(-dp(8), -dp(4));
         o.setMaxHeight(Math.min(dp(560), Math.max(dp(320), AndroidUtilities.displaySize.y - dp(120))));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         o.setScrimViewBackground(bg);
         o.setGravity(Gravity.LEFT);
         o.show();
@@ -836,7 +853,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         o.setBlur(true);
         o.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, button);
         o.setScrimViewBackground(bg);
         o.show();
 
@@ -1173,7 +1190,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         ViewGroup.MarginLayoutParams lp;
         {
-            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive()) ? dp(24) : 0;
             final int height = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
             lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
             if (lp.height != height) {
@@ -1322,13 +1339,54 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         final float isProfile = 1f - MathUtils.clamp(Math.abs(getPositionProfile() - animatedPosition), 0, 1);
         final float hide = 1f - AndroidUtilities.getNavigationBarThirdButtonsFactor(0, 1f, navigationBarHeight);
         float alpha = (1f - isProfile * hide) * animatorTabsVisible.getFloatValue() * (1f - speedDialDimProgress);
-        if (tabletLayout) {
+        if (tabletLayout || MainTabsUiHelper.isExpressiveToolbar()) {
             alpha = 0.0f;
         }
 
         fadeView.setAlpha(alpha);
         fadeView.setTranslationY(isProfile * dp(48));
         fadeView.setVisibility(alpha > 0 ? View.VISIBLE : View.GONE);
+        checkUi_expressiveToolbarShift();
+    }
+
+    private void checkUi_expressiveToolbarShift() {
+        if (tabsView == null || tabsViewWrapper == null) {
+            return;
+        }
+        if (!MainTabsUiHelper.isExpressiveToolbar() || viewPager == null || tabletLayout) {
+            tabsView.setTranslationX(0f);
+            return;
+        }
+        final int wrapperW = tabsViewWrapper.getWidth();
+        final float capsuleW = tabsView.getExpressiveCapsuleWidth();
+        if (wrapperW <= 0 || capsuleW <= 0f) {
+            return;
+        }
+
+        final float animatedPos = viewPager.getPositionAnimated();
+        float fabFactor = 0f;
+        final int posChats = getPositionChats();
+        if (posChats >= 0 && !NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool()) {
+            fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posChats - animatedPos), 0f, 1f));
+        }
+        if (!isFeedTabEnabled() && !MainTabsHelper.isContactsTabHidden()) {
+            final int posContacts = getPositionContacts();
+            if (posContacts >= 0) {
+                fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posContacts - animatedPos), 0f, 1f));
+            }
+        }
+        if (MainTabsHelper.isCallsTabShown(currentAccount)) {
+            final int posCalls = getPositionCallsOrSettings();
+            if (posCalls >= 0) {
+                fabFactor = Math.max(fabFactor, 1f - MathUtils.clamp(Math.abs(posCalls - animatedPos), 0f, 1f));
+            }
+        }
+
+        final boolean fabLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        final int fabSize = app.exteraless.appearance.AppearanceConfig.fabSize();
+        final int fabReserveInWrapper = Math.max(0, dp(20 + fabSize + 8) - dp(12));
+        tabsView.setTranslationX(0f);
+        tabsView.setExpressiveFabInsets(fabLeft ? fabReserveInWrapper : 0f, fabLeft ? 0f : fabReserveInWrapper, fabFactor);
     }
 
     private void checkUi_miniPlayer() {
@@ -1708,12 +1766,16 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
             tabsViewBackground.invalidateDisplayList();
         }
         if (tabsView != null && tabsViewWrapper != null) {
+            tabsView.setBackground(MainTabsUiHelper.isExpressiveToolbar() ? null : tabsViewBackground);
+            if (MainTabsUiHelper.isExpressiveToolbar()) {
+                tabsView.updateExpressiveColors();
+            }
             MainTabsUiHelper.applyTabsLayoutStyle(tabsView, dp(328 + DialogsActivity.MAIN_TABS_MARGIN * 2));
             MainTabsUiHelper.applyTabsBottomInset(tabsView, tabsViewWrapper, navigationBarHeight, insetLeft, insetRight);
         }
         if (fadeView != null && updateLayoutWrapper != null) {
             final int updateLayoutHeight = updateLayoutWrapper.isUpdateLayoutVisible() ? dp(UpdateLayoutWrapper.HEIGHT) : 0;
-            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating()) ? dp(24) : 0;
+            final int fadeExtra = (!NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive()) ? dp(24) : 0;
             final int fadeHeight = navigationBarHeight + updateLayoutHeight + fadeExtra + (NaConfig.INSTANCE.getHideBottomNavigationBar().Bool() ? 0 : dp(MainTabsUiHelper.getTabsViewHeightDp()));
             final ViewGroup.MarginLayoutParams lp = (ViewGroup.MarginLayoutParams) fadeView.getLayoutParams();
             if (lp != null && lp.height != fadeHeight) {
@@ -1791,7 +1853,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
                     new Intent(ApplicationLoader.applicationContext, LaunchActivity.class)
                 )
             );
-            setupPopupMenuStyle(o);
+            setupPopupMenuStyle(o, button);
             o.show();
             return true;
         }
@@ -1804,7 +1866,7 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
 
         ItemOptions o = ItemOptions.makeOptions(this, button);
         addChatsMenuItems(o, button);
-        setupPopupMenuStyle(o);
+        setupPopupMenuStyle(o, button);
         o.show();
         return true;
     }
@@ -1830,11 +1892,11 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         }
     }
 
-    private void setupPopupMenuStyle(ItemOptions options) {
+    private void setupPopupMenuStyle(ItemOptions options, View anchor) {
         options.setGravity(Gravity.CENTER_HORIZONTAL);
         options.setBlur(true);
         options.translate(0, -dp(4));
-        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, false);
+        final android.graphics.drawable.Drawable bg = MainTabsUiHelper.createMainTabsScrimBackground(resourceProvider, anchor);
         options.setScrimViewBackground(bg);
     }
 

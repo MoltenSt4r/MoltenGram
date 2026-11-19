@@ -11,6 +11,7 @@
     <string name="OEGeneralDoNotTranslate">不翻译</string>
     <string name="OEGeneralTranslateInfo">「翻译」按钮会出现在消息的长按菜单中。</string>
     <string name="OEBottomNavigationModeFloating">悬浮</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (带 FAB)</string>
     <string name="OEGeneralSectionHeader">通用</string>
     <string name="OEGeneralDisableNumberRounding">关闭数字缩写</string>
     <string name="OEGeneralDisableNumberRoundingValue">1.23K → 1,234</string>

@@ -147,7 +147,12 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
     private int pushStatusRow;
     private int batteryOptimizationRow;
     private int shizukuBoostRow;
+    private int archiveMoreRow;
+    private int notificationsMoreRow;
     private int notificationsDividerRow;
+
+    private boolean archiveMoreExpanded;
+    private boolean notificationsMoreExpanded;
 
     /** Момент «пять минут назад» для живого примера в строке Relative Last Seen. */
     private int fiveMinutesAgo;
@@ -217,13 +222,20 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
         profileDividerRow = addRow();
 
         archiveHeaderRow = addRow("archiveHeader");
-        sortByUnreadRow = addRow("sortByUnread", "SortByUnread");
         hideArchiveRow = addRow("hideArchive");
         feedInChatMenuRow = addRow("feedInChatMenu");
-        // Когда архив скрыт, строка уходит целиком: «открывать архив потягиванием»
-        // нечего, если папки архива нет в списке.
-        archiveOnPullRow = NaConfig.INSTANCE.getHideArchive().Bool() ? -1 : addRow("archiveOnPull");
-        disableUnarchiveSwipeRow = addRow("disableUnarchiveSwipe");
+        archiveMoreRow = addRow();
+        if (archiveMoreExpanded) {
+            sortByUnreadRow = addRow("sortByUnread", "SortByUnread");
+            // Когда архив скрыт, строка уходит целиком: «открывать архив потягиванием»
+            // нечего, если папки архива нет в списке.
+            archiveOnPullRow = NaConfig.INSTANCE.getHideArchive().Bool() ? -1 : addRow("archiveOnPull");
+            disableUnarchiveSwipeRow = addRow("disableUnarchiveSwipe");
+        } else {
+            sortByUnreadRow = -1;
+            archiveOnPullRow = -1;
+            disableUnarchiveSwipeRow = -1;
+        }
         archiveDividerRow = addRow();
 
         mapsHeaderRow = addRow("mapsHeader");
@@ -239,11 +251,26 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                 ? addRow("pushServiceTypeUnifiedGateway", "PushServiceTypeUnifiedGateway") : -1;
         residentNotificationRow = pushServiceType == PUSH_SERVICE_IN_APP
                 ? addRow("pushServiceTypeInAppDialog", "PushServiceTypeInAppDialog") : -1;
-        notificationBubblesRow = addRow("disableNotificationBubbles");
-        pushStatusRow = addRow("pushStatus");
-        batteryOptimizationRow = addRow("batteryOptimization");
-        shizukuBoostRow = addRow("shizukuBoost");
+        notificationsMoreRow = addRow();
+        if (notificationsMoreExpanded) {
+            notificationBubblesRow = addRow("disableNotificationBubbles");
+            pushStatusRow = addRow("pushStatus");
+            batteryOptimizationRow = addRow("batteryOptimization");
+            shizukuBoostRow = addRow("shizukuBoost");
+        } else {
+            notificationBubblesRow = -1;
+            pushStatusRow = -1;
+            batteryOptimizationRow = -1;
+            shizukuBoostRow = -1;
+        }
         notificationsDividerRow = addRow();
+    }
+
+    @Override
+    protected java.util.List<CollapsibleGroup> collapsibleGroups() {
+        return java.util.Arrays.asList(
+                new CollapsibleGroup(() -> archiveMoreExpanded, expanded -> archiveMoreExpanded = expanded),
+                new CollapsibleGroup(() -> notificationsMoreExpanded, expanded -> notificationsMoreExpanded = expanded));
     }
 
     @Override
@@ -310,6 +337,20 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
 
     @Override
     protected void onItemClick(View view, int position, float x, float y) {
+        if (position == archiveMoreRow) {
+            archiveMoreExpanded = !archiveMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        }
+
+        if (position == notificationsMoreRow) {
+            notificationsMoreExpanded = !notificationsMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        }
+
         if (position == pushStatusRow) {
             showPushStatusDialog();
             return;
@@ -1267,6 +1308,13 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                     }
                     break;
                 }
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell =
+                            (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
+                    boolean expanded = position == archiveMoreRow ? archiveMoreExpanded : notificationsMoreExpanded;
+                    cell.set(getString(position == archiveMoreRow ? R.string.OEGeneralArchiveMore : R.string.OEGeneralNotificationsMore), expanded);
+                    break;
+                }
                 case TYPE_SLIDE: {
                     SlideChooseView slide = (SlideChooseView) holder.itemView;
                     slide.setCallback(index -> GeneralConfig.downloadSpeedBoost.setConfigInt(index));
@@ -1448,6 +1496,8 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                 return TYPE_INFO_PRIVACY;
             } else if (position == networkDividerRow) {
                 return TYPE_SHADOW;
+            } else if (position == archiveMoreRow || position == notificationsMoreRow) {
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == downloadSpeedRow) {
                 return TYPE_SLIDE;
             } else if (position == dnsTypeRow || position == customDoHRow

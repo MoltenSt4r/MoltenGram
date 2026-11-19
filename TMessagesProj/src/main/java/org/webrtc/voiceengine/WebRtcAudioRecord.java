@@ -340,7 +340,7 @@ public class WebRtcAudioRecord {
       try {
         audioRecord = new AudioRecord(audioSource, sampleRate, channelConfig,
                 AudioFormat.ENCODING_PCM_16BIT, bufferSizeInBytes);
-      } catch (IllegalArgumentException e) {
+      } catch (Throwable e) {
         reportWebRtcAudioRecordInitError("AudioRecord ctor error: " + e.getMessage());
         releaseAudioResources(false);
         return -1;
@@ -352,10 +352,18 @@ public class WebRtcAudioRecord {
       return -1;
     }
     if (captureType == 0 && effects != null) {
-      effects.enable(audioRecord.getAudioSessionId());
+      try {
+        effects.enable(audioRecord.getAudioSessionId());
+      } catch (Throwable e) {
+        FileLog.e(e);
+      }
     }
     logMainParameters();
-    logMainParametersExtended();
+    try {
+      logMainParametersExtended();
+    } catch (Throwable e) {
+      FileLog.e(e);
+    }
     return framesPerBuffer;
   }
 
@@ -427,7 +435,7 @@ public class WebRtcAudioRecord {
     assertTrue(audioThread == null);
     try {
       audioRecord.startRecording();
-    } catch (IllegalStateException e) {
+    } catch (Throwable e) {
       reportWebRtcAudioRecordStartError(AudioRecordStartErrorCode.AUDIO_RECORD_START_EXCEPTION, "AudioRecord.startRecording failed: " + e.getMessage());
       return false;
     }
@@ -469,10 +477,14 @@ public class WebRtcAudioRecord {
   }
 
   private void logMainParametersExtended() {
-    if (Build.VERSION.SDK_INT >= 23) {
-      Logging.d(TAG, "AudioRecord: "
-              // The frame count of the native AudioRecord buffer.
-              + "buffer size in frames: " + audioRecord.getBufferSizeInFrames());
+    if (Build.VERSION.SDK_INT >= 23 && audioRecord != null) {
+      try {
+        Logging.d(TAG, "AudioRecord: "
+                // The frame count of the native AudioRecord buffer.
+                + "buffer size in frames: " + audioRecord.getBufferSizeInFrames());
+      } catch (Throwable e) {
+        FileLog.e(e);
+      }
     }
   }
 

@@ -1,6 +1,6 @@
 name: Update F-Droid Repository
 
-# Auto-sync trigger for release v12.10.6
+# Auto-sync trigger for release v13.2.1
 on:
   workflow_run:
     workflows: ["Release Build"]
@@ -17,9 +17,9 @@ on:
   workflow_dispatch:
     inputs:
       tag:
-        description: 'Release tag to build F-Droid repo for (e.g. v12.10.6)'
+        description: 'Release tag to build F-Droid repo for (e.g. v13.2.1)'
         required: false
-        default: 'v12.10.6'
+        default: 'v13.2.1'
 
 permissions:
   contents: write
@@ -42,14 +42,14 @@ jobs:
       - name: Clean intermediate GitHub Release assets
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v12.10.6' }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v13.2.1' }}
         run: |
           python3 << 'EOF'
           import json, os, urllib.request
 
           repo = "${{ github.repository }}"
           token = os.environ.get("GITHUB_TOKEN", "")
-          tag = os.environ.get("TAG", "v12.10.6")
+          tag = os.environ.get("TAG", "v13.2.1")
 
           headers = {
               "Authorization": f"token {token}",
@@ -123,7 +123,7 @@ jobs:
       - name: Build F-Droid repository
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v12.10.6' }}
+          TAG: ${{ github.event.inputs.tag || github.event.release.tag_name || 'v13.2.1' }}
         run: |
           set -ex
 
@@ -151,6 +151,9 @@ jobs:
           repo_name: "MoltenGram F-Droid Repository"
           repo_description: "Official F-Droid repository for MoltenGram"
           archive_older: 0
+          nonstandardwebroot: true
+          mirrors:
+            - "https://github.com/MoltenSt4r/MoltenGram/releases/download/$TAG"
           keystore: keystore.p12
           keystorepass: android
           repo_keyalias: moltengram
@@ -167,7 +170,7 @@ jobs:
           python3 << 'PYEOF'
           import json, urllib.request, os
           repo = "${{ github.repository }}"
-          tag = os.environ.get("TAG", "v12.10.6")
+          tag = os.environ.get("TAG", "v13.2.1")
           url = f"https://api.github.com/repos/{repo}/releases/tags/{tag}"
           print(f"Fetching release info: {url}")
           headers = {"User-Agent": "fdroid-builder"}
@@ -210,6 +213,12 @@ jobs:
           mkdir -p deploy/fdroid
           cp -r fdroid_ws/repo deploy/fdroid/
           touch deploy/.nojekyll deploy/fdroid/.nojekyll
+
+          # GitHub enforces a 100 MB hard file size limit on git pushes.
+          # The release APK is ~107 MB, which caused 'Push to gh-pages' to fail with pre-receive hook declined.
+          # Remove files >= 95 MB from the git deploy directory so git push to gh-pages succeeds.
+          # F-Droid clients will download the APK directly from the GitHub Release mirror configured in config.yml.
+          find deploy/ -type f -size +95M -exec rm -v {} +
 
           cat > deploy/robots.txt << 'EOF'
           User-agent: *

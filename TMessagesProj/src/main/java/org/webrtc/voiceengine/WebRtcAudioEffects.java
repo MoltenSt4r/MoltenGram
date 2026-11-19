@@ -19,6 +19,7 @@ import androidx.annotation.Nullable;
 import java.util.List;
 import java.util.UUID;
 
+import org.telegram.messenger.FileLog;
 import org.telegram.messenger.SharedConfig;
 import org.webrtc.Logging;
 
@@ -223,35 +224,43 @@ public class WebRtcAudioEffects {
     if (isAcousticEchoCancelerSupported()) {
       // Create an AcousticEchoCanceler and attach it to the AudioRecord on
       // the specified audio session.
-      aec = AcousticEchoCanceler.create(audioSession);
-      if (aec != null) {
-        boolean enabled = aec.getEnabled();
-        boolean enable = shouldEnableAec && canUseAcousticEchoCanceler() && !SharedConfig.disableVoiceAudioEffects;
-        if (aec.setEnabled(enable) != AudioEffect.SUCCESS) {
-          Logging.e(TAG, "Failed to set the AcousticEchoCanceler state");
+      try {
+        aec = AcousticEchoCanceler.create(audioSession);
+        if (aec != null) {
+          boolean enabled = aec.getEnabled();
+          boolean enable = shouldEnableAec && canUseAcousticEchoCanceler() && !SharedConfig.disableVoiceAudioEffects;
+          if (aec.setEnabled(enable) != AudioEffect.SUCCESS) {
+            Logging.e(TAG, "Failed to set the AcousticEchoCanceler state");
+          }
+          Logging.d(TAG, "AcousticEchoCanceler: was " + (enabled ? "enabled" : "disabled")
+                  + ", enable: " + enable + ", is now: "
+                  + (aec.getEnabled() ? "enabled" : "disabled"));
+        } else {
+          Logging.e(TAG, "Failed to create the AcousticEchoCanceler instance");
         }
-        Logging.d(TAG, "AcousticEchoCanceler: was " + (enabled ? "enabled" : "disabled")
-                + ", enable: " + enable + ", is now: "
-                + (aec.getEnabled() ? "enabled" : "disabled"));
-      } else {
-        Logging.e(TAG, "Failed to create the AcousticEchoCanceler instance");
+      } catch (Throwable e) {
+        FileLog.e(e);
       }
     }
 
     if (isNoiseSuppressorSupported()) {
       // Create an NoiseSuppressor and attach it to the AudioRecord on the
       // specified audio session.
-      ns = NoiseSuppressor.create(audioSession);
-      if (ns != null) {
-        boolean enabled = ns.getEnabled();
-        boolean enable = shouldEnableNs && canUseNoiseSuppressor() && !SharedConfig.disableVoiceAudioEffects;
-        if (ns.setEnabled(enable) != AudioEffect.SUCCESS) {
-          Logging.e(TAG, "Failed to set the NoiseSuppressor state");
+      try {
+        ns = NoiseSuppressor.create(audioSession);
+        if (ns != null) {
+          boolean enabled = ns.getEnabled();
+          boolean enable = shouldEnableNs && canUseNoiseSuppressor() && !SharedConfig.disableVoiceAudioEffects;
+          if (ns.setEnabled(enable) != AudioEffect.SUCCESS) {
+            Logging.e(TAG, "Failed to set the NoiseSuppressor state");
+          }
+          Logging.d(TAG, "NoiseSuppressor: was " + (enabled ? "enabled" : "disabled") + ", enable: "
+                  + enable + ", is now: " + (ns.getEnabled() ? "enabled" : "disabled"));
+        } else {
+          Logging.e(TAG, "Failed to create the NoiseSuppressor instance");
         }
-        Logging.d(TAG, "NoiseSuppressor: was " + (enabled ? "enabled" : "disabled") + ", enable: "
-                + enable + ", is now: " + (ns.getEnabled() ? "enabled" : "disabled"));
-      } else {
-        Logging.e(TAG, "Failed to create the NoiseSuppressor instance");
+      } catch (Throwable e) {
+        FileLog.e(e);
       }
     }
   }

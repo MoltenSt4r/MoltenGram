@@ -172,7 +172,7 @@ public class OpenExteraGlyphActivity extends BaseNekoSettingsActivity {
 
     @Override
     public int getSearchGuid() {
-        return 25000;
+        return 29000;
     }
 
     @Override

@@ -339,14 +339,7 @@ public class AndroidUtil {
     };
 
     public static boolean shouldReportCrashToCrashlytics(Throwable error) {
-        Throwable current = error;
-        for (int depth = 0; current != null && depth < 32; depth++) {
-            if (current instanceof OutOfMemoryError) {
-                return false;
-            }
-            current = current.getCause();
-        }
-        return true;
+        return false;
     }
 
     public static boolean hasHookFrames(Throwable error) {

@@ -190,7 +190,12 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int voiceChangerRow;
     private int keepAttachButtonRow;
     private int textAnimationRow;
+    private int chatsMoreRow;
     private int chatsDividerRow;
+
+    private int messagesMoreRow;
+    private boolean chatsMoreExpanded;
+    private boolean messagesMoreExpanded;
 
     // Messages
     private int messagesHeaderRow;
@@ -420,26 +425,35 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else {
             quickTransitionChannelsRow = quickTransitionTopicsRow = -1;
         }
-        disableGreetingRow = addRow("disableGreeting");
-        deleteChatForBothSidesRow = addRow("deleteChatForBothSides", "DeleteChatForBothSides");
-        hideKeyboardOnScrollRow = addRow("hideKeyboardOnScroll");
-        disableGlobalSearchRow = addRow("disableGlobalSearch");
-        addCommaRow = addRow("addCommaAfterMention");
-        disableMarkdownRow = addRow("disableMarkdown");
-        pluginCommandSuggestionsRow = addRow("pluginCommandSuggestions");
-        pluginCommandPrefixesRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("pluginCommandPrefixes") : -1;
-        customCommandsRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("customCommands") : -1;
+        voiceChangerRow = addRow("voiceChanger");
+        textAnimationRow = addRow("textAnimation");
+        coloredTextRow = addRow("coloredText");
+        botProfileSyncRow = addRow("botProfileSync");
         customEmojiStatusRow = addRow("customEmojiStatus");
         freeProfileAppearanceRow = addRow("freeProfileAppearance");
-        botProfileSyncRow = addRow("botProfileSync");
-        coloredTextRow = addRow("coloredText");
-        inlineMathRow = addRow("inlineMathResult");
-        inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
-        hideSendAsPeerRow = addRow("hideSendAsPeer");
-        tapToSwitchRecordRow = addRow("tapToSwitchRecord", "UseChatAttachEnterMenu");
-        voiceChangerRow = addRow("voiceChanger");
-        keepAttachButtonRow = addRow("keepAttachButton");
-        textAnimationRow = addRow("textAnimation");
+        chatsMoreRow = addRow();
+        if (chatsMoreExpanded) {
+            disableGreetingRow = addRow("disableGreeting");
+            deleteChatForBothSidesRow = addRow("deleteChatForBothSides", "DeleteChatForBothSides");
+            hideKeyboardOnScrollRow = addRow("hideKeyboardOnScroll");
+            disableGlobalSearchRow = addRow("disableGlobalSearch");
+            addCommaRow = addRow("addCommaAfterMention");
+            disableMarkdownRow = addRow("disableMarkdown");
+            pluginCommandSuggestionsRow = addRow("pluginCommandSuggestions");
+            pluginCommandPrefixesRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("pluginCommandPrefixes") : -1;
+            customCommandsRow = OpenExteraConfig.pluginCommandSuggestions.Bool() ? addRow("customCommands") : -1;
+            inlineMathRow = addRow("inlineMathResult");
+            inlineMathCurrencyRow = ChatsConfig.inlineMathResult.Bool() ? addRow("inlineMathCurrency") : -1;
+            hideSendAsPeerRow = addRow("hideSendAsPeer");
+            tapToSwitchRecordRow = addRow("tapToSwitchRecord", "UseChatAttachEnterMenu");
+            keepAttachButtonRow = addRow("keepAttachButton");
+        } else {
+            disableGreetingRow = deleteChatForBothSidesRow = hideKeyboardOnScrollRow = -1;
+            disableGlobalSearchRow = addCommaRow = disableMarkdownRow = -1;
+            pluginCommandSuggestionsRow = pluginCommandPrefixesRow = customCommandsRow = -1;
+            inlineMathRow = inlineMathCurrencyRow = hideSendAsPeerRow = -1;
+            tapToSwitchRecordRow = keepAttachButtonRow = -1;
+        }
         chatsDividerRow = addRow();
 
         messagesHeaderRow = addRow("messagesHeader");
@@ -447,13 +461,20 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         md3ChatInputRow = -1;
         incomingMessageAnimationRow = addRow("incomingMessageAnimation");
         outgoingMessageAnimationRow = addRow("outgoingMessageAnimation");
-        replaceEditedRow = addRow("replaceEdited");
-        showOnlineStatusRow = addRow("showOnlineStatus");
-        hideShareButtonRow = addRow("hideShareButton");
-        hideGiftButtonRow = addRow("hideGiftButton");
-        hideSearchButtonRow = addRow("hideSearchButton");
-        showResultsBeforeVotingRow = addRow("showResultsBeforeVoting");
-        dateOfForwardedMsgRow = addRow("dateOfForwardedMsg", "DateOfForwardedMsg");
+        messagesMoreRow = addRow();
+        if (messagesMoreExpanded) {
+            replaceEditedRow = addRow("replaceEdited");
+            showOnlineStatusRow = addRow("showOnlineStatus");
+            hideShareButtonRow = addRow("hideShareButton");
+            hideGiftButtonRow = addRow("hideGiftButton");
+            hideSearchButtonRow = addRow("hideSearchButton");
+            showResultsBeforeVotingRow = addRow("showResultsBeforeVoting");
+            dateOfForwardedMsgRow = addRow("dateOfForwardedMsg", "DateOfForwardedMsg");
+        } else {
+            replaceEditedRow = showOnlineStatusRow = hideShareButtonRow = -1;
+            hideGiftButtonRow = hideSearchButtonRow = showResultsBeforeVotingRow = -1;
+            dateOfForwardedMsgRow = -1;
+        }
         chatMenuGroupRow = addRow("chatMenu");
         if (chatMenuExpanded) {
             chatMenuAdminsRow = addRow();
@@ -1459,7 +1480,23 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    protected java.util.List<CollapsibleGroup> collapsibleGroups() {
+        return java.util.Arrays.asList(
+                new CollapsibleGroup(() -> chatsMoreExpanded, expanded -> chatsMoreExpanded = expanded),
+                new CollapsibleGroup(() -> messagesMoreExpanded, expanded -> messagesMoreExpanded = expanded));
+    }
+
+    @Override
     protected void onItemClick(View view, int position, float x, float y) {
+        if (position == chatsMoreRow) {
+            chatsMoreExpanded = !chatsMoreExpanded;
+            reloadList();
+            return;
+        } else if (position == messagesMoreRow) {
+            messagesMoreExpanded = !messagesMoreExpanded;
+            reloadList();
+            return;
+        }
         // Клик по телу строки-группы только сворачивает её; мастер-переключатель живёт
         // в правой зоне TextCheckCell2 за разделителем.
         if (position == repliesGroupRow) {
@@ -2264,7 +2301,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                     || type == TYPE_WIDE_CHANNEL_PREVIEW) {
                 return false;
             }
-            if (type == TYPE_SET_REACTION || type == TYPE_EXPANDABLE_SWITCH || type == TYPE_ROUND_CHECK) {
+            if (type == TYPE_SET_REACTION || type == TYPE_EXPANDABLE_SWITCH
+                    || type == TYPE_ROUND_CHECK || type == TYPE_COLLAPSIBLE_HEADER) {
                 return true;
             }
             return super.isEnabled(holder);
@@ -2277,7 +2315,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         @Override
         protected boolean isSectionContent(int viewType) {
             if (viewType == TYPE_EXPANDABLE_SWITCH || viewType == TYPE_ROUND_CHECK
-                    || viewType == TYPE_WIDE_CHANNEL_PREVIEW) {
+                    || viewType == TYPE_WIDE_CHANNEL_PREVIEW || viewType == TYPE_COLLAPSIBLE_HEADER) {
                 return true;
             }
             return super.isSectionContent(viewType);
@@ -2286,6 +2324,12 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    boolean expanded = position == chatsMoreRow ? chatsMoreExpanded : messagesMoreExpanded;
+                    ((tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView).set(
+                            getString(position == chatsMoreRow ? R.string.OEChatsChatsMore : R.string.OEChatsMessagesMore), expanded);
+                    break;
+                }
                 case TYPE_SET_REACTION:
                     ((DoubleTapCell.SetReactionCell) holder.itemView).update(false);
                     break;
@@ -2890,6 +2934,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == doubleTapRow) return TYPE_DOUBLE_TAP;
             if (position == wideChannelPostsPreviewRow) return TYPE_WIDE_CHANNEL_PREVIEW;
             if (position == doubleTapReactionRow) return TYPE_SET_REACTION;
+            if (position == chatsMoreRow || position == messagesMoreRow) return TYPE_COLLAPSIBLE_HEADER;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
             if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;

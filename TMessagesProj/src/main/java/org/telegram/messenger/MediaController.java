@@ -1261,7 +1261,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 int len = audioRecorder.read(buffer, buffer.capacity());
                 if (len > 0) {
                     buffer.limit(len);
-                    app.exteraless.voice.VoiceChangerController.getInstance().process(buffer, len);
+                    app.exteraless.voice.VoiceChangerController.getInstance().process(buffer, len, sampleRate);
                     double sum = 0;
                     try {
                         long newSamplesCount = samplesCount + len / 2;
@@ -2050,6 +2050,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.fileLoaded || id == NotificationCenter.httpFileDidLoad) {
             String fileName = (String) args[0];
+            if (playingMessageObject != null && playingMessageObject.isMusic()) {
+                app.exteraless.player.PlayerArt.preloadPlaylistAhead(playingMessageObject);
+            }
             if (playingMessageObject != null && playingMessageObject.currentAccount == account) {
                 String file = FileLoader.getAttachFileName(playingMessageObject.getDocument());
                 if (file.equals(fileName)) {
@@ -3951,6 +3954,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         }
         isSilent = silent;
         checkVolumeBarUI();
+        if (messageObject.isMusic()) {
+            app.exteraless.player.PlayerArt.preloadPlaylistAhead(messageObject);
+        }
         if ((audioPlayer != null || videoPlayer != null) && isSamePlayingMessage(messageObject)) {
             if (isPaused) {
                 resumeAudio(messageObject);
@@ -4865,6 +4871,9 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     }
 
     public static boolean shouldUseAudioRecorderV2(int account) {
+        if (app.exteraless.voice.VoiceChangerController.getInstance().isEnabled()) {
+            return false;
+        }
         return SharedSettings.audioRecorderV2Enabled.isSet() ?
             SharedSettings.audioRecorderV2Enabled.get() :
             !MessagesController.getInstance(account).config.audioRecorderV2Disabled.get();

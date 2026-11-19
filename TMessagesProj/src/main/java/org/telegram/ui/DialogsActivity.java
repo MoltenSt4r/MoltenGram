@@ -3049,7 +3049,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         }
 
         BirthdayController.getInstance(currentAccount).check();
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         LastSeenHelper.preload();
@@ -3341,7 +3341,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         filterTabsView = null;
         selectedDialogs.clear();
 
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         maximumVelocity = ViewConfiguration.get(context).getScaledMaximumFlingVelocity();
@@ -3938,17 +3938,59 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                         }
                     }
 
+                    final boolean md3ChipMode = app.exteraless.appearance.Md3ChipTabHelper.isEnabled();
+                    final int chipPos = md3ChipMode ? Math.max(0, filterTabsView.getTabsContainer().getChildAdapterPosition(tabView)) : 0;
+                    final int chipCount = md3ChipMode ? Math.max(1, filterTabsView.getTabsCount()) : 1;
+                    final float[] chipRadii = md3ChipMode
+                            ? app.exteraless.appearance.Md3ChipTabHelper.getCornerRadii(selected, chipPos, chipCount)
+                            : null;
+                    final int chipGapH = md3ChipMode ? app.exteraless.appearance.Md3ChipTabHelper.getSpacingHalfPx() : 0;
                     filterOptions = ItemOptions.makeOptions(DialogsActivity.this, tabView)
                             .setScrimViewBackground(new Drawable() {
                                 private Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG);
                                 private RectF bound = new RectF();
+                                private final GradientDrawable chipDrawable = md3ChipMode ? new GradientDrawable() : null;
+                                private final GradientDrawable baseDrawable = md3ChipMode ? new GradientDrawable() : null;
+                                private final float[] chipRadiiScratch = md3ChipMode ? new float[8] : null;
+                                private float scrimAlpha = 1f;
 
                                 {
                                     paint.setColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                                    if (md3ChipMode && baseDrawable != null && chipDrawable != null && chipRadii != null) {
+                                        baseDrawable.setCornerRadii(chipRadii);
+                                        baseDrawable.setColor(getThemedColor(Theme.key_actionBarDefaultSubmenuBackground));
+                                        if (selected) {
+                                            int activeThemeColor = getThemedColor(Theme.key_actionBarTabActiveText);
+                                            app.exteraless.appearance.Md3ChipTabHelper.configureSelectorDrawable(chipDrawable, activeThemeColor, chipRadii);
+                                        }
+                                    }
                                 }
 
                                 @Override
                                 public void draw(@NonNull Canvas canvas) {
+                                    if (md3ChipMode && chipDrawable != null && baseDrawable != null && chipRadii != null && chipRadiiScratch != null) {
+                                        android.graphics.Rect b = getBounds();
+                                        int innerH = Math.max(1, b.height());
+                                        int vInset = innerH >= dp(40) ? dp(4) : dp(2);
+                                        int left = b.left + chipGapH;
+                                        int top = b.top + vInset;
+                                        int right = Math.max(left, b.right - chipGapH);
+                                        int bottom = Math.max(top, b.bottom - vInset);
+                                        baseDrawable.setBounds(left, top, right, bottom);
+                                        baseDrawable.draw(canvas);
+                                        if (selected) {
+                                            chipDrawable.setBounds(left, top, right, bottom);
+                                            chipDrawable.draw(canvas);
+                                        } else {
+                                            int unactiveThemeColor = getThemedColor(Theme.key_actionBarTabUnactiveText);
+                                            app.exteraless.appearance.Md3ChipTabHelper.drawInactiveChip(
+                                                    canvas, chipDrawable,
+                                                    left, top, right, bottom,
+                                                    chipPos, chipCount, unactiveThemeColor, scrimAlpha, chipRadiiScratch
+                                            );
+                                        }
+                                        return;
+                                    }
                                     bound.set(getBounds());
                                     float insetY = (bound.height() - dp(28)) / 2f;
                                     bound.inset(0, insetY);
@@ -3957,7 +3999,14 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
                                 @Override
                                 public void setAlpha(int alpha) {
+                                    scrimAlpha = alpha / 255f;
                                     paint.setAlpha(alpha);
+                                    if (baseDrawable != null) {
+                                        baseDrawable.setAlpha(alpha);
+                                    }
+                                    if (chipDrawable != null) {
+                                        chipDrawable.setAlpha(alpha);
+                                    }
                                 }
 
                                 @Override
@@ -7559,7 +7608,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
 
             @Override
             public boolean bottomOffsetAnimated() {
-                return !MainTabsLayout.isBottomNavigationFloating();
+                return !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive();
             }
 
             @Override
@@ -7758,7 +7807,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 showArchiveHelp();
             }
         }
-        if (canShowStoryHint && !storyHintShown && storyHint != null && storiesEnabled) {
+        if (canShowStoryHint && !storyHintShown && storyHint != null && storiesEnabled && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
             storyHintShown = true;
             canShowStoryHint = false;
             storyHint.show();
@@ -9274,7 +9323,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             floatingButton3.setButtonVisible(isVisible, animated);
         }
         if (floatingButtonStories != null) {
-            floatingButtonStories.setButtonVisible(isVisible && !NaConfig.INSTANCE.getDisableStories().Bool(), animated);
+            floatingButtonStories.setButtonVisible(
+                    isVisible && !NaConfig.INSTANCE.getDisableStories().Bool() && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar(),
+                    animated);
         }
     }
 
@@ -9350,7 +9401,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final boolean storiesEnabled = getMessagesController().storiesEnabled();
         if (this.storiesEnabled != storiesEnabled) {
             updateFloatingButtonOffset();
-            if (!this.storiesEnabled && storiesEnabled && storyHint != null) {
+            if (!this.storiesEnabled && storiesEnabled && storyHint != null && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
                 storyHint.show();
             }
             this.storiesEnabled = storiesEnabled;
@@ -12665,7 +12716,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 arrayList.add(new ThemeDescription(filterTabsView, 0, new Class[]{FilterTabsView.class}, new String[]{"selectorDrawable"}, null, null, null, Theme.key_actionBarTabLine));
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_actionBarTabActiveText));
                 arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_TEXTCOLOR | ThemeDescription.FLAG_CHECKTAG, new Class[]{FilterTabsView.TabView.class}, null, null, null, Theme.key_actionBarTabUnactiveText));
-                arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_actionBarTabSelector));
+                if (!app.exteraless.appearance.Md3ChipTabHelper.isEnabled()) {
+                    arrayList.add(new ThemeDescription(filterTabsView.getTabsContainer(), ThemeDescription.FLAG_SELECTOR, null, null, null, null, Theme.key_actionBarTabSelector));
+                }
             }
         }
         arrayList.addAll(SimpleThemeDescription.createThemeDescriptions(() -> {
@@ -14714,7 +14767,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         final boolean liquidHeaders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassMainHeader && !app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
         final boolean liquidFolders = liquidActive && app.exteraless.glass.LiquidGlassConfig.glassFolders;
 
-        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        additionNavigationBarHeight = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() && !MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
         additionFloatingButtonOffset = hasMainTabs && MainTabsLayout.isBottomNavigationVisible() ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp()) : 0;
 
         iBlur3FactoryLiquidGlass.setOutset(liquidActive ? dp(8) : dp(48));
@@ -14845,7 +14898,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
             }
             if (glassFabActive) {
                 poolIdx = appendExpandedViewCaptureRect(floatingButton3, dp(16), poolIdx, dynamicMaxBottom);
-                if (!speedDialOpen) {
+                if (!speedDialOpen && !app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
                     appendExpandedViewCaptureRect(floatingButtonStories, dp(16), poolIdx, dynamicMaxBottom);
                 }
             }
@@ -14866,7 +14919,7 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private int getListViewFloatingTabsPadding() {
-        if (commentView != null || !hasMainTabs || !MainTabsLayout.isBottomNavigationFloating()) {
+        if (commentView != null || !hasMainTabs || (!MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive())) {
             return 0;
         }
         return dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp());

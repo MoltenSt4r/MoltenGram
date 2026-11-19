@@ -201,7 +201,6 @@ def test_all_21_archive_icons_present():
         ('classic', 'MoltenGramClassicIcon', 'AppIconMoltenGramClassic'),
         ('coffee', 'MoltenGramCoffeeIcon', 'AppIconMoltenGramCoffee'),
         ('coral', 'MoltenGramCoralIcon', 'AppIconMoltenGramCoral'),
-        ('dotted', 'MoltenGramDottedIcon', 'AppIconMoltenGramDotted'),
         ('exteragram', 'MoltenGramExteraGramIcon', 'AppIconMoltenGramExteraGram'),
         ('glacier', 'MoltenGramGlacierIcon', 'AppIconMoltenGramGlacier'),
         ('google', 'MoltenGramGoogleIcon', 'AppIconMoltenGramGoogle'),

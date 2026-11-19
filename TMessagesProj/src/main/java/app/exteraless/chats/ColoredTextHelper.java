@@ -38,9 +38,6 @@ public class ColoredTextHelper {
     }
 
     public static void applyColorSpan(Spannable spannable, String url, int offset) {
-        if (!app.exteraless.OpenExteraConfig.coloredText()) {
-            return;
-        }
         if (spannable == null || url == null) {
             return;
         }

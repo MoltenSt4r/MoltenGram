@@ -85,6 +85,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     /** Слайдер толщины обводки и бликов стеклянных сообщений */
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
     private static final int TYPE_SLIDER_THICKNESS = 110;
+    private static final int TYPE_SWITCH_SIZE = 111;
     private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
@@ -138,6 +139,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3SliderThicknessRow;
     private int md3SwitchRow;
     private int md3SwitchExpressiveColorsRow;
+    private int navBarStyleRow;
+    private int md3SwitchSizeRow;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
@@ -273,6 +276,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // Переключатели
         md3SwitchRow = addRow("md3Switch");
         md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
+        navBarStyleRow = addRow("navBarStyle");
+        md3SwitchSizeRow = addRow("md3SwitchSize");
         // Регуляция толщины слайдеров снаружи
         md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
 
@@ -815,6 +820,43 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     }
                 } else if (parentLayout != null) {
                     parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+                }
+            });
+            showDialog(builder.create());
+            return;
+        } else if (position == navBarStyleRow) {
+            AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+            builder.setTitle(getString(R.string.OEAppearanceNewNavigationBarStyle));
+            CharSequence[] options = {
+                    getString(R.string.Default),
+                    "Material 3",
+                    "M3 Expressive"
+            };
+            builder.setItems(options, (dialog, which) -> {
+                if (which == 2) {
+                    MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_EXPRESSIVE);
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
+                    AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
+                } else if (which == 1) {
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(true);
+                    AppearanceConfig.iosNavigationBarStyle.setConfigBool(false);
+                    if (MainTabsLayout.isBottomNavigationHidden()) {
+                        MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
+                    } else {
+                        leaveFloatingBottomNavigation();
+                    }
+                } else {
+                    AppearanceConfig.newNavigationBarStyle.setConfigBool(false);
+                    if (MainTabsLayout.isBottomNavigationHidden()) {
+                        MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
+                    } else {
+                        leaveFloatingBottomNavigation();
+                    }
+                }
+                rebuildAll();
+                rebuildRowsAndNotify();
+                if (parentLayout != null) {
+                    parentLayout.rebuildAllFragmentViews(false, false);
                 }
             });
             showDialog(builder.create());
@@ -1400,6 +1442,28 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     sliderThickness.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = sliderThickness;
                     break;
+                case TYPE_SWITCH_SIZE:
+                    AvatarCornersSeekBar sliderSwitchSize = new AvatarCornersSeekBar(mContext,
+                            val -> {
+                                AppearanceConfig.switchSize.setConfigInt(val);
+                                if (listView != null) {
+                                    for (int i = 0; i < listView.getChildCount(); i++) {
+                                        invalidateSwitchesRecursive(listView.getChildAt(i));
+                                    }
+                                }
+                                if (parentLayout != null) {
+                                    parentLayout.rebuildAllFragmentViews(false, false);
+                                }
+                            },
+                            70, 130,
+                            getString(R.string.OEAppearanceSwitchSize),
+                            "70%",
+                            "130%");
+                    sliderSwitchSize.setValueSuffix("%");
+                    sliderSwitchSize.setValue(AppearanceConfig.switchSize());
+                    sliderSwitchSize.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = sliderSwitchSize;
+                    break;
                 default:
                     return super.onCreateViewHolder(parent, viewType);
             }
@@ -1625,6 +1689,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         int cur = NaConfig.INSTANCE.getSwitchStyle().Int();
                         String name = cur == Switch.SWITCH_STYLE_EXPRESSIVE ? "Expressive (M3)" : (cur == Switch.SWITCH_STYLE_MD3 ? "Material 3" : getString(R.string.Default));
                         cell.setTextAndValue(getString(R.string.OEAppearanceSwitchStyle), name, true);
+                    } else if (position == navBarStyleRow) {
+                        String name = MainTabsLayout.isBottomNavigationExpressive()
+                                ? "M3 Expressive"
+                                : (AppearanceConfig.newNavigationBarStyle.Bool() ? "Material 3" : getString(R.string.Default));
+                        cell.setTextAndValue(getString(R.string.OEAppearanceNewNavigationBarStyle), name, true);
                     } else if (position == md3QrTopRightShapeRow) {
                         LocaleController.LocaleInfo locale = LocaleController.getInstance().getCurrentLocaleInfo();
                         boolean isRu = locale != null && locale.shortName != null && locale.shortName.toLowerCase().startsWith("ru");
@@ -1697,6 +1766,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 case TYPE_SLIDER_THICKNESS: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
                     slider.setValue(AppearanceConfig.sliderThickness());
+                    break;
+                }
+                case TYPE_SWITCH_SIZE: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.switchSize());
                     break;
                 }
                 case TYPE_DETAIL_SETTINGS: {
@@ -1785,6 +1859,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_GLASS_STROKE_SLIDER;
             } else if (position == md3SliderThicknessRow) {
                 return TYPE_SLIDER_THICKNESS;
+            } else if (position == md3SwitchSizeRow) {
+                return TYPE_SWITCH_SIZE;
             } else if (position == appearanceHeaderRow || position == sectionsHeaderRow
                     || position == blurHeaderRow || position == chatListHeaderRow
                     || position == foldersHeaderRow || position == linksHeaderRow
@@ -1822,7 +1898,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
                     || position == chipFoldersRow || position == md3AvatarShapesRow
-                    || position == md3SwitchRow || position == md3QrShapeRow
+                    || position == md3SwitchRow || position == navBarStyleRow || position == md3QrShapeRow
                     || position == md3QrPixelShapeRow
                     || position == md3QrColorSourceRow
                     || position == md3QrTopRightShapeRow
@@ -1977,7 +2053,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     }
 
     private static void leaveFloatingBottomNavigation() {
-        if (MainTabsLayout.isBottomNavigationFloating()) {
+        if (MainTabsLayout.isBottomNavigationFloating() || MainTabsLayout.isBottomNavigationExpressive()) {
             MainTabsLayout.setBottomNavigationMode(MainTabsLayout.BOTTOM_NAVIGATION_MODE_SHOW);
         }
     }
@@ -2033,6 +2109,21 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         rebuildRowsAndNotify();
         if (parentLayout != null) {
             parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+        }
+    }
+
+    private static void invalidateSwitchesRecursive(View view) {
+        if (view instanceof org.telegram.ui.Components.Switch) {
+            view.requestLayout();
+            view.invalidate();
+            return;
+        }
+        view.invalidate();
+        if (view instanceof ViewGroup) {
+            ViewGroup group = (ViewGroup) view;
+            for (int i = 0; i < group.getChildCount(); i++) {
+                invalidateSwitchesRecursive(group.getChildAt(i));
+            }
         }
     }
 

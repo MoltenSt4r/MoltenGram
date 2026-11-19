@@ -206,7 +206,7 @@ public final class LiquidControls {
                 shader.setFloatUniform("dispersion", 0.32f * ls);
                 shader.setFloatUniform("light", 0.68f + 0.28f * a);
             }
-            final float body = (sliderLens ? 0.10f : 0.14f) * (1f - 0.55f * a); // subtle frosted crystal body tint, premultiplied
+            final float body = (sliderLens ? 0.10f : 0.04f) * (1f - 0.55f * a); // subtle frosted crystal body tint, premultiplied
             shader.setFloatUniform("tint", body, body, body, body);
             node.setRenderEffect(RenderEffect.createRuntimeShaderEffect(shader, "img"));
             canvas.drawRenderNode(node);
@@ -284,9 +284,9 @@ public final class LiquidControls {
             }
         }
 
-        // lens: real liquid glass lens even at rest, magnifying & clearing further while pressed/moving
+        // lens: resting switch thumb is a white pill; while pressed or moving it becomes a clear liquid glass lens
         boolean shaderLens = false;
-        if (lens != null) {
+        if (lens != null && (sliderLens || a > 0.01f)) {
             shaderLens = glass != null && glass.draw(canvas, viewWidth, viewHeight, cx, cy, width, height, a, lens);
             if (!shaderLens) {
                 canvas.save();
@@ -301,8 +301,14 @@ public final class LiquidControls {
             rect.set(cx - width / 2f, cy - height / 2f, cx + width / 2f, cy + height / 2f);
         }
 
-        // translucent frosted sheen (subtle crystal milk at rest, ultra-clear glass while active)
-        final int coatAlpha = (int) (255 * ((sliderLens ? 0.16f : 0.22f) * (1f - 0.70f * a)));
+        // switch at rest is opaque white; when active it turns into clear glass (0.06f coat)
+        final int coatAlpha;
+        if (sliderLens) {
+            coatAlpha = (int) (255 * (0.16f * (1f - 0.70f * a)));
+        } else {
+            final float rest = 1f - a;
+            coatAlpha = (int) (255 * (0.06f + 0.94f * rest * rest));
+        }
         fillPaint.setColor((coatAlpha << 24) | 0xFFFFFF);
         canvas.drawRoundRect(rect, r, r, fillPaint);
 

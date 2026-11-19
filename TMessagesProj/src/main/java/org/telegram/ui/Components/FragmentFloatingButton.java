@@ -205,7 +205,11 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         if (isSubButton) {
             return app.exteraless.appearance.AppearanceConfig.subFabShape();
         }
-        return currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        final int id = currentShapeId >= 0 ? currentShapeId : app.exteraless.appearance.AppearanceConfig.fabShape();
+        if (id == 0 && !isMorphedToActive && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
+            return 1; // MD3 Expressive rounded square FAB next to floating toolbar
+        }
+        return id;
     }
 
     private void configureFabGlassDrawable(int w, int h) {

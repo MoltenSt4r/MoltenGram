@@ -4,11 +4,15 @@ import app.exteraless.OpenExteraConfig
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.DialogObject
 import org.telegram.messenger.FileLog
+import org.telegram.messenger.LocaleController
 import org.telegram.messenger.MessagesController
 import org.telegram.messenger.NotificationCenter
+import org.telegram.messenger.R
 import org.telegram.messenger.UserConfig
 import org.telegram.tgnet.TLRPC
 import org.telegram.ui.Components.AnimatedEmojiDrawable
+import org.telegram.ui.Components.BulletinFactory
+import org.telegram.ui.LaunchActivity
 import java.util.concurrent.ConcurrentHashMap
 
 /**
@@ -277,7 +281,50 @@ object CustomEmojiStatusHelper {
         user.flags2 = user.flags2 or 1
         MessagesController.getInstance(account).putUser(user, true)
 
-        ProfileInvisibleMetadata.updateSelfEmojiStatus(account, documentId, isCollectible, callback)
+        val needsBotSetup = !OpenExteraConfig.botProfileSync.Bool() ||
+            BotMetadataSyncHelper.getSavedSelfBotSeed(user.id) == null
+        if (!needsBotSetup) {
+            ProfileInvisibleMetadata.updateSelfEmojiStatus(account, documentId, isCollectible, callback)
+            return
+        }
+
+        AndroidUtilities.runOnUIThread {
+            val fragment = LaunchActivity.getLastFragment()
+            if (fragment != null && BulletinFactory.canShowBulletin(fragment)) {
+                BulletinFactory.of(fragment)
+                    .createSimpleBulletin(R.raw.info, LocaleController.getString(R.string.OEBotProfileSyncProgress))
+                    .show()
+            }
+        }
+
+        BotMetadataSyncHelper.ensureBotReady(account, allowInteractiveBotFather = true) { result ->
+            if (result.success) {
+                OpenExteraConfig.botProfileSync.setConfigBool(true)
+                val latestDocId = statusCache[user.id] ?: documentId
+                val latestCollectible = collectibleCache[user.id] ?: isCollectible
+                ProfileInvisibleMetadata.updateSelfEmojiStatus(account, latestDocId, latestCollectible, callback)
+                val fragment = LaunchActivity.getLastFragment()
+                if (fragment != null && BulletinFactory.canShowBulletin(fragment) && result.botUsername.isNotEmpty()) {
+                    BulletinFactory.of(fragment)
+                        .createSimpleBulletin(
+                            R.raw.done,
+                            LocaleController.formatString(R.string.OEBotProfileSyncSuccess, result.botUsername)
+                        )
+                        .show()
+                }
+            } else {
+                if (result.errorType != BotMetadataSyncHelper.ErrorType.ALREADY_IN_PROGRESS) {
+                    val fragment = LaunchActivity.getLastFragment()
+                    val msg = result.formatUserMessage()
+                    if (fragment != null && BulletinFactory.canShowBulletin(fragment) && msg.isNotEmpty()) {
+                        BulletinFactory.of(fragment).createErrorBulletin(msg).show()
+                    }
+                    ProfileInvisibleMetadata.updateSelfEmojiStatus(account, documentId, isCollectible) {
+                        callback?.invoke(false)
+                    }
+                }
+            }
+        }
     }
 
     @JvmStatic

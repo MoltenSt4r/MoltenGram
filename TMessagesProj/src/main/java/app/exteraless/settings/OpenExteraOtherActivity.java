@@ -10,6 +10,7 @@ import android.net.Uri;
 import android.os.Build;
 import android.os.CountDownTimer;
 import android.view.View;
+import android.view.ViewGroup;
 import android.widget.TextView;
 
 import androidx.recyclerview.widget.RecyclerView;
@@ -76,6 +77,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     private int voiceEnhancementsRow;
     private int enhancedVideoBitrateRow;
     private int sensitiveContentRow;
+    private int experimentalMoreRow;
+    private boolean experimentalMoreExpanded;
     private int experimentalDividerRow;
     private boolean sensitiveEnabled;
     private boolean sensitiveCanChange;
@@ -127,9 +130,16 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
         experimentalHeaderRow = addRow("experimentalHeader");
         localPremiumRow = addRow("localPremium");
         unlimitedPinnedDialogsRow = addRow("unlimitedPinnedDialogs", "UnlimitedPinnedDialogs");
-        voiceEnhancementsRow = addRow("noiseSuppressAndVoiceEnhance", "NoiseSuppressAndVoiceEnhance");
-        enhancedVideoBitrateRow = addRow("enhancedVideoBitrate", "EnhancedVideoBitrate");
-        sensitiveContentRow = addRow("sensitiveDisableFiltering", "SensitiveDisableFiltering");
+        experimentalMoreRow = addRow();
+        if (experimentalMoreExpanded) {
+            voiceEnhancementsRow = addRow("noiseSuppressAndVoiceEnhance", "NoiseSuppressAndVoiceEnhance");
+            enhancedVideoBitrateRow = addRow("enhancedVideoBitrate", "EnhancedVideoBitrate");
+            sensitiveContentRow = addRow("sensitiveDisableFiltering", "SensitiveDisableFiltering");
+        } else {
+            voiceEnhancementsRow = -1;
+            enhancedVideoBitrateRow = -1;
+            sensitiveContentRow = -1;
+        }
         experimentalDividerRow = addRow();
 
         exportEtgRow = addRow("exportEtgSettings");
@@ -180,7 +190,19 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
     }
 
     @Override
+    protected java.util.List<CollapsibleGroup> collapsibleGroups() {
+        return java.util.Collections.singletonList(
+                new CollapsibleGroup(() -> experimentalMoreExpanded, expanded -> experimentalMoreExpanded = expanded));
+    }
+
+    @Override
     protected void onItemClick(View view, int position, float x, float y) {
+        if (position == experimentalMoreRow) {
+            experimentalMoreExpanded = !experimentalMoreExpanded;
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
+            return;
+        }
         if (position == updatesRow) {
             presentFragment(new OpenExteraUpdatesActivity());
         } else if (position == localPremiumRow) {
@@ -465,8 +487,19 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
         }
 
         @Override
+        public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
+            return super.onCreateViewHolder(parent, viewType);
+        }
+
+        @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position, boolean partial) {
             switch (holder.getItemViewType()) {
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell =
+                            (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
+                    cell.set(getString(R.string.OEOtherExperimentalMore), experimentalMoreExpanded);
+                    break;
+                }
                 case TYPE_HEADER: {
                     HeaderCell cell = (HeaderCell) holder.itemView;
                     if (position == updatesHeaderRow) {
@@ -553,6 +586,8 @@ public class OpenExteraOtherActivity extends BaseNekoSettingsActivity {
             } else if (position == glyphDividerRow
                     || position == bottomDividerRow) {
                 return TYPE_INFO_PRIVACY;
+            } else if (position == experimentalMoreRow) {
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == updatesRow || position == exportEtgRow || position == importEtgRow
                     || position == resetSettingsRow || position == deleteAccountRow
                     || position == glyphRow) {

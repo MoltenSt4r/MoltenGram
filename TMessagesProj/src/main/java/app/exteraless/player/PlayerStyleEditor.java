@@ -6,8 +6,12 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.annotation.SuppressLint;
 import android.content.Context;
 import android.content.res.ColorStateList;
+import android.graphics.Canvas;
+import android.graphics.Paint;
+import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.graphics.drawable.RippleDrawable;
+import android.os.Bundle;
 import android.transition.AutoTransition;
 import android.transition.ChangeBounds;
 import android.transition.TransitionManager;
@@ -15,9 +19,12 @@ import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.HapticFeedbackConstants;
+import android.view.MotionEvent;
 import android.view.View;
 import android.view.ViewGroup;
 import android.view.accessibility.AccessibilityNodeInfo;
+
+import androidx.annotation.NonNull;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 import android.widget.ScrollView;
@@ -656,7 +663,7 @@ public class PlayerStyleEditor extends LinearLayout {
 
         private final TextView label;
         private final TextView valueView;
-        private final WavySeekBar bar;
+        private final Md3SliderView bar;
         private final int min;
         private final int max;
         private final int step;
@@ -683,10 +690,9 @@ public class PlayerStyleEditor extends LinearLayout {
             valueView.setFontFeatureSettings("tnum");
             top.addView(valueView, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
             addView(top, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 8, 0, 0));
-            bar = new WavySeekBar(context);
-            bar.setMaxAmplitude(0);
+            bar = new Md3SliderView(context);
             bar.setContentDescription(text);
-            bar.setDelegate(new WavySeekBar.Delegate() {
+            bar.setDelegate(new Md3SliderView.Delegate() {
                 private int last = Integer.MIN_VALUE;
 
                 @Override
@@ -747,6 +753,185 @@ public class PlayerStyleEditor extends LinearLayout {
             int value = getter.getAsInt();
             valueView.setText(format(value));
             bar.setProgress(fraction(value));
+        }
+    }
+
+    /**
+     * Fixed-style Material 3 Expressive slider for PlayerStyleEditor settings so it is
+     * never distorted by the player's own seekbar thickness/style preferences.
+     */
+    private static class Md3SliderView extends View {
+
+        interface Delegate {
+            void onSeekStart();
+
+            void onSeekMove(float progress);
+
+            void onSeekEnd(float progress, boolean commit);
+        }
+
+        private final Paint activePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final Paint trackPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+        private final RectF rect = new RectF();
+        private Delegate delegate;
+        private float progress;
+        private float dragProgress;
+        private boolean dragging;
+
+        Md3SliderView(Context context) {
+            super(context);
+            setImportantForAccessibility(IMPORTANT_FOR_ACCESSIBILITY_YES);
+        }
+
+        void setDelegate(Delegate delegate) {
+            this.delegate = delegate;
+        }
+
+        void setColors(int active, int inactive) {
+            activePaint.setColor(active);
+            trackPaint.setColor(inactive);
+            invalidate();
+        }
+
+        void setProgress(float value) {
+            progress = Math.max(0f, Math.min(1f, value));
+            if (!dragging) {
+                invalidate();
+            }
+        }
+
+        private float leftEdge() {
+            return dp(4);
+        }
+
+        private float rightEdge() {
+            return getWidth() - dp(4);
+        }
+
+        private float progressAt(float x) {
+            float w = rightEdge() - leftEdge();
+            if (w <= 0f) {
+                return 0f;
+            }
+            return Math.max(0f, Math.min(1f, (x - leftEdge()) / w));
+        }
+
+        @Override
+        public boolean onTouchEvent(MotionEvent event) {
+            if (!isEnabled()) {
+                return false;
+            }
+            switch (event.getActionMasked()) {
+                case MotionEvent.ACTION_DOWN:
+                    dragging = true;
+                    if (getParent() != null) {
+                        getParent().requestDisallowInterceptTouchEvent(true);
+                    }
+                    dragProgress = progressAt(event.getX());
+                    performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
+                    if (delegate != null) {
+                        delegate.onSeekStart();
+                        delegate.onSeekMove(dragProgress);
+                    }
+                    invalidate();
+                    return true;
+                case MotionEvent.ACTION_MOVE:
+                    if (dragging) {
+                        dragProgress = progressAt(event.getX());
+                        if (delegate != null) {
+                            delegate.onSeekMove(dragProgress);
+                        }
+                        invalidate();
+                    }
+                    return true;
+                case MotionEvent.ACTION_UP:
+                    if (dragging) {
+                        dragging = false;
+                        progress = dragProgress;
+                        if (delegate != null) {
+                            delegate.onSeekEnd(progress, true);
+                        }
+                        invalidate();
+                    }
+                    return true;
+                case MotionEvent.ACTION_CANCEL:
+                    if (dragging) {
+                        dragging = false;
+                        if (delegate != null) {
+                            delegate.onSeekEnd(progress, false);
+                        }
+                        invalidate();
+                    }
+                    return true;
+            }
+            return super.onTouchEvent(event);
+        }
+
+        @Override
+        protected void onDraw(@NonNull Canvas canvas) {
+            final float left = leftEdge();
+            final float right = rightEdge();
+            if (right <= left) {
+                return;
+            }
+            final float cy = getHeight() / 2f;
+            final float trackHeight = dp(16);
+            final float trackRadius = trackHeight / 2f;
+            final float thumbWidth = dp(4);
+            final float thumbHeight = dp(dragging ? 32 : 28);
+            final float thumbRadius = thumbWidth / 2f;
+            final float gap = dp(6);
+            final float dotRadius = AndroidUtilities.dpf2(2f);
+
+            final float p = dragging ? dragProgress : progress;
+            final float thumbCx = left + p * (right - left);
+            final float activeRight = thumbCx - thumbWidth / 2f - gap;
+            final float inactiveLeft = thumbCx + thumbWidth / 2f + gap;
+
+            if (activeRight > left) {
+                rect.set(left, cy - trackRadius, activeRight, cy + trackRadius);
+                canvas.drawRoundRect(rect, trackRadius, trackRadius, activePaint);
+            }
+            if (inactiveLeft < right) {
+                rect.set(inactiveLeft, cy - trackRadius, right, cy + trackRadius);
+                canvas.drawRoundRect(rect, trackRadius, trackRadius, trackPaint);
+            }
+
+            final float endDotX = right - trackRadius;
+            if (endDotX > inactiveLeft + dp(2)) {
+                canvas.drawCircle(endDotX, cy, dotRadius, activePaint);
+            }
+
+            rect.set(thumbCx - thumbRadius, cy - thumbHeight / 2f, thumbCx + thumbRadius, cy + thumbHeight / 2f);
+            canvas.drawRoundRect(rect, thumbRadius, thumbRadius, activePaint);
+        }
+
+        @Override
+        public void onInitializeAccessibilityNodeInfo(AccessibilityNodeInfo info) {
+            super.onInitializeAccessibilityNodeInfo(info);
+            info.setClassName("android.widget.SeekBar");
+            info.setRangeInfo(AccessibilityNodeInfo.RangeInfo.obtain(
+                    AccessibilityNodeInfo.RangeInfo.RANGE_TYPE_PERCENT, 0, 100, progress * 100f));
+            info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_FORWARD);
+            info.addAction(AccessibilityNodeInfo.AccessibilityAction.ACTION_SCROLL_BACKWARD);
+        }
+
+        @Override
+        public boolean performAccessibilityAction(int action, Bundle arguments) {
+            if (action == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD
+                    || action == AccessibilityNodeInfo.ACTION_SCROLL_BACKWARD) {
+                float value = Math.max(0f, Math.min(1f,
+                        progress + (action == AccessibilityNodeInfo.ACTION_SCROLL_FORWARD ? 0.05f : -0.05f)));
+                progress = value;
+                if (delegate != null) {
+                    delegate.onSeekStart();
+                    delegate.onSeekMove(value);
+                    delegate.onSeekEnd(value, true);
+                }
+                invalidate();
+                return true;
+            }
+            return super.performAccessibilityAction(action, arguments);
         }
     }
 

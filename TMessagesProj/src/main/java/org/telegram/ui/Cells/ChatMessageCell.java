@@ -25116,7 +25116,12 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         } else if (isSideMenued && !currentMessageObject.isOutOwner() && currentPosition != null) {
             tx += dp(ChatActivity.SIDE_MENU_WIDTH - (needDrawAvatar() ? 48 : 0)) * sideMenuAlpha;
         }
-        setTranslationX(tx);
+        if (getTranslationX() != tx) {
+            setTranslationX(tx);
+            if (shouldDrawGlassBubble()) {
+                invalidate();
+            }
+        }
     }
 
     public float getNonAnimationTranslationX(boolean update) {

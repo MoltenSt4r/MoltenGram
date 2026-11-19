@@ -34,6 +34,7 @@
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_LOCATION" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_MICROPHONE" />
     <uses-permission android:name="android.permission.FOREGROUND_SERVICE_REMOTE_MESSAGING" />
+    <uses-permission android:name="android.permission.FOREGROUND_SERVICE_PHONE_CALL" />
     <uses-permission android:name="android.permission.RECORD_AUDIO" />
     <uses-permission android:name="android.permission.MODIFY_AUDIO_SETTINGS" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -339,22 +340,6 @@
             android:targetActivity="org.telegram.ui.LaunchActivity"
             android:icon="@mipmap/ic_launcher_moltengram_google"
             android:roundIcon="@mipmap/ic_launcher_moltengram_google_round"
-            android:exported="true">
-
-            <intent-filter>
-                <action android:name="android.intent.action.MAIN" />
-                <category android:name="android.intent.category.LAUNCHER" />
-                <category android:name="android.intent.category.MULTIWINDOW_LAUNCHER" />
-            </intent-filter>
-            <meta-data android:name="android.app.shortcuts" android:resource="@xml/shortcuts" />
-        </activity-alias>
-
-        <activity-alias
-            android:enabled="false"
-            android:name="org.telegram.messenger.MoltenGramDottedIcon"
-            android:targetActivity="org.telegram.ui.LaunchActivity"
-            android:icon="@mipmap/ic_launcher_moltengram_dotted"
-            android:roundIcon="@mipmap/ic_launcher_moltengram_dotted_round"
             android:exported="true">
 
             <intent-filter>
@@ -1116,7 +1101,7 @@
             android:name=".voip.VoIPService"
             android:enabled="true"
             android:exported="false"
-            android:foregroundServiceType="camera|microphone|mediaPlayback|mediaProjection"
+            android:foregroundServiceType="camera|microphone|mediaPlayback|mediaProjection|phoneCall"
         />
         <service
             android:name=".MusicPlayerService"
@@ -1388,8 +1373,6 @@
         <property
             android:name="miui.continuity.policy"
             android:value="5" />
-
-        <meta-data android:name="firebase_crashlytics_collection_enabled" android:value="false" />
 
     </application>
 

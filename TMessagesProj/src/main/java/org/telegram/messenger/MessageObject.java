@@ -8731,7 +8731,8 @@ public class MessageObject {
 
             for (int b = 0, N2 = runs.size(); b < N2; b++) {
                 TextStyleSpan.TextStyleRun run = runs.get(b);
-                if ((run.flags & TextStyleSpan.FLAG_STYLE_SPOILER) != 0 && newRun.start >= run.start && newRun.end <= run.end) {
+                if ((run.flags & TextStyleSpan.FLAG_STYLE_SPOILER) != 0 && newRun.start >= run.start && newRun.end <= run.end
+                        && !(newRun.urlEntity instanceof TLRPC.TL_messageEntityTextUrl && app.exteraless.chats.ColoredTextHelper.isColorUrl(((TLRPC.TL_messageEntityTextUrl) newRun.urlEntity).url))) {
                     continue;
                 }
 
@@ -12102,7 +12103,16 @@ public class MessageObject {
         return audioPlayerDuration;
     }
 
+    public String customArtworkUrl;
+
+    public void setCustomArtworkUrl(String url) {
+        this.customArtworkUrl = url;
+    }
+
     public String getArtworkUrl(boolean small) {
+        if (!TextUtils.isEmpty(customArtworkUrl)) {
+            return customArtworkUrl;
+        }
         return getArtworkUrl(getDocument(), small);
     }
 

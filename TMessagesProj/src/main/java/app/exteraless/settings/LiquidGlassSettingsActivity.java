@@ -38,27 +38,31 @@ import tw.nekomimi.nekogram.helpers.AppRestartHelper;
  */
 public class LiquidGlassSettingsActivity extends BaseFragment {
 
-    private static final int ID_GLASS_ON = 1;
-    private static final int ID_GLASS_PREVIEW_LOOK = 2;
-    private static final int ID_GLASS_SHADOW = 3;
-    private static final int ID_GLASS_VIBRANCY = 4;
-    private static final int ID_LIQUID_CONTROLS = 5;
-    private static final int ID_HEADER_BUTTONS = 6;
-    private static final int ID_FROSTED_HEADERS = 7;
-    private static final int ID_GLASS_MENUS = 8;
-    private static final int ID_GLASS_DIALOGS = 9;
-    private static final int ID_GLASS_SHEETS = 10;
-    private static final int ID_GLASS_TINT = 11;
-    private static final int ID_GLASS_RESTART = 12;
-    private static final int ID_GLASS_RESET = 13;
-    private static final int ID_GLASS_FAB = 14;
-    private static final int ID_GLASS_MINI_PLAYER = 15;
-    private static final int ID_GLASS_MESSAGES = 16;
-    private static final int ID_GLASS_MAIN_HEADER = 17;
-    private static final int ID_GLASS_FOLDERS = 18;
+    public static final int ID_GLASS_ON = 1;
+    public static final int ID_GLASS_PREVIEW_LOOK = 2;
+    public static final int ID_GLASS_SHADOW = 3;
+    public static final int ID_GLASS_VIBRANCY = 4;
+    public static final int ID_LIQUID_CONTROLS = 5;
+    public static final int ID_HEADER_BUTTONS = 6;
+    public static final int ID_FROSTED_HEADERS = 7;
+    public static final int ID_GLASS_MENUS = 8;
+    public static final int ID_GLASS_DIALOGS = 9;
+    public static final int ID_GLASS_SHEETS = 10;
+    public static final int ID_GLASS_TINT = 11;
+    public static final int ID_GLASS_RESTART = 12;
+    public static final int ID_GLASS_RESET = 13;
+    public static final int ID_GLASS_FAB = 14;
+    public static final int ID_GLASS_MINI_PLAYER = 15;
+    public static final int ID_GLASS_MESSAGES = 16;
+    public static final int ID_GLASS_MAIN_HEADER = 17;
+    public static final int ID_GLASS_FOLDERS = 18;
+    private static final int ID_OPTICAL_MORE = 19;
+    private static final int ID_ELSEWHERE_MORE = 20;
 
     private UniversalRecyclerView listView;
     private SolegramGlassPreview glassPreview;
+    private boolean opticalMoreExpanded;
+    private boolean elsewhereMoreExpanded;
 
     @Override
     public View createView(Context context) {
@@ -102,12 +106,17 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
 
         if (LiquidGlassConfig.glassOn) {
             if (Build.VERSION.SDK_INT >= 33) {
-                glassSlider(items, R.string.SG_GlassThickness, "glassThickness", 25, 300, LiquidGlassConfig.glassThickness, v -> v + "%");
-                glassSlider(items, R.string.SG_GlassRefraction, "glassRefraction", 0, 300, LiquidGlassConfig.glassRefraction, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
-                glassSlider(items, R.string.SG_GlassIndex, "glassIndex", 100, 250, LiquidGlassConfig.glassIndex, v -> String.format(Locale.US, "%.2f", v / 100f));
-                glassSlider(items, R.string.SG_GlassDispersion, "glassDispersion", 0, 100, LiquidGlassConfig.glassDispersion, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
-                glassSlider(items, R.string.SG_GlassRim, "glassRim", 0, 100, LiquidGlassConfig.glassRim, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
-                items.add(UItem.asShadow(getString(R.string.SG_GlassRefractionInfo)));
+                items.add(UItem.asShadowCollapseButton(ID_OPTICAL_MORE,
+                        getString(opticalMoreExpanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions))
+                        .setCollapsed(!opticalMoreExpanded));
+                if (opticalMoreExpanded) {
+                    glassSlider(items, R.string.SG_GlassThickness, "glassThickness", 25, 300, LiquidGlassConfig.glassThickness, v -> v + "%");
+                    glassSlider(items, R.string.SG_GlassRefraction, "glassRefraction", 0, 300, LiquidGlassConfig.glassRefraction, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
+                    glassSlider(items, R.string.SG_GlassIndex, "glassIndex", 100, 250, LiquidGlassConfig.glassIndex, v -> String.format(Locale.US, "%.2f", v / 100f));
+                    glassSlider(items, R.string.SG_GlassDispersion, "glassDispersion", 0, 100, LiquidGlassConfig.glassDispersion, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
+                    glassSlider(items, R.string.SG_GlassRim, "glassRim", 0, 100, LiquidGlassConfig.glassRim, v -> v == 0 ? getString(R.string.SG_Off) : v + "%");
+                    items.add(UItem.asShadow(getString(R.string.SG_GlassRefractionInfo)));
+                }
             }
 
             glassSlider(items, R.string.SG_GlassOpacity, "glassOpacity", 10, 100, LiquidGlassConfig.glassOpacity, v -> v + "%");
@@ -126,27 +135,32 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
             items.add(UItem.asHeader(getString(R.string.SG_GlassElsewhere)));
             items.add(UItem.asButtonCheck(ID_LIQUID_CONTROLS, getString(R.string.SG_LiquidControls), getString(R.string.SG_LiquidControlsInfo))
                     .setChecked(LiquidGlassConfig.liquidControls));
-            items.add(UItem.asButtonCheck(ID_HEADER_BUTTONS, getString(R.string.SG_HeaderButtons), getString(R.string.SG_HeaderButtonsInfo))
-                    .setChecked(LiquidGlassConfig.glassHeaderButtons));
-            items.add(UItem.asButtonCheck(ID_FROSTED_HEADERS, getString(R.string.SG_FrostedHeaders), getString(R.string.SG_FrostedHeadersInfo))
-                    .setChecked(LiquidGlassConfig.frostedHeaders));
-            items.add(UItem.asButtonCheck(ID_GLASS_MAIN_HEADER, getString(R.string.SG_GlassMainHeader), getString(R.string.SG_GlassMainHeaderInfo))
-                    .setChecked(LiquidGlassConfig.glassMainHeader));
-            items.add(UItem.asButtonCheck(ID_GLASS_FOLDERS, getString(R.string.SG_GlassFolders), getString(R.string.SG_GlassFoldersInfo))
-                    .setChecked(LiquidGlassConfig.glassFolders));
             items.add(UItem.asButtonCheck(ID_GLASS_FAB, getString(R.string.SG_GlassFab), getString(R.string.SG_GlassFabInfo))
                     .setChecked(LiquidGlassConfig.glassFab));
             items.add(UItem.asButtonCheck(ID_GLASS_MINI_PLAYER, getString(R.string.SG_GlassMiniPlayer), getString(R.string.SG_GlassMiniPlayerInfo))
                     .setChecked(LiquidGlassConfig.glassMiniPlayer));
             items.add(UItem.asButtonCheck(ID_GLASS_MESSAGES, getString(R.string.SG_GlassMessages), getString(R.string.SG_GlassMessagesInfo))
                     .setChecked(LiquidGlassConfig.glassMessages || app.exteraless.appearance.AppearanceConfig.glassMessages()));
-            if (SolegramLiveGlass.available() || Build.VERSION.SDK_INT >= 33) {
-                items.add(UItem.asButtonCheck(ID_GLASS_MENUS, getString(R.string.SG_GlassMenus), getString(R.string.SG_GlassMenusInfo))
-                        .setChecked(LiquidGlassConfig.glassMenus));
-                items.add(UItem.asButtonCheck(ID_GLASS_DIALOGS, getString(R.string.SG_GlassDialogs), getString(R.string.SG_GlassDialogsInfo))
-                        .setChecked(LiquidGlassConfig.glassDialogs));
-                items.add(UItem.asButtonCheck(ID_GLASS_SHEETS, getString(R.string.SG_GlassSheets), getString(R.string.SG_GlassSheetsInfo))
-                        .setChecked(LiquidGlassConfig.glassSheets));
+            items.add(UItem.asShadowCollapseButton(ID_ELSEWHERE_MORE,
+                    getString(elsewhereMoreExpanded ? R.string.OEShowLessOptions : R.string.OEShowMoreOptions))
+                    .setCollapsed(!elsewhereMoreExpanded));
+            if (elsewhereMoreExpanded) {
+                items.add(UItem.asButtonCheck(ID_HEADER_BUTTONS, getString(R.string.SG_HeaderButtons), getString(R.string.SG_HeaderButtonsInfo))
+                        .setChecked(LiquidGlassConfig.glassHeaderButtons));
+                items.add(UItem.asButtonCheck(ID_FROSTED_HEADERS, getString(R.string.SG_FrostedHeaders), getString(R.string.SG_FrostedHeadersInfo))
+                        .setChecked(LiquidGlassConfig.frostedHeaders));
+                items.add(UItem.asButtonCheck(ID_GLASS_MAIN_HEADER, getString(R.string.SG_GlassMainHeader), getString(R.string.SG_GlassMainHeaderInfo))
+                        .setChecked(LiquidGlassConfig.glassMainHeader));
+                items.add(UItem.asButtonCheck(ID_GLASS_FOLDERS, getString(R.string.SG_GlassFolders), getString(R.string.SG_GlassFoldersInfo))
+                        .setChecked(LiquidGlassConfig.glassFolders));
+                if (SolegramLiveGlass.available() || Build.VERSION.SDK_INT >= 33) {
+                    items.add(UItem.asButtonCheck(ID_GLASS_MENUS, getString(R.string.SG_GlassMenus), getString(R.string.SG_GlassMenusInfo))
+                            .setChecked(LiquidGlassConfig.glassMenus));
+                    items.add(UItem.asButtonCheck(ID_GLASS_DIALOGS, getString(R.string.SG_GlassDialogs), getString(R.string.SG_GlassDialogsInfo))
+                            .setChecked(LiquidGlassConfig.glassDialogs));
+                    items.add(UItem.asButtonCheck(ID_GLASS_SHEETS, getString(R.string.SG_GlassSheets), getString(R.string.SG_GlassSheetsInfo))
+                            .setChecked(LiquidGlassConfig.glassSheets));
+                }
             }
             items.add(UItem.asShadow());
 
@@ -179,6 +193,14 @@ public class LiquidGlassSettingsActivity extends BaseFragment {
             return;
         }
         switch (item.id) {
+            case ID_OPTICAL_MORE:
+                opticalMoreExpanded = !opticalMoreExpanded;
+                refreshList();
+                break;
+            case ID_ELSEWHERE_MORE:
+                elsewhereMoreExpanded = !elsewhereMoreExpanded;
+                refreshList();
+                break;
             case ID_GLASS_ON:
                 LiquidGlassConfig.putBoolean("glassOn", !LiquidGlassConfig.glassOn);
                 if (LiquidGlassConfig.glassOn) {

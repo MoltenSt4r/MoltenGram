@@ -1098,9 +1098,37 @@ public class ImageLoader {
                         || (cacheImage.key != null && cacheImage.key.toLowerCase().contains(".webp"));
                 if (isWebp && Build.VERSION.SDK_INT >= 28 && cacheImage.finalFilePath != null && cacheImage.finalFilePath.exists()) {
                     try {
+                        int targetW = 0, targetH = 0;
+                        if (cacheImage.filter != null) {
+                            String[] args = cacheImage.filter.split("_");
+                            if (args.length >= 2) {
+                                try {
+                                    float wf = Float.parseFloat(args[0]);
+                                    float hf = Float.parseFloat(args[1]);
+                                    targetW = Math.min(512, Math.max(1, (int) (wf * AndroidUtilities.density)));
+                                    targetH = Math.min(512, Math.max(1, (int) (hf * AndroidUtilities.density)));
+                                    if (wf <= 90 && hf <= 90 && !cacheImage.filter.contains("nolimit")) {
+                                        targetW = Math.min(targetW, 160);
+                                        targetH = Math.min(targetH, 160);
+                                    }
+                                } catch (NumberFormatException ignored) {
+                                }
+                            }
+                        }
+                        final int reqW = targetW;
+                        final int reqH = targetH;
                         android.graphics.ImageDecoder.Source source = android.graphics.ImageDecoder.createSource(cacheImage.finalFilePath);
                         if (cacheImage.filter != null && cacheImage.filter.contains("firstframe")) {
                             Bitmap bitmap = android.graphics.ImageDecoder.decodeBitmap(source, (decoder, info, src) -> {
+                                if (reqW > 0 && reqH > 0) {
+                                    android.util.Size sz = info.getSize();
+                                    if (sz.getWidth() > 0 && sz.getHeight() > 0) {
+                                        float scale = Math.min((float) reqW / sz.getWidth(), (float) reqH / sz.getHeight());
+                                        if (scale < 1f) {
+                                            decoder.setTargetSize(Math.max(1, Math.round(sz.getWidth() * scale)), Math.max(1, Math.round(sz.getHeight() * scale)));
+                                        }
+                                    }
+                                }
                                 decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
                             });
                             Thread.interrupted();
@@ -1108,7 +1136,15 @@ public class ImageLoader {
                             return;
                         } else {
                             Drawable decoded = android.graphics.ImageDecoder.decodeDrawable(source, (decoder, info, src) -> {
-                                decoder.setAllocator(android.graphics.ImageDecoder.ALLOCATOR_SOFTWARE);
+                                if (reqW > 0 && reqH > 0) {
+                                    android.util.Size sz = info.getSize();
+                                    if (sz.getWidth() > 0 && sz.getHeight() > 0) {
+                                        float scale = Math.min((float) reqW / sz.getWidth(), (float) reqH / sz.getHeight());
+                                        if (scale < 1f) {
+                                            decoder.setTargetSize(Math.max(1, Math.round(sz.getWidth() * scale)), Math.max(1, Math.round(sz.getHeight() * scale)));
+                                        }
+                                    }
+                                }
                             });
                             if (decoded instanceof android.graphics.drawable.AnimatedImageDrawable) {
                                 ((android.graphics.drawable.AnimatedImageDrawable) decoded).setRepeatCount(android.graphics.drawable.AnimatedImageDrawable.REPEAT_INFINITE);

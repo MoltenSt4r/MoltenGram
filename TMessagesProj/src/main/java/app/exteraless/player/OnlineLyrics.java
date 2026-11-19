@@ -22,9 +22,11 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
+import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Future;
@@ -107,7 +109,11 @@ public final class OnlineLyrics {
         }
 
         public String key() {
-            return (artist == null ? "" : artist.toLowerCase(Locale.ROOT)) + "\u0001" + (title == null ? "" : title.toLowerCase(Locale.ROOT)) + "\u0001" + duration;
+            String base = (artist == null ? "" : artist.toLowerCase(Locale.ROOT)) + "\u0001" + (title == null ? "" : title.toLowerCase(Locale.ROOT)) + "\u0001" + duration;
+            if (TextUtils.isEmpty(artist) && !TextUtils.isEmpty(filePath)) {
+                return base + "\u0001" + Utilities.MD5(filePath);
+            }
+            return base;
         }
 
         public boolean valid() {
@@ -213,7 +219,7 @@ public final class OnlineLyrics {
 
         if (queryDuration > 0 && candDuration > 0) {
             int diff = Math.abs(queryDuration - candDuration);
-            if (diff > 12) {
+            if (diff > (app.exteraless.appearance.AppearanceConfig.playerLyricsExperimental() ? 30 : 12)) {
                 return false;
             }
         }
@@ -275,16 +281,44 @@ public final class OnlineLyrics {
         });
     }
 
-    private static final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private static final ExecutorService fetchExecutor = Executors.newFixedThreadPool(4);
+    private static final ExecutorService executor = Executors.newFixedThreadPool(6);
+    private static final Map<String, List<Callback>> inFlightFetches = new HashMap<>();
+
+    private static String stripExtras(String s) {
+        if (s == null) {
+            return null;
+        }
+        String r = s.replaceAll("\\s*[\\(\\[\\{][^\\)\\]\\}]*[\\)\\]\\}]", " ");
+        r = r.replaceAll("(?i)\\s+(feat\\.?|ft\\.?|featuring)\\s+.*$", "");
+        r = r.replaceAll("(?i)\\s*-\\s*(official.*|remaster.*|remix.*|live.*|lyrics?.*)$", "");
+        return r.trim();
+    }
 
     public static void fetch(Query query, Callback callback) {
         String key = query.key();
         Lyrics hit = memory.get(key);
         if (hit != null) {
-            callback.onResult(hit, OK);
+            if (callback != null) {
+                callback.onResult(hit, OK);
+            }
             return;
         }
-        queue.postRunnable(() -> {
+        synchronized (inFlightFetches) {
+            List<Callback> waiters = inFlightFetches.get(key);
+            if (waiters != null) {
+                if (callback != null) {
+                    waiters.add(callback);
+                }
+                return;
+            }
+            waiters = new ArrayList<>();
+            if (callback != null) {
+                waiters.add(callback);
+            }
+            inFlightFetches.put(key, waiters);
+        }
+        fetchExecutor.execute(() -> {
             Lyrics result = readDisk(key);
             int status = OK;
             if (result == null) {
@@ -380,6 +414,40 @@ public final class OnlineLyrics {
                     }
                 }
 
+                // 3b. Experimental: retry with stripped title/artist across all sources
+                if (bestOnline == null && app.exteraless.appearance.AppearanceConfig.playerLyricsExperimental()) {
+                    Query sq = new Query(stripExtras(currentQ.artist), stripExtras(currentQ.title), currentQ.album, currentQ.duration);
+                    sq.filePath = currentQ.filePath;
+                    if (!TextUtils.isEmpty(sq.title) && !sq.key().equals(currentQ.key())) {
+                        Found[] fs = new Found[6];
+                        for (int i = 0; i < 6 && bestOnline == null; i++) {
+                            try {
+                                switch (i) {
+                                    case 0: fs[i] = requestLrclib(sq); break;
+                                    case 1: fs[i] = requestBetterLyrics(sq); break;
+                                    case 2: fs[i] = requestPaxsenix(sq); break;
+                                    case 3: fs[i] = requestLyricsPlus(sq); break;
+                                    case 4: fs[i] = requestKuGou(sq); break;
+                                    default: fs[i] = requestZemer(sq); break;
+                                }
+                            } catch (Throwable e) {
+                                FileLog.e(e);
+                            }
+                            if (fs[i] != null && fs[i].lyrics != null && fs[i].lyrics.synced) {
+                                bestOnline = fs[i];
+                            }
+                        }
+                        for (int i = 0; i < 6 && bestOnline == null; i++) {
+                            if (fs[i] != null && fs[i].lyrics != null) {
+                                bestOnline = fs[i];
+                            }
+                        }
+                        if (bestOnline != null) {
+                            currentQ = sq;
+                        }
+                    }
+                }
+
                 // 4. If no synced lyrics, try LrcMux fallback
                 if (bestOnline == null || !bestOnline.lyrics.synced) {
                     try {
@@ -414,9 +482,22 @@ public final class OnlineLyrics {
                 } else if (finalStatus == NOT_FOUND) {
                     missing.add(key);
                 }
-                callback.onResult(lyrics, finalStatus);
+                List<Callback> waiters;
+                synchronized (inFlightFetches) {
+                    waiters = inFlightFetches.remove(key);
+                }
+                if (waiters != null) {
+                    for (Callback cb : waiters) {
+                        cb.onResult(lyrics, finalStatus);
+                    }
+                }
             });
         });
+    }
+
+    public static void prefetch(Query query) {
+        if (query == null) return;
+        fetch(query, (lyrics, status) -> { });
     }
 
     // SongRec audio recognition (powered by Shazam discovery engine)
@@ -424,6 +505,9 @@ public final class OnlineLyrics {
         if (!TextUtils.isEmpty(q.filePath) && new java.io.File(q.filePath).exists()) {
             SongRecognizer.Result r = SongRecognizer.recognize(q.filePath);
             if (r != null) {
+                if (app.exteraless.appearance.AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(r.coverUrl)) {
+                    SongRecognizer.downloadAndCacheCover(r.coverUrl);
+                }
                 Query rq = new Query(r.artist, r.title, null, q.duration);
                 Found f = null;
                 try { f = requestLrclib(rq); } catch (Exception ignore) { }
@@ -471,6 +555,20 @@ public final class OnlineLyrics {
 
                 String recognizedTitle = track.optString("title");
                 String recognizedArtist = track.optString("subtitle");
+                JSONObject images = track.optJSONObject("images");
+                String coverUrl = null;
+                if (images != null) {
+                    if (images.has("coverarthq")) {
+                        coverUrl = images.optString("coverarthq");
+                    } else if (images.has("coverart")) {
+                        coverUrl = images.optString("coverart");
+                    } else if (images.has("background")) {
+                        coverUrl = images.optString("background");
+                    }
+                }
+                if (app.exteraless.appearance.AppearanceConfig.songrecFetchCover() && !TextUtils.isEmpty(coverUrl)) {
+                    SongRecognizer.downloadAndCacheCover(coverUrl);
+                }
 
                 // Only require strict match when both title and artist are given in query.
                 // If query is missing artist or looks like a file name, trust the top SongRec recognition hit!

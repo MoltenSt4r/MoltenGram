@@ -18,14 +18,30 @@ import java.util.Map;
 import java.util.Objects;
 import java.util.concurrent.ConcurrentHashMap;
 
+import app.exteraless.ai.ui.AiSettingsActivity;
+import app.exteraless.appearance.ChipFoldersSettingsActivity;
+import app.exteraless.appearance.Md3AvatarShapesActivity;
+import app.exteraless.appearance.Md3FabAppearanceActivity;
+import app.exteraless.chats.TextAnimationSettingsActivity;
+import app.exteraless.pillstack.PillStackSettingsActivity;
+import app.exteraless.player.PlayerSettingsActivity;
+import app.exteraless.plugins.ui.PluginStoreSettingsActivity;
+import app.exteraless.settings.LiquidGlassSettingsActivity;
 import app.exteraless.settings.OpenExteraAppNavigationActivity;
 import app.exteraless.settings.OpenExteraAppearanceActivity;
+import app.exteraless.settings.OpenExteraAyuMomentsActivity;
 import app.exteraless.settings.OpenExteraChatsActivity;
+import app.exteraless.settings.OpenExteraCloudActivity;
 import app.exteraless.settings.OpenExteraGeneralActivity;
+import app.exteraless.settings.OpenExteraGlyphActivity;
 import app.exteraless.settings.OpenExteraOtherActivity;
 import app.exteraless.settings.OpenExteraSettingsActivity;
+import app.exteraless.settings.OpenExteraToolsActivity;
 import app.exteraless.settings.OpenExteraUpdatesActivity;
 import app.exteraless.settings.OpenExteraVoiceChangerActivity;
+import app.exteraless.shizuku.ShizukuSettingsActivity;
+import app.exteraless.spoof.DeviceSpoofActivity;
+import app.exteraless.tor.TorSettingsActivity;
 
 /**
  * Реестр пунктов настроек под именем {@code com.exteragram.messenger.preferences.utils.SettingsRegistry}.
@@ -160,6 +176,22 @@ public class SettingsRegistry {
         icons.put(OpenExteraOtherActivity.class, R.drawable.msg_fave);
         icons.put(OpenExteraAppNavigationActivity.class, R.drawable.msg_list);
         icons.put(OpenExteraUpdatesActivity.class, R.drawable.sync_outline_28);
+        icons.put(OpenExteraToolsActivity.class, R.drawable.baseline_build_outline_24);
+        icons.put(OpenExteraAyuMomentsActivity.class, R.drawable.ayu_ghost);
+        icons.put(OpenExteraGlyphActivity.class, R.drawable.deproko_baseline_lamp_filled_24);
+        icons.put(OpenExteraCloudActivity.class, R.drawable.cloud_sync);
+        icons.put(LiquidGlassSettingsActivity.class, R.drawable.msg_theme);
+        icons.put(PlayerSettingsActivity.class, R.drawable.baseline_music_note_outline_24);
+        icons.put(PillStackSettingsActivity.class, R.drawable.msg_pin);
+        icons.put(PluginStoreSettingsActivity.class, R.drawable.msg_settings_old);
+        icons.put(AiSettingsActivity.class, R.drawable.ai_chat);
+        icons.put(ChipFoldersSettingsActivity.class, R.drawable.msg_folders);
+        icons.put(TextAnimationSettingsActivity.class, R.drawable.msg_edit);
+        icons.put(Md3AvatarShapesActivity.class, R.drawable.msg_contacts);
+        icons.put(Md3FabAppearanceActivity.class, R.drawable.msg_actions);
+        icons.put(DeviceSpoofActivity.class, R.drawable.msg_devices_solar);
+        icons.put(ShizukuSettingsActivity.class, R.drawable.msg_permissions);
+        icons.put(TorSettingsActivity.class, R.drawable.ic_orbot);
         return icons;
     }
 

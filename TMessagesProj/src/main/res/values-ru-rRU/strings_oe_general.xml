@@ -79,6 +79,7 @@
     <string name="OELastActivityFormatted">последняя активность %1$s</string>
     <string name="OELastActivityDateFormatted">последняя активность %1$s</string>
     <string name="OEBottomNavigationModeFloating">Плавающая</string>
+    <string name="OEBottomNavigationModeExpressive">Expressive M3 (с FAB)</string>
     <string name="OEGeneralNotificationsHeader">Уведомления</string>
     <string name="OEGeneralPushStatus">Состояние пушей</string>
     <string name="OEGeneralPushStatusBlocked">заблокированы системой</string>

@@ -2327,7 +2327,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                 imageView.setViewSelected(selectedReactions.contains(currentReaction), false);
                 imageView.notDraw = false;
                 imageView.invalidate();
-                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && !app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && !app.exteraless.OpenExteraConfig.useNotoForBigReactions() && currentReaction != null && currentReaction.emojicon != null)) {
+                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction != null && currentReaction.emojicon != null)) {
                     Drawable emojiDrawable = Emoji.getEmojiDrawable(currentReaction.emojicon);
                     if (emojiDrawable instanceof Emoji.EmojiDrawable) {
                         ((Emoji.EmojiDrawable) emojiDrawable).fullSize = false;
@@ -2747,7 +2747,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                     currentReaction = topReactions.get(index);
                 }
 
-                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && !app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() && !app.exteraless.OpenExteraConfig.useNotoForBigReactions() && currentReaction != null && currentReaction.emojicon != null)) {
+                if (type == TYPE_STICKER_SET_EMOJI || (app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() && currentReaction != null && currentReaction.emojicon != null)) {
                     imageView.notDraw = false;
                     imageView.isFirstReactions = true;
                     imageView.reaction = currentReaction;
@@ -4709,7 +4709,7 @@ public class SelectAnimatedEmojiDialog extends FrameLayout implements Notificati
                         skewAlpha = .25f + .75f * skewAlpha;
                     }
                 }
-                boolean drawInUi = type == TYPE_STICKER_SET_EMOJI || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() || skewAlpha < 1 || isAnimating() || imageViewEmojis.size() <= 4 || !lite || enterAnimationInProgress() || type == TYPE_AVATAR_CONSTRUCTOR || type == TYPE_CHAT_REACTIONS;
+                boolean drawInUi = type == TYPE_STICKER_SET_EMOJI || app.exteraless.OpenExteraConfig.useCurrentEmojiForReactions() || app.exteraless.OpenExteraConfig.useNotoAnimatedEmoji() || app.exteraless.OpenExteraConfig.useNotoForBigReactions() || skewAlpha < 1 || isAnimating() || imageViewEmojis.size() <= 4 || !lite || enterAnimationInProgress() || type == TYPE_AVATAR_CONSTRUCTOR || type == TYPE_CHAT_REACTIONS;
                 if (!drawInUi) {
                     boolean animatedExpandIn = animateExpandStartTime > 0 && (SystemClock.elapsedRealtime() - animateExpandStartTime) < animateExpandDuration();
                     for (int i = 0; i < imageViewEmojis.size(); i++) {

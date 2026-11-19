@@ -517,8 +517,9 @@ public class Switch extends View implements Theme.Colorable {
         int widthSize = MeasureSpec.getSize(widthMeasureSpec);
         int heightSize = MeasureSpec.getSize(heightMeasureSpec);
 
-        int defaultWidth = AndroidUtilities.dp(56);
-        int defaultHeight = AndroidUtilities.dp(34);
+        float sizeScale = app.exteraless.appearance.AppearanceConfig.switchSize() / 100f;
+        int defaultWidth = AndroidUtilities.dp(sizeScale > 1f ? 56f * sizeScale : 56f);
+        int defaultHeight = AndroidUtilities.dp(sizeScale > 1f ? 34f * sizeScale : 34f);
 
         int measuredWidth;
         int measuredHeight;
@@ -610,9 +611,7 @@ public class Switch extends View implements Theme.Colorable {
         final float inset = AndroidUtilities.dpf2(2);
         final float restH = trackH - inset * 2f, restW = restH * 1.42f;
         final float from = left + inset + restW / 2f, to = left + trackW - inset - restW / 2f;
-        final float room = Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.24f) / restH;
-        final float roomX = (2f * Math.min(from, w - to)) / restW;
-        final float maxScale = Math.max(1f, Math.min(room, roomX));
+        final float maxScale = Math.max(1f, Math.min(h - AndroidUtilities.dpf2(0.5f), restH * 1.28f) / restH);
         final float a = Math.max(0f, Math.min(1f, active));
         final float scale = 1f + (maxScale - 1f) * a;
         final float stretch = solegramStretchStep();
@@ -701,6 +700,22 @@ public class Switch extends View implements Theme.Colorable {
         if (getVisibility() != VISIBLE) {
             return;
         }
+        float sizeScale = app.exteraless.appearance.AppearanceConfig.switchSize() / 100f;
+        int scaleSave = -1;
+        if (Math.abs(sizeScale - 1f) > 0.001f) {
+            scaleSave = canvas.save();
+            canvas.scale(sizeScale, sizeScale, getMeasuredWidth() / 2f, getMeasuredHeight() / 2f);
+        }
+        try {
+            drawScaledContent(canvas);
+        } finally {
+            if (scaleSave != -1) {
+                canvas.restoreToCount(scaleSave);
+            }
+        }
+    }
+
+    private void drawScaledContent(Canvas canvas) {
         if (solegramLiquid()) {
             solegramDrawLiquid(canvas);
             return;

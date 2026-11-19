@@ -400,7 +400,7 @@
     <string name="TorExitCountryTitle">Выходной узел (Страна)</string>
     <string name="TorBridgeType">Режим подключения</string>
     <string name="TorBridgeConfigTitle">Выбор режима подключения</string>
-    <string name="TorBridgeConfigSubtitle">Прямое подключение к Tor или использование мостов для обхода блокировок провайдера.</string>
+    <string name="TorBridgeConfigSubtitle">Прямое подключение к Tor или использование мостов при нестабильной связи провайдера.</string>
     <string name="TorBridgeDirect">Прямое подключение (без мостов)</string>
     <string name="TorBridgeCustom">Мосты Tor</string>
     <string name="TorAutoGetBridges">Получить мосты</string>
@@ -421,7 +421,7 @@
     <string name="TorExitIpChecking">Определение IP...</string>
     <string name="TorExitIpPing">%1$d мс</string>
     <string name="TorExitIpCheckTap">Нажмите для проверки IP</string>
-    <string name="TorInfoPrivacy">Встроенный Tor обеспечивает анонимность и стабильный обход блокировок. При активном подключении весь сетевой трафик приложения шифруется и маршрутизируется через распределённую сеть Tor.</string>
+    <string name="TorInfoPrivacy">Встроенная сеть Tor обеспечивает повышенную анонимность и сквозное шифрование. При активном подключении весь сетевой трафик приложения шифруется и маршрутизируется через распределённую сеть Tor.</string>
     <string name="TorDiagnosticsTitle">Диагностика Tor</string>
     <string name="TorDiagnosticsSubtitle">Журнал событий без IP-адресов</string>
     <string name="TorDiagnosticsClear">Очистить журнал</string>
@@ -438,4 +438,12 @@
     <string name="md3_avatar_shape_custom">Настроено</string>
     <string name="media_group_carousel">Альбомы медиа как карусель</string>
     <string name="media_group_carousel_desc">Отображать сгруппированные фото и видео в чатах в виде горизонтальной карусели Material Design 3.</string>
+    <string name="OEAppearanceSwitchSize">Размер тумблера</string>
+    <string name="OEShowMoreOptions">Показать ещё</string>
+    <string name="OEShowLessOptions">Свернуть</string>
+    <string name="OEGeneralArchiveMore">Дополнительные настройки архива</string>
+    <string name="OEGeneralNotificationsMore">Дополнительные настройки уведомлений</string>
+    <string name="OEChatsChatsMore">Дополнительные настройки чатов</string>
+    <string name="OEChatsMessagesMore">Дополнительные настройки сообщений</string>
+    <string name="OEOtherExperimentalMore">Дополнительные эксперименты</string>
 </resources>
