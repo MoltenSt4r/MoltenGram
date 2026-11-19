@@ -726,6 +726,27 @@ def test_fab_colors_tonal_contrast_and_color_picker():
     assert 'fillType="evenOdd"' in cs
 
 
+def test_carousel_sending_to_sent_blur_and_animations():
+    """Verify Md3MediaCarouselView and ChatMessageCell handle upload progress, sending->sent rebind, full-res loading, and completion animations."""
+    cmc_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "org", "telegram", "ui", "Cells", "ChatMessageCell.java")
+    with open(cmc_path, "r", encoding="utf-8") as f:
+        cell_code = f.read()
+    assert "md3MediaCarouselView.onProgressUpload(" in cell_code
+
+    carousel_path = os.path.join(REPO, "TMessagesProj", "src", "main", "java", "app", "exteraless", "appearance", "Md3MediaCarouselView.java")
+    with open(carousel_path, "r", encoding="utf-8") as f:
+        carousel_code = f.read()
+    assert "NotificationCenter.messageReceivedByServer" in carousel_code
+    assert "onProgressUpload(" in carousel_code
+    assert "rebindVisibleHolders()" in carousel_code
+    assert "setCrossfadeWithOldImage(true)" in carousel_code
+    assert "hideProgress(" in carousel_code
+    assert "showProgress(" in carousel_code
+    assert "getClosestPhotoSizeWithSize(thumbs, AndroidUtilities.getPhotoSize(), false, null, true)" in carousel_code
+    assert "getClosestPhotoSizeWithSize(thumbs, 100, false, photoSize, false)" in carousel_code
+
+
+
 
 
 

@@ -16262,6 +16262,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         float progress = totalSize == 0 ? 0 : Math.min(1f, uploadedSize / (float) totalSize);
         currentMessageObject.loadedFileSize = uploadedSize;
+        if (md3MediaCarouselView != null && md3MediaCarouselView.getVisibility() == VISIBLE) {
+            md3MediaCarouselView.onProgressUpload(fileName, uploadedSize, totalSize, isEncrypted);
+        }
         radialProgress.setProgress(progress, true);
         if (uploadedSize == totalSize && (currentPosition != null || currentMessageObject.isPaid())) {
             boolean sending = SendMessagesHelper.getInstance(currentAccount).isSendingMessage(currentMessageObject.getId());
