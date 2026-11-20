@@ -904,10 +904,14 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
         }
 
         public void bind(MessageObject message) {
+            boolean sameAttach = currentMessage != null && message != null
+                    && currentMessage.messageOwner != null && message.messageOwner != null
+                    && !android.text.TextUtils.isEmpty(currentMessage.messageOwner.attachPath)
+                    && android.text.TextUtils.equals(currentMessage.messageOwner.attachPath, message.messageOwner.attachPath);
             boolean sameItem = currentMessage != null && message != null && (
                     currentMessage == message ||
                     currentMessage.getId() == message.getId() ||
-                    (currentMessage.getGroupId() != 0 && currentMessage.getGroupId() == message.getGroupId() && currentMessage.getDate() == message.getDate())
+                    sameAttach
             );
             this.currentMessage = message;
 
