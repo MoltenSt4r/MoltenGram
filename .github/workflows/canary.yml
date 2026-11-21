@@ -143,8 +143,8 @@ jobs:
         if: ${{ (github.event_name != 'workflow_dispatch' || inputs.publish) && !contains(github.event.head_commit.message, '[skip publish]') }}
         env:
           TG_BOT_TOKEN: ${{ secrets.TG_BOT_TOKEN }}
-          TG_API_ID: ${{ secrets.TG_API_ID || '39205442' }}
-          TG_API_HASH: ${{ secrets.TG_API_HASH || '1090b570704d1d97975994ee9c177dba' }}
+          TG_API_ID: ${{ secrets.TG_API_ID }}
+          TG_API_HASH: ${{ secrets.TG_API_HASH }}
           TG_CHAT_ID: ${{ secrets.TG_CHAT_ID }}
           RELEASE_TITLE: "MoltenGram Canary"
           COMMIT_SHA: ${{ github.sha }}
