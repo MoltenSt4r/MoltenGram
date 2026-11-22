@@ -573,7 +573,10 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         final int endSize = dp(targetSizeDp);
 
         final float startShiftY = activeTranslationY;
-        final float targetShiftY = endSize < restingSizePx ? -(restingSizePx - endSize) : 0f;
+        final float targetShiftY = -(restingSizePx - endSize) / 2f;
+        final boolean isLeft = app.exteraless.appearance.AppearanceConfig.fabAlignment() == app.exteraless.appearance.AppearanceConfig.FAB_ALIGN_LEFT;
+        final float startShiftX = activeTranslationX;
+        final float targetShiftX = isLeft ? (restingSizePx - endSize) / 2f : -(restingSizePx - endSize) / 2f;
 
         if (!animated) {
             if (shapeMorphAnimator != null) {
@@ -596,13 +599,14 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             applyFabSize(targetSizeDp);
             configureFabGlassDrawable(getWidth(), getHeight());
             setActiveTranslationY(targetShiftY);
+            setActiveTranslationX(targetShiftX);
             invalidate();
             return;
         }
 
         isMorphedToActive = targetShape != app.exteraless.appearance.AppearanceConfig.fabShape()
                 || targetSizeDp != app.exteraless.appearance.AppearanceConfig.fabSize();
-        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && currentIconColor == targetIconColor && startSize == endSize && activeTranslationY == targetShiftY) {
+        if (curShape == targetShape && shapeMorphProgress >= 1f && fabBgPaint.getColor() == targetColor && currentIconColor == targetIconColor && startSize == endSize && activeTranslationY == targetShiftY && activeTranslationX == targetShiftX) {
             applyFabSize(targetSizeDp);
             return;
         }
@@ -627,6 +631,9 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
             }
             if (startShiftY != targetShiftY) {
                 setActiveTranslationY(startShiftY + (targetShiftY - startShiftY) * shapeMorphProgress);
+            }
+            if (startShiftX != targetShiftX) {
+                setActiveTranslationX(startShiftX + (targetShiftX - startShiftX) * shapeMorphProgress);
             }
             if (startColor != targetColor) {
                 int blended = androidx.core.graphics.ColorUtils.blendARGB(startColor, targetColor, shapeMorphProgress);
@@ -654,6 +661,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 invalidateOutline();
                 applyFabSize(targetSizeDp);
                 setActiveTranslationY(targetShiftY);
+                setActiveTranslationX(targetShiftX);
                 invalidate();
             }
         });
@@ -702,6 +710,7 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
                 isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 14);
     }
 
+    private float activeTranslationX;
     private float activeTranslationY;
     private float additionalTranslationY;
     private float internalTranslationY;
@@ -711,6 +720,13 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         setTranslationInternal = true;
         super.setTranslationY(internalTranslationY + additionalTranslationY + activeTranslationY);
         setTranslationInternal = false;
+    }
+
+    public void setActiveTranslationX(float translationX) {
+        if (activeTranslationX != translationX) {
+            activeTranslationX = translationX;
+            super.setTranslationX(activeTranslationX);
+        }
     }
 
     public void setActiveTranslationY(float translationY) {
