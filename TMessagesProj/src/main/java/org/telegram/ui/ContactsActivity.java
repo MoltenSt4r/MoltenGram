@@ -759,7 +759,8 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
                 if (floatingButton != null && !searching) {
                     boolean goingDown = dy > 0;
                     if (dy != 0 && scrollUpdated && (goingDown || scrollingManually)) {
-                        floatingButtonVisibleByScroll = !goingDown;
+                        floatingButtonVisibleByScroll = !goingDown || (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar());
                         checkUi_floatingButtonVisible();
                     }
                     scrollUpdated = true;
@@ -1420,7 +1421,9 @@ public class ContactsActivity extends BaseFragment implements FactorAnimator.Tar
 
     private void checkUi_floatingButtonPosition() {
         if (floatingButton != null) {
-            floatingButton.setTranslationY(-navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, miniPlayerInset));
+            final float effectiveMiniPlayerInset = (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                    && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) ? 0f : miniPlayerInset;
+            floatingButton.setTranslationY(-navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, effectiveMiniPlayerInset));
         }
     }
 

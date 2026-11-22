@@ -817,7 +817,9 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 				}
 
 				if (dy != 0 && scrollUpdated) {
-					floatingButton.setButtonVisible(dy < 0, true);
+					final boolean expressiveKeepVisible = hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+							&& app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar();
+					floatingButton.setButtonVisible(expressiveKeepVisible || dy < 0, true);
 				}
 				scrollUpdated = true;
 			}
@@ -1421,7 +1423,9 @@ public class CallLogActivity extends BaseFragment implements NotificationCenter.
 	}
 
 	private void checkUi_floatingButton() {
-        floatingButton.setTranslationY(-navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, miniPlayerInset));
+        final float effectiveMiniPlayerInset = (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) ? 0f : miniPlayerInset;
+        floatingButton.setTranslationY(-navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, effectiveMiniPlayerInset));
 	}
 
 	private void checkUi_listViewPadding() {

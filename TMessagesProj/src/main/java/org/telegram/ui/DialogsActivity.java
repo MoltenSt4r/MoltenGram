@@ -9378,7 +9378,9 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void updateFloatingButtonOffset() {
-        final float top = -navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, miniPlayerInset);
+        final float effectiveMiniPlayerInset = (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) ? 0f : miniPlayerInset;
+        final float top = -navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, effectiveMiniPlayerInset);
         final float baseTranslationY = top
             - floatingButtonPanOffset;
 
@@ -11728,6 +11730,10 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void hideFloatingButton(boolean hide, boolean byScroll) {
+        if (byScroll && hide && hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) {
+            hide = false;
+        }
         final boolean hideByScroll = hide;
         if (NaConfig.INSTANCE.getDisableDialogsFloatingButton().Bool()) {
             floatingForceVisible = false;
