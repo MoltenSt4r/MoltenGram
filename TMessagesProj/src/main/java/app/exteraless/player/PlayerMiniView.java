@@ -123,17 +123,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         });
         card.setClipToOutline(true);
         card.setElevation(dp(3));
-        if (!preview) {
-            card.setOnClickListener(v -> {
-                if (speedDialMorphProgress >= 0.8f) {
-                    if (this.playButton != null) {
-                        this.playButton.performClick();
-                    }
-                } else {
-                    Md3Player.open(fragment, this);
-                }
-            });
-        } else {
+        if (preview) {
             card.setClickable(false);
         }
         card.setContentDescription(getString(R.string.OEPlayerOpen));
@@ -173,6 +163,15 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             }
         });
         card.addView(playButton, LayoutHelper.createLinear(48, 48));
+        if (!preview) {
+            card.setOnClickListener(v -> {
+                if (speedDialMorphProgress >= 0.8f) {
+                    playButton.performClick();
+                } else {
+                    Md3Player.open(fragment, this);
+                }
+            });
+        }
 
         nextButton = new ImageView(context);
         nextButton.setScaleType(ImageView.ScaleType.CENTER);
