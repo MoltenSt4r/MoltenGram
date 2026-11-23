@@ -346,8 +346,10 @@ public class Md3SpeedDialView extends FrameLayout {
         itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
         itemsContainer.setClipChildren(false);
         itemsContainer.setClipToPadding(false);
+        int navOffset = activity != null ? activity.getFloatingButtonBottomOffset() : 0;
+        int initialBottomMargin = Math.max(dp(70), navOffset + dp(14 + 56 + 10));
         addView(itemsContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT,
-                (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 20 : 0, 0, isLeft ? 0 : 20, 70));
+                (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM, isLeft ? 20 : 0, 0, isLeft ? 0 : 20, initialBottomMargin));
 
         setVisibility(GONE);
         rebuildItems();
@@ -374,9 +376,12 @@ public class Md3SpeedDialView extends FrameLayout {
         itemsContainer.setGravity(isLeft ? Gravity.LEFT : Gravity.RIGHT);
         FrameLayout.LayoutParams containerLp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
         if (containerLp != null) {
+            int navOffset = activity != null ? activity.getFloatingButtonBottomOffset() : 0;
+            int minMargin = navOffset + dp(14 + 56 + 10);
             containerLp.gravity = (isLeft ? Gravity.LEFT : Gravity.RIGHT) | Gravity.BOTTOM;
             containerLp.leftMargin = isLeft ? dp(20) : 0;
             containerLp.rightMargin = isLeft ? 0 : dp(20);
+            containerLp.bottomMargin = Math.max(containerLp.bottomMargin, minMargin);
             itemsContainer.setLayoutParams(containerLp);
         }
 
@@ -427,13 +432,19 @@ public class Md3SpeedDialView extends FrameLayout {
             mainFab.morphTo(AppearanceConfig.fabActiveShape(), AppearanceConfig.fabActiveSize(), AppearanceConfig.fabActiveColor(), true);
         }
 
+        if (activity != null) {
+            activity.onSpeedDialOpenChanged(true, true);
+        }
+
         rebuildItems();
 
         final boolean isLeft = AppearanceConfig.fabAlignment() == AppearanceConfig.FAB_ALIGN_LEFT;
         int activeSize = AppearanceConfig.fabActiveSize();
         int restingSize = AppearanceConfig.fabSize();
         int topSize = Math.max(activeSize, restingSize);
-        int bottomMargin = dp(14 + topSize + 10);
+        int navOffset = activity != null ? activity.getFloatingButtonBottomOffset() : 0;
+        int minBottomMargin = navOffset + dp(14 + topSize + 10);
+        int bottomMargin = minBottomMargin;
         if (mainFab != null) {
             // Центр FAB в покое + половина максимальной высоты кнопки (уменьшение/рост к центру)
             float restCenterY = mainFab.getY() + mainFab.getHeight() / 2f;
@@ -441,7 +452,8 @@ public class Md3SpeedDialView extends FrameLayout {
                     : (activity != null && activity.getFragmentView() != null ? activity.getFragmentView().getHeight() : 0);
             if (containerH > 0 && restCenterY > 0 && restCenterY <= containerH) {
                 float topEdge = restCenterY - dp(topSize) / 2f;
-                bottomMargin = (int) (containerH - topEdge + dp(10));
+                int calculated = (int) (containerH - topEdge + dp(10));
+                bottomMargin = Math.max(calculated, minBottomMargin);
             }
         }
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) itemsContainer.getLayoutParams();
@@ -455,9 +467,6 @@ public class Md3SpeedDialView extends FrameLayout {
         setVisibility(VISIBLE);
         scrimView.setAlpha(0f);
         scrimView.animate().alpha(1f).setDuration(240).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();
-        if (activity != null) {
-            activity.onSpeedDialOpenChanged(true, true);
-        }
 
         if (mainFab != null && mainFab.imageView != null) {
             mainFab.imageView.animate().rotation(45f).setDuration(240).setInterpolator(CubicBezierInterpolator.EASE_OUT).start();

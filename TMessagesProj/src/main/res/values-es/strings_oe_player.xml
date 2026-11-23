@@ -62,6 +62,8 @@
     <string name="OEPlayerLayoutInfo">El último bloque se queda abajo de la pantalla.</string>
     <string name="OEPlayerShowModes">Aleatorio y repetir</string>
     <string name="OEPlayerShowWave">Barra de progreso ondulada</string>
+    <string name="OEPlayerWaveAmplitude">Amplitud de la onda</string>
+    <string name="OEPlayerWaveSpeed">Velocidad de la animación</string>
     <string name="OEPlayerStyleButtons">Botones</string>
     <string name="OEPlayerControlsCompact">Compactos</string>
     <string name="OEPlayerControlsNormal">Normales</string>

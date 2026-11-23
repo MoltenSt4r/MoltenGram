@@ -2,8 +2,17 @@ package app.exteraless.appearance
 
 import android.content.SharedPreferences
 import android.os.Build
+import com.google.android.material.color.utilities.DynamicScheme
 import com.google.android.material.color.utilities.Hct
+import com.google.android.material.color.utilities.SchemeContent
+import com.google.android.material.color.utilities.SchemeExpressive
+import com.google.android.material.color.utilities.SchemeFidelity
+import com.google.android.material.color.utilities.SchemeFruitSalad
+import com.google.android.material.color.utilities.SchemeMonochrome
+import com.google.android.material.color.utilities.SchemeNeutral
+import com.google.android.material.color.utilities.SchemeRainbow
 import com.google.android.material.color.utilities.SchemeTonalSpot
+import com.google.android.material.color.utilities.SchemeVibrant
 import org.telegram.messenger.AndroidUtilities
 import org.telegram.messenger.ApplicationLoader
 import org.telegram.messenger.FileLog
@@ -134,6 +143,47 @@ object AppearanceConfig {
     @JvmStatic
     fun monetAssetSuffix(): String =
         if (monetStyle.Int() == MONET_STYLE_CLASSIC) "_gram" else ""
+
+    /** Стили тональной палитры Material Design 3 (Google Monet DynamicScheme). */
+    const val MONET_PALETTE_TONAL_SPOT = 0
+    const val MONET_PALETTE_NEUTRAL = 1
+    const val MONET_PALETTE_VIBRANT = 2
+    const val MONET_PALETTE_EXPRESSIVE = 3
+    const val MONET_PALETTE_RAINBOW = 4
+    const val MONET_PALETTE_FRUIT_SALAD = 5
+    const val MONET_PALETTE_MONOCHROME = 6
+    const val MONET_PALETTE_FIDELITY = 7
+    const val MONET_PALETTE_CONTENT = 8
+
+    /**
+     * Алгоритм тональной палитры Monet.
+     * По умолчанию Vibrant (насыщенные яркие цвета вместо блеклого Neutral).
+     */
+    @JvmField
+    val monetPaletteStyle =
+        addConfig("OEAppearanceMonetPaletteStyle", ConfigItem.configTypeInt, MONET_PALETTE_VIBRANT)
+
+    @JvmStatic
+    fun monetPaletteStyle(): Int {
+        ensureLoaded()
+        val p = monetPaletteStyle.Int()
+        return if (p in 0..8) p else MONET_PALETTE_VIBRANT
+    }
+
+    @JvmStatic
+    fun createDynamicScheme(style: Int, hct: Hct, isDark: Boolean, contrastLevel: Double = 0.0): DynamicScheme {
+        return when (style) {
+            MONET_PALETTE_NEUTRAL -> SchemeNeutral(hct, isDark, contrastLevel)
+            MONET_PALETTE_VIBRANT -> SchemeVibrant(hct, isDark, contrastLevel)
+            MONET_PALETTE_EXPRESSIVE -> SchemeExpressive(hct, isDark, contrastLevel)
+            MONET_PALETTE_RAINBOW -> SchemeRainbow(hct, isDark, contrastLevel)
+            MONET_PALETTE_FRUIT_SALAD -> SchemeFruitSalad(hct, isDark, contrastLevel)
+            MONET_PALETTE_MONOCHROME -> SchemeMonochrome(hct, isDark, contrastLevel)
+            MONET_PALETTE_FIDELITY -> SchemeFidelity(hct, isDark, contrastLevel)
+            MONET_PALETTE_CONTENT -> SchemeContent(hct, isDark, contrastLevel)
+            else -> SchemeTonalSpot(hct, isDark, contrastLevel)
+        }
+    }
 
     // ---- Только UI: аналогов в NagramX нет, визуальный эффект пока не подключён ----
 
@@ -855,7 +905,7 @@ object AppearanceConfig {
             playerShowModes, playerShowLike, playerShowSource, playerWavy, playerControlsSize, playerActionsStyle,
             playerColors, playerBackground, playerCoverExtend, playerMiniCover, playerMiniShape, playerMiniProgress,
             playerMiniColors, playerMiniCompact, playerMiniArtist, playerMiniPrevious, playerMiniNext,
-            playerMiniClose
+            playerMiniClose, playerWaveAmplitude, playerWaveSpeed
         )
     }
 
@@ -910,6 +960,28 @@ object AppearanceConfig {
         ensureLoaded()
         val v = playerSeekbarThickness.Int()
         return if (v in 2..16) v else 4
+    }
+
+    /** Высота волны для WavySeekBar (в dp): по умолчанию 4 dp. */
+    @JvmField
+    val playerWaveAmplitude = addConfig("OEPlayerWaveAmplitude", ConfigItem.configTypeInt, 4)
+
+    @JvmStatic
+    fun playerWaveAmplitude(): Int {
+        ensureLoaded()
+        val v = playerWaveAmplitude.Int()
+        return if (v in 1..16) v else 4
+    }
+
+    /** Скорость анимации волны: по умолчанию 6. */
+    @JvmField
+    val playerWaveSpeed = addConfig("OEPlayerWaveSpeed", ConfigItem.configTypeInt, 6)
+
+    @JvmStatic
+    fun playerWaveSpeed(): Int {
+        ensureLoaded()
+        val v = playerWaveSpeed.Int()
+        return if (v in 1..20) v else 6
     }
 
     /** Включает MD3 / волнистый прогресс-бар на аудиосообщениях (музыке) в чатах. */
@@ -2037,7 +2109,7 @@ object AppearanceConfig {
         return hct.toInt()
     }
 
-    /** Возвращает цвет из Monet (если активна Monet-тема) либо из текущей активной темы через SchemeTonalSpot. */
+    /** Возвращает цвет из Monet (если активна Monet-тема) либо из текущей активной темы через выбранную палитру MD3 DynamicScheme. */
     @JvmStatic
     fun resolveThemeToken(token: String, defaultColor: Int): Int {
         val activeTheme = Theme.getActiveTheme()
@@ -2048,7 +2120,7 @@ object AppearanceConfig {
         var seed = Theme.getColor(Theme.key_featuredStickers_addButton)
         if (seed == 0) seed = Theme.getColor(Theme.key_chats_actionBackground)
         if (seed == 0) seed = if (defaultColor != 0) defaultColor else 0xFF4285F4.toInt()
-        val scheme = SchemeTonalSpot(Hct.fromInt(seed), Theme.isCurrentThemeDark(), 0.0)
+        val scheme = createDynamicScheme(monetPaletteStyle(), Hct.fromInt(seed), Theme.isCurrentThemeDark(), 0.0)
         return when (token) {
             "primary" -> scheme.primary
             "on_primary" -> scheme.onPrimary

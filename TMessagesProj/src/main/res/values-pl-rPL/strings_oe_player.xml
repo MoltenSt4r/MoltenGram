@@ -62,6 +62,8 @@
     <string name="OEPlayerLayoutInfo">Ostatni blok przylega do dołu ekranu.</string>
     <string name="OEPlayerShowModes">Losowo i powtarzanie</string>
     <string name="OEPlayerShowWave">Falisty pasek postępu</string>
+    <string name="OEPlayerWaveAmplitude">Wysokość fali</string>
+    <string name="OEPlayerWaveSpeed">Szybkość animacji</string>
     <string name="OEPlayerStyleButtons">Przyciski</string>
     <string name="OEPlayerControlsCompact">Kompaktowe</string>
     <string name="OEPlayerControlsNormal">Zwykłe</string>

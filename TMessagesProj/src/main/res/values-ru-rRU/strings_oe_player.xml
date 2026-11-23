@@ -192,6 +192,8 @@
 <string name="OEPlayerShowSource">Источник</string>
 <string name="OEPlayerBlockProgress">Прогресс</string>
 <string name="OEPlayerShowWave">Волнистая полоса</string>
+    <string name="OEPlayerWaveAmplitude">Высота волны</string>
+    <string name="OEPlayerWaveSpeed">Скорость анимации</string>
 <string name="OEPlayerBlockControls">Управление</string>
 <string name="OEPlayerControlsCompact">Компактно</string>
 <string name="OEPlayerControlsNormal">Обычно</string>

@@ -1564,6 +1564,9 @@ public class MainTabsActivity extends ViewPagerActivity implements NotificationC
         if (tabsView != null) {
             tabsView.setSpeedDialDim(speedDialDimProgress, onSpeedDialScrimClick);
         }
+        if (miniPlayer != null) {
+            miniPlayer.setSpeedDialMorphProgress(speedDialDimProgress);
+        }
         checkUi_fadeView();
     }
 

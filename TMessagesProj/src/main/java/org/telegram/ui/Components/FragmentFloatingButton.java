@@ -722,6 +722,12 @@ public class FragmentFloatingButton extends FrameLayout implements FactorAnimato
         setTranslationInternal = false;
     }
 
+    public void ensureBottomNavOffset(int offsetPx) {
+        if (offsetPx > 0 && Math.abs(internalTranslationY) < offsetPx) {
+            setTranslationY(-offsetPx);
+        }
+    }
+
     public void setActiveTranslationX(float translationX) {
         if (activeTranslationX != translationX) {
             activeTranslationX = translationX;

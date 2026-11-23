@@ -9,7 +9,6 @@ import androidx.core.graphics.ColorUtils;
 import com.google.android.material.color.utilities.DynamicScheme;
 import com.google.android.material.color.utilities.Hct;
 import com.google.android.material.color.utilities.QuantizerCelebi;
-import com.google.android.material.color.utilities.SchemeTonalSpot;
 import com.google.android.material.color.utilities.Score;
 
 import org.telegram.ui.ActionBar.Theme;
@@ -59,7 +58,9 @@ public final class PlayerColors {
     }
 
     public static PlayerColors fromSeed(int seed, boolean dark) {
-        DynamicScheme s = new SchemeTonalSpot(Hct.fromInt(seed), dark, 0.0);
+        int palette = app.exteraless.appearance.AppearanceConfig.monetPaletteStyle();
+        DynamicScheme s = app.exteraless.appearance.AppearanceConfig.createDynamicScheme(
+                palette, Hct.fromInt(seed), dark, 0.0);
         return new PlayerColors(dark, new int[]{
                 s.getSurface(), s.getSurfaceContainerLow(), s.getSurfaceContainer(), s.getSurfaceContainerHigh(),
                 s.getOnSurface(), s.getOnSurfaceVariant(), s.getOutlineVariant(),

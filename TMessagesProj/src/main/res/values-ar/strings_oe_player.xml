@@ -62,6 +62,8 @@
     <string name="OEPlayerLayoutInfo">آخر قسم يلتصق بأسفل الشاشة.</string>
     <string name="OEPlayerShowModes">خلط وتكرار</string>
     <string name="OEPlayerShowWave">شريط تقدم متموج</string>
+    <string name="OEPlayerWaveAmplitude">ارتفاع الموجة</string>
+    <string name="OEPlayerWaveSpeed">سرعة الحركة</string>
     <string name="OEPlayerStyleButtons">الأزرار</string>
     <string name="OEPlayerControlsCompact">مضغوطة</string>
     <string name="OEPlayerControlsNormal">عادية</string>

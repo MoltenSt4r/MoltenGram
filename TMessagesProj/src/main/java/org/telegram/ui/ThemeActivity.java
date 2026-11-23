@@ -210,6 +210,77 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     @Keep
     private int bubbleRadiusRow;
     private int monetStyleRow;
+    private int monetPaletteRow;
+
+    private void showMonetPaletteOptions(View anchor) {
+        int current = AppearanceConfig.monetPaletteStyle();
+        ItemOptions.makeOptions(this, anchor)
+                .add(current == AppearanceConfig.MONET_PALETTE_TONAL_SPOT ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteTonalSpot),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_TONAL_SPOT))
+                .add(current == AppearanceConfig.MONET_PALETTE_NEUTRAL ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteNeutral),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_NEUTRAL))
+                .add(current == AppearanceConfig.MONET_PALETTE_VIBRANT ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteVibrant),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_VIBRANT))
+                .add(current == AppearanceConfig.MONET_PALETTE_EXPRESSIVE ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteExpressive),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_EXPRESSIVE))
+                .add(current == AppearanceConfig.MONET_PALETTE_RAINBOW ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteRainbow),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_RAINBOW))
+                .add(current == AppearanceConfig.MONET_PALETTE_FRUIT_SALAD ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteFruitSalad),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FRUIT_SALAD))
+                .add(current == AppearanceConfig.MONET_PALETTE_MONOCHROME ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteMonochrome),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_MONOCHROME))
+                .add(current == AppearanceConfig.MONET_PALETTE_FIDELITY ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteFidelity),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FIDELITY))
+                .add(current == AppearanceConfig.MONET_PALETTE_CONTENT ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteContent),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_CONTENT))
+                .setGravity(Gravity.RIGHT)
+                .show();
+    }
+
+    private void applyMonetPalette(int palette) {
+        if (AppearanceConfig.monetPaletteStyle() == palette) {
+            return;
+        }
+        AppearanceConfig.monetPaletteStyle.setConfigInt(palette);
+        MonetHelper.invalidateCache();
+        Theme.reloadMonetThemes();
+        if (listAdapter != null) {
+            listAdapter.notifyItemChanged(monetPaletteRow);
+        }
+        app.exteraless.player.PlayerMiniView.styleChanged();
+    }
+
+    private static int monetPaletteName() {
+        switch (AppearanceConfig.monetPaletteStyle()) {
+            case AppearanceConfig.MONET_PALETTE_NEUTRAL:
+                return R.string.MonetPaletteNeutral;
+            case AppearanceConfig.MONET_PALETTE_VIBRANT:
+                return R.string.MonetPaletteVibrant;
+            case AppearanceConfig.MONET_PALETTE_EXPRESSIVE:
+                return R.string.MonetPaletteExpressive;
+            case AppearanceConfig.MONET_PALETTE_RAINBOW:
+                return R.string.MonetPaletteRainbow;
+            case AppearanceConfig.MONET_PALETTE_FRUIT_SALAD:
+                return R.string.MonetPaletteFruitSalad;
+            case AppearanceConfig.MONET_PALETTE_MONOCHROME:
+                return R.string.MonetPaletteMonochrome;
+            case AppearanceConfig.MONET_PALETTE_FIDELITY:
+                return R.string.MonetPaletteFidelity;
+            case AppearanceConfig.MONET_PALETTE_CONTENT:
+                return R.string.MonetPaletteContent;
+            default:
+                return R.string.MonetPaletteTonalSpot;
+        }
+    }
 
     private void showMonetStyleOptions(View anchor) {
         int current = AppearanceConfig.monetStyle.Int();
@@ -715,6 +786,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         bubbleRadiusHeaderRow = -1;
         bubbleRadiusRow = -1;
         monetStyleRow = -1;
+        monetPaletteRow = -1;
         bubbleRadiusInfoRow = -1;
         chatListHeaderRow = -1;
         chatListRow = -1;
@@ -804,6 +876,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 monetStyleRow = rowCount++;
+                monetPaletteRow = rowCount++;
             }
             bubbleRadiusInfoRow = rowCount++;
 
@@ -1281,6 +1354,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         listView.setOnItemClickListener((view, position, x, y) -> {
             if (position == monetStyleRow) {
                 showMonetStyleOptions(view);
+            } else if (position == monetPaletteRow) {
+                showMonetPaletteOptions(view);
             } else if (position == enableAnimationsRow) {
                 SharedPreferences preferences = MessagesController.getGlobalMainSettings();
                 boolean animations = preferences.getBoolean("view_animations", true);
@@ -2867,7 +2942,13 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValue(getString(R.string.MonetStyleHeader),
-                                getString(monetStyleName()), false);
+                                getString(monetStyleName()), true);
+                    } else if (position == monetPaletteRow) {
+                        cell.setSubtitle(getString(R.string.MonetPaletteSubHeader));
+                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
+                                Theme.key_windowBackgroundWhiteBlackText);
+                        cell.setTextAndValue(getString(R.string.MonetPaletteHeader),
+                                getString(monetPaletteName()), false);
                     } else if (position == backgroundRow) {
                         cell.setSubtitle(null);
                         cell.setColors(Theme.key_windowBackgroundWhiteBlueText4, Theme.key_windowBackgroundWhiteBlueText4);
@@ -2968,7 +3049,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             } else if (position == bubbleRadiusRow) {
                 return TYPE_BUBBLE_RADIUS;
             } else if (position == backgroundRow || position == editThemeRow || position == createNewThemeRow ||
-                        position == liteModeRow || position == stickersRow || position == monetStyleRow) {
+                        position == liteModeRow || position == stickersRow || position == monetStyleRow || position == monetPaletteRow) {
                 return TYPE_TEXT_PREFERENCE;
             } else if (position == swipeGestureRow) {
                 return TYPE_SWIPE_GESTURE;

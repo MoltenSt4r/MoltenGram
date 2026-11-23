@@ -50,6 +50,7 @@ public class WavySeekBar extends View {
     private long lastFrame;
     private boolean frozen;
     private float maxAmplitude = dp(4);
+    private float waveSpeed = -1f;
 
     private ValueAnimator returnAnimator;
     private float returnProgress;
@@ -95,8 +96,21 @@ public class WavySeekBar extends View {
     }
 
     public void setMaxAmplitude(float px) {
-        maxAmplitude = px;
-        invalidate();
+        if (maxAmplitude != px) {
+            maxAmplitude = px;
+            invalidate();
+        }
+    }
+
+    public void setWaveSpeed(float speed) {
+        if (waveSpeed != speed) {
+            waveSpeed = speed;
+            invalidate();
+        }
+    }
+
+    public float getWaveSpeed() {
+        return waveSpeed;
     }
 
     public void setWave(boolean wave) {
@@ -300,15 +314,18 @@ public class WavySeekBar extends View {
         int seekbarStyle = app.exteraless.appearance.AppearanceConfig.playerSeekbarStyle();
         int indicator = app.exteraless.appearance.AppearanceConfig.playerSeekbarIndicator();
         int thickness = app.exteraless.appearance.AppearanceConfig.playerSeekbarThickness();
+        int ampDp = app.exteraless.appearance.AppearanceConfig.playerWaveAmplitude();
+        float currentSpeed = waveSpeed > 0f ? waveSpeed : app.exteraless.appearance.AppearanceConfig.playerWaveSpeed();
         boolean isMaterial3 = (seekbarStyle == 1);
         boolean isWavy = !isMaterial3 && waveEnabled && app.exteraless.appearance.AppearanceConfig.playerWavy.Bool();
-        float targetAmp = (playing && isWavy) ? maxAmplitude : 0f;
+        float effectiveMaxAmp = maxAmplitude > 0f ? maxAmplitude : dp(ampDp);
+        float targetAmp = (playing && isWavy) ? effectiveMaxAmp : 0f;
         amplitude += (targetAmp - amplitude) * (1f - (float) Math.pow(0.85, dt / 0.04f));
         if (Math.abs(amplitude - targetAmp) < dpf2(0.05f)) {
             amplitude = targetAmp;
         }
         if (amplitude > 0f) {
-            phase = (phase + 6f * dt) % TAU;
+            phase = (phase + currentSpeed * dt) % TAU;
         }
 
         float strokeW = dp(Math.max(2, thickness));
@@ -333,29 +350,32 @@ public class WavySeekBar extends View {
         float x = left + p * (right - left);
         float visualGap = dp(4) + strokeW * 0.35f;
         float capHalf = strokeW / 2f;
-        float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
-        float waveEnd = (indicator == 2) ? x : (x - thumbRadius - visualGap - capHalf);
+        float waveStart = left + capHalf;
         float stopX = right - capHalf;
-        float restX = (indicator == 2) ? x : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
+        float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
+        float waveEnd = (indicator == 2) ? Math.min(stopX, Math.max(waveStart, x)) : Math.min(stopX, Math.max(waveStart, x - thumbRadius - visualGap - capHalf));
+        float restX = (indicator == 2) ? waveEnd : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
+        float unplayedStart = restX;
         float lambda = dp(34);
         float step = dp(2);
 
-        // 1. Draw inactive background track first
-        if (indicator == 2) {
-            canvas.drawLine(left, cy, stopX, cy, trackPaint);
-        } else if (restX < stopX) {
-            canvas.drawLine(restX, cy, stopX, cy, trackPaint);
+        // 1. Draw inactive background track (only the unplayed portion, never underneath the wavy played path)
+        if (unplayedStart < stopX) {
+            canvas.drawLine(unplayedStart, cy, stopX, cy, trackPaint);
         }
 
         // 2. Draw active progress on top
-        if (waveEnd > left) {
+        if (waveEnd > waveStart + dpf2(0.5f)) {
             if (amplitude > 0f && isWavy) {
                 path.rewind();
+                float taper = Math.min(dp(16), (waveEnd - waveStart) * 0.5f);
                 boolean first = true;
-                for (float px = left; ; px += step) {
+                for (float px = waveStart; ; px += step) {
                     boolean last = px >= waveEnd;
                     float cx = last ? waveEnd : px;
-                    float y = cy + amplitude * (float) Math.sin(TAU * cx / lambda - phase);
+                    float u = taper > 0f ? Math.max(0f, Math.min(1f, Math.min((cx - waveStart) / taper, (waveEnd - cx) / taper))) : 0f;
+                    float smoothFade = u * u * (3f - 2f * u);
+                    float y = cy + amplitude * (float) Math.sin(TAU * (cx - waveStart) / lambda - phase) * smoothFade;
                     if (first) {
                         path.moveTo(cx, y);
                         first = false;
@@ -368,7 +388,7 @@ public class WavySeekBar extends View {
                 }
                 canvas.drawPath(path, wavePaint);
             } else {
-                canvas.drawLine(left, cy, waveEnd, cy, wavePaint);
+                canvas.drawLine(waveStart, cy, waveEnd, cy, wavePaint);
             }
         }
 

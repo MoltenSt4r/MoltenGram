@@ -87,6 +87,8 @@ public class PlayerStyleEditor extends LinearLayout {
     private final ArrayList<Part> parts = new ArrayList<>();
     private PlayerColors colors;
     private View waveChip;
+    private View waveAmpSlider;
+    private View waveSpeedSlider;
     private ElementCard titleCard;
     private final ElementCard[] blockCard = new ElementCard[3];
     private LinearLayout blockCards;
@@ -200,6 +202,10 @@ public class PlayerStyleEditor extends LinearLayout {
         waveChip = addChip(progressChips, R.string.OEPlayerShowWave, AppearanceConfig.playerWavy);
         addSlider(R.string.OEPlayerSeekbarThickness, 2, 16, 1, " dp",
                 AppearanceConfig::playerSeekbarThickness, value -> AppearanceConfig.playerSeekbarThickness.setConfigInt(value));
+        waveAmpSlider = addSlider(R.string.OEPlayerWaveAmplitude, 1, 16, 1, " dp",
+                AppearanceConfig::playerWaveAmplitude, value -> AppearanceConfig.playerWaveAmplitude.setConfigInt(value));
+        waveSpeedSlider = addSlider(R.string.OEPlayerWaveSpeed, 1, 20, 1, "",
+                AppearanceConfig::playerWaveSpeed, value -> AppearanceConfig.playerWaveSpeed.setConfigInt(value));
         addCardLabel(R.string.OEPlayerSeekbarIndicator);
         addSegmented(new String[]{
                 getString(R.string.OEPlayerSeekbarIndicatorDot),
@@ -438,7 +444,10 @@ public class PlayerStyleEditor extends LinearLayout {
     }
 
     private void refreshVisibility() {
+        boolean wavy = AppearanceConfig.playerSeekbarStyle() != 1 && AppearanceConfig.playerWavy.Bool();
         setVisible(waveChip, AppearanceConfig.playerSeekbarStyle() != 1);
+        setVisible(waveAmpSlider, wavy);
+        setVisible(waveSpeedSlider, wavy);
     }
 
     private static void setVisible(View view, boolean visible) {

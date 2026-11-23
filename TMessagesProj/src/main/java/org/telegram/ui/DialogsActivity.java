@@ -9378,8 +9378,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
     }
 
     private void updateFloatingButtonOffset() {
-        final float effectiveMiniPlayerInset = (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
-                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar()) ? 0f : miniPlayerInset;
+        if (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()) {
+            additionFloatingButtonOffset = dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp());
+            additionNavigationBarHeight = (!MainTabsLayout.isBottomNavigationFloating() && !MainTabsLayout.isBottomNavigationExpressive()) ? dp(app.exteraless.appearance.MainTabsUiHelper.getTabsViewHeightDp()) : 0;
+        }
+        final boolean speedDialOpen = speedDialView != null && speedDialView.isOpen();
+        final float effectiveMiniPlayerInset = (speedDialOpen || (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()
+                && app.exteraless.appearance.MainTabsUiHelper.isExpressiveToolbar())) ? 0f : miniPlayerInset;
         final float top = -navigationBarHeight - additionFloatingButtonOffset - Math.max(additionalFloatingTranslation, effectiveMiniPlayerInset);
         final float baseTranslationY = top
             - floatingButtonPanOffset;
@@ -14751,6 +14756,13 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
         return poolIndex;
     }
 
+    public int getFloatingButtonBottomOffset() {
+        if (hasMainTabs && MainTabsLayout.isBottomNavigationVisible()) {
+            additionFloatingButtonOffset = dp(app.exteraless.appearance.MainTabsUiHelper.getTabsFabOffsetDp());
+        }
+        return navigationBarHeight + additionFloatingButtonOffset;
+    }
+
     public void onSpeedDialOpenChanged(boolean open, boolean animated) {
         if (mainTabsActivityController != null) {
             mainTabsActivityController.setSpeedDialOpen(open, animated, () -> {
@@ -14759,6 +14771,8 @@ public class DialogsActivity extends BaseFragment implements NotificationCenter.
                 }
             });
         }
+        app.exteraless.player.PlayerMiniView.notifySpeedDialMorph(open, animated);
+        updateFloatingButtonOffset();
         invalidateBlurCaptures(GlassEngine.FLAG_INVALIDATED_POSITIONS);
     }
 

@@ -159,12 +159,20 @@ public final class PlayerStyle {
         return item(AppearanceConfig.playerWavy).Bool();
     }
 
+    public static int waveAmplitude() {
+        return item(AppearanceConfig.playerWaveAmplitude).Int();
+    }
+
+    public static int waveSpeed() {
+        return item(AppearanceConfig.playerWaveSpeed).Int();
+    }
+
     public static float controlsScale() {
         switch (item(AppearanceConfig.playerControlsSize).Int()) {
             case 0:
                 return 0.84f;
             case 2:
-                return 1.14f;
+                return 1.15f;
             default:
                 return 1f;
         }
@@ -243,6 +251,8 @@ public final class PlayerStyle {
                 AppearanceConfig.playerShowSource,
                 AppearanceConfig.playerSeekbarStyle,
                 AppearanceConfig.playerWavy,
+                AppearanceConfig.playerWaveAmplitude,
+                AppearanceConfig.playerWaveSpeed,
                 AppearanceConfig.playerSeekbarThickness,
                 AppearanceConfig.playerSeekbarIndicator,
                 AppearanceConfig.playerControlsSize,

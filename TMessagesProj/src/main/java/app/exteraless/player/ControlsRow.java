@@ -4,6 +4,7 @@ import static org.telegram.messenger.AndroidUtilities.dp;
 
 import android.content.Context;
 import android.os.SystemClock;
+import android.view.MotionEvent;
 import android.view.ViewGroup;
 
 public class ControlsRow extends ViewGroup implements MorphButton.PressListener {
@@ -15,6 +16,7 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     public final MorphButton repeat;
     private final MorphButton[] buttons;
     private MorphButton pressed;
+    private MorphButton touchTargetButton;
     private boolean playing;
     private boolean shuffleOn;
     private boolean repeatOn;
@@ -65,7 +67,11 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
         this.modesVisible = modesVisible;
         shuffle.setVisibility(modesVisible ? VISIBLE : GONE);
         repeat.setVisibility(modesVisible ? VISIBLE : GONE);
+        for (MorphButton b : buttons) {
+            b.invalidate();
+        }
         requestLayout();
+        invalidate();
     }
 
     public void setPlaying(boolean value, boolean animated) {
@@ -169,11 +175,11 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         int width = MeasureSpec.getSize(widthMeasureSpec);
-        float userScale = 1.0f;
-        float baseNeeded = dp(340);
-        float available = width - dp(24);
-        if (available > 0) {
-            scale = Math.min(userScale, available / baseNeeded);
+        float baseNeeded = modesVisible ? dp(312) : dp(216);
+        float minGaps = modesVisible ? dp(16) : dp(24);
+        float required = (baseNeeded + minGaps) * userScale;
+        if (width > 0 && width < required) {
+            scale = Math.min(userScale, width / (baseNeeded + minGaps));
         } else {
             scale = userScale;
         }
@@ -206,18 +212,26 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
             total += button.getMeasuredWidth();
             count++;
         }
-        float gap;
-        float x;
-        if (modesVisible) {
-            gap = (width - total) / Math.max(1f, count - 1f);
-            x = 0;
-        } else {
-            gap = Math.min(dp(28) * scale, (width - total) / Math.max(1f, count - 1f));
-            x = (width - total - gap * (count - 1)) / 2f;
+        if (count == 0) {
+            return;
         }
-        gap = Math.max(0, (width - total) / (buttons.length - 1f));
-        float startX = Math.max(0, (width - (total + gap * (buttons.length - 1))) / 2f);
-        x = startX;
+        float gap;
+        float startX;
+        if (modesVisible) {
+            gap = count > 1 ? Math.max(0f, (width - total) / (count - 1f)) : 0f;
+            startX = Math.max(0f, (width - (total + gap * (count - 1f))) / 2f);
+        } else {
+            float maxInnerGap = dp(40) * scale;
+            float evenGap = (width - total) / (count + 1f);
+            if (evenGap <= maxInnerGap) {
+                gap = Math.max(0f, evenGap);
+                startX = Math.max(0f, gap);
+            } else {
+                gap = maxInnerGap;
+                startX = Math.max(0f, (width - (total + gap * (count - 1f))) / 2f);
+            }
+        }
+        float x = startX;
         for (MorphButton button : buttons) {
             if (button.getVisibility() == GONE) {
                 continue;
@@ -229,5 +243,52 @@ public class ControlsRow extends ViewGroup implements MorphButton.PressListener 
             button.layout(left, top, left + w, top + h);
             x += w + gap;
         }
+    }
+
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (event.getActionMasked() == MotionEvent.ACTION_DOWN) {
+            touchTargetButton = findNearestButton(event.getX(), event.getY());
+            if (touchTargetButton != null) {
+                MotionEvent copy = MotionEvent.obtain(event);
+                copy.setLocation(touchTargetButton.getWidth() / 2f, touchTargetButton.getHeight() / 2f);
+                boolean handled = touchTargetButton.dispatchTouchEvent(copy);
+                copy.recycle();
+                if (handled) {
+                    return true;
+                }
+                touchTargetButton = null;
+            }
+        } else if (touchTargetButton != null) {
+            MotionEvent copy = MotionEvent.obtain(event);
+            copy.setLocation(touchTargetButton.getWidth() / 2f, touchTargetButton.getHeight() / 2f);
+            boolean handled = touchTargetButton.dispatchTouchEvent(copy);
+            copy.recycle();
+            if (event.getActionMasked() == MotionEvent.ACTION_UP || event.getActionMasked() == MotionEvent.ACTION_CANCEL) {
+                touchTargetButton = null;
+            }
+            return handled;
+        }
+        return super.onTouchEvent(event);
+    }
+
+    private MorphButton findNearestButton(float x, float y) {
+        MorphButton best = null;
+        float bestDist = Float.MAX_VALUE;
+        for (MorphButton button : buttons) {
+            if (button.getVisibility() == GONE) {
+                continue;
+            }
+            float bx = (button.getLeft() + button.getRight()) / 2f;
+            float by = (button.getTop() + button.getBottom()) / 2f;
+            float dx = x - bx;
+            float dy = y - by;
+            float dist = dx * dx + dy * dy;
+            if (dist < bestDist) {
+                bestDist = dist;
+                best = button;
+            }
+        }
+        return best;
     }
 }

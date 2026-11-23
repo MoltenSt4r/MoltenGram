@@ -72,6 +72,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int keepScreenOnRow;
     private int actionButtonsRow;
     private int seekbarWavyRow;
+    private int seekbarWaveAmplitudeRow;
+    private int seekbarWaveSpeedRow;
     private int miniPlayerWavyRow;
     private int seekbarThicknessRow;
     private int seekbarIndicatorRow;
@@ -131,6 +133,13 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         coverShapeRow = addRow("coverShape");
         miniCoverShapeRow = addRow("miniCoverShape");
         seekbarWavyRow = addRow("seekbarWavy");
+        if (AppearanceConfig.playerWavy.Bool()) {
+            seekbarWaveAmplitudeRow = addRow("seekbarWaveAmplitude");
+            seekbarWaveSpeedRow = addRow("seekbarWaveSpeed");
+        } else {
+            seekbarWaveAmplitudeRow = -1;
+            seekbarWaveSpeedRow = -1;
+        }
         seekbarThicknessRow = addRow("seekbarThickness");
         seekbarIndicatorRow = addRow("seekbarIndicator");
         appearanceMoreRow = addRow();
@@ -226,6 +235,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(nextVal);
             }
+            updateRows();
+            if (listAdapter != null) listAdapter.notifyDataSetChanged();
             refreshPlayerUi();
         } else if (position == miniPlayerWavyRow) {
             boolean nextVal = !AppearanceConfig.playerMiniWavy();
@@ -491,7 +502,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_HEADER;
             } else if (position == appearanceMoreRow || position == lyricsMoreRow) {
                 return TYPE_COLLAPSIBLE_HEADER;
-            } else if (position == seekbarThicknessRow) {
+            } else if (position == seekbarThicknessRow || position == seekbarWaveAmplitudeRow || position == seekbarWaveSpeedRow) {
                 return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
                     || position == seekbarWavyRow || position == miniPlayerWavyRow || position == chatMediaSeekbarRow || position == classicPlayerSeekbarRow
@@ -539,6 +550,24 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     cell.setLabel("Толщина линии прогресса");
                     cell.set(AppearanceConfig.playerSeekbarThickness(), options, newValue -> {
                         AppearanceConfig.playerSeekbarThickness.setConfigInt(newValue);
+                    });
+                } else if (position == seekbarWaveAmplitudeRow) {
+                    SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
+                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 1, 16, val -> val + " dp");
+                    options.toString = (typ, val) -> typ == 0 ? (getString(R.string.OEPlayerWaveAmplitude) + ": " + val + " dp") : (val + " dp");
+                    cell.setLabel(getString(R.string.OEPlayerWaveAmplitude));
+                    cell.set(AppearanceConfig.playerWaveAmplitude(), options, newValue -> {
+                        AppearanceConfig.playerWaveAmplitude.setConfigInt(newValue);
+                        refreshPlayerUi();
+                    });
+                } else if (position == seekbarWaveSpeedRow) {
+                    SlideIntChooseView cell = (SlideIntChooseView) holder.itemView;
+                    SlideIntChooseView.Options options = SlideIntChooseView.Options.make(0, 1, 20, String::valueOf);
+                    options.toString = (typ, val) -> typ == 0 ? (getString(R.string.OEPlayerWaveSpeed) + ": " + val) : String.valueOf(val);
+                    cell.setLabel(getString(R.string.OEPlayerWaveSpeed));
+                    cell.set(AppearanceConfig.playerWaveSpeed(), options, newValue -> {
+                        AppearanceConfig.playerWaveSpeed.setConfigInt(newValue);
+                        refreshPlayerUi();
                     });
                 }
             } else if (type == TYPE_HEADER) {

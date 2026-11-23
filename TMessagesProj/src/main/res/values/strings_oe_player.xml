@@ -192,6 +192,8 @@
 <string name="OEPlayerShowSource">Source</string>
 <string name="OEPlayerBlockProgress">Progress</string>
 <string name="OEPlayerShowWave">Wave seekbar</string>
+    <string name="OEPlayerWaveAmplitude">Wave amplitude</string>
+    <string name="OEPlayerWaveSpeed">Wave speed</string>
 <string name="OEPlayerBlockControls">Controls</string>
 <string name="OEPlayerControlsCompact">Compact</string>
 <string name="OEPlayerControlsNormal">Normal</string>

@@ -2341,7 +2341,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         cover.setElevation(shapeId >= 0 ? 0 : dp(14));
         cover.invalidateOutline();
 
-        seekBar.setMaxAmplitude(PlayerStyle.wavy() ? dp(4) : 0);
+        seekBar.setMaxAmplitude(PlayerStyle.wavy() ? dp(PlayerStyle.waveAmplitude()) : 0);
+        seekBar.setWaveSpeed(PlayerStyle.waveSpeed());
         seekBar.invalidate();
         controls.setStyle(PlayerStyle.controlsScale(), PlayerStyle.showModes());
         group.setVisibility(PlayerStyle.showActions() ? View.VISIBLE : View.GONE);
@@ -3311,7 +3312,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 case PlayerStyle.BLOCK_PROGRESS:
                     return dp(6);
                 case PlayerStyle.BLOCK_CONTROLS:
-                    return dp(12);
+                    return Math.round(dp(12) * PlayerStyle.controlsScale());
                 default:
                     return dp(16);
             }
