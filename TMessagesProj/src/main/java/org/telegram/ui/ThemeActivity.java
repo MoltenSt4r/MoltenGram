@@ -251,7 +251,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             return;
         }
         AppearanceConfig.monetPaletteStyle.setConfigInt(palette);
-        MonetHelper.invalidateCache();
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            tw.nekomimi.nekogram.helpers.MonetHelper.invalidateCache();
+        }
         Theme.reloadMonetThemes();
         if (listAdapter != null) {
             listAdapter.notifyItemChanged(monetPaletteRow);

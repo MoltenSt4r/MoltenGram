@@ -397,7 +397,7 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             parentW = AndroidUtilities.displaySize.x;
         }
         final int fullW = Math.max(compactSize, parentW - dp(24));
-        final int currentW = progress <= 0f ? ViewGroup.LayoutParams.MATCH_PARENT
+        final int currentW = progress <= 0f ? FrameLayout.LayoutParams.MATCH_PARENT
                 : Math.round(fullW - (fullW - compactSize) * progress);
 
         FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) card.getLayoutParams();
