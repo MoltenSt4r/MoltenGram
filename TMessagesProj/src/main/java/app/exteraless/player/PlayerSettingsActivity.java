@@ -65,6 +65,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int appearanceHeaderRow;
     private int bgStyleRow;
     private int colorStyleRow;
+    private int monetPaletteRow;
     private int coverShapeRow;
     private int miniCoverShapeRow;
     private int swipeTrackRow;
@@ -130,6 +131,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         appearanceHeaderRow = addRow("appearanceHeader");
         bgStyleRow = addRow("bgStyle");
         colorStyleRow = addRow("colorStyle");
+        monetPaletteRow = addRow("monetPalette");
         coverShapeRow = addRow("coverShape");
         miniCoverShapeRow = addRow("miniCoverShape");
         seekbarWavyRow = addRow("seekbarWavy");
@@ -332,6 +334,28 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 refreshPlayerUi();
                 if (listAdapter != null) listAdapter.notifyItemChanged(colorStyleRow);
             });
+        } else if (position == monetPaletteRow) {
+            CharSequence[] options = {
+                    getString(R.string.MonetPaletteFollowTheme),
+                    getString(R.string.MonetPaletteTonalSpot),
+                    getString(R.string.MonetPaletteNeutral),
+                    getString(R.string.MonetPaletteVibrant),
+                    getString(R.string.MonetPaletteExpressive),
+                    getString(R.string.MonetPaletteRainbow),
+                    getString(R.string.MonetPaletteFruitSalad),
+                    getString(R.string.MonetPaletteMonochrome),
+                    getString(R.string.MonetPaletteFidelity),
+                    getString(R.string.MonetPaletteContent)
+            };
+            showSelector(getString(R.string.MonetPaletteHeader), options, which -> {
+                int paletteVal = which - 1; // 0 -> -1 (FOLLOW_THEME), 1..9 -> 0..8
+                AppearanceConfig.monetPaletteStyle.setConfigInt(paletteVal);
+                if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.S) {
+                    tw.nekomimi.nekogram.helpers.MonetHelper.invalidateCache();
+                }
+                refreshPlayerUi();
+                if (listAdapter != null) listAdapter.notifyItemChanged(monetPaletteRow);
+            });
         } else if (position == coverShapeRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerCoverShapeDisabled),
@@ -510,7 +534,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     || position == lyricsAudioRecognitionRow || position == songrecFetchCoverRow || position == songrecBackgroundRecognitionRow || position == lyricsExperimentalRow
                     || position == lyricsTranslateRow || position == lyricsAutoscrollRow || position == crossfadeRow) {
                 return TYPE_CHECK;
-            } else if (position == bgStyleRow || position == colorStyleRow || position == coverShapeRow || position == miniCoverShapeRow
+            } else if (position == bgStyleRow || position == colorStyleRow || position == monetPaletteRow || position == coverShapeRow || position == miniCoverShapeRow
                     || position == actionButtonsRow || position == seekbarIndicatorRow || position == mediaSeekbarStyleRow || position == mediaSeekbarIndicatorRow
                     || position == lyricsSourcesRow || position == lyricsPriorityRow || position == lyricsAlignmentRow
                     || position == lyricsTextSizeRow || position == crossfadeDurationRow || position == playlistsRow || position == sleepTimerRow) {
@@ -653,6 +677,22 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     int colorStyle = AppearanceConfig.playerColorStyle();
                     String colorName = colorStyle == 1 ? getString(R.string.OEAppearancePlayerColorStyleTheme) : getString(R.string.OEAppearancePlayerColorStyleCover);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerColorStyle), colorName, true);
+                } else if (position == monetPaletteRow) {
+                    int p = AppearanceConfig.monetPaletteStyle();
+                    int resId;
+                    switch (p) {
+                        case AppearanceConfig.MONET_PALETTE_FOLLOW_THEME: resId = R.string.MonetPaletteFollowTheme; break;
+                        case AppearanceConfig.MONET_PALETTE_NEUTRAL: resId = R.string.MonetPaletteNeutral; break;
+                        case AppearanceConfig.MONET_PALETTE_VIBRANT: resId = R.string.MonetPaletteVibrant; break;
+                        case AppearanceConfig.MONET_PALETTE_EXPRESSIVE: resId = R.string.MonetPaletteExpressive; break;
+                        case AppearanceConfig.MONET_PALETTE_RAINBOW: resId = R.string.MonetPaletteRainbow; break;
+                        case AppearanceConfig.MONET_PALETTE_FRUIT_SALAD: resId = R.string.MonetPaletteFruitSalad; break;
+                        case AppearanceConfig.MONET_PALETTE_MONOCHROME: resId = R.string.MonetPaletteMonochrome; break;
+                        case AppearanceConfig.MONET_PALETTE_FIDELITY: resId = R.string.MonetPaletteFidelity; break;
+                        case AppearanceConfig.MONET_PALETTE_CONTENT: resId = R.string.MonetPaletteContent; break;
+                        default: resId = R.string.MonetPaletteTonalSpot; break;
+                    }
+                    cell.setTextAndValue(getString(R.string.MonetPaletteHeader), getString(resId), true);
                 } else if (position == coverShapeRow) {
                     int shapeMode = AppearanceConfig.playerCoverShape();
                     String shapeStr;

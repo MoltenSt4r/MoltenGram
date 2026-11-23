@@ -59,10 +59,66 @@ public final class PlayerColors {
 
     public static PlayerColors fromSeed(int seed, boolean dark) {
         int palette = app.exteraless.appearance.AppearanceConfig.monetPaletteStyle();
+        if (palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_FOLLOW_THEME
+                && Build.VERSION.SDK_INT >= 31
+                && Theme.getActiveTheme() != null
+                && Theme.getActiveTheme().isMonet()
+                && !app.exteraless.appearance.AppearanceConfig.playerColors.Bool()) {
+            Integer surf = MonetHelper.getColorOrNull("surface");
+            Integer surfLow = MonetHelper.getColorOrNull("surface_container_low");
+            Integer surfCont = MonetHelper.getColorOrNull("surface_container");
+            Integer surfHigh = MonetHelper.getColorOrNull("surface_container_high");
+            Integer onSurf = MonetHelper.getColorOrNull("on_surface");
+            Integer onSurfVar = MonetHelper.getColorOrNull("on_surface_variant");
+            Integer outVar = MonetHelper.getColorOrNull("outline_variant");
+            Integer prim = MonetHelper.getColorOrNull("primary");
+            Integer onPrim = MonetHelper.getColorOrNull("on_primary");
+            Integer primCont = MonetHelper.getColorOrNull("primary_container");
+            Integer onPrimCont = MonetHelper.getColorOrNull("on_primary_container");
+            Integer secCont = MonetHelper.getColorOrNull("secondary_container");
+            Integer onSecCont = MonetHelper.getColorOrNull("on_secondary_container");
+            if (surf != null && prim != null && onSurf != null) {
+                return new PlayerColors(dark, new int[]{
+                        surf,
+                        surfLow != null ? surfLow : surf,
+                        surfCont != null ? surfCont : surf,
+                        surfHigh != null ? surfHigh : surf,
+                        onSurf,
+                        onSurfVar != null ? onSurfVar : onSurf,
+                        outVar != null ? outVar : onSurf,
+                        prim,
+                        onPrim != null ? onPrim : surf,
+                        primCont != null ? primCont : prim,
+                        onPrimCont != null ? onPrimCont : onSurf,
+                        secCont != null ? secCont : (primCont != null ? primCont : surf),
+                        onSecCont != null ? onSecCont : onSurf
+                });
+            }
+        }
         DynamicScheme s = app.exteraless.appearance.AppearanceConfig.createDynamicScheme(
                 palette, Hct.fromInt(seed), dark, 0.0);
+        int surface = s.getSurface();
+        int surfaceLow = s.getSurfaceContainerLow();
+        int surfaceContainer = s.getSurfaceContainer();
+        int surfaceHigh = s.getSurfaceContainerHigh();
+        // MD3 Expressive tinted surfaces for vibrant/expressive/fidelity/content schemes
+        boolean expressiveTint = palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_VIBRANT
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_EXPRESSIVE
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_FIDELITY
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_CONTENT
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_RAINBOW
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_FRUIT_SALAD
+                || palette == app.exteraless.appearance.AppearanceConfig.MONET_PALETTE_FOLLOW_THEME;
+        if (expressiveTint) {
+            int tintTarget = s.getPrimaryContainer();
+            float ratio = dark ? 0.28f : 0.14f;
+            surface = ColorUtils.blendARGB(surface, tintTarget, ratio);
+            surfaceLow = ColorUtils.blendARGB(surfaceLow, tintTarget, ratio * 0.85f);
+            surfaceContainer = ColorUtils.blendARGB(surfaceContainer, tintTarget, ratio * 1.1f);
+            surfaceHigh = ColorUtils.blendARGB(surfaceHigh, tintTarget, ratio * 1.25f);
+        }
         return new PlayerColors(dark, new int[]{
-                s.getSurface(), s.getSurfaceContainerLow(), s.getSurfaceContainer(), s.getSurfaceContainerHigh(),
+                surface, surfaceLow, surfaceContainer, surfaceHigh,
                 s.getOnSurface(), s.getOnSurfaceVariant(), s.getOutlineVariant(),
                 s.getPrimary(), s.getOnPrimary(), s.getPrimaryContainer(), s.getOnPrimaryContainer(),
                 s.getSecondaryContainer(), s.getOnSecondaryContainer()

@@ -145,6 +145,7 @@ object AppearanceConfig {
         if (monetStyle.Int() == MONET_STYLE_CLASSIC) "_gram" else ""
 
     /** Стили тональной палитры Material Design 3 (Google Monet DynamicScheme). */
+    const val MONET_PALETTE_FOLLOW_THEME = -1
     const val MONET_PALETTE_TONAL_SPOT = 0
     const val MONET_PALETTE_NEUTRAL = 1
     const val MONET_PALETTE_VIBRANT = 2
@@ -156,23 +157,24 @@ object AppearanceConfig {
     const val MONET_PALETTE_CONTENT = 8
 
     /**
-     * Алгоритм тональной палитры Monet.
-     * По умолчанию Vibrant (насыщенные яркие цвета вместо блеклого Neutral).
+     * Алгоритм тональной палитры Monet / MD3 Expressive.
+     * По умолчанию MONET_PALETTE_FOLLOW_THEME (-1) — повторяет текущую тему / системный Monet.
      */
     @JvmField
     val monetPaletteStyle =
-        addConfig("OEAppearanceMonetPaletteStyle", ConfigItem.configTypeInt, MONET_PALETTE_VIBRANT)
+        addConfig("OEAppearanceMonetPaletteStyle", ConfigItem.configTypeInt, MONET_PALETTE_FOLLOW_THEME)
 
     @JvmStatic
     fun monetPaletteStyle(): Int {
         ensureLoaded()
         val p = monetPaletteStyle.Int()
-        return if (p in 0..8) p else MONET_PALETTE_VIBRANT
+        return if (p in -1..8) p else MONET_PALETTE_FOLLOW_THEME
     }
 
     @JvmStatic
     fun createDynamicScheme(style: Int, hct: Hct, isDark: Boolean, contrastLevel: Double = 0.0): DynamicScheme {
         return when (style) {
+            MONET_PALETTE_TONAL_SPOT -> SchemeTonalSpot(hct, isDark, contrastLevel)
             MONET_PALETTE_NEUTRAL -> SchemeNeutral(hct, isDark, contrastLevel)
             MONET_PALETTE_VIBRANT -> SchemeVibrant(hct, isDark, contrastLevel)
             MONET_PALETTE_EXPRESSIVE -> SchemeExpressive(hct, isDark, contrastLevel)
@@ -181,7 +183,7 @@ object AppearanceConfig {
             MONET_PALETTE_MONOCHROME -> SchemeMonochrome(hct, isDark, contrastLevel)
             MONET_PALETTE_FIDELITY -> SchemeFidelity(hct, isDark, contrastLevel)
             MONET_PALETTE_CONTENT -> SchemeContent(hct, isDark, contrastLevel)
-            else -> SchemeTonalSpot(hct, isDark, contrastLevel)
+            else -> SchemeExpressive(hct, isDark, contrastLevel)
         }
     }
 

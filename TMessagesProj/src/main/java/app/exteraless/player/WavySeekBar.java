@@ -353,29 +353,27 @@ public class WavySeekBar extends View {
         float waveStart = left + capHalf;
         float stopX = right - capHalf;
         float thumbRadius = (indicator == 0) ? Math.max(strokeW / 2f + dp(2.5f), dp(6f)) : (indicator == 2 ? 0f : (thumbW / 2f));
-        float waveEnd = (indicator == 2) ? Math.min(stopX, Math.max(waveStart, x)) : Math.min(stopX, Math.max(waveStart, x - thumbRadius - visualGap - capHalf));
-        float restX = (indicator == 2) ? waveEnd : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
+        float waveGap = dp(6) + capHalf;
+        float waveEnd = (indicator == 2) ? Math.min(stopX, Math.max(waveStart, x - dp(3))) : Math.min(stopX, Math.max(waveStart, x - thumbRadius - visualGap - capHalf));
+        float restX = (indicator == 2) ? Math.min(stopX, waveEnd + waveGap) : Math.min(stopX, x + thumbRadius + visualGap + capHalf);
         float unplayedStart = restX;
-        float lambda = dp(34);
-        float step = dp(2);
+        float lambda = dp(40);
+        float step = dpf2(1.5f);
 
-        // 1. Draw inactive background track (only the unplayed portion, never underneath the wavy played path)
+        // 1. Draw inactive background track (only the unplayed portion, with a clean MD3 Expressive gap)
         if (unplayedStart < stopX) {
             canvas.drawLine(unplayedStart, cy, stopX, cy, trackPaint);
         }
 
-        // 2. Draw active progress on top
+        // 2. Draw active progress on top (full-amplitude MD3 Expressive sine wave with round caps)
         if (waveEnd > waveStart + dpf2(0.5f)) {
             if (amplitude > 0f && isWavy) {
                 path.rewind();
-                float taper = Math.min(dp(16), (waveEnd - waveStart) * 0.5f);
                 boolean first = true;
                 for (float px = waveStart; ; px += step) {
                     boolean last = px >= waveEnd;
                     float cx = last ? waveEnd : px;
-                    float u = taper > 0f ? Math.max(0f, Math.min(1f, Math.min((cx - waveStart) / taper, (waveEnd - cx) / taper))) : 0f;
-                    float smoothFade = u * u * (3f - 2f * u);
-                    float y = cy + amplitude * (float) Math.sin(TAU * (cx - waveStart) / lambda - phase) * smoothFade;
+                    float y = cy + amplitude * (float) Math.sin(TAU * (cx - waveStart) / lambda - phase);
                     if (first) {
                         path.moveTo(cx, y);
                         first = false;

@@ -215,6 +215,9 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     private void showMonetPaletteOptions(View anchor) {
         int current = AppearanceConfig.monetPaletteStyle();
         ItemOptions.makeOptions(this, anchor)
+                .add(current == AppearanceConfig.MONET_PALETTE_FOLLOW_THEME ? R.drawable.msg_select : 0,
+                        getString(R.string.MonetPaletteFollowTheme),
+                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FOLLOW_THEME))
                 .add(current == AppearanceConfig.MONET_PALETTE_TONAL_SPOT ? R.drawable.msg_select : 0,
                         getString(R.string.MonetPaletteTonalSpot),
                         () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_TONAL_SPOT))
@@ -263,6 +266,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
 
     private static int monetPaletteName() {
         switch (AppearanceConfig.monetPaletteStyle()) {
+            case AppearanceConfig.MONET_PALETTE_FOLLOW_THEME:
+                return R.string.MonetPaletteFollowTheme;
             case AppearanceConfig.MONET_PALETTE_NEUTRAL:
                 return R.string.MonetPaletteNeutral;
             case AppearanceConfig.MONET_PALETTE_VIBRANT:

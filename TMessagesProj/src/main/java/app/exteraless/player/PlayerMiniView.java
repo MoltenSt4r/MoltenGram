@@ -118,7 +118,19 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         card.setOutlineProvider(new ViewOutlineProvider() {
             @Override
             public void getOutline(View view, Outline outline) {
-                outline.setRoundRect(0, 0, view.getWidth(), view.getHeight(), dp(20));
+                int w = view.getWidth();
+                int h = view.getHeight();
+                if (w <= 0 || h <= 0) {
+                    return;
+                }
+                if (speedDialMorphProgress > 0.001f) {
+                    int compactSize = dp(HEIGHT_DP);
+                    int curW = Math.max(compactSize, Math.round(w - (w - compactSize) * speedDialMorphProgress));
+                    float radius = dp(20) + dp(4) * speedDialMorphProgress;
+                    outline.setRoundRect(0, 0, curW, h, radius);
+                } else {
+                    outline.setRoundRect(0, 0, w, h, dp(20));
+                }
             }
         });
         card.setClipToOutline(true);
@@ -367,8 +379,8 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             return;
         }
         speedDialMorphAnimator = ValueAnimator.ofFloat(speedDialMorphProgress, target);
-        speedDialMorphAnimator.setDuration(open ? 240 : 180);
-        speedDialMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT);
+        speedDialMorphAnimator.setDuration(open ? 300 : 240);
+        speedDialMorphAnimator.setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT);
         speedDialMorphAnimator.addUpdateListener(a -> setSpeedDialMorphProgress((Float) a.getAnimatedValue()));
         speedDialMorphAnimator.start();
     }
@@ -387,74 +399,48 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
             return;
         }
         final int compactSize = dp(HEIGHT_DP);
-        int parentW = getMeasuredWidth();
-        if (parentW <= 0) {
-            parentW = getWidth();
-        }
-        if (parentW <= 0 && getParent() instanceof View) {
-            parentW = ((View) getParent()).getWidth();
-        }
-        if (parentW <= 0) {
-            parentW = AndroidUtilities.displaySize.x;
-        }
-        final int fullW = Math.max(compactSize, parentW - dp(24));
-        final int currentW = progress <= 0f ? FrameLayout.LayoutParams.MATCH_PARENT
-                : Math.round(fullW - (fullW - compactSize) * progress);
+        final float contentAlpha = Math.max(0f, 1f - progress * 2.2f);
+        final float contentScale = 1f - progress * 0.25f;
 
-        FrameLayout.LayoutParams lp = (FrameLayout.LayoutParams) card.getLayoutParams();
-        if (lp != null) {
-            lp.gravity = Gravity.BOTTOM | Gravity.LEFT;
-            lp.leftMargin = dp(12);
-            lp.rightMargin = progress <= 0f ? dp(12) : 0;
-            lp.width = currentW;
-            card.setLayoutParams(lp);
-        }
-
-        final float contentAlpha = Math.max(0f, 1f - progress * 2f);
         if (cover != null) {
             cover.setAlpha(contentAlpha);
-            cover.setScaleX(Math.max(0.01f, 1f - progress * 0.5f));
-            cover.setScaleY(Math.max(0.01f, 1f - progress * 0.5f));
-            cover.setVisibility(progress >= 0.99f ? GONE : VISIBLE);
+            cover.setScaleX(contentScale);
+            cover.setScaleY(contentScale);
         }
         if (texts != null) {
             texts.setAlpha(contentAlpha);
-            texts.setVisibility(progress >= 0.99f ? GONE : VISIBLE);
+            texts.setTranslationX(-dp(12) * progress);
         }
         if (nextButton != null) {
             nextButton.setAlpha(contentAlpha);
-            nextButton.setScaleX(Math.max(0.01f, 1f - progress * 0.5f));
-            nextButton.setScaleY(Math.max(0.01f, 1f - progress * 0.5f));
-            nextButton.setVisibility(progress >= 0.99f ? GONE : VISIBLE);
+            nextButton.setScaleX(contentScale);
+            nextButton.setScaleY(contentScale);
+            nextButton.setEnabled(progress < 0.2f);
         }
         if (closeButton != null) {
             closeButton.setAlpha(contentAlpha);
-            closeButton.setScaleX(Math.max(0.01f, 1f - progress * 0.5f));
-            closeButton.setScaleY(Math.max(0.01f, 1f - progress * 0.5f));
-            closeButton.setVisibility(progress >= 0.99f ? GONE : VISIBLE);
-        }
-
-        final int padLeft = Math.round(dp(10) * (1f - progress) + dp(8) * progress);
-        final int padRight = Math.round(dp(6) * (1f - progress) + dp(8) * progress);
-        card.setPadding(padLeft, 0, padRight, 0);
-        if (progress >= 0.9f) {
-            card.setGravity(Gravity.CENTER);
-        } else {
-            card.setGravity(Gravity.CENTER_VERTICAL);
+            closeButton.setScaleX(contentScale);
+            closeButton.setScaleY(contentScale);
+            closeButton.setEnabled(progress < 0.2f);
         }
 
         if (playButton != null) {
             playButton.setVisibility(VISIBLE);
             playButton.setAlpha(1f);
+            float playCenterX = playButton.getLeft() + playButton.getWidth() / 2f;
+            if (playCenterX > 0f) {
+                float targetCenterX = compactSize / 2f;
+                playButton.setTranslationX((targetCenterX - playCenterX) * progress);
+            }
         }
 
+        cardBg.setCornerRadius(dp(20) + dp(4) * progress);
         card.setContentDescription(progress >= 0.8f && playButton != null
                 ? playButton.getContentDescription()
                 : getString(R.string.OEPlayerOpen));
 
         card.invalidateOutline();
-        invalidateGlass();
-        card.requestLayout();
+        card.invalidate();
     }
 
     @Override

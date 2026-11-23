@@ -162,6 +162,7 @@
     <string name="MonetStyleClassic">Classic</string>
     <string name="MonetPaletteHeader">Palette</string>
     <string name="MonetPaletteSubHeader">Tonal algorithm used to generate Monet palette</string>
+    <string name="MonetPaletteFollowTheme">Follow theme</string>
     <string name="MonetPaletteTonalSpot">Tonal Spot</string>
     <string name="MonetPaletteNeutral">Neutral</string>
     <string name="MonetPaletteVibrant">Vibrant</string>
