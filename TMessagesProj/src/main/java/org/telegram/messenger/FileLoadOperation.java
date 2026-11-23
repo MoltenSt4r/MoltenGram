@@ -2335,6 +2335,9 @@ public class FileLoadOperation {
         if (BuildVars.LOGS_ENABLED && FULL_LOGS) {
             FileLog.d(fileName + " startDownloadRequest");
         }
+        if (state == stateCancelling) {
+            state = stateDownloading;
+        }
         if (paused || reuploadingCdn || state != stateDownloading || requestingReference ||
                 (!isStory && streamPriorityStartOffset == 0 && (!nextPartWasPreloaded && (requestInfos.size() + delayedRequestInfos.size() >= currentMaxDownloadRequests))) ||
                 (isPreloadVideoOperation && (requestedBytesCount > preloadMaxBytes || moovFound != 0 && requestInfos.size() > 0))) {

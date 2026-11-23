@@ -42,6 +42,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
     private int categoriesDividerRow;
 
     private int linksHeaderRow;
+    private int whatsNewRow;
     private int channelRow;
     private int sourceRow;
     private int linksDividerRow;
@@ -67,6 +68,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
         categoriesDividerRow = addRow();
 
         linksHeaderRow = addRow("linksHeader");
+        whatsNewRow = addRow("whatsNew");
         channelRow = addRow("channel");
         sourceRow = addRow("source");
         linksDividerRow = addRow();
@@ -199,6 +201,8 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new OpenExteraToolsActivity());
         } else if (position == otherRow) {
             presentFragment(new OpenExteraOtherActivity());
+        } else if (position == whatsNewRow) {
+            showDialog(new app.exteraless.updater.WhatsNewSheet(OpenExteraSettingsActivity.this));
         } else if (position == channelRow) {
             getMessagesController().openByUserName("MoltenGram", this, 1);
         } else if (position == sourceRow) {
@@ -259,6 +263,9 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndIcon(getString(R.string.OpenExteraTools), R.drawable.baseline_build_outline_24, true);
                     } else if (position == otherRow) {
                         cell.setTextAndIcon(getString(R.string.OpenExteraOther), R.drawable.msg_fave, false);
+                    } else if (position == whatsNewRow) {
+                        cell.setTextAndValueAndIcon(getString(R.string.OpenExteraWhatsNew),
+                                org.telegram.messenger.BuildVars.BUILD_VERSION_STRING, R.drawable.msg_info, true);
                     } else if (position == channelRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.ProfileChannel),
                                 "@MoltenGram", R.drawable.msg_channel, true);

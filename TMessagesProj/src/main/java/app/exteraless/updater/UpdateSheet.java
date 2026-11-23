@@ -9,8 +9,10 @@ import android.graphics.PorterDuffColorFilter;
 import android.graphics.Typeface;
 import android.text.SpannableStringBuilder;
 import android.text.Spanned;
+import android.text.TextPaint;
 import android.text.TextUtils;
 import android.text.method.LinkMovementMethod;
+import android.text.style.ClickableSpan;
 import android.text.style.StyleSpan;
 import android.util.TypedValue;
 import android.view.Gravity;
@@ -45,7 +47,7 @@ public class UpdateSheet extends BottomSheet {
         void onCancelDownload();
     }
 
-    private static final Pattern LINK = Pattern.compile("\\[([^\\]]+)]\\((https?://[^)\\s]+)\\)");
+    private static final Pattern LINK = Pattern.compile("\\[([^\\]]+)]\\(((?:https?|tg)://[^)\\s]+)\\)");
 
     private final Delegate delegate;
     private final TextView primaryButton;
@@ -231,7 +233,19 @@ public class UpdateSheet extends BottomSheet {
             String label = link.group(1);
             String url = link.group(2);
             builder.replace(start, end, label);
-            builder.setSpan(new URLSpanNoUnderline(url), start, start + label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+            Object span = WhatsNewSheet.isDeepLinkUrl(url) ? new ClickableSpan() {
+                @Override
+                public void onClick(View widget) {
+                    WhatsNewSheet.openDeepLink(widget.getContext(), null, url);
+                }
+
+                @Override
+                public void updateDrawState(TextPaint ds) {
+                    ds.setColor(ds.linkColor);
+                    ds.setUnderlineText(false);
+                }
+            } : new URLSpanNoUnderline(url);
+            builder.setSpan(span, start, start + label.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
             shift += (end - start) - label.length();
         }
         applyMarker(builder, "`", new TypefaceSpan(Typeface.MONOSPACE));

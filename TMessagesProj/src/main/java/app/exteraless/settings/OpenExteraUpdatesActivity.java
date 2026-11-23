@@ -177,7 +177,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
         } else if (position == actionRow) {
             handleActionClick();
         } else if (position == changelogRow) {
-            Browser.openUrl(getParentActivity(), "https://github.com/MoltenSt4r/MoltenGram/releases");
+            showDialog(new app.exteraless.updater.WhatsNewSheet(OpenExteraUpdatesActivity.this));
         } else if (position == channelRow) {
             getMessagesController().openByUserName("MoltenGram", this, 1);
         } else if (position == includeCanaryRow) {
@@ -389,7 +389,7 @@ public class OpenExteraUpdatesActivity extends BaseNekoSettingsActivity implemen
                         }
                     } else if (position == changelogRow) {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
-                        cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdatesChangelog), "GitHub", R.drawable.msg_help, true);
+                        cell.setTextAndValueAndIcon(getString(R.string.OpenExteraWhatsNew), getCurrentVersionString(), R.drawable.msg_help, true);
                     } else if (position == channelRow) {
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon, Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValueAndIcon(getString(R.string.OpenExteraUpdatesChannel), "@MoltenGram", R.drawable.msg_channel, false);

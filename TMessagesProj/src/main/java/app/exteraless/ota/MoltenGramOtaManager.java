@@ -164,6 +164,10 @@ public class MoltenGramOtaManager {
             editor.putBoolean("pending_is_canary", update.isCanary);
             editor.putLong("pending_published_at", update.publishedAt);
             editor.putString("pending_commit_id", update.commitId);
+            if (!TextUtils.isEmpty(update.changelog)) {
+                editor.putString("last_ota_changelog", update.changelog);
+                editor.putString("last_ota_version", update.version);
+            }
         } else {
             editor.remove("pending_version");
             editor.remove("pending_title");
@@ -1320,6 +1324,30 @@ public class MoltenGramOtaManager {
         Runtime.getRuntime().exit(0);
     }
 
+    public String getDisplayChangelog() {
+        String lastVer = prefs.getString("last_ota_version", null);
+        String lastChangelog = prefs.getString("last_ota_changelog", null);
+        if (!TextUtils.isEmpty(lastChangelog) && !TextUtils.isEmpty(lastVer)
+                && lastVer.contains(BuildVars.BUILD_VERSION_STRING)) {
+            return lastChangelog;
+        }
+        if (pendingUpdate != null && !TextUtils.isEmpty(pendingUpdate.changelog)) {
+            return pendingUpdate.changelog;
+        }
+        return null;
+    }
+
+    public String getDisplayVersion() {
+        String lastVer = prefs.getString("last_ota_version", null);
+        if (!TextUtils.isEmpty(lastVer) && lastVer.contains(BuildVars.BUILD_VERSION_STRING)) {
+            return lastVer;
+        }
+        if (pendingUpdate != null && !TextUtils.isEmpty(pendingUpdate.version)) {
+            return pendingUpdate.version;
+        }
+        return null;
+    }
+
     public void checkShowChangelog(Activity activity) {
         if (activity == null || activity.isFinishing()) {
             return;
@@ -1335,7 +1363,11 @@ public class MoltenGramOtaManager {
 
         if (shouldShow) {
             prefs.edit().putBoolean("show_update_changelog_on_launch", false).apply();
-            // Centered popup dialog removed as requested
+            AndroidUtilities.runOnUIThread(() -> {
+                if (!activity.isFinishing()) {
+                    app.exteraless.updater.WhatsNewSheet.show(activity);
+                }
+            }, 500);
         }
     }
 

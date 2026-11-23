@@ -247,5 +247,7 @@
 <string name="OEVoiceChangerRecordTest">Record 3s Test</string>
 <string name="OEVoiceChangerStopTest">Stop &amp; Play</string>
 <string name="OEVoiceChangerOff">Off</string>
+<string name="OpenExteraWhatsNew">What\'s New</string>
+<string name="OpenExteraWhatsNewGotIt">Got it</string>
 </resources>
 

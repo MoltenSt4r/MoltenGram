@@ -51,6 +51,10 @@ public final class GitHubUpdater {
     private static final String PREFS = "exteraless_updater";
     private static final String KEY_LAST_CHECK = "last_check";
     private static final String KEY_SKIPPED = "skipped_tag";
+    private static final String KEY_LAST_RELEASE_TAG = "last_release_tag";
+    private static final String KEY_LAST_RELEASE_NAME = "last_release_name";
+    private static final String KEY_LAST_RELEASE_BODY = "last_release_body";
+    private static final String KEY_LAST_RELEASE_PUBLISHED = "last_release_published";
     private static final Pattern VERSION = Pattern.compile("(\\d+)\\.(\\d+)\\.(\\d+)");
 
     private static volatile OkHttpClient client;
@@ -140,6 +144,7 @@ public final class GitHubUpdater {
                 release = latest(prerelease);
                 if (release != null) {
                     newer = isNewer(release);
+                    cacheRelease(release);
                 }
                 prefs().edit().putLong(KEY_LAST_CHECK, System.currentTimeMillis()).apply();
             } catch (Exception e) {
@@ -155,6 +160,28 @@ public final class GitHubUpdater {
 
     public static long lastCheck() {
         return prefs().getLong(KEY_LAST_CHECK, 0);
+    }
+
+    private static void cacheRelease(Release release) {
+        if (release == null || TextUtils.isEmpty(release.body)) {
+            return;
+        }
+        prefs().edit()
+                .putString(KEY_LAST_RELEASE_TAG, release.tag)
+                .putString(KEY_LAST_RELEASE_NAME, release.name)
+                .putString(KEY_LAST_RELEASE_BODY, release.body)
+                .putLong(KEY_LAST_RELEASE_PUBLISHED, release.published)
+                .apply();
+    }
+
+    public static String getCachedReleaseBody() {
+        return prefs().getString(KEY_LAST_RELEASE_BODY, null);
+    }
+
+    public static String getCachedReleaseVersion() {
+        String name = prefs().getString(KEY_LAST_RELEASE_NAME, null);
+        String tag = prefs().getString(KEY_LAST_RELEASE_TAG, null);
+        return !TextUtils.isEmpty(name) ? name : tag;
     }
 
     public static boolean isDownloading() {

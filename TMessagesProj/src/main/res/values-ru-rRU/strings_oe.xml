@@ -220,5 +220,7 @@
 <string name="OEVoiceChangerRecordTest">Записать 3 сек теста</string>
 <string name="OEVoiceChangerStopTest">Остановить и слушать</string>
 <string name="OEVoiceChangerOff">Выкл</string>
+<string name="OpenExteraWhatsNew">Что нового</string>
+<string name="OpenExteraWhatsNewGotIt">Понятно</string>
 </resources>
 
