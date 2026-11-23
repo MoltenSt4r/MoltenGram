@@ -287,3 +287,7 @@
     static boolean frozen;
     static int bridgeState();
 }
+
+# Material Color Utilities (DynamicScheme & 9 Monet palette algorithms)
+-keep class com.google.android.material.color.utilities.** { *; }
+-dontwarn com.google.android.material.color.utilities.**

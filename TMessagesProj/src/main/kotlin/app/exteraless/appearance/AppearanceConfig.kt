@@ -173,17 +173,22 @@ object AppearanceConfig {
 
     @JvmStatic
     fun createDynamicScheme(style: Int, hct: Hct, isDark: Boolean, contrastLevel: Double = 0.0): DynamicScheme {
-        return when (style) {
-            MONET_PALETTE_TONAL_SPOT -> SchemeTonalSpot(hct, isDark, contrastLevel)
-            MONET_PALETTE_NEUTRAL -> SchemeNeutral(hct, isDark, contrastLevel)
-            MONET_PALETTE_VIBRANT -> SchemeVibrant(hct, isDark, contrastLevel)
-            MONET_PALETTE_EXPRESSIVE -> SchemeExpressive(hct, isDark, contrastLevel)
-            MONET_PALETTE_RAINBOW -> SchemeRainbow(hct, isDark, contrastLevel)
-            MONET_PALETTE_FRUIT_SALAD -> SchemeFruitSalad(hct, isDark, contrastLevel)
-            MONET_PALETTE_MONOCHROME -> SchemeMonochrome(hct, isDark, contrastLevel)
-            MONET_PALETTE_FIDELITY -> SchemeFidelity(hct, isDark, contrastLevel)
-            MONET_PALETTE_CONTENT -> SchemeContent(hct, isDark, contrastLevel)
-            else -> SchemeExpressive(hct, isDark, contrastLevel)
+        return try {
+            when (style) {
+                MONET_PALETTE_TONAL_SPOT -> SchemeTonalSpot(hct, isDark, contrastLevel)
+                MONET_PALETTE_NEUTRAL -> SchemeNeutral(hct, isDark, contrastLevel)
+                MONET_PALETTE_VIBRANT -> SchemeVibrant(hct, isDark, contrastLevel)
+                MONET_PALETTE_EXPRESSIVE -> SchemeExpressive(hct, isDark, contrastLevel)
+                MONET_PALETTE_RAINBOW -> SchemeRainbow(hct, isDark, contrastLevel)
+                MONET_PALETTE_FRUIT_SALAD -> SchemeFruitSalad(hct, isDark, contrastLevel)
+                MONET_PALETTE_MONOCHROME -> SchemeMonochrome(hct, isDark, contrastLevel)
+                MONET_PALETTE_FIDELITY -> SchemeFidelity(hct, isDark, contrastLevel)
+                MONET_PALETTE_CONTENT -> SchemeContent(hct, isDark, contrastLevel)
+                else -> SchemeExpressive(hct, isDark, contrastLevel)
+            }
+        } catch (t: Throwable) {
+            FileLog.e(t)
+            SchemeTonalSpot(hct, isDark, contrastLevel)
         }
     }
 
