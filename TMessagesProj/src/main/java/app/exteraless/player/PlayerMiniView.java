@@ -126,7 +126,9 @@ public class PlayerMiniView extends FrameLayout implements NotificationCenter.No
         if (!preview) {
             card.setOnClickListener(v -> {
                 if (speedDialMorphProgress >= 0.8f) {
-                    playButton.performClick();
+                    if (this.playButton != null) {
+                        this.playButton.performClick();
+                    }
                 } else {
                     Md3Player.open(fragment, this);
                 }
