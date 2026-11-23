@@ -63,7 +63,7 @@ public final class PlayerColors {
                 && Build.VERSION.SDK_INT >= 31
                 && Theme.getActiveTheme() != null
                 && Theme.getActiveTheme().isMonet()
-                && !app.exteraless.appearance.AppearanceConfig.playerColors.Bool()) {
+                && app.exteraless.appearance.AppearanceConfig.playerColorStyle() == 1) {
             Integer surf = MonetHelper.getColorOrNull("surface");
             Integer surfLow = MonetHelper.getColorOrNull("surface_container_low");
             Integer surfCont = MonetHelper.getColorOrNull("surface_container");
