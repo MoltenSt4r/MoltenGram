@@ -574,7 +574,7 @@ public final class ExteraConfig {
 
     public static GlassOutlineStyle getGlassOutlineStyle() {
         ensureLoaded();
-        return enumAt(GlassOutlineStyle.values(), AppearanceConfig.glassOutlineStyle.Int(), GlassOutlineStyle.GLARE);
+        return enumAt(GlassOutlineStyle.values(), AppearanceConfig.glassOutlineStyle.Int(), GlassOutlineStyle.HIDDEN);
     }
 
     public static void setGlassOutlineStyle(GlassOutlineStyle value) {

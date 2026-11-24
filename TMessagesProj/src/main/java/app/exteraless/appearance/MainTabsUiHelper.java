@@ -287,6 +287,7 @@ public final class MainTabsUiHelper {
         int rawOnPrimaryContainer = 0;
         boolean resolvedFromMonet = false;
 
+        final int seed = resolveExpressiveSeed(resourcesProvider);
         final Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
         if (resourcesProvider == null && Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
                 && activeTheme != null && activeTheme.isMonet()) {
@@ -297,20 +298,25 @@ public final class MainTabsUiHelper {
             final Integer monetOnContainer = MonetHelper.getColorOrNull("on_primary_container" + suffix);
             if (monetPrimary != null && monetContainer != null
                     && Color.alpha(monetPrimary) != 0 && Color.alpha(monetContainer) != 0) {
-                rawPrimary = monetPrimary | 0xff000000;
-                rawPrimaryContainer = monetContainer | 0xff000000;
-                rawOnPrimary = monetOnPrimary != null && Color.alpha(monetOnPrimary) != 0
-                        ? (monetOnPrimary | 0xff000000)
-                        : (isDark ? 0xff000000 : 0xffffffff);
-                rawOnPrimaryContainer = monetOnContainer != null && Color.alpha(monetOnContainer) != 0
-                        ? (monetOnContainer | 0xff000000)
-                        : (isDark ? 0xffffffff : 0xff000000);
-                resolvedFromMonet = true;
+                final double seedHue = Hct.fromInt(seed).getHue();
+                final double monetHue = Hct.fromInt(monetPrimary | 0xff000000).getHue();
+                final double hueDiff = Math.abs(seedHue - monetHue);
+                final double wrappedDiff = Math.min(hueDiff, 360.0 - hueDiff);
+                if (wrappedDiff < 25.0) {
+                    rawPrimary = monetPrimary | 0xff000000;
+                    rawPrimaryContainer = monetContainer | 0xff000000;
+                    rawOnPrimary = monetOnPrimary != null && Color.alpha(monetOnPrimary) != 0
+                            ? (monetOnPrimary | 0xff000000)
+                            : (isDark ? 0xff000000 : 0xffffffff);
+                    rawOnPrimaryContainer = monetOnContainer != null && Color.alpha(monetOnContainer) != 0
+                            ? (monetOnContainer | 0xff000000)
+                            : (isDark ? 0xffffffff : 0xff000000);
+                    resolvedFromMonet = true;
+                }
             }
         }
 
         if (!resolvedFromMonet) {
-            final int seed = resolveExpressiveSeed(resourcesProvider);
             final Hct seedHct = Hct.fromInt(seed);
             final double seedChroma = seedHct.getChroma();
             if (seedChroma < NEUTRAL_CHROMA_THRESHOLD) {

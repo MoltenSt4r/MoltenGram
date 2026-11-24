@@ -43,11 +43,11 @@ public enum GlassOutlineStyle {
         }
     }
 
-    /** Текущий стиль из настроек; неизвестное значение трактуется как {@link #GLARE}. */
+    /** Текущий стиль из настроек; неизвестное значение трактуется как {@link #HIDDEN}. */
     public static GlassOutlineStyle current() {
         final int index = AppearanceConfig.glassOutlineStyle();
         if (index < 0 || index >= VALUES.length) {
-            return GLARE;
+            return HIDDEN;
         }
         return VALUES[index];
     }

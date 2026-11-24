@@ -27,7 +27,7 @@ public final class LiquidGlassConfig {
 
     private static final String PREFIX = "MG_";
     private static final String KEY_DEFAULTS_VERSION = PREFIX + "glassDefaultsVersion";
-    private static final int GLASS_DEFAULTS_VERSION = 3;
+    private static final int GLASS_DEFAULTS_VERSION = 4;
 
     public static volatile int version = 1;
 
@@ -58,26 +58,26 @@ public final class LiquidGlassConfig {
     public static int glassRefraction = 35;
     public static int glassIndex = 130;
     public static int glassDispersion = 40;
-    public static int glassRim = 35;
+    public static int glassRim = 0;
     public static int glassOpacity = 35;
-    public static int glassBlur = 40;
+    public static int glassBlur = 0;
     public static int glassHighlight = 0;
     public static int glassTint = 0;
     public static int glassTintAmount = 25;
-    public static boolean glassShadow = true;
+    public static boolean glassShadow = false;
     public static boolean glassVibrancy = false;
     public static boolean glassPreviewLook = true;
     public static boolean liquidControls = false;
     public static boolean glassHeaderButtons = false;
     public static boolean frostedHeaders = false;
-    public static boolean glassMenus = true;
-    public static boolean glassDialogs = true;
-    public static boolean glassSheets = true;
+    public static boolean glassMenus = false;
+    public static boolean glassDialogs = false;
+    public static boolean glassSheets = false;
     public static boolean glassFab = false;
     public static boolean glassMiniPlayer = false;
     public static boolean glassMessages = false;
-    public static boolean glassMainHeader = true;
-    public static boolean glassFolders = true;
+    public static boolean glassMainHeader = false;
+    public static boolean glassFolders = false;
 
     static {
         init();
@@ -102,6 +102,11 @@ public final class LiquidGlassConfig {
                     if (savedVer < 3) {
                         editor.putBoolean(PREFIX + "glassOn", false);
                     }
+                    if (savedVer < 4) {
+                        editor.putInt(PREFIX + "glassRim", 0);
+                        editor.putInt(PREFIX + "glassBlur", 0);
+                        editor.putBoolean(PREFIX + "glassShadow", false);
+                    }
                 }
                 editor.putInt(KEY_DEFAULTS_VERSION, GLASS_DEFAULTS_VERSION).commit();
                 if (savedVer == 0) {
@@ -121,26 +126,26 @@ public final class LiquidGlassConfig {
         glassRefraction = p.getInt(PREFIX + "glassRefraction", 35);
         glassIndex = p.getInt(PREFIX + "glassIndex", 130);
         glassDispersion = p.getInt(PREFIX + "glassDispersion", 40);
-        glassRim = p.getInt(PREFIX + "glassRim", 35);
+        glassRim = p.getInt(PREFIX + "glassRim", 0);
         glassOpacity = p.getInt(PREFIX + "glassOpacity", 35);
-        glassBlur = p.getInt(PREFIX + "glassBlur", 40);
+        glassBlur = p.getInt(PREFIX + "glassBlur", 0);
         glassHighlight = p.getInt(PREFIX + "glassHighlight", 0);
         glassTint = p.getInt(PREFIX + "glassTint", 0);
         glassTintAmount = p.getInt(PREFIX + "glassTintAmount", 25);
-        glassShadow = p.getBoolean(PREFIX + "glassShadow", true);
+        glassShadow = p.getBoolean(PREFIX + "glassShadow", false);
         glassVibrancy = p.getBoolean(PREFIX + "glassVibrancy", false);
         glassPreviewLook = p.getBoolean(PREFIX + "glassPreviewLook", true);
         liquidControls = p.getBoolean(PREFIX + "liquidControls", false);
         glassHeaderButtons = p.getBoolean(PREFIX + "glassHeaderButtons", false);
         frostedHeaders = p.getBoolean(PREFIX + "frostedHeaders", false);
-        glassMenus = p.getBoolean(PREFIX + "glassMenus", true);
-        glassDialogs = p.getBoolean(PREFIX + "glassDialogs", true);
-        glassSheets = p.getBoolean(PREFIX + "glassSheets", true);
+        glassMenus = p.getBoolean(PREFIX + "glassMenus", false);
+        glassDialogs = p.getBoolean(PREFIX + "glassDialogs", false);
+        glassSheets = p.getBoolean(PREFIX + "glassSheets", false);
         glassFab = p.getBoolean(PREFIX + "glassFab", false);
         glassMiniPlayer = p.getBoolean(PREFIX + "glassMiniPlayer", false);
         glassMessages = p.getBoolean(PREFIX + "glassMessages", false);
-        glassMainHeader = p.getBoolean(PREFIX + "glassMainHeader", true);
-        glassFolders = p.getBoolean(PREFIX + "glassFolders", true);
+        glassMainHeader = p.getBoolean(PREFIX + "glassMainHeader", false);
+        glassFolders = p.getBoolean(PREFIX + "glassFolders", false);
     }
 
     private static void writeGlassDefaults(SharedPreferences.Editor editor) {
@@ -149,26 +154,26 @@ public final class LiquidGlassConfig {
             .putInt(PREFIX + "glassRefraction", 35)
             .putInt(PREFIX + "glassIndex", 130)
             .putInt(PREFIX + "glassDispersion", 40)
-            .putInt(PREFIX + "glassRim", 35)
+            .putInt(PREFIX + "glassRim", 0)
             .putInt(PREFIX + "glassOpacity", 35)
-            .putInt(PREFIX + "glassBlur", 40)
+            .putInt(PREFIX + "glassBlur", 0)
             .putInt(PREFIX + "glassHighlight", 0)
             .putInt(PREFIX + "glassTint", 0)
             .putInt(PREFIX + "glassTintAmount", 25)
-            .putBoolean(PREFIX + "glassShadow", true)
+            .putBoolean(PREFIX + "glassShadow", false)
             .putBoolean(PREFIX + "glassVibrancy", false)
             .putBoolean(PREFIX + "glassPreviewLook", true)
             .putBoolean(PREFIX + "liquidControls", false)
             .putBoolean(PREFIX + "glassHeaderButtons", false)
             .putBoolean(PREFIX + "frostedHeaders", false)
-            .putBoolean(PREFIX + "glassMenus", true)
-            .putBoolean(PREFIX + "glassDialogs", true)
-            .putBoolean(PREFIX + "glassSheets", true)
+            .putBoolean(PREFIX + "glassMenus", false)
+            .putBoolean(PREFIX + "glassDialogs", false)
+            .putBoolean(PREFIX + "glassSheets", false)
             .putBoolean(PREFIX + "glassFab", false)
             .putBoolean(PREFIX + "glassMiniPlayer", false)
             .putBoolean(PREFIX + "glassMessages", false)
-            .putBoolean(PREFIX + "glassMainHeader", true)
-            .putBoolean(PREFIX + "glassFolders", true);
+            .putBoolean(PREFIX + "glassMainHeader", false)
+            .putBoolean(PREFIX + "glassFolders", false);
     }
 
     private static final Runnable postThemeChangedRunnable = () -> {

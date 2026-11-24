@@ -165,7 +165,7 @@ public final class SettingsBackupHelper {
             spToJSON("mainconfig", configJson, SAFE_MAINCONFIG_KEYS::contains, includeApiKeys);
 
             if (!isCloud) {
-                spToJSON("themeconfig", configJson, null);
+                spToJSON("themeconfig", configJson, key -> includeApiKeys || !"themes2".equals(key), includeApiKeys);
             }
             spToJSON("nkmrcfg", configJson, null, includeApiKeys);
             spToJSON("exteraconfig", configJson, null, includeApiKeys);
@@ -231,7 +231,8 @@ public final class SettingsBackupHelper {
             if ("nkmrcfg".equals(sp) && isDeviceSpecificPushKey(key)) {
                 continue;
             }
-            if (!includeApiKeys && (key.endsWith("Key") || key.contains("Token") || key.contains("AccountID"))) {
+            if (!includeApiKeys && (key.endsWith("Key") || key.contains("Token") || key.contains("AccountID")
+                    || ("nkmrcfg".equals(sp) && isPrivateAccountMetadataKey(key)))) {
                 continue;
             }
             if (filter != null && !filter.apply(key)) {
@@ -517,7 +518,7 @@ public final class SettingsBackupHelper {
         apiKeysCell.setBackground(Theme.getSelectorDrawable(false));
         apiKeysCell.setText(getString(R.string.ExportSettingsIncludeApiKeys), "", true, false);
         apiKeysCell.setPadding(LocaleController.isRTL ? dp(16) : dp(8), 0, LocaleController.isRTL ? dp(8) : dp(16), 0);
-        apiKeysCell.setChecked(true, false);
+        apiKeysCell.setChecked(false, false);
         apiKeysCell.setOnClickListener(v -> {
             CheckBoxCell c = (CheckBoxCell) v;
             c.setChecked(!c.isChecked(), true);
@@ -546,6 +547,13 @@ public final class SettingsBackupHelper {
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         builder.show();
+    }
+
+    private static boolean isPrivateAccountMetadataKey(String key) {
+        return key.startsWith("custom_emoji_status_user_")
+                || key.startsWith("custom_emoji_collectible_flag_")
+                || key.startsWith("bot_sync_")
+                || key.startsWith("profile_invisible_meta_self_");
     }
 
     private static boolean isDeviceSpecificPushKey(String key) {

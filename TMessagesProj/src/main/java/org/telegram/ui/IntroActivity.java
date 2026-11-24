@@ -870,7 +870,7 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
             loadTexture(R.drawable.intro_powerful_star, 18);
             loadTexture(R.drawable.intro_private_door, 19);
             loadTexture(R.drawable.intro_private_screw, 20);
-            loadTexture(R.mipmap.ic_launcher_foreground, 21);
+            loadTexture(R.drawable.moltengram_icon_foreground, 21);
             loadTexture(telegramSphereProvider, 22);
             loadTexture(telegramMaskProvider, 23);
 

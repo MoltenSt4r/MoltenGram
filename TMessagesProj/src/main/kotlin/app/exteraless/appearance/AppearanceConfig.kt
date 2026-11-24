@@ -500,7 +500,7 @@ object AppearanceConfig {
     /** Стиль стеклянного контура: 0 — блик, 1 — сплошной, 2 — скрыт. Только UI. */
     @JvmField
     val glassOutlineStyle =
-        addConfig(object : ConfigItem("OEAppearanceGlassOutlineStyle", ConfigItem.configTypeInt, 0) {
+        addConfig(object : ConfigItem("OEAppearanceGlassOutlineStyle", ConfigItem.configTypeInt, 2) {
             override fun setConfigInt(v: Int) {
                 val changed = Int() != v
                 super.setConfigInt(v)
