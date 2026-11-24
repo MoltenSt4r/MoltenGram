@@ -993,7 +993,8 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
                 if (tintColor != 0) {
                     drawable.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
                 }
-                drawable.setBounds(0, 0, w, h);
+                int pad = (int) (w * 0.28f);
+                drawable.setBounds(-pad, -pad, w + pad, h + pad);
                 drawable.draw(c);
                 createdTemp = true;
             }
