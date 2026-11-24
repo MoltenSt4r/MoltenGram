@@ -278,11 +278,27 @@ public class WhatsNewSheet extends BottomSheet {
         return pill;
     }
 
+    private static final Pattern TRAILING_DEEPLINKS_PATTERN = Pattern.compile(
+            "\\s*[—–-]\\s*(?:\\[[^\\]]+]\\((?:tg://|tg:)[^)\\s]+\\)(?:\\s*(?:,|и|and)\\s*)?)+\\s*$");
+
     private void appendFormattedLine(SpannableStringBuilder out, String line, List<DeepLinkAction> collectedDeepLinks) {
         String text = line;
         Matcher bullet = BULLET_PATTERN.matcher(text);
         if (bullet.matches()) {
             text = "•  " + bullet.group(1);
+        }
+
+        Matcher trailing = TRAILING_DEEPLINKS_PATTERN.matcher(text);
+        if (trailing.find()) {
+            Matcher tailLinks = LINK_PATTERN.matcher(trailing.group());
+            while (tailLinks.find()) {
+                String label = tailLinks.group(1);
+                String url = tailLinks.group(2);
+                if (isDeepLinkUrl(url)) {
+                    addUniqueDeepLink(collectedDeepLinks, label, url);
+                }
+            }
+            text = text.substring(0, trailing.start());
         }
 
         int lineStart = out.length();
@@ -442,16 +458,37 @@ public class WhatsNewSheet extends BottomSheet {
         return sb.toString();
     }
 
+    private static boolean isRichChangelog(String notes) {
+        if (TextUtils.isEmpty(notes)) {
+            return false;
+        }
+        String trimmed = notes.trim();
+        if (trimmed.length() < 120) {
+            return false;
+        }
+        String lower = trimmed.toLowerCase();
+        if (lower.contains("tg://moltengram/") || lower.contains("tg:moltengram/")) {
+            return true;
+        }
+        int bullets = 0;
+        for (String line : trimmed.split("\n")) {
+            if (BULLET_PATTERN.matcher(line.trim()).matches()) {
+                bullets++;
+            }
+        }
+        return bullets >= 2;
+    }
+
     private static String resolveNotes(String customNotes) {
         if (!TextUtils.isEmpty(customNotes)) {
             return customNotes;
         }
         String otaNotes = MoltenGramOtaManager.getInstance().getDisplayChangelog();
-        if (!TextUtils.isEmpty(otaNotes)) {
+        if (isRichChangelog(otaNotes)) {
             return otaNotes;
         }
         String ghNotes = GitHubUpdater.getCachedReleaseBody();
-        if (!TextUtils.isEmpty(ghNotes)) {
+        if (isRichChangelog(ghNotes)) {
             return ghNotes;
         }
         return getLocalFallbackChangelog();
@@ -462,29 +499,25 @@ public class WhatsNewSheet extends BottomSheet {
                 ? LocaleController.getInstance().getCurrentLocaleInfo().pluralLangCode : "en";
         boolean ru = "ru".equals(lang) || "uk".equals(lang) || "be".equals(lang);
         if (ru) {
-            return "## Навигация и Expressive-панель\n"
-                    + "- Обновлённая плавающая панель навигации Expressive: гармонизация цветов с темой, корректная ширина рядом с FAB и плавное скрытие при прокрутке — [Стиль панели](tg://moltengram/appearance?row=md3NavBar)\n"
-                    + "- Улучшенная центровка морфинга FAB и подсветка длинного нажатия\n\n"
-                    + "## Плеер и медиа\n"
-                    + "- Исправлены гонки распознавания SongRec, загрузки обложек и текстов песен — [Настройки плеера](tg://moltengram/player_settings?row=bgStyle)\n"
-                    + "- Новые палитры MD3 Expressive (9 алгоритмов Monet + «Как в теме») — [Палитра плеера](tg://moltengram/player_settings?row=monetPalette)\n"
-                    + "- Волнистый сикбар MD3 Expressive с настройкой амплитуды и скорости — [Амплитуда волны](tg://moltengram/player_settings?row=seekbarWaveAmplitude)\n"
-                    + "- Обновлённая MD3-карусель медиагрупп с размытием и плавными анимациями — [MD3-карусель](tg://moltengram/appearance?row=mediaGroupCarousel)\n\n"
-                    + "## Интерфейс и оформление\n"
-                    + "- Фигурные аватары MD3 и переработанная иконка Material You — [Фигуры аватаров](tg://moltengram/appearance?row=md3AvatarShapes)\n"
-                    + "- Улучшенные чип-папки и синхронизация цветов Monet / Expressive — [Чип-папки](tg://moltengram/appearance?row=chipFolders)";
+            return "## 🎵 Плеер и медиа MD3 Expressive\n"
+                    + "- 9 алгоритмов палитр Monet (`Tonal Spot`, `Neutral`, `Vibrant`, `Expressive`, `Rainbow`, `Fruit Salad`, `Monochrome`, `Fidelity`, `Content`) и режим «Как в теме» — [Палитра плеера](tg://moltengram/player_settings?r=monetPalette)\n"
+                    + "- Волнистый прогресс-бар MD3 Expressive с настройкой амплитуды и скорости волны — [Амплитуда волны](tg://moltengram/player_settings?r=seekbarWaveAmplitude) и [Скорость волны](tg://moltengram/player_settings?r=seekbarWaveSpeed)\n"
+                    + "- Плавный морфинг мини-плеера в квадратный тайл `64×64` с круговым прогрессом при открытии Speed Dial FAB\n"
+                    + "- 3 масштаба кнопок плеера, автоцентрирование и исправление гонок SongRec, обложек и текстов песен — [Оформление плеера](tg://moltengram/player_settings?r=bgStyle)\n\n"
+                    + "## 🎨 Навигация и оформление\n"
+                    + "- Плавающая панель навигации Expressive: гармонизация цветов с темой, корректная ширина рядом с FAB и скрытие при прокрутке — [Панель навигации](tg://moltengram/appearance?r=md3NavBar)\n"
+                    + "- Улучшенная центровка морфинга Speed Dial FAB и подсветка длинного нажатия — [Внешний вид FAB](tg://moltengram/fab)\n"
+                    + "- Обновлённая MD3-карусель медиагрупп, фигурные аватары MD3 и чип-папки — [MD3-карусель](tg://moltengram/appearance?r=mediaGroupCarousel), [Фигуры аватаров](tg://moltengram/appearance?r=md3AvatarShapes) и [Чип-папки](tg://moltengram/appearance?r=chipFolders)";
         }
-        return "## Navigation & Expressive Toolbar\n"
-                + "- Refined Expressive floating navigation bar: theme surface harmonization, accurate width next to FAB, and smooth scroll hiding — [Navigation bar](tg://moltengram/appearance?row=md3NavBar)\n"
-                + "- Centered FAB size morphing and improved long-press scrim highlight\n\n"
-                + "## Player & Media\n"
-                + "- Fixed SongRec recognition, cover art, and lyrics race conditions — [Player settings](tg://moltengram/player_settings?row=bgStyle)\n"
-                + "- New MD3 Expressive palettes (9 Monet algorithms + Follow Theme) — [Player palette](tg://moltengram/player_settings?row=monetPalette)\n"
-                + "- MD3 Expressive wavy seekbar with amplitude & speed sliders — [Wave amplitude](tg://moltengram/player_settings?row=seekbarWaveAmplitude)\n"
-                + "- Improved MD3 media carousel blur and animations — [Media carousel](tg://moltengram/appearance?row=mediaGroupCarousel)\n\n"
-                + "## Interface & Design\n"
-                + "- MD3 avatar shapes and centered Material You icon — [Avatar shapes](tg://moltengram/appearance?row=md3AvatarShapes)\n"
-                + "- Refined chip folders and Monet / Expressive theme colors — [Chip folders](tg://moltengram/appearance?row=chipFolders)";
+        return "## 🎵 MD3 Expressive Player & Media\n"
+                + "- 9 Monet palette algorithms (`Tonal Spot`, `Neutral`, `Vibrant`, `Expressive`, `Rainbow`, `Fruit Salad`, `Monochrome`, `Fidelity`, `Content`) + Follow Theme — [Player palette](tg://moltengram/player_settings?r=monetPalette)\n"
+                + "- MD3 Expressive wavy seekbar with amplitude & speed controls — [Wave amplitude](tg://moltengram/player_settings?r=seekbarWaveAmplitude) and [Wave speed](tg://moltengram/player_settings?r=seekbarWaveSpeed)\n"
+                + "- Smooth mini-player morph into a `64×64` square tile with circular progress when Speed Dial FAB opens\n"
+                + "- 3 player button sizes, auto-centering, and SongRec/cover/lyrics race condition fixes — [Player settings](tg://moltengram/player_settings?r=bgStyle)\n\n"
+                + "## 🎨 Navigation & Design\n"
+                + "- Expressive floating navigation bar: theme surface harmonization, accurate width next to FAB, and smooth scroll hiding — [Navigation bar](tg://moltengram/appearance?r=md3NavBar)\n"
+                + "- Centered Speed Dial FAB morphing and improved long-press scrim — [FAB appearance](tg://moltengram/fab)\n"
+                + "- Improved MD3 media carousel, avatar shapes, and chip folders — [Media carousel](tg://moltengram/appearance?r=mediaGroupCarousel), [Avatar shapes](tg://moltengram/appearance?r=md3AvatarShapes) and [Chip folders](tg://moltengram/appearance?r=chipFolders)";
     }
 
     private static List<Section> parseSections(String markdown) {

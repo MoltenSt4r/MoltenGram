@@ -314,6 +314,11 @@ public class MoltenGramOtaManager {
                 JSONArray releases = new JSONArray(response);
                 OtaUpdate bestUpdate = null;
                 boolean includeCanary = isIncludeCanary();
+                String matchedCurrentBody = null;
+                String matchedCurrentVersion = null;
+                boolean matchedCurrentByCodename = false;
+                String codenameLower = TextUtils.isEmpty(BuildVars.BUILD_CODENAME)
+                        ? "" : BuildVars.BUILD_CODENAME.toLowerCase(java.util.Locale.US);
 
                 for (int i = 0; i < releases.length(); i++) {
                     JSONObject rel = releases.getJSONObject(i);
@@ -369,6 +374,21 @@ public class MoltenGramOtaManager {
 
                     boolean isNewer = isNewerVersion(verStr, publishedTime, remoteCommit, prerelease, apkName);
 
+                    String relBody = rel.optString("body", "");
+                    if (!TextUtils.isEmpty(relBody)
+                            && !TextUtils.isEmpty(BuildVars.BUILD_VERSION_STRING)
+                            && verStr.contains(BuildVars.BUILD_VERSION_STRING)) {
+                        String relTitle = rel.optString("name", "");
+                        boolean byCodename = !codenameLower.isEmpty()
+                                && (tagName.toLowerCase(java.util.Locale.US).contains(codenameLower)
+                                || relTitle.toLowerCase(java.util.Locale.US).contains(codenameLower));
+                        if (matchedCurrentBody == null || (byCodename && !matchedCurrentByCodename)) {
+                            matchedCurrentBody = relBody;
+                            matchedCurrentVersion = !TextUtils.isEmpty(relTitle) ? relTitle : (verStr + (prerelease ? " (Canary)" : ""));
+                            matchedCurrentByCodename = byCodename;
+                        }
+                    }
+
                     if (isNewer) {
                         OtaUpdate candidate = new OtaUpdate();
                         candidate.version = verStr + (prerelease ? " (Canary)" : "");
@@ -388,12 +408,20 @@ public class MoltenGramOtaManager {
                 }
 
                 final OtaUpdate resultUpdate = bestUpdate;
+                final String refreshedBody = matchedCurrentBody;
+                final String refreshedVersion = matchedCurrentVersion;
                 setLastCheckTime(System.currentTimeMillis());
 
                 AndroidUtilities.runOnUIThread(() -> {
                     isChecking = false;
                     pendingUpdate = resultUpdate;
                     savePendingUpdateToPrefs(resultUpdate);
+                    if (!TextUtils.isEmpty(refreshedBody)) {
+                        prefs.edit()
+                                .putString("last_ota_changelog", refreshedBody)
+                                .putString("last_ota_version", refreshedVersion)
+                                .apply();
+                    }
 
                     NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.appUpdateAvailable);
 
