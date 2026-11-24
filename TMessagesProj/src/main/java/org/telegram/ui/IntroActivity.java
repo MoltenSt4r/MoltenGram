@@ -870,7 +870,7 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
             loadTexture(R.drawable.intro_powerful_star, 18);
             loadTexture(R.drawable.intro_private_door, 19);
             loadTexture(R.drawable.intro_private_screw, 20);
-            loadTexture(R.drawable.moltengram_icon_foreground, 21);
+            loadTexture(R.drawable.moltengram_icon_foreground, 21, Color.WHITE, false);
             loadTexture(telegramSphereProvider, 22);
             loadTexture(telegramMaskProvider, 23);
 
@@ -973,24 +973,48 @@ public class IntroActivity extends BaseFragment implements NotificationCenter.No
 
         private void loadTexture(int resId, int index, int tintColor, boolean rebind) {
             Drawable drawable = getParentActivity().getResources().getDrawable(resId);
+            if (drawable == null) {
+                return;
+            }
+            Bitmap bitmap;
+            boolean createdTemp = false;
             if (drawable instanceof BitmapDrawable) {
-                Bitmap bitmap = ((BitmapDrawable) drawable).getBitmap();
-                GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[index]);
-                GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
-                GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
-                GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE);
-                GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
-
+                bitmap = ((BitmapDrawable) drawable).getBitmap();
+            } else {
+                int w = drawable.getIntrinsicWidth() > 0 ? drawable.getIntrinsicWidth() : AndroidUtilities.dp(108);
+                int h = drawable.getIntrinsicHeight() > 0 ? drawable.getIntrinsicHeight() : AndroidUtilities.dp(108);
+                if (w < AndroidUtilities.dp(108) && h < AndroidUtilities.dp(108)) {
+                    w = AndroidUtilities.dp(108);
+                    h = AndroidUtilities.dp(108);
+                }
+                bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                Canvas c = new Canvas(bitmap);
+                drawable = drawable.mutate();
                 if (tintColor != 0) {
-                    Bitmap tempBitmap = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
-                    Canvas canvas = new Canvas(tempBitmap);
-                    Paint tempPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
-                    tempPaint.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
-                    canvas.drawBitmap(bitmap, 0, 0, tempPaint);
-                    GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, tempBitmap, 0);
-                    tempBitmap.recycle();
-                } else {
-                    GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0);
+                    drawable.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
+                }
+                drawable.setBounds(0, 0, w, h);
+                drawable.draw(c);
+                createdTemp = true;
+            }
+            GLES20.glBindTexture(GL10.GL_TEXTURE_2D, textures[index]);
+            GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MIN_FILTER, GL10.GL_LINEAR);
+            GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_MAG_FILTER, GL10.GL_LINEAR);
+            GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_S, GL10.GL_CLAMP_TO_EDGE);
+            GLES20.glTexParameteri(GL10.GL_TEXTURE_2D, GL10.GL_TEXTURE_WRAP_T, GL10.GL_CLAMP_TO_EDGE);
+
+            if (!createdTemp && tintColor != 0) {
+                Bitmap tempBitmap = Bitmap.createBitmap(bitmap.getWidth(), bitmap.getHeight(), Bitmap.Config.ARGB_8888);
+                Canvas canvas = new Canvas(tempBitmap);
+                Paint tempPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+                tempPaint.setColorFilter(new PorterDuffColorFilter(tintColor, PorterDuff.Mode.SRC_IN));
+                canvas.drawBitmap(bitmap, 0, 0, tempPaint);
+                GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, tempBitmap, 0);
+                tempBitmap.recycle();
+            } else {
+                GLUtils.texImage2D(GL10.GL_TEXTURE_2D, 0, bitmap, 0);
+                if (createdTemp) {
+                    bitmap.recycle();
                 }
             }
         }
