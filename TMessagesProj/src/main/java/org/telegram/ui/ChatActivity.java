@@ -15876,7 +15876,7 @@ public class ChatActivity extends BaseFragment implements
         if (getParentActivity() == null) {
             return;
         }
-        if (!SharedConfig.inAppCamera || !CameraView.isCameraAllowed()) {
+        if (NekoConfig.disableInstantCamera.Bool() || !CameraView.isCameraAllowed()) {
             processSelectedAttach(attach_photo);
         } else if (getParentActivity().checkSelfPermission(Manifest.permission.CAMERA) != PackageManager.PERMISSION_GRANTED) {
             openQuickCameraOnGrant = true;

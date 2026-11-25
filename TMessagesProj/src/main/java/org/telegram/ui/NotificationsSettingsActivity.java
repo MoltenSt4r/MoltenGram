@@ -8,6 +8,9 @@
 
 package org.telegram.ui;
 
+import com.exteragram.messenger.notifications.AccountNotifications;
+import com.exteragram.messenger.notifications.AccountNotificationsActivity;
+
 import static org.telegram.messenger.AndroidUtilities.dp;
 import static org.telegram.messenger.LocaleController.getString;
 
@@ -101,6 +104,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
     private int accountsSectionRow;
     @Keep
     private int accountsAllRow;
+    private int accountsListRow;
     private int accountsInfoRow;
 
     private int notificationsServiceRow;
@@ -171,10 +175,12 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
         if (UserConfig.getVisibleAccountsCount() > 1) {
             accountsSectionRow = rowCount++;
             accountsAllRow = rowCount++;
+            accountsListRow = rowCount++;
             accountsInfoRow = rowCount++;
         } else {
             accountsSectionRow = -1;
             accountsAllRow = -1;
+            accountsListRow = -1;
             accountsInfoRow = -1;
         }
 
@@ -755,16 +761,11 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                 editor.putBoolean("AllAccounts", !enabled);
                 editor.commit();
                 SharedConfig.showNotificationsForAllAccounts = !enabled;
-                for (int a = 0; a < UserConfig.MAX_ACCOUNT_COUNT; a++) {
-                    if (SharedConfig.showNotificationsForAllAccounts) {
-                        NotificationsController.getInstance(a).showNotifications();
-                    } else {
-                        if (a == currentAccount) {
-                            NotificationsController.getInstance(a).showNotifications();
-                        } else {
-                            NotificationsController.getInstance(a).hideNotifications();
-                        }
-                    }
+                AccountNotifications.applyAll();
+                adapter.notifyItemChanged(accountsListRow);
+            } else if (position == accountsListRow) {
+                if (SharedConfig.showNotificationsForAllAccounts) {
+                    presentFragment(new AccountNotificationsActivity());
                 }
             } else if (position == notificationsServiceRow) {
                 SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
@@ -955,7 +956,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                     position == badgeNumberSection || position == otherSection2Row || position == resetSection2Row ||
                     position == callsSection2Row || position == callsSectionRow || position == badgeNumberSection2Row ||
                     position == accountsSectionRow || position == accountsInfoRow || position == resetNotificationsSectionRow ||
-                    position == eventsSection2Row);
+                    position == eventsSection2Row || position == accountsListRow && !SharedConfig.showNotificationsForAllAccounts);
         }
 
         @Override
@@ -1164,7 +1165,9 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                 case 5: {
                     TextSettingsCell textCell = (TextSettingsCell) holder.itemView;
                     SharedPreferences preferences = MessagesController.getNotificationsSettings(currentAccount);
-                    if (position == callsRingtoneRow) {
+                    if (position == accountsListRow) {
+                        textCell.setTextAndValue(getString(R.string.SettingsAccounts), LocaleController.formatString(R.string.Of, AccountNotifications.getEnabledCount(), AccountNotifications.getAccounts().size()), false);
+                    } else if (position == callsRingtoneRow) {
                         String value = preferences.getString("CallsRingtone", getString("DefaultRingtone", R.string.DefaultRingtone));
                         if (value.equals("NoSound")) {
                             value = getString("NoSound", R.string.NoSound);
@@ -1198,6 +1201,7 @@ public class NotificationsSettingsActivity extends BaseFragment implements Notif
                         textCell.setTextAndValue(getString("RepeatNotifications", R.string.RepeatNotifications), value, updateRepeatNotifications, false);
                         updateRepeatNotifications = false;
                     }
+                    textCell.setEnabled(position != accountsListRow || SharedConfig.showNotificationsForAllAccounts);
                     break;
                 }
                 case 6: {

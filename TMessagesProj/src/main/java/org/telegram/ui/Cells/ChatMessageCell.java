@@ -138,6 +138,7 @@ import org.telegram.messenger.MediaDataController;
 import app.exteraless.chats.WideChannelPostLayout;
 import app.exteraless.feed.FeedMessageUtils;
 import com.exteragram.messenger.utils.chats.WidePosts;
+import com.exteragram.messenger.utils.chats.StickerTime;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -1431,6 +1432,14 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private boolean timePressed;
 
     private float timeAlpha = 1.0f;
+
+    public float getTimeAlpha() {
+        return timeAlpha;
+    }
+
+    public void setTimeAlpha(float value) {
+        timeAlpha = value;
+    }
     private float actionAlpha = 1.0f;
     float controlsAlpha = 1.0f;
     private long lastControlsAlphaChangeTime;
@@ -4971,7 +4980,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                         sideButtonVisible &&
                         drawSideButton != 0 &&
                         (delegate == null || (!delegate.hasSelectedMessages() && delegate.canPerformActions())) &&
-                        x >= sideStartX - dp(24) && x <= sideStartX + dp(40) &&
+                        x >= sideStartX - sideButtonTouchLeft() && x <= sideStartX + sideButtonTouchRight() &&
                         y >= sideStartY - dp(drawSummarizeButton ? 6 : 24) && y <= sideStartY + dp(38 + (drawSideButton == 3 && commentLayout != null ? 18 : 0) + (drawSideButton2 == SIDE_BUTTON_SPONSORED_MORE ? 38 : 0))
                     ) {
                         if (currentMessageObject.isSent()) {
@@ -5135,7 +5144,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     } else if (event.getAction() == MotionEvent.ACTION_MOVE) {
                         if (!(
                             sideButtonVisible &&
-                            x >= sideStartX - dp(24) && x <= sideStartX + dp(40) &&
+                            x >= sideStartX - sideButtonTouchLeft() && x <= sideStartX + sideButtonTouchRight() &&
                             y >= sideStartY - dp(drawSummarizeButton ? 6 : 24) && y <= sideStartY + dp(38 + (drawSideButton == 3 && commentLayout != null ? 18 : 0) + (drawSideButton2 == SIDE_BUTTON_SPONSORED_MORE ? 38 : 0))
                         )) {
                             sideButtonPressed = false;
@@ -20046,6 +20055,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 sideStartX = AndroidUtilities.lerp(besideCircle, Math.min(sideStartX + offsetX, maxX), getVideoTranscriptionProgress());
             }
         }
+        sideStartX = StickerTime.getSideButtonX(stickerTimeRow(), sideStartX);
         sideButtonVisible = true;
         if (drawSideButton == 3) {
             if (!(enterTransitionInProgress && !currentMessageObject.isVoice())) {
@@ -22859,6 +22869,37 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return mediaBackground && (captionLayout == null || captionAbove) && (reactionsLayoutInBubble.isEmpty || reactionsLayoutInBubble.isSmall || currentMessageObject != null && (currentMessageObject.isAnyKindOfSticker() || currentMessageObject.isRoundVideo())) || currentMessageObject != null && currentMessageObject.type == MessageObject.TYPE_PAID_MEDIA/* || isMedia && drawCommentButton && !isRepliesChat*/;
     }
 
+    private final StickerTime.Row stickerTimeRow = new StickerTime.Row();
+    private float stickerTimeOffsetX;
+    private float stickerTimeTargetX;
+
+    private float sideButtonTouchLeft() {
+        return StickerTime.getSideButtonTouchLeft(stickerTimeRow(), dp(24));
+    }
+
+    private float sideButtonTouchRight() {
+        return StickerTime.getSideButtonTouchRight(stickerTimeRow(), dp(40));
+    }
+
+    private StickerTime.Row stickerTimeRow() {
+        stickerTimeRow.message = currentMessageObject;
+        stickerTimeRow.overStickerOffsetX = -dp(STICKER_STATUS_OFFSET);
+        stickerTimeRow.timeWidth = timeWidth;
+        stickerTimeRow.stickerLeft = photoImage.getImageX();
+        stickerTimeRow.stickerRight = photoImage.getImageX2();
+        stickerTimeRow.stickerWidth = photoImage.getImageWidth();
+        stickerTimeRow.anchorY = getPhotoBottom() + additionalTimeOffsetY;
+        stickerTimeRow.cellWidth = getMeasuredWidth();
+        stickerTimeRow.sideButton = drawSideButton != 0
+                && !(currentPosition != null && currentMessagesGroup != null && currentMessagesGroup.isDocuments && !currentPosition.last);
+        stickerTimeRow.hasName = drawNameLayout && nameLayout != null;
+        stickerTimeRow.nameLeft = nameX;
+        stickerTimeRow.nameWidth = nameWidth;
+        stickerTimeRow.nameTop = nameY;
+        stickerTimeRow.nameHeight = nameLayout != null ? nameLayout.getHeight() : 0;
+        return stickerTimeRow;
+    }
+
     public void drawTime(Canvas canvas, float alpha, boolean fromParent) {
         if (isSiblingGroupCarouselMessage()) {
             return;
@@ -22869,7 +22910,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (currentMessageObject != null && currentMessageObject.type == MessageObject.TYPE_JOINED_CHANNEL) {
             return;
         }
-        if (NekoConfig.hideTimeForSticker.Bool() && currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() && !isDrawSelectionBackground() && !currentMessageObject.isAyuDeleted()) {
+        if (StickerTime.isHidden(currentMessageObject) && !isDrawSelectionBackground()) {
             return;
         }
         for (int i = 0; i < 2; i++) {
@@ -23065,7 +23106,9 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             } else {
                 r = dp(4) + (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(8) : 0);
             }
-            timeX += (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0);
+            stickerTimeOffsetX = StickerTime.getTimeOffsetX(stickerTimeRow(), timeX);
+            stickerTimeTargetX = this.timeX + StickerTime.getTimeOffsetX(stickerTimeRow(), this.timeX);
+            timeX += stickerTimeOffsetX;
             if (effectId != 0) {
                 timeX -= dp(14 + 4);
             }
@@ -23115,7 +23158,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
             alpha = oldAlpha3;
 
-            float additionalX = -timeLayout.getLineLeft(0) + (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0);
+            float additionalX = -timeLayout.getLineLeft(0) + (currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? stickerTimeTargetX - this.timeX : 0);
             if (currentMessageObject.shouldDrawReactions() && reactionsLayoutInBubble.isSmall) {
                 updateReactionLayoutPosition();
                 reactionsLayoutInBubble.setScrimProgress(0, false);
@@ -23820,7 +23863,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         }
         timeY -= dp(8.5f);
 
-        float offsetX = currentMessageObject != null && currentMessageObject.isAnyKindOfSticker() ? dp(-STICKER_STATUS_OFFSET) : 0;
+        float offsetX = stickerTimeOffsetX;
         if (drawClock) {
             MsgClockDrawable drawable = Theme.chat_msgClockDrawable;
             int color;

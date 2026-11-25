@@ -282,4 +282,7 @@
 <string name="SwipeActionsOrderInfo">Нажмите на действие, чтобы включить или выключить, перетащите — чтобы изменить порядок. Верхнее срабатывает при обычном свайпе.</string>
 <string name="SwipeActionsPreviewReply">а если промахнусь и удалю?</string>
 <string name="SwipeActionsPreviewMessage">страх убивает разум. веди палец медленнее</string>
+<string name="OEChatsStickerTime">Время на стикерах</string>
+<string name="OEChatsStickerTimeSide">Сбоку</string>
+<string name="OEChatsStickerTimeHidden">Скрыто</string>
 </resources>

@@ -210,4 +210,6 @@
 <string name="OEUpdaterAllReleases">Все релизы на GitHub</string>
 <string name="OELiteFollowSystemSaver">Как в системе</string>
 <string name="OELiteFollowSystemSaverInfo">Энергосбережение включается вместе с системным режимом экономии заряда.</string>
+<string name="AccountNotificationsInfo">Уведомления от неотмеченных аккаунтов не приходят, пока вы пользуетесь другим аккаунтом.</string>
+<string name="AccountNotificationsCurrent">Уведомления текущего аккаунта показываются всегда.</string>
 </resources>

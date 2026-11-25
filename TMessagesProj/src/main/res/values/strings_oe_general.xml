@@ -238,4 +238,6 @@
 <string name="OEUpdaterAllReleases">All releases on GitHub</string>
 <string name="OELiteFollowSystemSaver">Follow system battery saver</string>
 <string name="OELiteFollowSystemSaverInfo">Power saving turns on together with the system battery saver.</string>
+<string name="AccountNotificationsInfo">Unchecked accounts don\'t show notifications while you\'re using another account.</string>
+<string name="AccountNotificationsCurrent">Notifications from the current account are always shown.</string>
 </resources>

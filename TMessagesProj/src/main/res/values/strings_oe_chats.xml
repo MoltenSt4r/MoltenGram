@@ -285,4 +285,7 @@
 <string name="SwipeActionsOrderInfo">Tap an action to turn it on or off, drag to reorder. The topmost action runs on a plain swipe.</string>
 <string name="SwipeActionsPreviewReply">what if i slip and delete it?</string>
 <string name="SwipeActionsPreviewMessage">fear is the mind-killer. drag slower</string>
+<string name="OEChatsStickerTime">Time on Stickers</string>
+<string name="OEChatsStickerTimeSide">On the Side</string>
+<string name="OEChatsStickerTimeHidden">Hidden</string>
 </resources>

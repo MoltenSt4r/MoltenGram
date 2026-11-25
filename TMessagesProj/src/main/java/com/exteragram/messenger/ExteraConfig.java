@@ -910,6 +910,23 @@ public final class ExteraConfig {
         ChatsConfig.swipeActionsReversed.setConfigBool(value);
     }
 
+    // ---- Sticker Time Mode (0 = Default, 1 = Side, 2 = Hidden) ----
+
+    public static int getStickerTimeMode() {
+        ensureLoaded();
+        int mode = ChatsConfig.stickerTimeMode();
+        if (mode == 0 && tw.nekomimi.nekogram.NekoConfig.hideTimeForSticker.Bool()) {
+            return 2;
+        }
+        return mode;
+    }
+
+    public static void setStickerTimeMode(int mode) {
+        ensureLoaded();
+        ChatsConfig.stickerTimeMode.setConfigInt(mode);
+        tw.nekomimi.nekogram.NekoConfig.hideTimeForSticker.setConfigBool(mode == 2);
+    }
+
     public static boolean getTelegramAiEditor() {
         ensureLoaded();
         return !AppearanceConfig.hideAiEditor.Bool();

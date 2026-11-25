@@ -8,6 +8,8 @@
 
 package org.telegram.messenger;
 
+import com.exteragram.messenger.notifications.AccountNotifications;
+
 import android.annotation.SuppressLint;
 import android.annotation.TargetApi;
 import android.app.Activity;
@@ -393,7 +395,7 @@ public class NotificationsController extends BaseController implements Notificat
     public void showTonConnectNotification(String dapp, long time) {
         notificationsQueue.postRunnable(() -> {
             if (!getUserConfig().isClientActivated()
-                    || !SharedConfig.showNotificationsForAllAccounts && currentAccount != UserConfig.selectedAccount) {
+                    || !AccountNotifications.shouldShow(currentAccount)) {
                 return;
             }
             try {
@@ -1814,7 +1816,7 @@ public class NotificationsController extends BaseController implements Notificat
             if (!UserConfig.getInstance(a).isClientActivated() || PasscodeHelper.isAccountHidden(a)) {
                 continue;
             }
-            if (!SharedConfig.showNotificationsForAllAccounts && UserConfig.selectedAccount != a) {
+            if (!AccountNotifications.shouldShow(a)) {
                 continue;
             }
 
@@ -4440,7 +4442,7 @@ public class NotificationsController extends BaseController implements Notificat
     }
 
     private void showOrUpdateNotification(boolean notifyAboutLast) {
-        if (!getUserConfig().isClientActivated() || pushMessages.isEmpty() && storyPushMessages.isEmpty() || PasscodeHelper.isAccountHidden(currentAccount) || !SharedConfig.showNotificationsForAllAccounts && currentAccount != UserConfig.selectedAccount) {
+        if (!getUserConfig().isClientActivated() || pushMessages.isEmpty() && storyPushMessages.isEmpty() || PasscodeHelper.isAccountHidden(currentAccount) || !AccountNotifications.shouldShow(currentAccount)) {
             dismissNotification();
             return;
         }

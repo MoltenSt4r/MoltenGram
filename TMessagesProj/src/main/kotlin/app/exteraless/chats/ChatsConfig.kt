@@ -587,6 +587,17 @@ object ChatsConfig {
     @JvmField
     val swipeActionsReversed = addConfig("OEChatsSwipeActionsReversed", ConfigItem.configTypeBool, false)
 
+    // ---- Sticker Time Mode (13.2.2 backport: 0=Default, 1=Side, 2=Hidden) ----
+
+    @JvmField
+    val stickerTimeMode = addConfig("OEChatsStickerTimeMode", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun stickerTimeMode(): Int {
+        ensureLoaded()
+        return stickerTimeMode.Int()
+    }
+
     @JvmStatic
     fun swipeActions(): String {
         ensureLoaded()
