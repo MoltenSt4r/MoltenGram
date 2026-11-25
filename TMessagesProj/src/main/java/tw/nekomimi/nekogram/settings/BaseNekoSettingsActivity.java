@@ -124,6 +124,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
         SizeNotifierFrameLayout frameLayout = (SizeNotifierFrameLayout) fragmentView;
 
         listView = new app.exteraless.appearance.SectionCardRecyclerView(context);
+        listView.ignoreBlurTopPadding = needActionBarBlur();
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
             public void onScrolled(@NonNull RecyclerView recyclerView, int dx, int dy) {

@@ -2761,7 +2761,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsShowResultsBeforeVoting),
                         ChatsConfig.showResultsBeforeVoting.Bool(), true);
             } else if (position == wideChannelPostsRow) {
-                cell.setTextAndCheck(getString(R.string.OEChatsWideChannelPosts),
+                cell.setTextAndCheck(TextCell.applyNewSpan(getString(R.string.OEChatsWideChannelPosts)),
                         ChatsConfig.wideChannelPosts.Bool(), true, true);
             } else if (position == wideFeedPostsRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsWideFeedPosts),
@@ -2837,7 +2837,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndIcon(getString(R.string.FeedSettings), R.drawable.ic_feed, false);
                 cell.setSubtitle(getString(R.string.FeedChannelsInfo));
             } else if (position == swipeActionsRow) {
-                cell.setTextAndIcon(getString(R.string.SwipeActions), R.drawable.msg_forward, false);
+                cell.setTextAndIcon(TextCell.applyNewSpan(getString(R.string.SwipeActions)), R.drawable.msg_forward, false);
             }
             // Обе строки двухстрочные: подпись под заголовком, высота 64,
             // отступ текста от иконки 60. Ставится после setTextAndIcon —

@@ -56,6 +56,8 @@
     <string name="OEAppearanceSwitchStyle">Switches</string>
     <string name="OEAppearanceSwitchExpressiveColors">Expressive switch colors</string>
     <string name="OEAppearanceSwitchExpressiveColorsInfo">Use a soft pastel container for track and rich accent for thumb.</string>
+    <string name="OEAppearanceControlsTuning">Switch &amp; slider sizes</string>
+    <string name="OEAppearanceGlassMessagesTuning">Glass messages settings</string>
     <string name="OEAppearanceSliderStyle">Sliders</string>
     <string name="OEAppearanceSliderThickness">Slider thickness</string>
 

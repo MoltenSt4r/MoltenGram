@@ -1236,11 +1236,19 @@ public final class ExteraConfig {
 
     public static VideoMessagesCamera getVideoMessagesCamera() {
         ensureLoaded();
-        return NekoConfig.rearVideoMessages.Bool() ? VideoMessagesCamera.REAR : VideoMessagesCamera.FRONT;
+        int mode = NaConfig.INSTANCE.getCameraInVideoMessages().Int();
+        if (mode == 1) {
+            return VideoMessagesCamera.REAR;
+        } else if (mode == 2) {
+            return VideoMessagesCamera.ASK;
+        }
+        return VideoMessagesCamera.FRONT;
     }
 
     public static void setVideoMessagesCamera(VideoMessagesCamera value) {
         ensureLoaded();
+        int mode = value == VideoMessagesCamera.REAR ? 1 : (value == VideoMessagesCamera.ASK ? 2 : 0);
+        NaConfig.INSTANCE.getCameraInVideoMessages().setConfigInt(mode);
         NekoConfig.rearVideoMessages.setConfigBool(value == VideoMessagesCamera.REAR);
     }
 

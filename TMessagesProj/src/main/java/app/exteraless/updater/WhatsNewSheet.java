@@ -499,25 +499,25 @@ public class WhatsNewSheet extends BottomSheet {
                 ? LocaleController.getInstance().getCurrentLocaleInfo().pluralLangCode : "en";
         boolean ru = "ru".equals(lang) || "uk".equals(lang) || "be".equals(lang);
         if (ru) {
-            return "## 🎵 Плеер и медиа MD3 Expressive\n"
-                    + "- 9 алгоритмов палитр Monet (`Tonal Spot`, `Neutral`, `Vibrant`, `Expressive`, `Rainbow`, `Fruit Salad`, `Monochrome`, `Fidelity`, `Content`) и режим «Как в теме» — [Палитра плеера](tg://moltengram/player_settings?r=monetPalette)\n"
-                    + "- Волнистый прогресс-бар MD3 Expressive с настройкой амплитуды и скорости волны — [Амплитуда волны](tg://moltengram/player_settings?r=seekbarWaveAmplitude) и [Скорость волны](tg://moltengram/player_settings?r=seekbarWaveSpeed)\n"
-                    + "- Плавный морфинг мини-плеера в квадратный тайл `64×64` с круговым прогрессом при открытии Speed Dial FAB\n"
-                    + "- 3 масштаба кнопок плеера, автоцентрирование и исправление гонок SongRec, обложек и текстов песен — [Оформление плеера](tg://moltengram/player_settings?r=bgStyle)\n\n"
-                    + "## 🎨 Навигация и оформление\n"
-                    + "- Плавающая панель навигации Expressive: гармонизация цветов с темой, корректная ширина рядом с FAB и скрытие при прокрутке — [Панель навигации](tg://moltengram/appearance?r=md3NavBar)\n"
-                    + "- Улучшенная центровка морфинга Speed Dial FAB и подсветка длинного нажатия — [Внешний вид FAB](tg://moltengram/fab)\n"
-                    + "- Обновлённая MD3-карусель медиагрупп, фигурные аватары MD3 и чип-папки — [MD3-карусель](tg://moltengram/appearance?r=mediaGroupCarousel), [Фигуры аватаров](tg://moltengram/appearance?r=md3AvatarShapes) и [Чип-папки](tg://moltengram/appearance?r=chipFolders)";
+            return "## 🍋 MoltenGram 13.2.2 Lemonade\n"
+                    + "- Обновлённая база **13.2.2**: улучшена стабильность, экспорт сообщений, AdBlock во встроенном браузере и настройка уведомлений по аккаунтам\n"
+                    + "- Новый пайплайн видеосообщений с реальными физическими линзами, исправленным выбором основной камеры и плавным слайдером зума — [Слайдер зума](tg://moltengram/chats?r=zoomSlider)\n"
+                    + "- Широкие посты в каналах и ленте: симметричные отступы без обрезки опросов и MD3-карусели — [Широкие посты](tg://moltengram/chats?r=wideChannelPosts)\n"
+                    + "- Настраиваемые свайп-действия в чатах и быстрые меню — [Свайп-действия](tg://moltengram/chats?r=swipeActions)\n\n"
+                    + "## ✨ Стекло, виджеты и настройки\n"
+                    + "- Прогрессивное размытие шапки, стеклянные меню и исправление обрезки фона при принудительной прозрачности — [Размытие шапки](tg://moltengram/appearance?r=headerBlurStyle) и [Стеклянное меню](tg://moltengram/appearance?r=glassMessageMenu)\n"
+                    + "- Кастомные пиллы (PillStack), импорт `.pill` по нажатию и виджеты в сообщениях — [Пиллы](tg://moltengram/appearance?r=pillStack)\n"
+                    + "- Сворачиваемые подсекции для слайдеров и стекла в «Оформлении» — [Размеры тумблеров](tg://moltengram/appearance?r=controlsTuning)";
         }
-        return "## 🎵 MD3 Expressive Player & Media\n"
-                + "- 9 Monet palette algorithms (`Tonal Spot`, `Neutral`, `Vibrant`, `Expressive`, `Rainbow`, `Fruit Salad`, `Monochrome`, `Fidelity`, `Content`) + Follow Theme — [Player palette](tg://moltengram/player_settings?r=monetPalette)\n"
-                + "- MD3 Expressive wavy seekbar with amplitude & speed controls — [Wave amplitude](tg://moltengram/player_settings?r=seekbarWaveAmplitude) and [Wave speed](tg://moltengram/player_settings?r=seekbarWaveSpeed)\n"
-                + "- Smooth mini-player morph into a `64×64` square tile with circular progress when Speed Dial FAB opens\n"
-                + "- 3 player button sizes, auto-centering, and SongRec/cover/lyrics race condition fixes — [Player settings](tg://moltengram/player_settings?r=bgStyle)\n\n"
-                + "## 🎨 Navigation & Design\n"
-                + "- Expressive floating navigation bar: theme surface harmonization, accurate width next to FAB, and smooth scroll hiding — [Navigation bar](tg://moltengram/appearance?r=md3NavBar)\n"
-                + "- Centered Speed Dial FAB morphing and improved long-press scrim — [FAB appearance](tg://moltengram/fab)\n"
-                + "- Improved MD3 media carousel, avatar shapes, and chip folders — [Media carousel](tg://moltengram/appearance?r=mediaGroupCarousel), [Avatar shapes](tg://moltengram/appearance?r=md3AvatarShapes) and [Chip folders](tg://moltengram/appearance?r=chipFolders)";
+        return "## 🍋 MoltenGram 13.2.2 Lemonade\n"
+                + "- Updated **13.2.2** core: stability fixes, message export, built-in browser AdBlock, and per-account notification filters\n"
+                + "- Real-lens round video pipeline with fixed rear camera selection and unified zoom slider — [Zoom slider](tg://moltengram/chats?r=zoomSlider)\n"
+                + "- Wide posts in channels & feed with symmetric margins for polls and MD3 media carousel — [Wide posts](tg://moltengram/chats?r=wideChannelPosts)\n"
+                + "- Customizable chat swipe actions and quick menus — [Swipe actions](tg://moltengram/chats?r=swipeActions)\n\n"
+                + "## ✨ Glass, Widgets & Settings\n"
+                + "- Progressive header blur, glass menus, and fixed bottom background clipping with Force Blur — [Header blur](tg://moltengram/appearance?r=headerBlurStyle) and [Glass menu](tg://moltengram/appearance?r=glassMessageMenu)\n"
+                + "- Custom Pills (PillStack), tap-to-import `.pill` files, and message widgets — [Custom Pills](tg://moltengram/appearance?r=pillStack)\n"
+                + "- Collapsible subsections for switch/slider sizes and glass sliders in Appearance — [Switch & slider sizes](tg://moltengram/appearance?r=controlsTuning)";
     }
 
     private static List<Section> parseSections(String markdown) {

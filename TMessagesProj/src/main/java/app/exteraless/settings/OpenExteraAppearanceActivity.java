@@ -115,6 +115,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int glassMessagesOpacityRow;
     private int glassMessagesRefractionRow;
     private int glassMessagesStrokeRow;
+    private int glassMessagesTuningGroupRow;
+    private boolean glassMessagesTuningExpanded;
     private int customBubbleBgRow;
     private int chat3dScrollRow;
     private int chat3dScrollIntensityRow;
@@ -143,6 +145,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3SwitchExpressiveColorsRow;
     private int navBarStyleRow;
     private int md3SwitchSizeRow;
+    private int controlsTuningGroupRow;
+    private boolean controlsTuningExpanded;
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
@@ -279,10 +283,15 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         // Переключатели
         md3SwitchRow = addRow("md3Switch");
         md3SwitchExpressiveColorsRow = isMd3Switch(NaConfig.INSTANCE.getSwitchStyle().Int()) ? addRow("md3SwitchExpressiveColors") : -1;
+        controlsTuningGroupRow = addRow("controlsTuning");
+        if (controlsTuningExpanded) {
+            md3SwitchSizeRow = addRow("md3SwitchSize");
+            md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
+        } else {
+            md3SwitchSizeRow = -1;
+            md3SliderThicknessRow = -1;
+        }
         navBarStyleRow = addRow("navBarStyle");
-        md3SwitchSizeRow = addRow("md3SwitchSize");
-        // Регуляция толщины слайдеров снаружи
-        md3SliderThicknessRow = isMd3(NaConfig.INSTANCE.getSliderStyle().Int()) ? addRow("md3SliderThickness") : -1;
 
         // Material Design 3 — сворачиваемая группа, как у exteraGram
         md3GroupRow = addRow("md3Styles");
@@ -336,10 +345,18 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         glassMessagesRow = addRow("glassMessages");
         if (AppearanceConfig.glassMessages.Bool() && SharedConfig.chatBlurEnabled()
                 && !app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled()) {
-            glassMessagesOpacityRow = addRow("glassMessagesOpacity");
-            glassMessagesRefractionRow = addRow("glassMessagesRefraction");
-            glassMessagesStrokeRow = addRow("glassMessagesStroke");
+            glassMessagesTuningGroupRow = addRow("glassMessagesTuning");
+            if (glassMessagesTuningExpanded) {
+                glassMessagesOpacityRow = addRow("glassMessagesOpacity");
+                glassMessagesRefractionRow = addRow("glassMessagesRefraction");
+                glassMessagesStrokeRow = addRow("glassMessagesStroke");
+            } else {
+                glassMessagesOpacityRow = -1;
+                glassMessagesRefractionRow = -1;
+                glassMessagesStrokeRow = -1;
+            }
         } else {
+            glassMessagesTuningGroupRow = -1;
             glassMessagesOpacityRow = -1;
             glassMessagesRefractionRow = -1;
             glassMessagesStrokeRow = -1;
@@ -781,6 +798,14 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == md3GroupRow) {
             md3Expanded = !md3Expanded;
+            rebuildRowsAndNotify();
+            return;
+        } else if (position == controlsTuningGroupRow) {
+            controlsTuningExpanded = !controlsTuningExpanded;
+            rebuildRowsAndNotify();
+            return;
+        } else if (position == glassMessagesTuningGroupRow) {
+            glassMessagesTuningExpanded = !glassMessagesTuningExpanded;
             rebuildRowsAndNotify();
             return;
         } else if (position == md3LoadingRow) {
@@ -1525,7 +1550,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == useSystemFontsRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceUseSystemFonts), NekoConfig.typeface.Bool(), true);
                     } else if (position == ndotFontHeadersRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceNdotFontHeaders), getString(R.string.OEAppearanceNdotFontHeadersInfo), AppearanceConfig.ndotFontHeaders(), true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceNdotFontHeaders), AppearanceConfig.ndotFontHeaders(), true);
                     } else if (position == useSystemEmojiRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceUseSystemEmoji), NekoConfig.useSystemEmoji.Bool(), true);
                     } else if (position == gooeyAvatarRow) {
@@ -1683,7 +1708,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         String[] v = {getString(R.string.OEAppearanceDividerHidden), getString(R.string.OEAppearanceDividerLine), getString(R.string.OEAppearanceDividerSegments)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceDividerStyle), v[clamp(AppearanceConfig.dividerStyle.Int(), v.length)], false);
                     } else if (position == headerBlurStyleRow) {
-                        cell.setTextAndValue(getString(R.string.OEAppearanceHeaderBlurStyle), getHeaderBlurStyleValue(), true);
+                        cell.setTextAndValue(org.telegram.ui.Cells.TextCell.applyNewSpan(getString(R.string.OEAppearanceHeaderBlurStyle)), getHeaderBlurStyleValue(), true);
                     } else if (position == glassOutlineRow) {
                         String[] v = {getString(R.string.OEAppearanceGlassOutlineGlare), getString(R.string.OEAppearanceGlassOutlineSolid), getString(R.string.OEAppearanceGlassOutlineHidden)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceGlassOutline), v[clamp(AppearanceConfig.glassOutlineStyle.Int(), v.length)], true);
@@ -1808,11 +1833,21 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValueAndIcon(getString(R.string.EmojiSets), getString(NekoConfig.useSystemEmoji.Bool()
                                 ? R.string.OEAppearanceUseSystemEmoji : R.string.OEAppearanceEmojiSetsInfo), R.drawable.msg_emoji_smiles, true);
                     } else if (position == pillStackRow) {
-                        cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePillStack), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, true);
+                        cell.setTextAndValueAndIcon(org.telegram.ui.Cells.TextCell.applyNewSpan(getString(R.string.OEAppearancePillStack)), getString(R.string.OEAppearancePillStackInfo), R.drawable.outline_header_search, true);
                     } else if (position == playerSettingsRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OEAppearancePlayerSettings), getString(R.string.OEAppearancePlayerAppearanceHeader), R.drawable.baseline_music_note_outline_24, false);
                     } else if (position == liquidGlassRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.SG_GlassSettings), getString(R.string.SG_GlassSub), R.drawable.msg_customize, true);
+                    }
+                    break;
+                }
+                case TYPE_COLLAPSIBLE_HEADER: {
+                    tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell cell =
+                            (tw.nekomimi.nekogram.ui.cells.CollapsibleHeaderCell) holder.itemView;
+                    if (position == controlsTuningGroupRow) {
+                        cell.set(getString(R.string.OEAppearanceControlsTuning), controlsTuningExpanded);
+                    } else if (position == glassMessagesTuningGroupRow) {
+                        cell.set(getString(R.string.OEAppearanceGlassMessagesTuning), glassMessagesTuningExpanded);
                     }
                     break;
                 }
@@ -1899,6 +1934,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == md3GroupRow || position == hideAiGroupRow
                     || position == iosGroupRow || hideSettingsGroupRow == position) {
                 return TYPE_EXPANDABLE_SWITCH;
+            } else if (position == controlsTuningGroupRow || position == glassMessagesTuningGroupRow) {
+                return TYPE_COLLAPSIBLE_HEADER;
             } else if (position == md3LoadingRow || position == md3SliderRow
                     || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow

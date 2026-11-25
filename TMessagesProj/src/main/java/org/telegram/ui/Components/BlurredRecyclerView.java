@@ -16,6 +16,7 @@ public class BlurredRecyclerView extends RecyclerListView {
     boolean globalIgnoreLayout;
     public int additionalClipBottom;
     public boolean alwaysDrawChild;
+    public boolean ignoreBlurTopPadding;
 
     public BlurredRecyclerView(Context context) {
         super(context);
@@ -38,6 +39,10 @@ public class BlurredRecyclerView extends RecyclerListView {
 
     private void updateTopPadding() {
         if (getLayoutParams() == null) {
+            return;
+        }
+        if (ignoreBlurTopPadding) {
+            blurTopPadding = 0;
             return;
         }
         if (SharedConfig.chatBlurEnabled()) {

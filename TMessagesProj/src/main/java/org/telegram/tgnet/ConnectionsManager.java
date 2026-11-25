@@ -255,7 +255,7 @@ public class ConnectionsManager extends BaseController {
             langCode = LocaleController.getLocaleStringIso639().toLowerCase();
             deviceModel = app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel();
             //PackageInfo pInfo = ApplicationLoader.applicationContext.getPackageManager().getPackageInfo(ApplicationLoader.applicationContext.getPackageName(), 0);
-            appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "13.2.1");
+            appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "13.2.2");
             /*if (BuildVars.DEBUG_PRIVATE_VERSION) {
                 appVersion += " pbeta";
             } else if (BuildVars.DEBUG_VERSION) {
@@ -822,7 +822,7 @@ public class ConnectionsManager extends BaseController {
     public void updateDeviceModel() {
         String deviceModel = app.exteraless.spoof.DeviceSpoofManager.getInstance().getDeviceModel();
         String systemVersion = app.exteraless.spoof.DeviceSpoofManager.getInstance().getSystemVersion();
-        String appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "13.2.1");
+        String appVersion = "MoltenGram " + (BuildConfig.VERSION_NAME != null ? BuildConfig.VERSION_NAME.split("-")[0] : "13.2.2");
         String systemLangCode;
         String langCode;
         try {

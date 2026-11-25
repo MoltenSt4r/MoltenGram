@@ -14,7 +14,7 @@ public final class WideChannelPostLayout {
     }
 
     public static int backgroundWidth(int viewportWidth, int leadingInset, boolean mediaBackground) {
-        int width = viewportWidth - leadingInset - dp(OUTER_INSET_DP * 2);
+        int width = viewportWidth - leadingInset - dp(OUTER_INSET_DP);
         if (mediaBackground) {
             width -= dp(OUTER_INSET_DP);
         }
