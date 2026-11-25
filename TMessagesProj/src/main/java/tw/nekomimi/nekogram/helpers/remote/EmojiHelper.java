@@ -84,9 +84,17 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
 
     private static volatile EmojiHelper Instance;
     private static int currentAccount = UserConfig.selectedAccount;
-    private static TextPaint textPaint;
+    private static final ThreadLocal<TextPaint> textPaintThreadLocal = ThreadLocal.withInitial(() -> {
+        TextPaint paint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
+        paint.setTextAlign(Paint.Align.CENTER);
+        paint.setTextLocale(Locale.forLanguageTag("und-Zsye"));
+        return paint;
+    });
 
     private final HashMap<String, Typeface> typefaceCache = new HashMap<>();
+    private final Object typefaceLock = new Object();
+    private volatile String cachedTypefacePackId;
+    private volatile Typeface cachedSelectedTypeface;
     private final CopyOnWriteArrayList<EmojiPackBase> emojiPacksInfo = new CopyOnWriteArrayList<>();
     private final SharedPreferences preferences = ApplicationLoader.applicationContext.getSharedPreferences("nekoemojis", Context.MODE_PRIVATE);
     private final HashMap<String, Pair<EmojiPackInfo, Boolean[]>> loadingEmojiPacks = new HashMap<>();
@@ -260,11 +268,13 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
             return;
         }
         String fixed = Emoji.fixEmoji(emoji);
-        int fontSize = (int) (emojiSize * 0.85f);
+        int fontSize = Math.round(emojiSize * 0.90f);
+        TextPaint textPaint = textPaintThreadLocal.get();
         if (textPaint == null) {
-            textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
+            textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
             textPaint.setTextAlign(Paint.Align.CENTER);
             textPaint.setTextLocale(Locale.forLanguageTag("und-Zsye"));
+            textPaintThreadLocal.set(textPaint);
         }
         textPaint.setTypeface(typeface);
         textPaint.setTextSize(fontSize);
@@ -307,6 +317,8 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
 
     public void setEmojiPack(String pack, boolean manually) {
         emojiPack = pack;
+        cachedTypefacePackId = null;
+        cachedSelectedTypeface = null;
         preferences.edit().putString("emoji_pack", pack).apply();
         if (manually && NekoConfig.useSystemEmoji.Bool()) {
             NekoConfig.useSystemEmoji.setConfigBool(false);
@@ -350,31 +362,64 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
     }
 
     private Typeface getSelectedTypeface() {
-        EmojiPackBase pack = getEmojiPacksInfoAll()
-                .parallelStream()
-                .filter(emojiPackInfo -> emojiPackInfo.packId.equals(emojiPack))
-                .findFirst()
-                .orElse(null);
-        if (pack == null) {
+        String currentPack = emojiPack;
+        if (currentPack == null || currentPack.isEmpty() || "default".equals(currentPack)) {
             return null;
         }
-        Typeface typeface;
-        if (!typefaceCache.containsKey(pack.packId)) {
-            File emojiFile = new File(pack.fileLocation);
-            if (!emojiFile.exists()) {
+        if (currentPack.equals(cachedTypefacePackId)) {
+            return cachedSelectedTypeface;
+        }
+        synchronized (typefaceLock) {
+            if (currentPack.equals(cachedTypefacePackId)) {
+                return cachedSelectedTypeface;
+            }
+            Typeface typeface = typefaceCache.get(currentPack);
+            if (typeface != null) {
+                cachedTypefacePackId = currentPack;
+                cachedSelectedTypeface = typeface;
+                return typeface;
+            }
+            EmojiPackBase pack = null;
+            for (EmojiPackBase info : emojiPacksInfo) {
+                if (info != null && currentPack.equals(info.packId)) {
+                    pack = info;
+                    break;
+                }
+            }
+            File emojiFile = pack != null && pack.fileLocation != null ? new File(pack.fileLocation) : null;
+            if (emojiFile == null || !emojiFile.exists()) {
+                File packDir = getCurrentEmojiPackOffline();
+                if (packDir != null && packDir.isDirectory()) {
+                    File fontFile = new File(packDir, EMOJI_FONT_NAME);
+                    if (fontFile.exists()) {
+                        emojiFile = fontFile;
+                    } else {
+                        File[] files = packDir.listFiles();
+                        if (files != null) {
+                            for (File f : files) {
+                                if (f.isFile() && f.getName().endsWith(".ttf")) {
+                                    emojiFile = f;
+                                    break;
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            if (emojiFile == null || !emojiFile.exists()) {
                 return null;
             }
             try {
                 typeface = Typeface.createFromFile(emojiFile);
-                typefaceCache.put(pack.packId, typeface);
+                typefaceCache.put(currentPack, typeface);
+                cachedTypefacePackId = currentPack;
+                cachedSelectedTypeface = typeface;
+                return typeface;
             } catch (Exception e) {
-                FileLog.e("Failed to load emoji font: " + pack.fileLocation, e);
+                FileLog.e("Failed to load emoji font: " + emojiFile.getAbsolutePath(), e);
                 return null;
             }
-        } else {
-            typeface = typefaceCache.get(pack.packId);
         }
-        return typeface;
     }
 
     public String getSelectedPackName() {
@@ -621,7 +666,7 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
     }
 
     private Bitmap drawPreviewBitmap(Typeface typeface) {
-        int emojiSize = 73;
+        int emojiSize = 128;
         Bitmap bitmap = Bitmap.createBitmap(emojiSize * 2, emojiSize * 2, Bitmap.Config.ARGB_8888);
         Canvas canvas = new Canvas(bitmap);
         for (int x = 0; x < 2; x++) {
@@ -930,6 +975,10 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
     }
 
     public static void reloadEmoji() {
+        if (Instance != null) {
+            Instance.cachedTypefacePackId = null;
+            Instance.cachedSelectedTypeface = null;
+        }
         Emoji.reloadEmoji();
         AndroidUtilities.cancelRunOnUIThread(invalidateUiRunnable);
         AndroidUtilities.runOnUIThread(invalidateUiRunnable);

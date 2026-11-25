@@ -44,6 +44,9 @@ import java.util.Collections;
 import java.util.HashMap;
 import java.util.Locale;
 import java.util.Objects;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicBoolean;
 
 import tw.nekomimi.nekogram.NekoConfig;
 import tw.nekomimi.nekogram.helpers.MessageHelper;
@@ -90,6 +93,11 @@ public class Emoji {
 
     private static File emojiFile;
     private static boolean isSelectedEmojiPack;
+    private static volatile int emojiGeneration = 0;
+    private static final AtomicBoolean invalidateScheduled = new AtomicBoolean(false);
+    private static final ExecutorService emojiLoadExecutor = Executors.newFixedThreadPool(
+            Math.min(4, Math.max(2, Runtime.getRuntime().availableProcessors() / 2))
+    );
 
     private static void reloadCache() {
         emojiFile = EmojiHelper.getInstance().getCurrentEmojiPackOffline();
@@ -101,14 +109,22 @@ public class Emoji {
     }
 
     public static void reloadEmoji() {
+        emojiGeneration++;
+        invalidateScheduled.set(false);
         reloadCache();
         for (int a = 0; a < emojiBmp.length; a++) {
             emojiBmp[a] = new Bitmap[emojiCounts[a]];
             loadingEmoji[a] = new boolean[emojiCounts[a]];
         }
-        for (int j = 0; j < EmojiData.data.length; j++) {
-            for (int i = 0; i < EmojiData.data[j].length; i++) {
-                rects.put(EmojiData.data[j][i], new DrawableInfo((byte) j, (short) i, i));
+        if (NekoConfig.useSystemEmoji.Bool() || isSelectedEmojiPack) {
+            if (!recentEmoji.isEmpty()) {
+                for (int i = 0; i < recentEmoji.size(); i++) {
+                    preloadEmoji(recentEmoji.get(i));
+                }
+            } else {
+                for (int i = 0; i < DEFAULT_RECENT.length; i++) {
+                    preloadEmoji(DEFAULT_RECENT[i]);
+                }
             }
         }
     }
@@ -139,16 +155,29 @@ public class Emoji {
         }
     }
 
+    private static void scheduleInvalidateUi() {
+        if (invalidateScheduled.compareAndSet(false, true)) {
+            AndroidUtilities.runOnUIThread(() -> {
+                invalidateScheduled.set(false);
+                invalidateUiRunnable.run();
+            }, 16);
+        }
+    }
+
     private static void loadEmoji(final byte page, final short page2) {
         if (emojiBmp[page][page2] == null) {
             if (loadingEmoji[page][page2]) {
                 return;
             }
             loadingEmoji[page][page2] = true;
-            Utilities.globalQueue.postRunnable(() -> {
+            final int gen = emojiGeneration;
+            emojiLoadExecutor.execute(() -> {
+                if (gen != emojiGeneration) {
+                    return;
+                }
                 Bitmap bitmap;
                 if (NekoConfig.useSystemEmoji.Bool() || isSelectedEmojiPack) {
-                    int emojiSize = 66;
+                    int emojiSize = Math.max(128, Math.min(192, Math.max(bigImgSize, AndroidUtilities.dp(44))));
                     bitmap = Bitmap.createBitmap(emojiSize, emojiSize, Bitmap.Config.ARGB_8888);
                     Canvas canvas = new Canvas(bitmap);
                     EmojiHelper.drawEmojiFont(
@@ -200,12 +229,13 @@ public class Emoji {
                         FileLog.e(e);
                     }
                 }
-                if (bitmap != null) {
+                if (bitmap != null && gen == emojiGeneration) {
                     emojiBmp[page][page2] = bitmap;
-                    AndroidUtilities.cancelRunOnUIThread(invalidateUiRunnable);
-                    AndroidUtilities.runOnUIThread(invalidateUiRunnable);
+                    scheduleInvalidateUi();
                 }
-                loadingEmoji[page][page2] = false;
+                if (gen == emojiGeneration) {
+                    loadingEmoji[page][page2] = false;
+                }
             });
         }
     }
@@ -415,7 +445,7 @@ public class Emoji {
 
     public static class SimpleEmojiDrawable extends EmojiDrawable {
         private DrawableInfo info;
-        private static Paint paint = new Paint(Paint.FILTER_BITMAP_FLAG);
+        private static Paint paint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG);
         private static Rect rect = new Rect();
         private boolean invert;
 

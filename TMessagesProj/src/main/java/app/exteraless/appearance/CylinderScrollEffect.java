@@ -71,8 +71,8 @@ public class CylinderScrollEffect {
             "\n" +
             "    float edgeAA = smoothstep(0.0, 1.5, srcX) * (1.0 - smoothstep(resolution.x - 1.5, resolution.x, srcX));\n" +
             "    half4 col = img.eval(float2(srcX, srcY));\n" +
-            "    float horizonFade = 1.0 - 0.15 * smoothstep(0.85, 1.0, u);\n" +
-            "    float shade = 1.0 - 0.14 * depth;\n" +
+            "    float horizonFade = 1.0 - 0.20 * smoothstep(0.88, 1.0, u);\n" +
+            "    float shade = 1.0 - 0.18 * depth;\n" +
             "    float alphaMul = horizonFade * edgeAA;\n" +
             "    return half4(col.rgb * half(shade * alphaMul), col.a * half(alphaMul));\n" +
             "}\n";
@@ -112,12 +112,12 @@ public class CylinderScrollEffect {
         float clampedAngle = Math.max(5f, Math.min(60f, angleDeg));
         float norm = (clampedAngle - 5f) / 55f; // 0..1
 
-        float desiredEdgeDp = 44f + norm * 32f; // 44dp..76dp
-        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.22f);
+        float desiredEdgeDp = 72f + norm * 48f; // 72dp..120dp
+        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.28f);
 
-        float maxTheta = (float) Math.toRadians(clampedAngle);
-        float maxSin = (float) Math.sin(maxTheta);
-        float perspectiveK = 0.06f + norm * 0.10f; // 0.06..0.16 (clean taper without clipping sides)
+        float maxSin = 0.72f + norm * 0.24f; // 0.72..0.96 (expressive 3D cylinder arc)
+        float maxTheta = (float) Math.asin(maxSin);
+        float perspectiveK = 0.18f + norm * 0.22f; // 0.18..0.40 (strong 3D perspective taper with smooth edgeAA)
 
         if (!applied
                 || Math.abs(lastWidth - width) > 0.5f
