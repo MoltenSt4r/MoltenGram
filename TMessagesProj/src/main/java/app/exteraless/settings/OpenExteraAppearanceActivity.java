@@ -1224,6 +1224,12 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(SharedConfig.chatBlurEnabled());
             }
+            if (actionBar != null) {
+                getBaseSimpleGlass().updateActionBarFadeDrawable(actionBar);
+            }
+            if (listView != null) {
+                listView.requestLayout();
+            }
             rebuildRowsAndNotify();
             rebuildAll();
             return;

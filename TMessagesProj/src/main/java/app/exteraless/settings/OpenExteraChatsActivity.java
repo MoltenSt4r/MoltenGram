@@ -2775,7 +2775,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsRememberLastUsedCamera),
                         ChatsConfig.rememberLastUsedCamera.Bool(), true);
             } else if (position == zoomSliderRow) {
-                cell.setTextAndValueAndCheck(TextCell.applyNewSpan(getString(R.string.OEChatsZoomSlider)),
+                cell.setTextAndValueAndCheck(getString(R.string.OEChatsZoomSlider),
                         getString(R.string.OEChatsZoomSliderInfo),
                         ChatsConfig.zoomSlider.Bool(), true, true);
             } else if (position == staticZoomRow) {

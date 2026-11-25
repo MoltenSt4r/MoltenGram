@@ -10744,7 +10744,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
 
             if (shouldEnforceWideChannelPostOuterWidth(messageObject)) {
-                backgroundWidth = getWideChannelPostBackgroundWidth(messageObject, mediaBackground);
+                backgroundWidth = getWidePostsBubbleWidth();
             }
 
             for (BotButton botButton : botButtons) {
@@ -13010,9 +13010,27 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 && WidePosts.shouldDrawBackground(currentMessageObject);
     }
 
-    /** Width of the wide-posts bubble background. */
+    private int getWidePostsBubbleTargetRight(MessageObject messageObject) {
+        return WidePosts.getBubbleRight(getGroupPhotosBaseWidth(messageObject));
+    }
+
+    /** Width of the wide-posts bubble background, compensating for left/right 9-patch & pinned-bottom insets. */
     int getWidePostsBubbleWidth() {
-        return getWideChannelPostBackgroundWidth(currentMessageObject);
+        MessageObject messageObject = currentMessageObject != null ? currentMessageObject : messageObjectToSet;
+        if (messageObject == null || !WidePosts.isEnabledFor(messageObject)) {
+            return getWideChannelPostBackgroundWidth(messageObject);
+        }
+        int currentLeft = getBackgroundDrawableLeft();
+        int rightInset = 0;
+        int visibleWidth = getBackgroundDrawableRight() - currentLeft;
+        int currentRightInset = backgroundWidth - visibleWidth;
+        if (currentRightInset >= 0 && currentRightInset <= dp(24)) {
+            rightInset = currentRightInset;
+        }
+        return Math.max(
+                dp(120),
+                getWidePostsBubbleTargetRight(messageObject) - currentLeft + rightInset
+        );
     }
 
     /** Whether the external avatar on the left should be suppressed (embedded in the header instead). */

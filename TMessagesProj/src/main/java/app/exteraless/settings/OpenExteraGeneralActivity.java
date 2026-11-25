@@ -1449,7 +1449,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                     } else if (position == defaultProfileTabRow) {
                         int tab = GeneralConfig.defaultProfileTab();
                         CharSequence[] options = defaultProfileTabOptions();
-                        cell.setTextAndValue(getString(R.string.OEGeneralDefaultProfileTab),
+                        cell.setTextAndValue(org.telegram.ui.Cells.TextCell.applyNewSpan(getString(R.string.OEGeneralDefaultProfileTab)),
                                 options[tab < 0 || tab >= options.length ? 0 : tab], true);
                     } else if (position == showIdAndDcRow) {
                         // Выбор из трёх режимов, а не переключатель: Bot API отличается

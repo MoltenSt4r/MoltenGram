@@ -507,7 +507,7 @@ public class WhatsNewSheet extends BottomSheet {
                     + "## ✨ Стекло, виджеты и настройки\n"
                     + "- Прогрессивное размытие шапки, стеклянные меню и исправление обрезки фона при принудительной прозрачности — [Размытие шапки](tg://moltengram/appearance?r=headerBlurStyle) и [Стеклянное меню](tg://moltengram/appearance?r=glassMessageMenu)\n"
                     + "- Кастомные пиллы (PillStack), импорт `.pill` по нажатию и виджеты в сообщениях — [Пиллы](tg://moltengram/appearance?r=pillStack)\n"
-                    + "- Сворачиваемые подсекции для слайдеров и стекла в «Оформлении» — [Размеры тумблеров](tg://moltengram/appearance?r=controlsTuning)";
+                    + "- Сворачиваемые подсекции для слайдеров и стекла в «Оформлении» и выбор вкладки профиля по умолчанию — [Размеры тумблеров](tg://moltengram/appearance?r=controlsTuning) и [Вкладка профиля](tg://moltengram/general?r=defaultProfileTab)";
         }
         return "## 🍋 MoltenGram 13.2.2 Lemonade\n"
                 + "- Updated **13.2.2** core: stability fixes, message export, built-in browser AdBlock, and per-account notification filters\n"
@@ -517,7 +517,7 @@ public class WhatsNewSheet extends BottomSheet {
                 + "## ✨ Glass, Widgets & Settings\n"
                 + "- Progressive header blur, glass menus, and fixed bottom background clipping with Force Blur — [Header blur](tg://moltengram/appearance?r=headerBlurStyle) and [Glass menu](tg://moltengram/appearance?r=glassMessageMenu)\n"
                 + "- Custom Pills (PillStack), tap-to-import `.pill` files, and message widgets — [Custom Pills](tg://moltengram/appearance?r=pillStack)\n"
-                + "- Collapsible subsections for switch/slider sizes and glass sliders in Appearance — [Switch & slider sizes](tg://moltengram/appearance?r=controlsTuning)";
+                + "- Collapsible subsections for switch/slider sizes, glass sliders, and default profile tab — [Switch & slider sizes](tg://moltengram/appearance?r=controlsTuning) and [Profile tab](tg://moltengram/general?r=defaultProfileTab)";
     }
 
     private static List<Section> parseSections(String markdown) {
