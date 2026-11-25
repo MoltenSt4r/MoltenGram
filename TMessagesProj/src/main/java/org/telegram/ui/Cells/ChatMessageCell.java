@@ -7396,7 +7396,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (messageObject.isQuickReply() && !messageObject.isSendError()) {
                     timeMore -= dp(3);
                 } else if (messageObject.isOutOwner()) {
-                    timeMore += dp(20.5f);
+                    timeMore += dp(23.0f);
                 }
                 timeMore += getExtraTimeX();
 
@@ -13152,13 +13152,20 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             }
             if (currentTimeString != null) {
                 timeLayout = new StaticLayout(currentTimeString, Theme.chat_timePaint, timeTextWidth + dp(100), Layout.Alignment.ALIGN_NORMAL, 1.0f, 0.0f, false);
+                if (timeLayout.getLineCount() > 0) {
+                    int measuredLineWidth = (int) Math.ceil(timeLayout.getLineWidth(0));
+                    if (measuredLineWidth > timeTextWidth) {
+                        timeWidth += measuredLineWidth - timeTextWidth;
+                        timeTextWidth = measuredLineWidth;
+                    }
+                }
             } else {
                 timeLayout = null;
             }
             // An outgoing widget's time over its corner sits as a photo's: the ticks over media keep to layoutWidth.
             if (mediaBackground || widgetTimeOver() && currentMessageObject.isOutOwner()) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(42.0f);
+                    timeX = layoutWidth - timeWidth - dp(44.0f);
                 } else if (isCompactIn()) {
                     timeX = getCompactRight() - timeWidth;
                 } else {
@@ -13183,7 +13190,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(38.5f);
+                    timeX = layoutWidth - timeWidth - dp(41.0f);
                 } else {
                     if (isCompactIn()) {
                         timeX = getCompactRight() - timeWidth - getCompactSideButtonColumn();

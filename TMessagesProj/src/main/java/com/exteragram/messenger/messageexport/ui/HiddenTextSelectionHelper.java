@@ -59,6 +59,7 @@ final class HiddenTextSelectionHelper extends TextSelectionHelper.ChatListTextSe
         return true;
     }
 
+    @Override
     protected CharSequence getQuoteActionTitle() {
         ChatMessageCell cell = selectedView;
         boolean hidden = cell != null && cell.getMessageObject() != null && session.isHidden(cell.getMessageObject(), cell.hasCaptionLayout(), selectionStart, selectionEnd);
