@@ -46754,6 +46754,10 @@ public class ChatActivity extends BaseFragment implements
                     if (app.exteraless.plugins.PluginInstallHelper.handleMessageTap(getParentActivity(), message)) {
                         return;
                     }
+                    if (app.exteraless.pillstack.custom.CustomPillIO.isPillFile(message)) {
+                        app.exteraless.pillstack.custom.CustomPillIO.handleFile(ChatActivity.this, message);
+                        return;
+                    }
                     boolean handled = false;
                     if (MessageObject.canPreviewDocument(media.document)) {
                         PhotoViewer.getInstance().setParentActivity(ChatActivity.this, themeDelegate);
@@ -47118,6 +47122,10 @@ public class ChatActivity extends BaseFragment implements
                     // в подсветке кода (.plugin зарегистрирован как Python
                     // в MarkdownUtils). Проверка идёт до просмотрщиков, как у exteraGram.
                     if (app.exteraless.plugins.PluginInstallHelper.handleMessageTap(getParentActivity(), message)) {
+                        return;
+                    }
+                    if (app.exteraless.pillstack.custom.CustomPillIO.isPillFile(message)) {
+                        app.exteraless.pillstack.custom.CustomPillIO.handleFile(ChatActivity.this, message);
                         return;
                     }
                     boolean handled = false;

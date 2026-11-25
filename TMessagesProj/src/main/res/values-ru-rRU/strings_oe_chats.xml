@@ -285,4 +285,8 @@
 <string name="OEChatsStickerTime">Время на стикерах</string>
 <string name="OEChatsStickerTimeSide">Сбоку</string>
 <string name="OEChatsStickerTimeHidden">Скрыто</string>
+<string name="AutoRunWidgets">Автозапуск виджетов</string>
+<string name="AutoRunWidgetsInfo">Иначе виджет в сообщении запустится только после нажатия.</string>
+<string name="WidgetRun">Запустить виджет</string>
+<string name="WidgetNotRunning">Виджет</string>
 </resources>

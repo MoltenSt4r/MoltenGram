@@ -228,6 +228,7 @@ public class WebActionBar extends FrameLayout {
                 o.add(R.drawable.msg_settings_old, getString(R.string.Settings), click.run(settings_item));
             } else if (menuType == ArticleViewer.PageLayout.TYPE_WEB) {
                 if (!isTonsite) {
+                    com.exteragram.messenger.adblock.ui.AdBlockMenuItem.addTo(o, getAdBlocker());
                     o.add(R.drawable.msg_openin, getString(R.string.OpenInExternalApp), click.run(open_item));
                     o.addGap();
                 }
@@ -373,6 +374,10 @@ public class WebActionBar extends FrameLayout {
     }
 
     protected WebInstantView.Loader getInstantViewLoader() {
+        return null;
+    }
+
+    protected com.exteragram.messenger.adblock.WebAdBlocker getAdBlocker() {
         return null;
     }
 

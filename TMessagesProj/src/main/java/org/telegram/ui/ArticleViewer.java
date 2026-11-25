@@ -4454,6 +4454,11 @@ public class ArticleViewer extends IArticleViewer implements NotificationCenter.
             protected WebInstantView.Loader getInstantViewLoader() {
                 return pages[0].loadInstant();
             }
+
+            @Override
+            protected com.exteragram.messenger.adblock.WebAdBlocker getAdBlocker() {
+                return pages[0] != null && pages[0].webView != null ? pages[0].webView.adBlocker : null;
+            }
         };
         actionBar.occupyStatusBar(sheet != null && !BOTTOM_ACTION_BAR);
         containerView.addView(actionBar, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, BOTTOM_ACTION_BAR ? Gravity.BOTTOM : Gravity.TOP));

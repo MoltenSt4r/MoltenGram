@@ -910,6 +910,26 @@ public final class ExteraConfig {
         ChatsConfig.swipeActionsReversed.setConfigBool(value);
     }
 
+    public static boolean getAutoRunWidgets() {
+        ensureLoaded();
+        return ChatsConfig.autoRunWidgets();
+    }
+
+    public static void setAutoRunWidgets(boolean value) {
+        ensureLoaded();
+        ChatsConfig.autoRunWidgets.setConfigBool(value);
+    }
+
+    public static boolean getEnableAdBlock() {
+        ensureLoaded();
+        return ChatsConfig.enableAdBlock();
+    }
+
+    public static void setEnableAdBlock(boolean value) {
+        ensureLoaded();
+        ChatsConfig.enableAdBlock.setConfigBool(value);
+    }
+
     // ---- Sticker Time Mode (0 = Default, 1 = Side, 2 = Hidden) ----
 
     public static int getStickerTimeMode() {

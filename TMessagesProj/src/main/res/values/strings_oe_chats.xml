@@ -288,4 +288,8 @@
 <string name="OEChatsStickerTime">Time on Stickers</string>
 <string name="OEChatsStickerTimeSide">On the Side</string>
 <string name="OEChatsStickerTimeHidden">Hidden</string>
+<string name="AutoRunWidgets">Run Widgets Automatically</string>
+<string name="AutoRunWidgetsInfo">Otherwise, a widget in a message runs only after you tap it.</string>
+<string name="WidgetRun">Run Widget</string>
+<string name="WidgetNotRunning">Widget</string>
 </resources>

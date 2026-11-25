@@ -587,6 +587,24 @@ object ChatsConfig {
     @JvmField
     val swipeActionsReversed = addConfig("OEChatsSwipeActionsReversed", ConfigItem.configTypeBool, false)
 
+    @JvmField
+    val autoRunWidgets = addConfig("OEChatsAutoRunWidgets", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun autoRunWidgets(): Boolean {
+        ensureLoaded()
+        return autoRunWidgets.Bool()
+    }
+
+    @JvmField
+    val enableAdBlock = addConfig("OEChatsEnableAdBlock", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun enableAdBlock(): Boolean {
+        ensureLoaded()
+        return enableAdBlock.Bool()
+    }
+
     // ---- Sticker Time Mode (13.2.2 backport: 0=Default, 1=Side, 2=Hidden) ----
 
     @JvmField

@@ -212,4 +212,13 @@
 <string name="OELiteFollowSystemSaverInfo">Энергосбережение включается вместе с системным режимом экономии заряда.</string>
 <string name="AccountNotificationsInfo">Уведомления от неотмеченных аккаунтов не приходят, пока вы пользуетесь другим аккаунтом.</string>
 <string name="AccountNotificationsCurrent">Уведомления текущего аккаунта показываются всегда.</string>
+<string name="PageBlocked">Страница заблокирована</string>
+<string name="PageBlockedDescription">MoltenGram предотвратил загрузку следующей страницы:\n**%1$s**</string>
+<string name="PageBlockedGoBack">Назад</string>
+<string name="BlockAds">Блокировка рекламы</string>
+<string name="BlockedRequests_one">%1$d заблокировано</string>
+<string name="BlockedRequests_few">%1$d заблокировано</string>
+<string name="BlockedRequests_many">%1$d заблокировано</string>
+<string name="BlockedRequests_other">%1$d заблокировано</string>
+<string name="AdBlockFiltersLoading">Загрузка фильтров…</string>
 </resources>

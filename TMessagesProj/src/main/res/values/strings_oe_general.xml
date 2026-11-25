@@ -240,4 +240,14 @@
 <string name="OELiteFollowSystemSaverInfo">Power saving turns on together with the system battery saver.</string>
 <string name="AccountNotificationsInfo">Unchecked accounts don\'t show notifications while you\'re using another account.</string>
 <string name="AccountNotificationsCurrent">Notifications from the current account are always shown.</string>
+<string name="PageBlocked">Page blocked</string>
+<string name="PageBlockedDescription">MoltenGram has prevented the following page from loading:\n**%1$s**</string>
+<string name="PageBlockedGoBack">Go back</string>
+<string name="BlockAds">Block Ads</string>
+<string name="BlockedRequests_one">%1$d blocked</string>
+<string name="BlockedRequests_two">%1$d blocked</string>
+<string name="BlockedRequests_few">%1$d blocked</string>
+<string name="BlockedRequests_many">%1$d blocked</string>
+<string name="BlockedRequests_other">%1$d blocked</string>
+<string name="AdBlockFiltersLoading">Loading Filters…</string>
 </resources>

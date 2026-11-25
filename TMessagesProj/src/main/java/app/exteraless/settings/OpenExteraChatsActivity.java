@@ -190,6 +190,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int tapToSwitchRecordRow;
     private int voiceChangerRow;
     private int keepAttachButtonRow;
+    private int autoRunWidgetsRow;
     private int textAnimationRow;
     private int chatsMoreRow;
     private int chatsDividerRow;
@@ -449,12 +450,13 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             hideSendAsPeerRow = addRow("hideSendAsPeer");
             tapToSwitchRecordRow = addRow("tapToSwitchRecord", "UseChatAttachEnterMenu");
             keepAttachButtonRow = addRow("keepAttachButton");
+            autoRunWidgetsRow = addRow("autoRunWidgets");
         } else {
             disableGreetingRow = deleteChatForBothSidesRow = hideKeyboardOnScrollRow = -1;
             disableGlobalSearchRow = addCommaRow = disableMarkdownRow = -1;
             pluginCommandSuggestionsRow = pluginCommandPrefixesRow = customCommandsRow = -1;
             inlineMathRow = inlineMathCurrencyRow = hideSendAsPeerRow = -1;
-            tapToSwitchRecordRow = keepAttachButtonRow = -1;
+            tapToSwitchRecordRow = keepAttachButtonRow = autoRunWidgetsRow = -1;
         }
         chatsDividerRow = addRow();
 
@@ -2034,6 +2036,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         if (position == inlineMathCurrencyRow) return ChatsConfig.inlineMathCurrency;
         if (position == hideSendAsPeerRow) return NekoConfig.hideSendAsChannel;
         if (position == keepAttachButtonRow) return ChatsConfig.keepAttachButton;
+        if (position == autoRunWidgetsRow) return ChatsConfig.autoRunWidgets;
         if (position == removeMessageTailRow) return ChatsConfig.removeMessageTail;
         if (position == md3ChatInputRow && md3ChatInputRow != -1) return ChatsConfig.md3ChatInput;
         if (position == replaceEditedRow) return NaConfig.INSTANCE.getUseEditedIcon();
@@ -2731,6 +2734,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsTapToSwitchRecord), !NekoConfig.useChatAttachMediaMenu.Bool(), true);
             } else if (position == keepAttachButtonRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
+            } else if (position == autoRunWidgetsRow) {
+                cell.setTextAndCheck(getString(R.string.AutoRunWidgets), getString(R.string.AutoRunWidgetsInfo), ChatsConfig.autoRunWidgets.Bool(), true);
             } else if (position == removeMessageTailRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsRemoveMessageTail), ChatsConfig.removeMessageTail.Bool(), true);
             } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {

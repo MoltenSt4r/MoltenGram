@@ -3978,6 +3978,7 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
         private boolean isPageLoaded;
         private Runnable whenPageLoaded;
         public final boolean bot;
+        public final com.exteragram.messenger.adblock.WebAdBlocker adBlocker;
 
         private String openedByUrl;
         private String currentUrl;
@@ -4019,6 +4020,7 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
         public MyWebView(Context context, boolean bot, long botId) {
             super(context);
             this.bot = bot;
+            this.adBlocker = bot ? null : new com.exteragram.messenger.adblock.WebAdBlocker(this);
             d("created new webview " + this);
 
             setOnLongClickListener(new View.OnLongClickListener() {
@@ -4227,6 +4229,12 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
                             }
                         }
                     }
+                    if (adBlocker != null && request != null) {
+                        final WebResourceResponse adBlockResponse = adBlocker.interceptRequest(request);
+                        if (adBlockResponse != null) {
+                            return adBlockResponse;
+                        }
+                    }
                     firstRequest = false;
                     return super.shouldInterceptRequest(view, request);
                 }
@@ -4249,6 +4257,9 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
                         injectedJS = true;
                         evaluateJS(readRes(R.raw.webview_ext).replace("$DEBUG$", "" + BuildVars.DEBUG_VERSION));
                         evaluateJS(readRes(R.raw.webview_share));
+                        if (adBlocker != null) {
+                            adBlocker.injectCosmetics(url);
+                        }
                     } else {
                         injectedJS = true;
                         evaluateJS(readRes(R.raw.webview_app_ext).replace("$DEBUG$", "" + BuildVars.DEBUG_VERSION));
@@ -4417,6 +4428,9 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
                     lastBackgroundColorGot = false;
                     lastFaviconGot = false;
                     d("onPageStarted " + url);
+                    if (adBlocker != null) {
+                        adBlocker.onPageStarted(url);
+                    }
                     if (botWebViewContainer != null && errorShown && (errorShownAt == null || !TextUtils.equals(errorShownAt, url))) {
                         AndroidUtilities.runOnUIThread(resetErrorRunnable, 40);
                     }
@@ -4453,6 +4467,9 @@ public abstract class BotWebViewContainer extends FrameLayout implements Notific
                         injectedJS = true;
                         evaluateJS(readRes(R.raw.webview_ext).replace("$DEBUG$", "" + BuildVars.DEBUG_VERSION));
                         evaluateJS(readRes(R.raw.webview_share));
+                        if (adBlocker != null) {
+                            adBlocker.injectCosmetics(url);
+                        }
                     } else {
                         injectedJS = true;
                         evaluateJS(readRes(R.raw.webview_app_ext).replace("$DEBUG$", "" + BuildVars.DEBUG_VERSION));

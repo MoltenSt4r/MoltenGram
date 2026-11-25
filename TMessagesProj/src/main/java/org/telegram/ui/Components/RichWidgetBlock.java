@@ -56,6 +56,7 @@ public final class RichWidgetBlock extends RichMessageLayout.RichBlock
     private WidgetSandboxPlayer player;
     // UI: this block runs the widget (WidgetMedia#attach); otherwise it only shows its frames.
     private boolean running;
+    private com.exteragram.messenger.utils.ui.WidgetRunPlaceholder runPlaceholder;
     /**
      * A widget's first frames come before its scripts have built it (a short page, then the full one some
      * tens of ms later): until it has loaded its height is not taken. The first loaded frame's is, at once;
@@ -301,6 +302,7 @@ public final class RichWidgetBlock extends RichMessageLayout.RichBlock
     private void stop() {
         if (!running) return;
         running = false;
+        if (runPlaceholder != null) runPlaceholder.stopSpinner();
         AndroidUtilities.cancelRunOnUIThread(settledResize);
         player.setVisible(false);
         player.unbind();
@@ -355,7 +357,15 @@ public final class RichWidgetBlock extends RichMessageLayout.RichBlock
         clip.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
         canvas.clipPath(clip);
         canvas.translate(0, shift);
-        if (player.draw(canvas, width) && view != null) view.postInvalidateOnAnimation();
+        int placeholderState = com.exteragram.messenger.utils.ui.WidgetRunPlaceholder.stateOf(embed.url, message);
+        if (placeholderState == com.exteragram.messenger.utils.ui.WidgetRunPlaceholder.STATE_IDLE
+                || placeholderState != com.exteragram.messenger.utils.ui.WidgetRunPlaceholder.STATE_NONE && running) {
+            if (runPlaceholder == null) runPlaceholder = new com.exteragram.messenger.utils.ui.WidgetRunPlaceholder(true);
+            runPlaceholder.draw(canvas, view, width, laidOutHeight, Theme.getColor(root.isOut() ? Theme.key_chat_outPreviewInstantText : Theme.key_chat_inPreviewInstantText, resourcesProvider()), placeholderState);
+        } else {
+            if (runPlaceholder != null) runPlaceholder.stopSpinner();
+            if (player.draw(canvas, width) && view != null) view.postInvalidateOnAnimation();
+        }
         canvas.restore();
     }
 
@@ -520,6 +530,17 @@ public final class RichWidgetBlock extends RichMessageLayout.RichBlock
     @Override
     protected boolean onTouchEvent(MotionEvent event) {
         if (player == null || !running) return false;
+        if (runPlaceholder != null && WidgetMedia.waitsForTap(embed.url)) {
+            event.offsetLocation(bleedLeft, 0);
+            try {
+                return runPlaceholder.onTouchEvent(event, view, () -> {
+                    WidgetMedia.startByUser(embed.url);
+                    if (view != null) view.invalidate();
+                });
+            } finally {
+                event.offsetLocation(-bleedLeft, 0);
+            }
+        }
         if (WidgetMedia.isPreview(embed.url)) return false;
         event.offsetLocation(bleedLeft, 0);
         try {
