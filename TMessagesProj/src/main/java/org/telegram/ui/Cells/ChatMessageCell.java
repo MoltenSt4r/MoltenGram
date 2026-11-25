@@ -1340,7 +1340,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     boolean wasTranscriptionOpen;
 
     private int nameLayoutSelectorColor;
-    private Drawable nameLayoutSelector;
+    Drawable nameLayoutSelector;
     private boolean nameLayoutPressed;
     private boolean boostCounterPressed;
     private int boostCounterSelectorColor;
@@ -18035,7 +18035,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         );
     }
 
-    private String getAuthorName() {
+    String getAuthorName() {
         if (currentUser != null) {
             return UserObject.getUserName(currentUser);
         } else if (currentChat != null) {
