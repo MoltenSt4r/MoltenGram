@@ -21,6 +21,8 @@ import android.widget.FrameLayout;
 
 import androidx.annotation.NonNull;
 
+import com.exteragram.messenger.utils.chats.WidePosts;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
@@ -165,7 +167,7 @@ public class WideChannelPostsPreviewCell extends FrameLayout {
                 && SharedConfig.animationsEnabled()
                 && (Build.VERSION.SDK_INT < Build.VERSION_CODES.O || ValueAnimator.areAnimatorsEnabled());
         final int fromHeight = getHeight();
-        messageObject.wide = wide;
+        messageObject.setWide(wide);
         messageObject.resetLayout();
         cell.forceResetMessageObject();
         if (!canAnimate) {
@@ -358,12 +360,12 @@ public class WideChannelPostsPreviewCell extends FrameLayout {
 
         PreviewMessageObject(int account, TLRPC.Message message, boolean wide) {
             super(account, message, true, false);
-            this.wide = wide;
+            setWide(wide);
         }
 
-        @Override
-        public boolean isWideChannelPost() {
-            return wide;
+        void setWide(boolean wide) {
+            this.wide = wide;
+            WidePosts.allowInPreview(this, wide);
         }
     }
 }

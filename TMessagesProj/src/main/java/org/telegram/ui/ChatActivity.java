@@ -15,6 +15,7 @@ import app.exteraless.feed.FeedChannelAvatarMenu;
 import app.exteraless.feed.FeedChatIntegration;
 import app.exteraless.feed.FeedController;
 import app.exteraless.feed.FeedMessageUtils;
+import com.exteragram.messenger.utils.chats.WidePosts;
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.chats.ChatsConfig;
 import app.exteraless.components.ActionRow;
@@ -38873,6 +38874,26 @@ public class ChatActivity extends BaseFragment implements
         updateVisibleRows(false);
     }
 
+    public void updateWidePostsCommentsAuthor(ArrayList<MessageObject> commentsMessages) {
+        if (commentsMessages == null || commentsMessages.isEmpty()) {
+            return;
+        }
+        updateVisibleRows(messageObject -> {
+            if (!WidePosts.isCommentsChannelPost(messageObject)) {
+                return false;
+            }
+            for (int a = 0, N = commentsMessages.size(); a < N; a++) {
+                MessageObject commentsMessage = commentsMessages.get(a);
+                if (commentsMessage != null
+                        && commentsMessage.getId() == messageObject.getId()
+                        && commentsMessage.getDialogId() == messageObject.getDialogId()) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
+
     private void updateVisibleRows(boolean suppressUpdateMessageObject) {
         if (chatListView == null) {
             return;
@@ -39873,7 +39894,9 @@ public class ChatActivity extends BaseFragment implements
                     continue;
                 }
                 message.isThreadMessage = true;
-                arrayList.add(new MessageObject(UserConfig.selectedAccount, message, true, true));
+                MessageObject messageObject = new MessageObject(UserConfig.selectedAccount, message, true, true);
+                WidePosts.registerCommentsPostContext(messageObject, originalChat, originalMessage);
+                arrayList.add(messageObject);
             }
         }
         TLRPC.messages_Messages historyFinal = history;
