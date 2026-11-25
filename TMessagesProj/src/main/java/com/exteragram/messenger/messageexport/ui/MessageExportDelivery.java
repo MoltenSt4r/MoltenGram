@@ -159,36 +159,22 @@ final class MessageExportDelivery {
     }
 
     static void shareInApp(ChatActivity fragment, File file, boolean asPhoto, boolean asSticker, Utilities.Callback<LongSparseArray<TLRPC.Dialog>> onSent) {
-        if (fragment.getParentActivity() == null) {
+        Activity activity = fragment.getParentActivity();
+        if (activity == null || file == null) {
             return;
         }
-        ShareAlert alert = new ShareAlert(fragment.getParentActivity(), fragment, null, file.getAbsolutePath(), null, null, false, null, null, false, false, false, null, fragment.getResourceProvider()) {
-            @Override
-            protected boolean sendFileWithCaption() {
-                return true;
+        try {
+            Uri uri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", file);
+            android.content.Intent intent = new android.content.Intent(android.content.Intent.ACTION_SEND);
+            intent.setType(asSticker ? "image/webp" : "image/png");
+            intent.putExtra(android.content.Intent.EXTRA_STREAM, uri);
+            intent.addFlags(android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            activity.startActivity(android.content.Intent.createChooser(intent, null));
+            if (onSent != null) {
+                onSent.run(new LongSparseArray<>());
             }
-
-            @Override
-            protected boolean sendFileAsPhoto() {
-                return asPhoto || asSticker;
-            }
-
-            @Override
-            protected boolean sendFileCommentSeparately() {
-                return asSticker;
-            }
-
-            @Override
-            protected boolean sendFileAsHighQualityPhoto() {
-                return asPhoto;
-            }
-
-            @Override
-            protected void onSend(LongSparseArray<TLRPC.Dialog> dids, int count, TLRPC.TL_forumTopic topic, boolean showToast) {
-                super.onSend(dids, count, topic, showToast);
-                onSent.run(dids);
-            }
-        };
-        alert.show();
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
     }
 }

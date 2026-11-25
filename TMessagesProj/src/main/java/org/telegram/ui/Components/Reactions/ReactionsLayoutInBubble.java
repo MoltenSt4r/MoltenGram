@@ -843,6 +843,9 @@ public class ReactionsLayoutInBubble {
         public boolean inGroup;
         public boolean isTag;
         AvatarsDrawable avatarsDrawable;
+        public AvatarsDrawable getAvatarsDrawable() {
+            return avatarsDrawable;
+        }
         ArrayList<TLObject> users;
 
         private final int currentAccount;

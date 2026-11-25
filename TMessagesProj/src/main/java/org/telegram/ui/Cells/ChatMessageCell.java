@@ -7387,7 +7387,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     availableTimeWidth -= Math.ceil(Theme.chat_audioTimePaint.measureText("00:00")) + (messageObject.isOutOwner() ? 0 : dp(64));
                 }
                 measureTime(messageObject);
-                int timeMore = timeWidth + dp(6);
+                int timeMore = timeWidth + dp(10);
                 if (messageObject.isQuickReply() && !messageObject.isSendError()) {
                     timeMore -= dp(3);
                 } else if (messageObject.isOutOwner()) {

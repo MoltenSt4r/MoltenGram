@@ -119,7 +119,7 @@ public final class ChatScreenshotExportBridge {
     }
 
     private static boolean isChatCovered(ChatActivity chat) {
-        if (chat.isInPreviewMode() || chat.getVisibleDialog() != null || chat.isTopicsPanelOpen() || BaseFragment.hasSheets(chat)) {
+        if (chat.isInPreviewMode() || chat.getVisibleDialog() != null || BaseFragment.hasSheets(chat)) {
             return true;
         }
         if (chat.instantCameraView != null && chat.instantCameraView.getVisibility() == View.VISIBLE) {

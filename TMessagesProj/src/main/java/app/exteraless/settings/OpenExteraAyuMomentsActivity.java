@@ -707,10 +707,9 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
                     cell.setEnabled(true, null);
                     cell.setIcon(0);
                     if (position == askStoryRow) {
-                        cell.setTextAndValueAndCheck(
+                        cell.setTextAndCheck(
                                 getString(R.string.AskBeforeOpeningStory),
-                                getString(R.string.AskBeforeOpeningStoryInfo),
-                                NaConfig.INSTANCE.getAskBeforeOpeningStory().Bool(), true, false);
+                                NaConfig.INSTANCE.getAskBeforeOpeningStory().Bool(), true);
                     } else if (position == regexRow) {
                         cell.setTextAndValueAndCheck(
                                 getString(NaConfig.INSTANCE.getRegexFiltersEnabled().getKey()),
@@ -728,10 +727,9 @@ public class OpenExteraAyuMomentsActivity extends BaseNekoSettingsActivity {
                     } else if (position == saveEditsRow) {
                         bindAyuCheck(cell, NaConfig.INSTANCE.getEnableSaveEditsHistory(), true);
                     } else if (position == saveInArchivedRow) {
-                        cell.setTextAndValueAndCheck(
+                        cell.setTextAndCheck(
                                 getString(R.string.OEAyuSaveInArchived),
-                                getString(R.string.OEAyuSaveInArchivedInfo),
-                                NaConfig.INSTANCE.getSaveInArchivedChats().Bool(), true, true);
+                                NaConfig.INSTANCE.getSaveInArchivedChats().Bool(), true);
                     } else if (position == botUserRow) {
                         bindAyuCheck(cell, NaConfig.INSTANCE.getSaveDeletedMessageForBotUser(), true);
                     } else if (position == botChatRow) {

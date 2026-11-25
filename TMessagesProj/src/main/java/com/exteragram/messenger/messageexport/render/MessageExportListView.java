@@ -676,7 +676,7 @@ public final class MessageExportListView extends RecyclerListView {
                 if (cell.getMessageObject() == null || isLoading(cell.getPhotoImage()) || isLoading(cell.getAvatarImage())) {
                     return false;
                 }
-                if (!hasFirstFrame(cell.getPhotoImage()) || !cell.isTranscribeIconReady()) {
+                if (!hasFirstFrame(cell.getPhotoImage())) {
                     return false;
                 }
                 if (cell.animatedEmojiStack != null) {
@@ -1198,11 +1198,6 @@ public final class MessageExportListView extends RecyclerListView {
                 }
 
                 @Override
-                protected int getAnimatedEmojiCacheType() {
-                    return interactive ? super.getAnimatedEmojiCacheType() : AnimatedEmojiDrawable.CACHE_TYPE_NOANIMATE_FOLDER;
-                }
-
-                @Override
                 public void drawSideButton(Canvas canvas, boolean fromQuickShare) {
                 }
 
@@ -1405,14 +1400,6 @@ public final class MessageExportListView extends RecyclerListView {
             cell.setAlpha(1f);
             cell.setMessageObject(item.message, block.group, pinnedBottom, pinnedTop, false, false);
             session.ensureHiddenSpans(item.message);
-            if (session.isReplyAuthorHidden(item.message)) {
-                if (cell.replyNameSpoiler == null) {
-                    cell.replyNameSpoiler = new SpoilerEffect();
-                    cell.replyNameSpoiler.setParentView(cell);
-                }
-            } else {
-                cell.replyNameSpoiler = null;
-            }
             if (interactive) {
                 cell.setSpoilersSuppressed(false);
             }

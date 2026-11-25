@@ -2739,9 +2739,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == removeMessageTailRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsRemoveMessageTail), ChatsConfig.removeMessageTail.Bool(), true);
             } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {
-                cell.setTextAndValueAndCheck(getString(R.string.OEChatsMd3ChatInput),
-                        getString(R.string.OEChatsMd3ChatInputInfo),
-                        ChatsConfig.md3ChatInput.Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.OEChatsMd3ChatInput),
+                        ChatsConfig.md3ChatInput.Bool(), true);
             } else if (position == replaceEditedRow) {
                 // В подпись подставляется локализованное «edited».
                 cell.setTextAndCheck(LocaleController.formatString(R.string.OEChatsReplaceEditedWithIcon,
@@ -2759,9 +2758,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsHideSearchButton),
                         ChatsConfig.hideChannelSearchButton.Bool(), true);
             } else if (position == showResultsBeforeVotingRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.OEChatsShowResultsBeforeVoting),
-                        getString(R.string.OEChatsShowResultsBeforeVotingInfo),
-                        ChatsConfig.showResultsBeforeVoting.Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.OEChatsShowResultsBeforeVoting),
+                        ChatsConfig.showResultsBeforeVoting.Bool(), true);
             } else if (position == wideChannelPostsRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsWideChannelPosts),
                         ChatsConfig.wideChannelPosts.Bool(), true, true);
@@ -2769,15 +2767,13 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 cell.setTextAndCheck(getString(R.string.OEChatsWideFeedPosts),
                         ChatsConfig.wideFeedPosts.Bool(), true, true);
             } else if (position == feedInChatMenuRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.FeedInChatMenu),
-                        getString(R.string.FeedInChatMenuInfo),
-                        ChatsConfig.showFeedInChatMenu.Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.FeedInChatMenu),
+                        ChatsConfig.showFeedInChatMenu.Bool(), true);
             } else if (position == groupedMessageMenuRow) {
                 cell.setTextAndCheck(getString(R.string.GroupedMessageMenu), NaConfig.INSTANCE.getGroupedMessageMenu().Bool(), false);
             } else if (position == rememberLastUsedCameraRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.OEChatsRememberLastUsedCamera),
-                        getString(R.string.OEChatsRememberLastCameraInfo),
-                        ChatsConfig.rememberLastUsedCamera.Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.OEChatsRememberLastUsedCamera),
+                        ChatsConfig.rememberLastUsedCamera.Bool(), true);
             } else if (position == zoomSliderRow) {
                 cell.setTextAndValueAndCheck(TextCell.applyNewSpan(getString(R.string.OEChatsZoomSlider)),
                         getString(R.string.OEChatsZoomSliderInfo),
@@ -2797,19 +2793,16 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == swipeToPipRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsSwipeToPip), ChatsConfig.swipeToPip.Bool(), true);
             } else if (position == unmuteWithVolumeButtonsRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.OEChatsUnmuteWithVolumeButtons),
-                        getString(R.string.OEChatsUnmuteWithVolumeButtonsInfo),
-                        ChatsConfig.unmuteWithVolumeButtons.Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.OEChatsUnmuteWithVolumeButtons),
+                        ChatsConfig.unmuteWithVolumeButtons.Bool(), true);
             } else if (position == disableTrendingRow) {
                 cell.setTextAndCheck(getString(R.string.DisableTrending), NekoConfig.disableTrending.Bool(), true);
             } else if (position == customEmojiWithoutPremiumRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.SendCustomEmojiWithoutPremium),
-                        getString(R.string.SendCustomEmojiWithoutPremiumInfo),
-                        NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.SendCustomEmojiWithoutPremium),
+                        NaConfig.INSTANCE.getCustomEmojiForNonPremium().Bool(), true);
             } else if (position == lockedEmojiAsStickerRow) {
-                cell.setTextAndValueAndCheck(getString(R.string.SendLockedCustomEmojiAsSticker),
-                        getString(R.string.SendLockedCustomEmojiAsStickerInfo),
-                        NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool(), true, true);
+                cell.setTextAndCheck(getString(R.string.SendLockedCustomEmojiAsSticker),
+                        NaConfig.INSTANCE.getSendLockedCustomEmojiAsSticker().Bool(), true);
             } else if (position == deleteChatForBothSidesRow) {
                 cell.setTextAndCheck(getString(R.string.DeleteChatForBothSides), NaConfig.INSTANCE.getDeleteChatForBothSides().Bool(), true);
             } else if (position == dateOfForwardedMsgRow) {

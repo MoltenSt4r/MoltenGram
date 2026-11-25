@@ -75,14 +75,6 @@ public final class MessageExportChatContext {
         TLRPC.ChatFull chatInfo = fragment.getCurrentChatInfo();
         linkedChatId = chatInfo != null ? chatInfo.linked_chat_id : 0;
         forumAsMessages = fragment.isForumInViewAsMessagesMode();
-        for (SparseArray<MessageObject> array : selected) {
-            for (int i = 0; i < array.size(); i++) {
-                MessageObject message = array.valueAt(i);
-                if (fragment.isMessagePinned(message.getId())) {
-                    pinnedKeys.add(pinnedKey(message));
-                }
-            }
-        }
     }
 
     private static long pinnedKey(MessageObject message) {

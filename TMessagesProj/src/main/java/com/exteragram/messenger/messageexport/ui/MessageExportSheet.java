@@ -505,8 +505,7 @@ public class MessageExportSheet extends BottomSheet implements MessageExportSess
             }
         }
         options
-            .setGravity(Gravity.CENTER_HORIZONTAL)
-            .setSwipebackCenterHorizontal(true);
+            .setGravity(Gravity.CENTER_HORIZONTAL);
         if (options.getLayout() instanceof ActionBarPopupWindow.ActionBarPopupWindowLayout layout) {
             layout.swipeBackGravityBottom = true;
         }

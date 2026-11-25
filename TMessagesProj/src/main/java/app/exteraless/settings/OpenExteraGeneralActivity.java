@@ -1390,9 +1390,8 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                         cell.setTextAndCheck(getString(R.string.OEGeneralHideArchive),
                                 NaConfig.INSTANCE.getHideArchive().Bool(), true);
                     } else if (position == feedInChatMenuRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.FeedInChatMenu),
-                                getString(R.string.FeedInChatMenuInfo),
-                                app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool(), true, true);
+                        cell.setTextAndCheck(getString(R.string.FeedInChatMenu),
+                                app.exteraless.chats.ChatsConfig.showFeedInChatMenu.Bool(), true);
                     } else if (position == archiveOnPullRow) {
                         cell.setTextAndCheck(getString(R.string.OEGeneralArchiveOnPull),
                                 NekoConfig.openArchiveOnPull.Bool(), true);

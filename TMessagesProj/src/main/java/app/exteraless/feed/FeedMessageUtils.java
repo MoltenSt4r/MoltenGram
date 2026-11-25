@@ -335,7 +335,7 @@ public abstract class FeedMessageUtils {
         }
     }
 
-    private static TLRPC.TL_message copyMessage(TLRPC.Message message) {
+    public static TLRPC.TL_message copyMessage(TLRPC.Message message) {
         TLRPC.TL_message copy = new TLRPC.TL_message();
         copy.id = message.id;
         copy.from_id = message.from_id;

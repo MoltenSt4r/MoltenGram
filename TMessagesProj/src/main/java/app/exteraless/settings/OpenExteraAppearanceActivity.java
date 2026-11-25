@@ -1537,11 +1537,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == separateHeadersRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSeparateHeaders), AppearanceConfig.separateHeaders.Bool(), true);
                     } else if (position == glassMessageMenuRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), getString(R.string.OEAppearanceGlassMessageMenuInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessageMenu.Bool(), true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceGlassMessageMenu), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessageMenu.Bool(), true);
                     } else if (position == glassMessagesRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceGlassMessages), getString(R.string.OEAppearanceGlassMessagesInfo), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessages.Bool(), true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceGlassMessages), SharedConfig.chatBlurEnabled() && AppearanceConfig.glassMessages.Bool(), true);
                     } else if (position == chat3dScrollRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceChat3dScroll), getString(R.string.OEAppearanceChat3dScrollInfo), AppearanceConfig.chat3dScroll.Bool(), true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceChat3dScroll), AppearanceConfig.chat3dScroll.Bool(), true);
                     } else if (position == forceBlurRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceForceBlur), SharedConfig.chatBlurEnabled(), true);
                     } else if (position == disableAvatarBlurRow) {
@@ -1549,7 +1549,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == singleCornerRadiusRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceSingleCornerRadius), AppearanceConfig.singleCornerRadius.Bool(), false);
                     } else if (position == forceSnowRow) {
-                        cell.setTextAndValueAndCheck(getString(R.string.OEAppearanceForceSnow), getString(R.string.OEAppearanceForceSnowInfo), NekoConfig.actionBarDecoration.Int() == 1, true, true);
+                        cell.setTextAndCheck(getString(R.string.OEAppearanceForceSnow), NekoConfig.actionBarDecoration.Int() == 1, true);
                     } else if (position == hideActionBarStatusRow) {
                         cell.setTextAndCheck(getString(R.string.OEAppearanceHideActionBarStatus), AppearanceConfig.hideActionBarStatus.Bool(), true);
                     } else if (position == hideFloatingButtonRow) {
