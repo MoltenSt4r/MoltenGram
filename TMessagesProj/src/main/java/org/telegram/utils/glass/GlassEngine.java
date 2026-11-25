@@ -615,7 +615,7 @@ public class GlassEngine {
     private static int glassSettingsGenerationId;
 
     private static void checkGlassSettings() {
-        final boolean isBlurEnabled = LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR);
+        final boolean isBlurEnabled = org.telegram.messenger.SharedConfig.chatBlurEnabled() && LiteMode.isEnabled(LiteMode.FLAG_CHAT_BLUR);
         final boolean isLiquidGlassEnabled = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) && app.exteraless.glass.LiquidGlassConfig.glassOn;
 
         final boolean glassSettingsInvalidated = glassSettings == null

@@ -4457,7 +4457,7 @@ public class ArticleViewer extends IArticleViewer implements NotificationCenter.
 
             @Override
             protected com.exteragram.messenger.adblock.WebAdBlocker getAdBlocker() {
-                return pages[0] != null && pages[0].webView != null ? pages[0].webView.adBlocker : null;
+                return pages[0] != null && pages[0].getWebView() != null ? pages[0].getWebView().adBlocker : null;
             }
         };
         actionBar.occupyStatusBar(sheet != null && !BOTTOM_ACTION_BAR);

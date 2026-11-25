@@ -920,15 +920,14 @@ public final class ExteraConfig {
         ChatsConfig.autoRunWidgets.setConfigBool(value);
     }
 
-    public static boolean getEnableAdBlock() {
-        ensureLoaded();
-        return ChatsConfig.enableAdBlock();
-    }
-
-    public static void setEnableAdBlock(boolean value) {
-        ensureLoaded();
-        ChatsConfig.enableAdBlock.setConfigBool(value);
-    }
+    public static boolean getMessageExportWatermark() { ensureLoaded(); return ChatsConfig.messageExportWatermark(); }
+    public static void setMessageExportWatermark(boolean v) { ensureLoaded(); ChatsConfig.messageExportWatermark.setConfigBool(v); }
+    public static boolean getMessageExportAuthors() { ensureLoaded(); return ChatsConfig.messageExportAuthors(); }
+    public static void setMessageExportAuthors(boolean v) { ensureLoaded(); ChatsConfig.messageExportAuthors.setConfigBool(v); }
+    public static boolean getMessageExportTime() { ensureLoaded(); return ChatsConfig.messageExportTime(); }
+    public static void setMessageExportTime(boolean v) { ensureLoaded(); ChatsConfig.messageExportTime.setConfigBool(v); }
+    public static boolean getMessageExportSource() { ensureLoaded(); return ChatsConfig.messageExportSource(); }
+    public static void setMessageExportSource(boolean v) { ensureLoaded(); ChatsConfig.messageExportSource.setConfigBool(v); }
 
     // ---- Sticker Time Mode (0 = Default, 1 = Side, 2 = Hidden) ----
 

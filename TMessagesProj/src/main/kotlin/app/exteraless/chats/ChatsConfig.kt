@@ -605,6 +605,24 @@ object ChatsConfig {
         return enableAdBlock.Bool()
     }
 
+    @JvmField
+    val messageExportWatermark = addConfig("OEChatsMessageExportWatermark", ConfigItem.configTypeBool, true)
+    @JvmField
+    val messageExportAuthors = addConfig("OEChatsMessageExportAuthors", ConfigItem.configTypeBool, true)
+    @JvmField
+    val messageExportTime = addConfig("OEChatsMessageExportTime", ConfigItem.configTypeBool, true)
+    @JvmField
+    val messageExportSource = addConfig("OEChatsMessageExportSource", ConfigItem.configTypeBool, true)
+
+    @JvmStatic
+    fun messageExportWatermark(): Boolean { ensureLoaded(); return messageExportWatermark.Bool() }
+    @JvmStatic
+    fun messageExportAuthors(): Boolean { ensureLoaded(); return messageExportAuthors.Bool() }
+    @JvmStatic
+    fun messageExportTime(): Boolean { ensureLoaded(); return messageExportTime.Bool() }
+    @JvmStatic
+    fun messageExportSource(): Boolean { ensureLoaded(); return messageExportSource.Bool() }
+
     // ---- Sticker Time Mode (13.2.2 backport: 0=Default, 1=Side, 2=Hidden) ----
 
     @JvmField

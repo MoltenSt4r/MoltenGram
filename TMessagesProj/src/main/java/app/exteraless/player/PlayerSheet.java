@@ -1982,7 +1982,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             return;
         }
         int duration = (int) Math.round(mo.getDuration());
-        int now = seeking ? (int) (duration * seekProgress) : Math.min(duration, mo.audioProgressSec);
+        int progressSec = duration > 0 ? Math.round(mo.audioProgress * duration) : mo.audioProgressSec;
+        int now = seeking ? (int) (duration * seekProgress) : Math.min(duration, Math.max(0, progressSec));
         String a = formatTime(now);
         String b = "−" + formatTime(Math.max(0, duration - now));
         if (!TextUtils.equals(timeNow.getText(), a)) {

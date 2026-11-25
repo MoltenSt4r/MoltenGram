@@ -2735,7 +2735,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == keepAttachButtonRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsKeepAttachButton), ChatsConfig.keepAttachButton.Bool(), true);
             } else if (position == autoRunWidgetsRow) {
-                cell.setTextAndCheck(getString(R.string.AutoRunWidgets), getString(R.string.AutoRunWidgetsInfo), ChatsConfig.autoRunWidgets.Bool(), true);
+                cell.setTextAndCheck(getString(R.string.AutoRunWidgets), ChatsConfig.autoRunWidgets.Bool(), true);
             } else if (position == removeMessageTailRow) {
                 cell.setTextAndCheck(getString(R.string.OEChatsRemoveMessageTail), ChatsConfig.removeMessageTail.Bool(), true);
             } else if (position == md3ChatInputRow && md3ChatInputRow != -1) {

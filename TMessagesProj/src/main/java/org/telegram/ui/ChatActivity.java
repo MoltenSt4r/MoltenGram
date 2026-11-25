@@ -18,6 +18,8 @@ import app.exteraless.feed.FeedMessageUtils;
 import com.exteragram.messenger.utils.chats.WidePosts;
 import com.exteragram.messenger.utils.chats.SwipeAction;
 import com.exteragram.messenger.utils.chats.SwipeActionsHelper;
+import com.exteragram.messenger.messageexport.ChatScreenshotExportBridge;
+import com.exteragram.messenger.messageexport.MessageExport;
 import com.exteragram.messenger.components.QuickAttachMenu;
 import com.exteragram.messenger.components.QuickStickersMenu;
 import com.exteragram.messenger.components.QuickTilesMenu;
@@ -2090,6 +2092,7 @@ public class ChatActivity extends BaseFragment implements
     private final static int delete_business_link = 68;
 
     private final static int share = 69;
+    private final static int export_image = 97;
     private final static int open_direct = 70;
     private final static int remove_fee = 71;
     private final static int charge_fee = 72;
@@ -4568,6 +4571,8 @@ public class ChatActivity extends BaseFragment implements
                     openForward(true);
                 } else if (id == share) {
                     share();
+                } else if (id == export_image) {
+                    MessageExport.open(ChatActivity.this, selectedMessagesIds);
                 } else if (id == open_direct) {
                     if (currentChat == null) return;
                     presentFragment(ChatActivity.of(-currentChat.linked_monoforum_id));
@@ -6281,7 +6286,7 @@ public class ChatActivity extends BaseFragment implements
                         }
                         invalidate();
                     }
-                    if (swipeActionsHelper != null && (swipeActionsHelper.size() > 1 || (swipeActionsHelper.size() == 1 && swipeActionsHelper.getSelected() != SwipeAction.REPLY))) {
+                    if (slidingView != null && swipeActionsHelper != null && (swipeActionsHelper.size() > 1 || (swipeActionsHelper.size() == 1 && swipeActionsHelper.getSelected() != SwipeAction.REPLY))) {
                         final MessageObject slidingMessage = getSlidingMessageObject();
                         final float slidingTranslationX = getSlidingNonAnimationTranslationX(false);
                         swipeActionsHelper.draw(c, slidingTranslationX,
@@ -12067,6 +12072,7 @@ public class ChatActivity extends BaseFragment implements
         if (currentEncryptedChat == null && getDialogId() != UserObject.VERIFY && NaConfig.INSTANCE.getActionBarButtonForward().Bool()) {
             actionModeViews.add(actionMode.addItemWithWidth(forward, R.drawable.msg_forward_noquote, dp(54), LocaleController.getString(R.string.Forward)));
         }
+        actionModeViews.add(actionMode.addItemWithWidth(export_image, R.drawable.msg_photos, dp(54), LocaleController.getString(R.string.MessageExport)));
         actionModeViews.add(actionMode.addItemWithWidth(delete, R.drawable.msg_delete, dp(54), LocaleController.getString(R.string.Delete)));
 
         if (currentEncryptedChat == null) {
@@ -21911,6 +21917,10 @@ public class ChatActivity extends BaseFragment implements
                 ActionBarMenuItem deleteItem = actionBar.createActionMode().getItem(delete);
                 ActionBarMenuItem tagItem = actionBar.createActionMode().getItem(tag_message);
                 ActionBarMenuItem shareItem = actionBar.createActionMode().getItem(share);
+                ActionBarMenuItem exportItem = actionBar.createActionMode().getItem(export_image);
+                if (exportItem != null) {
+                    exportItem.setVisibility(!isFeedSearch() && MessageExport.canExport(this, selectedMessagesIds) ? View.VISIBLE : View.GONE);
+                }
 
                 ActionBarMenuItem selectItem = actionBar.createActionMode().getItem(nkactionbarbtn_selectBetween);
                 ActionBarMenuItem combineMessageItem = actionBar.createActionMode().getItem(combine_message);
@@ -33342,6 +33352,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onResume() {
         super.onResume();
+        ChatScreenshotExportBridge.onChatResumed(this);
         cachedIsGestureNavigation = AndroidUtil.isGestureNavigation(getContext());
         checkShowBlur(false);
         if (quickAttachOnResume != null) {
@@ -33567,6 +33578,7 @@ public class ChatActivity extends BaseFragment implements
     @Override
     public void onPause() {
         super.onPause();
+        ChatScreenshotExportBridge.onChatPaused(this);
         if (quickTilesMenu != null) quickTilesMenu.dismiss(false);
         scrolling = false;
         if (scrimPopupWindow != null) {

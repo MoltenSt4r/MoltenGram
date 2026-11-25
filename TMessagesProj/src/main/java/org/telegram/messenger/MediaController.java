@@ -2868,6 +2868,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 } else {
                     playingMessageObject.audioProgress = progress;
                     int seekTo = (int) (duration * progress);
+                    playingMessageObject.audioProgressSec = seekTo / 1000;
                     audioPlayer.seekTo(seekTo);
                     lastProgress = seekTo;
                     if (!ignorePlayerUpdate) {
@@ -2905,6 +2906,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 if (duration != C.TIME_UNSET) {
                     playingMessageObject.audioProgress = Utilities.clamp01((float) progressMs / duration);
                 }
+                playingMessageObject.audioProgressSec = (int) (progressMs / 1000L);
                 audioPlayer.seekTo(progressMs);
                 lastProgress = progressMs;
                 if (!ignorePlayerUpdate) {

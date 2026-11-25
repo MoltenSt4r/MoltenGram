@@ -8377,6 +8377,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 return false;
             });
         }
+        updateHeaderBar();
     }
 
     /** The old action bar only keeps the geometry of the header; the selection of the media hides the profile's titles. */

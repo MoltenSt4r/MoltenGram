@@ -271,7 +271,7 @@ public class OpenExteraSettingsActivity extends BaseNekoSettingsActivity {
                                 "@MoltenGram", R.drawable.msg_channel, true);
                     } else if (position == sourceRow) {
                         cell.setTextAndValueAndIcon(getString(R.string.OpenExteraSource),
-                                "GitHub", R.drawable.msg_language, false);
+                                "GitHub", R.drawable.ic_open_source_outline, false);
                     } else if (position == creditsExteralessRow) {
                         cell.setTextAndValueAndIcon("exteraless",
                                 "@exteraless", R.drawable.msg_channel, true);

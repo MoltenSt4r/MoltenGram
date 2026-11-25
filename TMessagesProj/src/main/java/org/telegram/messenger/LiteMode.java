@@ -483,6 +483,7 @@ public class LiteMode {
 
     private static void onFlagsUpdate(int oldValue, int newValue) {
         int changedFlags = ~oldValue & newValue;
+        int toggledFlags = oldValue ^ newValue;
         if ((changedFlags & FLAGS_ANIMATED_EMOJI) > 0) {
             AnimatedEmojiDrawable.updateAll();
         }
@@ -492,8 +493,9 @@ public class LiteMode {
         if ((changedFlags & FLAG_CHAT_BACKGROUND) > 0) {
             Theme.reloadWallpaper(true);
         }
-        if (BitwiseUtils.hasFlag(changedFlags, FLAG_CHAT_BLUR) || BitwiseUtils.hasFlag(changedFlags, FLAG_LIQUID_GLASS)) {
+        if (BitwiseUtils.hasFlag(toggledFlags, FLAG_CHAT_BLUR) || BitwiseUtils.hasFlag(toggledFlags, FLAG_LIQUID_GLASS)) {
             GlassEngine.getCurrentGlassSettings();
+            GlassEngine.bumpGeneration();
         }
     }
 

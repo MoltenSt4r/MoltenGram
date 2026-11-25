@@ -12972,7 +12972,8 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                     || messageObject.forceAvatar
                     || messageObject.messageOwner.guestchat_via_from != null
                     || messageObject.getDialogId() == UserObject.VERIFY)
-                && isAvatarVisible;
+                && isAvatarVisible
+                && !isWidePostsExternalAvatarSuppressed();
         return drawsAvatar ? dp(48) : 0;
     }
 

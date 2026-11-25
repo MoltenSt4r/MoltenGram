@@ -125,7 +125,7 @@ public final class WidgetRunPlaceholder {
             }
             textPaint.setColor(accentColor);
             textPaint.setAlpha(alpha);
-            canvas.drawText(text, x + iconWidth + gap, cy - (textPaint.descent() + textPaint.ascent()) / 2f, text);
+            canvas.drawText(text, x + iconWidth + gap, cy - (textPaint.descent() + textPaint.ascent()) / 2f, textPaint);
             canvas.restore();
         }
 

@@ -1557,6 +1557,7 @@ public class SharedConfig {
 
     public static void toggleChatBlur() {
         LiteMode.toggleFlag(LiteMode.FLAG_CHAT_BLUR);
+        org.telegram.utils.glass.GlassEngine.bumpGeneration();
     }
 
     public static void toggleForceDisableTabletMode() {

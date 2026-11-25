@@ -192,7 +192,7 @@ public class BaseFragmentSimpleGlass {
 
         glassBlurredFadeDrawable.setDirection(GlassFadeDirection.TOP);
         glassBlurredFadeDrawable.setOverlayColorSource(glassBackgroundSourceColor);
-        glassBlurredFadeDrawable.setOverlayAlpha(160);
+        glassBlurredFadeDrawable.setOverlayAlpha(85);
         glassBlurredFadeDrawable.setMaskRange(gradientRangeMask);
         glassBlurredFadeDrawable.setOverlayRange(gradientRangeFade);
 

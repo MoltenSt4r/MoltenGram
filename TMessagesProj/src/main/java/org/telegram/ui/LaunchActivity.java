@@ -7527,6 +7527,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
     @Override
     protected void onDestroy() {
         app.exteraless.icons.picker.IconPickerController.onDestroy();
+        com.exteragram.messenger.messageexport.ChatScreenshotExportBridge.unregister(this);
         app.exteraless.plugins.PluginsController.getInstance().executeOnAppEvent(app.exteraless.plugins.PluginsConstants.EVENT_APP_STOP);
         GramWalletStorageAuth.onActivityDestroyed(this);
         PipCoordinator.getInstance().onActivityDestroy(this);
