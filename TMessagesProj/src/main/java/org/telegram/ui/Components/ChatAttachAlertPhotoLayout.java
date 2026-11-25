@@ -181,6 +181,7 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     private int currentSelectedCount;
 
     private boolean isHidden;
+    private boolean openCameraOnShow;
 
     private AnimatorSet cameraInitAnimation;
     protected CameraViewInternal cameraView;
@@ -4193,6 +4194,14 @@ public class ChatAttachAlertPhotoLayout extends ChatAttachAlert.AttachAlertLayou
     @Override
     public void onOpenAnimationEnd() {
         checkCamera(parentAlert != null && parentAlert.baseFragment instanceof ChatActivity && !NekoConfig.disableInstantCamera.Bool());
+        if (openCameraOnShow) {
+            openCameraOnShow = false;
+            openCamera(true);
+        }
+    }
+
+    public void openCameraOnShow() {
+        openCameraOnShow = true;
     }
 
     @Override

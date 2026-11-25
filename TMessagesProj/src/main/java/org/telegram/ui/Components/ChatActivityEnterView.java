@@ -118,6 +118,8 @@ import androidx.customview.widget.ExploreByTouchHelper;
 import androidx.dynamicanimation.animation.DynamicAnimation;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
+
+import com.exteragram.messenger.components.QuickTilesMenu;
 import androidx.interpolator.view.animation.FastOutSlowInInterpolator;
 import org.telegram.ui.recyclerview.ChatListItemAnimator;
 import androidx.recyclerview.widget.LinearLayoutManager;
@@ -2922,6 +2924,17 @@ public class ChatActivityEnterView extends FrameLayout implements
                 }
             }
         });
+        emojiButton.setOnLongClickListener(v -> {
+            if (NekoConfig.hideSendAsChannel.Bool() && delegate != null && delegate.getSendAsPeers() != null && delegate.getSendAsPeers().peers.size() > 1) {
+                if (senderSelectView != null) {
+                    senderSelectView.callOnClick();
+                }
+                return false;
+            }
+            return parentFragment != null && parentFragment.getChatActivityEnterView() == this && parentFragment.showQuickStickers(v);
+        });
+        QuickTilesMenu.attachLongPressRamp(emojiButton, () -> parentFragment != null && parentFragment.getChatActivityEnterView() == this && parentFragment.canShowQuickStickers()
+                && !(NekoConfig.hideSendAsChannel.Bool() && delegate != null && delegate.getSendAsPeers() != null && delegate.getSendAsPeers().peers.size() > 1));
         if (md3Input) {
             messageEditTextContainer.addView(emojiButton, LayoutHelper.createFrame(DEFAULT_HEIGHT, DEFAULT_HEIGHT, Gravity.BOTTOM | Gravity.RIGHT, 0, 0, 2, 0));
         } else {
@@ -3063,6 +3076,12 @@ public class ChatActivityEnterView extends FrameLayout implements
                 }
                 delegate.didPressAttachButton();
             });
+            if (parentFragment != null && isChat) {
+                attachButton.setOnLongClickListener(v -> parentFragment.getChatActivityEnterView() == this && attachLayoutPaddingAlpha != 0f
+                        && (adjustPanLayoutHelper == null || !adjustPanLayoutHelper.animationInProgress()) && parentFragment.showQuickAttach(v));
+                QuickTilesMenu.attachLongPressRamp(attachButton, () -> parentFragment.getChatActivityEnterView() == this && attachLayoutPaddingAlpha != 0f
+                        && (adjustPanLayoutHelper == null || !adjustPanLayoutHelper.animationInProgress()) && parentFragment.canShowQuickAttach());
+            }
             attachButton.setContentDescription(getString(R.string.AccDescrAttachButton));
             updateFieldRight(1);
         }
@@ -14825,6 +14844,16 @@ public class ChatActivityEnterView extends FrameLayout implements
 
     public void showEmojiView() {
         showPopup(1, POPUP_CONTENT_EMOJI_KEYBOARD);
+    }
+
+    public void openStickersPanel() {
+        if (emojiButtonRestricted || adjustPanLayoutHelper != null && adjustPanLayoutHelper.animationInProgress()) {
+            return;
+        }
+        showPopup(1, POPUP_CONTENT_EMOJI_KEYBOARD);
+        if (emojiView != null) {
+            emojiView.openStickers();
+        }
     }
 
     private void showPopup(int show, int contentType) {

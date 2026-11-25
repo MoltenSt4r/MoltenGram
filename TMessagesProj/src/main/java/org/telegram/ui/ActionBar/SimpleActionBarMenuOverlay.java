@@ -30,6 +30,7 @@ import androidx.core.graphics.ColorUtils;
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.Utilities;
+import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.Components.PopupSwipeBackLayout;
 import org.telegram.ui.Components.chat.ViewPositionWatcher;
@@ -49,6 +50,13 @@ import java.util.ArrayList;
  */
 public class SimpleActionBarMenuOverlay extends FrameLayout {
     private static final float MENU_RADIUS = 22;
+    private static final int ITEM_PRESS_GAP = 4;
+    private static final int ITEM_PRESS_PILL_RADIUS = 100;
+    private static final int ITEM_EXTRA_HEIGHT = 4;
+    private static final int ITEM_CASCADE_OFFSET = 12;
+    private static final long ITEM_CASCADE_START_DELAY = 10;
+    private static final long ITEM_CASCADE_STEP = 35;
+    private static final long ITEM_CASCADE_DURATION = 400;
 
     private float glassColorsFactor = 1f;
     private PopupSwipeBackLayout swipeBackListening;
@@ -242,6 +250,7 @@ public class SimpleActionBarMenuOverlay extends FrameLayout {
         setVisibility(VISIBLE);
         opened = true;
         openedAt = SystemClock.uptimeMillis();
+        startItemsCascade(content);
         startAnimation();
         bar.setMenuOverlay(this, item);
         computeStartRect();
@@ -333,6 +342,8 @@ public class SimpleActionBarMenuOverlay extends FrameLayout {
                 layout.setBackgroundColor(backgroundColor);
             }
             layout.setPadding(paddingLeft, paddingTop, paddingRight, paddingBottom);
+            layout.setItemsSelectorOverride(-1, -1, 0);
+            layout.setGapColorOverride(null);
         }
     }
 
@@ -351,6 +362,34 @@ public class SimpleActionBarMenuOverlay extends FrameLayout {
         layout.setBackground(null);
         layout.setBackgroundDrawable(null);
         layout.setPadding(0, paddingVertical, 0, paddingVertical);
+        layout.setItemsSelectorOverride(ITEM_PRESS_PILL_RADIUS, ITEM_PRESS_GAP, ITEM_EXTRA_HEIGHT);
+    }
+
+    private void startItemsCascade(ActionBarPopupWindow.ActionBarPopupWindowLayout content) {
+        final float offset = dp(pillBelow ? ITEM_CASCADE_OFFSET : -ITEM_CASCADE_OFFSET);
+        final int count = content.getItemsCount();
+        int index = 0;
+        for (int i = 0; i < count; i++) {
+            final View child = content.getItemAt(pillBelow ? count - 1 - i : i);
+            if (child == null || child.getVisibility() != VISIBLE || child instanceof ActionBarPopupWindow.GapView) {
+                continue;
+            }
+            child.animate().cancel();
+            child.setAlpha(0f);
+            child.setTranslationY(offset);
+            child.animate()
+                .alpha(child.isEnabled() ? 1f : 0.5f)
+                .translationY(0)
+                .setInterpolator(CubicBezierInterpolator.EASE_OUT_QUINT)
+                .setStartDelay(ITEM_CASCADE_START_DELAY + index * ITEM_CASCADE_STEP)
+                .setDuration(ITEM_CASCADE_DURATION)
+                .start();
+            index++;
+        }
+    }
+
+    private int getGapColor() {
+        return Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, bar.getMenuResourcesProvider()), 0.06f);
     }
 
     private void restorePopupLook() {
@@ -371,7 +410,8 @@ public class SimpleActionBarMenuOverlay extends FrameLayout {
         content.setAlpha(1f);
         // the items are out of the view tree while closed: a theme switch since the last open has not reached them
         ThemeBind.updateTree(content, false);
-        ItemOptions.setGapBackgroundColor(content, Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, bar.getMenuResourcesProvider()), 0.06f));
+        ItemOptions.setGapBackgroundColor(content, getGapColor());
+        content.setGapColorOverride(getGapColor());
         content.updateRadialSelectors();
         final PopupSwipeBackLayout swipeBack = content.getSwipeBack();
         if (swipeBack != null) {
@@ -389,7 +429,8 @@ public class SimpleActionBarMenuOverlay extends FrameLayout {
                     // the padding of the popup's background: the rows go to the edges of the glass as on the main page
                     takeOffPopupLook(page, 0);
                     ThemeBind.updateTree(page, false);
-                    ItemOptions.setGapBackgroundColor(page, Theme.multAlpha(Theme.getColor(Theme.key_actionBarDefaultSubmenuItem, bar.getMenuResourcesProvider()), 0.06f));
+                    ItemOptions.setGapBackgroundColor(page, getGapColor());
+                    page.setGapColorOverride(getGapColor());
                 }
             }
         }

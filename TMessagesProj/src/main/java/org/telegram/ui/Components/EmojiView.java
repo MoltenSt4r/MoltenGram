@@ -6186,6 +6186,13 @@ public class EmojiView extends FrameLayout implements
         forseMultiwindowLayout = value;
     }
 
+    public void openStickers() {
+        if (!stickersBanned) {
+            currentPage = 1;
+        }
+        onOpen(false, false);
+    }
+
     public void onOpen(boolean forceEmoji, boolean groupEmojiHintWasVisible) {
         if (currentPage != 0 && stickersBanned) {
             currentPage = 0;

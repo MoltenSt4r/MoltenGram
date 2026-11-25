@@ -5505,28 +5505,48 @@ public class Theme {
         private float[] radii = new float[8];
         boolean invalidatePath = true;
 
+        private float paddingTop;
+        private float paddingBottom;
+        private float paddingLeft;
+        private float paddingRight;
+
         public RippleRadMaskDrawable(float top, float bottom) {
-            radii[0] = radii[1] = radii[2] = radii[3] = dp(top);
-            radii[4] = radii[5] = radii[6] = radii[7] = dp(bottom);
+            this(top, bottom, 0, 0, 0, 0);
         }
         public RippleRadMaskDrawable(float topLeft, float topRight, float bottomRight, float bottomLeft) {
+            this(topLeft, topRight, bottomRight, bottomLeft, 0, 0, 0, 0);
+        }
+        public RippleRadMaskDrawable(float top, float bottom, int paddingLeft, int paddingTop, int paddingRight, int paddingBottom) {
+            this(top, top, bottom, bottom, paddingLeft, paddingTop, paddingRight, paddingBottom);
+        }
+        public RippleRadMaskDrawable(float topLeft, float topRight, float bottomRight, float bottomLeft, int paddingLeft, int paddingTop, int paddingRight, int paddingBottom) {
             radii[0] = radii[1] = dp(topLeft);
             radii[2] = radii[3] = dp(topRight);
             radii[4] = radii[5] = dp(bottomRight);
             radii[6] = radii[7] = dp(bottomLeft);
+            this.paddingLeft = dpf2(paddingLeft);
+            this.paddingTop = dpf2(paddingTop);
+            this.paddingRight = dpf2(paddingRight);
+            this.paddingBottom = dpf2(paddingBottom);
         }
 
         public void setRadius(float top, float bottom) {
-            radii[0] = radii[1] = radii[2] = radii[3] = dp(top);
-            radii[4] = radii[5] = radii[6] = radii[7] = dp(bottom);
-            invalidatePath = true;
-            invalidateSelf();
+            setRadius(top, top, bottom, bottom);
         }
         public void setRadius(float topLeft, float topRight, float bottomRight, float bottomLeft) {
             radii[0] = radii[1] = dp(topLeft);
             radii[2] = radii[3] = dp(topRight);
             radii[4] = radii[5] = dp(bottomRight);
             radii[6] = radii[7] = dp(bottomLeft);
+            invalidatePath = true;
+            invalidateSelf();
+        }
+
+        public void setPadding(float paddingLeft, float paddingTop, float paddingRight, float paddingBottom) {
+            this.paddingLeft = dpf2(paddingLeft);
+            this.paddingTop = dpf2(paddingTop);
+            this.paddingRight = dpf2(paddingRight);
+            this.paddingBottom = dpf2(paddingBottom);
             invalidatePath = true;
             invalidateSelf();
         }
@@ -5541,7 +5561,7 @@ public class Theme {
             if (invalidatePath) {
                 invalidatePath = false;
                 path.reset();
-                AndroidUtilities.rectTmp.set(getBounds());
+                AndroidUtilities.rectTmp.set(getBounds().left + paddingLeft, getBounds().top + paddingTop, getBounds().right - paddingRight, getBounds().bottom - paddingBottom);
                 path.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CW);
             }
             canvas.drawPath(path, maskPaint);

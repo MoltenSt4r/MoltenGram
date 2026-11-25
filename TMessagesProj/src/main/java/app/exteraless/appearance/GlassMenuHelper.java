@@ -128,15 +128,14 @@ public abstract class GlassMenuHelper {
         }
     }
 
-    /**
-     * Не перенесено: {@code popupLayout.getSwipeBack().setForegroundDrawable(createFill(...))} —
-     * у нашего {@code PopupSwipeBackLayout} нет {@code setForegroundDrawable}. Подпанель
-     * swipe-back остаётся непрозрачной, как в апстриме.
-     */
     public static void applyToPopup(BlurredBackgroundDrawableViewFactory factory,
                                     Theme.ResourcesProvider resourcesProvider,
                                     ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout) {
         popupLayout.setBackground(createPanelBackground(factory, resourcesProvider, popupLayout));
+        popupLayout.setGlassBackgroundFactory(factory);
+        if (popupLayout.getSwipeBack() != null) {
+            popupLayout.getSwipeBack().setForegroundDrawable(createFill(factory, resourcesProvider, popupLayout.getSwipeBack()));
+        }
     }
 
     public static void applyToReactions(BlurredBackgroundDrawableViewFactory factory,
@@ -155,17 +154,30 @@ public abstract class GlassMenuHelper {
                                          ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout,
                                          View rootView,
                                          boolean glass) {
+        applyToReusedMenu(factory, resourcesProvider, popupLayout, glass);
+        if (popupLayout != null && glass) {
+            captureBlur(sourceBitmap, factory, rootView);
+        }
+    }
+
+    public static void applyToReusedMenu(BlurredBackgroundDrawableViewFactory factory,
+                                         Theme.ResourcesProvider resourcesProvider,
+                                         ActionBarPopupWindow.ActionBarPopupWindowLayout popupLayout,
+                                         boolean glass) {
         if (popupLayout == null) {
             return;
         }
         if (glass) {
             applyToPopup(factory, resourcesProvider, popupLayout);
             applyToGaps(popupLayout, separatorColor(true, resourcesProvider));
-            captureBlur(sourceBitmap, factory, rootView);
         } else {
+            popupLayout.setGlassBackgroundFactory(null);
             final Drawable background = popupLayout.getResources().getDrawable(R.drawable.popup_fixed_alert4).mutate();
             popupLayout.setBackgroundDrawable(background);
             popupLayout.setBackgroundColor(Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider));
+            if (popupLayout.getSwipeBack() != null) {
+                popupLayout.getSwipeBack().setForegroundDrawable(null);
+            }
             applyToGaps(popupLayout, separatorColor(false, resourcesProvider), true);
         }
     }
