@@ -20194,14 +20194,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         return sideStartY;
     }
 
-    public void setTimeAlpha(float value) {
-        timeAlpha = value;
-    }
-
-    public float getTimeAlpha() {
-        return timeAlpha;
-    }
-
     private boolean isSideMenuPossibleLeftMargin() {
         return isSideMenued && (currentMessageObject != null && !currentMessageObject.isOutOwner()) && (currentPosition == null);
     }
@@ -22870,7 +22862,6 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     }
 
     private final StickerTime.Row stickerTimeRow = new StickerTime.Row();
-    private float stickerTimeOffsetX;
     private float stickerTimeTargetX;
 
     private float sideButtonTouchLeft() {
