@@ -54,6 +54,38 @@ public class SleepTimer {
     private boolean endOfTrack = false;
     private boolean running = false;
     private int chosenMinutes = 0;
+    private static final long FADE_MS = 10_000;
+    private boolean fadeOut = prefs().getBoolean("fade_out", true);
+    private boolean finishSong = prefs().getBoolean("finish_song", false);
+
+    private static android.content.SharedPreferences prefs() {
+        return org.telegram.messenger.ApplicationLoader.applicationContext.getSharedPreferences("sleep_timer", android.content.Context.MODE_PRIVATE);
+    }
+
+    public boolean isFadeOut() {
+        return fadeOut;
+    }
+
+    public void setFadeOut(boolean v) {
+        fadeOut = v;
+        prefs().edit().putBoolean("fade_out", v).apply();
+        if (!v) {
+            MediaController.getInstance().setSleepFadeVolume(1f);
+        }
+    }
+
+    public boolean isFinishSong() {
+        return finishSong;
+    }
+
+    public void setFinishSong(boolean v) {
+        finishSong = v;
+        prefs().edit().putBoolean("finish_song", v).apply();
+    }
+
+    public int getLastMinutes() {
+        return prefs().getInt("last_minutes", 30);
+    }
 
     private final Runnable tickRunnable = new Runnable() {
         @Override
@@ -62,12 +94,24 @@ public class SleepTimer {
             long now = SystemClock.elapsedRealtime();
             long remaining = targetTimeMs - now;
             if (remaining <= 0) {
+                if (finishSong) {
+                    // let the current track finish, then stop
+                    handler.removeCallbacks(this);
+                    endOfTrack = true;
+                    for (Listener l : listeners) {
+                        l.onTimerTick(0);
+                    }
+                    return;
+                }
                 triggerStop();
             } else {
+                if (remaining <= FADE_MS && fadeOut && !finishSong) {
+                    MediaController.getInstance().setSleepFadeVolume(remaining / (float) FADE_MS);
+                }
                 for (Listener l : listeners) {
                     l.onTimerTick(remaining);
                 }
-                handler.postDelayed(this, 1000);
+                handler.postDelayed(this, remaining <= FADE_MS + 1000 ? 100 : 1000);
             }
         }
     };
@@ -76,6 +120,7 @@ public class SleepTimer {
         cancel();
         if (minutes <= 0) return;
         chosenMinutes = minutes;
+        prefs().edit().putInt("last_minutes", minutes).apply();
         running = true;
         endOfTrack = false;
         targetTimeMs = SystemClock.elapsedRealtime() + (long) minutes * 60 * 1000;
@@ -98,6 +143,7 @@ public class SleepTimer {
         targetTimeMs = 0;
         chosenMinutes = 0;
         handler.removeCallbacks(tickRunnable);
+        MediaController.getInstance().setSleepFadeVolume(1f);
         if (wasRunning) {
             for (Listener l : listeners) {
                 l.onTimerStop();
@@ -150,108 +196,15 @@ public class SleepTimer {
     }
 
     private void triggerStop() {
-        cancel();
-        AndroidUtilities.runOnUIThread(() -> {
-            MediaController mc = MediaController.getInstance();
-            if (!mc.isMessagePaused()) {
-                mc.pauseMessage(mc.getPlayingMessageObject());
-            }
-        });
+        MediaController mc = MediaController.getInstance();
+        if (!mc.isMessagePaused() && mc.getPlayingMessageObject() != null) {
+            mc.pauseMessage(mc.getPlayingMessageObject());
+        }
+        AndroidUtilities.runOnUIThread(this::cancel, 400);
     }
 
     public static void showDialog(Context context, Theme.ResourcesProvider resourcesProvider) {
         if (context == null) return;
-        AlertDialog.Builder builder = new AlertDialog.Builder(context, resourcesProvider);
-        builder.setTitle(getString(R.string.OEAppearancePlayerSleepTimerDialogTitle));
-
-        LinearLayout container = new LinearLayout(context);
-        container.setOrientation(LinearLayout.VERTICAL);
-        container.setPadding(dp(22), dp(10), dp(22), dp(12));
-
-        TextView status = new TextView(context);
-        status.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-        status.setTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteGrayText, resourcesProvider));
-        SleepTimer timer = getInstance();
-        if (timer.isRunning()) {
-            status.setText(LocaleController.formatString("OEAppearancePlayerSleepTimerRunning", R.string.OEAppearancePlayerSleepTimerRunning, timer.getFormattedRemaining()));
-        } else {
-            status.setText(getString(R.string.OEAppearancePlayerSleepTimerDesc));
-        }
-        container.addView(status, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 14));
-
-        int[] presets = {15, 30, 45, 60};
-        final int[] selected = {timer.isRunning() ? timer.getChosenMinutes() : 30};
-
-        String[] items = new String[presets.length + 1];
-        for (int i = 0; i < presets.length; i++) {
-            items[i] = LocaleController.formatString("OEAppearancePlayerSleepTimerMin", R.string.OEAppearancePlayerSleepTimerMin, presets[i]);
-        }
-        items[presets.length] = getString(R.string.OEAppearancePlayerSleepTimerEnd);
-
-        int initialCheck = -1;
-        if (timer.isRunning()) {
-            if (timer.isEndOfTrack()) {
-                initialCheck = presets.length;
-            } else {
-                for (int i = 0; i < presets.length; i++) {
-                    if (presets[i] == selected[0]) {
-                        initialCheck = i;
-                        break;
-                    }
-                }
-            }
-        }
-
-        RadioColorCell[] cells = new RadioColorCell[items.length];
-        for (int i = 0; i < items.length; i++) {
-            final int index = i;
-            RadioColorCell cell = new RadioColorCell(context, resourcesProvider);
-            cell.setPadding(dp(4), 0, dp(4), 0);
-            cell.setTextAndValue(items[i], i == initialCheck);
-            container.addView(cell, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
-            cells[i] = cell;
-            cell.setOnClickListener(v -> {
-                for (int j = 0; j < cells.length; j++) {
-                    cells[j].setChecked(j == index, true);
-                }
-                if (index < presets.length) {
-                    selected[0] = presets[index];
-                } else {
-                    selected[0] = -1; // End of track
-                }
-            });
-        }
-
-        builder.setView(container);
-
-        builder.setPositiveButton(getString(R.string.OK), (dialog, which) -> {
-            if (selected[0] == -1) {
-                timer.setEndOfTrack(true);
-                BulletinFactory.global().createSimpleBulletin(
-                        R.drawable.menu_night_mode_24,
-                        LocaleController.formatString("OEAppearancePlayerSleepTimerStarted", R.string.OEAppearancePlayerSleepTimerStarted, getString(R.string.OEAppearancePlayerSleepTimerEnd))
-                ).show();
-            } else if (selected[0] > 0) {
-                timer.start(selected[0]);
-                String formatted = LocaleController.formatString("OEAppearancePlayerSleepTimerMin", R.string.OEAppearancePlayerSleepTimerMin, selected[0]);
-                BulletinFactory.global().createSimpleBulletin(
-                        R.drawable.menu_night_mode_24,
-                        LocaleController.formatString("OEAppearancePlayerSleepTimerStarted", R.string.OEAppearancePlayerSleepTimerStarted, formatted)
-                ).show();
-            }
-        });
-
-        if (timer.isRunning()) {
-            builder.setNeutralButton(getString(R.string.OEAppearancePlayerSleepTimerReset), (dialog, which) -> {
-                timer.cancel();
-                BulletinFactory.global().createSimpleBulletin(
-                        R.drawable.menu_night_mode_24,
-                        getString(R.string.OEAppearancePlayerSleepTimerStopped)
-                ).show();
-            });
-        }
-
-        builder.setNegativeButton(getString(R.string.Cancel), null);
-        builder.show();
+        new SleepTimerSheet(context, resourcesProvider).show();
     }
 }

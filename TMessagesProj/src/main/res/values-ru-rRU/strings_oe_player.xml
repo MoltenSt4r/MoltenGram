@@ -256,4 +256,12 @@
 <string name="OEAppearanceSongrecBackgroundRecognitionDesc">Распознавать трек сразу при воспроизведении в фоне, чтобы обложка и текст были готовы при открытии плеера</string>
 <string name="OEAppearancePlayerAppearanceMore">Дополнительные параметры</string>
 <string name="OEAppearancePlayerLyricsMore">Дополнительно: текст и обложки</string>
+<string name="OESleepPlayback">Воспроизведение</string>
+<string name="OESleepMin">мин</string>
+<string name="OESleepStopsAt">Остановка в</string>
+<string name="OESleepFinishSong">Доиграть трек</string>
+<string name="OESleepFinishSongDesc">Не обрывать на середине</string>
+<string name="OESleepFadeOut">Плавное затухание</string>
+<string name="OESleepFadeOutDesc">Последние 10 сек</string>
+<string name="OESleepStart">Старт</string>
 </resources>

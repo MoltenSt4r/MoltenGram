@@ -1755,6 +1755,15 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         });
     }
 
+    private float sleepFadeVolume = 1f;
+
+    public void setSleepFadeVolume(float v) {
+        v = Math.max(0f, Math.min(1f, v));
+        if (Math.abs(sleepFadeVolume - v) < 0.001f) return;
+        sleepFadeVolume = v;
+        setPlayerVolume();
+    }
+
     private void setPlayerVolume() {
         try {
             float volume;
@@ -1766,7 +1775,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                 volume = VOLUME_DUCK;
             }
             if (audioPlayer != null) {
-                audioPlayer.setVolume(CastSync.isActive() ? 0.0f : volume * audioVolume);
+                audioPlayer.setVolume(CastSync.isActive() ? 0.0f : volume * audioVolume * sleepFadeVolume);
             } else if (videoPlayer != null) {
                 videoPlayer.setVolume(CastSync.isActive() ? 0.0f : volume);
             }

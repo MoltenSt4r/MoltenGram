@@ -256,4 +256,12 @@
 <string name="OEAppearanceSongrecBackgroundRecognitionDesc">Recognize tracks automatically in the background during playback so covers and lyrics are ready when opening the player</string>
 <string name="OEAppearancePlayerAppearanceMore">Additional appearance settings</string>
 <string name="OEAppearancePlayerLyricsMore">Additional lyrics &amp; covers</string>
+<string name="OESleepPlayback">Playback</string>
+<string name="OESleepMin">min</string>
+<string name="OESleepStopsAt">Stops at</string>
+<string name="OESleepFinishSong">Finish current song</string>
+<string name="OESleepFinishSongDesc">Don\'t cut off mid-track</string>
+<string name="OESleepFadeOut">Fade out</string>
+<string name="OESleepFadeOutDesc">Last 10 sec</string>
+<string name="OESleepStart">Start</string>
 </resources>
