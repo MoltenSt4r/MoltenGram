@@ -286,6 +286,10 @@ public final class WidePosts {
         if (messageObject == null || messageObject.messageOwner == null || HIDDEN_PROFILES.containsKey(messageObject)) {
             return false;
         }
+        if (messageObject.searchType == FeedMessageUtils.SEARCH_TYPE_FEED
+                && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+            return false;
+        }
         if (!(shouldExpand(messageObject)
                 || isEnabledFor(messageObject) && isEmbeddedProfileAvatarMessageWithoutBackground(messageObject))
                 || messageObject.isOutOwner()

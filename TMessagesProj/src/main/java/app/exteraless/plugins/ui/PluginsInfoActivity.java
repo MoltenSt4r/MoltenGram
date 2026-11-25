@@ -470,7 +470,7 @@ public class PluginsInfoActivity extends BaseFragment {
             String latestVersion = null;
             String downloadUrl = null;
             try {
-                URL url = new URL("https://raw.githubusercontent.com/exteraGram/pysdk/main/v.txt");
+                URL url = new URL("https://raw.githubusercontent.com/MoltenSt4r/MoltenGram/main/TMessagesProj/src/main/python/version.txt");
                 HttpURLConnection conn = (HttpURLConnection) url.openConnection();
                 conn.setConnectTimeout(8000);
                 conn.setReadTimeout(8000);
@@ -480,7 +480,7 @@ public class PluginsInfoActivity extends BaseFragment {
                         String line = reader.readLine();
                         if (line != null && !line.trim().isEmpty()) {
                             latestVersion = line.trim();
-                            downloadUrl = "https://github.com/exteraGram/pysdk/archive/refs/heads/main.zip";
+                            downloadUrl = "https://github.com/MoltenSt4r/MoltenGram/archive/refs/heads/main.zip";
                         }
                     }
                 }

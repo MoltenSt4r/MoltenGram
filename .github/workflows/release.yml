@@ -139,11 +139,11 @@ jobs:
         uses: softprops/action-gh-release@v2
         if: ${{ success() && !contains(github.event.head_commit.message, '[skip publish]') }}
         with:
-          tag_name: v13.2.1
-          name: MoltenGram v13.2.1 «Glintvein»
+          tag_name: v13.2.2
+          name: MoltenGram v13.2.2 «Lemonade»
           make_latest: true
           body: |
-            ### 🍷 MoltenGram v13.2.1 «Glintvein»
+            ### 🍋 MoltenGram v13.2.2 «Lemonade»
 
             **📦 База Telegram 13.2.1:**
             - Обновление кодовой базы и нативных библиотек (`tlottie`, `voip`, `androidxMedia`) до **Telegram 13.2.1**.
@@ -214,4 +214,4 @@ jobs:
           curl -s -X POST -H "Authorization: token $TOKEN" \
             -H "Accept: application/vnd.github.v3+json" \
             https://api.github.com/repos/${{ github.repository }}/actions/workflows/fdroid.yml/dispatches \
-            -d '{"ref":"main","inputs":{"tag":"v13.2.1"}}' || true
+            -d '{"ref":"main","inputs":{"tag":"v13.2.2"}}' || true

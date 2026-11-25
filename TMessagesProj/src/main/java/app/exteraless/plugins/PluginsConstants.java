@@ -89,7 +89,7 @@ public final class PluginsConstants {
      * поверхность имён и семантика соответствуют, отсутствующее покрыто
      * явными исключениями, а не молчаливыми заглушками.
      */
-    public static final String SDK_VERSION = "1.4.5.7";
+    public static final String SDK_VERSION = "1.4.6.5";
 
     /** Имя движка в карте getEngines(); плагины каталога берут его отсюда. */
     public static final String PYTHON = "python";

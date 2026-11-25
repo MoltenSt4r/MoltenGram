@@ -379,6 +379,11 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
         if (messageObject == null) {
             return;
         }
+        if (messageObject.searchType == FeedMessageUtils.SEARCH_TYPE_FEED
+                && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+            currentPhoto = null;
+            return;
+        }
         if (isAvatarVisible || hasCompactNameAvatar() || WidePosts.shouldEmbedProfileAvatar(messageObject) && !messageObject.isOutOwner()) {
             if (messageObject.customAvatarDrawable != null) {
                 avatarImage.setImageBitmap(messageObject.customAvatarDrawable);
@@ -6862,13 +6867,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             feedDisplayChannel = FeedMessageUtils.resolveDisplayChannel(messageObject);
             isAvatarVisible = !wideChannelPostHeader && needDrawAvatar() && (currentPosition == null || currentPosition.edge);
             boolean drawAvatar = !wideChannelPostHeader && needDrawAvatar();
-            if (messageObject != null && messageObject.searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
-                isAvatarVisible = false;
-                drawAvatar = false;
-            }
             if (!wideChannelPostHeader && (messageObject.customAvatarDrawable != null || messageObject.forceAvatar || messageObject.messageOwner.guestchat_via_from != null) && !isCompactIn()) {
                 isAvatarVisible = true;
                 drawAvatar = true;
+            }
+            if (messageObject != null && messageObject.searchType == FeedMessageUtils.SEARCH_TYPE_FEED && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+                isAvatarVisible = false;
+                drawAvatar = false;
             }
             boolean groupedMedia = WidePosts.isWideGroupedMedia(groupedMessages);
             int widePostsTextWidth = widePosts && WidePosts.shouldDrawBackground(messageObject) && !groupedMedia

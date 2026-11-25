@@ -320,7 +320,11 @@ androidComponents {
     onVariants(selector().all()) { variant ->
         variant.outputs.forEach { output ->
             String gramName = 'MoltenGram'
-            String first = String.format('%s-v%s(%s)', gramName, verName, verCode)
+            String rawRunNumber = System.getenv('GITHUB_RUN_NUMBER')
+            String buildSuffix = (rawRunNumber != null && rawRunNumber.isInteger())
+                ? String.format('build%04d-%s', rawRunNumber.toInteger(), verCode)
+                : String.valueOf(verCode)
+            String first = String.format('%s-v%s-%s', gramName, APP_VERSION_NAME, buildSuffix)
             output.outputFileName.set(
                 output.outputFileName.get()
                     .replace('TMessagesProj', first)

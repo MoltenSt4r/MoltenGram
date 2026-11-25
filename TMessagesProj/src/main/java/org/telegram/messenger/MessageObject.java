@@ -10164,13 +10164,13 @@ public class MessageObject {
         if (isSaved) {
             return true;
         }
+        if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+            return false;
+        }
         if (forceAvatar || customAvatarDrawable != null) {
             return true;
         }
         if (searchType != 0) {
-            if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
-                return false;
-            }
             return true;
         }
         boolean channelSignatureProfiles = false;
@@ -10194,13 +10194,13 @@ public class MessageObject {
         if (isSaved) {
             return true;
         }
+        if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
+            return false;
+        }
         if (forceAvatar || customAvatarDrawable != null || messageOwner != null && messageOwner.guestchat_via_from != null) {
             return true;
         }
         if (searchType != 0) {
-            if (searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
-                return false;
-            }
             return true;
         }
         boolean channelSignatureProfiles = false;
