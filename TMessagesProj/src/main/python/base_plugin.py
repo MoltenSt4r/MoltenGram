@@ -7,8 +7,10 @@ running on a host interpreter.
 
 import json
 import sys
-from dataclasses import dataclass
-from typing import Any, Callable, Dict, Optional
+import threading
+from dataclasses import dataclass, field
+from enum import Enum
+from typing import Any, Callable, Dict, List, Optional, Union
 
 
 _internal_modules = {}
@@ -64,6 +66,86 @@ class HookResult:
 
     def __repr__(self):
         return f"HookResult(strategy={self.strategy!r})"
+
+
+class IntentHookType(Enum):
+    """Placement for global intent hooks registered via BasePlugin.add_intent_hook."""
+    BEFORE = 0
+    AFTER = 1
+
+
+class PluginError(Exception):
+    """Exception carrying an optional plugin_id."""
+    def __init__(self, message: str, plugin_id: Optional[str] = None):
+        super().__init__(message)
+        self.plugin_id = plugin_id
+
+
+@dataclass
+class PluginMetadata:
+    """Metadata descriptor for a plugin."""
+    id: str = ""
+    name: str = ""
+    description: str = ""
+    author: str = ""
+    version: str = ""
+    icon: str = ""
+    min_version: str = ""
+    requirements: List[str] = field(default_factory=list)
+
+
+class PartialChain:
+    """Compatibility wrapper for partial-hook interception chains."""
+    def __init__(self, chain=None, param_types=()):
+        self._chain = chain
+        self._param_types = param_types
+
+    @property
+    def this_object(self) -> Any:
+        return None if self._chain is None else self._chain.thisObject()
+
+    @property
+    def caller(self) -> Any:
+        return None if self._chain is None else self._chain.caller()
+
+    @property
+    def args(self) -> List[Any]:
+        return [] if self._chain is None else list(self._chain.args())
+
+    def arg(self, index: int) -> Any:
+        return None if self._chain is None else self._chain.arg(index)
+
+    def proceed(self, *args) -> Any:
+        if self._chain is None:
+            return None
+        return self._chain.proceed() if not args else self._chain.proceed(args)
+
+    def throw_to_caller(self, throwable):
+        if self._chain is not None:
+            self._chain.throwToCaller(throwable)
+
+
+class _PluginLogger:
+    """Lightweight logger adapter routing standard logging methods to BasePlugin.log."""
+    def __init__(self, plugin: "BasePlugin"):
+        self._plugin = plugin
+
+    def debug(self, msg, *args):
+        self._plugin.log(msg % args if args else msg)
+
+    def info(self, msg, *args):
+        self._plugin.log(msg % args if args else msg)
+
+    def warning(self, msg, *args):
+        self._plugin.log(f"WARN: {msg % args if args else msg}")
+
+    warn = warning
+
+    def error(self, msg, *args):
+        self._plugin.log(f"ERROR: {msg % args if args else msg}")
+
+    def exception(self, msg, *args):
+        self._plugin.log(f"EXCEPTION: {msg % args if args else msg}")
 
 
 class AppEvent:
@@ -603,10 +685,37 @@ class BasePlugin:
     def plugin_id(self) -> Optional[str]:
         return self._exteraless_plugin_id
 
+    @property
+    def stop_event(self) -> threading.Event:
+        """Event set when the plugin is unloaded."""
+        ev = self.__dict__.get("_exteraless_stop_event")
+        if ev is None:
+            ev = threading.Event()
+            self.__dict__["_exteraless_stop_event"] = ev
+        return ev
+
+    def register_cleanup(self, cleanup: Callable[[], Any]):
+        """Register a callback to run when this plugin unloads."""
+        if not callable(cleanup):
+            raise TypeError("cleanup must be callable")
+        self._exteraless_state("_exteraless_cleanups", list).append(cleanup)
+        return cleanup
+
     def _exteraless_bridge_available(self) -> bool:
         return PythonBridge is not None and bool(self._exteraless_plugin_id)
 
     # ---- logging ----
+
+    @property
+    def logger(self):
+        custom = self.__dict__.get("_custom_logger")
+        if custom is not None:
+            return custom
+        return _PluginLogger(self)
+
+    @logger.setter
+    def logger(self, value):
+        self.__dict__["_custom_logger"] = value
 
     def log(self, msg):
         """Write a message to the app's plugin log pipeline."""
@@ -734,6 +843,54 @@ class BasePlugin:
             PythonBridge.addSendMessageHook(self._exteraless_plugin_id, int(priority))
         except Exception as e:
             self.log(f"add_on_send_message_hook() failed: {e}")
+
+    def add_file_hook(self, file_info):
+        """Register a file handler via FilesController (enforces PluginPermissions.FILES)."""
+        from file_utils import FilesController
+        if not file_info or not isinstance(file_info, FilesController.FileInfo):
+            raise ValueError("You must provide a file info (instance of FilesController.FileInfo)")
+        secret = FilesController.register(file_info)
+        if secret is not None:
+            self._exteraless_state("_exteraless_file_hooks", list).append((file_info.ext, secret))
+        return secret
+
+    def remove_file_hook(self, ext: str, secret: str):
+        """Unregister a file handler registered with add_file_hook()."""
+        if not ext or not secret:
+            raise ValueError("You must provide a file extension and secret for unregister")
+        from file_utils import FilesController
+        FilesController.unregister(ext, secret)
+        hooks = self._exteraless_state("_exteraless_file_hooks", list)
+        hooks[:] = [entry for entry in hooks if entry != (ext, secret)]
+
+    def add_intent_hook(self, info, hook_type: IntentHookType):
+        """Register a global intent handler via IntentsManager (enforces PluginPermissions.INTENTS)."""
+        from intents import IntentsManager
+        if not info or not isinstance(info, IntentsManager.HandlerInfo):
+            raise ValueError("You must provide a handler info (instance of IntentsManager.HandlerInfo)")
+        if not isinstance(hook_type, IntentHookType):
+            raise ValueError("You must provide a handler type (instance of IntentHookType)")
+        if hook_type == IntentHookType.BEFORE:
+            handle = IntentsManager.new_global_before_handler(info)
+        else:
+            handle = IntentsManager.new_global_after_handler(info)
+        if handle is not None:
+            self._exteraless_state("_exteraless_intent_hooks", list).append(handle)
+        return handle
+
+    def remove_intent_hook(self, handler_id):
+        """Unregister an intent handler registered with add_intent_hook()."""
+        from intents import IntentsManager
+        if not handler_id or not isinstance(handler_id, (IntentsManager.HandlerHandle, str)):
+            raise ValueError("You must provide a handler handle or id")
+        if isinstance(handler_id, str):
+            IntentsManager.unhandle(handler_id)
+            target_id = handler_id
+        else:
+            handler_id.unhandle()
+            target_id = getattr(handler_id, "handler_id", None)
+        hooks = self._exteraless_state("_exteraless_intent_hooks", list)
+        hooks[:] = [h for h in hooks if getattr(h, "handler_id", None) != target_id]
 
     # ---- command suggestions ----
 
@@ -989,6 +1146,36 @@ class BasePlugin:
             except ValueError:
                 pass
 
+    def _partial_unsupported(self, kind: str):
+        try:
+            _internal("plugin_loader").require_permission("hooks", kind)
+        except Exception:
+            raise
+        self.log(f"{kind}: partial bytecode hooks are not supported in this build")
+        return None
+
+    def hook_call_site(self, in_method, callee, callback, priority: Optional[int] = None):
+        return self._partial_unsupported("hook_call_site")
+
+    def hook_field_read(self, in_method, field, callback, priority: Optional[int] = None):
+        return self._partial_unsupported("hook_field_read")
+
+    def hook_field_write(self, in_method, field, callback, priority: Optional[int] = None):
+        return self._partial_unsupported("hook_field_write")
+
+    def hook_string_constant(self, in_method, text: str, callback, priority: Optional[int] = None):
+        return self._partial_unsupported("hook_string_constant")
+
+    def hook_return_value(self, in_method, callback, priority: Optional[int] = None):
+        return self._partial_unsupported("hook_return_value")
+
+    def unhook_partial(self, handle):
+        if handle is not None and hasattr(handle, "unhook"):
+            try:
+                handle.unhook()
+            except Exception:
+                pass
+
     # ---- resource cleanup (driven by the loader on unload) ----
 
     def _exteraless_cleanup_resources(self):
@@ -998,6 +1185,15 @@ class BasePlugin:
         on_plugin_unload(); never raises. The Java side performs its own
         per-plugin sweep as well — every call here tolerates duplicates.
         """
+        ev = self.__dict__.get("_exteraless_stop_event")
+        if ev is not None:
+            ev.set()
+        for cleanup in reversed(list(self.__dict__.get("_exteraless_cleanups", ()))):
+            try:
+                cleanup()
+            except Exception:
+                pass
+        self.__dict__["_exteraless_cleanups"] = []
         if PluginServices is not None:
             for unhook_id in list(self._exteraless_state("_exteraless_method_hook_ids", list)):
                 try:

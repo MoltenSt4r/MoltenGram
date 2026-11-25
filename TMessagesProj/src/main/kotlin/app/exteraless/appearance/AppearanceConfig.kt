@@ -545,6 +545,28 @@ object AppearanceConfig {
         return glassOutlineStyle.Int()
     }
 
+    /** Стиль кнопок действий в профиле (Material Design 3). */
+    @JvmField
+    val newProfileActionsStyle =
+        addConfig("OEAppearanceNewProfileActionsStyle", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun newProfileActionsStyle(): Boolean {
+        ensureLoaded()
+        return newProfileActionsStyle.Bool()
+    }
+
+    /** Стиль размытия шапки: 0 — обычное, 1 — прогрессивное (API 33+), 2 — градиент. */
+    @JvmField
+    val headerBlurStyle =
+        addConfig("OEAppearanceHeaderBlurStyle", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun headerBlurStyle(): Int {
+        ensureLoaded()
+        return headerBlurStyle.Int()
+    }
+
     const val GLASS_MESSAGES_OPACITY_MIN = 5
     const val GLASS_MESSAGES_OPACITY_MAX = 85
     const val GLASS_MESSAGES_OPACITY_DEFAULT = 28

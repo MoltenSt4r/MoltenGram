@@ -86,6 +86,10 @@
     <string name="OEAppearanceGlassOutlineGlare">Glare</string>
     <string name="OEAppearanceGlassOutlineSolid">Solid</string>
     <string name="OEAppearanceGlassOutlineHidden">Hidden</string>
+    <string name="OEAppearanceHeaderBlurStyle">Header Blur</string>
+    <string name="OEAppearanceHeaderBlurDefault">Default</string>
+    <string name="OEAppearanceHeaderBlurProgressive">Progressive</string>
+    <string name="OEAppearanceHeaderBlurFade">Fade</string>
     <string name="OEAppearanceGlassMessageMenu">Glass Message Menu</string>
     <string name="OEAppearanceGlassMessages">Glass Messages</string>
     <string name="OEAppearanceGlassMessagesInfo">Frosted glass for message bubbles matching global style</string>
@@ -145,6 +149,7 @@
     <string name="OEAppearanceNewChatHeaderStyle">Chat Header</string>
     <string name="OEAppearanceNewNavigationBarStyle">Navigation Bar</string>
     <string name="OEAppearanceM3ListItems">List Items</string>
+    <string name="OEAppearanceNewProfileActionsStyle">Profile Buttons</string>
     <string name="OEAppearanceSquareFab">Floating Action Button</string>
     <string name="OEAppearanceIosDesign" translatable="false">iOS Design</string>
     <string name="OEAppearanceIosNavigationBarStyle">Navigation Bar</string>

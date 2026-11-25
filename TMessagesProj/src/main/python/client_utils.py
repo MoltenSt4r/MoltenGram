@@ -114,6 +114,9 @@ def hook_scope(account):
             _hook_state.account = previous
 
 
+account_scope = hook_scope
+
+
 _warned_helpers = set()
 
 
@@ -781,6 +784,15 @@ class AccountClient:
     def __call__(self, account=None) -> "AccountClient":
         return AccountClient(account)
 
+    def __repr__(self):
+        return f"AccountClient(account={self._account})"
+
+    def __eq__(self, other):
+        return isinstance(other, AccountClient) and other._account == self._account
+
+    def __hash__(self):
+        return hash((AccountClient, self._account))
+
     @property
     def account(self) -> int:
         """The resolved account this client currently targets."""
@@ -850,7 +862,9 @@ class AccountClient:
 
     # -- sending --
 
-    def send_text(self, peer_id, text, replyToMsg=None, parse_mode=None):
+    def send_text(self, peer_id, text, replyToMsg=None, parse_mode=None, **kwargs):
+        if replyToMsg is None and "reply_to_msg" in kwargs:
+            replyToMsg = kwargs.pop("reply_to_msg")
         return send_text(peer_id, text, replyToMsg=replyToMsg,
                          parse_mode=parse_mode, account=self.account)
 
@@ -858,25 +872,33 @@ class AccountClient:
         return send_message(params, parse_mode=parse_mode, account=self.account)
 
     def send_photo(self, peer_id, path, caption=None, high_quality=False,
-                   parse_mode=None, replyToMsg=None):
+                   parse_mode=None, replyToMsg=None, **kwargs):
+        if replyToMsg is None and "reply_to_msg" in kwargs:
+            replyToMsg = kwargs.pop("reply_to_msg")
         return send_photo(peer_id, path, caption=caption, high_quality=high_quality,
                           parse_mode=parse_mode, replyToMsg=replyToMsg,
                           account=self.account)
 
-    def send_video(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None):
+    def send_video(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None, **kwargs):
+        if replyToMsg is None and "reply_to_msg" in kwargs:
+            replyToMsg = kwargs.pop("reply_to_msg")
         return send_video(peer_id, path, caption=caption, parse_mode=parse_mode,
                           replyToMsg=replyToMsg, account=self.account)
 
-    def send_document(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None):
+    def send_document(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None, **kwargs):
+        if replyToMsg is None and "reply_to_msg" in kwargs:
+            replyToMsg = kwargs.pop("reply_to_msg")
         return send_document(peer_id, path, caption=caption, parse_mode=parse_mode,
                              replyToMsg=replyToMsg, account=self.account)
 
-    def send_audio(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None):
+    def send_audio(self, peer_id, path, caption=None, parse_mode=None, replyToMsg=None, **kwargs):
+        if replyToMsg is None and "reply_to_msg" in kwargs:
+            replyToMsg = kwargs.pop("reply_to_msg")
         return send_audio(peer_id, path, caption=caption, parse_mode=parse_mode,
                           replyToMsg=replyToMsg, account=self.account)
 
     def edit_message(self, message_obj, text=None, file_path=None,
-                     with_spoiler=False, parse_mode=None):
+                     with_spoiler=False, parse_mode=None, **kwargs):
         return edit_message(message_obj, text=text, file_path=file_path,
                             with_spoiler=with_spoiler, parse_mode=parse_mode,
                             account=self.account)

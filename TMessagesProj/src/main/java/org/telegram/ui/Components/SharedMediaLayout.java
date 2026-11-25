@@ -80,6 +80,8 @@ import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.LinearLayoutManager;
 import androidx.recyclerview.widget.RecyclerView;
 
+import com.exteragram.messenger.utils.ui.ProfileUiHelper;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.ApplicationLoader;
@@ -818,6 +820,7 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
     private boolean photoVideoChangeColumnsAnimation;
     private int changeColumnsTab;
     private int animateToColumnsCount;
+    private boolean preferredTabPending;
 
     private static final Interpolator interpolator = t -> {
         --t;
@@ -1722,6 +1725,7 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
             }
         }
         onTabProgress(initialTab);
+        preferredTabPending = viewType == VIEW_TYPE_PROFILE_ACTIVITY && initialTab == -1;
         info = chatInfo;
         this.userInfo = userInfo;
         if (info != null) {
@@ -6928,6 +6932,17 @@ public class SharedMediaLayout extends FrameLayout implements Theme.Colorable, N
         scrollSlidingTextTabStrip.finishAddingTabs();
         onSelectedTabChanged();
         checkStoriesTabsPosition();
+        if (preferredTabPending) {
+            final int preferredTab = ProfileUiHelper.getPreferredTab();
+            if (delegate.isFragmentOpened()) {
+                preferredTabPending = false;
+            } else if (preferredTab != -1 && preferredTab != scrollSlidingTextTabStrip.getCurrentTabId() && scrollSlidingTextTabStrip.hasTab(preferredTab)) {
+                scrollSlidingTextTabStrip.setInitialTabId(preferredTab);
+                mediaPages[0].selectedType = preferredTab;
+                switchToCurrentSelectedMode(false);
+                onTabProgress(preferredTab);
+            }
+        }
     }
 
     private void startStopVisibleGifs() {

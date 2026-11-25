@@ -86,6 +86,7 @@ import org.telegram.ui.Components.EmptyTextProgressView;
 import org.telegram.ui.Components.FlickerLoadingView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.LinkSpanDrawable;
+import org.telegram.ui.Components.ListView.AdapterWithDiffUtils;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Components.ScaleStateListAnimator;
 import org.telegram.ui.Components.URLSpanNoUnderline;
@@ -167,8 +168,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                 if (bots == null) return;
                 this.bots = bots.connected_bots;
                 if (listAdapter != null) {
-                    updateRows();
-                    listAdapter.notifyDataSetChanged();
+                    updateRows(true);
                 }
             });
         }
@@ -316,7 +316,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                         req.authorization_ttl_days = value;
                         ttlDays = value;
                         if (listAdapter != null) {
-                            listAdapter.notifyDataSetChanged();
+                            updateRows(true);
                         }
                         getConnectionsManager().sendRequest(req, (response, error) -> {
 
@@ -454,10 +454,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                 final TL_account.TL_connectedBot bot = bots.get(index);
                 new ChatbotSheet(getContext(), bot, () -> {
                     bots.remove(bot);
-                    updateRows();
-                    if (listAdapter != null) {
-                        listAdapter.notifyDataSetChanged();
-                    }
+                    updateRows(true);
                 }, resourceProvider).show();
             } else if (position >= otherSessionsStartRow && position < otherSessionsEndRow || position >= passwordSessionsStartRow && position < passwordSessionsEndRow || position == currentSessionRow) {
                 if (getParentActivity() == null) {
@@ -543,10 +540,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                             if (error == null) {
                                 sessions.remove(authorization);
                                 passwordSessions.remove(authorization);
-                                updateRows();
-                                if (listAdapter != null) {
-                                    listAdapter.notifyDataSetChanged();
-                                }
+                                updateRows(true);
                             }
                         }));
                     } else {
@@ -561,10 +555,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                             }
                             if (error == null) {
                                 sessions.remove(authorization);
-                                updateRows();
-                                if (listAdapter != null) {
-                                    listAdapter.notifyDataSetChanged();
-                                }
+                                updateRows(true);
                             }
                         }));
                         if (param[0]) {
@@ -594,10 +585,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                             if (error == null) {
                                 sessions.remove(authorization);
                                 passwordSessions.remove(authorization);
-                                updateRows();
-                                if (listAdapter != null) {
-                                    listAdapter.notifyDataSetChanged();
-                                }
+                                updateRows(true);
                                 loadSessions(true);
                             }
                         }));
@@ -631,10 +619,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                     if (error == null) {
                         sessions.remove(authorization);
                         passwordSessions.remove(authorization);
-                        updateRows();
-                        if (listAdapter != null) {
-                            listAdapter.notifyDataSetChanged();
-                        }
+                        updateRows(true);
                     }
                 }));
             }
@@ -699,15 +684,14 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                         }
                     }
                     ttlDays = res.authorization_ttl_days;
-                    updateRows();
+                    updateRows(true);
                     if (delegate != null) {
                         delegate.sessionsLoaded();
                     }
+                } else {
+                    updateRows(true);
                 }
 //                itemsEnterAnimator.showItemsAnimated(oldItemsCount + 1);
-                if (listAdapter != null) {
-                    listAdapter.notifyDataSetChanged();
-                }
 
                 if (delegate != null) {
                     delegate.sessionsLoaded();
@@ -730,12 +714,9 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                     TL_account.webAuthorizations res = (TL_account.webAuthorizations) response;
                     MessagesController.getInstance(currentAccount).putUsers(res.users, false);
                     sessions.addAll(res.authorizations);
-                    updateRows();
                 }
+                updateRows(true);
 //                itemsEnterAnimator.showItemsAnimated(0);
-                if (listAdapter != null) {
-                    listAdapter.notifyDataSetChanged();
-                }
 
                 if (delegate != null) {
                     delegate.sessionsLoaded();
@@ -778,7 +759,42 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
         return session;
     }
 
+    private final ArrayList<ItemInner> items = new ArrayList<>();
+
+    private static final int ID_QR_CODE = 1;
+    private static final int ID_QR_CODE_DIVIDER = 2;
+    private static final int ID_CURRENT_SESSION_SECTION = 3;
+    private static final int ID_CURRENT_SESSION = 4;
+    private static final int ID_TERMINATE_ALL_SESSIONS = 5;
+    private static final int ID_TERMINATE_ALL_SESSIONS_DETAIL = 6;
+    private static final int ID_NO_OTHER_SESSIONS = 7;
+    private static final int ID_PASSWORD_SESSIONS_SECTION = 8;
+    private static final int ID_PASSWORD_SESSION = 9;
+    private static final int ID_PASSWORD_SESSIONS_DETAIL = 10;
+    private static final int ID_OTHER_SESSIONS_SECTION = 11;
+    private static final int ID_BOT_SESSION = 12;
+    private static final int ID_OTHER_SESSION = 13;
+    private static final int ID_OTHER_SESSIONS_TERMINATE_DETAIL = 14;
+    private static final int ID_TTL_HEADER = 15;
+    private static final int ID_TTL = 16;
+    private static final int ID_TTL_DIVIDE = 17;
+
+    private static long getSessionHash(TLObject session) {
+        if (session instanceof TLRPC.TL_authorization) {
+            return ((TLRPC.TL_authorization) session).hash;
+        } else if (session instanceof TLRPC.TL_webAuthorization) {
+            return ((TLRPC.TL_webAuthorization) session).hash;
+        }
+        return 0;
+    }
+
     private void updateRows() {
+        updateRows(false);
+    }
+
+    private void updateRows(boolean animated) {
+        ArrayList<ItemInner> oldItems = animated && listAdapter != null ? new ArrayList<>(items) : null;
+        items.clear();
         rowCount = 0;
         currentSessionSectionRow = -1;
         currentSessionRow = -1;
@@ -803,64 +819,146 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
 
         if (currentType == 0 && getMessagesController().qrLoginCamera) {
             qrCodeRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_SCANQR, ID_QR_CODE));
             qrCodeDividerRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_QR_CODE_DIVIDER));
         }
         if (loading) {
             if (currentType == 0) {
                 currentSessionSectionRow = rowCount++;
+                items.add(new ItemInner(VIEW_TYPE_HEADER, ID_CURRENT_SESSION_SECTION));
                 currentSessionRow = rowCount++;
+                items.add(new ItemInner(VIEW_TYPE_SESSION, ID_CURRENT_SESSION, 0, currentSession, !sessions.isEmpty() || !passwordSessions.isEmpty() || qrCodeRow != -1, 1));
+            }
+            if (animated && listAdapter != null) {
+                listAdapter.setItems(oldItems, items);
             }
             return;
         }
         if (currentSession != null) {
             currentSessionSectionRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_HEADER, ID_CURRENT_SESSION_SECTION));
             currentSessionRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_SESSION, ID_CURRENT_SESSION, 0, currentSession, !sessions.isEmpty() || !passwordSessions.isEmpty() || qrCodeRow != -1, 0));
         }
 
 
         if (!passwordSessions.isEmpty() || !sessions.isEmpty()) {
             terminateAllSessionsRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_TEXT, ID_TERMINATE_ALL_SESSIONS));
             terminateAllSessionsDetailRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_TERMINATE_ALL_SESSIONS_DETAIL));
             noOtherSessionsRow = -1;
         } else {
             terminateAllSessionsRow = -1;
             terminateAllSessionsDetailRow = -1;
             if (currentType == 1 || currentSession != null) {
                 noOtherSessionsRow = rowCount++;
+                items.add(new ItemInner(VIEW_TYPE_INFO, ID_NO_OTHER_SESSIONS));
             } else {
                 noOtherSessionsRow = -1;
             }
         }
         if (!passwordSessions.isEmpty()) {
             passwordSessionsSectionRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_HEADER, ID_PASSWORD_SESSIONS_SECTION));
             passwordSessionsStartRow = rowCount;
+            for (int i = 0, N = passwordSessions.size(); i < N; i++) {
+                TLObject session = passwordSessions.get(i);
+                items.add(new ItemInner(VIEW_TYPE_SESSION, ID_PASSWORD_SESSION, getSessionHash(session), session, i != N - 1, 0));
+            }
             rowCount += passwordSessions.size();
             passwordSessionsEndRow = rowCount;
             passwordSessionsDetailRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_PASSWORD_SESSIONS_DETAIL));
         }
         if (!sessions.isEmpty()) {
             otherSessionsSectionRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_HEADER, ID_OTHER_SESSIONS_SECTION));
             if (bots != null && !bots.isEmpty()) {
                 botSessionsStartRow = rowCount;
+                for (int i = 0, N = bots.size(); i < N; i++) {
+                    TL_account.TL_connectedBot bot = bots.get(i);
+                    items.add(new ItemInner(VIEW_TYPE_SESSION, ID_BOT_SESSION, bot.bot_id, bot, i != N - 1, 0));
+                }
                 rowCount += bots.size();
                 botSessionsEndRow = rowCount;
             }
             otherSessionsStartRow = rowCount;
             otherSessionsEndRow = rowCount + sessions.size();
+            for (int i = 0, N = sessions.size(); i < N; i++) {
+                TLObject session = sessions.get(i);
+                items.add(new ItemInner(VIEW_TYPE_SESSION, ID_OTHER_SESSION, getSessionHash(session), session, i != N - 1, 0));
+            }
             rowCount += sessions.size();
             otherSessionsTerminateDetail = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_OTHER_SESSIONS_TERMINATE_DETAIL, 0, null, false, 0));
         } else if (bots != null && !bots.isEmpty()) {
             otherSessionsSectionRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_HEADER, ID_OTHER_SESSIONS_SECTION));
             botSessionsStartRow = rowCount;
+            for (int i = 0, N = bots.size(); i < N; i++) {
+                TL_account.TL_connectedBot bot = bots.get(i);
+                items.add(new ItemInner(VIEW_TYPE_SESSION, ID_BOT_SESSION, bot.bot_id, bot, i != N - 1, 0));
+            }
             rowCount += bots.size();
             botSessionsEndRow = rowCount;
             otherSessionsTerminateDetail = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_OTHER_SESSIONS_TERMINATE_DETAIL, 0, null, false, 1));
         }
 
         if (ttlDays > 0) {
             ttlHeaderRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_HEADER, ID_TTL_HEADER));
             ttlRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_SETTINGS, ID_TTL, 0, null, false, ttlDays));
             ttlDivideRow = rowCount++;
+            items.add(new ItemInner(VIEW_TYPE_INFO, ID_TTL_DIVIDE));
+        }
+
+        if (animated && listAdapter != null) {
+            listAdapter.setItems(oldItems, items);
+        }
+    }
+
+    private static class ItemInner extends AdapterWithDiffUtils.Item {
+        final int id;
+        final long itemId;
+        final Object session;
+        final boolean needDivider;
+        final int intValue;
+
+        ItemInner(int viewType, int id) {
+            this(viewType, id, 0, null, false, 0);
+        }
+
+        ItemInner(int viewType, int id, long itemId, Object session, boolean needDivider, int intValue) {
+            super(viewType, false);
+            this.id = id;
+            this.itemId = itemId;
+            this.session = session;
+            this.needDivider = needDivider;
+            this.intValue = intValue;
+        }
+
+        @Override
+        public boolean equals(Object o) {
+            if (this == o) return true;
+            if (o == null || getClass() != o.getClass()) return false;
+            ItemInner item = (ItemInner) o;
+            return viewType == item.viewType && id == item.id && itemId == item.itemId;
+        }
+
+        @Override
+        protected boolean contentsEquals(AdapterWithDiffUtils.Item o) {
+            if (!(o instanceof ItemInner)) return false;
+            ItemInner item = (ItemInner) o;
+            if (id != item.id || itemId != item.itemId) return false;
+            if (needDivider != item.needDivider || intValue != item.intValue) return false;
+            if (id == ID_CURRENT_SESSION || id == ID_OTHER_SESSION || id == ID_PASSWORD_SESSION || id == ID_BOT_SESSION) {
+                return session == item.session;
+            }
+            return true;
         }
     }
 
@@ -871,7 +969,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
     private final int VIEW_TYPE_SCANQR = 5;
     private final int VIEW_TYPE_SETTINGS = 6;
 
-    private class ListAdapter extends RecyclerListView.SelectionAdapter {
+    private class ListAdapter extends AdapterWithDiffUtils {
 
         private Context mContext;
 
@@ -1291,8 +1389,7 @@ public class SessionsActivity extends BaseFragment implements NotificationCenter
                     } else {
                         sessions.add(0, authorization);
                     }
-                    updateRows();
-                    listAdapter.notifyDataSetChanged();
+                    updateRows(true);
                     undoView.showWithAction(0, UndoView.ACTION_QR_SESSION_ACCEPTED, response);
                 } else if (error != null) {
                     AndroidUtilities.runOnUIThread(() -> {

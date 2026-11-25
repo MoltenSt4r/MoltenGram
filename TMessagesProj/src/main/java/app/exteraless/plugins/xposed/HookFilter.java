@@ -54,7 +54,9 @@ final class HookFilter {
     private Object value;                    // "value": JSON-литерал -> Java-объект
     private String className;                // "class" для *_is_instance_of
     private String expr;                     // "expression" (или "expr") для condition (MVEL)
-    private Map<String, Object> objectVars;  // "object" -> переменные для MVEL
+    private Map<String, Object> objectVars;  // "object" -> переменные для MVEL (если Map)
+    private Object objectVal;                // "object" -> произвольное значение для vars["object"]
+    private boolean hasObject;               // true, если поле "object" присутствовало в JSON
     private List<HookFilter> orFilters;      // "filters" для or
     private boolean valid = true;            // false — фильтр заведомо сломан, никогда не проходит
 
@@ -110,9 +112,14 @@ final class HookFilter {
         } else if (json.has("expr")) {
             f.expr = app.exteraless.plugins.JsonUtils.optStringOrNull(json, "expr");
         }
-        JSONObject object = json.optJSONObject("object");
-        if (object != null) {
-            f.objectVars = toMap(object);
+        if (json.has("object")) {
+            f.hasObject = true;
+            f.objectVal = jsonToJava(json.opt("object"));
+            if (f.objectVal instanceof Map) {
+                @SuppressWarnings("unchecked")
+                Map<String, Object> asMap = (Map<String, Object>) f.objectVal;
+                f.objectVars = asMap;
+            }
         }
         if ("or".equals(f.type)) {
             f.orFilters = new ArrayList<>();
@@ -281,6 +288,9 @@ final class HookFilter {
         try {
             if (objectVars != null) {
                 vars.putAll(objectVars);
+            }
+            if (hasObject) {
+                vars.put("object", objectVal);
             }
             vars.put("param", param);
             vars.put("thisObject", param.thisObject);

@@ -70,6 +70,10 @@
     <string name="OEAppearanceGlassOutlineGlare">Блик</string>
     <string name="OEAppearanceGlassOutlineSolid">Сплошной</string>
     <string name="OEAppearanceGlassOutlineHidden">Скрыт</string>
+    <string name="OEAppearanceHeaderBlurStyle">Размытие шапки</string>
+    <string name="OEAppearanceHeaderBlurDefault">Обычное</string>
+    <string name="OEAppearanceHeaderBlurProgressive">Прогрессивное</string>
+    <string name="OEAppearanceHeaderBlurFade">Градиент</string>
     <string name="OEAppearanceGlassMessageMenu">Стеклянное меню сообщения</string>
     <string name="OEAppearanceGlassMessages">Стеклянные сообщения</string>
     <string name="OEAppearanceGlassMessagesInfo">Матовое стекло для сообщений по глобальному стилю</string>
@@ -135,6 +139,7 @@
     <string name="OEAppearanceNewChatHeaderStyle">Шапка чата</string>
     <string name="OEAppearanceNewNavigationBarStyle">Панель навигации</string>
     <string name="OEAppearanceM3ListItems">Элементы списков</string>
+    <string name="OEAppearanceNewProfileActionsStyle">Кнопки профиля</string>
     <string name="OEAppearanceSquareFab">Плавающая кнопка</string>
     <string name="OEAppearanceIosDesign" translatable="false">iOS Design</string>
     <string name="OEAppearanceIosNavigationBarStyle">Панель навигации</string>

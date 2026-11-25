@@ -136,6 +136,8 @@ import androidx.viewpager.widget.ViewPager;
 
 import org.telegram.PhoneFormat.PhoneFormat;
 import org.telegram.messenger.AccountInstance;
+import com.exteragram.messenger.utils.ui.ProfileUiHelper;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.AuthTokensHelper;
@@ -3957,7 +3959,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             musicView.setOnClickListener(v -> openSavedMusic());
 
-            actionsView = new ProfileActionsView(context, dp(74));
+            actionsView = new ProfileActionsView(context, ProfileUiHelper.getBandHeight(), resourcesProvider);
             setActionsMode();
             updateNotifications(false);
 
@@ -4361,6 +4363,12 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
 
             @Override
+            public void onLayoutChildren(RecyclerView.Recycler recycler, RecyclerView.State state) {
+                ProfileUiHelper.anchorTopChild(this, state);
+                super.onLayoutChildren(recycler, state);
+            }
+
+            @Override
             public int scrollVerticallyBy(int dy, RecyclerView.Recycler recycler, RecyclerView.State state) {
                 final View view = layoutManager.findViewByPosition(0);
                 if (view != null && !openingAvatar) {
@@ -4385,6 +4393,9 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     return 0;
                 }
 
+                if (dy > 0 && view != null && bottomPaddingRow >= 0 && banFromGroup == 0 && listView.getPaddingBottom() > 0) {
+                    dy = ProfileUiHelper.limitScrollForShortProfile(this, view, bottomPaddingRow, getHeaderExtraHeight(), dy);
+                }
                 return super.scrollVerticallyBy(dy, recycler, state);
             }
         };
@@ -6442,7 +6453,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
     private int getActionsExtraHeight(boolean withPills) {
         if (userId != 0 && imageUpdater != null && !myProfile)
             return 0;
-        return dp(74 + (withPills && (hasMusic || hasBalance) ? 25 : 0));
+        return ProfileUiHelper.getBandHeight() + dp(withPills && (hasMusic || hasBalance) ? 25 : 0);
     }
 
     private int getHeaderExtraHeight() {
@@ -11912,17 +11923,18 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         final int newTop = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+        final int bandHeight = ProfileUiHelper.getBandHeight();
         actionsView.isOpeningLayout = openAnimationInProgress;
 
         if (openAnimationInProgress && playProfileAnimation == 2 && avatarContainer != null) {
             float vh = avatarContainer.getHeight() * avatarContainer.getScaleY();
             actionsView.clipHeight = avatarContainer.getY() + vh;
             actionsView.setAlpha(avatarAnimationProgress);
-            actionsView.updatePosition(listView.getMeasuredWidth(), dp(74));
+            actionsView.updatePosition(listView.getMeasuredWidth(), bandHeight);
         } else {
             actionsView.clipHeight = -1;
             float bottom = extraHeight + newTop - dp(hasMusic || hasBalance ? 25 : 0);
-            float height = Math.min(dp(74), bottom - newTop);
+            float height = Math.min(bandHeight, bottom - newTop);
             actionsView.updatePosition(bottom - height, height);
         }
 
@@ -11942,22 +11954,23 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return;
         }
         final int newTop = ActionBar.getCurrentActionBarHeight() + (actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0);
+        final int bandHeight = ProfileUiHelper.getBandHeight();
 //        musicView.isOpeningLayout = openAnimationInProgress;
 
         if (openAnimationInProgress && playProfileAnimation == 2 && avatarContainer != null) {
 //            float vh = avatarContainer.getHeight() * avatarContainer.getScaleY();
 //            musicView.clipHeight = avatarContainer.getY() + vh;
             musicView.setAlpha(avatarAnimationProgress);
-            musicView.updatePosition(listView.getMeasuredWidth() + dp(74), getActionsExtraHeight() - dp(74));
+            musicView.updatePosition(listView.getMeasuredWidth() + bandHeight, getActionsExtraHeight() - bandHeight);
         } else {
             if (openAnimationInProgress) {
                 musicView.setAlpha(avatarAnimationProgress);
             }
 
 //            musicView.clipHeight = -1;
-            float bottom = extraHeight + newTop + dp(74);
+            float bottom = extraHeight + newTop + bandHeight;
             float height = Math.min(getActionsExtraHeight(), bottom - newTop);
-            musicView.updatePosition(bottom - height, height - dp(74));
+            musicView.updatePosition(bottom - height, height - bandHeight);
         }
     }
 

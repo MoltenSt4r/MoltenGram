@@ -6,11 +6,13 @@ import static org.telegram.messenger.LocaleController.getString;
 
 import android.annotation.SuppressLint;
 import android.content.Context;
+import android.content.res.ColorStateList;
 import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.ColorFilter;
 import android.graphics.Matrix;
 import android.graphics.Paint;
+import android.graphics.Path;
 import android.graphics.PorterDuff;
 import android.graphics.PorterDuffColorFilter;
 import android.graphics.RadialGradient;
@@ -18,6 +20,7 @@ import android.graphics.Rect;
 import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.RippleDrawable;
 import android.os.Bundle;
 import android.text.Layout;
 import android.view.HapticFeedbackConstants;
@@ -35,35 +38,97 @@ import androidx.annotation.RawRes;
 import androidx.annotation.StringRes;
 import androidx.core.graphics.ColorUtils;
 import androidx.core.math.MathUtils;
+import androidx.dynamicanimation.animation.FloatPropertyCompat;
+import androidx.dynamicanimation.animation.SpringAnimation;
+
+import com.exteragram.messenger.DividerStyle;
+import com.exteragram.messenger.ExteraConfig;
+import com.exteragram.messenger.utils.system.VibratorUtils;
+import com.exteragram.messenger.utils.ui.ProfileUiHelper;
 
 import org.telegram.messenger.AndroidUtilities;
-import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.R;
-import org.telegram.messenger.SharedConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.Theme;
-import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.blur3.BlurredBackgroundDrawableViewFactory;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-import tw.nekomimi.nekogram.NekoConfig;
+import app.exteraless.components.ChatActivityEnterViewStaticIconView;
+import tw.nekomimi.nekogram.helpers.MonetHelper;
 
 @SuppressLint("ViewConstructor")
 public class ProfileActionsView extends View {
 
+    private static final FloatPropertyCompat<Action> PRESS_PROGRESS = new FloatPropertyCompat<>("pressProgress") {
+        @Override
+        public float getValue(Action action) {
+            return action.pressProgress;
+        }
+
+        @Override
+        public void setValue(Action action, float value) {
+            action.setPressProgress(value);
+        }
+    };
+
     private final List<Action> actions = new ArrayList<>();
     private final Paint paint = new Paint();
     private final Paint shaderPaint = new Paint();
+    private final Paint containerPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final boolean material3;
     private float parentExpanded;
 
     public boolean isAnimatingCallAction = false;
     public boolean isOpeningLayout = true;
     public float clipHeight = -1;
+
+    private final Path pathTmp = new Path();
+    private final float[] radii = new float[8];
+
+    private boolean isSegmentedMode() {
+        return !material3 && ExteraConfig.getDividerStyle() == DividerStyle.SEGMENTS;
+    }
+
+    private void setRadii(boolean isFirst, boolean isLast, float outerRadius, float innerRadius) {
+        radii[0] = radii[1] = isFirst ? outerRadius : innerRadius;
+        radii[2] = radii[3] = isLast ? outerRadius : innerRadius;
+        radii[4] = radii[5] = isLast ? outerRadius : innerRadius;
+        radii[6] = radii[7] = isFirst ? outerRadius : innerRadius;
+    }
+
+    private void updateClipPath(Action action, float r, float outset, Path path) {
+        path.rewind();
+        if (material3) {
+            AndroidUtilities.rectTmp.set(action.containerInView);
+            AndroidUtilities.rectTmp.inset(-outset, -outset);
+            final float radius = action.containerRadiusInView + outset;
+            path.addRoundRect(AndroidUtilities.rectTmp, radius, radius, Path.Direction.CCW);
+            return;
+        }
+        AndroidUtilities.rectTmp.set(action.rect);
+
+        float insetW = action.rect.width() / 2.0f * (1.0f - action.getScale());
+        float insetH = action.rect.height() / 2.0f * (1.0f - action.getScale());
+        AndroidUtilities.rectTmp.inset(insetW, insetH);
+        AndroidUtilities.rectTmp.inset(-outset, -outset);
+
+        if (isSegmentedMode()) {
+            float innerRadius = getInnerRoundRadius();
+            boolean isFirst = action.isDeleting ? action.wasFirst : action == firstAction;
+            boolean isLast = action.isDeleting ? action.wasLast : action == lastAction;
+
+            setRadii(isFirst, isLast, r, innerRadius);
+            path.addRoundRect(AndroidUtilities.rectTmp, radii, Path.Direction.CCW);
+        } else {
+            path.addRoundRect(AndroidUtilities.rectTmp, r, r, Path.Direction.CCW);
+        }
+    }
 
     /** The buttons' glass, one drawable per drawn button in order; without it they are filled with their color. */
     @Nullable
@@ -124,15 +189,26 @@ public class ProfileActionsView extends View {
 
     public boolean myProfile;
 
+    private int textColor = Color.WHITE;
+
+    private final Theme.ResourcesProvider resourcesProvider;
+
     public ProfileActionsView(Context context, int targetHeight) {
+        this(context, targetHeight, null);
+    }
+
+    public ProfileActionsView(Context context, int targetHeight, Theme.ResourcesProvider resourcesProvider) {
         super(context);
+        this.resourcesProvider = resourcesProvider;
 
         paint.setColor(Color.BLACK);
         paint.setAlpha(40);
 
-        xpadding = dpf2(14);
+        material3 = ProfileUiHelper.isMaterial3Style();
+        xpadding = material3 ? ProfileUiHelper.getSidePadding() : dpf2(12);
         ypadding = dpf2(12);
         top = dpf2(8);
+        shaderPaint.setAntiAlias(material3);
         textPadding = dpf2(4);
 
         this.targetHeight = (int) (targetHeight - ypadding - top);
@@ -150,13 +226,12 @@ public class ProfileActionsView extends View {
         invalidate();
     }
 
-    private void drawGlass(Canvas canvas, RectF rect, float radius, float alpha) {
-        final float capsuleRadius = Math.min(radius, Math.min(rect.width(), rect.height()) / 2f);
+    private void drawGlass(Canvas canvas, RectF rect, float[] radii, float alpha) {
         if (glassUsed == glass.size()) {
-            glass.add(glassFactory.create(this, ProfileButtonsGlass.NO_COLORS).setRadius(capsuleRadius));
+            glass.add(glassFactory.create(this, ProfileButtonsGlass.NO_COLORS));
         }
         final BlurredBackgroundDrawable drawable = glass.get(glassUsed++);
-        drawable.setRadius(capsuleRadius);
+        drawable.setRadius(radii[0], radii[2], radii[4], radii[6]);
         drawable.setBounds((int) rect.left, (int) rect.top, (int) Math.ceil(rect.right), (int) Math.ceil(rect.bottom));
         drawable.setAlpha((int) (0xFF * alpha));
         drawable.draw(canvas);
@@ -170,13 +245,23 @@ public class ProfileActionsView extends View {
                 drawable.setBounds(0, 0, 0, 0);
             }
         }
+        glassUsed = 0;
     }
 
     public void setOnActionClickListener(OnActionClickListener onActionClickListener) {
         this.onActionClickListener = onActionClickListener;
     }
 
+    private boolean keepColorsOnPhoto;
+
+    public void setKeepColorsOnPhoto(boolean keep) {
+        keepColorsOnPhoto = keep;
+    }
+
     public void setParentExpanded(float expanded) {
+        if (keepColorsOnPhoto) {
+            expanded = 0f;
+        }
         if (parentExpanded != expanded) {
             parentExpanded = expanded;
             checkPaints();
@@ -185,8 +270,13 @@ public class ProfileActionsView extends View {
     }
 
     public void setActionsColor(int color, boolean hasColorById) {
-        if (radialGradient == null || this.color != color || this.hasColorById != hasColorById) {
+        setActionsColor(color, Color.WHITE, hasColorById);
+    }
+
+    public void setActionsColor(int color, int textColor, boolean hasColorById) {
+        if (radialGradient == null || this.color != color || this.textColor != textColor || this.hasColorById != hasColorById) {
             this.color = color;
+            this.textColor = textColor;
             this.hasColorById = hasColorById;
             createColorShader();
             checkPaints();
@@ -211,12 +301,13 @@ public class ProfileActionsView extends View {
         int w = getMeasuredWidth();
         if (w <= 0) return;
 
-        float betweenPadding = xpadding / 2f;
+        float betweenPadding = getGap();
         float width = (w - betweenPadding * Math.max(0, activeCount - 1) - xpadding * 2f) / Math.max(1, activeCount);
+        float height = material3 ? ProfileUiHelper.getContainerHeight() : targetHeight;
 
         this.radialGradient = new RadialGradient(
                 width / 2f,
-                targetHeight / 2f,
+                height / 2f,
                 hasColorById ? width * 0.65f : 1f,
                 Theme.multAlpha(color, 0.8f),
                 color,
@@ -225,12 +316,27 @@ public class ProfileActionsView extends View {
         shaderPaint.setShader(radialGradient);
     }
 
+    private void measureActions() {
+        if (getMeasuredWidth() <= 0 || activeCount <= 0 || material3) {
+            return;
+        }
+        float itemWidth = getItemWidth();
+        for (int i = 0; i < actions.size(); i++) {
+            Action action = actions.get(i);
+            if (action.text != null) {
+                action.text.setMaxWidth(itemWidth - dp(2));
+                action.textScale = action.text.getLineCount() >= 3 ? 0.75f : action.text.getLineCount() >= 2 ? 0.85f : 1.0f;
+            }
+        }
+    }
+
     @Override
     protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
         setMeasuredDimension(
                 MeasureSpec.getSize(widthMeasureSpec),
                 MeasureSpec.makeMeasureSpec((int) (targetHeight + top + ypadding), MeasureSpec.EXACTLY)
         );
+        measureActions();
     }
 
     public void updatePosition(float y, float newHeight) {
@@ -239,10 +345,26 @@ public class ProfileActionsView extends View {
         invalidate();
     }
 
+    private float getGap() {
+        return material3 ? ProfileUiHelper.getContainerGap(getMeasuredWidth() - xpadding * 2f, activeCount) : isSegmentedMode() ? dp(2) : xpadding / 2f;
+    }
+
     private float getItemWidth() {
         int w = getMeasuredWidth();
-        float betweenPadding = xpadding / 2f;
+        float betweenPadding = getGap();
         return (w - betweenPadding * (activeCount - 1) - xpadding * 2f) / activeCount;
+    }
+
+    private int getMonetSecondaryContainerColor(boolean dark) {
+        Integer c = MonetHelper.getColorOrNull("secondary_container");
+        if (c != null) return c;
+        return Theme.getColor(Theme.key_actionBarDefaultSubmenuBackground, resourcesProvider);
+    }
+
+    private int getMonetOnSecondaryContainerColor(boolean dark) {
+        Integer c = MonetHelper.getColorOrNull("on_secondary_container");
+        if (c != null) return c;
+        return Theme.getColor(Theme.key_windowBackgroundWhiteBlueText, resourcesProvider);
     }
 
     @Override
@@ -264,7 +386,7 @@ public class ProfileActionsView extends View {
             return;
         }
 
-        final float betweenPadding = xpadding / 2f;
+        final float betweenPadding = getGap();
         final float width = getItemWidth();
         float left = xpadding;
         float r = getRoundRadius();
@@ -290,6 +412,11 @@ public class ProfileActionsView extends View {
         firstAction = newFirstAction;
         lastAction = newLastAction;
 
+        if (material3) {
+            drawMaterial3(canvas, height);
+            return;
+        }
+
         float fraction = Utilities.clamp01(height / targetHeight);
         float alphaFraction1 = Utilities.clamp01((fraction - 0.2f) / 0.8f);
         if (alphaFraction1 <= 0f) {
@@ -302,30 +429,58 @@ public class ProfileActionsView extends View {
             if (action.isDeleted) {
                 continue;
             }
-            AndroidUtilities.rectTmp.set(action.rect);
-            AndroidUtilities.rectTmp.inset(
-                action.rect.width() / 2.0f * (1.0f - action.getScale()),
-                action.rect.height() / 2.0f * (1.0f - action.getScale())
-            );
             if (glassFactory != null) {
-                drawGlass(canvas, AndroidUtilities.rectTmp, r, action.getAlpha() * alphaFraction1);
+                updateClipPath(action, r, 0f, pathTmp);
+                if (!isSegmentedMode()) {
+                    Arrays.fill(radii, r);
+                }
+                drawGlass(canvas, AndroidUtilities.rectTmp, radii, action.getAlpha() * alphaFraction1);
+                canvas.save();
+                canvas.clipPath(pathTmp);
+                action.rippleDrawable.setBounds(
+                        (int) AndroidUtilities.rectTmp.left,
+                        (int) AndroidUtilities.rectTmp.top,
+                        (int) AndroidUtilities.rectTmp.right,
+                        (int) AndroidUtilities.rectTmp.bottom
+                );
+                action.rippleDrawable.draw(canvas);
+                canvas.restore();
                 continue;
             }
+
             int wasAlpha = paint.getAlpha();
             int newAlpha = (int) (action.getAlpha() * alphaFraction1 * wasAlpha);
             paint.setAlpha((int) (newAlpha * (radialGradient != null ? 0.1f : 1f)));
-            paint.setShadowLayer(0, 0, 0, 0);
 
-            canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, paint);
-            if (radialGradient != null) {
-                int wasAlpha2 = shaderPaint.getAlpha();
-                shaderPaint.setAlpha((int) (action.getAlpha() * alphaFraction1 * wasAlpha2));
-                matrix.setTranslate(AndroidUtilities.rectTmp.left, AndroidUtilities.rectTmp.top);
-                radialGradient.setLocalMatrix(matrix);
-                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, shaderPaint);
-                shaderPaint.setAlpha(wasAlpha2);
+            updateClipPath(action, r, 0f, pathTmp);
+            if (isSegmentedMode()) {
+                canvas.save();
+                canvas.clipPath(pathTmp);
+                canvas.drawRect(AndroidUtilities.rectTmp, paint);
+                drawGradient(canvas, action, alphaFraction1);
+                paint.setAlpha(wasAlpha);
+                action.rippleDrawable.setBounds(
+                        (int) AndroidUtilities.rectTmp.left,
+                        (int) AndroidUtilities.rectTmp.top,
+                        (int) AndroidUtilities.rectTmp.right,
+                        (int) AndroidUtilities.rectTmp.bottom
+                );
+                action.rippleDrawable.draw(canvas);
+                canvas.restore();
+            } else {
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, paint);
+                if (radialGradient != null) {
+                    drawGradient(canvas, action, alphaFraction1);
+                }
+                paint.setAlpha(wasAlpha);
+                action.rippleDrawable.setBounds(
+                        (int) AndroidUtilities.rectTmp.left,
+                        (int) AndroidUtilities.rectTmp.top,
+                        (int) AndroidUtilities.rectTmp.right,
+                        (int) AndroidUtilities.rectTmp.bottom
+                );
+                action.rippleDrawable.draw(canvas);
             }
-            paint.setAlpha(wasAlpha);
         }
         hideUnusedGlass();
 
@@ -334,6 +489,129 @@ public class ProfileActionsView extends View {
             for (int i = 0; i < c; i++) {
                 drawAction(canvas, actions.get(i), fraction, alphaFraction2);
             }
+        }
+    }
+
+    private void drawMaterial3(Canvas canvas, float height) {
+        final float fraction = Utilities.clamp01(height / targetHeight);
+        final float columnWidth = getItemWidth() + getGap();
+        final int c = actions.size();
+        for (int i = 0; i < c; i++) {
+            Action action = actions.get(i);
+            if (!action.isDeleted) {
+                action.updateMaterial3Layout(fraction);
+            }
+        }
+
+        final float containerAlpha = Utilities.clamp01((fraction - 0.2f) / 0.8f);
+        if (containerAlpha <= 0f) {
+            hideUnusedGlass();
+            return;
+        }
+
+        final boolean themeColors = !hasColorById && Theme.isCurrentThemeMonet();
+        final float useFilledWhiteIcon = getFilledIconProgress(themeColors || isButtonColorLight());
+        final boolean dark = Theme.isCurrentThemeDark();
+        final int filledColor = ColorUtils.blendARGB(textColor, Color.WHITE, parentExpanded);
+        final int contentColor = ColorUtils.blendARGB(themeColors ? getMonetOnSecondaryContainerColor(dark) : Theme.getColor(Theme.key_windowBackgroundWhiteBlueText, resourcesProvider), filledColor, useFilledWhiteIcon);
+        final int labelColor = hasColorById ? filledColor : ColorUtils.blendARGB(Theme.getColor(Theme.key_profile_title, resourcesProvider), Color.WHITE, parentExpanded);
+        final int containerColor = themeColors ? ColorUtils.blendARGB(getMonetSecondaryContainerColor(dark), paint.getColor(), useFilledWhiteIcon) : paint.getColor();
+        final boolean drawGradient = !themeColors && radialGradient != null;
+
+        final int stateLayerColor = ProfileUiHelper.getStateLayerColor(contentColor);
+        for (int i = 0; i < c; i++) {
+            Action action = actions.get(i);
+            if (action.isDeleted) {
+                continue;
+            }
+            final float alpha = action.getAlpha() * containerAlpha;
+            final float r = action.containerRadius;
+
+            if (glassFactory != null) {
+                Arrays.fill(radii, action.containerRadiusInView);
+                drawGlass(canvas, action.containerInView, radii, alpha);
+            }
+            canvas.save();
+            canvas.concat(action.layoutMatrix);
+            if (glassFactory == null) {
+                containerPaint.setColor(containerColor);
+                containerPaint.setAlpha((int) (Color.alpha(containerColor) * alpha * (drawGradient ? 0.1f : 1f)));
+                canvas.drawRoundRect(action.container, r, r, containerPaint);
+                if (drawGradient) {
+                    final int wasAlpha = shaderPaint.getAlpha();
+                    shaderPaint.setAlpha((int) (alpha * wasAlpha));
+                    matrix.setTranslate(action.container.left, action.container.top);
+                    radialGradient.setLocalMatrix(matrix);
+                    canvas.drawRoundRect(action.container, r, r, shaderPaint);
+                    shaderPaint.setAlpha(wasAlpha);
+                }
+            } else if (themeColors && useFilledWhiteIcon < 1f) {
+                final int monetContainerColor = getMonetSecondaryContainerColor(dark);
+                containerPaint.setColor(monetContainerColor);
+                containerPaint.setAlpha((int) (Color.alpha(monetContainerColor) * alpha * (1f - useFilledWhiteIcon)));
+                canvas.drawRoundRect(action.container, r, r, containerPaint);
+            }
+            action.updateRippleColor(stateLayerColor);
+            pathTmp.rewind();
+            pathTmp.addRoundRect(action.container, r, r, Path.Direction.CCW);
+            canvas.clipPath(pathTmp);
+            action.rippleDrawable.setBounds(
+                    (int) action.container.left,
+                    (int) action.container.top,
+                    (int) Math.ceil(action.container.right),
+                    (int) Math.ceil(action.container.bottom)
+            );
+            action.rippleDrawable.draw(canvas);
+            canvas.restore();
+        }
+
+        hideUnusedGlass();
+
+        final float iconAlpha = Utilities.clamp01((fraction - 0.4f) / 0.6f);
+        if (iconAlpha <= 0f) {
+            return;
+        }
+        final float labelAlpha = ProfileUiHelper.getLabelAlpha(fraction);
+        updateColorFilter(contentColor);
+        for (int i = 0; i < c; i++) {
+            Action action = actions.get(i);
+            if (action.isDeleted) {
+                continue;
+            }
+            final float alpha = action.getAlpha();
+
+            canvas.save();
+            canvas.concat(action.layoutMatrix);
+            updateBounds(action);
+            if (labelAlpha > 0f) {
+                action.fitLabel(columnWidth);
+                final float cx = action.container.centerX();
+                final float labelTop = action.container.bottom + action.labelTopOffset;
+                canvas.save();
+                canvas.scale(action.textScale, action.textScale, cx, labelTop);
+                action.text.draw(canvas, cx - action.text.getWidth() / 2f, labelTop + action.text.getHeight() / 2f, labelColor, labelAlpha * alpha);
+                canvas.restore();
+            }
+            drawActionIcons(canvas, action, iconAlpha * alpha, useFilledWhiteIcon);
+            canvas.restore();
+
+            drawLoading(canvas, action, iconAlpha * alpha, contentColor);
+        }
+    }
+
+    private void drawGradient(Canvas canvas, Action action, float alphaFraction) {
+        if (radialGradient != null) {
+            int wasAlpha2 = shaderPaint.getAlpha();
+            shaderPaint.setAlpha((int) (action.getAlpha() * alphaFraction * wasAlpha2));
+            matrix.setTranslate(AndroidUtilities.rectTmp.left, AndroidUtilities.rectTmp.top);
+            radialGradient.setLocalMatrix(matrix);
+            if (isSegmentedMode()) {
+                canvas.drawRect(AndroidUtilities.rectTmp, shaderPaint);
+            } else {
+                float r = getRoundRadius();
+                canvas.drawRoundRect(AndroidUtilities.rectTmp, r, r, shaderPaint);
+            }
+            shaderPaint.setAlpha(wasAlpha2);
         }
     }
 
@@ -351,6 +629,18 @@ public class ProfileActionsView extends View {
     private void updateBounds(Action action) {
         final float cx = action.rect.centerX();
         final float cy = action.rect.centerY();
+
+        if (material3) {
+            final int iconSize = ProfileUiHelper.getIconSize();
+            final float iconTop = top + (ProfileUiHelper.getContainerHeight() - iconSize) / 2f;
+            action.setBounds(
+                (int) (cx - iconSize / 2f),
+                (int) iconTop,
+                (int) (cx - iconSize / 2f) + iconSize,
+                (int) iconTop + iconSize
+            );
+            return;
+        }
 
         final int drawableSize = dp(24);
         final float drawableR = drawableSize * 0.5f;
@@ -374,15 +664,12 @@ public class ProfileActionsView extends View {
             return;
         }
 
-        final boolean isButtonColorLight = isButtonColorLight();
-        // over the photo the buttons are the dimmed photo on every Android (see ProfileButtonsGlass): white icons there
-        final float useFilledWhiteIcon = !isButtonColorLight ? 1 : MathUtils.clamp((parentExpanded - 0.75f) / 0.25f, 0, 1);
+        final float useFilledWhiteIcon = getFilledIconProgress(isButtonColorLight());
 
-        final int textColor = ColorUtils.blendARGB(Color.BLACK, Color.WHITE, useFilledWhiteIcon);
-        if (lastColorFilter == null || lastColorFilterColor != textColor) {
-            lastColorFilterColor = textColor;
-            lastColorFilter = new PorterDuffColorFilter(textColor, PorterDuff.Mode.SRC_IN);
-        }
+        int accentColor = Theme.getColor(Theme.key_windowBackgroundWhiteBlueText, resourcesProvider);
+        final int filledColor = ColorUtils.blendARGB(this.textColor, Color.WHITE, parentExpanded);
+        final int textColor = ColorUtils.blendARGB(accentColor, filledColor, useFilledWhiteIcon);
+        updateColorFilter(textColor);
 
         canvas.save();
         alpha *= action.getAlpha();
@@ -394,12 +681,33 @@ public class ProfileActionsView extends View {
 
         updateBounds(action);
 
-        final float textY = action.bounds.bottom + action.bounds.top - action.text.getHeight() * action.textScale / 2.0f - dp(4.66f);
+        final float textY = action.bounds.bottom + action.bounds.top - action.text.getHeight() * action.textScale / 2.0f - dp(6f);
         canvas.save();
         canvas.scale(action.textScale, action.textScale, cx, textY + action.text.getHeight() * action.textScale / 2.0f);
         action.text.draw(canvas, cx - action.text.getWidth() / 2f, textY, textColor, alpha);
         canvas.restore();
 
+        drawActionIcons(canvas, action, alpha, useFilledWhiteIcon);
+
+        canvas.restore();
+        drawLoading(canvas, action, alpha, filledColor);
+    }
+
+    private float getFilledIconProgress(boolean isButtonColorLight) {
+        if (!isButtonColorLight) {
+            return 1f;
+        }
+        return MathUtils.clamp((parentExpanded - 0.75f) / 0.25f, 0, 1);
+    }
+
+    private void updateColorFilter(int color) {
+        if (lastColorFilter == null || lastColorFilterColor != color) {
+            lastColorFilterColor = color;
+            lastColorFilter = new PorterDuffColorFilter(color, PorterDuff.Mode.SRC_IN);
+        }
+    }
+
+    private void drawActionIcons(Canvas canvas, Action action, float alpha, float useFilledWhiteIcon) {
         if (action.iconTranslationY != 0) {
             canvas.translate(0, action.iconTranslationY);
         }
@@ -408,8 +716,9 @@ public class ProfileActionsView extends View {
             canvas.scale(action.iconScale, action.iconScale, action.bounds.centerX(), action.bounds.centerY());
         }
         if (!isAnimatingCallAction || action.key != KEY_CALL) {
-            final float outlineAlpha = (1f - useFilledWhiteIcon) * alpha;
-            final float filledAlpha = useFilledWhiteIcon * alpha;
+            final boolean forceFilled = ChatActivityEnterViewStaticIconView.isStaticIconsEnabled();
+            final float outlineAlpha = forceFilled ? 0f : (1f - useFilledWhiteIcon) * alpha;
+            final float filledAlpha = forceFilled ? alpha : useFilledWhiteIcon * alpha;
             if (action.drawableAnimated != null) {
                 if (action.key == KEY_NOTIFICATION) {
                     drawActionDrawable(canvas, action.drawableOutline, outlineAlpha);
@@ -422,9 +731,6 @@ public class ProfileActionsView extends View {
                 drawActionDrawable(canvas, action.drawableFilled, filledAlpha);
             }
         }
-
-        canvas.restore();
-        drawLoading(canvas, action, alpha);
     }
 
     private void drawActionDrawable(Canvas canvas, Drawable drawable, float alpha) {
@@ -439,7 +745,7 @@ public class ProfileActionsView extends View {
         drawable.draw(canvas);
     }
 
-    private void drawLoading(Canvas canvas, Action action, float alpha) {
+    private void drawLoading(Canvas canvas, Action action, float alpha, int color) {
         if (action.stopDelay > 0 && System.currentTimeMillis() > action.stopDelay + action.startTime) {
             action.isLoading = false;
         }
@@ -449,10 +755,10 @@ public class ProfileActionsView extends View {
                 action.loadingDrawable = new LoadingDrawable();
                 action.loadingDrawable.setCallback(this);
                 action.loadingDrawable.setColors(
-                        Theme.multAlpha(Color.WHITE, .1f),
-                        Theme.multAlpha(Color.WHITE, .3f),
-                        Theme.multAlpha(Color.WHITE, .35f),
-                        Theme.multAlpha(Color.WHITE, .8f)
+                        Theme.multAlpha(color, .1f),
+                        Theme.multAlpha(color, .3f),
+                        Theme.multAlpha(color, .35f),
+                        Theme.multAlpha(color, .8f)
                 );
                 action.loadingDrawable.setAppearByGradient(true);
                 action.loadingDrawable.strokePaint.setStrokeWidth(dpf2(1.25f));
@@ -465,22 +771,34 @@ public class ProfileActionsView extends View {
         }
 
         if (action.loadingDrawable != null) {
-            action.loadingDrawable.setBounds(action.rect);
-            action.loadingDrawable.setRadii(getRoundRadius());
+            action.loadingDrawable.setBounds(material3 ? action.containerInView : action.rect);
+            if (material3) {
+                action.loadingDrawable.setRadii(action.containerRadiusInView);
+            } else if (isSegmentedMode()) {
+                float outerRadius = getRoundRadius();
+                float innerRadius = getInnerRoundRadius();
+                boolean isFirst = action.isDeleting ? action.wasFirst : action == firstAction;
+                boolean isLast = action.isDeleting ? action.wasLast : action == lastAction;
+                action.loadingDrawable.setRadii(
+                        isFirst ? outerRadius : innerRadius,
+                        isLast ? outerRadius : innerRadius,
+                        isLast ? outerRadius : innerRadius,
+                        isFirst ? outerRadius : innerRadius
+                );
+            } else {
+                action.loadingDrawable.setRadii(getRoundRadius());
+            }
             action.loadingDrawable.setAlpha((int) (0xFF * alpha));
             action.loadingDrawable.draw(canvas);
         }
     }
 
     public float getRoundRadius() {
-        float height = Math.max(0f, currentHeight - ypadding - top);
-        float width = activeCount > 0 ? getItemWidth() : 0;
-        if (height > 0 && width > 0) {
-            return Math.min(width, height) / 2f;
-        } else if (height > 0) {
-            return height / 2f;
-        }
-        return targetHeight > 0 ? targetHeight / 2f : dp(28);
+        return dp(ExteraConfig.getSectionRadiusDp());
+    }
+
+    public float getInnerRoundRadius() {
+        return Math.min(dp(4), ExteraConfig.getSectionRadiusDp());
     }
 
     private Action hit = null;
@@ -507,7 +825,9 @@ public class ProfileActionsView extends View {
                     downX = x;
                     downY = y;
                     downTime = System.currentTimeMillis();
-                    hit.bounce.setPressed(true);
+                    hit.setPressed(true);
+                    hit.rippleDrawable.setHotspot(x, y);
+                    hit.rippleDrawable.setState(new int[]{android.R.attr.state_pressed, android.R.attr.state_enabled});
 //                    try {
 //                        performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
 //                    } catch (Exception ignore) {}
@@ -517,17 +837,19 @@ public class ProfileActionsView extends View {
         } else if (eventAction == MotionEvent.ACTION_MOVE) {
             if (hit != null) {
                 if (Math.abs(x - downX) > 20 || Math.abs(y - downY) > 20) {
-                    hit.bounce.setPressed(false);
+                    hit.setPressed(false);
+                    hit.rippleDrawable.setState(new int[]{});
                     hit = null;
                 }
             }
         } else if (eventAction == MotionEvent.ACTION_UP || eventAction == MotionEvent.ACTION_CANCEL) {
             if (hit != null) {
-                hit.bounce.setPressed(false);
+                hit.setPressed(false);
+                hit.rippleDrawable.setState(new int[]{});
                 if (eventAction == MotionEvent.ACTION_UP && hit.rect.contains(x, y)) {
                     if (System.currentTimeMillis() - downTime > 250) {
                         try {
-                            if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.LONG_PRESS, HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
+                            performHapticFeedback(VibratorUtils.getType(HapticFeedbackConstants.LONG_PRESS), HapticFeedbackConstants.FLAG_IGNORE_VIEW_SETTING);
                         } catch (Exception ignore) {
                         }
                     }
@@ -535,7 +857,7 @@ public class ProfileActionsView extends View {
                         hit.isLoading = true;
                         invalidate();
                     }
-                    if (hit.supportsAnimate != 0) {
+                    if (hit.supportsAnimate != 0 && !ChatActivityEnterViewStaticIconView.isStaticIconsEnabled()) {
                         hit.updateDrawable(true, hit.supportsAnimate);
                     }
                     hit.startTime = System.currentTimeMillis();
@@ -559,7 +881,9 @@ public class ProfileActionsView extends View {
 
     @Override
     protected boolean verifyDrawable(@NonNull Drawable who) {
-        return super.verifyDrawable(who) || who instanceof LoadingDrawable;
+        return actions.stream().anyMatch(action -> action.rippleDrawable == who)
+                || super.verifyDrawable(who)
+                || who instanceof LoadingDrawable;
     }
 
     public void beginApplyingActions() {
@@ -649,7 +973,7 @@ public class ProfileActionsView extends View {
     }
 
     private void updateNotification(Action notificationAction, boolean animated) {
-        if (animated) {
+        if (animated && !ChatActivityEnterViewStaticIconView.isStaticIconsEnabled()) {
             if (isNotificationsEnabled) {
                 notificationAction.setText(getString(ActionButton.NOTIFICATION_MUTE.title));
                 notificationAction.updateDrawable(
@@ -981,7 +1305,19 @@ public class ProfileActionsView extends View {
         private Drawable drawableOutline;
         private RLottieDrawable drawableAnimated;
         private Text text;
+        private CharSequence title;
         private float textScale = 1.0f;
+        private float labelFitWidth = -1;
+        private float labelTopOffset;
+
+        private final RectF container = new RectF();
+        private final RectF containerInView = new RectF();
+        private final Matrix layoutMatrix = new Matrix();
+        private float containerRadius;
+        private float containerRadiusInView;
+        private SpringAnimation pressSpring;
+        private float pressProgress;
+        private int rippleColor;
 
         public void setBounds(int l, int t, int r, int b) {
             bounds.set(l, t, r, b);
@@ -1001,6 +1337,12 @@ public class ProfileActionsView extends View {
         }
 
         public void setText(CharSequence cs) {
+            title = cs;
+            if (material3) {
+                text = ProfileUiHelper.createLabel(cs);
+                labelFitWidth = -1;
+                return;
+            }
             this.text = new Text(cs, 11, AndroidUtilities.bold())
                 .multiline(3)
                 .align(Layout.Alignment.ALIGN_CENTER);
@@ -1009,6 +1351,7 @@ public class ProfileActionsView extends View {
         boolean isOpening = false;
         boolean isDeleting = false;
         boolean isDeleted = false;
+        boolean wasFirst, wasLast;
 
         int iconTranslationY = 0;
         float iconScale = 1f;
@@ -1020,6 +1363,8 @@ public class ProfileActionsView extends View {
         int callDelay = 0;
         long startTime;
         int stopDelay;
+
+        private final Drawable rippleDrawable = createRippleDrawable();
 
         @Deprecated
         public Action() {
@@ -1039,6 +1384,13 @@ public class ProfileActionsView extends View {
             }
         }
 
+        private Drawable createRippleDrawable() {
+            int r = isSegmentedMode() || material3 ? 0 : ExteraConfig.getSectionRadiusDp();
+            Drawable radSelectorDrawable = Theme.createRadSelectorDrawable(0, 0x10FFFFFF, r, r);
+            radSelectorDrawable.setCallback(ProfileActionsView.this);
+            return radSelectorDrawable;
+        }
+
         public void delete() {
             if (loadingDrawable != null) {
                 loadingDrawable.disappear();
@@ -1046,6 +1398,9 @@ public class ProfileActionsView extends View {
                 isLoading = false;
             }
             isDeleting = true;
+
+            wasFirst = this == firstAction;
+            wasLast = this == lastAction;
 
             boolean isFirstItem = prevRect.left - 1 <= xpadding;
             boolean isLastItem = prevRect.right + 1 >= getMeasuredWidth() - xpadding;
@@ -1161,7 +1516,50 @@ public class ProfileActionsView extends View {
         }
 
         public float getScale() {
-            return bounce.getScale(0.04f);
+            return material3 ? 1f : bounce.getScale(0.04f);
+        }
+
+        void setPressed(boolean pressed) {
+            bounce.setPressed(pressed);
+            if (material3) {
+                if (pressSpring == null) {
+                    pressSpring = ProfileUiHelper.createPressSpring(this, PRESS_PROGRESS);
+                }
+                pressSpring.animateToFinalPosition(pressed ? 1f : 0f);
+            }
+        }
+
+        private void setPressProgress(float progress) {
+            pressProgress = progress;
+            invalidate();
+        }
+
+        void updateMaterial3Layout(float fraction) {
+            final float cx = rect.centerX();
+            final float width = isDeleting ? from.width() : isOpening ? to.width() : rect.width();
+            container.set(cx - width / 2f, top, cx + width / 2f, top + ProfileUiHelper.getContainerHeight());
+            containerRadius = ProfileUiHelper.getCornerRadius(pressProgress);
+
+            final float appear = width > 0 && (isDeleting || isOpening) ? Utilities.clamp01(rect.width() / width) : 1f;
+            layoutMatrix.setScale(appear, appear, cx, top + targetHeight / 2f);
+            layoutMatrix.postScale(fraction, fraction, cx, top);
+            layoutMatrix.mapRect(containerInView, container);
+            containerRadiusInView = containerRadius * appear * fraction;
+        }
+
+        void fitLabel(float columnWidth) {
+            if (labelFitWidth != columnWidth) {
+                labelFitWidth = columnWidth;
+                textScale = ProfileUiHelper.fitLabel(text, title, columnWidth);
+                labelTopOffset = ProfileUiHelper.getLabelTopOffset(text);
+            }
+        }
+
+        void updateRippleColor(int color) {
+            if (rippleColor != color && rippleDrawable instanceof RippleDrawable) {
+                rippleColor = color;
+                ((RippleDrawable) rippleDrawable).setColor(ColorStateList.valueOf(color));
+            }
         }
 
         public void update(ActionButton button) {

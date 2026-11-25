@@ -13,6 +13,11 @@ import android.widget.FrameLayout;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 
+import com.exteragram.messenger.ExteraConfig;
+import com.exteragram.messenger.HeaderBlurStyle;
+import com.exteragram.messenger.utils.ui.GlassProgressiveBlur;
+import com.exteragram.messenger.utils.ui.GlassUiHelper;
+
 import app.exteraless.glass.LiquidGlassConfig;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -66,6 +71,7 @@ public class BaseFragmentSimpleGlass {
     private @Nullable Runnable onCaptured;
 
     private final @NonNull GlassSource glassSourceForFadeDrawable;
+    private final @NonNull GlassSource glassSourceForHeaderFade;
 
 
     public BaseFragmentSimpleGlass(GlassEngine engine, GlassEngine.ThemedColorDelegate themedColor) {
@@ -107,8 +113,12 @@ public class BaseFragmentSimpleGlass {
             menuFactory.setLiquidGlassEffectAllowed(true);
 
             glassSourceForFadeDrawable = glassCaptureSourceCanvas.getSource(GlassCaptureSourceCanvas.SourceIndex.BLURRED);
+            glassSourceForHeaderFade = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
+                    ? glassCaptureSourceCanvas.getSource(GlassCaptureSourceCanvas.SourceIndex.SHARP)
+                    : glassSourceForFadeDrawable;
         } else {
             glassSourceForFadeDrawable = GlassSourceEmpty.INSTANCE;
+            glassSourceForHeaderFade = GlassSourceEmpty.INSTANCE;
             glassCaptureSourceCanvas = null;
             glassSource = null;
             frostedGlassSource = null;
@@ -161,27 +171,44 @@ public class BaseFragmentSimpleGlass {
 
     @NonNull
     public Drawable createActionBarFadeDrawable(View view) {
+        final HeaderBlurStyle style = ExteraConfig.getHeaderBlurStyle();
+        final boolean progressive = style == HeaderBlurStyle.PROGRESSIVE && glassSourceForHeaderFade != glassSourceForFadeDrawable;
         final GlassFadeBlurredDrawable glassBlurredFadeDrawable = new GlassFadeBlurredDrawable(
-            glassSourceForFadeDrawable);
+            style == HeaderBlurStyle.FADE ? GlassSourceEmpty.INSTANCE : progressive ? glassSourceForHeaderFade : glassSourceForFadeDrawable);
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU && progressive) {
+            final float[] sigmas = new float[GlassProgressiveBlur.HEADER_SIGMAS_DP.length];
+            for (int i = 0; i < sigmas.length; i++) {
+                sigmas[i] = AndroidUtilities.dpf2(GlassProgressiveBlur.HEADER_SIGMAS_DP[i]);
+            }
+            glassBlurredFadeDrawable.setProgressiveBlur(sigmas);
+        }
 
         final GlassFadeRangeParams gradientRangeMask = new GlassFadeRangeParams(
-                dp(14), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(32), GlassFadeRangeParams.Gravity.START, 0, 0);
         final GlassFadeRangeParams gradientRangeFade = new GlassFadeRangeParams(
-                dp(24), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(56), GlassFadeRangeParams.Gravity.START, 0, 0);
         final GlassFadeRangeParams gradientRangeFallback = new GlassFadeRangeParams(
-                dp(20), GlassFadeRangeParams.Gravity.START, 0, 0);
+                dp(48), GlassFadeRangeParams.Gravity.START, 0, 0);
 
         glassBlurredFadeDrawable.setDirection(GlassFadeDirection.TOP);
         glassBlurredFadeDrawable.setOverlayColorSource(glassBackgroundSourceColor);
-        glassBlurredFadeDrawable.setOverlayAlpha(235);
+        glassBlurredFadeDrawable.setOverlayAlpha(160);
         glassBlurredFadeDrawable.setMaskRange(gradientRangeMask);
         glassBlurredFadeDrawable.setOverlayRange(gradientRangeFade);
 
-        glassBlurredFadeDrawable.setOverlayOnlyAlpha(248);
+        glassBlurredFadeDrawable.setOverlayOnlyAlpha(210);
         glassBlurredFadeDrawable.setOverlayOnlyRange(gradientRangeFallback);
+        glassBlurredFadeDrawable.setGradientProfile(GlassUiHelper.HEADER_FADE_ALPHAS, GlassUiHelper.HEADER_FADE_POSITIONS);
 
         glassEngine.registerDrawable(view, glassBlurredFadeDrawable);
         return glassBlurredFadeDrawable;
+    }
+
+    public void updateActionBarFadeDrawable(View view) {
+        if (view.getBackground() instanceof GlassFadeBlurredDrawable) {
+            glassEngine.unregisterDrawable((GlassFadeBlurredDrawable) view.getBackground());
+            view.setBackground(createActionBarFadeDrawable(view));
+        }
     }
 
     @NonNull

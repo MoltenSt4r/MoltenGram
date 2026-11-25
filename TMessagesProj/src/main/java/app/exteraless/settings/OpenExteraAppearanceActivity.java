@@ -5,6 +5,7 @@ import static org.telegram.messenger.LocaleController.getString;
 import android.app.Activity;
 import android.content.Context;
 import android.content.Intent;
+import android.os.Build;
 import android.text.InputType;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -107,6 +108,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     // Blur
     private int blurHeaderRow;
     private int liquidGlassRow;
+    private int headerBlurStyleRow;
     private int glassOutlineRow;
     private int glassMessageMenuRow;
     private int glassMessagesRow;
@@ -144,6 +146,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int md3ChatHeaderRow;
     private int md3NavBarRow;
     private int md3ListItemsRow;
+    private int md3ProfileActionsRow;
     private int md3PlayerRow;
     private int md3MiniPlayerRow;
     private int md3ChatInputRow;
@@ -289,12 +292,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             md3ChatHeaderRow = addRow("md3ChatHeader");
             md3NavBarRow = addRow("md3NavBar");
             md3ListItemsRow = addRow("md3ListItems");
+            md3ProfileActionsRow = addRow("md3ProfileActions");
             md3PlayerRow = addRow("md3Player", "playerSettings");
             md3MiniPlayerRow = addRow("md3MiniPlayer");
             md3ChatInputRow = -1;
             mediaGroupCarouselRow = addRow("mediaGroupCarousel");
         } else {
-            md3LoadingRow = md3SliderRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = -1;
+            md3LoadingRow = md3SliderRow = md3ChatHeaderRow = md3NavBarRow = md3ListItemsRow = md3ProfileActionsRow = -1;
             md3PlayerRow = md3MiniPlayerRow = md3ChatInputRow = mediaGroupCarouselRow = -1;
         }
         iosGroupRow = addRow("iosStyles");
@@ -326,6 +330,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         sectionsDividerRow = addRow();
 
         blurHeaderRow = addRow("blurHeader");
+        headerBlurStyleRow = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S ? addRow("headerBlurStyle") : -1;
         glassOutlineRow = addRow("glassOutline");
         glassMessageMenuRow = addRow("glassMessageMenu");
         glassMessagesRow = addRow("glassMessages");
@@ -889,6 +894,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             onM3ListItemsChanged();
             rebuildAllAndSelf(view, AppearanceConfig.m3ListItems.Bool());
             return;
+        } else if (position == md3ProfileActionsRow) {
+            AppearanceConfig.newProfileActionsStyle.setConfigBool(!AppearanceConfig.newProfileActionsStyle.Bool());
+            if (listAdapter != null && md3GroupRow >= 0) {
+                listAdapter.notifyItemChanged(md3GroupRow);
+            }
+            rebuildAllAndSelf(view, AppearanceConfig.newProfileActionsStyle.Bool());
+            return;
         } else if (position == md3MiniPlayerRow) {
             AppearanceConfig.md3MiniPlayer.setConfigBool(!AppearanceConfig.md3MiniPlayer.Bool());
             rebuildAllAndSelf(view, AppearanceConfig.md3MiniPlayer.Bool());
@@ -1018,6 +1030,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     getString(R.string.OEAppearanceDividerLine),
                     getString(R.string.OEAppearanceDividerSegments)
             }, AppearanceConfig.dividerStyle, this::onDividerStyleChanged);
+            return;
+        } else if (position == headerBlurStyleRow) {
+            showHeaderBlurStyleSelector(position);
             return;
         } else if (position == glassOutlineRow) {
             showSelector(position, getString(R.string.OEAppearanceGlassOutline), new CharSequence[]{
@@ -1601,6 +1616,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == md3ListItemsRow) {
                         cell.setText(getString(R.string.OEAppearanceM3ListItems), "",
                                 AppearanceConfig.m3ListItems.Bool(), true, true);
+                    } else if (position == md3ProfileActionsRow) {
+                        cell.setText(getString(R.string.OEAppearanceNewProfileActionsStyle), "",
+                                AppearanceConfig.newProfileActionsStyle.Bool(), true, true);
                     } else if (position == md3PlayerRow) {
                         cell.setText(getString(R.string.OEAppearanceMd3Player), "",
                                 AppearanceConfig.md3Player.Bool(), true, true);
@@ -1664,6 +1682,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     } else if (position == dividerStyleRow) {
                         String[] v = {getString(R.string.OEAppearanceDividerHidden), getString(R.string.OEAppearanceDividerLine), getString(R.string.OEAppearanceDividerSegments)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceDividerStyle), v[clamp(AppearanceConfig.dividerStyle.Int(), v.length)], false);
+                    } else if (position == headerBlurStyleRow) {
+                        cell.setTextAndValue(getString(R.string.OEAppearanceHeaderBlurStyle), getHeaderBlurStyleValue(), true);
                     } else if (position == glassOutlineRow) {
                         String[] v = {getString(R.string.OEAppearanceGlassOutlineGlare), getString(R.string.OEAppearanceGlassOutlineSolid), getString(R.string.OEAppearanceGlassOutlineHidden)};
                         cell.setTextAndValue(getString(R.string.OEAppearanceGlassOutline), v[clamp(AppearanceConfig.glassOutlineStyle.Int(), v.length)], true);
@@ -1882,6 +1902,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             } else if (position == md3LoadingRow || position == md3SliderRow
                     || position == md3ChatHeaderRow
                     || position == md3NavBarRow || position == md3ListItemsRow
+                    || position == md3ProfileActionsRow
                     || position == md3PlayerRow || position == md3MiniPlayerRow
                     || (position == md3ChatInputRow && md3ChatInputRow != -1)
                     || position == mediaGroupCarouselRow
@@ -1893,7 +1914,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     || position == hideAccountsSectionRow
                     || position == hidePremiumSectionRow || position == hideHelpSectionRow) {
                 return TYPE_ROUND_CHECK;
-            } else if (position == dividerStyleRow || position == glassOutlineRow
+            } else if (position == dividerStyleRow || position == headerBlurStyleRow || position == glassOutlineRow
                     || position == customBubbleBgRow
                     || position == tabTitleStyleRow || position == hideStoriesRow
                     || position == tabCounterRow || position == titleTextRow
@@ -2007,8 +2028,53 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         showDialog(builder.create());
     }
 
-    /** Сколько стилей MD3 включено. Счётчик «N/8» рядом с шевроном. */
-    private static final int MD3_STYLE_COUNT = 8;
+    private String getHeaderBlurStyleValue() {
+        int val = AppearanceConfig.headerBlurStyle.Int();
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU && val == 1) {
+            val = 0;
+        }
+        if (val == 1) {
+            return getString(R.string.OEAppearanceHeaderBlurProgressive);
+        } else if (val == 2) {
+            return getString(R.string.OEAppearanceHeaderBlurFade);
+        }
+        return getString(R.string.OEAppearanceHeaderBlurDefault);
+    }
+
+    private void showHeaderBlurStyleSelector(int position) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        final boolean hasProgressive = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU;
+        final CharSequence[] labels = hasProgressive
+                ? new CharSequence[]{
+                        getString(R.string.OEAppearanceHeaderBlurDefault),
+                        getString(R.string.OEAppearanceHeaderBlurProgressive),
+                        getString(R.string.OEAppearanceHeaderBlurFade)
+                }
+                : new CharSequence[]{
+                        getString(R.string.OEAppearanceHeaderBlurDefault),
+                        getString(R.string.OEAppearanceHeaderBlurFade)
+                };
+        final int[] values = hasProgressive ? new int[]{0, 1, 2} : new int[]{0, 2};
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEAppearanceHeaderBlurStyle));
+        builder.setItems(labels, (dialog, which) -> {
+            AppearanceConfig.headerBlurStyle.setConfigInt(values[which]);
+            if (listAdapter != null) {
+                listAdapter.notifyItemChanged(position);
+            }
+            rebuildAll();
+            if (parentLayout != null) {
+                parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);
+            }
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    /** Сколько стилей MD3 включено. Счётчик «N/9» рядом с шевроном. */
+    private static final int MD3_STYLE_COUNT = 9;
     /** Значение селектора NagramX, соответствующее Material Design 3. */
     private static final int STYLE_MD3 = 2;
 
@@ -2027,6 +2093,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         if (AppearanceConfig.newChatHeaderStyle.Bool()) n++;
         if (AppearanceConfig.newNavigationBarStyle.Bool()) n++;
         if (AppearanceConfig.m3ListItems.Bool()) n++;
+        if (AppearanceConfig.newProfileActionsStyle.Bool()) n++;
         if (AppearanceConfig.md3Player.Bool()) n++;
         if (AppearanceConfig.md3MiniPlayer.Bool()) n++;
         if (AppearanceConfig.mediaGroupCarousel.Bool()) n++;
@@ -2090,6 +2157,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         AppearanceConfig.newChatHeaderStyle.setConfigBool(enable);
         AppearanceConfig.newNavigationBarStyle.setConfigBool(enable);
         AppearanceConfig.m3ListItems.setConfigBool(enable);
+        AppearanceConfig.newProfileActionsStyle.setConfigBool(enable);
         AppearanceConfig.md3Player.setConfigBool(enable);
         AppearanceConfig.md3MiniPlayer.setConfigBool(enable);
         AppearanceConfig.mediaGroupCarousel.setConfigBool(enable);

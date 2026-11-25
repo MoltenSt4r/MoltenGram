@@ -16,6 +16,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 
+import app.exteraless.pillstack.custom.CustomPillStore;
 import app.exteraless.pillstack.pills.BasePill;
 import app.exteraless.pillstack.pills.CachePill;
 import app.exteraless.pillstack.pills.DcPingPill;
@@ -125,6 +126,7 @@ public class PillRegistry {
                 R.drawable.pillstack_ping,
                 IconBackgroundColors.GREEN.top, IconBackgroundColors.GREEN.bottom,
                 DcPingPill::new));
+        CustomPillStore.registerAll();
     }
 
     // ---- Пакетная регистрация ----

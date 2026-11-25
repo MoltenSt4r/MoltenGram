@@ -258,8 +258,14 @@ public class SessionBottomSheet extends BottomSheet {
                     buttonText = LocaleController.getString(R.string.Terminate);
 
                     builder.setPositiveButton(buttonText, (dialogInterface, option) -> {
+                        dialogInterface.dismiss();
+                        buttonTextView.setEnabled(false);
                         callback.onSessionTerminated(session);
-                        dismiss();
+                        AndroidUtilities.runOnUIThread(() -> {
+                            if (!isDismissed()) {
+                                dismiss();
+                            }
+                        }, 150);
                     });
                     builder.setNegativeButton(LocaleController.getString(R.string.Cancel), null);
                     AlertDialog alertDialog = builder.create();

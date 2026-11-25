@@ -9,7 +9,16 @@ import androidx.annotation.NonNull;
 import androidx.recyclerview.widget.ItemTouchHelper;
 import androidx.recyclerview.widget.RecyclerView;
 
+import app.exteraless.pillstack.custom.CustomPillIO;
+import app.exteraless.pillstack.custom.CustomPillSpec;
+import app.exteraless.pillstack.custom.CustomPillStore;
+import app.exteraless.pillstack.custom.CustomPillTemplates;
+import app.exteraless.pillstack.custom.ui.CustomPillEditorActivity;
+import app.exteraless.pillstack.custom.ui.PillImportSheet;
+import app.exteraless.pillstack.custom.ui.PillTemplatesSheet;
+
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.AlertDialog;
@@ -19,6 +28,7 @@ import org.telegram.ui.Cells.TextCheckCell;
 import org.telegram.ui.Cells.TextInfoPrivacyCell;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
+import org.telegram.ui.Components.ItemOptions;
 import org.telegram.ui.LocationActivity;
 
 import java.util.ArrayList;
@@ -34,7 +44,7 @@ import tw.nekomimi.nekogram.ui.cells.HeaderCell;
  *
  * Полное имя класса — часть контракта с общим экраном настроек, не переименовывать.
  */
-public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
+public class PillStackSettingsActivity extends BaseNekoSettingsActivity implements PillStackEvents.Listener {
 
     private final ArrayList<Integer> activePills = new ArrayList<>();
     private final ArrayList<Integer> hiddenPills = new ArrayList<>();
@@ -52,6 +62,7 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
     private int hiddenStartRow;
     private int hiddenEndRow;
     private int hiddenEmptyRow;
+    private int createCustomPillRow;
     private int addRateRow;
     private int hiddenInfoRow;
 
@@ -64,6 +75,27 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
     public PillStackSettingsActivity() {
         super();
         PillStackConfig.init();
+    }
+
+    @Override
+    public boolean onFragmentCreate() {
+        PillStackEvents.addListener(this);
+        return super.onFragmentCreate();
+    }
+
+    @Override
+    public void onFragmentDestroy() {
+        PillStackEvents.removeListener(this);
+        super.onFragmentDestroy();
+    }
+
+    @Override
+    public void onPillStackLayoutChanged() {
+        AndroidUtilities.runOnUIThread(() -> {
+            if (fragmentView != null) {
+                updateRowsAndNotify();
+            }
+        });
     }
 
     @Override
@@ -126,6 +158,7 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
             rowCount += hiddenPills.size();
             hiddenEndRow = rowCount;
         }
+        createCustomPillRow = addRow("createCustomPill");
         addRateRow = RateInstances.canAddMore() ? addRow("addRate") : -1;
         hiddenInfoRow = addRow();
 
@@ -171,6 +204,16 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
             presentFragment(new app.exteraless.pillstack.pills.weather.WeatherSettingsActivity());
             return;
         }
+        if (position == createCustomPillRow) {
+            if (!CustomPillStore.canCreate()) {
+                BulletinFactory.of(this).createErrorBulletin(LocaleController.formatString(R.string.CustomPillLimitReached, CustomPillStore.MAX_PILLS)).show();
+                return;
+            }
+            showDialog(new PillTemplatesSheet(this,
+                    template -> presentFragment(new CustomPillEditorActivity(CustomPillTemplates.create(template.id()))),
+                    spec -> CustomPillIO.showImport(this, spec)));
+            return;
+        }
         if (addRateRow != -1 && position == addRateRow) {
             RateInstances.Instance created = RateInstances.create(RateInstances.defaultBase(), PillCurrencies.AUTO);
             if (created == null) {
@@ -194,6 +237,10 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
         }
         if (activeStartRow != -1 && position >= activeStartRow && position < activeEndRow) {
             int id = activePills.get(position - activeStartRow);
+            if (CustomPillStore.get(id) != null) {
+                showCustomPillOptions(id, view);
+                return;
+            }
             activePills.remove(Integer.valueOf(id));
             hiddenPills.add(id);
             saveLayout();
@@ -202,10 +249,79 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
         }
         if (hiddenStartRow != -1 && position >= hiddenStartRow && position < hiddenEndRow) {
             int id = hiddenPills.get(position - hiddenStartRow);
+            if (CustomPillStore.get(id) != null) {
+                showCustomPillOptions(id, view);
+                return;
+            }
             hiddenPills.remove(Integer.valueOf(id));
             activePills.add(id);
             saveLayout();
             updateRowsAndNotify();
+        }
+    }
+
+    private void showCustomPillOptions(int id, View anchor) {
+        CustomPillSpec spec = CustomPillStore.get(id);
+        if (spec == null) {
+            return;
+        }
+        ItemOptions options = ItemOptions.makeOptions(this, anchor);
+        if (activePills.contains(id)) {
+            options.add(R.drawable.menu_hide_gift, getString(R.string.Hide), () -> {
+                activePills.remove(Integer.valueOf(id));
+                if (!hiddenPills.contains(id)) {
+                    hiddenPills.add(0, id);
+                }
+                saveLayout();
+                updateRowsAndNotify();
+            });
+        } else if (hiddenPills.contains(id)) {
+            options.add(R.drawable.msg_view_file, getString(R.string.Show), () -> {
+                hiddenPills.remove(Integer.valueOf(id));
+                if (!activePills.contains(id)) {
+                    activePills.add(id);
+                }
+                saveLayout();
+                updateRowsAndNotify();
+            });
+        }
+        options.add(R.drawable.msg_edit, getString(R.string.Edit), () -> presentFragment(new CustomPillEditorActivity(id)))
+                .add(R.drawable.msg_link, getString(R.string.CustomPillDuplicate), () -> duplicateCustomPill(spec))
+                .add(R.drawable.msg_share, getString(R.string.ShareFile), () -> CustomPillIO.share(this, spec))
+                .add(R.drawable.msg_copy, getString(R.string.Copy), () -> CustomPillIO.copy(this, spec))
+                .add(R.drawable.msg_delete, getString(R.string.Delete), true, () -> confirmDeleteCustomPill(spec));
+        options.show();
+    }
+
+    private void duplicateCustomPill(CustomPillSpec spec) {
+        int id = CustomPillStore.allocateId();
+        if (id == 0) {
+            BulletinFactory.of(this).createErrorBulletin(LocaleController.formatString(R.string.CustomPillLimitReached, CustomPillStore.MAX_PILLS)).show();
+            return;
+        }
+        CustomPillSpec copy = spec.copy();
+        copy.id = id;
+        String suffix = " " + getString(R.string.CustomPillCopySuffix);
+        if (copy.name.length() + suffix.length() <= CustomPillSpec.MAX_NAME) {
+            copy.name += suffix;
+        }
+        CustomPillStore.save(copy, false, CustomPillStore.getSecrets(spec.id), CustomPillStore.getResponse(spec.id));
+    }
+
+    private void confirmDeleteCustomPill(CustomPillSpec spec) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog dialog = new AlertDialog.Builder(getParentActivity(), resourcesProvider)
+                .setTitle(getString(R.string.CustomPillDeleteTitle))
+                .setMessage(AndroidUtilities.replaceTags(LocaleController.formatString(R.string.CustomPillDeleteText, spec.name)))
+                .setPositiveButton(getString(R.string.Delete), (d, which) -> CustomPillStore.delete(spec.id))
+                .setNegativeButton(getString(R.string.Cancel), null)
+                .create();
+        showDialog(dialog);
+        android.widget.TextView positive = (android.widget.TextView) dialog.getButton(AlertDialog.BUTTON_POSITIVE);
+        if (positive != null) {
+            positive.setTextColor(Theme.getColor(Theme.key_text_RedBold, resourcesProvider));
         }
     }
 
@@ -406,6 +522,12 @@ public class PillStackSettingsActivity extends BaseNekoSettingsActivity {
                         cell.setTextAndValueAndIcon(getString(R.string.PillStackWeather),
                                 getWeatherLocationValue(), R.drawable.weather_cloudy, false);
                         cell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlackText);
+                        break;
+                    }
+                    if (position == createCustomPillRow) {
+                        cell.reset();
+                        cell.setTextAndValueAndIcon(getString(R.string.CustomPillCreate), null, R.drawable.msg_add, addRateRow != -1);
+                        cell.setColors(Theme.key_windowBackgroundWhiteBlueIcon, Theme.key_windowBackgroundWhiteBlueText);
                         break;
                     }
                     if (addRateRow != -1 && position == addRateRow) {

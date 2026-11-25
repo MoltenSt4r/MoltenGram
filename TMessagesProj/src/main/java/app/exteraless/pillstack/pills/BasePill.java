@@ -6,27 +6,35 @@ import android.graphics.Canvas;
 import android.graphics.RectF;
 import android.graphics.drawable.Drawable;
 import android.os.SystemClock;
+import android.text.format.DateUtils;
 import android.transition.ChangeBounds;
 import android.transition.TransitionManager;
 import android.transition.TransitionSet;
 import android.util.SparseArray;
+import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.View;
 import android.view.ViewGroup;
 import android.widget.FrameLayout;
+import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 
+import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
+import org.telegram.messenger.R;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimatedTextView;
 import org.telegram.ui.Components.CubicBezierInterpolator;
+import org.telegram.ui.Components.ItemOptions;
+import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.LoadingDrawable;
 
 /** Общая база для пилюль: автообновление, шиммер загрузки, анимация смены размера. */
 public abstract class BasePill extends FrameLayout {
 
     private static final SparseArray<Long> globalLastUpdateTimes = new SparseArray<>();
+    private static final SparseArray<Long> globalUpdatedAt = new SparseArray<>();
 
     protected Theme.ResourcesProvider resourcesProvider;
     protected boolean loading;
@@ -87,7 +95,36 @@ public abstract class BasePill extends FrameLayout {
 
     public void markDataUpdated() {
         globalLastUpdateTimes.put(getPillId(), SystemClock.elapsedRealtime());
+        globalUpdatedAt.put(getPillId(), System.currentTimeMillis());
         scheduleNextUpdate();
+    }
+
+    protected long getLastUpdatedAt() {
+        return globalUpdatedAt.get(getPillId(), 0L);
+    }
+
+    protected ItemOptions addUpdatedAt(ItemOptions options) {
+        long time = getLastUpdatedAt();
+        if (time <= 0) {
+            return options;
+        }
+        String formatted = LocaleController.getInstance().getFormatterDay().format(time);
+        TextView textView = new TextView(options.getContext());
+        textView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        textView.setTypeface(AndroidUtilities.regular());
+        textView.setTextColor(Theme.getColor(Theme.key_groupcreate_sectionText, resourcesProvider));
+        textView.setGravity(LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT);
+        textView.setPadding(AndroidUtilities.dp(18), AndroidUtilities.dp(9), AndroidUtilities.dp(18), AndroidUtilities.dp(9));
+        textView.setTag(R.id.fit_width_tag, 1);
+        if (DateUtils.isToday(time)) {
+            textView.setText(LocaleController.formatString(R.string.CustomPillUpdatedAt, formatted));
+        } else {
+            String date = LocaleController.formatString(R.string.formatDateAtTime, LocaleController.getInstance().getFormatterDayMonth().format(time), formatted);
+            textView.setText(LocaleController.formatString(R.string.CustomPillUpdatedDate, date));
+        }
+        options.addGap();
+        options.addView(textView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+        return options;
     }
 
     private void scheduleNextUpdate() {

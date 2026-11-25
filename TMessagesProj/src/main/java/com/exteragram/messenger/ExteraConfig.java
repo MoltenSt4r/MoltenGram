@@ -582,6 +582,26 @@ public final class ExteraConfig {
         AppearanceConfig.glassOutlineStyle.setConfigInt(value.ordinal());
     }
 
+    public static HeaderBlurStyle getHeaderBlurStyle() {
+        ensureLoaded();
+        return enumAt(HeaderBlurStyle.values(), AppearanceConfig.headerBlurStyle.Int(), HeaderBlurStyle.PROGRESSIVE);
+    }
+
+    public static void setHeaderBlurStyle(HeaderBlurStyle value) {
+        ensureLoaded();
+        AppearanceConfig.headerBlurStyle.setConfigInt(value.ordinal());
+    }
+
+    public static boolean getNewProfileActionsStyle() {
+        ensureLoaded();
+        return AppearanceConfig.newProfileActionsStyle.Bool();
+    }
+
+    public static void setNewProfileActionsStyle(boolean value) {
+        ensureLoaded();
+        AppearanceConfig.newProfileActionsStyle.setConfigBool(value);
+    }
+
     public static boolean getGlassMessageMenu() {
         ensureLoaded();
         return AppearanceConfig.glassMessageMenu.Bool();

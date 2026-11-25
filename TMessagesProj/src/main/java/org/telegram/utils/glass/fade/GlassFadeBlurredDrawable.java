@@ -24,6 +24,8 @@ import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.RequiresApi;
 
+import com.exteragram.messenger.utils.ui.GlassProgressiveBlur;
+
 import org.intellij.lang.annotations.Language;
 import org.telegram.messenger.BuildConfig;
 import org.telegram.messenger.utils.GradientProtectionDrawable;
@@ -134,6 +136,25 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
     public void setOverlayOnlyRange(@NonNull GlassFadeRangeParams range) {
         overlayOnlyRange = range;
         overlayOnlyDirty = true;
+        invalidateSelf();
+    }
+
+    @Nullable private float[] gradientAlphas;
+    @Nullable private float[] gradientPositions;
+
+    public void setGradientProfile(@Nullable float[] alphas, @Nullable float[] positions) {
+        gradientAlphas = alphas;
+        gradientPositions = positions;
+        shaderDirty = true;
+        overlayOnlyDirty = true;
+        invalidateSelf();
+    }
+
+    @Nullable private float[] progressiveBlurSigmas;
+
+    public void setProgressiveBlur(@Nullable float[] sigmasPx) {
+        progressiveBlurSigmas = sigmasPx;
+        shaderDirty = true;
         invalidateSelf();
     }
 
@@ -274,15 +295,24 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
                 + (reverse ? -offset : offset)) * scale;
         final float end = start + (reverse ? -1f : 1f) * Math.max(length * scale, 0.001f);
 
-        final int[] colors = new int[8];
-        GradientProtectionDrawable.fillColors(GradientProtectionDrawable.DEFAULT_INTERPOLATOR, color, colors);
+        final int[] colors;
+        if (gradientAlphas != null) {
+            colors = new int[gradientAlphas.length];
+            for (int i = 0; i < colors.length; i++) {
+                colors[i] = Theme.multAlpha(color, gradientAlphas[i]);
+            }
+        } else {
+            colors = new int[8];
+            GradientProtectionDrawable.fillColors(GradientProtectionDrawable.DEFAULT_INTERPOLATOR, color, colors);
+        }
+        final float[] positions = gradientAlphas != null ? gradientPositions : null;
 
         if (direction == GlassFadeDirection.TOP || direction == GlassFadeDirection.BOTTOM) {
             return new LinearGradient(0f, end, 0f, start,
-                    colors, null, Shader.TileMode.CLAMP);
+                    colors, positions, Shader.TileMode.CLAMP);
         }
         return new LinearGradient(end, 0f, start, 0f,
-                colors, null, Shader.TileMode.CLAMP);
+                colors, positions, Shader.TileMode.CLAMP);
     }
 
     public static float alignDownsampleOrigin(float value, int phase, int downsample) {
@@ -505,6 +535,16 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
 
         @Override
         void buildDisplayList(Rect bounds, RectF boundsRelativeRoot) {
+            if (progressiveBlurSigmas != null) {
+                buildProgressiveDisplayList(bounds, boundsRelativeRoot);
+                return;
+            }
+            if (progressiveBlur != null) {
+                progressiveBlur.discard();
+                progressiveBlur = null;
+                progressiveSigmas = null;
+                progressiveEffect = null;
+            }
             final boolean useDownsampledSource = canDrawDownsampled();
             final int downsample = useDownsampledSource ? downsampledSource.getDownsample() : 1;
             final int nodePadding = useDownsampledSource ? DOWNSAMPLED_NODE_PADDING : 0;
@@ -616,6 +656,9 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
 
         private final RenderNode contentNode = new RenderNode("glass-fade-content");
         private final RuntimeShader runtimeShader = new RuntimeShader(AGSL_SOURCE);
+        @Nullable private GlassProgressiveBlur progressiveBlur;
+        @Nullable private float[] progressiveSigmas;
+        @Nullable private RenderEffect progressiveEffect;
         private int shaderWidth = -1, shaderHeight = -1, shaderDownsample;
         private RenderEffect[] effectPool;
         private float[] effectPoolOffsetX;
@@ -633,6 +676,16 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
 
         @Override
         void buildDisplayList(Rect bounds, RectF boundsRelativeRoot) {
+            if (progressiveBlurSigmas != null) {
+                buildProgressiveDisplayList(bounds, boundsRelativeRoot);
+                return;
+            }
+            if (progressiveBlur != null) {
+                progressiveBlur.discard();
+                progressiveBlur = null;
+                progressiveSigmas = null;
+                progressiveEffect = null;
+            }
             final boolean useDownsampledSource = canDrawDownsampled();
             final int downsample = useDownsampledSource ? downsampledSource.getDownsample() : 1;
             final int nodePadding = useDownsampledSource ? DOWNSAMPLED_NODE_PADDING : 0;
@@ -725,9 +778,68 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
             shaderDirty = false;
         }
 
+        private void buildProgressiveDisplayList(Rect bounds, RectF boundsRelativeRoot) {
+            final int width = bounds.width();
+            final int height = bounds.height();
+            final boolean vertical = direction == GlassFadeDirection.TOP || direction == GlassFadeDirection.BOTTOM;
+            if (progressiveBlur == null || progressiveSigmas != progressiveBlurSigmas) {
+                if (progressiveBlur != null) {
+                    progressiveBlur.discard();
+                }
+                progressiveBlur = new GlassProgressiveBlur(progressiveBlurSigmas);
+                progressiveSigmas = progressiveBlurSigmas;
+            }
+            if (shaderDirty || progressiveEffect == null || shaderWidth != width || shaderHeight != height || shaderDownsample != 0) {
+                final float axisLength = vertical ? height : width;
+                runtimeShader.setInputShader("alphaMask", createGradient(maskRange, axisLength,
+                        maskRange.marginEnd, Color.WHITE, 1));
+                runtimeShader.setInputShader("overlay", createGradient(overlayRange, axisLength,
+                        overlayRange.marginEnd, overlayColor, 1));
+                runtimeShader.setFloatUniform("background_color_premultiplied",
+                        Color.red(overlayColor) / 255f,
+                        Color.green(overlayColor) / 255f,
+                        Color.blue(overlayColor) / 255f,
+                        1f);
+                runtimeShader.setFloatUniform("shader_offset", 0f, 0f);
+                progressiveEffect = RenderEffect.createRuntimeShaderEffect(runtimeShader, "content");
+                shaderWidth = width;
+                shaderHeight = height;
+                shaderDownsample = 0;
+            }
+            progressiveBlur.setLayout(width, height, vertical,
+                    direction == GlassFadeDirection.TOP || direction == GlassFadeDirection.LEFT);
+
+            final RecordingCanvas sharpCanvas = progressiveBlur.beginRecording(overlayColor);
+            if (canDrawDownsampled()) {
+                downsampledSource.drawDownsampled(sharpCanvas, boundsRelativeRoot, 1,
+                        boundsRelativeRoot.left, boundsRelativeRoot.top);
+            } else {
+                sharpCanvas.translate(-boundsRelativeRoot.left, -boundsRelativeRoot.top);
+                source.draw(sharpCanvas, boundsRelativeRoot.left, boundsRelativeRoot.top,
+                        boundsRelativeRoot.right, boundsRelativeRoot.bottom);
+            }
+            progressiveBlur.endRecording();
+
+            contentNode.setPosition(0, 0, width, height);
+            contentNode.setPivotX(0f);
+            contentNode.setPivotY(0f);
+            contentNode.setScaleX(1f);
+            contentNode.setScaleY(1f);
+            contentNode.setTranslationX(0f);
+            contentNode.setTranslationY(0f);
+            final RecordingCanvas canvas = contentNode.beginRecording();
+            progressiveBlur.draw(canvas);
+            contentNode.endRecording();
+            contentNode.setRenderEffect(progressiveEffect);
+            shaderDirty = false;
+        }
+
         @Override
         void discard() {
             contentNode.discardDisplayList();
+            if (progressiveBlur != null) {
+                progressiveBlur.discard();
+            }
             shaderWidth = -1;
         }
 

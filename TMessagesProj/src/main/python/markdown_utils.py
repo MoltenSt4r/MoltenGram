@@ -32,7 +32,15 @@ from typing import Any, List, Optional
 
 from extera_utils.text_formatting import RawEntity, parse_raw
 
-__all__ = ["MarkdownEntity", "ParsedText", "parse_markdown", "parse_html"]
+__all__ = [
+    "MarkdownEntity",
+    "ParsedMessage",
+    "ParsedText",
+    "count_chars_until",
+    "parse_html",
+    "parse_markdown",
+    "to_utf16_len",
+]
 
 
 class MarkdownEntity:
@@ -116,3 +124,21 @@ def parse_markdown(text: Any) -> ParsedText:
 def parse_html(text: Any) -> ParsedText:
     """HTML counterpart of :func:`parse_markdown`, same result shape."""
     return _parse(text, "HTML")
+
+
+ParsedMessage = ParsedText
+
+
+def count_chars_until(string: str, stop_chars: str, start_index: int = 0) -> int:
+    """Count characters from *start_index* until any character in *stop_chars*."""
+    count = 0
+    for i in range(start_index, len(string)):
+        if string[i] in stop_chars:
+            break
+        count += 1
+    return count
+
+
+def to_utf16_len(s: str) -> int:
+    """Return length of *s* in UTF-16 code units (matching Telegram entity offsets)."""
+    return len(s.encode("utf-16-le")) // 2

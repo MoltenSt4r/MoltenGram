@@ -166,3 +166,99 @@ def set_static_private_field(clazz, name: str, value) -> bool:
 # short names as aliases of the private-field helpers.
 get_field = get_private_field
 set_field = set_private_field
+
+
+_PRIMITIVE_BOXES = {
+    "boolean": "java.lang.Boolean", "byte": "java.lang.Byte", "char": "java.lang.Character",
+    "short": "java.lang.Short", "int": "java.lang.Integer", "long": "java.lang.Long",
+    "float": "java.lang.Float", "double": "java.lang.Double", "void": "java.lang.Void",
+}
+
+
+def _class_for_name(name: str):
+    base = name.strip()
+    dimensions = 0
+    while base.endswith("[]"):
+        base = base[:-2].rstrip()
+        dimensions += 1
+    if base in _PRIMITIVE_BOXES:
+        from java import jclass
+        java_cls = jclass(_PRIMITIVE_BOXES[base]).TYPE
+    else:
+        try:
+            resolve = _internal("class_aliases").resolve
+            base = resolve(base)
+        except Exception:
+            pass
+        try:
+            guard_java_class = _internal("plugin_loader").guard_java_class
+            if not guard_java_class(base):
+                return None
+        except Exception:
+            pass
+        from java import jclass
+        loader = jclass("org.telegram.messenger.ApplicationLoader").applicationContext.getClassLoader()
+        java_cls = jclass("java.lang.Class").forName(base, False, loader)
+    if dimensions > 0:
+        from java import jclass
+        array = jclass("java.lang.reflect.Array")
+        for _ in range(dimensions):
+            java_cls = array.newInstance(java_cls, 0).getClass()
+    return java_cls
+
+
+def java_class(clazz: Any):
+    """Return the ``java.lang.Class`` for a class name, ``find_class`` result, or ``Class``."""
+    if isinstance(clazz, str):
+        try:
+            return _class_for_name(clazz)
+        except Exception:
+            return None
+    try:
+        return _as_class(clazz)
+    except Exception:
+        return None
+
+
+def _parameter_classes(param_types):
+    classes = []
+    for param_type in param_types:
+        resolved = java_class(param_type)
+        if resolved is None:
+            return None
+        classes.append(resolved)
+    return classes
+
+
+def get_method(clazz: Any, method_name: str, *param_types: Any):
+    """Find a declared method in *clazz* or its superclasses and make it accessible."""
+    owner = java_class(clazz)
+    params = _parameter_classes(param_types)
+    if owner is None or params is None:
+        return None
+    current = owner
+    while current is not None:
+        try:
+            method = current.getDeclaredMethod(method_name, *params)
+            method.setAccessible(True)
+            return method
+        except Exception:
+            try:
+                current = current.getSuperclass()
+            except Exception:
+                break
+    return None
+
+
+def get_constructor(clazz: Any, *param_types: Any):
+    """Find a constructor of *clazz* and make it accessible."""
+    owner = java_class(clazz)
+    params = _parameter_classes(param_types)
+    if owner is None or params is None:
+        return None
+    try:
+        constructor = owner.getDeclaredConstructor(*params)
+        constructor.setAccessible(True)
+        return constructor
+    except Exception:
+        return None

@@ -170,6 +170,10 @@ public final class SettingsBackupHelper {
             spToJSON("nkmrcfg", configJson, null, includeApiKeys);
             spToJSON("exteraconfig", configJson, null, includeApiKeys);
             spToJSON("custom_icons", configJson, null, includeApiKeys);
+            spToJSON(app.exteraless.pillstack.custom.CustomPillStore.CONFIG_NAME, configJson,
+                    key -> !key.startsWith(app.exteraless.pillstack.custom.CustomPillStore.KEY_CACHE_PREFIX)
+                            && (includeApiKeys || !app.exteraless.pillstack.custom.CustomPillStore.KEY_SECRETS.equals(key)),
+                    includeApiKeys);
         }
 
         if (enabledSections == null || enabledSections.contains(SECTION_NOTIFICATIONS)) {
@@ -459,6 +463,10 @@ public final class SettingsBackupHelper {
         try {
             app.exteraless.plugins.PluginsController.getInstance().loadPluginSettings();
             app.exteraless.plugins.PluginsController.getInstance().notifyPluginsChanged();
+        } catch (Throwable ignore) {
+        }
+        try {
+            app.exteraless.pillstack.custom.CustomPillStore.reload();
         } catch (Throwable ignore) {
         }
         PushListenerController.reconcilePushRegistration();
