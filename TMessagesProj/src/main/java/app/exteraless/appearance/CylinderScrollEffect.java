@@ -33,7 +33,7 @@ public class CylinderScrollEffect {
             "        return img.eval(fragCoord);\n" +
             "    }\n" +
             "    if (fragCoord.y < topY || fragCoord.y > botY) {\n" +
-            "        return half4(0.0);\n" +
+            "        return img.eval(fragCoord);\n" +
             "    }\n" +
             "\n" +
             "    float u = 0.0;\n" +
@@ -53,12 +53,11 @@ public class CylinderScrollEffect {
             "    }\n" +
             "\n" +
             "    u = clamp(u, 0.0, 1.0);\n" +
-            "    float sinT = clamp(u * maxSin, 0.0, 0.985);\n" +
-            "    float cosT = sqrt(max(1.0 - sinT * sinT, 0.015));\n" +
+            "    float sinT = clamp(u * maxSin, 0.0, 0.96);\n" +
+            "    float cosT = sqrt(max(1.0 - sinT * sinT, 0.05));\n" +
             "    float theta = approxAsin(sinT);\n" +
             "    float g = theta / max(maxTheta, 0.01);\n" +
-            "    float w = smoothstep(0.0, 0.28, u);\n" +
-            "    float v = clamp(mix(u, g, w), 0.0, 1.0);\n" +
+            "    float v = clamp(mix(u, g, u), 0.0, 1.0);\n" +
             "\n" +
             "    float srcY = clamp(anchorY + dir * v * edgeHeight, topY, botY);\n" +
             "\n" +
@@ -66,14 +65,16 @@ public class CylinderScrollEffect {
             "    float cx = resolution.x * 0.5;\n" +
             "    float scaleX = 1.0 + perspectiveK * depth;\n" +
             "    float srcX = cx + (fragCoord.x - cx) * scaleX;\n" +
-            "    if (srcX < 0.0 || srcX > resolution.x) {\n" +
+            "    if (srcX <= 0.0 || srcX >= resolution.x) {\n" +
             "        return half4(0.0);\n" +
             "    }\n" +
             "\n" +
+            "    float edgeAA = smoothstep(0.0, 1.5, srcX) * (1.0 - smoothstep(resolution.x - 1.5, resolution.x, srcX));\n" +
             "    half4 col = img.eval(float2(srcX, srcY));\n" +
-            "    float horizonFade = 1.0 - smoothstep(0.95, 1.0, u);\n" +
-            "    float shade = 1.0 - 0.10 * depth;\n" +
-            "    return half4(col.rgb * half(shade * horizonFade), col.a * half(horizonFade));\n" +
+            "    float horizonFade = 1.0 - 0.15 * smoothstep(0.85, 1.0, u);\n" +
+            "    float shade = 1.0 - 0.14 * depth;\n" +
+            "    float alphaMul = horizonFade * edgeAA;\n" +
+            "    return half4(col.rgb * half(shade * alphaMul), col.a * half(alphaMul));\n" +
             "}\n";
 
     private final View targetView;
@@ -93,26 +94,14 @@ public class CylinderScrollEffect {
         this.shader = new RuntimeShader(SHADER_CODE);
     }
 
-    private static float approxAsin(float x) {
-        float x2 = x * x;
-        return x * (1.0f + x2 * (0.16666667f + x2 * (0.075f + x2 * 0.04464286f)))
-                + 0.12f * x2 * x2 * x * (1.0f - (float) Math.sqrt(Math.max(1.0f - x2, 0.001f)));
-    }
-
     public void update(int width, int height, int paddingTop, int paddingBottom, float angleDeg) {
         if (width <= 0 || height <= 0) {
             clear();
             return;
         }
 
-        float visTop = (targetView.getTop() <= AndroidUtilities.dp(12) && paddingTop > AndroidUtilities.dp(28))
-                ? paddingTop : 0f;
-        float visBottom = (paddingBottom > AndroidUtilities.dp(40))
-                ? Math.max(visTop + AndroidUtilities.dp(120), height - paddingBottom + AndroidUtilities.dp(6))
-                : (float) height;
-        if (visBottom > height) {
-            visBottom = height;
-        }
+        float visTop = 0f;
+        float visBottom = (float) height;
 
         float visSpan = visBottom - visTop;
         if (visSpan < AndroidUtilities.dp(160)) {
@@ -123,12 +112,12 @@ public class CylinderScrollEffect {
         float clampedAngle = Math.max(5f, Math.min(60f, angleDeg));
         float norm = (clampedAngle - 5f) / 55f; // 0..1
 
-        float desiredEdgeDp = 64f + norm * 44f; // 64dp..108dp
-        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.28f);
+        float desiredEdgeDp = 44f + norm * 32f; // 44dp..76dp
+        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.22f);
 
-        float maxSin = 0.72f + norm * 0.23f; // 0.72..0.95 (at default 25deg -> ~0.805)
-        float maxTheta = approxAsin(maxSin);
-        float perspectiveK = 0.14f + norm * 0.18f; // 0.14..0.32 (at default 25deg -> ~0.205)
+        float maxTheta = (float) Math.toRadians(clampedAngle);
+        float maxSin = (float) Math.sin(maxTheta);
+        float perspectiveK = 0.06f + norm * 0.10f; // 0.06..0.16 (clean taper without clipping sides)
 
         if (!applied
                 || Math.abs(lastWidth - width) > 0.5f

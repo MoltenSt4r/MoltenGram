@@ -54,8 +54,8 @@ def verCode = (explicitVerCode && explicitVerCode.toString().isInteger())
 
 def officialVer = APP_VERSION_NAME
 def officialCode = APP_VERSION_CODE
-def appCodename = (project.hasProperty('APP_CODENAME') ? APP_CODENAME : 'Tiramisu')
-def stagingCodename = (project.hasProperty('STAGING_CODENAME') ? project.property('STAGING_CODENAME').toString() : 'Titanium')
+def appCodename = (project.hasProperty('APP_CODENAME') ? APP_CODENAME : 'Lemonade')
+def stagingCodename = (project.hasProperty('STAGING_CODENAME') ? project.property('STAGING_CODENAME').toString() : 'Lemonade')
 
 def keystorePwd = null
 def alias = null
