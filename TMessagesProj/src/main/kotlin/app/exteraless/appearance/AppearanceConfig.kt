@@ -658,6 +658,10 @@ object AppearanceConfig {
     const val CHAT_3D_SCROLL_ANGLE_MAX = 60
     const val CHAT_3D_SCROLL_ANGLE_DEFAULT = 25
 
+    const val CHAT_3D_SCROLL_SIZE_MIN = 25
+    const val CHAT_3D_SCROLL_SIZE_MAX = 200
+    const val CHAT_3D_SCROLL_SIZE_DEFAULT = 100
+
     const val CHAT_3D_SCROLL_SUBTLE = 0
     const val CHAT_3D_SCROLL_MEDIUM = 1
     const val CHAT_3D_SCROLL_STRONG = 2
@@ -676,6 +680,11 @@ object AppearanceConfig {
     @JvmField
     val chat3dScrollAngle =
         addConfig("OEAppearanceChat3dScrollAngle", ConfigItem.configTypeInt, CHAT_3D_SCROLL_ANGLE_DEFAULT)
+
+    /** Размер/глубина зоны 3D-эффекта в процентах (25%..200%) */
+    @JvmField
+    val chat3dScrollSize =
+        addConfig("OEAppearanceChat3dScrollSize", ConfigItem.configTypeInt, CHAT_3D_SCROLL_SIZE_DEFAULT)
 
     @JvmStatic
     fun chat3dScroll(): Boolean {
@@ -703,6 +712,16 @@ object AppearanceConfig {
     fun chat3dScrollMaxAngle(): Float {
         ensureLoaded()
         return chat3dScrollAngle().toFloat()
+    }
+
+    @JvmStatic
+    fun chat3dScrollSize(): Int {
+        ensureLoaded()
+        val v = chat3dScrollSize.Int()
+        if (v in CHAT_3D_SCROLL_SIZE_MIN..CHAT_3D_SCROLL_SIZE_MAX) {
+            return v
+        }
+        return CHAT_3D_SCROLL_SIZE_DEFAULT
     }
 
     // ---- Папки-чипсы Material 3 ----

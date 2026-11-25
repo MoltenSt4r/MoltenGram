@@ -60,7 +60,8 @@ public class MessageEnterTransitionContainer extends View {
                 cylinderScrollEffect = new app.exteraless.appearance.CylinderScrollEffect(this);
             }
             float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
-            cylinderScrollEffect.update(width, height, lastListTopPadding, lastListBottomPadding, maxAngle);
+            float effectSize = app.exteraless.appearance.AppearanceConfig.chat3dScrollSize();
+            cylinderScrollEffect.update(width, height, lastListTopPadding, lastListBottomPadding, maxAngle, effectSize);
         } catch (Throwable ignored) {
         }
     }

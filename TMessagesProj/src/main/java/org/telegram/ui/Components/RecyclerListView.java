@@ -1785,7 +1785,8 @@ public class RecyclerListView extends RecyclerView implements IBlur3Capture {
                 cylinderScrollEffect = new app.exteraless.appearance.CylinderScrollEffect(this);
             }
             float maxAngle = app.exteraless.appearance.AppearanceConfig.chat3dScrollMaxAngle();
-            cylinderScrollEffect.update(width, height, getPaddingTop(), getPaddingBottom(), maxAngle);
+            float effectSize = app.exteraless.appearance.AppearanceConfig.chat3dScrollSize();
+            cylinderScrollEffect.update(width, height, getPaddingTop(), getPaddingBottom(), maxAngle, effectSize);
         } catch (Throwable ignored) {
         }
     }

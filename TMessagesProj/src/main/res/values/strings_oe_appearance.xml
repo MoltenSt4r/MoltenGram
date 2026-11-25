@@ -107,6 +107,7 @@
     <string name="OEAppearanceChat3dScroll">3D Scroll</string>
     <string name="OEAppearanceChat3dScrollInfo">Cylindrical roller 3D tilt effect across all scrollable lists and chats</string>
     <string name="OEAppearanceChat3dScrollAngle">3D Tilt Angle</string>
+    <string name="OEAppearanceChat3dScrollSize">3D Effect Size</string>
     <string name="OEAppearanceChat3dScrollIntensity">3D Scroll Intensity</string>
     <string name="OEAppearanceChat3dScrollSubtle">Subtle (18°)</string>
     <string name="OEAppearanceChat3dScrollMedium">Moderate (26°)</string>

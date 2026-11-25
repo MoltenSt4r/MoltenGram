@@ -413,6 +413,7 @@ public final class EtgBackup {
         integer(list, "glassMessagesRefraction", AppearanceConfig.glassMessagesRefraction, AppearanceConfig.GLASS_MESSAGES_REFRACTION_MIN, AppearanceConfig.GLASS_MESSAGES_REFRACTION_MAX);
         bool(list, "chat3dScroll", AppearanceConfig.chat3dScroll);
         integer(list, "chat3dScrollAngle", AppearanceConfig.chat3dScrollAngle, AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MIN, AppearanceConfig.CHAT_3D_SCROLL_ANGLE_MAX);
+        integer(list, "chat3dScrollSize", AppearanceConfig.chat3dScrollSize, AppearanceConfig.CHAT_3D_SCROLL_SIZE_MIN, AppearanceConfig.CHAT_3D_SCROLL_SIZE_MAX);
         integer(list, "chat3dScrollIntensity", AppearanceConfig.chat3dScrollIntensity, 0, 2);
         integer(list, "stickerShape", ChatsConfig.stickerShape, 0, 2);
         integer(list, "doubleTapSeekDuration", ChatsConfig.doubleTapSeekDuration, 0, 3);

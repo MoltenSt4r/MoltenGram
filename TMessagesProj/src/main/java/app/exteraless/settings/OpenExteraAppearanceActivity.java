@@ -87,6 +87,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private static final int TYPE_GLASS_STROKE_SLIDER = 109;
     private static final int TYPE_SLIDER_THICKNESS = 110;
     private static final int TYPE_SWITCH_SIZE = 111;
+    /** Слайдер размера/глубины 3D-скролла */
+    private static final int TYPE_3D_SCROLL_SIZE_SLIDER = 112;
     private static final int PICK_CUSTOM_BUBBLE_BG_REQUEST_CODE = 21091;
 
     // Appearance
@@ -120,6 +122,7 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
     private int customBubbleBgRow;
     private int chat3dScrollRow;
     private int chat3dScrollIntensityRow;
+    private int chat3dScrollSizeRow;
     private int forceBlurRow;
     private int disableAvatarBlurRow;
     private int blurDividerRow;
@@ -365,8 +368,10 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
         chat3dScrollRow = addRow("chat3dScroll");
         if (AppearanceConfig.chat3dScroll.Bool()) {
             chat3dScrollIntensityRow = addRow("chat3dScrollIntensity");
+            chat3dScrollSizeRow = addRow("chat3dScrollSize");
         } else {
             chat3dScrollIntensityRow = -1;
+            chat3dScrollSizeRow = -1;
         }
         forceBlurRow = addRow("forceBlur");
         disableAvatarBlurRow = addRow("disableAvatarBlur");
@@ -663,6 +668,13 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
 
     private void onChat3dAngleChanged(int value) {
         AppearanceConfig.chat3dScrollAngle.setConfigInt(value);
+        if (listView != null) {
+            listView.update3dScroll();
+        }
+    }
+
+    private void onChat3dSizeChanged(int value) {
+        AppearanceConfig.chat3dScrollSize.setConfigInt(value);
         if (listView != null) {
             listView.update3dScroll();
         }
@@ -1122,19 +1134,20 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 ((TextCheckCell) view).setChecked(enabled);
             }
             int prevIntensity = chat3dScrollIntensityRow;
+            int prevSize = chat3dScrollSizeRow;
             updateRows();
             if (listAdapter != null) {
                 if (prevIntensity == -1 && chat3dScrollIntensityRow != -1) {
-                    listAdapter.notifyItemInserted(chat3dScrollIntensityRow);
+                    listAdapter.notifyItemRangeInserted(chat3dScrollIntensityRow, chat3dScrollSizeRow != -1 ? 2 : 1);
                 } else if (prevIntensity != -1 && chat3dScrollIntensityRow == -1) {
-                    listAdapter.notifyItemRemoved(prevIntensity);
+                    listAdapter.notifyItemRangeRemoved(prevIntensity, prevSize != -1 ? 2 : 1);
                 }
             }
             if (listView != null) {
                 listView.update3dScroll();
             }
             return;
-        } else if (position == chat3dScrollIntensityRow) {
+        } else if (position == chat3dScrollIntensityRow || position == chat3dScrollSizeRow) {
             return;
         } else if (position == tabTitleStyleRow) {
             if (getParentActivity() == null) {
@@ -1418,6 +1431,19 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider3d.setValue(AppearanceConfig.chat3dScrollAngle.Int());
                     slider3d.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
                     view = slider3d;
+                    break;
+                case TYPE_3D_SCROLL_SIZE_SLIDER:
+                    AvatarCornersSeekBar slider3dSize = new AvatarCornersSeekBar(mContext,
+                            OpenExteraAppearanceActivity.this::onChat3dSizeChanged,
+                            AppearanceConfig.CHAT_3D_SCROLL_SIZE_MIN,
+                            AppearanceConfig.CHAT_3D_SCROLL_SIZE_MAX,
+                            getString(R.string.OEAppearanceChat3dScrollSize),
+                            AppearanceConfig.CHAT_3D_SCROLL_SIZE_MIN + "%",
+                            AppearanceConfig.CHAT_3D_SCROLL_SIZE_MAX + "%");
+                    slider3dSize.setValueSuffix("%");
+                    slider3dSize.setValue(AppearanceConfig.chat3dScrollSize());
+                    slider3dSize.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundWhite));
+                    view = slider3dSize;
                     break;
                 case TYPE_GLASS_OPACITY_SLIDER:
                     AvatarCornersSeekBar sliderOpacity = new AvatarCornersSeekBar(mContext,
@@ -1799,6 +1825,11 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                     slider.setValue(AppearanceConfig.chat3dScrollAngle.Int());
                     break;
                 }
+                case TYPE_3D_SCROLL_SIZE_SLIDER: {
+                    AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
+                    slider.setValue(AppearanceConfig.chat3dScrollSize());
+                    break;
+                }
                 case TYPE_GLASS_OPACITY_SLIDER: {
                     AvatarCornersSeekBar slider = (AvatarCornersSeekBar) holder.itemView;
                     slider.setValue(AppearanceConfig.glassMessagesOpacity.Int());
@@ -1912,6 +1943,8 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
                 return TYPE_SECTION_SLIDER;
             } else if (position == chat3dScrollIntensityRow) {
                 return TYPE_3D_SCROLL_SLIDER;
+            } else if (position == chat3dScrollSizeRow) {
+                return TYPE_3D_SCROLL_SIZE_SLIDER;
             } else if (position == glassMessagesOpacityRow) {
                 return TYPE_GLASS_OPACITY_SLIDER;
             } else if (position == glassMessagesRefractionRow) {

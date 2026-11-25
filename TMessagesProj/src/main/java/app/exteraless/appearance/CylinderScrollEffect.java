@@ -95,6 +95,10 @@ public class CylinderScrollEffect {
     }
 
     public void update(int width, int height, int paddingTop, int paddingBottom, float angleDeg) {
+        update(width, height, paddingTop, paddingBottom, angleDeg, 100f);
+    }
+
+    public void update(int width, int height, int paddingTop, int paddingBottom, float angleDeg, float effectSizePercent) {
         if (width <= 0 || height <= 0) {
             clear();
             return;
@@ -111,13 +115,14 @@ public class CylinderScrollEffect {
 
         float clampedAngle = Math.max(5f, Math.min(60f, angleDeg));
         float norm = (clampedAngle - 5f) / 55f; // 0..1
+        float sizeScale = Math.max(0.25f, Math.min(2.0f, effectSizePercent / 100f));
 
-        float desiredEdgeDp = 72f + norm * 48f; // 72dp..120dp
-        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.28f);
+        float desiredEdgeDp = (72f + norm * 48f) * sizeScale; // scaled by effect size (25%..200%)
+        float edgeHeight = Math.min(AndroidUtilities.dpf2(desiredEdgeDp), visSpan * 0.42f);
 
         float maxSin = 0.72f + norm * 0.24f; // 0.72..0.96 (expressive 3D cylinder arc)
         float maxTheta = (float) Math.asin(maxSin);
-        float perspectiveK = 0.18f + norm * 0.22f; // 0.18..0.40 (strong 3D perspective taper with smooth edgeAA)
+        float perspectiveK = (0.18f + norm * 0.22f) * (0.55f + 0.45f * sizeScale);
 
         if (!applied
                 || Math.abs(lastWidth - width) > 0.5f
