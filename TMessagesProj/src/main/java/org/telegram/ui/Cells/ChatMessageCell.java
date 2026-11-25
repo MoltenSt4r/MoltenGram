@@ -7401,7 +7401,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 if (messageObject.isQuickReply() && !messageObject.isSendError()) {
                     timeMore -= dp(3);
                 } else if (messageObject.isOutOwner()) {
-                    timeMore += dp(23.0f);
+                    timeMore += dp(26.0f);
                 }
                 timeMore += getExtraTimeX();
 
@@ -13170,7 +13170,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             // An outgoing widget's time over its corner sits as a photo's: the ticks over media keep to layoutWidth.
             if (mediaBackground || widgetTimeOver() && currentMessageObject.isOutOwner()) {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(44.0f);
+                    timeX = layoutWidth - timeWidth - dp(47.0f);
                 } else if (isCompactIn()) {
                     timeX = getCompactRight() - timeWidth;
                 } else {
@@ -13195,7 +13195,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 }
             } else {
                 if (currentMessageObject.isOutOwner()) {
-                    timeX = layoutWidth - timeWidth - dp(41.0f);
+                    timeX = layoutWidth - timeWidth - dp(44.0f);
                 } else {
                     if (isCompactIn()) {
                         timeX = getCompactRight() - timeWidth - getCompactSideButtonColumn();
