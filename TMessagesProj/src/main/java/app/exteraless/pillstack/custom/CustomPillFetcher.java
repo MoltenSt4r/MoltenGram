@@ -1,5 +1,7 @@
 package app.exteraless.pillstack.custom;
 
+import android.Manifest;
+import android.content.pm.PackageManager;
 import android.location.Location;
 import android.net.Uri;
 import android.os.SystemClock;
@@ -8,6 +10,7 @@ import android.util.SparseArray;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.ContextCompat;
 
 import app.exteraless.pillstack.ExchangeRates;
 import app.exteraless.pillstack.PillCurrencies;
@@ -16,6 +19,7 @@ import com.google.gson.JsonParser;
 import tw.nekomimi.nekogram.utils.HttpClient;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.BuildVars;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
@@ -89,6 +93,11 @@ public final class CustomPillFetcher {
         }
     }
 
+    public static boolean hasLocationPermission() {
+        return ContextCompat.checkSelfPermission(ApplicationLoader.applicationContext, Manifest.permission.ACCESS_FINE_LOCATION) == PackageManager.PERMISSION_GRANTED
+                || ContextCompat.checkSelfPermission(ApplicationLoader.applicationContext, Manifest.permission.ACCESS_COARSE_LOCATION) == PackageManager.PERMISSION_GRANTED;
+    }
+
     public static boolean needsLocation(CustomPillSpec spec) {
         if (!spec.http) {
             return false;
@@ -134,7 +143,7 @@ public final class CustomPillFetcher {
             }
         });
         if (needsLocation(spec)) {
-            if (!Weather.isLocationPermissionGranted()) {
+            if (!hasLocationPermission()) {
                 deliver.run(Response.error(ERROR_LOCATION));
                 return;
             }

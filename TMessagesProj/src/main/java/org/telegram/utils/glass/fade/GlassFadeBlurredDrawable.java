@@ -535,16 +535,6 @@ public class GlassFadeBlurredDrawable extends GlassDrawable {
 
         @Override
         void buildDisplayList(Rect bounds, RectF boundsRelativeRoot) {
-            if (progressiveBlurSigmas != null) {
-                buildProgressiveDisplayList(bounds, boundsRelativeRoot);
-                return;
-            }
-            if (progressiveBlur != null) {
-                progressiveBlur.discard();
-                progressiveBlur = null;
-                progressiveSigmas = null;
-                progressiveEffect = null;
-            }
             final boolean useDownsampledSource = canDrawDownsampled();
             final int downsample = useDownsampledSource ? downsampledSource.getDownsample() : 1;
             final int nodePadding = useDownsampledSource ? DOWNSAMPLED_NODE_PADDING : 0;

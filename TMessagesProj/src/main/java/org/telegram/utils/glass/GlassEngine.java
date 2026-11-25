@@ -78,6 +78,14 @@ public class GlassEngine {
         viewPositionStates.add(new ViewPositionState(view, drawable));
     }
 
+    public void unregisterDrawable(@NonNull GlassDrawable drawable) {
+        for (int a = viewPositionStates.size() - 1; a >= 0; a--) {
+            if (viewPositionStates.get(a).drawable == drawable) {
+                viewPositionStates.remove(a);
+            }
+        }
+    }
+
     private final RectF externalCapturePosition = new RectF();
     private boolean externalCapturePositionInvalidated;
 

@@ -341,7 +341,6 @@ public class CustomPill extends BasePill implements PillStackEvents.Listener {
         options.setDrawScrim(false)
                 .setGravity(LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT)
                 .setDimAlpha(0)
-                .setDismissOnMoveOutside(true)
                 .show();
         return true;
     }
@@ -500,7 +499,7 @@ public class CustomPill extends BasePill implements PillStackEvents.Listener {
     }
 
     @Override
-    protected void updateLoadingColors() {
+    public void updateLoadingColors() {
         if (loadingDrawable == null) {
             return;
         }

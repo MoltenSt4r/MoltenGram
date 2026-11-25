@@ -134,6 +134,9 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
     private AddButtonDrawable addRuleDrawable;
     private boolean chipsHttp;
     private int keyboardInset;
+    private int bottomInset;
+    @Nullable
+    private View pinnedHeader;
     private int shift = -4;
     private final Runnable updateListRunnable = () -> {
         if (listView != null && listView.adapter != null) {
@@ -200,19 +203,27 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
         Bulletin.addDelegate(this, new Bulletin.Delegate() {
             @Override
             public int getTopOffset(int tag) {
-                return AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight() + getPinnedHeaderOffset();
+                return AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight() + (pinnedHeader != null ? dp(60) : 0);
             }
 
             @Override
             public int getBottomOffset(int tag) {
-                return getBottomInset() + keyboardInset;
+                return bottomInset + keyboardInset;
             }
         });
     }
 
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
+        bottomInset = bottom;
         super.onInsets(left, top, right, bottom + keyboardInset);
+        if (pinnedHeader != null) {
+            pinnedHeader.setTranslationY(top + ActionBar.getCurrentActionBarHeight() + dp(4));
+        }
+        if (listView != null) {
+            listView.setPadding(0, top + ActionBar.getCurrentActionBarHeight() + (pinnedHeader != null ? dp(60) : 0), 0, bottom + keyboardInset);
+            listView.setClipToPadding(false);
+        }
         Bulletin.updateCurrentPosition();
         if (keyboardInset > 0 && listView != null) {
             listView.post(() -> {
@@ -224,24 +235,14 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
         }
     }
 
-    @Override
-    protected View createPinnedHeader(@NonNull Context context, @NonNull BlurredBackgroundDrawableViewFactory glassFactory) {
+    private View createPinnedHeader(@NonNull Context context) {
         FragmentSearchField searchField = new FragmentSearchField(context, getResourceProvider());
         searchField.setPadding(dp(4), dp(4), dp(4), dp(4));
-        BlurredBackgroundProvider searchBackground = new BlurredBackgroundProviderBuilder(getResourceProvider())
-                .setBackgroundColor((r, isDark) -> {
-                    int fieldColor = ColorUtils.compositeColors(Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, r), isDark ? 0.07f : 0.05f), Theme.getColor(Theme.key_windowBackgroundWhite, r));
-                    float alpha = LiteMode.isEnabled(LiteMode.FLAG_LIQUID_GLASS) ? 0.85f : 0.76f;
-                    return BlurredBackgroundProviderImpl.solveSrcColor(Theme.getColor(Theme.key_windowBackgroundGray, r), fieldColor, alpha);
-                })
-                .setStrokeColorTop(0x11000000, 0x06FFFFFF)
-                .setStrokeColorBottom(0x20000000, 0x11FFFFFF)
-                .setShadowColor(0x20000000, 0x04FFFFFF)
-                .setShadowLayer(AndroidUtilities.dpf2(2.667f), 0, AndroidUtilities.dpf2(0.85f))
-                .setStrokeWidth(AndroidUtilities.dpf2(0.4f), AndroidUtilities.dpf2(0.4f))
-                .build();
-        searchField.setupBlurredBackground(glassFactory.create(searchField, searchBackground));
-        searchField.setBlurredBackgroundVisibility(1f);
+        int fieldColor = ColorUtils.compositeColors(
+                Theme.multAlpha(Theme.getColor(Theme.key_windowBackgroundWhiteBlackText, getResourceProvider()), Theme.isCurrentThemeDark() ? 0.07f : 0.05f),
+                Theme.getColor(Theme.key_windowBackgroundWhite, getResourceProvider())
+        );
+        searchField.setBackground(Theme.createRoundRectDrawable(dp(24), fieldColor));
         searchField.setClickable(true);
         searchField.editText.setEnabled(false);
         searchField.editText.setHint(LocaleController.getString(R.string.SearchChats));
@@ -250,7 +251,6 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
         searchField.addView(pillContainer, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, LocaleController.isRTL ? Gravity.LEFT : Gravity.RIGHT, 6, 0, 6, 0));
         previewPill = new CustomPill(context, getResourceProvider(), spec);
         pillContainer.addView(previewPill);
-        searchField.setPillHost(pillContainer);
         return searchField;
     }
 
@@ -258,6 +258,15 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
     public View createView(Context context) {
         createFields(context);
         View view = super.createView(context);
+        if (view instanceof FrameLayout frameLayout) {
+            pinnedHeader = createPinnedHeader(context);
+            frameLayout.addView(pinnedHeader, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.TOP, 12, 0, 12, 0));
+            pinnedHeader.setTranslationY(AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight() + dp(4));
+            if (listView != null) {
+                listView.setPadding(0, AndroidUtilities.statusBarHeight + ActionBar.getCurrentActionBarHeight() + dp(60), 0, 0);
+                listView.setClipToPadding(false);
+            }
+        }
         actionBar.setAllowOverlayTitle(true);
         actionBar.createMenu().addItem(MENU_DONE, R.drawable.ic_ab_done).setContentDescription(LocaleController.getString(R.string.Save));
         actionBar.setActionBarMenuOnItemClick(new ActionBar.ActionBarMenuOnItemClick() {
@@ -580,7 +589,7 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
     }
 
     @Override
-    protected void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
+    public void fillItems(ArrayList<UItem> items, UniversalAdapter adapter) {
         items.add(UItem.asHeader(LocaleController.getString(R.string.CustomPillAppearance)));
         items.add(UItem.asCustom(nameCell));
         items.add(UItem.asCustom(colorGrid));
@@ -821,8 +830,22 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
         return false;
     }
 
+    private void showListDialog(UItem item, CharSequence[] items, String title, int selected, org.telegram.messenger.Utilities.Callback<Integer> onSelect) {
+        showListDialog(item, items, null, title, selected, onSelect);
+    }
+
+    private void showListDialog(UItem item, CharSequence[] items, @Nullable int[] icons, String title, int selected, org.telegram.messenger.Utilities.Callback<Integer> onSelect) {
+        if (getParentActivity() == null) {
+            return;
+        }
+        PopupUtils.showDialog(items, icons, title, selected, getParentActivity(), index -> {
+            onSelect.run(index);
+            updateList();
+        }, getResourceProvider(), icons == null);
+    }
+
     @Override
-    protected void onClick(UItem item, View view, int position, float x, float y) {
+    public void onClick(UItem item, View view, int position, float x, float y) {
         int id = item.id;
         if (item.object instanceof CustomPillCells.TokenRow row) {
             openFormatSheet(row.index());
@@ -1060,7 +1083,7 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
             openKeyValueSheet(PillKeyValueSheet.MODE_SECRETS);
             return;
         }
-        if (CustomPillFetcher.needsLocation(spec) && !Weather.isLocationPermissionGranted()) {
+        if (CustomPillFetcher.needsLocation(spec) && !CustomPillFetcher.hasLocationPermission()) {
             Weather.getUserLocation(true, location -> {
                 if (location != null && fragmentView != null) {
                     runRequest();

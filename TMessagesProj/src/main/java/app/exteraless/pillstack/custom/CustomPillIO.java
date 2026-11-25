@@ -1,12 +1,16 @@
 package app.exteraless.pillstack.custom;
 
+import android.app.Activity;
 import android.content.ClipData;
 import android.content.ClipboardManager;
 import android.content.Context;
+import android.content.Intent;
+import android.net.Uri;
 import android.text.TextUtils;
 
 import androidx.annotation.Nullable;
 import androidx.collection.LongSparseArray;
+import androidx.core.content.FileProvider;
 
 import app.exteraless.pillstack.custom.ui.PillImportSheet;
 import com.exteragram.messenger.utils.chats.ChatUtils;
@@ -14,6 +18,7 @@ import com.google.gson.GsonBuilder;
 import com.google.gson.JsonParser;
 
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
@@ -158,13 +163,19 @@ public final class CustomPillIO {
             FileLog.e(e);
             return;
         }
-        fragment.showDialog(new ShareAlert(fragment.getParentActivity(), null, null, file.getAbsolutePath(), null, null, false, null, null, false, false, false, null, null) {
-            @Override
-            protected void onSend(LongSparseArray<TLRPC.Dialog> dids, int count, TLRPC.TL_forumTopic topic, boolean showToast) {
-                if (showToast) {
-                    AndroidUtilities.runOnUIThread(() -> BulletinFactory.of(fragment).createSimpleBulletin(R.raw.forward, LocaleController.getString(R.string.CustomPillShared)).show(), 250);
-                }
-            }
-        });
+        Activity activity = fragment.getParentActivity();
+        if (activity == null) {
+            return;
+        }
+        try {
+            Uri uri = FileProvider.getUriForFile(activity, ApplicationLoader.getApplicationId() + ".provider", file);
+            Intent intent = new Intent(Intent.ACTION_SEND);
+            intent.setType("application/octet-stream");
+            intent.putExtra(Intent.EXTRA_STREAM, uri);
+            intent.addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION);
+            activity.startActivity(Intent.createChooser(intent, LocaleController.getString(R.string.ShareFile)));
+        } catch (Throwable e) {
+            FileLog.e(e);
+        }
     }
 }
