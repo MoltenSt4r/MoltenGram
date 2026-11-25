@@ -8,6 +8,8 @@
 
 package org.telegram.messenger;
 
+import com.exteragram.messenger.utils.ui.TabletSplitUiHelper;
+
 import static org.telegram.messenger.LocaleController.formatString;
 import static org.telegram.messenger.LocaleController.getString;
 
@@ -3142,7 +3144,10 @@ public class AndroidUtilities {
     }
 
     public static boolean isTabletTwoPane() {
-        return !isInMultiwindow && (!isSmallTablet() || displaySize.x > displaySize.y);
+        if (isInMultiwindow) {
+            return TabletSplitUiHelper.canFitTwoPanes(displaySize.x);
+        }
+        return !isSmallTablet() || displaySize.x > displaySize.y;
     }
 
     public static int getMinTabletSide() {
@@ -3159,7 +3164,7 @@ public class AndroidUtilities {
     }
 
     public static int getTabletLeftFragmentSize(final int fullWidth, final int insetLeft, final int insetRight) {
-        return insetLeft + Math.max(dp(320), (fullWidth - insetLeft - insetRight) * 35 / 100);
+        return TabletSplitUiHelper.getRightPaneStart(fullWidth, insetLeft, insetRight);
     }
 
     public static int getPhotoSize() {

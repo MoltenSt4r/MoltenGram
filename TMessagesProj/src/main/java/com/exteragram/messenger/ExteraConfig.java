@@ -572,6 +572,18 @@ public final class ExteraConfig {
         getPreferences().edit().putBoolean("springAnimations", value).apply();
     }
 
+    public static boolean getAospTransitions() {
+        return NaConfig.INSTANCE.getBackAnimationStyle().Int() == 4;
+    }
+
+    public static float getTabletLeftFraction() {
+        return getPreferences().getFloat("tabletLeftFraction", 0.35f);
+    }
+
+    public static void setTabletLeftFraction(float value) {
+        getPreferences().edit().putFloat("tabletLeftFraction", value).apply();
+    }
+
     public static GlassOutlineStyle getGlassOutlineStyle() {
         ensureLoaded();
         return enumAt(GlassOutlineStyle.values(), AppearanceConfig.glassOutlineStyle.Int(), GlassOutlineStyle.HIDDEN);

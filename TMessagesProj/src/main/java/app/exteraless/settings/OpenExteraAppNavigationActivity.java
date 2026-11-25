@@ -177,7 +177,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         // Вместо переключателя Spring Animations здесь трёхпозиционный
         // NaConfig.backAnimationStyle: он покрывает и Spring, и Classic.
         items.add(UItem.asButton(ID_BACK_ANIMATION, getString(R.string.OEBackAnimation),
-                backAnimations()[clamp(NaConfig.INSTANCE.getBackAnimationStyle().Int(), backAnimations().length)]));
+                backAnimations()[backAnimationIndex(NaConfig.INSTANCE.getBackAnimationStyle().Int())]));
         items.add(UItem.asShadow(getString(R.string.OEBackAnimationInfo)));
 
         if (android.os.Build.VERSION.SDK_INT >= 34) {
@@ -712,11 +712,12 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
         }
         if (id == ID_BACK_ANIMATION) {
             showChoice(getString(R.string.OEBackAnimation), backAnimations(),
-                    NaConfig.INSTANCE.getBackAnimationStyle().Int(), which -> {
-                        NaConfig.INSTANCE.getBackAnimationStyle().setConfigInt(which);
+                    backAnimationIndex(NaConfig.INSTANCE.getBackAnimationStyle().Int()), which -> {
+                        int style = backAnimationStyleFromIndex(which);
+                        NaConfig.INSTANCE.getBackAnimationStyle().setConfigInt(style);
                         // Пружинные переходы не работают с выключенными анимациями
                         // интерфейса, поэтому их взводим принудительно.
-                        if (which == BACK_ANIMATION_SPRING) {
+                        if (style == BACK_ANIMATION_SPRING || style == BACK_ANIMATION_AOSP) {
                             MessagesController.getGlobalMainSettings().edit()
                                     .putBoolean("view_animations", true).apply();
                             SharedConfig.setAnimationsEnabled(true);
@@ -978,6 +979,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
 
     /** Значение NaConfig.backAnimationStyle, соответствующее пружинным переходам. */
     private static final int BACK_ANIMATION_SPRING = 1;
+    private static final int BACK_ANIMATION_AOSP = 4;
 
     private CharSequence[] backAnimations() {
         if (android.os.Build.VERSION.SDK_INT < 34) {
@@ -985,6 +987,7 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
                     getString(R.string.OEBackAnimationClassic),
                     getString(R.string.OEBackAnimationSpring),
                     getString(R.string.OEBackAnimationPredictive),
+                    getString(R.string.OEBackAnimationAosp),
             };
         }
         return new CharSequence[]{
@@ -992,7 +995,22 @@ public class OpenExteraAppNavigationActivity extends BaseFragment {
                 getString(R.string.OEBackAnimationSpring),
                 getString(R.string.OEBackAnimationPredictive),
                 getString(R.string.OEBackAnimationSlide),
+                getString(R.string.OEBackAnimationAosp),
         };
+    }
+
+    private int backAnimationIndex(int style) {
+        if (android.os.Build.VERSION.SDK_INT < 34 && style == BACK_ANIMATION_AOSP) {
+            return 3;
+        }
+        return clamp(style, backAnimations().length);
+    }
+
+    private static int backAnimationStyleFromIndex(int index) {
+        if (android.os.Build.VERSION.SDK_INT < 34 && index == 3) {
+            return BACK_ANIMATION_AOSP;
+        }
+        return index;
     }
 
     private static int clamp(int value, int size) {

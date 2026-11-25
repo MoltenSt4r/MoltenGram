@@ -68,6 +68,9 @@ import androidx.dynamicanimation.animation.FloatValueHolder;
 import androidx.dynamicanimation.animation.SpringAnimation;
 import androidx.dynamicanimation.animation.SpringForce;
 
+import com.exteragram.messenger.ExteraConfig;
+import com.exteragram.messenger.utils.ui.WindowTransitionAnimationHelper;
+
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.AnimationNotificationsLocker;
 import org.telegram.messenger.BuildVars;
@@ -1228,6 +1231,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         } else if (springRouteBackgroundDrawable != null) {
             app.exteraless.utils.PredictiveBackAnimationHelper.drawTransitionBackground(
                     canvas, springRouteBackgroundDrawable, getWidth(), getHeight(), predictiveBackTmpRect);
+        } else if (aospTransitionBackgroundDrawable != null) {
+            app.exteraless.utils.PredictiveBackAnimationHelper.drawTransitionBackground(
+                    canvas, aospTransitionBackgroundDrawable, getWidth(), getHeight(), predictiveBackTmpRect);
         }
         super.dispatchDraw(canvas);
         if (isLayersLayout) {
@@ -1265,6 +1271,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         if (child != bottomSheetTabs && bottomSheetTabsClip != null) {
             bottomSheetTabsClip.clip(canvas, withShadow, isKeyboardVisible, getWidth(), (int) getY() + getHeight(), 1.0f);
             withShadow = false;
+        }
+        if (aospTransitionBackgroundDrawable != null && (child == containerView || child == containerViewBack)) {
+            drawAospEdgeExtension(canvas, child);
         }
 
         // Material 3 predictive back: закрывающийся фрагмент — карточка, за ним уменьшенный предыдущий,
@@ -1783,6 +1792,10 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
      * ActionBarLayout.springRouteBackgroundDrawable.
      */
     private Drawable springRouteBackgroundDrawable;
+    private float aospTransitionDuration;
+    private Drawable aospTransitionBackgroundDrawable;
+    private WindowTransitionAnimationHelper.WindowEdgeExtension aospEdgeExtension;
+    private WindowTransitionAnimationHelper.WindowEdgeExtension aospEdgeExtensionBack;
     /** Вертикальное следование карточки за пальцем при ручном свайпе, -1..1. */
     private float springRouteYRatio;
 
@@ -2205,6 +2218,15 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         // openExtera: подложка и масштаб карточки живут только на время перехода
         springRouteBackgroundDrawable = null;
         springRouteYRatio = 0f;
+        aospTransitionBackgroundDrawable = null;
+        if (Build.VERSION.SDK_INT >= 29) {
+            if (aospEdgeExtension != null) {
+                aospEdgeExtension.release();
+            }
+            if (aospEdgeExtensionBack != null) {
+                aospEdgeExtensionBack.release();
+            }
+        }
         if (containerView != null) {
             containerView.setScaleX(1f);
             containerView.setScaleY(1f);
@@ -2315,12 +2337,43 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
         containerViewBack.setVisibility(View.INVISIBLE);
     }
 
+    private void drawAospEdgeExtension(Canvas canvas, View child) {
+        if (Build.VERSION.SDK_INT < 29 || !canvas.isHardwareAccelerated()) {
+            return;
+        }
+        final float translationX = child.getTranslationX();
+        if (translationX == 0) {
+            return;
+        }
+        final boolean leftEdge = translationX > 0;
+        final boolean front = child == containerView;
+        WindowTransitionAnimationHelper.WindowEdgeExtension extension = front ? aospEdgeExtension : aospEdgeExtensionBack;
+        if (extension == null) {
+            extension = new WindowTransitionAnimationHelper.WindowEdgeExtension();
+            if (front) {
+                aospEdgeExtension = extension;
+            } else {
+                aospEdgeExtensionBack = extension;
+            }
+        }
+        if (!extension.isCaptured() && !extension.capture(child, leftEdge)) {
+            return;
+        }
+        final float width = WindowTransitionAnimationHelper.getSlideDistance();
+        extension.draw(canvas, leftEdge ? translationX - width : translationX + child.getWidth(), width, child.getAlpha());
+    }
+
     private void startLayoutAnimation(final boolean open, final boolean first, final boolean preview) {
+        final boolean useAospTransition = !preview && ExteraConfig.getAospTransitions();
         if (first) {
             animationProgress = 0.0f;
             lastFrameTime = System.nanoTime() / 1000000;
+            if (useAospTransition) {
+                aospTransitionBackgroundDrawable = app.exteraless.utils.PredictiveBackAnimationHelper.getTransitionBackground(fragmentsStack, getLastFragment());
+                aospTransitionDuration = WindowTransitionAnimationHelper.getDuration();
+            }
         }
-        if (USE_SPRING_ANIMATION) {
+        if (USE_SPRING_ANIMATION && !useAospTransition) {
             if (USE_ACTIONBAR_CROSSFADE) {
                 swipeProgress = open ? 1f : 0f;
                 invalidateActionBars();
@@ -2449,7 +2502,7 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     dt = 18;
                 }
                 lastFrameTime = newTime;
-                float duration = preview && open ? 190.0f : 150.0f;
+                float duration = useAospTransition ? aospTransitionDuration : preview && open ? 190.0f : 150.0f;
                 animationProgress += dt / duration;
                 if (animationProgress > 1.0f) {
                     animationProgress = 1.0f;
@@ -2494,7 +2547,10 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                 } else {
                     interpolated = decelerateInterpolator.getInterpolation(animationProgress);
                 }
-                if (open) {
+                if (useAospTransition) {
+                    WindowTransitionAnimationHelper.apply(containerView, containerViewBack, open, interpolated);
+                    invalidate();
+                } else if (open) {
                     float clampedInterpolated = MathUtils.clamp(interpolated, 0, 1);
                     containerView.setAlpha(clampedInterpolated);
                     if (preview) {
@@ -2839,7 +2895,11 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     animation = fragment.onCustomTransitionAnimation(true, () -> onAnimationEndCheck(false));
                 }
                 if (animation == null) {
-                    if (USE_SPRING_ANIMATION) {
+                    if (!preview && ExteraConfig.getAospTransitions()) {
+                        containerView.setScaleX(1.0f);
+                        containerView.setScaleY(1.0f);
+                        WindowTransitionAnimationHelper.apply(containerView, containerViewBack, true, 0f);
+                    } else if (USE_SPRING_ANIMATION) {
                         if (preview) {
                             containerView.setAlpha(0.0f);
                             containerView.setTranslationX(0.0f);
@@ -3315,6 +3375,9 @@ public class ActionBarLayout extends FrameLayout implements INavigationLayout, F
                     animation = currentFragment.onCustomTransitionAnimation(false, () -> onAnimationEndCheck(false));
                 }
                 if (animation == null) {
+                    if (!inPreviewMode && !transitionAnimationPreviewMode && ExteraConfig.getAospTransitions()) {
+                        WindowTransitionAnimationHelper.apply(containerView, containerViewBack, false, 0f);
+                    }
                     startLayoutAnimation(false, true, inPreviewMode || transitionAnimationPreviewMode);
                 } else {
                     currentAnimation = animation;

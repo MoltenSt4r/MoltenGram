@@ -131,6 +131,7 @@
     <string name="OEBackAnimationSpring">Spring</string>
     <string name="OEBackAnimationPredictive">Predictive Back</string>
     <string name="OEBackAnimationSlide">Slide</string>
+    <string name="OEBackAnimationAosp">AOSP</string>
     <string name="OEBackAnimationInfo">Enables smoother animations when switching screens and opening the side menu.</string>
     <string name="OEPredictiveBackIntensity">Gesture Intensity</string>
     <string name="OEPredictiveBackOff">Off</string>
