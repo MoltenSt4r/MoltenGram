@@ -305,15 +305,20 @@ public class BaseFragmentSimpleGlass {
         if (header instanceof SimpleActionBar) {
             final SimpleActionBar simpleActionBar = (SimpleActionBar) header;
             final boolean hasCustomButtonsGlass = simpleActionBar.hasButtonsGlass();
-            simpleActionBar.setMonotoneHeaderMode(!hasCustomButtonsGlass);
-            simpleActionBar.setExtraHeight(0);
-            if (hasCustomButtonsGlass) {
-                simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
+            simpleActionBar.setMonotoneHeaderMode(false);
+            simpleActionBar.setExtraHeight(dp(6));
+            if (!hasCustomButtonsGlass) {
+                simpleActionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
             }
+            simpleActionBar.setMenuGlass(menuFactory, menuGlassSource);
         } else if (header instanceof ActionBar) {
             final ActionBar actionBar = (ActionBar) header;
             actionBar.setAddToContainer(false);
-            actionBar.setExtraHeight(0);
+            actionBar.setCenterTitleAndGlass(true);
+            actionBar.setExtraHeight(dp(6));
+            actionBar.setGlassPadding(dp(GlassUiHelper.SIDE_PADDING_DP));
+            actionBar.doNotDrawCenterGlass = true;
+            actionBar.setupGlass(factory, BlurredBackgroundProviderImpl.simpleActionBar(resourceProvider));
         }
     }
 

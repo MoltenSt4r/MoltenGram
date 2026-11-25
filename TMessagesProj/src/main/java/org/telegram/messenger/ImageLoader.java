@@ -41,6 +41,7 @@ import androidx.annotation.RequiresApi;
 import androidx.core.graphics.ColorUtils;
 
 import com.radolyn.ayugram.AyuConstants;
+import app.exteraless.icons.SvgDocumentPreview;
 
 import org.json.JSONArray;
 import org.json.JSONObject;
@@ -931,6 +932,8 @@ public class ImageLoader {
                     FileLog.e(e);
                 }
                 onPostExecute(bitmapDrawable);
+            } else if (cacheImage.imageType == FileLoader.IMAGE_TYPE_SVG_DOCUMENT) {
+                onPostExecute(SvgDocumentPreview.decode(cacheImage.finalFilePath, SvgDocumentPreview.THUMB_FILTER.equals(cacheImage.filter)));
             } else if (cacheImage.imageType == FileLoader.IMAGE_TYPE_SVG || cacheImage.imageType == FileLoader.IMAGE_TYPE_SVG_WHITE) {
                 int w = AndroidUtilities.displaySize.x;
                 int h = AndroidUtilities.displaySize.y;
@@ -3722,6 +3725,8 @@ public class ImageLoader {
                 url = url + "." + getHttpUrlExtension(object.webFile.url, defaultExt);
             } else if (object.secureDocument != null) {
                 url = url + "." + ext;
+            } else if (object.imageType == FileLoader.IMAGE_TYPE_SVG_DOCUMENT) {
+                url = FileLoader.getAttachFileName(object.document);
             } else if (object.document != null) {
                 if (a == 0 && qualityThumb) {
                     key = "q_" + key;

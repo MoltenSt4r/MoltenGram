@@ -45,6 +45,7 @@
     <string name="OEGeneralHidePhone">Скрыть номер телефона</string>
     <string name="OEGeneralShowIdAndDc">Показывать ID и DC</string>
     <string name="OEGeneralShowIdAndDcInfo">Показывает ID пользователя или чата и номер дата-центра в профиле.</string>
+    <string name="OEGeneralDefaultProfileTab">Вкладка по умолчанию</string>
 
     <!-- Archive -->
     <string name="OEGeneralArchiveHeader">Список чатов и архив</string>

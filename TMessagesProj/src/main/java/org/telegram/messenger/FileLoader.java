@@ -191,6 +191,7 @@ public class FileLoader extends BaseController {
     public static final int IMAGE_TYPE_SVG = 3;
     public static final int IMAGE_TYPE_SVG_WHITE = 4;
     public static final int IMAGE_TYPE_THEME_PREVIEW = 5;
+    public static final int IMAGE_TYPE_SVG_DOCUMENT = 6;
 
 //    private final FileLoaderPriorityQueue largeFilesQueue = new FileLoaderPriorityQueue("large files queue", 2);
 //    private final FileLoaderPriorityQueue filesQueue = new FileLoaderPriorityQueue("files queue", 3);

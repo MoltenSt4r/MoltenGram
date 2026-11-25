@@ -2064,6 +2064,9 @@ public class OpenExteraAppearanceActivity extends BaseNekoSettingsActivity {
             if (listAdapter != null) {
                 listAdapter.notifyItemChanged(position);
             }
+            if (actionBar != null) {
+                getBaseSimpleGlass().updateActionBarFadeDrawable(actionBar);
+            }
             rebuildAll();
             if (parentLayout != null) {
                 parentLayout.rebuildFragments(org.telegram.ui.ActionBar.INavigationLayout.REBUILD_FLAG_REBUILD_LAST);

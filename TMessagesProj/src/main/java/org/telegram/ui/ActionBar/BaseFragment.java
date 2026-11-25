@@ -320,17 +320,7 @@ public abstract class BaseFragment {
             if (useFadeDrawableForActionBar() && header != null) {
                 final boolean customButtonsGlass = header instanceof SimpleActionBar && ((SimpleActionBar) header).hasButtonsGlass();
                 if (!customButtonsGlass) {
-                    if (header instanceof SimpleActionBar) {
-                        ((SimpleActionBar) header).setAdaptiveBackground(listViewForSimpleGlass);
-                    } else if (header instanceof ActionBar && listViewForSimpleGlass instanceof RecyclerView) {
-                        ((ActionBar) header).setAdaptiveBackground((RecyclerView) listViewForSimpleGlass);
-                    } else if (header instanceof ActionBar && listViewForSimpleGlass instanceof SectionsScrollView) {
-                        ((ActionBar) header).setAdaptiveBackground((SectionsScrollView) listViewForSimpleGlass);
-                    } else {
-                        ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
-                    }
-                } else {
-                    ThemeBind.backgroundColor(header, Theme.key_actionBarDefault, themedColors);
+                    header.setBackground(simpleGlass.createActionBarFadeDrawable(header));
                 }
             }
             BaseFragmentSimpleGlass.setListViewParams(listViewForSimpleGlass, mSystemInsets.top, mSystemInsets.bottom, ActionBar.getCurrentActionBarHeight(), 0);

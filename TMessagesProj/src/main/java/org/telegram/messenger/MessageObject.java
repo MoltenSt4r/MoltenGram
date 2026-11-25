@@ -43,6 +43,8 @@ import android.text.style.ClickableSpan;
 import android.text.style.RelativeSizeSpan;
 import android.text.style.URLSpan;
 import android.text.util.Linkify;
+
+import app.exteraless.icons.SvgDocumentPreview;
 import android.util.Base64;
 import android.view.View;
 
@@ -7386,6 +7388,9 @@ public class MessageObject {
     }
 
     public static boolean canPreviewDocument(TLRPC.Document document) {
+        if (SvgDocumentPreview.isSvg(document)) {
+            return document.size <= SvgDocumentPreview.MAX_FILE_SIZE;
+        }
         if (document != null && document.mime_type != null) {
             String mime = document.mime_type;
             if (isDocumentHasThumb(document) && (mime.equalsIgnoreCase("image/png") || mime.equalsIgnoreCase("image/jpg") || mime.equalsIgnoreCase("image/jpeg")) || (Build.VERSION.SDK_INT >= 26 && (mime.equalsIgnoreCase("image/heic")))) {

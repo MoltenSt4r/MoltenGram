@@ -36,6 +36,7 @@ import androidx.core.graphics.ColorUtils;
 import androidx.recyclerview.widget.RecyclerView;
 
 import app.exteraless.appearance.AppearanceConfig;
+import com.exteragram.messenger.utils.ui.GlassUiHelper;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.LocaleController;
@@ -493,7 +494,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     /** Where the glass of the right pill starts. */
     public float getMenuPillLeft() {
         computeMenuPill(menuPillRect);
-        return menuPillRect.left;
+        return menuPillRect.left + sideButtonsOffset;
     }
 
     /**
@@ -501,7 +502,6 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
      * Returns the pill alpha; a pill narrower than a single button shrinks as a circle.
      */
     private float computeMenuPill(RectF rect) {
-        final int p = dp(6);
         final float half = dp(23);
         final float cy = getRowTop() + ActionBar.getCurrentActionBarHeight() / 2f;
         final float s = getSearchFactor();
@@ -525,7 +525,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         // a pill narrower than a button shrinks as a circle; a fading pill shrinks a little
         final float k = Math.min(1f, width / (half * 2)) * lerp(0.8f, 1f, fade);
 
-        float right = getWidth() - p - getDoneButtonSpace(false);
+        final int side = getSidePadding();
+        float right = getWidth() - side - getDoneButtonSpace(false) - sideButtonsOffset;
         float left = right - Math.max(width, half * 2);
         float top = cy - half, bottom = cy + half;
         if (k < 1f) {
@@ -539,7 +540,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         rect.set(
             lerp(left, getSearchPillLeft(), sk),
             lerp(top, cy - half, sk),
-            lerp(right, getWidth() - p, sk),
+            lerp(right, getWidth() - side, sk),
             lerp(bottom, cy + half, sk)
         );
         return lerp(Math.min(1f, width / (half * 2)) * fade, 1f, sk);
@@ -562,7 +563,8 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
     }
 
     private float getSearchPillLeft() {
-        return hasBackButton() ? dp(6 + 46 + 6) : dp(6);
+        final int side = getSidePadding();
+        return hasBackButton() ? side + dp(46 + 6) : side;
     }
 
     /** Without a back button the close button appears only in action mode. */
@@ -587,6 +589,30 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         return occupyStatusBar;
     }
 
+    private int sidePadding = -1;
+
+    public void setSidePadding(int value) {
+        if (sidePadding != value) {
+            sidePadding = value;
+            requestLayout();
+            invalidate();
+        }
+    }
+
+    private int getSidePadding() {
+        return sidePadding >= 0 ? sidePadding : dp(GlassUiHelper.SIDE_PADDING_DP);
+    }
+
+    private float sideButtonsOffset;
+
+    public void setSideButtonsOffset(float offset) {
+        if (sideButtonsOffset != offset) {
+            sideButtonsOffset = offset;
+            backButton.setTranslationX(offset);
+            applyFactors();
+        }
+    }
+
     public void setExtraHeight(int value) {
         if (extraHeight != value) {
             extraHeight = value;
@@ -596,6 +622,16 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
 
     public int getExtraHeight() {
         return extraHeight;
+    }
+
+    private int titleMinSideInset;
+
+    /** The centered title keeps this far from both edges, e.g. clear of a custom child at the right (a balance). */
+    public void setTitleMinSideInset(int value) {
+        if (titleMinSideInset != value) {
+            titleMinSideInset = value;
+            requestLayout();
+        }
     }
 
     private int getRowTop() {
@@ -610,19 +646,24 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         final int height = rowTop + rowHeight + extraHeight;
         final boolean hasBack = hasBackButton();
 
-        final int horizontalMargin = monotoneHeaderMode ? dp(4) : dp(6);
-        final int menuRightMargin = monotoneHeaderMode ? dp(4) : dp(10);
+        final int side = getSidePadding();
+        final int horizontalMargin = monotoneHeaderMode ? dp(4) : side;
+        final int menuRightMargin = monotoneHeaderMode ? dp(4) : side + dp(4);
         final int buttonTop = rowTop + (rowHeight - dp(46)) / 2;
         setMargins(backButton, horizontalMargin, buttonTop, 0);
 
         final float menuWidth = menu != null && menu.getVisibility() != GONE ? menu.getTargetPillWidth() : 0;
         final float doneSpace = getDoneButtonSpace(true);
         if (!shouldCenterTitle()) {
-            final int leftInset = hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 18);
-            final int rightInset = menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(12) : dp(18);
+            final int leftInset = monotoneHeaderMode
+                    ? (hasBack ? dp(AndroidUtilities.isTablet() ? 80 : 72) : dp(AndroidUtilities.isTablet() ? 26 : 18))
+                    : (side + dp(hasBack ? 46 + GlassUiHelper.TITLE_START_GAP_DP : GlassUiHelper.TITLE_START_NO_BACK_DP));
+            final int rightInset = menuWidth > 0 || doneSpace > 0 ? Math.max((int) (menuWidth + doneSpace) + (monotoneHeaderMode ? dp(12) : side + dp(12)), titleMinSideInset) : dp(18);
             titleLayout.setSideInsets(leftInset, rightInset);
         } else {
-            final int titleSide = Math.max(hasBack ? dp(64) : dp(18), menuWidth > 0 || doneSpace > 0 ? (int) (menuWidth + doneSpace) + dp(6 + 12) : 0);
+            final int titleLeft = monotoneHeaderMode ? dp(hasBack ? 64 : 18) : (side + dp(hasBack ? 58 : 12));
+            final int titleRight = Math.max((int) (menuWidth + doneSpace) + (monotoneHeaderMode ? dp(6 + 12) : side + dp(12)), titleMinSideInset);
+            final int titleSide = Math.max(titleLeft, titleRight);
             titleLayout.setSideInset(titleSide);
         }
         setMargins(titleLayout, 0, rowTop, 0);
@@ -633,27 +674,28 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             menu.getLayoutParams().height = rowHeight;
         }
         if (actionMode != null) {
-            setMargins(actionMode, 0, rowTop, dp(10));
+            setMargins(actionMode, 0, rowTop, side + dp(4));
             actionMode.getLayoutParams().height = rowHeight;
         }
         if (actionModeTitle != null) {
             final float modeWidth = actionMode != null ? actionMode.getTargetPillWidth() : 0;
-            final int right = (int) modeWidth + dp(6 + 12);
+            final int right = (int) modeWidth + side + dp(12);
+            final int left = side + dp(60);
             if (hasActionModeSubtitle()) {
-                setMargins(actionModeTitle, dp(66), rowTop + rowHeight / 2 - dp(22), right);
+                setMargins(actionModeTitle, left, rowTop + rowHeight / 2 - dp(22), right);
                 actionModeTitle.getLayoutParams().height = dp(22);
-                setMargins(actionModeSubtitle, dp(66), rowTop + rowHeight / 2 + dp(1), right);
+                setMargins(actionModeSubtitle, left, rowTop + rowHeight / 2 + dp(1), right);
                 actionModeSubtitle.getLayoutParams().height = dp(18);
             } else {
-                setMargins(actionModeTitle, dp(66), rowTop, right);
+                setMargins(actionModeTitle, left, rowTop, right);
                 actionModeTitle.getLayoutParams().height = rowHeight;
             }
         }
         if (searchLayout != null) {
-            setMargins(searchLayout, (int) getSearchPillLeft(), buttonTop, dp(6));
+            setMargins(searchLayout, (int) getSearchPillLeft(), buttonTop, side);
         }
         if (doneButton != null) {
-            setMargins(doneButton, 0, buttonTop, dp(6));
+            setMargins(doneButton, 0, buttonTop, side);
         }
 
         super.onMeasure(MeasureSpec.makeMeasureSpec(width, MeasureSpec.EXACTLY), MeasureSpec.makeMeasureSpec(height, MeasureSpec.EXACTLY));
@@ -1445,7 +1487,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             doneButton.setScaleY(scale);
         }
         if (menu != null) {
-            menu.setTranslationX(-getDoneButtonSpace(false));
+            menu.setTranslationX(-getDoneButtonSpace(false) - sideButtonsOffset);
             final float menuAlpha = (1f - s) * (1f - a);
             setAlphaAndVisibility(menu, menuAlpha);
             final float scale = lerp(0.7f, 1f, menuAlpha);
@@ -1464,6 +1506,7 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         }
         if (actionMode != null) {
             setAlphaAndVisibility(actionMode, a);
+            actionMode.setTranslationX(-sideButtonsOffset);
             final float scale = lerp(0.7f, 1f, a);
             actionMode.setPivotX(actionMode.getWidth() - dp(19));
             actionMode.setPivotY(actionMode.getHeight() / 2f);
@@ -1681,8 +1724,9 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
         }
 
         void applyMode() {
-            final int size = monotoneHeaderMode ? 20 : 17;
-            final int gravity = shouldCenterTitle() ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL);
+            final boolean centered = shouldCenterTitle();
+            final int size = monotoneHeaderMode ? 20 : (centered ? GlassUiHelper.TITLE_TEXT_SIZE_CENTERED : GlassUiHelper.TITLE_TEXT_SIZE_START);
+            final int gravity = centered ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL);
             for (SimpleTextView view : titleViews) {
                 if (view != null) {
                     view.setTextSize(size);
@@ -1702,10 +1746,11 @@ public class SimpleActionBar extends FrameLayout implements FactorAnimator.Targe
             if (titleViews[i] != null) {
                 return;
             }
+            final boolean centered = shouldCenterTitle();
             final SimpleTextView view = new SimpleTextView(getContext());
-            view.setGravity(shouldCenterTitle() ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL));
+            view.setGravity(centered ? Gravity.CENTER : (Gravity.LEFT | Gravity.CENTER_VERTICAL));
             view.setTypeface(AndroidUtilities.headerTypeface());
-            view.setTextSize(monotoneHeaderMode ? 20 : 17);
+            view.setTextSize(monotoneHeaderMode ? 20 : (centered ? GlassUiHelper.TITLE_TEXT_SIZE_CENTERED : GlassUiHelper.TITLE_TEXT_SIZE_START));
             view.setTextColor(titleColor);
             view.setEmojiColor(titleColor);
             view.setDrawablePadding(dp(4));

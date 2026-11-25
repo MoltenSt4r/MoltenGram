@@ -122,6 +122,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
     private int profileHeaderRow;
     private int relativeLastSeenRow;
     private int hidePhoneRow;
+    private int defaultProfileTabRow;
     private int showIdAndDcRow;
     private int lastfmRow;
     private int profileDividerRow;
@@ -217,6 +218,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
         profileHeaderRow = addRow("profileHeader");
         relativeLastSeenRow = addRow("relativeLastSeen");
         hidePhoneRow = addRow("hidePhone");
+        defaultProfileTabRow = addRow("defaultProfileTab");
         showIdAndDcRow = addRow("showIdAndDc");
         lastfmRow = addRow("lastfm");
         profileDividerRow = addRow();
@@ -392,6 +394,11 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
 
         if (position == showIdAndDcRow) {
             showIdAndDcSelector();
+            return;
+        }
+
+        if (position == defaultProfileTabRow) {
+            showDefaultProfileTabSelector();
             return;
         }
 
@@ -578,6 +585,31 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
             if (listAdapter != null) {
                 listAdapter.notifyItemChanged(mapPreviewRow);
             }
+        });
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        showDialog(builder.create());
+    }
+
+    private CharSequence[] defaultProfileTabOptions() {
+        return new CharSequence[]{
+                getString(R.string.Default),
+                getString(R.string.SharedMediaTab2),
+                getString(R.string.SharedGroupsTab2)
+        };
+    }
+
+    private void showDefaultProfileTabSelector() {
+        if (getParentActivity() == null) {
+            return;
+        }
+        AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
+        builder.setTitle(getString(R.string.OEGeneralDefaultProfileTab));
+        builder.setItems(defaultProfileTabOptions(), (dialog, which) -> {
+            GeneralConfig.defaultProfileTab.setConfigInt(which);
+            if (listAdapter != null) {
+                listAdapter.notifyItemChanged(defaultProfileTabRow);
+            }
+            rebuildAll();
         });
         builder.setNegativeButton(getString(R.string.Cancel), null);
         showDialog(builder.create());
@@ -1415,6 +1447,11 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
                         int preview = NekoConfig.mapPreviewProvider.Int();
                         cell.setTextAndValue(getString(R.string.OEGeneralMapPreview),
                                 previews[preview < 0 || preview >= previews.length ? 0 : preview], false);
+                    } else if (position == defaultProfileTabRow) {
+                        int tab = GeneralConfig.defaultProfileTab();
+                        CharSequence[] options = defaultProfileTabOptions();
+                        cell.setTextAndValue(getString(R.string.OEGeneralDefaultProfileTab),
+                                options[tab < 0 || tab >= options.length ? 0 : tab], true);
                     } else if (position == showIdAndDcRow) {
                         // Выбор из трёх режимов, а не переключатель: Bot API отличается
                         // от Telegram API префиксом -100 у чатов и каналов.
@@ -1507,7 +1544,7 @@ public class OpenExteraGeneralActivity extends BaseNekoSettingsActivity implemen
             } else if (position == mapProviderRow || position == mapPreviewRow
                     || position == pushStatusRow || position == batteryOptimizationRow
                     || position == shizukuBoostRow
-                    || position == savePathRow
+                    || position == savePathRow || position == defaultProfileTabRow
                     || position == showIdAndDcRow || position == lastfmRow) {
                 return TYPE_SETTINGS;
             }

@@ -80,6 +80,15 @@ object GeneralConfig {
     @JvmField
     val crashReports = addConfig("OEGeneralCrashReports", ConfigItem.configTypeBool, false)
 
+    @JvmField
+    val defaultProfileTab = addConfig("OEGeneralDefaultProfileTab", ConfigItem.configTypeInt, 0)
+
+    @JvmStatic
+    fun defaultProfileTab(): Int {
+        loadConfig(false)
+        return defaultProfileTab.Int()
+    }
+
     @JvmStatic
     fun crashReports(): Boolean {
         loadConfig(false)

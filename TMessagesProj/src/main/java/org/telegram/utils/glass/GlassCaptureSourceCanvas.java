@@ -379,6 +379,7 @@ public class GlassCaptureSourceCanvas {
 
         public Position(int index) {
             renderNode = new RenderNode("cap-" + index);
+            renderNode.setUseCompositingLayer(true, null);
             renderNodeBlurred = new RenderNode("blurred-" + index);
             renderNodeBlurred.setUseCompositingLayer(true, null);
             renderNodeGlass = new RenderNode("glass-" + index);

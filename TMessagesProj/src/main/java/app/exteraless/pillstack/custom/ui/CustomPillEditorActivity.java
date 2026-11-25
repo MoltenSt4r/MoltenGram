@@ -221,7 +221,7 @@ public class CustomPillEditorActivity extends BasePreferencesActivity {
             pinnedHeader.setTranslationY(top + ActionBar.getCurrentActionBarHeight() + dp(4));
         }
         if (listView != null) {
-            listView.setPadding(0, top + ActionBar.getCurrentActionBarHeight() + (pinnedHeader != null ? dp(60) : 0), 0, bottom + keyboardInset);
+            org.telegram.utils.glass.BaseFragmentSimpleGlass.setListViewParams(listView, top, bottom + keyboardInset, ActionBar.getCurrentActionBarHeight() + (pinnedHeader != null ? dp(60) : 0), 0);
             listView.setClipToPadding(false);
         }
         Bulletin.updateCurrentPosition();

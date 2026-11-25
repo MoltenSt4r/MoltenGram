@@ -1965,8 +1965,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
 
         private final RectF indicatorRect = new RectF();
 
-        private final TextPaint textPaint;
+        private final AnimatedTextView.AnimatedTextDrawable textDrawable;
         private final Paint backgroundPaint;
+        private BlurredBackgroundDrawable glass;
+        private float lastMenuPillLeft = Float.NaN;
 
         private final ValueAnimator animator;
         private final float[] animatorValues = new float[]{0f, 1f};
@@ -1979,13 +1981,15 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             super(context);
             setVisibility(GONE);
 
-            textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG);
-            textPaint.setColor(Color.WHITE);
-            textPaint.setTypeface(Typeface.SANS_SERIF);
-            textPaint.setTextAlign(Paint.Align.CENTER);
-            textPaint.setTextSize(AndroidUtilities.dpf2(15f));
+            textDrawable = new AnimatedTextView.AnimatedTextDrawable(false, true, true);
+            textDrawable.setCallback(this);
+            textDrawable.setAnimationProperties(.3f, 0, 280, CubicBezierInterpolator.EASE_OUT_QUINT);
+            textDrawable.setTextSize(dp(14));
+            textDrawable.setTypeface(AndroidUtilities.bold());
+            textDrawable.setTextColor(Color.WHITE);
+            textDrawable.setGravity(Gravity.CENTER_HORIZONTAL);
             backgroundPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-            backgroundPaint.setColor(0x26000000);
+            backgroundPaint.setColor(0x33000000);
             animator = ValueAnimator.ofFloat(0f, 1f);
             animator.setInterpolator(CubicBezierInterpolator.EASE_BOTH);
             animator.addUpdateListener(a -> {
@@ -2066,7 +2070,7 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             }
             if (isPulledDown) {
                 int position = avatarsViewPager.getRealPosition();
-                if (position == 0) {
+                if (isMainProfilePhoto(position)) {
                     otherItem.hideSubItem(set_as_main);
                     otherItem.showSubItem(add_photo);
                 } else {
@@ -2074,6 +2078,28 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                     otherItem.hideSubItem(add_photo);
                 }
             }
+        }
+
+        private boolean isMainProfilePhoto(int position) {
+            TLRPC.Photo photo = avatarsViewPager.getPhoto(position);
+            if (photo == null) {
+                return position == 0;
+            }
+            if (chatId != 0) {
+                TLRPC.Chat chat = getMessagesController().getChat(chatId);
+                if (chat != null && chat.photo != null && chat.photo.photo_id != 0) {
+                    return photo.id == chat.photo.photo_id;
+                }
+                return position == 0;
+            }
+            TLRPC.User user = getMessagesController().getUser(userId != 0 ? userId : getUserConfig().getClientUserId());
+            if (user != null && user.photo != null && user.photo.photo_id != 0) {
+                return photo.id == user.photo.photo_id;
+            }
+            if (userInfo != null && userInfo.profile_photo != null) {
+                return photo.id == userInfo.profile_photo.id;
+            }
+            return position == 0;
         }
 
         private void updateAvatarItems() {
@@ -2127,25 +2153,47 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 overlaysView.saveCurrentPageProgress();
             }
             overlaysView.invalidate();
-            final float textWidth = textPaint.measureText(getCurrentTitle());
-            indicatorRect.right = getMeasuredWidth() - dp(54f);
-            indicatorRect.left = indicatorRect.right - (textWidth + dpf2(16f));
-            indicatorRect.top = (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + dp(15f);
-            indicatorRect.bottom = indicatorRect.top + dp(26);
-            setPivotX(indicatorRect.centerX());
-            setPivotY(indicatorRect.centerY());
+            textDrawable.setText(getCurrentTitle(), isIndicatorVisible && getVisibility() == VISIBLE);
             invalidate();
         }
 
         @Override
+        protected boolean verifyDrawable(@NonNull Drawable who) {
+            return who == textDrawable || super.verifyDrawable(who);
+        }
+
+        @Override
         protected void onDraw(Canvas canvas) {
-            final float radius = AndroidUtilities.dpf2(12);
-            canvas.drawRoundRect(indicatorRect, radius, radius, backgroundPaint);
-            canvas.drawText(getCurrentTitle(), indicatorRect.centerX(), indicatorRect.top + AndroidUtilities.dpf2(18.5f), textPaint);
+            final float height = dp(30);
+            final float width = textDrawable.getCurrentWidth() + dp(24);
+            lastMenuPillLeft = simpleActionBar != null ? simpleActionBar.getMenuPillLeft() : getMeasuredWidth() - dp(com.exteragram.messenger.utils.ui.GlassUiHelper.SIDE_PADDING_DP + 46);
+            final float right = lastMenuPillLeft - dp(BaseFragmentSimpleGlass.PILLS_GAP_DP);
+            final float cy = (actionBar != null && actionBar.getOccupyStatusBar() ? AndroidUtilities.statusBarHeight : 0) + ActionBar.getCurrentActionBarHeight() / 2f;
+            indicatorRect.set(right - width, cy - height / 2f, right, cy + height / 2f);
+            setPivotX(indicatorRect.centerX());
+            setPivotY(indicatorRect.centerY());
+            if (glass == null && buttonsGlass != null) {
+                glass = buttonsGlass.headerFactory.create(this, headerButtonsGlassColors).setRadius(height / 2f).setPadding(dp(6));
+            }
+            if (glass != null) {
+                final int p = dp(6);
+                glass.setBounds((int) indicatorRect.left - p, (int) indicatorRect.top - p, (int) Math.ceil(indicatorRect.right) + p, (int) Math.ceil(indicatorRect.bottom) + p);
+                glass.draw(canvas);
+            } else {
+                canvas.drawRoundRect(indicatorRect, height / 2f, height / 2f, backgroundPaint);
+            }
+            textDrawable.setBounds((int) indicatorRect.left, (int) indicatorRect.top, (int) indicatorRect.right, (int) indicatorRect.bottom);
+            textDrawable.draw(canvas);
+        }
+
+        public void checkMenuPill() {
+            if (getVisibility() == VISIBLE && simpleActionBar != null && simpleActionBar.getMenuPillLeft() != lastMenuPillLeft) {
+                invalidate();
+            }
         }
 
         private String getCurrentTitle() {
-            return adapter.getPageTitle(avatarsViewPager.getCurrentItem()).toString();
+            return LocaleController.formatString(R.string.Of, avatarsViewPager.getRealPosition() + 1, avatarsViewPager.getRealCount());
         }
 
         private ActionBarMenuItem getSecondaryMenuItem() {
@@ -8268,6 +8316,14 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
                 super.onFactorChanged(id, factor, fraction, callee);
                 updateHeaderBar();
             }
+
+            @Override
+            protected void dispatchDraw(@NonNull Canvas canvas) {
+                super.dispatchDraw(canvas);
+                if (avatarsViewPagerIndicatorView != null) {
+                    avatarsViewPagerIndicatorView.checkMenuPill();
+                }
+            }
         };
         simpleActionBar.setTitlesAlpha(0f);
         if (!fragmentOpened && !hasMainTabs && playProfileAnimation != 0 && allowProfileAnimation && !disableProfileAnimation) {
@@ -8407,19 +8463,10 @@ public class ProfileActivity extends BaseFragment implements NotificationCenter.
             return true;
         });
         sharedMediaLayout.addPagesOverlay(headerFadeView, 0);
-        final boolean useFadeHeader = app.exteraless.glass.LiquidGlassConfig.isLiquidGlassEnabled() && app.exteraless.glass.LiquidGlassConfig.frostedHeaders;
-        if (useFadeHeader) {
-            headerFadeView.setBackground(glass.createActionBarFadeDrawable(headerFadeView));
-        } else {
-            headerFadeView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
-        }
+        headerFadeView.setBackground(glass.createActionBarFadeDrawable(headerFadeView));
         // the progressive blur of the simple screens over the rows, under the name and the buttons
         headerBlurView = new View(getContext());
-        if (useFadeHeader) {
-            headerBlurView.setBackground(glass.createActionBarFadeDrawable(headerBlurView));
-        } else {
-            headerBlurView.setBackgroundColor(Theme.getColor(Theme.key_windowBackgroundGray, resourceProvider));
-        }
+        headerBlurView.setBackground(glass.createActionBarFadeDrawable(headerBlurView));
         contentView.addView(headerBlurView, contentView.indexOfChild(avatarContainer2), LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 0, Gravity.TOP));
         glassEngine.addScrolledView(listView);
         sharedMediaLayout.setPagesGlassEngine(glassEngine);

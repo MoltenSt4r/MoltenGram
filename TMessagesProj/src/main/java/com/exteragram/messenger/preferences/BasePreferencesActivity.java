@@ -72,9 +72,26 @@ public abstract class BasePreferencesActivity extends BaseFragment {
         layoutManager = (LinearLayoutManager) listView.getLayoutManager();
         contentView.addView(listView,
                 LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        actionBar.setAdaptiveBackground(listView);
 
         fragmentView = contentView;
         return fragmentView;
+    }
+
+    @Override
+    protected org.telegram.ui.Components.RecyclerListView getListViewForSimpleGlass() {
+        return listView;
+    }
+
+    @Override
+    public boolean isSupportEdgeToEdge() {
+        return true;
+    }
+
+    @Override
+    public void onInsets(int left, int top, int right, int bottom) {
+        if (listView != null) {
+            org.telegram.utils.glass.BaseFragmentSimpleGlass.setListViewParams(listView, top, bottom, ActionBar.getCurrentActionBarHeight(), 0);
+            listView.setClipToPadding(false);
+        }
     }
 }

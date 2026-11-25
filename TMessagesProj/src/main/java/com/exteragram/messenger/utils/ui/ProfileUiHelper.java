@@ -168,6 +168,10 @@ public final class ProfileUiHelper {
     }
 
     public static int getPreferredTab() {
-        return -1;
+        return switch (app.exteraless.general.GeneralConfig.defaultProfileTab()) {
+            case 1 -> org.telegram.ui.Components.SharedMediaLayout.TAB_PHOTOVIDEO;
+            case 2 -> org.telegram.ui.Components.SharedMediaLayout.TAB_COMMON_GROUPS;
+            default -> -1;
+        };
     }
 }

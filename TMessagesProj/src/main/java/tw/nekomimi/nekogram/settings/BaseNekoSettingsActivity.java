@@ -123,10 +123,6 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
         fragmentView.setBackgroundColor(getThemedColor(Theme.key_windowBackgroundGray));
         SizeNotifierFrameLayout frameLayout = (SizeNotifierFrameLayout) fragmentView;
 
-        if (needActionBarBlur()) {
-            actionBar.setDrawBlurBackground(frameLayout);
-        }
-
         listView = new app.exteraless.appearance.SectionCardRecyclerView(context);
         listView.addOnScrollListener(new RecyclerView.OnScrollListener() {
             @Override
@@ -224,7 +220,14 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     }
 
     protected void setupAdaptiveBackground() {
-        actionBar.setAdaptiveBackground(listView);
+        if (!needActionBarBlur()) {
+            actionBar.setAdaptiveBackground(listView);
+        }
+    }
+
+    @Override
+    protected org.telegram.ui.Components.RecyclerListView getListViewForSimpleGlass() {
+        return needActionBarBlur() ? listView : null;
     }
 
     protected String getKey() {
@@ -399,7 +402,11 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
         if (listView != null) {
-            listView.setPadding(0, 0, 0, bottom);
+            if (needActionBarBlur()) {
+                org.telegram.utils.glass.BaseFragmentSimpleGlass.setListViewParams(listView, top, bottom, ActionBar.getCurrentActionBarHeight(), 0);
+            } else {
+                listView.setPadding(0, 0, 0, bottom);
+            }
             listView.setClipToPadding(false);
         }
     }
@@ -411,7 +418,7 @@ public abstract class BaseNekoSettingsActivity extends BaseFragment {
 
         public BlurContentView(Context context) {
             super(context);
-            needBlur = hasWhiteActionBar();
+            needBlur = false;
             blurBehindViews.add(this);
         }
 

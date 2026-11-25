@@ -39,6 +39,14 @@ public class BackDrawable extends Drawable {
     private float animationTime = 300.0f;
     private boolean rotated = true;
     private int arrowRotation;
+    private boolean centered;
+
+    public void setCentered(boolean centered) {
+        if (this.centered != centered) {
+            this.centered = centered;
+            invalidateSelf();
+        }
+    }
 
     public float getRotation() {
         return finalRotation;
@@ -127,7 +135,9 @@ public class BackDrawable extends Drawable {
             canvas.rotate(arrowRotation);
         }
         float rotation = currentRotation;
-        canvas.translate(-AndroidUtilities.dp(0.66f)/* * (rotation)*/, 0);
+        if (!centered) {
+            canvas.translate(-AndroidUtilities.dp(0.66f)/* * (rotation)*/, 0);
+        }
         if (!alwaysClose) {
             canvas.rotate(currentRotation * (reverseAngle ? -225 : 135));
         } else {

@@ -50,6 +50,7 @@
     <string name="OEGeneralHidePhone">Hide Phone Number</string>
     <string name="OEGeneralShowIdAndDc">Show ID and DC</string>
     <string name="OEGeneralShowIdAndDcInfo">Shows the user or chat ID and the data center number on the profile page.</string>
+    <string name="OEGeneralDefaultProfileTab">Default Tab</string>
 
     <!-- Archive -->
     <string name="OEGeneralArchiveHeader">Chat List and Archive</string>
