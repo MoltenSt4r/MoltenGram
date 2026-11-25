@@ -74,6 +74,12 @@ public class AvatarsDrawable {
     public boolean drawStoriesCircle;
     StoriesGradientTools storiesTools;
 
+    public interface ImageDrawer {
+        boolean draw(Canvas canvas, ImageReceiver imageReceiver, long id);
+    }
+
+    public ImageDrawer imageDrawer;
+
     public void commitTransition(boolean animated) {
         commitTransition(animated, true);
     }
@@ -675,10 +681,14 @@ public class AvatarsDrawable {
                 if (avatarScale != 1f) {
                     canvas.save();
                     canvas.scale(avatarScale, avatarScale, imageReceiver.getCenterX(), imageReceiver.getCenterY());
-                    imageReceiver.draw(canvas);
+                    if (imageDrawer == null || !imageDrawer.draw(canvas, imageReceiver, states[a].id)) {
+                        imageReceiver.draw(canvas);
+                    }
                     canvas.restore();
                 } else {
-                    imageReceiver.draw(canvas);
+                    if (imageDrawer == null || !imageDrawer.draw(canvas, imageReceiver, states[a].id)) {
+                        imageReceiver.draw(canvas);
+                    }
                 }
                 maxX = Math.max(maxX, imageReceiver.getCenterX() + imageReceiver.getImageWidth() / 2.0f * avatarScale);
                 if (needRestore) {
