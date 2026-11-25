@@ -175,66 +175,71 @@ public class Emoji {
                 if (gen != emojiGeneration) {
                     return;
                 }
-                Bitmap bitmap;
-                if (NekoConfig.useSystemEmoji.Bool() || isSelectedEmojiPack) {
-                    int emojiSize = Math.max(128, Math.min(192, Math.max(bigImgSize, AndroidUtilities.dp(44))));
-                    bitmap = Bitmap.createBitmap(emojiSize, emojiSize, Bitmap.Config.ARGB_8888);
-                    Canvas canvas = new Canvas(bitmap);
-                    EmojiHelper.drawEmojiFont(
-                            canvas,
-                            0,
-                            0,
-                            EmojiHelper.getInstance().getCurrentTypeface(),
-                            fixEmoji(EmojiData.data[page][page2]),
-                            emojiSize
-                    );
-                } else {
-                    bitmap = loadBitmap("emoji/" + String.format(Locale.US, "%d_%d.png", page, page2));
-                    try {
-                        if (emojiAlphaMasks == null) {
-                            emojiAlphaMasks = loadEmojiAlphaMasks();
-                        }
-
-                        int maskIndex = -1;
-                        if (emojiAlphaMasks != null) {
-                            maskIndex = emojiAlphaMasks.get(page * 4096 + page2, -1);
-                        }
-
-                        if (bitmap != null && maskIndex != -1) {
-                            final Bitmap alphaBitmap = loadBitmap("emoji/masks/" + String.format(Locale.US, "%d.png", maskIndex));
-                            if (alphaBitmap != null) {
-                                final int w = bitmap.getWidth();
-                                final int h = bitmap.getHeight();
-
-                                final int[] rgbPixels = new int[w * h];
-                                final int[] alphaPixels = new int[w * h];
-
-                                bitmap.getPixels(rgbPixels, 0, w, 0, 0, w, h);
-                                alphaBitmap.getPixels(alphaPixels, 0, w, 0, 0, w, h);
-                                alphaBitmap.recycle();
-
-                                for (int i = 0; i < rgbPixels.length; i++) {
-                                    int c = rgbPixels[i];
-                                    c = (c & 0x00FFFFFF) | ((alphaPixels[i] & 0xFF) << 24);
-
-                                    rgbPixels[i] = c;
-                                }
-
-                                bitmap.recycle();
-                                bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
-                                bitmap.setPixels(rgbPixels, 0, w, 0, 0, w, h);
+                try {
+                    Bitmap bitmap;
+                    if (NekoConfig.useSystemEmoji.Bool() || isSelectedEmojiPack) {
+                        int emojiSize = Math.max(128, Math.min(192, Math.max(bigImgSize, AndroidUtilities.dp(44))));
+                        bitmap = Bitmap.createBitmap(emojiSize, emojiSize, Bitmap.Config.ARGB_8888);
+                        Canvas canvas = new Canvas(bitmap);
+                        EmojiHelper.drawEmojiFont(
+                                canvas,
+                                0,
+                                0,
+                                EmojiHelper.getInstance().getCurrentTypeface(),
+                                fixEmoji(EmojiData.data[page][page2]),
+                                emojiSize
+                        );
+                    } else {
+                        bitmap = loadBitmap("emoji/" + String.format(Locale.US, "%d_%d.png", page, page2));
+                        try {
+                            if (emojiAlphaMasks == null) {
+                                emojiAlphaMasks = loadEmojiAlphaMasks();
                             }
+
+                            int maskIndex = -1;
+                            if (emojiAlphaMasks != null) {
+                                maskIndex = emojiAlphaMasks.get(page * 4096 + page2, -1);
+                            }
+
+                            if (bitmap != null && maskIndex != -1) {
+                                final Bitmap alphaBitmap = loadBitmap("emoji/masks/" + String.format(Locale.US, "%d.png", maskIndex));
+                                if (alphaBitmap != null) {
+                                    final int w = bitmap.getWidth();
+                                    final int h = bitmap.getHeight();
+
+                                    final int[] rgbPixels = new int[w * h];
+                                    final int[] alphaPixels = new int[w * h];
+
+                                    bitmap.getPixels(rgbPixels, 0, w, 0, 0, w, h);
+                                    alphaBitmap.getPixels(alphaPixels, 0, w, 0, 0, w, h);
+                                    alphaBitmap.recycle();
+
+                                    for (int i = 0; i < rgbPixels.length; i++) {
+                                        int c = rgbPixels[i];
+                                        c = (c & 0x00FFFFFF) | ((alphaPixels[i] & 0xFF) << 24);
+
+                                        rgbPixels[i] = c;
+                                    }
+
+                                    bitmap.recycle();
+                                    bitmap = Bitmap.createBitmap(w, h, Bitmap.Config.ARGB_8888);
+                                    bitmap.setPixels(rgbPixels, 0, w, 0, 0, w, h);
+                                }
+                            }
+                        } catch (Exception e) {
+                            FileLog.e(e);
                         }
-                    } catch (Exception e) {
-                        FileLog.e(e);
                     }
-                }
-                if (bitmap != null && gen == emojiGeneration) {
-                    emojiBmp[page][page2] = bitmap;
-                    scheduleInvalidateUi();
-                }
-                if (gen == emojiGeneration) {
-                    loadingEmoji[page][page2] = false;
+                    if (bitmap != null && gen == emojiGeneration) {
+                        emojiBmp[page][page2] = bitmap;
+                        scheduleInvalidateUi();
+                    }
+                } catch (Throwable t) {
+                    FileLog.e(t);
+                } finally {
+                    if (gen == emojiGeneration) {
+                        loadingEmoji[page][page2] = false;
+                    }
                 }
             });
         }

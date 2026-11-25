@@ -263,12 +263,14 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
         }
     }
 
+    private static final ThreadLocal<android.graphics.Rect> boundsThreadLocal = ThreadLocal.withInitial(android.graphics.Rect::new);
+
     public static void drawEmojiFont(Canvas canvas, int x, int y, Typeface typeface, String emoji, int emojiSize) {
-        if (emoji == null || emoji.isEmpty()) {
+        if (emoji == null || emoji.isEmpty() || emojiSize <= 0) {
             return;
         }
         String fixed = Emoji.fixEmoji(emoji);
-        int fontSize = Math.round(emojiSize * 0.90f);
+        float fontSize = emojiSize * 0.78f;
         TextPaint textPaint = textPaintThreadLocal.get();
         if (textPaint == null) {
             textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
@@ -285,9 +287,33 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
                 textPaint.setTypeface(typeface);
             }
         }
+        android.graphics.Rect bounds = boundsThreadLocal.get();
+        if (bounds == null) {
+            bounds = new android.graphics.Rect();
+            boundsThreadLocal.set(bounds);
+        }
+        textPaint.getTextBounds(fixed, 0, fixed.length(), bounds);
+        float measuredW = textPaint.measureText(fixed);
         var fm = textPaint.getFontMetricsInt();
+        float glyphW = Math.max(bounds.width(), measuredW);
+        float glyphH = Math.max(bounds.height(), fm.descent - fm.ascent);
+        float maxBox = emojiSize * 0.90f;
+        if (glyphW > maxBox || glyphH > maxBox) {
+            float scale = Math.min(glyphW > 0 ? maxBox / glyphW : 1f, glyphH > 0 ? maxBox / glyphH : 1f);
+            fontSize *= Math.max(0.5f, scale);
+            textPaint.setTextSize(fontSize);
+            textPaint.getTextBounds(fixed, 0, fixed.length(), bounds);
+            fm = textPaint.getFontMetricsInt();
+        }
         var textHeight = fm.descent - fm.ascent;
         var baseline = y + (emojiSize - textHeight) / 2f - fm.ascent;
+        if (!bounds.isEmpty()) {
+            float minBaseline = y + 1f - bounds.top;
+            float maxBaseline = y + emojiSize - 1f - bounds.bottom;
+            if (minBaseline <= maxBaseline) {
+                baseline = Math.max(minBaseline, Math.min(maxBaseline, baseline));
+            }
+        }
         var centerX = x + emojiSize / 2f;
         canvas.drawText(fixed, centerX, baseline, textPaint);
     }
