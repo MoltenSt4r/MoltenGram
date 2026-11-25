@@ -270,7 +270,7 @@ public class EmojiHelper extends BaseRemoteHelper implements NotificationCenter.
             return;
         }
         String fixed = Emoji.fixEmoji(emoji);
-        float fontSize = emojiSize * 0.92f;
+        float fontSize = emojiSize * 0.95f;
         TextPaint textPaint = textPaintThreadLocal.get();
         if (textPaint == null) {
             textPaint = new TextPaint(Paint.ANTI_ALIAS_FLAG | Paint.FILTER_BITMAP_FLAG | Paint.DITHER_FLAG | Paint.SUBPIXEL_TEXT_FLAG);
