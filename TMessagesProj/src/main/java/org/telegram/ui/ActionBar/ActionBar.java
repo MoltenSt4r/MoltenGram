@@ -220,7 +220,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
     private float glassMenuAppliedOuterRadius = -1;
     private float glassMenuAppliedInnerRadius = -1;
     private float glassAvatarGap = dp(6);
-    private boolean drawGlassMiddlePill = true;
     private int glassPadding = dp(6);
     private int glassTitleTextSize = GlassUiHelper.TITLE_TEXT_SIZE_CENTERED;
     private float sideButtonsOffset;
@@ -2286,19 +2285,6 @@ public class ActionBar extends FrameLayout implements FactorAnimator.Target, The
             invalidate();
         }
         castShadows = value;
-    }
-
-    public void setDrawGlassMiddlePill(boolean value) {
-        if (drawGlassMiddlePill == value) return;
-        drawGlassMiddlePill = value;
-        invalidate();
-    }
-
-    public void setGlassShadowAlpha(float alpha) {
-        if (glassDrawable != null) glassDrawable.setShadowAlpha(alpha);
-        if (glassDrawableBack instanceof BlurredBackgroundDrawable) ((BlurredBackgroundDrawable) glassDrawableBack).setShadowAlpha(alpha);
-        if (glassDrawableMenu instanceof BlurredBackgroundDrawable) ((BlurredBackgroundDrawable) glassDrawableMenu).setShadowAlpha(alpha);
-        invalidate();
     }
 
     public void setShadowAlpha(int alpha) {

@@ -55,7 +55,7 @@
     <string name="PluginsDocumentation">Документация</string>
     <string name="PluginsTrusted">Доверенные плагины</string>
     <string name="PluginsPoweredBy">Работает на Chaquopy.</string>
-    <string name="PluginsEmptyHint">Плагины можно найти в @exteraPlugins.</string>
+    <string name="PluginsEmptyHint">Плагины можно найти в **Магазине плагинов**.</string>
     <string name="PluginsNotFound">Плагины не найдены</string>
     <string name="EnablePluginsEngine">Включить движок плагинов</string>
     <string name="RestartRequired">Перезапустите приложение, чтобы применить</string>

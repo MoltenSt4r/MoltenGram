@@ -56,7 +56,7 @@
     <string name="PluginsDocumentation">التوثيق</string>
     <string name="PluginsTrusted">الإضافات الموثوقة</string>
     <string name="PluginsPoweredBy">مدعوم بواسطة Chaquopy.</string>
-    <string name="PluginsEmptyHint">يمكنك العثور على الإضافات في @exteraPlugins.</string>
+    <string name="PluginsEmptyHint">يمكنك العثور على الإضافات في **متجر الإضافات**.</string>
     <string name="PluginsNotFound">لم يُعثر على إضافات</string>
     <string name="EnablePluginsEngine">تفعيل محرك الإضافات</string>
     <string name="RestartRequired">أعد تشغيل التطبيق للتطبيق</string>

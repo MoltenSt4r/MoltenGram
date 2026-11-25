@@ -51,7 +51,7 @@
     <string name="PluginsDocumentation">Dokumentacja</string>
     <string name="PluginsTrusted">Zaufane wtyczki</string>
     <string name="PluginsPoweredBy">Napędzane przez Chaquopy.</string>
-    <string name="PluginsEmptyHint">Wtyczki znajdziesz na @exteraPlugins.</string>
+    <string name="PluginsEmptyHint">Wtyczki znajdziesz w **Sklepie z wtyczkami**.</string>
     <string name="PluginsNotFound">Nie znaleziono wtyczek</string>
     <string name="EnablePluginsEngine">Włącz silnik wtyczek</string>
     <string name="RestartRequired">Uruchom aplikację ponownie, aby zastosować</string>

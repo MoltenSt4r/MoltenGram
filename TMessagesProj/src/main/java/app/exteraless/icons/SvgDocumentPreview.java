@@ -1,3 +1,4 @@
+package app.exteraless.icons;
 
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;

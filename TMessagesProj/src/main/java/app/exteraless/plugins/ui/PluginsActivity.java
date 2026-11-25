@@ -8,9 +8,7 @@ import android.content.Context;
 import android.content.Intent;
 import android.net.Uri;
 import android.text.SpannableStringBuilder;
-import android.text.Spanned;
 import android.text.TextUtils;
-import android.text.style.ClickableSpan;
 import android.view.View;
 import android.widget.FrameLayout;
 
@@ -19,7 +17,6 @@ import org.telegram.ui.Components.BulletinFactory;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
-import org.telegram.messenger.browser.Browser;
 import org.telegram.ui.ActionBar.ActionBar;
 import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
@@ -28,6 +25,8 @@ import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.UItem;
 import org.telegram.ui.Components.UniversalAdapter;
 import org.telegram.ui.Components.UniversalRecyclerView;
+import org.telegram.ui.Components.RecyclerListView;
+import org.telegram.utils.glass.BaseFragmentSimpleGlass;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -37,8 +36,6 @@ import java.util.HashSet;
 import java.util.List;
 import java.util.Locale;
 import java.util.Set;
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
 
 import app.exteraless.plugins.Plugin;
 import app.exteraless.plugins.PluginInstallHelper;
@@ -96,11 +93,7 @@ public class PluginsActivity extends BaseFragment {
                 } else if (id == MENU_INFO) {
                     presentFragment(new PluginsInfoActivity());
                 } else if (id == MENU_STORE) {
-                    PluginStoreActivity store = new PluginStoreActivity();
-                    if (PluginStoreActivity.getCachedUpdatesCount() > 0) {
-                        store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
-                    }
-                    presentFragment(store);
+                    openPluginStore();
                 } else if (id == MENU_CHECK_UPDATES) {
                     PluginStoreActivity store = new PluginStoreActivity();
                     store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
@@ -165,10 +158,17 @@ public class PluginsActivity extends BaseFragment {
         listView.adapter.setApplyBackground(false);
         contentView.addView(listView,
                 LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
-        actionBar.setAdaptiveBackground(listView);
 
         fragmentView = contentView;
         return fragmentView;
+    }
+
+    private void openPluginStore() {
+        PluginStoreActivity store = new PluginStoreActivity();
+        if (PluginStoreActivity.getCachedUpdatesCount() > 0) {
+            store.setInitialFilter(PluginStoreActivity.FILTER_UPDATES);
+        }
+        presentFragment(store);
     }
 
     // ---------- список ----------
@@ -317,7 +317,12 @@ public class PluginsActivity extends BaseFragment {
         List<Plugin> visible = visiblePlugins();
         if (visible.isEmpty()) {
             CharSequence hint = TextUtils.isEmpty(searchQuery)
-                    ? withUsernameLink(getString(R.string.PluginsEmptyHint))
+                    ? AndroidUtilities.replaceSingleTag(
+                            getString(R.string.PluginsEmptyHint),
+                            Theme.key_windowBackgroundWhiteBlueText,
+                            AndroidUtilities.REPLACING_TAG_TYPE_LINK,
+                            this::openPluginStore,
+                            getResourceProvider())
                     : getString(R.string.PluginsNotFound);
             emptyCell.setState(engineEnabled, hint, listView != null);
             items.add(PluginUiItem.fullscreen(emptyCell, dp(74), true));
@@ -326,32 +331,6 @@ public class PluginsActivity extends BaseFragment {
         for (Plugin plugin : visible) {
             items.add(PluginCell.Factory.asPlugin(plugin, new PluginRowDelegate(plugin)));
         }
-    }
-
-    /**
-     * Делает @username в подсказке кликабельной ссылкой на канал.
-     * exteraGram зовёт свой LocaleUtils.formatWithUsernames; у нас такого хелпера
-     * нет, а тянуть его целиком ради одной строки незачем.
-     */
-    private CharSequence withUsernameLink(String text) {
-        SpannableStringBuilder builder = new SpannableStringBuilder(text);
-        Matcher matcher = Pattern.compile("@([A-Za-z][A-Za-z0-9_]{3,31})").matcher(text);
-        while (matcher.find()) {
-            final String username = matcher.group(1);
-            builder.setSpan(new ClickableSpan() {
-                @Override
-                public void onClick(View widget) {
-                    Browser.openUrl(getParentActivity(), "https://t.me/" + username);
-                }
-
-                @Override
-                public void updateDrawState(android.text.TextPaint ds) {
-                    super.updateDrawState(ds);
-                    ds.setUnderlineText(false);
-                }
-            }, matcher.start(), matcher.end(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-        }
-        return builder;
     }
 
 
@@ -824,6 +803,11 @@ public class PluginsActivity extends BaseFragment {
     }
 
     @Override
+    protected RecyclerListView getListViewForSimpleGlass() {
+        return listView;
+    }
+
+    @Override
     public boolean isSupportEdgeToEdge() {
         return true;
     }
@@ -831,7 +815,7 @@ public class PluginsActivity extends BaseFragment {
     @Override
     public void onInsets(int left, int top, int right, int bottom) {
         if (listView != null) {
-            listView.setPadding(0, 0, 0, bottom);
+            BaseFragmentSimpleGlass.setListViewParams(listView, top, bottom, ActionBar.getCurrentActionBarHeight(), 0);
             listView.setClipToPadding(false);
         }
     }

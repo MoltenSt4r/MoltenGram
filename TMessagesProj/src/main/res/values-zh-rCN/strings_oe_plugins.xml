@@ -51,7 +51,7 @@
     <string name="PluginsDocumentation">文档</string>
     <string name="PluginsTrusted">受信任的插件</string>
     <string name="PluginsPoweredBy">由 Chaquopy 提供支持。</string>
-    <string name="PluginsEmptyHint">你可以在 @exteraPlugins 中找到插件。</string>
+    <string name="PluginsEmptyHint">你可以在 **插件商店** 中找到插件。</string>
     <string name="PluginsNotFound">未找到插件</string>
     <string name="EnablePluginsEngine">启用插件引擎</string>
     <string name="RestartRequired">重启应用后生效</string>

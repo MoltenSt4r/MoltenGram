@@ -1,23 +1,32 @@
 package app.exteraless.plugins.ui;
 
 import android.content.Context;
+import android.graphics.drawable.Drawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.widget.FrameLayout;
 import android.widget.LinearLayout;
 
+import org.telegram.messenger.DocumentObject;
+import org.telegram.messenger.Emoji;
+import org.telegram.messenger.ImageLocation;
+import org.telegram.messenger.MediaDataController;
+import org.telegram.messenger.NotificationCenter;
+import org.telegram.messenger.SvgHelper;
+import org.telegram.tgnet.TLRPC;
 import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.BackupImageView;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.LinkSpanDrawable;
-import org.telegram.ui.Components.StickerImageView;
 
-final class PluginsEmptyCell extends FrameLayout {
+final class PluginsEmptyCell extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
 
-    private static final String EMPTY_STICKER_PACK = "AnimatedEmojies";
-    private static final int EMPTY_STICKER_INDEX = 47;
+    private static final String EMPTY_CART_EMOJI = "\uD83D\uDED2";
 
+    private final int currentAccount;
     private final LinearLayout content;
+    private final BackupImageView iconView;
     private final LinkSpanDrawable.LinksTextView hintView;
 
     private boolean initialized;
@@ -26,6 +35,7 @@ final class PluginsEmptyCell extends FrameLayout {
 
     PluginsEmptyCell(Context context, int currentAccount) {
         super(context);
+        this.currentAccount = currentAccount;
         setClipChildren(false);
         setClipToPadding(false);
 
@@ -35,12 +45,12 @@ final class PluginsEmptyCell extends FrameLayout {
         addView(content, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT,
                 LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
 
-        StickerImageView stickerView = new StickerImageView(context, currentAccount);
-        stickerView.setAspectFit(true);
-        stickerView.setStickerPackName(EMPTY_STICKER_PACK);
-        stickerView.setStickerNum(EMPTY_STICKER_INDEX);
-        content.addView(stickerView, LayoutHelper.createLinear(130, 130, Gravity.CENTER,
+        iconView = new BackupImageView(context);
+        iconView.setAspectFit(true);
+        iconView.getImageReceiver().setAutoRepeat(2);
+        content.addView(iconView, LayoutHelper.createLinear(112, 112, Gravity.CENTER,
                 0, 0, 0, 16));
+        updateCartIcon();
 
         hintView = new LinkSpanDrawable.LinksTextView(context);
         hintView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
@@ -49,6 +59,47 @@ final class PluginsEmptyCell extends FrameLayout {
         hintView.setLinkTextColor(Theme.getColor(Theme.key_windowBackgroundWhiteBlueText));
         content.addView(hintView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT,
                 LayoutHelper.WRAP_CONTENT, Gravity.CENTER, 24, 0, 24, 0));
+    }
+
+    @Override
+    protected void onAttachedToWindow() {
+        super.onAttachedToWindow();
+        NotificationCenter.getInstance(currentAccount).addObserver(this, NotificationCenter.stickersDidLoad);
+        updateCartIcon();
+    }
+
+    @Override
+    protected void onDetachedFromWindow() {
+        super.onDetachedFromWindow();
+        NotificationCenter.getInstance(currentAccount).removeObserver(this, NotificationCenter.stickersDidLoad);
+    }
+
+    @Override
+    public void didReceivedNotification(int id, int account, Object... args) {
+        if (id == NotificationCenter.stickersDidLoad
+                && args.length > 0
+                && args[0] instanceof Integer
+                && (Integer) args[0] == MediaDataController.TYPE_EMOJI) {
+            updateCartIcon();
+        }
+    }
+
+    private void updateCartIcon() {
+        MediaDataController controller = MediaDataController.getInstance(currentAccount);
+        TLRPC.Document document = controller.getEmojiAnimatedSticker(EMPTY_CART_EMOJI);
+        Drawable emojiDrawable = Emoji.getEmojiBigDrawable(EMPTY_CART_EMOJI);
+        if (document != null) {
+            SvgHelper.SvgDrawable svgThumb = DocumentObject.getSvgThumb(
+                    document.thumbs, Theme.key_emptyListPlaceholder, 0.2f);
+            if (svgThumb != null) {
+                svgThumb.overrideWidthAndHeight(512, 512);
+            }
+            Drawable thumb = svgThumb != null ? svgThumb : emojiDrawable;
+            iconView.setImage(ImageLocation.getForDocument(document), "112_112", "tgs", thumb, document);
+        } else {
+            controller.checkStickers(MediaDataController.TYPE_EMOJI);
+            iconView.setImageDrawable(emojiDrawable);
+        }
     }
 
     void setState(boolean visible, CharSequence text, boolean animated) {

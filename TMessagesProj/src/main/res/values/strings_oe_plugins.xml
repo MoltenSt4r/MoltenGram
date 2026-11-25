@@ -58,7 +58,7 @@
     <string name="PluginsDocumentation">Documentation</string>
     <string name="PluginsTrusted">Trusted Plugins</string>
     <string name="PluginsPoweredBy">Powered by Chaquopy.</string>
-    <string name="PluginsEmptyHint">You can find plugins in @exteraPlugins.</string>
+    <string name="PluginsEmptyHint">You can find plugins in **Plugin Store**.</string>
     <string name="PluginsNotFound">No plugins found</string>
     <string name="EnablePluginsEngine">Enable Plugins Engine</string>
     <string name="RestartRequired">Restart the app to apply</string>
