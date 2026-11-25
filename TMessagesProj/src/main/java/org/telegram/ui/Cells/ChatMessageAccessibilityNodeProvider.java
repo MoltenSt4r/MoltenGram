@@ -81,18 +81,57 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
     private Rect rect = new Rect();
 
     private class ProfileSpan extends ClickableSpan {
-        private TLRPC.User user;
+        private final TLRPC.User user;
+        private final TLRPC.Chat chat;
 
         public ProfileSpan(TLRPC.User user) {
             this.user = user;
+            this.chat = null;
+        }
+
+        public ProfileSpan(TLRPC.Chat chat) {
+            this.user = null;
+            this.chat = chat;
         }
 
         @Override
         public void onClick(@NonNull View view) {
             if (cell.delegate != null) {
-                cell.delegate.didPressUserAvatar(cell, user, 0, 0, false);
+                if (user != null) {
+                    cell.delegate.didPressUserAvatar(cell, user, 0, 0, false);
+                } else if (chat != null) {
+                    cell.delegate.didPressChannelAvatar(cell, chat, 0, 0, 0, false);
+                }
             }
         }
+    }
+
+    private TLRPC.User getProfileUser() {
+        if (!cell.isWidePostsProfileHeaderCell()) {
+            return null;
+        }
+        if (cell.feedDisplayChannel != null) {
+            return null;
+        }
+        if (!cell.widePostsEmbeddedProfileAvatar) {
+            return cell.currentUser;
+        }
+        TLRPC.User profileUser = cell.getWidePostsProfileUser();
+        return profileUser != null || cell.hasWidePostsProfilePeer() ? profileUser : cell.currentUser;
+    }
+
+    private TLRPC.Chat getProfileChat() {
+        if (!cell.isWidePostsProfileHeaderCell()) {
+            return null;
+        }
+        if (cell.feedDisplayChannel != null) {
+            return cell.feedDisplayChannel;
+        }
+        if (!cell.widePostsEmbeddedProfileAvatar) {
+            return null;
+        }
+        TLRPC.Chat profileChat = cell.getWidePostsProfileChat();
+        return profileChat != null || cell.hasWidePostsProfilePeer() ? profileChat : cell.currentChat;
     }
 
     private RichMessageLayout.RichBlock resolveRichElement(int virtualViewId, int[] outLocal) {
@@ -132,9 +171,15 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
             final long fileSize = cell.currentMessageObject != null ? cell.currentMessageObject.loadedFileSize : 0;
             if (cell.accessibilityText == null || cell.accessibilityTextUnread != unread || cell.accessibilityTextContentUnread != contentUnread || cell.accessibilityTextFileSize != fileSize) {
                 SpannableStringBuilder sb = new SpannableStringBuilder();
-                if (cell.isChat && cell.currentUser != null && !cell.currentMessageObject.isOut()) {
-                    sb.append(UserObject.getUserName(cell.currentUser));
-                    sb.setSpan(new ProfileSpan(cell.currentUser), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                TLRPC.User profileUser = getProfileUser();
+                TLRPC.Chat profileChat = getProfileChat();
+                if (cell.isChat
+                        && (profileUser != null || profileChat != null)
+                        && (!cell.currentMessageObject.isOut() || cell.feedDisplayChannel != null)) {
+                    sb.append(cell.widePostsEmbeddedProfileAvatar
+                            ? cell.getAuthorName()
+                            : profileUser != null ? UserObject.getUserName(profileUser) : profileChat.title);
+                    sb.setSpan(profileUser != null ? new ProfileSpan(profileUser) : new ProfileSpan(profileChat), 0, sb.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
                     final CharSequence adminText = cell.getAdminAccessibilityText();
                     if (!TextUtils.isEmpty(adminText)) {
                         if (cell.adminLayoutIsTag) {
@@ -447,7 +492,7 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
 
             int i;
             if (Build.VERSION.SDK_INT < Build.VERSION_CODES.N) {
-                if (cell.isChat && cell.currentUser != null && !cell.currentMessageObject.isOut()) {
+                if (cell.isChat && (getProfileUser() != null || getProfileChat() != null) && !cell.currentMessageObject.isOut()) {
                     info.addChild(cell, PROFILE);
                 }
                 if (cell.currentMessageObject.messageText instanceof Spannable) {
@@ -538,14 +583,36 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
             info.setParent(cell);
             info.setPackageName(cell.getContext().getPackageName());
             if (virtualViewId == PROFILE) {
-                if (cell.currentUser == null) {
+                TLRPC.User profileUser = getProfileUser();
+                TLRPC.Chat profileChat = getProfileChat();
+                if (profileUser == null && profileChat == null) {
                     return null;
                 }
-                String content = UserObject.getUserName(cell.currentUser);
+                String content = cell.widePostsEmbeddedProfileAvatar
+                        ? cell.getAuthorName()
+                        : profileUser != null ? UserObject.getUserName(profileUser) : profileChat.title;
                 info.setText(content);
-                rect.set((int) cell.nameX, (int) cell.nameY, (int) (cell.nameX + cell.nameWidth), (int) (cell.nameY + (cell.nameLayout != null ? cell.nameLayout.getHeight() : 10)));
+                rect.setEmpty();
+                if (cell.drawNameLayout && cell.nameLayout != null) {
+                    if (cell.isWidePostsMediaProfileHeader() && cell.nameLayoutSelector != null) {
+                        rect.set(cell.nameLayoutSelector.getBounds());
+                    } else {
+                        rect.set((int) cell.nameX, (int) cell.nameY, (int) (cell.nameX + cell.nameWidth), (int) (cell.nameY + cell.nameLayout.getHeight()));
+                    }
+                }
+                if (!cell.nameAvatarBounds.isEmpty()) {
+                    rect.union(
+                            (int) Math.floor(cell.nameAvatarBounds.left),
+                            (int) Math.floor(cell.nameAvatarBounds.top),
+                            (int) Math.ceil(cell.nameAvatarBounds.right),
+                            (int) Math.ceil(cell.nameAvatarBounds.bottom)
+                    );
+                }
+                if (rect.isEmpty()) {
+                    return null;
+                }
                 info.setBoundsInParent(rect);
-                if (cell.accessibilityVirtualViewBounds.get(virtualViewId) == null) {
+                if (cell.accessibilityVirtualViewBounds.get(virtualViewId) == null || !cell.accessibilityVirtualViewBounds.get(virtualViewId).equals(rect)) {
                     cell.accessibilityVirtualViewBounds.put(virtualViewId, new Rect(rect));
                 }
                 rect.offset(pos[0], pos[1]);
@@ -832,7 +899,11 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
                 info.setContentDescription(sb.toString());
                 info.addAction(AccessibilityNodeInfo.ACTION_CLICK);
 
-                rect.set(cell.replyStartX, cell.replyStartY, cell.replyStartX + Math.max(cell.replyNameWidth, cell.replyTextWidth), cell.replyStartY + (int) cell.replyHeight);
+                if (cell.isWidePostsMediaProfileHeader()) {
+                    cell.replySelectorRect.roundOut(rect);
+                } else {
+                    rect.set(cell.replyStartX, cell.replyStartY, cell.replyStartX + Math.max(cell.replyNameWidth, cell.replyTextWidth), cell.replyStartY + (int) cell.replyHeight);
+                }
                 info.setBoundsInParent(rect);
                 if (cell.accessibilityVirtualViewBounds.get(virtualViewId) == null || !cell.accessibilityVirtualViewBounds.get(virtualViewId).equals(rect)) {
                     cell.accessibilityVirtualViewBounds.put(virtualViewId, new Rect(rect));
@@ -917,7 +988,13 @@ class ChatMessageAccessibilityNodeProvider extends AccessibilityNodeProvider {
             } else if (action == AccessibilityNodeInfo.ACTION_CLICK) {
                 if (virtualViewId == PROFILE) {
                     if (cell.delegate != null) {
-                        cell.delegate.didPressUserAvatar(cell, cell.currentUser, 0, 0, false);
+                        TLRPC.User profileUser = getProfileUser();
+                        TLRPC.Chat profileChat = getProfileChat();
+                        if (profileUser != null) {
+                            cell.delegate.didPressUserAvatar(cell, profileUser, 0, 0, false);
+                        } else if (profileChat != null) {
+                            cell.delegate.didPressChannelAvatar(cell, profileChat, 0, 0, 0, false);
+                        }
                     }
                 } else if (virtualViewId >= RICH_MEDIA_START) {
                     final int[] localElement = {0};

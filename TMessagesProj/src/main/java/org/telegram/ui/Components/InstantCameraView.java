@@ -135,7 +135,7 @@ import tw.nekomimi.nekogram.NekoConfig;
 import xyz.nextalone.nagram.NaConfig;
 
 @SuppressLint("ViewConstructor")
-public class InstantCameraView extends FrameLayout implements NotificationCenter.NotificationCenterDelegate {
+public class InstantCameraView extends InstantCameraViewBase implements NotificationCenter.NotificationCenterDelegate {
 
     public boolean WRITE_TO_FILE_IN_BACKGROUND;
 
@@ -1025,6 +1025,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
     }
 
     public void startAnimation(boolean open, boolean fromPaused) {
+        dispatchAnimationState(open, fromPaused);
         if (animatorSet != null) {
             animatorSet.removeAllListeners();
             animatorSet.cancel();
@@ -1105,9 +1106,15 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
         zoomSlider.setBaseTranslationY(translationY);
     }
 
-    public RectOld getCameraRect() {
+    @Override
+    public RectF getCameraRect() {
         cameraContainer.getLocationOnScreen(position);
-        return new RectOld(position[0], position[1], cameraContainer.getWidth(), cameraContainer.getHeight());
+        return new RectF(
+                position[0],
+                position[1],
+                position[0] + cameraContainer.getWidth(),
+                position[1] + cameraContainer.getHeight()
+        );
     }
 
     public void changeVideoPreviewState(int state, float progress) {
@@ -4143,7 +4150,7 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                 "}\n";
     }
 
-    public class InstantViewCameraContainer extends FrameLayout {
+    public class InstantViewCameraContainer extends InstantCameraViewBase.InstantViewCameraContainer {
 
         ImageReceiver imageReceiver;
         float imageProgress;
@@ -4655,6 +4662,11 @@ public class InstantCameraView extends FrameLayout implements NotificationCenter
                 pinchScale = lockedZoom;
             }
         }
+    }
+
+    @Override
+    public void setFrontface(boolean frontface) {
+        setUseFrontCamera(frontface);
     }
 
     public void setUseFrontCamera(boolean useFront) {

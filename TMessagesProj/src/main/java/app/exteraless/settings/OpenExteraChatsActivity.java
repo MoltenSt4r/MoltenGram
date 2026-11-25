@@ -628,10 +628,10 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
                 }
                 extendedFpsRow = addRow();
                 cameraStabilizationRow = addRow();
-                // Зеркало и широкий угол умеет только CameraX.
+                // Широкий угол на старте умеют Camera2 и CameraX; зеркало — CameraX.
+                startWithWideAngleRow = addRow();
                 if (cameraTypeIndex() == CAMERA_TYPE_CAMERA_X) {
                     cameraMirrorModeRow = addRow();
-                    startWithWideAngleRow = addRow();
                 }
             }
             if (!isSeamlessSwitchingAvailable() && isSeamlessSwitchingEnabled()) {
@@ -866,20 +866,24 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
      * CameraXSession, другим движкам их передать некуда.
      */
     private static int cameraSettingsTotal() {
-        int total = isSeamlessSwitchingAvailable() ? 3 : 2;
+        int total = (isSeamlessSwitchingAvailable() ? 3 : 2) + 1; // + широкий угол (Camera2 и CameraX)
         if (ChatsConfig.cameraType() == CAMERA_TYPE_CAMERA_X) {
-            total += 2;  // зеркало и широкий угол
+            total += 1;  // зеркало
         }
         return total;
     }
 
     private static int cameraSettingsSelected() {
-        int selected = count(ChatsConfig.extendedFramesPerSecond.Bool(), ChatsConfig.cameraStabilization.Bool());
+        int selected = count(
+                ChatsConfig.extendedFramesPerSecond.Bool(),
+                ChatsConfig.cameraStabilization.Bool(),
+                ChatsConfig.startWithWideAngleCamera.Bool()
+        );
         if (isSeamlessSwitchingAvailable() && isSeamlessSwitchingEnabled()) {
             selected++;
         }
-        if (ChatsConfig.cameraType() == CAMERA_TYPE_CAMERA_X) {
-            selected += count(ChatsConfig.cameraMirrorMode.Bool(), ChatsConfig.startWithWideAngleCamera.Bool());
+        if (ChatsConfig.cameraType() == CAMERA_TYPE_CAMERA_X && ChatsConfig.cameraMirrorMode.Bool()) {
+            selected++;
         }
         return selected;
     }

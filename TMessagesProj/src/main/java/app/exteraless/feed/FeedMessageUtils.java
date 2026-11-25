@@ -2,6 +2,7 @@ package app.exteraless.feed;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ChatObject;
+import org.telegram.messenger.DialogObject;
 import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
@@ -249,6 +250,47 @@ public abstract class FeedMessageUtils {
                 && !message.isDateObject
                 && message.type != MessageObject.TYPE_LOADING
                 && !message.isSponsored();
+    }
+
+    public static TLRPC.Chat resolveDisplayChannel(MessageObject messageObject) {
+        if (messageObject == null
+                || messageObject.messageOwner == null
+                || messageObject.searchType != SEARCH_TYPE_FEED
+                || messageObject.preview
+                || messageObject.isSponsored()
+                || messageObject.type == MessageObject.TYPE_JOINED_CHANNEL
+                || !messageObject.messageOwner.post
+                || messageObject.messageOwner.action != null
+                || messageObject.messageOwner.peer_id == null
+                || messageObject.messageOwner.peer_id.channel_id == 0) {
+            return null;
+        }
+        TLRPC.Chat channel = MessagesController.getInstance(messageObject.currentAccount)
+                .getChat(messageObject.messageOwner.peer_id.channel_id);
+        return ChatObject.isChannelAndNotMegaGroup(channel) ? channel : null;
+    }
+
+    public static boolean hasProfileSignature(MessageObject messageObject) {
+        TLRPC.Chat channel = resolveDisplayChannel(messageObject);
+        return channel != null && channel.signature_profiles;
+    }
+
+    public static boolean shouldMergePosts(
+            MessageObject upper,
+            TLRPC.Chat upperChannel,
+            MessageObject lower,
+            TLRPC.Chat lowerChannel
+    ) {
+        return upperChannel != null
+                && lowerChannel != null
+                && upperChannel.id == lowerChannel.id
+                && upper.contentType == lower.contentType
+                && !(upper.messageOwner.reply_markup instanceof TLRPC.TL_replyInlineMarkup)
+                && upper.isOutOwner() == lower.isOutOwner()
+                && Math.abs(upper.messageOwner.date - lower.messageOwner.date) <= 5 * 60
+                && lower.messageOwner.paid_message_stars <= 0
+                && DialogObject.getPeerDialogId(upper.messageOwner.guestchat_via_from)
+                    == DialogObject.getPeerDialogId(lower.messageOwner.guestchat_via_from);
     }
 
     /**

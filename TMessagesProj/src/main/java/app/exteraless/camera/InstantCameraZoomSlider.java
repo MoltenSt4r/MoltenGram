@@ -1,3 +1,17 @@
+/*
+
+ This is the source code of exteraGram for Android.
+
+ We do not and cannot prevent the use of our code,
+ but be respectful and credit the original author.
+
+ Copyright @exteraGram, 2022-2026
+
+ Licensed under the GNU GPL v. 3 or later, with the additional terms
+ in ADDITIONAL_TERMS.md at the root of the repository.
+
+*/
+
 package app.exteraless.camera;
 
 import android.animation.Animator;
@@ -10,105 +24,113 @@ import android.graphics.RectF;
 import android.hardware.Camera;
 import android.os.SystemClock;
 import android.view.MotionEvent;
-import android.view.View;
 
 import androidx.camera.core.ZoomState;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 
+import com.exteragram.messenger.ExteraConfig;
+
 import org.telegram.messenger.AndroidUtilities;
+import org.telegram.messenger.Utilities;
 import org.telegram.messenger.camera.Camera2Session;
-import org.telegram.messenger.camera.CameraInfo;
 import org.telegram.messenger.camera.CameraSession;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Components.AnimationProperties;
 import org.telegram.ui.Components.CubicBezierInterpolator;
 import org.telegram.ui.Components.blur3.drawable.BlurredBackgroundDrawable;
+import org.telegram.utils.recorder.round.RoundVideoSession;
 
-import java.util.ArrayList;
 import java.util.List;
 
-import app.exteraless.chats.ChatsConfig;
-
-/**
- * Ползунок зума для кружка: перенос {@code InstantCameraZoomSlider} из exteraGram 12.9.0.
- *
- * Привязывается к любому из трёх бэкендов камеры и берёт у него настоящие пределы зума,
- * поэтому «.5» на делениях — это реальный ширик, а не цифровое увеличение. У Camera1 зум
- * задаётся индексом в таблице кратностей, у Camera2 — числом, у CameraX — через
- * {@link ZoomState}, за которым вид следит подпиской.
- *
- * Сессия готова не сразу, поэтому привязка повторяется до 25 раз с шагом 100 мс; пока
- * пределы неизвестны, вид скрыт.
- */
 @SuppressLint("ViewConstructor")
 public class InstantCameraZoomSlider extends CameraZoomSliderView {
 
     public interface OnCameraZoomChangeListener {
-        void onCameraZoomChanged(float zoom, boolean fromUser);
+        void onCameraZoomChanged(float zoom, boolean fromSlider);
     }
 
-    public static final AnimationProperties.FloatProperty<InstantCameraZoomSlider> OPEN_ALPHA =
-        new AnimationProperties.FloatProperty<InstantCameraZoomSlider>("openAlpha") {
-            @Override
-            public void setValue(InstantCameraZoomSlider slider, float value) {
-                slider.setOpenAlpha(value);
-            }
-
-            @Override
-            public Float get(InstantCameraZoomSlider slider) {
-                return slider.getOpenAlpha();
-            }
-        };
-
-    public enum Backend {
+    private enum Backend {
         NONE,
         CAMERA_1,
         CAMERA_2,
-        CAMERA_X
+        CAMERA_X,
+        ROUND_VIDEO
     }
 
-    private static final int MAX_BIND_RETRIES = 25;
-    private static final long BIND_RETRY_DELAY = 100L;
-    private static final long APPEAR_DURATION = 180L;
+    private static final int BIND_RETRY_LIMIT = 25;
+    private static final long BIND_RETRY_DELAY_MS = 100L;
+    private static final long APPEAR_DURATION_MS = 180L;
+    private static final float APPEAR_SCALE_FROM = 0.9f;
+    private static final int FALLBACK_FRAME_RATE = 30;
+    private static final float CIRCLE_GAP_DP = 16.0f;
+    private static final float BAR_BLOCK_DP = 64.0f;
+    private static final long RESET_ZOOM_DURATION_MS = 350L;
+    private static final long STEP_ZOOM_DURATION_MS = 175L;
+    private static final double STEP_ZOOM_COEFFICIENT = 1.75;
+    private static final long LENS_INACTIVE_DELAY_MS = 700L;
 
-    private final Theme.ResourcesProvider resourcesProvider;
-    private final Runnable bindRunnable = this::tryBind;
-    private final Observer<ZoomState> cameraXZoomObserver = this::onCameraXZoomStateChanged;
+    public static final AnimationProperties.FloatProperty<InstantCameraZoomSlider> OPEN_ALPHA =
+            new AnimationProperties.FloatProperty<>("openAlpha") {
+                @Override
+                public void setValue(InstantCameraZoomSlider view, float value) {
+                    view.setOpenAlpha(value);
+                }
+
+                @Override
+                public Float get(InstantCameraZoomSlider view) {
+                    return view.getOpenAlpha();
+                }
+            };
 
     private Backend backend = Backend.NONE;
     private CameraXSession cameraXSession;
     private Camera2Session camera2Session;
     private CameraSession camera1Session;
+    private RoundVideoSession roundVideoSession;
+    private String roundVideoCameraId;
+    private boolean roundVideoFront;
+    private ValueAnimator resetZoomAnimator;
+    private ValueAnimator stepZoomAnimator;
     private LiveData<ZoomState> cameraXZoomState;
-
     private float[] camera1ZoomRatios = new float[0];
-    private int camera1ZoomIndex = -1;
+    private CameraLensStops.LensSet lensSet = CameraLensStops.LensSet.EMPTY;
+    private String lensCameraId;
+    private boolean lensInactivePending;
+    private final CameraLensSwitcher lensSwitcher = new CameraLensSwitcher(this::sendRatioZoom);
+    private final Runnable activeLensListener = this::onActiveLensChanged;
+    private final Runnable lensInactiveRunnable = () -> {
+        lensInactivePending = false;
+        if (!lensSet.isExpectedLens(getZoom(), CameraActiveLens.get(lensCameraId))) {
+            setSelectedLensInactive(true);
+        }
+    };
     private float camera1LinearZoom;
-
-    private float defaultZoom = 1f;
-    private float wideZoom = 1f;
-    private float displayOneZoom = 1f;
-
+    private int camera1ZoomIndex = -1;
+    private float defaultZoom = 1.0f;
+    private float wideZoom = 1.0f;
+    private float displayOneZoom = 1.0f;
     private OnCameraZoomChangeListener cameraZoomChangeListener;
-    private BlurredBackgroundDrawable blurBackground;
-    private float blurCornerRadius = -1f;
-
-    private ValueAnimator appearAnimator;
-    private float appearProgress;
-    private float openAlpha;
-    private float baseTranslationY;
-    private int textureViewSize;
-
-    private boolean switchingCamera;
-    private boolean animateNextConfiguration;
     private int bindRetries;
-
-    private final Runnable zoomFlushRunnable = this::flushPendingZoom;
+    private int textureViewSize;
+    private float baseTranslationY;
+    private boolean animateNextConfiguration;
+    private boolean switchingCamera;
+    private float openAlpha;
+    private float appearProgress;
+    private ValueAnimator appearAnimator;
     private float pendingZoom = Float.NaN;
     private float lastAppliedZoom = Float.NaN;
     private long lastZoomAppliedAt;
     private boolean zoomFlushScheduled;
+
+    private final Runnable bindRunnable = this::tryBind;
+    private final Runnable zoomFlushRunnable = this::flushPendingZoom;
+    private final Observer<ZoomState> cameraXZoomObserver = this::onCameraXZoomStateChanged;
+
+    private final Theme.ResourcesProvider resourcesProvider;
+    private BlurredBackgroundDrawable blurBackground;
+    private float blurCornerRadius = -1.0f;
 
     public InstantCameraZoomSlider(Context context, Theme.ResourcesProvider resourcesProvider) {
         super(context);
@@ -119,297 +141,244 @@ public class InstantCameraZoomSlider extends CameraZoomSliderView {
         applyTelegramColors();
     }
 
-    private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
+    public float getOpenAlpha() {
+        return openAlpha;
+    }
+
+    public void setOpenAlpha(float alpha) {
+        if (openAlpha != alpha) {
+            openAlpha = alpha;
+            setAlpha(openAlpha * appearProgress);
+        }
+    }
+
+    private void setAppearProgress(float progress) {
+        if (appearProgress != progress) {
+            appearProgress = progress;
+            applyAppearProgress();
+        }
+    }
+
+    private void applyAppearProgress() {
+        setAlpha(openAlpha * appearProgress);
+        float scale = APPEAR_SCALE_FROM + (1.0f - APPEAR_SCALE_FROM) * appearProgress;
+        setScaleX(scale);
+        setScaleY(scale);
+    }
+
+    private void showAnimated() {
+        setEnabled(true);
+        if (!ExteraConfig.getZoomSlider()) {
+            hideImmediately();
+            return;
+        }
+        if (getVisibility() != VISIBLE) {
+            setVisibility(VISIBLE);
+        }
+        if (appearAnimator != null || appearProgress >= 1.0f) {
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat(appearProgress, 1.0f);
+        appearAnimator = animator;
+        animator.addUpdateListener(animation -> setAppearProgress((float) animation.getAnimatedValue()));
+        animator.addListener(new AnimatorListenerAdapter() {
+            @Override
+            public void onAnimationEnd(Animator animation) {
+                if (appearAnimator == animation) {
+                    appearAnimator = null;
+                    setAppearProgress(1.0f);
+                }
+            }
+        });
+        animator.setDuration(APPEAR_DURATION_MS);
+        animator.setInterpolator(CubicBezierInterpolator.DEFAULT);
+        animator.start();
+    }
+
+    private void hideImmediately() {
+        cancelAppearAnimation();
+        setAppearProgress(0.0f);
+        setVisibility(GONE);
+    }
+
+    private void cancelAppearAnimation() {
+        ValueAnimator animator = appearAnimator;
+        if (animator != null) {
+            appearAnimator = null;
+            animator.cancel();
+        }
     }
 
     private void applyTelegramColors() {
-        final int background = Theme.getColor(Theme.key_chat_messagePanelBackground, resourcesProvider);
-        final int accent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
-        final int onAccent = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
-        final int text = Theme.getColor(Theme.key_chat_messagePanelText, resourcesProvider);
-        setColors(background, text, accent, accent, onAccent);
-        setToggleTextColor(text);
+        int background = Theme.getColor(Theme.key_chat_messagePanelBackground, resourcesProvider);
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton, resourcesProvider);
+        int onAccent = Theme.getColor(Theme.key_chats_actionIcon, resourcesProvider);
+        int marks = Theme.getColor(Theme.key_chat_messagePanelText, resourcesProvider);
+        setColors(background, marks, accent, accent, onAccent);
+        setToggleTextColor(marks);
     }
 
-    // ---------- деления ----------
-
-    private static void addDistinctStop(ArrayList<Float> stops, float value) {
-        for (int i = 0; i < stops.size(); i++) {
-            final float existing = stops.get(i);
-            if (Math.abs(existing - value) <= 1.0E-4f) {
-                return;
-            }
-            if (existing > value) {
-                stops.add(i, value);
-                return;
-            }
-        }
-        stops.add(value);
-    }
-
-    private static float[] boundStops(float[] values, float min, float max, boolean withEdges) {
-        final ArrayList<Float> stops = new ArrayList<>(values.length + 2);
-        if (withEdges) {
-            addDistinctStop(stops, min);
-        }
-        for (float value : values) {
-            if (value <= 0f || !Float.isFinite(value)) {
-                continue;
-            }
-            if (value < min - 1.0E-4f) {
-                if (!withEdges) {
-                    addDistinctStop(stops, min);
-                }
-            } else if (value <= max + 1.0E-4f) {
-                addDistinctStop(stops, clamp(value, min, max));
-            }
-        }
-        if (withEdges) {
-            addDistinctStop(stops, max);
-        }
-        final float[] result = new float[stops.size()];
-        for (int i = 0; i < stops.size(); i++) {
-            result[i] = stops.get(i);
-        }
-        return result;
-    }
-
-    private static float[] buildRulerStops(float min, float max) {
-        return buildRulerStops(min, max, 1f);
-    }
-
-    /** {@code unit} — реальная кратность, которая подписывается как «1×». */
-    private static float[] buildRulerStops(float min, float max, float unit) {
-        final float[] stops = boundStops(new float[]{min, unit, 2f * unit, 5f * unit, 10f * unit, 30f * unit}, min, max, false);
-        // Край подписываем отдельно, только если он заметно дальше последнего деления:
-        // иначе на фронталке Pixel рядом встают «10» и «11».
-        if (stops.length == 0 || stops[stops.length - 1] * 1.15f < max) {
-            return boundStops(stops, min, max, true);
-        }
-        return stops;
-    }
-
-    private static float[] buildToggleStops(boolean frontFace, float min, float max) {
-        return buildToggleStops(frontFace, min, max, 1f);
-    }
-
-    private static float[] buildToggleStops(boolean frontFace, float min, float max, float unit) {
-        return boundStops(frontFace
-            ? new float[]{min, unit, 2f * unit}
-            : new float[]{min, unit, 2f * unit, 5f * unit}, min, max, false);
-    }
-
-    // ---------- Camera1 ----------
-
-    private static float[] readCamera1ZoomRatios(CameraSession session) {
-        try {
-            final CameraInfo info = session.cameraInfo;
-            final Camera camera = info != null ? info.getCamera() : null;
-            if (camera == null) {
-                return null;
-            }
-            final Camera.Parameters parameters = camera.getParameters();
-            if (parameters == null || !parameters.isZoomSupported()) {
-                return new float[0];
-            }
-            final List<Integer> ratios = parameters.getZoomRatios();
-            if (ratios == null || ratios.size() < 2) {
-                return new float[0];
-            }
-            final float[] result = new float[ratios.size()];
-            for (int i = 0; i < result.length; i++) {
-                final Integer ratio = ratios.get(i);
-                result[i] = ratio == null ? 1f : Math.max(1f, ratio / 100f);
-            }
-            return result;
-        } catch (Exception e) {
-            return null;
+    public void setBlurBackground(BlurredBackgroundDrawable background) {
+        if (blurBackground != background) {
+            blurBackground = background;
+            blurCornerRadius = -1.0f;
+            invalidate();
         }
     }
 
-    private float camera1LinearZoomForIndex(int index) {
-        final int last = camera1ZoomRatios.length - 1;
-        if (index <= 0) {
-            return 0f;
+    @Override
+    protected boolean drawPillBackground(Canvas canvas, RectF pillBounds, float cornerRadius) {
+        if (blurBackground == null) {
+            return false;
         }
-        if (index >= last) {
-            return 1f;
+        if (blurCornerRadius != cornerRadius) {
+            blurCornerRadius = cornerRadius;
+            blurBackground.setRadius(cornerRadius);
         }
-        return (index + 0.001f) / last;
+        blurBackground.setBounds(
+                Math.round(pillBounds.left),
+                Math.round(pillBounds.top),
+                Math.round(pillBounds.right),
+                Math.round(pillBounds.bottom)
+        );
+        blurBackground.draw(canvas);
+        return true;
     }
 
-    private float camera1RatioForLinearZoom(float linear) {
-        final int last = camera1ZoomRatios.length - 1;
-        return camera1ZoomRatios[Math.min((int) (clamp(linear, 0f, 1f) * last), last)];
+    public void setOnCameraZoomChangeListener(OnCameraZoomChangeListener listener) {
+        cameraZoomChangeListener = listener;
     }
 
-    private int camera1ZoomIndexForRatio(float ratio) {
-        int best = 0;
-        float bestDistance = Float.MAX_VALUE;
-        for (int i = 0; i < camera1ZoomRatios.length; i++) {
-            final float distance = Math.abs(camera1ZoomRatios[i] - ratio);
-            if (distance < bestDistance) {
-                best = i;
-                bestDistance = distance;
-            }
+    public void bindSession(CameraXSession session) {
+        boolean animateConfiguration = session != null
+                && getVisibility() == VISIBLE
+                && isLaidOut()
+                && (switchingCamera
+                        || backend == Backend.CAMERA_X && cameraXSession == session);
+        switchingCamera = false;
+        if (animateConfiguration) {
+            prepareZoomConfigurationTransition();
         }
-        return best;
-    }
-
-    // ---------- зум ----------
-
-    /**
-     * Ставит зум в очередь вместо немедленной отправки в камеру.
-     *
-     * Слайдер двигается по каждому событию касания, а камера принимает изменения
-     * не чаще кадра записи; без очереди лишние вызовы копятся в очереди камеры
-     * и зум отстаёт от пальца.
-     */
-    private void applyZoom(float value) {
-        pendingZoom = value;
-        scheduleZoomFlush();
-    }
-
-    private void scheduleZoomFlush() {
-        if (zoomFlushScheduled) {
+        resetBinding(!animateConfiguration);
+        if (session == null) {
             return;
         }
-        zoomFlushScheduled = true;
-        postOnAnimation(zoomFlushRunnable);
-    }
-
-    private void discardPendingZoom() {
-        removeCallbacks(zoomFlushRunnable);
-        zoomFlushScheduled = false;
-        pendingZoom = Float.NaN;
-    }
-
-    private void resetZoomThrottle() {
-        discardPendingZoom();
-        lastAppliedZoom = Float.NaN;
-        lastZoomAppliedAt = 0L;
-    }
-
-    private long getZoomUpdateIntervalMs() {
-        int frameRate = 0;
-        if (backend == Backend.CAMERA_X && cameraXSession != null) {
-            frameRate = cameraXSession.getRecordingFrameRate();
-        } else if (backend == Backend.CAMERA_2 && camera2Session != null) {
-            frameRate = camera2Session.getRecordingFrameRate();
+        backend = Backend.CAMERA_X;
+        cameraXSession = session;
+        animateNextConfiguration = animateConfiguration;
+        if (animateConfiguration) {
+            setEnabled(false);
+            setExpanded(false, true);
         }
-        if (frameRate <= 0) {
-            frameRate = 30;
-        }
-        return Math.max(1L, 1000L / frameRate);
+        tryBind();
     }
 
-    private void flushPendingZoom() {
-        zoomFlushScheduled = false;
-        final float value = pendingZoom;
-        if (Float.isNaN(value) || backend == Backend.NONE) {
+    public void bindSession(Camera2Session session) {
+        boolean reconfigureInPlace = session != null && switchingCamera;
+        switchingCamera = false;
+        resetBinding(!reconfigureInPlace);
+        if (session == null) {
             return;
         }
-        final long now = SystemClock.uptimeMillis();
-        if (!Float.isNaN(lastAppliedZoom)) {
-            if (value == lastAppliedZoom) {
-                return;
-            }
-            if (now - lastZoomAppliedAt < getZoomUpdateIntervalMs()) {
-                scheduleZoomFlush();
-                return;
-            }
-        }
-        lastAppliedZoom = value;
-        lastZoomAppliedAt = now;
-        sendZoomToCamera(value);
+        backend = Backend.CAMERA_2;
+        camera2Session = session;
+        animateNextConfiguration = reconfigureInPlace;
+        tryBind();
     }
 
-    private void sendZoomToCamera(float value) {
-        float reported = value;
-        switch (backend) {
-            case CAMERA_X:
-                if (cameraXSession == null) {
-                    return;
-                }
-                cameraXSession.setZoomRatio(value);
-                reported = cameraXSession.getLinearZoom();
-                break;
-            case CAMERA_2:
-                if (camera2Session == null) {
-                    return;
-                }
-                camera2Session.setZoom(value);
-                break;
-            case CAMERA_1:
-                if (camera1Session == null || camera1ZoomRatios.length < 2) {
-                    return;
-                }
-                final int index = camera1ZoomIndexForRatio(value);
-                camera1LinearZoom = camera1LinearZoomForIndex(index);
-                if (index != camera1ZoomIndex) {
-                    camera1ZoomIndex = index;
-                    camera1Session.setZoom(camera1LinearZoom);
-                }
-                reported = camera1LinearZoom;
-                break;
-            default:
-                return;
+    public void bindSession(RoundVideoSession session, RoundVideoSession.CameraCapabilities capabilities) {
+        String cameraId = capabilities.getActiveCameraId();
+        RoundVideoSession.CameraFacing facing = capabilities.getActiveFacing();
+        if (session == null || cameraId == null || facing == null) {
+            return;
         }
-        if (cameraZoomChangeListener != null) {
-            cameraZoomChangeListener.onCameraZoomChanged(reported, true);
+        if (backend == Backend.ROUND_VIDEO
+                && roundVideoSession == session
+                && cameraId.equals(roundVideoCameraId)) {
+            return;
         }
+        boolean animateConfiguration = session != null
+                && getVisibility() == VISIBLE
+                && isLaidOut()
+                && (switchingCamera
+                        || backend == Backend.ROUND_VIDEO && roundVideoSession == session);
+        switchingCamera = false;
+        if (animateConfiguration) {
+            prepareZoomConfigurationTransition();
+        }
+        resetBinding(!animateConfiguration);
+        backend = Backend.ROUND_VIDEO;
+        roundVideoSession = session;
+        roundVideoCameraId = cameraId;
+        roundVideoFront = facing == RoundVideoSession.CameraFacing.FRONT;
+        animateNextConfiguration = animateConfiguration;
+        if (animateConfiguration) {
+            setEnabled(false);
+            setExpanded(false, true);
+        }
+        tryBind();
     }
 
-    private void onCameraXZoomStateChanged(ZoomState state) {
-        if (backend != Backend.CAMERA_X || state == null || cameraZoomChangeListener == null) {
+    public void bindSession(CameraSession session, float currentLinearZoom) {
+        boolean reconfigureInPlace = session != null && switchingCamera;
+        switchingCamera = false;
+        resetBinding(!reconfigureInPlace);
+        if (session == null) {
             return;
         }
-        cameraZoomChangeListener.onCameraZoomChanged(state.getLinearZoom(), false);
+        backend = Backend.CAMERA_1;
+        camera1Session = session;
+        camera1LinearZoom = Utilities.clamp01(currentLinearZoom);
+        animateNextConfiguration = reconfigureInPlace;
+        tryBind();
     }
 
-    private void attachCameraXZoomObserver() {
-        if (cameraXSession == null || cameraXSession.camera == null) {
+    public void beginCameraSwitch() {
+        if (backend == Backend.NONE || getVisibility() != VISIBLE || !isLaidOut()) {
             return;
         }
-        final LiveData<ZoomState> state = cameraXSession.camera.getCameraInfo().getZoomState();
-        if (cameraXZoomState == state) {
-            return;
-        }
+        switchingCamera = true;
+        prepareZoomConfigurationTransition();
+        setEnabled(false);
+        setExpanded(false, true);
+    }
+
+    public void unbindSession() {
+        switchingCamera = false;
+        resetBinding(true);
+    }
+
+    private void resetBinding(boolean hide) {
+        setExternalZoomGestureActive(false);
+        cancelZoomAnimation();
+        resetZoomThrottle();
+        backend = Backend.NONE;
         detachCameraXZoomObserver();
-        cameraXZoomState = state;
-        state.observeForever(cameraXZoomObserver);
-    }
-
-    private void detachCameraXZoomObserver() {
-        if (cameraXZoomState != null) {
-            cameraXZoomState.removeObserver(cameraXZoomObserver);
-            cameraXZoomState = null;
+        setZoom(getZoom());
+        cameraXSession = null;
+        camera2Session = null;
+        camera1Session = null;
+        roundVideoSession = null;
+        roundVideoCameraId = null;
+        roundVideoFront = false;
+        camera1ZoomRatios = new float[0];
+        lensSet = CameraLensStops.LensSet.EMPTY;
+        lensCameraId = null;
+        lensSwitcher.bind(lensSet, null, null, Float.NaN);
+        updateLensIndicator();
+        camera1ZoomIndex = -1;
+        defaultZoom = 1.0f;
+        wideZoom = 1.0f;
+        displayOneZoom = 1.0f;
+        bindRetries = 0;
+        removeCallbacks(bindRunnable);
+        animateNextConfiguration = false;
+        if (hide) {
+            cancelZoomConfigurationTransition();
+            setEnabled(true);
+            setExpanded(false, false);
+            hideImmediately();
         }
-    }
-
-    public void scaleCameraXZoom(float factor) {
-        if (backend == Backend.CAMERA_X && cameraXSession != null && Float.isFinite(factor)) {
-            setCameraXZoomRatio(getZoom() * factor);
-        }
-    }
-
-    public void setCameraXZoomRatio(float ratio) {
-        if (backend != Backend.CAMERA_X || cameraXSession == null) {
-            return;
-        }
-        final float clamped = clamp(ratio, getMinimumZoom(), getMaximumZoom());
-        setZoom(clamped);
-        cameraXSession.setZoomRatio(clamped);
-    }
-
-    public float getCameraXResetZoom() {
-        final boolean front = cameraXSession != null && cameraXSession.isActiveCameraFrontface();
-        return !ChatsConfig.startWithWideAngleCamera.Bool() || front ? defaultZoom : wideZoom;
-    }
-
-    public float getDisplayOneZoom() {
-        return displayOneZoom;
     }
 
     public void syncZoom() {
@@ -429,227 +398,28 @@ public class InstantCameraZoomSlider extends CameraZoomSliderView {
                     setZoom(camera1RatioForLinearZoom(camera1LinearZoom));
                 }
                 break;
-            default:
+            case ROUND_VIDEO:
+            case NONE:
                 break;
         }
     }
 
-    public void syncZoom(float value) {
+    public void syncZoom(float zoom) {
         if (backend == Backend.CAMERA_1) {
-            camera1LinearZoom = clamp(value, 0f, 1f);
+            camera1LinearZoom = Utilities.clamp01(zoom);
             camera1ZoomIndex = -1;
             if (camera1ZoomRatios.length > 1) {
                 setZoom(camera1RatioForLinearZoom(camera1LinearZoom));
             }
         } else if (backend == Backend.CAMERA_2) {
-            setZoom(value);
+            setZoom(zoom);
         } else {
             syncZoom();
         }
     }
 
-    // ---------- привязка к сессии ----------
-
-    public void bindSession(CameraXSession session) {
-        final boolean morph = session != null && getVisibility() == VISIBLE && isLaidOut()
-            && (switchingCamera || (backend == Backend.CAMERA_X && cameraXSession == session));
-        switchingCamera = false;
-        if (morph) {
-            prepareZoomConfigurationTransition();
-        }
-        resetBinding(!morph);
-        if (session == null) {
-            return;
-        }
-        backend = Backend.CAMERA_X;
-        cameraXSession = session;
-        animateNextConfiguration = morph;
-        if (morph) {
-            setEnabled(false);
-            setExpanded(false, true);
-        }
-        tryBind();
-    }
-
-    public void bindSession(Camera2Session session) {
-        final boolean morph = session != null && switchingCamera;
-        switchingCamera = false;
-        resetBinding(!morph);
-        if (session == null) {
-            return;
-        }
-        backend = Backend.CAMERA_2;
-        camera2Session = session;
-        animateNextConfiguration = morph;
-        tryBind();
-    }
-
-    public void bindSession(CameraSession session, float linearZoom) {
-        final boolean morph = session != null && switchingCamera;
-        switchingCamera = false;
-        resetBinding(!morph);
-        if (session == null) {
-            return;
-        }
-        backend = Backend.CAMERA_1;
-        camera1Session = session;
-        camera1LinearZoom = clamp(linearZoom, 0f, 1f);
-        animateNextConfiguration = morph;
-        tryBind();
-    }
-
-    public void unbindSession() {
-        switchingCamera = false;
-        resetBinding(true);
-    }
-
-    public void beginCameraSwitch() {
-        if (backend != Backend.NONE && getVisibility() == VISIBLE && isLaidOut()) {
-            switchingCamera = true;
-            prepareZoomConfigurationTransition();
-            setEnabled(false);
-            setExpanded(false, true);
-        }
-    }
-
-    private void resetBinding(boolean hide) {
-        setExternalZoomGestureActive(false);
-        resetZoomThrottle();
-        backend = Backend.NONE;
-        detachCameraXZoomObserver();
-        setZoom(getZoom());
-        cameraXSession = null;
-        camera2Session = null;
-        camera1Session = null;
-        camera1ZoomRatios = new float[0];
-        camera1ZoomIndex = -1;
-        defaultZoom = 1f;
-        wideZoom = 1f;
-        displayOneZoom = 1f;
-        bindRetries = 0;
-        removeCallbacks(bindRunnable);
-        animateNextConfiguration = false;
-        if (hide) {
-            cancelZoomConfigurationTransition();
-            setEnabled(true);
-            setExpanded(false, false);
-            hideImmediately();
-        }
-    }
-
-    private void retryBinding() {
-        if (backend != Backend.NONE && bindRetries++ < MAX_BIND_RETRIES) {
-            postDelayed(bindRunnable, BIND_RETRY_DELAY);
-            return;
-        }
-        animateNextConfiguration = false;
-        cancelZoomConfigurationTransition();
-        setEnabled(true);
-        hideImmediately();
-    }
-
-    private String activeCameraId() {
-        if (backend == Backend.CAMERA_X && cameraXSession != null) {
-            return cameraXSession.getActiveCameraId();
-        }
-        if (backend == Backend.CAMERA_2 && camera2Session != null) {
-            return camera2Session.cameraId;
-        }
-        return null;
-    }
-
-    private void tryBind() {
-        float minRatio;
-        float maxRatio;
-        boolean frontFace = false;
-
-        switch (backend) {
-            case CAMERA_X: {
-                if (cameraXSession == null || !cameraXSession.isReady() || cameraXSession.camera == null) {
-                    retryBinding();
-                    return;
-                }
-                final ZoomState state = cameraXSession.camera.getCameraInfo().getZoomState().getValue();
-                if (state == null) {
-                    retryBinding();
-                    return;
-                }
-                minRatio = state.getMinZoomRatio();
-                maxRatio = state.getMaxZoomRatio();
-                frontFace = cameraXSession.isActiveCameraFrontface();
-                break;
-            }
-            case CAMERA_2: {
-                if (camera2Session == null || !camera2Session.isInitiated()) {
-                    retryBinding();
-                    return;
-                }
-                minRatio = camera2Session.getMinZoom();
-                maxRatio = camera2Session.getMaxZoom();
-                frontFace = camera2Session.isFront();
-                break;
-            }
-            case CAMERA_1: {
-                if (camera1Session == null || !camera1Session.isInitied()) {
-                    retryBinding();
-                    return;
-                }
-                camera1ZoomRatios = readCamera1ZoomRatios(camera1Session);
-                if (camera1ZoomRatios == null) {
-                    camera1ZoomRatios = new float[0];
-                    retryBinding();
-                    return;
-                }
-                minRatio = camera1ZoomRatios.length == 0 ? 1f : camera1ZoomRatios[0];
-                maxRatio = camera1ZoomRatios.length == 0 ? 1f : camera1ZoomRatios[camera1ZoomRatios.length - 1];
-                break;
-            }
-            default:
-                return;
-        }
-
-        if (!Float.isFinite(minRatio) || !Float.isFinite(maxRatio) || minRatio <= 0f || maxRatio <= minRatio) {
-            animateNextConfiguration = false;
-            cancelZoomConfigurationTransition();
-            setEnabled(true);
-            hideImmediately();
-            return;
-        }
-
-        // Фронталка: её минимум — полный сенсор, а не другая линза (Pixel: 0.9×), и это
-        // штатный угол. Подписываем его как «1×» и от него же считаем «2×».
-        displayOneZoom = frontFace ? minRatio : 1f;
-        defaultZoom = clamp(displayOneZoom, minRatio, maxRatio);
-        wideZoom = minRatio;
-        setDisplayNormalizationFactor(displayOneZoom);
-
-        final float[] opticalToggles = frontFace ? null : CameraLensStops.buildToggleStops(minRatio, maxRatio,
-            CameraLensStops.opticalZoomRatios(getContext(), activeCameraId(), minRatio));
-        final float[] toggles = opticalToggles != null ? opticalToggles : buildToggleStops(frontFace, minRatio, maxRatio, displayOneZoom);
-        final float[] ruler = opticalToggles != null ? CameraLensStops.buildRulerStops(minRatio, maxRatio, opticalToggles) : buildRulerStops(minRatio, maxRatio, displayOneZoom);
-        final float current = clamp(
-            backend == Backend.CAMERA_X ? getCameraXResetZoom()
-                : backend == Backend.CAMERA_2 ? camera2Session.getZoom()
-                    : camera1RatioForLinearZoom(camera1LinearZoom),
-            minRatio, maxRatio);
-
-        final boolean morph = animateNextConfiguration;
-        animateNextConfiguration = false;
-        setZoomConfiguration(minRatio, maxRatio, toggles, ruler, current, morph);
-        if (!morph) {
-            setExpanded(false, false);
-        }
-        if (backend == Backend.CAMERA_X) {
-            attachCameraXZoomObserver();
-            cameraXSession.setZoomRatio(current);
-        }
-        showAnimated();
-    }
-
-    // ---------- жесты снаружи ----------
-
     public void beginExternalZoomGesture() {
-        if (backend != Backend.CAMERA_X) {
+        if (!isRatioBackend()) {
             return;
         }
         discardPendingZoom();
@@ -670,74 +440,462 @@ public class InstantCameraZoomSlider extends CameraZoomSliderView {
         setExpanded(true, true);
     }
 
-    // ---------- появление и место на экране ----------
-
-    private void applyAppearProgress() {
-        setAlpha(openAlpha * appearProgress);
-        final float scale = appearProgress * 0.1f + 0.9f;
-        setScaleX(scale);
-        setScaleY(scale);
-    }
-
-    private void setAppearProgress(float value) {
-        if (appearProgress != value) {
-            appearProgress = value;
-            applyAppearProgress();
+    public void scaleCameraXZoom(float factor) {
+        if (isRatioBackend() && Float.isFinite(factor)) {
+            setCameraXZoomRatio(getZoom() * factor);
         }
     }
 
-    private void cancelAppearAnimation() {
-        final ValueAnimator animator = appearAnimator;
-        if (animator != null) {
-            appearAnimator = null;
-            animator.cancel();
-        }
-    }
-
-    private void hideImmediately() {
-        cancelAppearAnimation();
-        setAppearProgress(0f);
-        setVisibility(GONE);
-    }
-
-    private void showAnimated() {
-        setEnabled(true);
-        if (!app.exteraless.chats.ChatsConfig.zoomSlider.Bool()) {
-            hideImmediately();
+    public void setCameraXZoomRatio(float zoom) {
+        if (!isRatioBackend()) {
             return;
         }
-        if (getVisibility() != VISIBLE) {
-            setVisibility(VISIBLE);
+        float sliderZoom = Utilities.clamp(zoom, getMaximumZoom(), getMinimumZoom());
+        setZoom(sliderZoom);
+        lensSwitcher.setZoom(sliderZoom);
+        updateLensIndicator();
+    }
+
+    public float getCameraXResetZoom() {
+        boolean front = backend == Backend.ROUND_VIDEO
+                ? roundVideoFront
+                : cameraXSession != null && cameraXSession.isActiveCameraFrontface();
+        return ExteraConfig.getStartWithWideAngleCamera() && !front ? wideZoom : defaultZoom;
+    }
+
+    public void finishPinchZoomGesture() {
+        endPinchZoomGesture();
+        if (!ExteraConfig.getStaticZoom()) {
+            animateToResetZoom();
         }
-        if (appearAnimator != null || appearProgress >= 1f) {
+    }
+
+    public void animateToResetZoom() {
+        if (!isRatioBackend()) {
             return;
         }
-        final ValueAnimator animator = ValueAnimator.ofFloat(appearProgress, 1f);
-        appearAnimator = animator;
-        animator.addUpdateListener(a -> setAppearProgress((float) a.getAnimatedValue()));
+        cancelZoomAnimation();
+        float currentRatio = getZoom();
+        float targetRatio = Utilities.clamp(getCameraXResetZoom(), getMaximumZoom(), getMinimumZoom());
+        if (currentRatio < displayOneZoom
+                && targetRatio >= displayOneZoom
+                && getMinimumZoom() < displayOneZoom) {
+            return;
+        }
+        if (Math.abs(currentRatio - targetRatio) <= 0.001f) {
+            return;
+        }
+        ValueAnimator animator = ValueAnimator.ofFloat(currentRatio, targetRatio);
+        resetZoomAnimator = animator;
+        animator.addUpdateListener(animation -> setCameraXZoomRatio((float) animation.getAnimatedValue()));
         animator.addListener(new AnimatorListenerAdapter() {
             @Override
             public void onAnimationEnd(Animator animation) {
-                if (appearAnimator == animation) {
-                    appearAnimator = null;
-                    setAppearProgress(1f);
+                if (resetZoomAnimator == animation) {
+                    resetZoomAnimator = null;
                 }
             }
         });
-        animator.setDuration(APPEAR_DURATION);
+        animator.setDuration(RESET_ZOOM_DURATION_MS);
         animator.setInterpolator(CubicBezierInterpolator.DEFAULT);
         animator.start();
     }
 
-    private void applyPosition() {
-        setTranslationY(baseTranslationY + textureViewSize / 2f + AndroidUtilities.dp(80f) - getMeasuredHeight() / 2f);
+    public void stepZoom(boolean increase) {
+        if (!isRatioBackend() || stepZoomAnimator != null && stepZoomAnimator.isRunning()) {
+            return;
+        }
+        cancelZoomAnimation();
+        beginSteppedZoomGesture();
+        float currentRatio = getZoom();
+        float minRatio = getMinimumZoom();
+        float maxRatio = getMaximumZoom();
+        float displayOneRatio = Utilities.clamp(displayOneZoom, maxRatio, minRatio);
+        int steps = Math.max(1, (int) Math.round(Math.log(maxRatio / displayOneRatio) / Math.log(STEP_ZOOM_COEFFICIENT)));
+        float stepFactor = (float) Math.pow(maxRatio / displayOneRatio, 1.0 / steps);
+        float targetRatio;
+        if (increase) {
+            targetRatio = currentRatio < displayOneRatio ? displayOneRatio : currentRatio * stepFactor;
+        } else if (currentRatio > displayOneRatio) {
+            targetRatio = Math.max(displayOneRatio, currentRatio / stepFactor);
+        } else {
+            targetRatio = minRatio;
+        }
+        targetRatio = Utilities.clamp(targetRatio, maxRatio, minRatio);
+        ValueAnimator animator = ValueAnimator.ofFloat(currentRatio, targetRatio);
+        stepZoomAnimator = animator;
+        animator.setDuration(STEP_ZOOM_DURATION_MS);
+        animator.setInterpolator(CubicBezierInterpolator.DEFAULT);
+        animator.addUpdateListener(animation -> setCameraXZoomRatio((float) animation.getAnimatedValue()));
+        animator.start();
     }
 
-    public void setBaseTranslationY(float value) {
-        if (baseTranslationY != value) {
-            baseTranslationY = value;
-            applyPosition();
+    public void cancelZoomAnimation() {
+        ValueAnimator animator = resetZoomAnimator;
+        if (animator != null) {
+            resetZoomAnimator = null;
+            animator.cancel();
         }
+        animator = stepZoomAnimator;
+        if (animator != null) {
+            stepZoomAnimator = null;
+            animator.cancel();
+        }
+    }
+
+    private boolean isRatioBackend() {
+        return backend == Backend.CAMERA_X && cameraXSession != null
+                || backend == Backend.ROUND_VIDEO && roundVideoSession != null;
+    }
+
+    public float[] getOpticalZoomRatios() {
+        return lensSet.getRatios();
+    }
+
+    public float getDisplayOneZoom() {
+        return displayOneZoom;
+    }
+
+    private void tryBind() {
+        float min;
+        float max;
+        boolean frontCamera = false;
+        switch (backend) {
+            case CAMERA_X:
+                if (cameraXSession == null || !cameraXSession.isReady()) {
+                    retryBinding();
+                    return;
+                }
+                ZoomState zoomState = cameraXSession.camera.getCameraInfo().getZoomState().getValue();
+                if (zoomState == null) {
+                    retryBinding();
+                    return;
+                }
+                min = zoomState.getMinZoomRatio();
+                max = zoomState.getMaxZoomRatio();
+                frontCamera = cameraXSession.isActiveCameraFrontface();
+                break;
+            case CAMERA_2:
+                if (camera2Session == null || !camera2Session.isInitiated()) {
+                    retryBinding();
+                    return;
+                }
+                min = camera2Session.getMinZoom();
+                max = camera2Session.getMaxZoom();
+                break;
+            case CAMERA_1:
+                if (camera1Session == null || !camera1Session.isInitied()) {
+                    retryBinding();
+                    return;
+                }
+                camera1ZoomRatios = readCamera1ZoomRatios(camera1Session);
+                if (camera1ZoomRatios == null) {
+                    camera1ZoomRatios = new float[0];
+                    retryBinding();
+                    return;
+                }
+                min = camera1ZoomRatios.length == 0 ? 1.0f : camera1ZoomRatios[0];
+                max = camera1ZoomRatios.length == 0
+                        ? 1.0f
+                        : camera1ZoomRatios[camera1ZoomRatios.length - 1];
+                break;
+            case ROUND_VIDEO:
+                float[] range = RoundVideoCamera2Helper.readZoomRange(getContext(), roundVideoCameraId);
+                if (roundVideoSession == null || range == null) {
+                    retryBinding();
+                    return;
+                }
+                min = range[0];
+                max = range[1];
+                frontCamera = roundVideoFront;
+                break;
+            case NONE:
+            default:
+                return;
+        }
+
+        if (!Float.isFinite(min) || !Float.isFinite(max) || min <= 0.0f || max <= min) {
+            animateNextConfiguration = false;
+            cancelZoomConfigurationTransition();
+            setEnabled(true);
+            hideImmediately();
+            return;
+        }
+        defaultZoom = Utilities.clamp(1.0f, max, min);
+        wideZoom = min;
+        displayOneZoom = 1.0f;
+        setDisplayNormalizationFactor(1.0f);
+        if (backend == Backend.CAMERA_X) {
+            lensCameraId = cameraXSession.getActiveCameraId();
+        } else if (backend == Backend.ROUND_VIDEO) {
+            lensCameraId = roundVideoCameraId;
+        } else {
+            lensCameraId = null;
+        }
+        lensSet = CameraLensStops.lensSet(getContext(), lensCameraId, min);
+        float[] toggleStops = CameraLensStops.buildToggleStops(frontCamera, min, max, lensSet.getRatios());
+        float[] rulerStops = CameraLensStops.buildRulerStops(min, max, toggleStops);
+        float configuredZoom;
+        if (backend == Backend.CAMERA_X || backend == Backend.ROUND_VIDEO) {
+            configuredZoom = getCameraXResetZoom();
+        } else if (backend == Backend.CAMERA_2) {
+            configuredZoom = camera2Session.getZoom();
+        } else {
+            configuredZoom = camera1RatioForLinearZoom(camera1LinearZoom);
+        }
+        configuredZoom = Utilities.clamp(configuredZoom, max, min);
+        boolean animateConfiguration = animateNextConfiguration;
+        animateNextConfiguration = false;
+        setZoomConfiguration(
+                min,
+                max,
+                toggleStops,
+                rulerStops,
+                configuredZoom,
+                animateConfiguration
+        );
+        if (!animateConfiguration) {
+            setExpanded(false, false);
+        }
+        if (backend == Backend.CAMERA_X) {
+            attachCameraXZoomObserver();
+            cameraXSession.setZoomRatio(configuredZoom);
+        } else if (backend == Backend.ROUND_VIDEO) {
+            roundVideoSession.setZoomRatio(configuredZoom);
+        }
+        boolean dualMode = backend == Backend.CAMERA_X && cameraXSession.isDualMode();
+        lensSwitcher.bind(lensSet, lensCameraId,
+                lensCameraId != null && dualMode ? lensCameraId + "/dual" : lensCameraId, configuredZoom);
+        showAnimated();
+        updateLensIndicator();
+    }
+
+    private void retryBinding() {
+        if (backend != Backend.NONE && bindRetries++ < BIND_RETRY_LIMIT) {
+            postDelayed(bindRunnable, BIND_RETRY_DELAY_MS);
+        } else {
+            animateNextConfiguration = false;
+            cancelZoomConfigurationTransition();
+            setEnabled(true);
+            hideImmediately();
+        }
+    }
+
+    private void applyZoom(float zoom) {
+        pendingZoom = zoom;
+        scheduleZoomFlush();
+    }
+
+    private void scheduleZoomFlush() {
+        if (!zoomFlushScheduled) {
+            zoomFlushScheduled = true;
+            postOnAnimation(zoomFlushRunnable);
+        }
+    }
+
+    private void flushPendingZoom() {
+        zoomFlushScheduled = false;
+        float zoom = pendingZoom;
+        if (Float.isNaN(zoom) || backend == Backend.NONE) {
+            return;
+        }
+        long now = SystemClock.uptimeMillis();
+        if (!Float.isNaN(lastAppliedZoom)) {
+            if (zoom == lastAppliedZoom) {
+                return;
+            }
+            if (now - lastZoomAppliedAt < getZoomUpdateIntervalMs()) {
+                scheduleZoomFlush();
+                return;
+            }
+        }
+        lastAppliedZoom = zoom;
+        lastZoomAppliedAt = now;
+        sendZoomToCamera(zoom);
+    }
+
+    private long getZoomUpdateIntervalMs() {
+        int frameRate = 0;
+        if (backend == Backend.CAMERA_X && cameraXSession != null) {
+            frameRate = cameraXSession.getRecordingFrameRate();
+        } else if (backend == Backend.CAMERA_2 && camera2Session != null) {
+            frameRate = camera2Session.getRecordingFrameRate();
+        } else if (backend == Backend.ROUND_VIDEO && roundVideoSession != null
+                && roundVideoSession.getActiveFrameRate() != null) {
+            frameRate = roundVideoSession.getActiveFrameRate().getValue();
+        }
+        if (frameRate <= 0) {
+            frameRate = FALLBACK_FRAME_RATE;
+        }
+        return Math.max(1L, 1000L / frameRate);
+    }
+
+    private void discardPendingZoom() {
+        removeCallbacks(zoomFlushRunnable);
+        zoomFlushScheduled = false;
+        pendingZoom = Float.NaN;
+    }
+
+    private void resetZoomThrottle() {
+        discardPendingZoom();
+        lastAppliedZoom = Float.NaN;
+        lastZoomAppliedAt = 0L;
+    }
+
+    private void sendZoomToCamera(float zoom) {
+        float cameraZoom;
+        switch (backend) {
+            case CAMERA_X:
+                if (cameraXSession == null) {
+                    return;
+                }
+                lensSwitcher.setZoom(zoom);
+                cameraZoom = cameraXSession.getLinearZoom();
+                break;
+            case CAMERA_2:
+                if (camera2Session == null) {
+                    return;
+                }
+                camera2Session.setZoom(zoom);
+                cameraZoom = zoom;
+                break;
+            case CAMERA_1:
+                if (camera1Session == null || camera1ZoomRatios.length < 2) {
+                    return;
+                }
+                int index = camera1ZoomIndexForRatio(zoom);
+                camera1LinearZoom = camera1LinearZoomForIndex(index);
+                if (index != camera1ZoomIndex) {
+                    camera1ZoomIndex = index;
+                    camera1Session.setZoom(camera1LinearZoom);
+                }
+                cameraZoom = camera1LinearZoom;
+                break;
+            case ROUND_VIDEO:
+                if (roundVideoSession == null) {
+                    return;
+                }
+                lensSwitcher.setZoom(zoom);
+                cameraZoom = zoom;
+                break;
+            case NONE:
+            default:
+                return;
+        }
+        if (cameraZoomChangeListener != null) {
+            cameraZoomChangeListener.onCameraZoomChanged(cameraZoom, true);
+        }
+        updateLensIndicator();
+    }
+
+    private void sendRatioZoom(float zoom) {
+        if (backend == Backend.CAMERA_X && cameraXSession != null) {
+            cameraXSession.setZoomRatio(zoom);
+        } else if (backend == Backend.ROUND_VIDEO && roundVideoSession != null) {
+            roundVideoSession.setZoomRatio(zoom);
+        }
+    }
+
+    private void onActiveLensChanged() {
+        updateLensIndicator();
+        lensSwitcher.onActiveLensChanged();
+    }
+
+    private void updateLensIndicator() {
+        if (lensSet.isExpectedLens(getZoom(), CameraActiveLens.get(lensCameraId))) {
+            removeCallbacks(lensInactiveRunnable);
+            lensInactivePending = false;
+            setSelectedLensInactive(false);
+        } else if (!lensInactivePending) {
+            lensInactivePending = true;
+            postDelayed(lensInactiveRunnable, LENS_INACTIVE_DELAY_MS);
+        }
+    }
+
+    private void attachCameraXZoomObserver() {
+        CameraXSession session = cameraXSession;
+        if (session == null || session.camera == null) {
+            return;
+        }
+        LiveData<ZoomState> zoomState = session.camera.getCameraInfo().getZoomState();
+        if (cameraXZoomState == zoomState) {
+            return;
+        }
+        detachCameraXZoomObserver();
+        cameraXZoomState = zoomState;
+        cameraXZoomState.observeForever(cameraXZoomObserver);
+    }
+
+    private void detachCameraXZoomObserver() {
+        if (cameraXZoomState != null) {
+            cameraXZoomState.removeObserver(cameraXZoomObserver);
+            cameraXZoomState = null;
+        }
+    }
+
+    private void onCameraXZoomStateChanged(ZoomState zoomState) {
+        if (backend != Backend.CAMERA_X || zoomState == null) {
+            return;
+        }
+        if (cameraZoomChangeListener != null) {
+            cameraZoomChangeListener.onCameraZoomChanged(zoomState.getLinearZoom(), false);
+        }
+    }
+
+    @SuppressWarnings("deprecation")
+    private static float[] readCamera1ZoomRatios(CameraSession session) {
+        try {
+            Camera camera = session.cameraInfo != null ? session.cameraInfo.getCamera() : null;
+            if (camera == null) {
+                return null;
+            }
+            Camera.Parameters parameters = camera.getParameters();
+            if (parameters == null || !parameters.isZoomSupported()) {
+                return new float[0];
+            }
+            List<Integer> ratios = parameters.getZoomRatios();
+            if (ratios == null || ratios.size() < 2) {
+                return new float[0];
+            }
+            float[] result = new float[ratios.size()];
+            for (int i = 0; i < result.length; i++) {
+                Integer ratio = ratios.get(i);
+                result[i] = ratio == null ? 1.0f : Math.max(1.0f, ratio / 100.0f);
+            }
+            return result;
+        } catch (Exception ignored) {
+            return null;
+        }
+    }
+
+    private float camera1RatioForLinearZoom(float linearZoom) {
+        int last = camera1ZoomRatios.length - 1;
+        int index = Math.min((int) (Utilities.clamp01(linearZoom) * last), last);
+        return camera1ZoomRatios[index];
+    }
+
+    private int camera1ZoomIndexForRatio(float ratio) {
+        int closest = 0;
+        float distance = Float.MAX_VALUE;
+        for (int i = 0; i < camera1ZoomRatios.length; i++) {
+            float candidateDistance = Math.abs(camera1ZoomRatios[i] - ratio);
+            if (candidateDistance < distance) {
+                closest = i;
+                distance = candidateDistance;
+            }
+        }
+        return closest;
+    }
+
+    private float camera1LinearZoomForIndex(int index) {
+        int last = camera1ZoomRatios.length - 1;
+        if (index <= 0) {
+            return 0.0f;
+        }
+        if (index >= last) {
+            return 1.0f;
+        }
+        return (index + 0.001f) / last;
     }
 
     public void setTextureViewSize(int size) {
@@ -747,49 +905,42 @@ public class InstantCameraZoomSlider extends CameraZoomSliderView {
         }
     }
 
-    public float getOpenAlpha() {
-        return openAlpha;
-    }
-
-    public void setOpenAlpha(float value) {
-        if (openAlpha != value) {
-            openAlpha = value;
-            setAlpha(value * appearProgress);
+    public void setBaseTranslationY(float translationY) {
+        if (baseTranslationY != translationY) {
+            baseTranslationY = translationY;
+            applyPosition();
         }
     }
 
-    public void setOnCameraZoomChangeListener(OnCameraZoomChangeListener listener) {
-        cameraZoomChangeListener = listener;
-    }
-
-    public void setBlurBackground(BlurredBackgroundDrawable drawable) {
-        if (blurBackground != drawable) {
-            blurBackground = drawable;
-            blurCornerRadius = -1f;
-            invalidate();
+    @SuppressLint("ClickableViewAccessibility")
+    @Override
+    public boolean onTouchEvent(MotionEvent event) {
+        if (!isEnabled() || getAlpha() < 0.5f) {
+            return false;
         }
+        return super.onTouchEvent(event);
     }
 
     @Override
-    public boolean drawPillBackground(Canvas canvas, RectF bounds, float radius) {
-        if (blurBackground == null) {
-            return false;
-        }
-        if (blurCornerRadius != radius) {
-            blurCornerRadius = radius;
-            blurBackground.setRadius(radius);
-        }
-        blurBackground.setBounds(Math.round(bounds.left), Math.round(bounds.top),
-            Math.round(bounds.right), Math.round(bounds.bottom));
-        blurBackground.draw(canvas);
-        return true;
+    protected void onSizeChanged(int w, int h, int oldw, int oldh) {
+        super.onSizeChanged(w, h, oldw, oldh);
+        applyPosition();
+    }
+
+    private void applyPosition() {
+        setTranslationY(baseTranslationY
+                + textureViewSize / 2.0f
+                + AndroidUtilities.dp(CIRCLE_GAP_DP + BAR_BLOCK_DP)
+                - getMeasuredHeight() / 2.0f);
     }
 
     @Override
     protected void onAttachedToWindow() {
         super.onAttachedToWindow();
-        if (backend != Backend.NONE
-            && (getVisibility() != VISIBLE || !isEnabled() || animateNextConfiguration)) {
+        CameraActiveLens.addListener(activeLensListener);
+        boolean needsBinding = backend != Backend.NONE
+                && (getVisibility() != VISIBLE || !isEnabled() || animateNextConfiguration);
+        if (needsBinding) {
             bindRetries = 0;
             tryBind();
         } else if (backend == Backend.CAMERA_X) {
@@ -800,27 +951,16 @@ public class InstantCameraZoomSlider extends CameraZoomSliderView {
     @Override
     protected void onDetachedFromWindow() {
         super.onDetachedFromWindow();
+        CameraActiveLens.removeListener(activeLensListener);
+        removeCallbacks(lensInactiveRunnable);
+        lensInactivePending = false;
+        lensSwitcher.stop();
         removeCallbacks(bindRunnable);
         discardPendingZoom();
         detachCameraXZoomObserver();
         if (appearAnimator != null) {
             cancelAppearAnimation();
-            setAppearProgress(getVisibility() == VISIBLE ? 1f : 0f);
+            setAppearProgress(getVisibility() == VISIBLE ? 1.0f : 0.0f);
         }
-    }
-
-    @Override
-    protected void onSizeChanged(int width, int height, int oldWidth, int oldHeight) {
-        super.onSizeChanged(width, height, oldWidth, oldHeight);
-        applyPosition();
-    }
-
-    @Override
-    @SuppressLint("ClickableViewAccessibility")
-    public boolean onTouchEvent(MotionEvent event) {
-        if (!isEnabled() || getAlpha() < 0.5f) {
-            return false;
-        }
-        return super.onTouchEvent(event);
     }
 }

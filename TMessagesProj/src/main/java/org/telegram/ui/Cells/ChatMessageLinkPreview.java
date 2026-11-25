@@ -654,8 +654,14 @@ class ChatMessageLinkPreview {
             canvas.restore();
         }
         cell.drawVideoTimestamps(canvas, cell.linkLine.getColor());
-        cell.giveawayMessageCell.draw(canvas, cell.namesOffset, linkX, cell.resourcesProvider);
-        cell.giveawayResultsMessageCell.draw(canvas, cell.namesOffset, linkX, cell.resourcesProvider);
+        int giveawayMessageX = linkX;
+        int giveawayResultsX = linkX;
+        if (cell.isWidePostsBackground()) {
+            giveawayMessageX += Math.max(0, (width - cell.giveawayMessageCell.getMeasuredWidth()) / 2);
+            giveawayResultsX += Math.max(0, (width - cell.giveawayResultsMessageCell.getMeasuredWidth()) / 2);
+        }
+        cell.giveawayMessageCell.draw(canvas, cell.namesOffset, giveawayMessageX, cell.resourcesProvider);
+        cell.giveawayResultsMessageCell.draw(canvas, cell.namesOffset, giveawayResultsX, cell.resourcesProvider);
 
         if (cell.drawInstantView) {
             Drawable instantDrawable;
@@ -745,6 +751,10 @@ class ChatMessageLinkPreview {
                 }
             } else {
                 int instantY = startY + linkPreviewHeight + dp(cell.currentMessageObject.isUnsupported() ? -5 : 10);
+                int instantX = linkX;
+                if (cell.isWidePostsBackground() && cell.currentMessageObject.isGiveawayOrGiveawayResults()) {
+                    instantX += Math.max(0, (width - cell.instantWidth) / 2);
+                }
                 if (instantButtonLoading != null && !loading && !instantButtonLoading.isDisappeared() && !instantButtonLoading.isDisappearing()) {
                     instantButtonLoading.disappear();
                 }
@@ -756,7 +766,7 @@ class ChatMessageLinkPreview {
                     instantButtonLoading.reset();
                     instantButtonLoading.resetDisappear();
                 }
-                cell.instantButtonRect.set(linkX, instantY, linkX + cell.instantWidth, instantY + dp(36));
+                cell.instantButtonRect.set(instantX, instantY, instantX + cell.instantWidth, instantY + dp(36));
                 float scale = cell.instantButtonBounce.getScale(.02f);
                 boolean scaleRestore = scale != 1;
                 if (scaleRestore) {
@@ -765,7 +775,7 @@ class ChatMessageLinkPreview {
                 }
                 cell.selectorDrawableMaskType[0] = 0;
                 cell.createSelectorDrawable(0);
-                cell.selectorDrawable[0].setBounds(linkX, instantY, linkX + cell.instantWidth, instantY + dp(36));
+                cell.selectorDrawable[0].setBounds(instantX, instantY, instantX + cell.instantWidth, instantY + dp(36));
                 cell.selectorDrawable[0].draw(canvas);
                 if (instantButtonLoading != null && !instantButtonLoading.isDisappeared()) {
                     instantButtonLoading.setBounds(cell.instantButtonRect);
@@ -775,7 +785,7 @@ class ChatMessageLinkPreview {
                 }
                 canvas.drawRoundRect(cell.instantButtonRect, dp(6), dp(6), Theme.chat_instantViewButtonPaint);
                 if (cell.drawInstantViewType == 0) {
-                    cell.setDrawableBounds(instantDrawable, cell.instantTextLeftX + cell.instantTextX + linkX - dp(15), instantY + dp(11.5f), dp(9), dp(13));
+                    cell.setDrawableBounds(instantDrawable, cell.instantTextLeftX + cell.instantTextX + instantX - dp(15), instantY + dp(11.5f), dp(9), dp(13));
                     instantDrawable.setAlpha((int) (0xFF * alpha));
                     instantDrawable.draw(canvas);
                 } else if (cell.drawInstantViewType == 16) {
@@ -801,7 +811,7 @@ class ChatMessageLinkPreview {
                 }
                 if (cell.instantViewLayout != null) {
                     canvas.save();
-                    canvas.translate(linkX + cell.instantTextX, instantY + dp(10.5f));
+                    canvas.translate(instantX + cell.instantTextX, instantY + dp(10.5f));
                     SpoilerEffect.layoutDrawMaybe(cell.instantViewLayout, canvas);
                     canvas.restore();
                 }

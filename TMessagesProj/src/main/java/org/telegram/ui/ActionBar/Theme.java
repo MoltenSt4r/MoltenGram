@@ -2500,6 +2500,7 @@ public class Theme {
     public static TextPaint chat_msgCodeBgPaint;
 
     public static Drawable chat_msgNoSoundDrawable;
+    public static Drawable chat_channelIconDrawable;
     public static Drawable chat_composeShadowDrawable;
     public static Drawable chat_composeShadowRoundDrawable;
     public static Drawable chat_roundVideoShadow;
@@ -8471,6 +8472,7 @@ public class Theme {
             Resources resources = context.getResources();
 
             chat_msgNoSoundDrawable = resources.getDrawable(R.drawable.video_muted);
+            chat_channelIconDrawable = resources.getDrawable(R.drawable.channel).mutate();
             chat_livePhoto = resources.getDrawable(R.drawable.media_live_on).mutate();
 
             chat_msgInDrawable = new MessageDrawable(MessageDrawable.TYPE_TEXT, false, false);

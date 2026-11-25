@@ -1,3 +1,17 @@
+/*
+
+ This is the source code of exteraGram for Android.
+
+ We do not and cannot prevent the use of our code,
+ but be respectful and credit the original author.
+
+ Copyright @exteraGram, 2022-2026
+
+ Licensed under the GNU GPL v. 3 or later, with the additional terms
+ in ADDITIONAL_TERMS.md at the root of the repository.
+
+*/
+
 package app.exteraless.camera;
 
 import android.content.Context;
@@ -5,7 +19,9 @@ import android.content.pm.PackageManager;
 import android.graphics.Rect;
 import android.graphics.SurfaceTexture;
 import android.hardware.camera2.CameraCharacteristics;
+import android.hardware.camera2.CameraDevice;
 import android.hardware.camera2.CameraManager;
+import android.hardware.camera2.CaptureRequest;
 import android.hardware.camera2.params.StreamConfigurationMap;
 import android.hardware.display.DisplayManager;
 import android.os.Build;
@@ -14,9 +30,8 @@ import android.util.Range;
 import android.util.Size;
 import android.view.Display;
 import android.view.Surface;
-import android.hardware.camera2.CameraDevice;
-import android.hardware.camera2.CaptureRequest;
 
+import androidx.annotation.NonNull;
 import androidx.annotation.OptIn;
 import androidx.camera.camera2.interop.Camera2CameraInfo;
 import androidx.camera.camera2.interop.Camera2Interop;
@@ -29,10 +44,11 @@ import androidx.camera.core.CameraState;
 import androidx.camera.core.ConcurrentCamera;
 import androidx.camera.core.DisplayOrientedMeteringPointFactory;
 import androidx.camera.core.FocusMeteringAction;
+import androidx.camera.core.MeteringPoint;
+import androidx.camera.core.MeteringPointFactory;
 import androidx.camera.core.MirrorMode;
 import androidx.camera.core.Preview;
 import androidx.camera.core.SessionConfig;
-import androidx.camera.core.SurfaceRequest;
 import androidx.camera.core.UseCaseGroup;
 import androidx.camera.core.ZoomState;
 import androidx.camera.core.resolutionselector.AspectRatioStrategy;
@@ -45,62 +61,89 @@ import androidx.lifecycle.LifecycleRegistry;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 
+import com.exteragram.messenger.ExteraConfig;
+import com.exteragram.messenger.utils.system.SystemUtils;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import org.telegram.messenger.AndroidUtilities;
 import org.telegram.messenger.ApplicationLoader;
 import org.telegram.messenger.FileLog;
 import org.telegram.messenger.SharedConfig;
+import org.telegram.messenger.Utilities;
 import org.telegram.ui.Stories.recorder.DualCameraView;
-
-import app.exteraless.glyph.GlyphController;
 
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
+import java.util.Comparator;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
-import app.exteraless.chats.ChatsConfig;
-
-/**
- * Камера круглых видеосообщений на CameraX.
- *
- * Порт {@code com/exteragram/messenger/camera/CameraXSession.java} из exteraGram 12.9.0.
- * Третий движок рядом с Camera1 ({@link org.telegram.messenger.camera.CameraSession}) и
- * Camera2 ({@link org.telegram.messenger.camera.Camera2Session}); чем снимать, выбирает
- * {@link ChatsConfig#cameraType}.
- *
- * Что он умеет сверх Camera2:
- * <ul>
- *   <li>бесшовное переключение камер — обе линзы привязаны одновременно
- *       ({@link ConcurrentCamera}), и переключение не пересобирает сессию;</li>
- *   <li>старт на широкоугольной линзе ({@link ChatsConfig#startWithWideAngleCamera});</li>
- *   <li>отключение зеркала фронталки ({@link ChatsConfig#cameraMirrorMode});</li>
- *   <li>стабилизацию превью и 60 кадров, когда железо их тянет.</li>
- * </ul>
- *
- * Все методы, кроме явно помеченных, зовутся с UI-потока: CameraX привязывается к
- * жизненному циклу, а {@link LifecycleRegistry} требует главного потока.
- */
 public class CameraXSession {
 
-    /** Свой жизненный цикл: у нас нет Activity, к которой CameraX мог бы привязаться. */
-    public static class CameraLifecycle implements LifecycleOwner {
+    private static final Map<CameraSelector, Boolean> STABILIZATION_SUPPORT_CACHE = new ConcurrentHashMap<>();
+    private static final Range<Integer> FPS_60_RANGE = new Range<>(60, 60);
+    private static final Range<Integer> FPS_30_RANGE = new Range<>(30, 30);
+    private static final long MAX_60_FPS_FRAME_DURATION_NS = 16_666_667L;
+    private static final int PREFERRED_PREVIEW_SHORT_EDGE = 1024;
+    private static final int MAX_PREFERRED_PREVIEW_SHORT_EDGE = 1440;
+    private static final int MAX_PREVIEW_LONG_EDGE = 1920;
+    private static final int MAX_PREVIEW_AREA = 2_100_000;
+    private static final double FIELD_OF_VIEW_WEIGHT = 2.0;
+    private static final double RESOLUTION_WEIGHT = 1.0;
+    private static final double CROP_WASTE_WEIGHT = 0.5;
+    private static final Size FALLBACK_SENSOR_ASPECT = new Size(4, 3);
+    private static final float WIDER_CAMERA_MARGIN = 0.05f;
+    private static volatile Boolean seamlessSwitchingAvailableCache;
+    private static volatile CameraSelector widestBackCameraSelectorCache;
 
+    public static final String ENCODER_FRAGMENT_SHADER =
+            "#extension GL_OES_EGL_image_external : require\n" +
+            "precision highp float;\n" +
+            "varying vec2 vTextureCoord;\n" +
+            "uniform float alpha;\n" +
+            "uniform samplerExternalOES sTexture;\n" +
+            "void main() {\n" +
+            "   vec4 color = texture2D(sTexture, vTextureCoord);\n" +
+            "   gl_FragColor = vec4(color.rgb * alpha, alpha);\n" +
+            "}\n";
+
+    private boolean isFrontface;
+    private boolean isInitiated = false;
+    private boolean isDualMode = false;
+    private boolean isBinding = false;
+    private volatile int recordingFrameRate = 30;
+
+    private final CameraLifecycle lifecycle;
+    ProcessCameraProvider provider;
+
+    Camera camera;
+    private CameraControl cameraControl;
+
+    Camera cameraFront;
+    Camera cameraBack;
+    private CameraControl cameraControlFront;
+    private CameraControl cameraControlBack;
+
+    private final Preview.SurfaceProvider surfaceProviderPrimary;
+    private Preview.SurfaceProvider surfaceProviderSecondary;
+
+    private Preview previewUseCase;
+    private Preview previewUseCaseBack;
+
+    private CameraSelector cameraSelector;
+    private CameraSelector concurrentFrontSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
+    private CameraSelector concurrentBackSelector = CameraSelector.DEFAULT_BACK_CAMERA;
+
+    public static class CameraLifecycle implements LifecycleOwner {
         private final LifecycleRegistry lifecycleRegistry;
 
         public CameraLifecycle() {
             lifecycleRegistry = new LifecycleRegistry(this);
             lifecycleRegistry.setCurrentState(Lifecycle.State.CREATED);
-        }
-
-        @Override
-        public Lifecycle getLifecycle() {
-            return lifecycleRegistry;
         }
 
         public void start() {
@@ -120,71 +163,104 @@ public class CameraXSession {
                 FileLog.e(e);
             }
         }
+
+        @NonNull
+        @Override
+        public Lifecycle getLifecycle() {
+            return lifecycleRegistry;
+        }
     }
-
-    /** Размер картинки, который CameraX выдал в поверхность: он же размер превью. */
-    public interface PreviewSizeListener {
-        void onPreviewSize(int width, int height);
-    }
-
-    private static final Range<Integer> FPS_60_RANGE = new Range<>(60, 60);
-    private static final Range<Integer> FPS_30_RANGE = new Range<>(30, 30);
-    /** Если характеристик сенсора нет, считаем его обычным 4:3. */
-    private static final Size FALLBACK_SENSOR_ASPECT = new Size(4, 3);
-
-    private static final Map<CameraSelector, Boolean> STABILIZATION_SUPPORT_CACHE = new ConcurrentHashMap<>();
-    private static volatile Boolean seamlessSwitchingAvailableCache;
-
-    private final CameraLifecycle lifecycle;
-    private final Preview.SurfaceProvider surfaceProviderPrimary;
-    private Preview.SurfaceProvider surfaceProviderSecondary;
-
-    ProcessCameraProvider provider;
-    Camera camera;
-    Camera cameraFront;
-    Camera cameraBack;
-    private CameraControl cameraControl;
-    private CameraControl cameraControlFront;
-    private CameraControl cameraControlBack;
-    private CameraSelector cameraSelector;
-    private Preview previewUseCase;
-    private Preview previewUseCaseBack;
-
-    private boolean isFrontface;
-    private boolean isInitiated;
-    private boolean isDualMode;
-    private boolean isBinding;
-    private boolean isTorchOn;
-    private volatile int recordingFrameRate = 30;
 
     public CameraXSession(CameraLifecycle lifecycle, Preview.SurfaceProvider surfaceProvider) {
         this.lifecycle = lifecycle;
         this.surfaceProviderPrimary = surfaceProvider;
     }
 
-    // ---- Создание и разбор ----
+    public interface PreviewSizeListener {
+        void onPreviewSize(int width, int height);
+    }
 
-    public void initCamera(Context context, boolean frontface, boolean dual, Runnable onReady) {
-        isFrontface = frontface;
-        final ListenableFuture<ProcessCameraProvider> future;
-        try {
-            future = ProcessCameraProvider.getInstance(context);
-        } catch (Throwable t) {
-            FileLog.e(t);
-            isInitiated = false;
-            return;
-        }
-        future.addListener(() -> {
+    public static Preview.SurfaceProvider createSurfaceProvider(Context context, SurfaceTexture surfaceTexture, PreviewSizeListener listener) {
+        return request -> {
             try {
-                provider = future.get();
+                Size resolution = request.getResolution();
+                listener.onPreviewSize(resolution.getWidth(), resolution.getHeight());
+                request.setTransformationInfoListener(ContextCompat.getMainExecutor(context), transformationInfo -> {
+                    Rect cropRect = transformationInfo.getCropRect();
+                    int width = cropRect.width() > 0 ? cropRect.width() : resolution.getWidth();
+                    int height = cropRect.height() > 0 ? cropRect.height() : resolution.getHeight();
+                    listener.onPreviewSize(width, height);
+                });
+                surfaceTexture.setDefaultBufferSize(resolution.getWidth(), resolution.getHeight());
+                Surface surface = new Surface(surfaceTexture);
+                request.provideSurface(surface, ContextCompat.getMainExecutor(context), result -> {
+                    request.clearTransformationInfoListener();
+                    surface.release();
+                });
+            } catch (Exception e) {
+                FileLog.e(e);
+                request.willNotProvideSurface();
+            }
+        };
+    }
+
+    public void setSecondSurfaceProvider(Preview.SurfaceProvider provider) {
+        this.surfaceProviderSecondary = provider;
+        if (isInitiated && isDualMode && previewUseCaseBack != null) {
+            previewUseCaseBack.setSurfaceProvider(surfaceProviderSecondary);
+        }
+    }
+
+    public boolean isInitiated() {
+        return isInitiated;
+    }
+
+    public boolean isReady() {
+        return isInitiated && !isBinding && camera != null;
+    }
+
+    public boolean isDualMode() {
+        return isDualMode;
+    }
+
+    public boolean isFrontface() {
+        return isFrontface;
+    }
+
+    public boolean isActiveCameraFrontface() {
+        if (camera == null) {
+            return isFrontface;
+        }
+        int lensFacing = camera.getCameraInfo().getLensFacing();
+        if (lensFacing == CameraSelector.LENS_FACING_FRONT) {
+            return true;
+        }
+        if (lensFacing == CameraSelector.LENS_FACING_BACK) {
+            return false;
+        }
+        return isFrontface;
+    }
+
+    public int getRecordingFrameRate() {
+        return recordingFrameRate;
+    }
+
+    public void initCamera(Context context, boolean isInitialFrontface, boolean isDualModeEnabled, Runnable onPreInit) {
+        this.isFrontface = isInitialFrontface;
+        ListenableFuture<ProcessCameraProvider> providerFtr = ProcessCameraProvider.getInstance(context);
+        providerFtr.addListener(() -> {
+            try {
+                provider = providerFtr.get();
+
                 if (lifecycle.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED) {
                     return;
                 }
-                isDualMode = dual && supportsConcurrentFrontBackPair();
+
+                isDualMode = isDualModeEnabled && supportsConcurrentFrontBackPair();
                 rebindCamera();
                 lifecycle.start();
-                if (onReady != null) {
-                    onReady.run();
+                if (onPreInit != null) {
+                    onPreInit.run();
                 }
             } catch (Exception e) {
                 FileLog.e(e);
@@ -193,7 +269,54 @@ public class CameraXSession {
         }, ContextCompat.getMainExecutor(context));
     }
 
-    /** Закрытие может прилететь с потока камеры — уводим на UI, там живёт жизненный цикл. */
+    private boolean supportsConcurrentFrontBackPair() {
+        if (provider == null) {
+            return false;
+        }
+        List<List<CameraInfo>> concurrentCameras = provider.getAvailableConcurrentCameraInfos();
+        for (List<CameraInfo> pair : concurrentCameras) {
+            boolean hasFront = false;
+            boolean hasBack = false;
+            for (CameraInfo info : pair) {
+                if (info.getLensFacing() == CameraSelector.LENS_FACING_FRONT) hasFront = true;
+                if (info.getLensFacing() == CameraSelector.LENS_FACING_BACK) hasBack = true;
+            }
+            if (hasFront && hasBack) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    public void switchCamera() {
+        isFrontface ^= true;
+        if (isDualMode && cameraFront != null && cameraBack != null) {
+            updateActiveControl(isFrontface);
+            updateTorchState();
+        } else {
+            rebindCamera();
+        }
+    }
+
+    public void resetInactiveCameraZoom() {
+        if (!isDualMode) return;
+        if (isFrontface) {
+            applyInitialZoom(cameraBack, cameraControlBack);
+        } else {
+            applyInitialZoom(cameraFront, cameraControlFront);
+        }
+    }
+
+    private void updateActiveControl(boolean front) {
+        if (front) {
+            camera = cameraFront;
+            cameraControl = cameraControlFront;
+        } else {
+            camera = cameraBack;
+            cameraControl = cameraControlBack;
+        }
+    }
+
     public void closeCamera() {
         if (Looper.myLooper() != Looper.getMainLooper()) {
             AndroidUtilities.runOnUIThread(this::closeCamera);
@@ -206,23 +329,238 @@ public class CameraXSession {
         } catch (Exception e) {
             FileLog.e(e);
         } finally {
+            try {
+                if (previewUseCase != null) {
+                    previewUseCase.setSurfaceProvider(null);
+                }
+                if (previewUseCaseBack != null) {
+                    previewUseCaseBack.setSurfaceProvider(null);
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
             lifecycle.stop();
             isInitiated = false;
             clearCameraReferences();
         }
     }
 
+    private void clearCameraReferences() {
+        camera = cameraFront = cameraBack = null;
+        cameraControl = cameraControlFront = cameraControlBack = null;
+        previewUseCase = previewUseCaseBack = null;
+    }
+
+    public boolean isFlashAvailable() {
+        if (camera == null) return false;
+        return camera.getCameraInfo().hasFlashUnit();
+    }
+
+    private boolean isTorchOn = false;
+
+    public void setTorchEnabled(boolean enabled) {
+        this.isTorchOn = enabled;
+        updateTorchState();
+    }
+
+    private void updateTorchState() {
+        try {
+            if (isDualMode) {
+                if (cameraControlFront != null) {
+                    cameraControlFront.enableTorch(false);
+                }
+                if (cameraControlBack != null && cameraBack != null && cameraBack.getCameraInfo().hasFlashUnit()) {
+                    cameraControlBack.enableTorch(isTorchOn && !isFrontface);
+                }
+            } else if (camera != null && cameraControl != null && camera.getCameraInfo().hasFlashUnit()) {
+                boolean isBackCamera = camera.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_BACK;
+                cameraControl.enableTorch(isTorchOn && isBackCamera);
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+    }
+
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    private Preview buildPreview(CameraSelector selector, boolean enablePreviewStabilization,
+                                 Range<Integer> targetFrameRateRange, boolean preferSixtyFpsSizes) {
+        Size sensorAspect = getSensorAspect(selector);
+        Set<Size> sixtyFpsSizes = preferSixtyFpsSizes ? get60FpsCapableSizes(selector) : Collections.emptySet();
+        ResolutionSelector resolutionSelector = new ResolutionSelector.Builder()
+                .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
+                .setResolutionFilter((supportedSizes, ignoredRotationDegrees) ->
+                        sortRoundPreviewSizes(supportedSizes, sensorAspect, sixtyFpsSizes))
+                .setAllowedResolutionMode(ResolutionSelector.PREFER_CAPTURE_RATE_OVER_HIGHER_RESOLUTION)
+                .build();
+
+        Preview.Builder previewBuilder = new Preview.Builder().setResolutionSelector(resolutionSelector);
+        Camera2Interop.Extender<Preview> extender = new Camera2Interop.Extender<>(previewBuilder);
+        extender.setSessionCaptureCallback(CameraActiveLens.CAPTURE_CALLBACK);
+        extender.setCaptureRequestTemplate(CameraDevice.TEMPLATE_RECORD);
+        extender.setCaptureRequestOption(
+                CaptureRequest.CONTROL_CAPTURE_INTENT,
+                CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD
+        );
+        try {
+            if (provider != null && provider.hasCamera(selector)) {
+                String cameraId = Camera2CameraInfo.from(provider.getCameraInfo(selector)).getCameraId();
+                CameraManager cameraManager = ApplicationLoader.applicationContext.getSystemService(CameraManager.class);
+                if (cameraManager != null && cameraId != null) {
+                    CameraCharacteristics characteristics = cameraManager.getCameraCharacteristics(cameraId);
+                    app.exteraless.glyph.GlyphController.applyNothingCameraRedIndicator(characteristics, extender, true);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+
+        if (targetFrameRateRange != null) {
+            previewBuilder.setTargetFrameRate(targetFrameRateRange);
+        }
+
+        previewBuilder.setPreviewStabilizationEnabled(!isDualMode && enablePreviewStabilization);
+
+        if (!ExteraConfig.getCameraMirrorMode()) {
+            previewBuilder.setMirrorMode(MirrorMode.MIRROR_MODE_OFF);
+        }
+
+        return previewBuilder.build();
+    }
+
+    CameraSelector widestBackCameraSelector() {
+        CameraSelector cached = widestBackCameraSelectorCache;
+        if (cached != null) {
+            return cached;
+        }
+        CameraSelector widest = CameraSelector.DEFAULT_BACK_CAMERA;
+        try {
+            if (provider == null || !provider.hasCamera(widest)) {
+                return widest;
+            }
+            float widestZoom = minZoomRatio(provider.getCameraInfo(widest)) - WIDER_CAMERA_MARGIN;
+            for (CameraInfo info : provider.getAvailableCameraInfos()) {
+                if (info.getLensFacing() != CameraSelector.LENS_FACING_BACK) {
+                    continue;
+                }
+                float zoom = minZoomRatio(info);
+                if (zoom < widestZoom) {
+                    widestZoom = zoom;
+                    widest = info.getCameraSelector();
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        widestBackCameraSelectorCache = widest;
+        return widest;
+    }
+
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    private static float minZoomRatio(CameraInfo info) {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return 1.0f;
+        }
+        Range<Float> range = Camera2CameraInfo.from(info)
+                .getCameraCharacteristic(CameraCharacteristics.CONTROL_ZOOM_RATIO_RANGE);
+        return range == null ? 1.0f : range.getLower();
+    }
+
+    private boolean isPreviewStabilizationSupported(CameraSelector selector) {
+        try {
+            if (selector == null || provider == null || !provider.hasCamera(selector)) {
+                return false;
+            }
+            Boolean cached = STABILIZATION_SUPPORT_CACHE.get(selector);
+            if (cached != null) {
+                return cached;
+            }
+            boolean supported = Preview.getPreviewCapabilities(provider.getCameraInfo(selector)).isStabilizationSupported();
+            STABILIZATION_SUPPORT_CACHE.put(selector, supported);
+            return supported;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return false;
+        }
+    }
+
+    private Camera tryBindSingleAtFrameRate(Range<Integer> targetFrameRateRange) {
+        try {
+            CameraInfo cameraInfo = provider.getCameraInfo(cameraSelector);
+            var builder = new SessionConfig.Builder(previewUseCase);
+            var supportedFrameRates = cameraInfo.getSupportedFrameRateRanges(builder.build());
+            if (!supportedFrameRates.contains(targetFrameRateRange)) {
+                return null;
+            }
+            builder.setFrameRateRange(targetFrameRateRange);
+            return tryBindSingleSession(builder.build(), targetFrameRateRange.getUpper());
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
+    private Camera tryBindSingleAtExtendedFrameRate() {
+        try {
+            var builder = new SessionConfig.Builder(previewUseCase);
+            Range<Integer> frameRateRange = selectExtendedFpsRange(
+                    provider.getCameraInfo(cameraSelector).getSupportedFrameRateRanges(builder.build()));
+            if (frameRateRange == null) {
+                return null;
+            }
+            builder.setFrameRateRange(frameRateRange);
+            return tryBindSingleSession(builder.build(), frameRateRange.getUpper());
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
+    private static Range<Integer> selectExtendedFpsRange(Collection<Range<Integer>> ranges) {
+        Range<Integer> best = null;
+        if (ranges == null) {
+            return null;
+        }
+        for (Range<Integer> range : ranges) {
+            if (range == null || !range.getUpper().equals(FPS_60_RANGE.getUpper())) {
+                continue;
+            }
+            if (FPS_60_RANGE.equals(range)) {
+                return range;
+            }
+            if (best == null || range.getLower() > best.getLower()) {
+                best = range;
+            }
+        }
+        return best;
+    }
+
+    private Camera tryBindSingleSession(SessionConfig sessionConfig, int frameRate) {
+        try {
+            if (!provider.getCameraInfo(cameraSelector).isSessionConfigSupported(sessionConfig)) {
+                return null;
+            }
+            Camera boundCamera = provider.bindToLifecycle(lifecycle, cameraSelector, sessionConfig);
+            if (boundCamera != null) {
+                recordingFrameRate = frameRate;
+            }
+            return boundCamera;
+        } catch (Exception e) {
+            FileLog.e(e);
+            return null;
+        }
+    }
+
     private void rebindCamera() {
-        if (provider == null
-                || lifecycle.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED
-                || isBinding) {
+        if (provider == null || lifecycle.getLifecycle().getCurrentState() == Lifecycle.State.DESTROYED || isBinding) {
             return;
         }
         isBinding = true;
         recordingFrameRate = 30;
         clearCameraReferences();
+
         try {
             provider.unbindAll();
+
             if (isDualMode) {
                 bindDualUseCases();
             } else {
@@ -243,54 +581,35 @@ public class CameraXSession {
         }
     }
 
-    private void clearCameraReferences() {
-        cameraBack = null;
-        cameraFront = null;
-        camera = null;
-        cameraControlBack = null;
-        cameraControlFront = null;
-        cameraControl = null;
-        previewUseCaseBack = null;
-        previewUseCase = null;
-    }
-
-    // ---- Привязка ----
-
-    /**
-     * Одна линза. Порядок попыток тот же, что у exteraGram: сперва запрошенные 60 кадров,
-     * потом без стабилизации, потом 30, потом вообще без требований к частоте — на
-     * каждом шаге превью пересобирается, потому что частота задаётся при сборке.
-     */
     private void bindSingleUseCases() {
         try {
-            cameraSelector = isFrontface ? CameraSelector.DEFAULT_FRONT_CAMERA : CameraSelector.DEFAULT_BACK_CAMERA;
+            cameraSelector = isFrontface ? CameraSelector.DEFAULT_FRONT_CAMERA : widestBackCameraSelector();
             if (!provider.hasCamera(cameraSelector)) {
                 isInitiated = false;
                 return;
             }
-            final boolean extendedFps = ChatsConfig.extendedFramesPerSecond.Bool();
-            final boolean stabilization = ChatsConfig.cameraStabilization.Bool()
-                    && isPreviewStabilizationSupported(cameraSelector);
 
-            previewUseCase = buildPreview(cameraSelector, stabilization, null, extendedFps);
+            boolean extendedFps = ExteraConfig.getExtendedFramesPerSecond();
+            boolean stabilizationEnabled = ExteraConfig.getCameraStabilization() &&
+                    isPreviewStabilizationSupported(cameraSelector);
+            previewUseCase = buildPreview(cameraSelector, stabilizationEnabled, null, extendedFps);
             previewUseCase.setSurfaceProvider(surfaceProviderPrimary);
 
             if (extendedFps) {
                 camera = tryBindSingleAtExtendedFrameRate();
-                if (camera == null && stabilization) {
+                if (camera == null && stabilizationEnabled) {
                     previewUseCase = buildPreview(cameraSelector, false, null, true);
                     previewUseCase.setSurfaceProvider(surfaceProviderPrimary);
                     camera = tryBindSingleAtExtendedFrameRate();
                 }
                 if (camera == null) {
-                    previewUseCase = buildPreview(cameraSelector, stabilization, null, false);
+                    previewUseCase = buildPreview(cameraSelector, stabilizationEnabled, null, false);
                     previewUseCase.setSurfaceProvider(surfaceProviderPrimary);
                     camera = tryBindSingleAtFrameRate(FPS_30_RANGE);
                 }
             } else {
                 camera = tryBindSingleAtFrameRate(FPS_30_RANGE);
             }
-
             if (camera == null) {
                 try {
                     camera = provider.bindToLifecycle(lifecycle, cameraSelector, previewUseCase);
@@ -298,7 +617,7 @@ public class CameraXSession {
                     FileLog.e(e);
                 }
             }
-            if (camera == null && stabilization) {
+            if (camera == null && stabilizationEnabled) {
                 previewUseCase = buildPreview(cameraSelector, false, null, false);
                 previewUseCase.setSurfaceProvider(surfaceProviderPrimary);
                 camera = provider.bindToLifecycle(lifecycle, cameraSelector, previewUseCase);
@@ -307,6 +626,7 @@ public class CameraXSession {
                 isInitiated = false;
                 return;
             }
+
             cameraControl = camera.getCameraControl();
             observeCameraState(camera);
             applyInitialZoom(camera, cameraControl);
@@ -317,63 +637,79 @@ public class CameraXSession {
         }
     }
 
-    /**
-     * Обе линзы сразу — ради переключения без паузы. Частота при двух камерах даётся
-     * тяжелее, поэтому 60 → 30 → как получится, и только потом откат на одну линзу.
-     */
     private void bindDualUseCases() {
-        final boolean extendedFps = ChatsConfig.extendedFramesPerSecond.Bool();
-        Range<Integer> range = extendedFps ? FPS_60_RANGE : FPS_30_RANGE;
-        ConcurrentCamera concurrent = tryBindConcurrentCameras(range);
-        if (concurrent == null && extendedFps) {
-            range = FPS_30_RANGE;
-            concurrent = tryBindConcurrentCameras(range);
+        boolean extendedFps = ExteraConfig.getExtendedFramesPerSecond();
+        Range<Integer> boundFrameRateRange = extendedFps ? FPS_60_RANGE : FPS_30_RANGE;
+        ConcurrentCamera concurrentCamera = tryBindConcurrentCameras(boundFrameRateRange);
+        if (concurrentCamera == null && extendedFps) {
+            boundFrameRateRange = FPS_30_RANGE;
+            concurrentCamera = tryBindConcurrentCameras(boundFrameRateRange);
         }
-        if (concurrent == null && range != null) {
-            range = null;
-            concurrent = tryBindConcurrentCameras(null);
+        if (concurrentCamera == null && boundFrameRateRange != null) {
+            boundFrameRateRange = null;
+            concurrentCamera = tryBindConcurrentCameras(null);
         }
-        if (concurrent == null) {
+        if (concurrentCamera == null) {
             isDualMode = false;
             bindSingleUseCases();
             return;
         }
-        if (range != null) {
-            recordingFrameRate = range.getLower();
+        if (boundFrameRateRange != null) {
+            recordingFrameRate = boundFrameRateRange.getLower();
         }
-        for (Camera bound : concurrent.getCameras()) {
-            if (bound.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_FRONT) {
-                cameraFront = bound;
-                cameraControlFront = bound.getCameraControl();
+
+        for (Camera cam : concurrentCamera.getCameras()) {
+            if (cam.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_FRONT) {
+                cameraFront = cam;
+                cameraControlFront = cam.getCameraControl();
                 applyInitialZoom(cameraFront, cameraControlFront);
             } else {
-                cameraBack = bound;
-                cameraControlBack = bound.getCameraControl();
+                cameraBack = cam;
+                cameraControlBack = cam.getCameraControl();
                 applyInitialZoom(cameraBack, cameraControlBack);
             }
-            observeCameraState(bound);
+            observeCameraState(cam);
         }
         updateActiveControl(isFrontface);
         updateTorchState();
     }
 
-    private ConcurrentCamera tryBindConcurrentCameras(Range<Integer> range) {
+    private ConcurrentCamera tryBindConcurrentCameras(Range<Integer> targetFrameRateRange) {
         try {
-            final boolean sixty = FPS_60_RANGE.equals(range);
-
-            previewUseCase = buildPreview(CameraSelector.DEFAULT_FRONT_CAMERA, false, range, sixty);
+            boolean preferSixtyFpsSizes = FPS_60_RANGE.equals(targetFrameRateRange);
+            selectWidestConcurrentPair();
+            previewUseCase = buildPreview(concurrentFrontSelector, false, targetFrameRateRange, preferSixtyFpsSizes);
             previewUseCase.setSurfaceProvider(surfaceProviderPrimary);
 
-            previewUseCaseBack = buildPreview(CameraSelector.DEFAULT_BACK_CAMERA, false, range, sixty);
+            previewUseCaseBack = buildPreview(concurrentBackSelector, false, targetFrameRateRange, preferSixtyFpsSizes);
             if (surfaceProviderSecondary != null) {
                 previewUseCaseBack.setSurfaceProvider(surfaceProviderSecondary);
             }
 
+            UseCaseGroup frontGroup = new UseCaseGroup.Builder()
+                    .addUseCase(previewUseCase)
+                    .build();
+
+            ConcurrentCamera.SingleCameraConfig frontConfig = new ConcurrentCamera.SingleCameraConfig(
+                    concurrentFrontSelector,
+                    frontGroup,
+                    lifecycle
+            );
+
+            UseCaseGroup backGroup = new UseCaseGroup.Builder()
+                    .addUseCase(previewUseCaseBack)
+                    .build();
+
+            ConcurrentCamera.SingleCameraConfig backConfig = new ConcurrentCamera.SingleCameraConfig(
+                    concurrentBackSelector,
+                    backGroup,
+                    lifecycle
+            );
+
             List<ConcurrentCamera.SingleCameraConfig> configs = new ArrayList<>(2);
-            configs.add(new ConcurrentCamera.SingleCameraConfig(CameraSelector.DEFAULT_FRONT_CAMERA,
-                    new UseCaseGroup.Builder().addUseCase(previewUseCase).build(), lifecycle));
-            configs.add(new ConcurrentCamera.SingleCameraConfig(CameraSelector.DEFAULT_BACK_CAMERA,
-                    new UseCaseGroup.Builder().addUseCase(previewUseCaseBack).build(), lifecycle));
+            configs.add(frontConfig);
+            configs.add(backConfig);
+
             return provider.bindToLifecycle(configs);
         } catch (Exception e) {
             FileLog.e(e);
@@ -386,521 +722,142 @@ public class CameraXSession {
         }
     }
 
-    private Camera tryBindSingleAtExtendedFrameRate() {
+    private void selectWidestConcurrentPair() {
+        concurrentFrontSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
+        concurrentBackSelector = CameraSelector.DEFAULT_BACK_CAMERA;
         try {
-            SessionConfig.Builder builder = new SessionConfig.Builder(previewUseCase);
-            Range<Integer> range = selectExtendedFpsRange(
-                    provider.getCameraInfo(cameraSelector).getSupportedFrameRateRanges(builder.build()));
-            if (range == null) {
-                return null;
-            }
-            builder.setFrameRateRange(range);
-            return tryBindSingleSession(builder.build(), range.getUpper());
-        } catch (Exception e) {
-            FileLog.e(e);
-            return null;
-        }
-    }
-
-    private Camera tryBindSingleAtFrameRate(Range<Integer> range) {
-        try {
-            CameraInfo info = provider.getCameraInfo(cameraSelector);
-            SessionConfig.Builder builder = new SessionConfig.Builder(previewUseCase);
-            if (!info.getSupportedFrameRateRanges(builder.build()).contains(range)) {
-                return null;
-            }
-            builder.setFrameRateRange(range);
-            return tryBindSingleSession(builder.build(), range.getUpper());
-        } catch (Exception e) {
-            FileLog.e(e);
-            return null;
-        }
-    }
-
-    private Camera tryBindSingleSession(SessionConfig sessionConfig, int frameRate) {
-        try {
-            if (!provider.getCameraInfo(cameraSelector).isSessionConfigSupported(sessionConfig)) {
-                return null;
-            }
-            Camera bound = provider.bindToLifecycle(lifecycle, cameraSelector, sessionConfig);
-            if (bound != null) {
-                recordingFrameRate = frameRate;
-            }
-            return bound;
-        } catch (Exception e) {
-            FileLog.e(e);
-            return null;
-        }
-    }
-
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
-    private CameraCharacteristics getCameraCharacteristics(CameraSelector selector) {
-        try {
-            if (provider != null && selector != null && provider.hasCamera(selector)) {
-                String cameraId = Camera2CameraInfo.from(provider.getCameraInfo(selector)).getCameraId();
-                if (cameraId != null) {
-                    Context context = ApplicationLoader.applicationContext;
-                    if (context != null) {
-                        CameraManager cameraManager = context.getSystemService(CameraManager.class);
-                        if (cameraManager != null) {
-                            return cameraManager.getCameraCharacteristics(cameraId);
-                        }
+            float widestZoom = minZoomRatio(provider.getCameraInfo(concurrentBackSelector)) - WIDER_CAMERA_MARGIN;
+            for (List<CameraInfo> pair : provider.getAvailableConcurrentCameraInfos()) {
+                CameraInfo front = null;
+                CameraInfo back = null;
+                for (CameraInfo info : pair) {
+                    if (info.getLensFacing() == CameraSelector.LENS_FACING_FRONT) {
+                        front = info;
+                    } else if (info.getLensFacing() == CameraSelector.LENS_FACING_BACK) {
+                        back = info;
                     }
                 }
+                if (front == null || back == null) {
+                    continue;
+                }
+                float zoom = minZoomRatio(back);
+                if (zoom < widestZoom) {
+                    widestZoom = zoom;
+                    concurrentFrontSelector = front.getCameraSelector();
+                    concurrentBackSelector = back.getCameraSelector();
+                }
             }
-        } catch (Throwable e) {
+        } catch (Exception e) {
             FileLog.e(e);
+            concurrentFrontSelector = CameraSelector.DEFAULT_FRONT_CAMERA;
+            concurrentBackSelector = CameraSelector.DEFAULT_BACK_CAMERA;
         }
-        return null;
     }
 
-    /**
-     * Превью под круглое видео: 4:3, свой порядок разрешений и, если попросили,
-     * стабилизация и незеркальная фронталка.
-     */
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
-    private Preview buildPreview(CameraSelector selector, boolean stabilization,
-                                 Range<Integer> range, boolean prefer60) {
-        final Size sensorAspect = getSensorAspect(selector);
-        final Set<Size> capable60 = prefer60 ? get60FpsCapableSizes(selector) : Collections.emptySet();
-
-        Preview.Builder builder = new Preview.Builder()
-                .setResolutionSelector(new ResolutionSelector.Builder()
-                        .setAspectRatioStrategy(AspectRatioStrategy.RATIO_4_3_FALLBACK_AUTO_STRATEGY)
-                        .setResolutionFilter((sizes, rotation) ->
-                                sortRoundPreviewSizes(sizes, sensorAspect, capable60))
-                        .setAllowedResolutionMode(ResolutionSelector.PREFER_CAPTURE_RATE_OVER_HIGHER_RESOLUTION)
-                        .build());
-        if (range != null) {
-            builder.setTargetFrameRate(range);
-        }
-        // При двух привязанных линзах стабилизация превью не даётся вовсе.
-        builder.setPreviewStabilizationEnabled(!isDualMode && stabilization);
-        if (!ChatsConfig.cameraMirrorMode.Bool()) {
-            builder.setMirrorMode(MirrorMode.MIRROR_MODE_OFF);
-        }
-
-        // Apply video recording template, intent, and Nothing Rec. Light vendor tags
-        Camera2Interop.Extender<Preview> extender = new Camera2Interop.Extender<>(builder);
-        extender.setCaptureRequestTemplate(CameraDevice.TEMPLATE_RECORD);
-        extender.setCaptureRequestOption(
-                CaptureRequest.CONTROL_CAPTURE_INTENT,
-                CaptureRequest.CONTROL_CAPTURE_INTENT_VIDEO_RECORD);
-
-        CameraCharacteristics characteristics = getCameraCharacteristics(selector);
-        if (characteristics != null) {
-            GlyphController.applyNothingCameraRedIndicator(characteristics, extender, true);
-        }
-
-        return builder.build();
-    }
-
-    // ---- Выбор разрешения ----
-
-    /**
-     * Порядок предпочтений для круглого видео.
-     * Сначала то, что не меньше кружка; из них — умеющее 60 кадров; дальше меньше
-     * обрезки по краям, и лишь потом просто ближе к нужной стороне.
-     */
-    private static List<Size> sortRoundPreviewSizes(List<Size> sizes, Size sensorAspect, Set<Size> capable60) {
-        List<Size> sorted = new ArrayList<>(sizes);
-        final int target = com.exteragram.messenger.utils.system.SystemUtils
-                .getRoundVideoResolution();
-        final int comfortable = target * 2;
-        final int sensorShort = Math.min(sensorAspect.getWidth(), sensorAspect.getHeight());
-        final int sensorLong = Math.max(sensorAspect.getWidth(), sensorAspect.getHeight());
-        sorted.sort((a, b) -> compareRoundPreviewSizes(a, b, target, comfortable, sensorShort, sensorLong, capable60));
-        return sorted;
-    }
-
-    private static int compareRoundPreviewSizes(Size a, Size b, int target, int comfortable,
-                                                int sensorShort, int sensorLong, Set<Size> capable60) {
-        final int aShort = Math.min(a.getWidth(), a.getHeight());
-        final int aLong = Math.max(a.getWidth(), a.getHeight());
-        final int bShort = Math.min(b.getWidth(), b.getHeight());
-        final int bLong = Math.max(b.getWidth(), b.getHeight());
-
-        final boolean aEnough = aShort >= target;
-        if (aEnough != (bShort >= target)) {
-            return aEnough ? -1 : 1;
-        }
-        if (!aEnough) {
-            int cmp = Integer.compare(bShort, aShort);
-            if (cmp != 0) {
-                return cmp;
-            }
-        }
-        // Угол обзора важнее 60 кадров: 16:9 у Pixel — это кроп 4:3 (3840×2160 из
-        // 3840×2736), и кружок из него теряет ~20 % ширины. 60 fps берём только
-        // среди размеров с тем же углом.
-        int cmp = Long.compare(
-                calculateFieldOfViewPenalty(aShort, aLong, sensorShort, sensorLong) * bShort,
-                calculateFieldOfViewPenalty(bShort, bLong, sensorShort, sensorLong) * aShort);
-        if (cmp != 0) {
-            return cmp;
-        }
-        final boolean aFast = capable60.contains(a);
-        if (aFast != capable60.contains(b)) {
-            return aFast ? -1 : 1;
-        }
-        final boolean aComfortable = aShort >= comfortable;
-        if (aComfortable != (bShort >= comfortable)) {
-            return aComfortable ? -1 : 1;
-        }
-        if (!aComfortable) {
-            cmp = Integer.compare(bShort, aShort);
-            if (cmp != 0) {
-                return cmp;
-            }
-        }
-        cmp = Integer.compare(Math.abs(aShort - comfortable), Math.abs(bShort - comfortable));
-        if (cmp != 0) {
-            return cmp;
-        }
-        return Long.compare((long) b.getWidth() * b.getHeight(), (long) a.getWidth() * a.getHeight());
-    }
-
-    /** Насколько кадр уже сенсора: чем шире — тем меньше штраф. */
-    private static long calculateFieldOfViewPenalty(int shortSide, int longSide, int sensorShort, int sensorLong) {
-        long frame = (long) shortSide * sensorLong;
-        return Math.max(0L, (((long) longSide * sensorShort) - frame) * 100 - frame);
-    }
-
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
-    private Set<Size> get60FpsCapableSizes(CameraSelector selector) {
-        Set<Size> result = new HashSet<>();
+    private void observeCameraState(Camera cam) {
         try {
-            if (provider == null || selector == null || !provider.hasCamera(selector)) {
-                return result;
-            }
-            StreamConfigurationMap map = Camera2CameraInfo.from(provider.getCameraInfo(selector))
-                    .getCameraCharacteristic(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
-            Size[] sizes = map != null ? map.getOutputSizes(SurfaceTexture.class) : null;
-            if (sizes != null) {
-                for (Size size : sizes) {
-                    long minDuration = map.getOutputMinFrameDuration(SurfaceTexture.class, size);
-                    // 16 666 667 нс на кадр — это ровно 60 кадров в секунду.
-                    if (minDuration > 0 && minDuration <= 16666667L) {
-                        result.add(size);
+            cam.getCameraInfo().getCameraState().observe(lifecycle, state -> {
+                CameraState.StateError error = state.getError();
+                if (error != null) {
+                    FileLog.e("CameraX camera state error: code=" + error.getCode() + " type=" + state.getType());
+                    if (error.getCause() != null) {
+                        FileLog.e(error.getCause());
                     }
                 }
-            }
+            });
         } catch (Exception e) {
             FileLog.e(e);
         }
-        return result;
     }
 
-    @OptIn(markerClass = ExperimentalCamera2Interop.class)
-    private Size getSensorAspect(CameraSelector selector) {
-        try {
-            if (provider != null && selector != null && provider.hasCamera(selector)) {
-                Rect array = Camera2CameraInfo.from(provider.getCameraInfo(selector))
-                        .getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-                if (array != null && array.width() > 0 && array.height() > 0) {
-                    return new Size(array.width(), array.height());
-                }
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-        return FALLBACK_SENSOR_ASPECT;
-    }
+    private void applyInitialZoom(Camera cam, CameraControl control) {
+        if (control == null || cam == null) return;
 
-    private static Range<Integer> selectExtendedFpsRange(Collection<Range<Integer>> ranges) {
-        if (ranges == null) {
-            return null;
-        }
-        Range<Integer> best = null;
-        for (Range<Integer> range : ranges) {
-            if (range == null || !range.getUpper().equals(FPS_60_RANGE.getUpper())) {
-                continue;
-            }
-            if (FPS_60_RANGE.equals(range)) {
-                return range;  // строго 60 — лучше плавающего диапазона
-            }
-            if (best == null || range.getLower() > best.getLower()) {
-                best = range;
-            }
-        }
-        return best;
-    }
-
-    private boolean isPreviewStabilizationSupported(CameraSelector selector) {
-        if (selector == null) {
-            return false;
-        }
-        try {
-            if (provider == null || !provider.hasCamera(selector)) {
-                return false;
-            }
-            Boolean cached = STABILIZATION_SUPPORT_CACHE.get(selector);
-            if (cached != null) {
-                return cached;
-            }
-            boolean supported = Preview.getPreviewCapabilities(provider.getCameraInfo(selector))
-                    .isStabilizationSupported();
-            STABILIZATION_SUPPORT_CACHE.put(selector, supported);
-            return supported;
-        } catch (Exception e) {
-            FileLog.e(e);
-            return false;
-        }
-    }
-
-    // ---- Две камеры сразу ----
-
-    /** Доступно ли бесшовное переключение: нужна и поддержка кружка, и пара линз. */
-    public static boolean isRoundDualAvailable(Context context) {
-        return DualCameraView.roundDualAvailableStatic(context) && isSeamlessSwitchingAvailable(context);
-    }
-
-    public static boolean isSeamlessSwitchingAvailable(Context context) {
-        if (seamlessSwitchingAvailableCache != null) {
-            return seamlessSwitchingAvailableCache;
-        }
-        seamlessSwitchingAvailableCache = SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_AVERAGE
-                && SharedConfig.allowPreparingHevcPlayers()
-                && hasConcurrentFrontBackPair(context);
-        return seamlessSwitchingAvailableCache;
-    }
-
-    /**
-     * Система обещает пару «фронтальная + основная» одновременно. Спрашиваем camera2
-     * напрямую: {@link ProcessCameraProvider} на этот вопрос отвечает только после
-     * инициализации, а знать надо раньше — до создания сессии.
-     */
-    private static boolean hasConcurrentFrontBackPair(Context context) {
-        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
-            return false;
-        }
-        PackageManager packageManager = context.getPackageManager();
-        if (packageManager == null
-                || !packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_CONCURRENT)) {
-            return false;
-        }
-        CameraManager cameraManager = context.getSystemService(CameraManager.class);
-        if (cameraManager == null) {
-            return false;
-        }
-        try {
-            for (Set<String> ids : cameraManager.getConcurrentCameraIds()) {
-                boolean front = false;
-                boolean back = false;
-                for (String id : ids) {
-                    Integer facing = cameraManager.getCameraCharacteristics(id)
-                            .get(CameraCharacteristics.LENS_FACING);
-                    if (facing == null) {
-                        continue;
-                    }
-                    if (facing == CameraCharacteristics.LENS_FACING_FRONT) {
-                        front = true;
-                    } else if (facing == CameraCharacteristics.LENS_FACING_BACK) {
-                        back = true;
-                    }
-                }
-                if (front && back) {
-                    return true;
-                }
-            }
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-        return false;
-    }
-
-    private boolean supportsConcurrentFrontBackPair() {
-        if (provider == null) {
-            return false;
-        }
-        for (List<CameraInfo> combination : provider.getAvailableConcurrentCameraInfos()) {
-            boolean front = false;
-            boolean back = false;
-            for (CameraInfo info : combination) {
-                if (info.getLensFacing() == CameraSelector.LENS_FACING_FRONT) {
-                    front = true;
-                } else if (info.getLensFacing() == CameraSelector.LENS_FACING_BACK) {
-                    back = true;
-                }
-            }
-            if (front && back) {
-                return true;
-            }
-        }
-        return false;
-    }
-
-    // ---- Зум, фокус, вспышка ----
-
-    /**
-     * Стартовый зум. Широкоугольная линза — это зум меньше единицы, и он приезжает не
-     * сразу: пока камера не открылась, {@link ZoomState} пуст, поэтому ждём его через
-     * наблюдателя и ставим минимум один раз.
-     */
-    private void applyInitialZoom(final Camera camera, final CameraControl control) {
-        if (control == null || camera == null) {
+        boolean wideAngleStart = wantsWideAngleStart(cam);
+        LiveData<ZoomState> zoomStateData = cam.getCameraInfo().getZoomState();
+        ZoomState currentState = wideAngleStart ? zoomStateData.getValue() : null;
+        control.setZoomRatio(currentState == null ? 1.0f : Math.min(1.0f, currentState.getMinZoomRatio()));
+        if (!wideAngleStart || currentState != null) {
             return;
         }
-        control.setZoomRatio(1.0f);
-        if (!wantsWideAngleStart(camera)) {
-            return;
-        }
-        final LiveData<ZoomState> zoomState = camera.getCameraInfo().getZoomState();
-        if (zoomState.getValue() != null) {
-            applyWideAngle(control, zoomState.getValue());
-            return;
-        }
-        zoomState.observe(lifecycle, new Observer<ZoomState>() {
+        zoomStateData.observe(lifecycle, new Observer<>() {
             @Override
-            public void onChanged(ZoomState state) {
-                if (state == null) {
+            public void onChanged(ZoomState zoomState) {
+                if (zoomState == null) {
                     return;
                 }
-                zoomState.removeObserver(this);
-                if (wantsWideAngleStart(camera)) {
-                    applyWideAngle(control, state);
+                zoomStateData.removeObserver(this);
+                if (wantsWideAngleStart(cam)) {
+                    applyWideAngle(control, zoomState);
                 }
             }
         });
     }
 
-    private void applyWideAngle(CameraControl control, ZoomState state) {
-        if (state == null || state.getMinZoomRatio() >= 1.0f) {
-            return;
-        }
-        control.setZoomRatio(state.getMinZoomRatio());
-    }
-
-    /**
-     * Основная камера — по настройке. Фронталка — всегда: у неё зум меньше единицы
-     * означает не другую линзу, а полный сенсор вместо кропа (Pixel: 0.9× — это
-     * 3840×2736 против 3440×2448 на «1×»), и это её штатный угол.
-     */
-    private boolean wantsWideAngleStart(Camera camera) {
-        if (camera == null) {
-            return false;
-        }
-        return camera.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_FRONT
-                || ChatsConfig.startWithWideAngleCamera.Bool();
-    }
-
-    public void focusToPoint(float x, float y, float viewWidth, float viewHeight) {
-        Display display;
-        if (cameraControl == null || camera == null || viewWidth <= 0 || viewHeight <= 0
-                || (display = getDefaultDisplay()) == null) {
-            return;
-        }
-        try {
-            cameraControl.startFocusAndMetering(new FocusMeteringAction.Builder(
-                    new DisplayOrientedMeteringPointFactory(display, camera.getCameraInfo(), viewWidth, viewHeight)
-                            .createPoint(x, y),
-                    FocusMeteringAction.FLAG_AF | FocusMeteringAction.FLAG_AE).build());
-        } catch (Exception e) {
-            FileLog.e(e);
+    private void applyWideAngle(CameraControl control, ZoomState zoomState) {
+        if (zoomState != null && zoomState.getMinZoomRatio() < 1.0f) {
+            control.setZoomRatio(zoomState.getMinZoomRatio());
         }
     }
 
-    public void setTorchEnabled(boolean enabled) {
-        isTorchOn = enabled;
-        updateTorchState();
-    }
-
-    /** Подсветка есть только у основной камеры, поэтому фронтальную всегда гасим. */
-    private void updateTorchState() {
-        try {
-            if (!isDualMode) {
-                if (camera == null || cameraControl == null || !camera.getCameraInfo().hasFlashUnit()) {
-                    return;
-                }
-                boolean back = camera.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_BACK;
-                cameraControl.enableTorch(isTorchOn && back);
-                return;
-            }
-            if (cameraControlFront != null) {
-                cameraControlFront.enableTorch(false);
-            }
-            if (cameraControlBack == null || cameraBack == null
-                    || !cameraBack.getCameraInfo().hasFlashUnit()) {
-                return;
-            }
-            cameraControlBack.enableTorch(isTorchOn && !isFrontface);
-        } catch (Exception e) {
-            FileLog.e(e);
-        }
-    }
-
-    public void setZoomRatio(float ratio) {
-        if (cameraControl == null) {
-            return;
-        }
-        cameraControl.setZoomRatio(ratio);
-    }
-
-    public float getZoomRatio() {
-        ZoomState state = zoomState();
-        return state == null ? 1f : state.getZoomRatio();
-    }
-
-    public float getMinZoomRatio() {
-        ZoomState state = zoomState();
-        return state == null ? 1f : state.getMinZoomRatio();
-    }
-
-    public float getMaxZoomRatio() {
-        ZoomState state = zoomState();
-        return state == null ? 1f : state.getMaxZoomRatio();
+    private boolean wantsWideAngleStart(Camera cam) {
+        return ExteraConfig.getStartWithWideAngleCamera() &&
+                cam != null &&
+                cam.getCameraInfo().getLensFacing() == CameraSelector.LENS_FACING_BACK;
     }
 
     public float getLinearZoom() {
-        ZoomState state = zoomState();
-        return state == null ? 0f : state.getLinearZoom();
+        if (camera == null) return 0f;
+        var zoomState = camera.getCameraInfo().getZoomState().getValue();
+        return zoomState != null ? zoomState.getLinearZoom() : 0;
     }
 
-    private ZoomState zoomState() {
-        return camera == null ? null : camera.getCameraInfo().getZoomState().getValue();
+    public void setLinearZoom(float zoom) {
+        if (cameraControl == null) return;
+        cameraControl.setLinearZoom(zoom);
     }
 
-    // ---- Переключение камер ----
-
-    public void switchCamera() {
-        isFrontface = !isFrontface;
-        if (isDualMode && cameraFront != null && cameraBack != null) {
-            // Обе линзы уже привязаны — меняется только та, с которой снимаем.
-            updateActiveControl(isFrontface);
-            updateTorchState();
-        } else {
-            rebindCamera();
+    public void setZoom(float scaleFactor) {
+        if (cameraControl == null || camera == null) {
+            return;
         }
+        var zoomState = camera.getCameraInfo().getZoomState().getValue();
+        if (zoomState == null) return;
+        var newZoom = Utilities.clamp(zoomState.getZoomRatio() * scaleFactor,
+                zoomState.getMaxZoomRatio(),
+                zoomState.getMinZoomRatio());
+        cameraControl.setZoomRatio(newZoom);
     }
 
-    private void updateActiveControl(boolean frontface) {
-        camera = frontface ? cameraFront : cameraBack;
-        cameraControl = frontface ? cameraControlFront : cameraControlBack;
+    public float getZoomRatio() {
+        if (camera == null) return 1.0f;
+        var zoomState = camera.getCameraInfo().getZoomState().getValue();
+        return zoomState != null ? zoomState.getZoomRatio() : 1.0f;
     }
 
-    public void setSecondSurfaceProvider(Preview.SurfaceProvider surfaceProvider) {
-        surfaceProviderSecondary = surfaceProvider;
-        if (isInitiated && isDualMode && previewUseCaseBack != null) {
-            previewUseCaseBack.setSurfaceProvider(surfaceProvider);
+    public void setZoomRatio(float ratio) {
+        if (cameraControl == null) return;
+        cameraControl.setZoomRatio(ratio);
+    }
+
+    public float getMinZoomRatio() {
+        if (camera != null) {
+            var zoomState = camera.getCameraInfo().getZoomState().getValue();
+            if (zoomState != null) {
+                return zoomState.getMinZoomRatio();
+            }
         }
+        return 1.0f;
     }
 
-    // ---- Состояние ----
-
-    public boolean isInitiated() {
-        return isInitiated;
-    }
-
-    public boolean isReady() {
-        return isInitiated && !isBinding && camera != null;
-    }
-
-    public boolean isDualMode() {
-        return isDualMode;
-    }
-
-    public boolean isFrontface() {
-        return isFrontface;
+    public float getMaxZoomRatio() {
+        if (camera != null) {
+            var zoomState = camera.getCameraInfo().getZoomState().getValue();
+            if (zoomState != null) {
+                return zoomState.getMaxZoomRatio();
+            }
+        }
+        return 1.0f;
     }
 
     @OptIn(markerClass = ExperimentalCamera2Interop.class)
@@ -916,92 +873,189 @@ public class CameraXSession {
         }
     }
 
-    public boolean isActiveCameraFrontface() {
-        if (camera == null) {
-            return isFrontface;
+    public void focusToPoint(float x, float y, float viewWidth, float viewHeight) {
+        if (cameraControl == null || camera == null || viewWidth <= 0 || viewHeight <= 0) {
+            return;
         }
-        switch (camera.getCameraInfo().getLensFacing()) {
-            case CameraSelector.LENS_FACING_FRONT:
-                return true;
-            case CameraSelector.LENS_FACING_BACK:
-                return false;
-            default:
-                return isFrontface;
-        }
-    }
-
-    public int getRecordingFrameRate() {
-        return recordingFrameRate;
-    }
-
-    public int getDisplayOrientation() {
         Display display = getDefaultDisplay();
-        int rotation = display != null ? display.getRotation() : Surface.ROTATION_0;
-        switch (rotation) {
-            case Surface.ROTATION_90:
-                return 90;
-            case Surface.ROTATION_180:
-                return 180;
-            case Surface.ROTATION_270:
-                return 270;
-            default:
-                return 0;
+        if (display == null) {
+            return;
         }
-    }
-
-    private void observeCameraState(Camera camera) {
         try {
-            camera.getCameraInfo().getCameraState().observe(lifecycle, state -> {
-                CameraState.StateError error = state.getError();
-                if (error == null) {
-                    return;
-                }
-                FileLog.e("CameraX camera state error: code=" + error.getCode() + " type=" + state.getType());
-                if (error.getCause() != null) {
-                    FileLog.e(error.getCause());
-                }
-            });
+            MeteringPointFactory factory = new DisplayOrientedMeteringPointFactory(display, camera.getCameraInfo(), viewWidth, viewHeight);
+            MeteringPoint point = factory.createPoint(x, y);
+
+            FocusMeteringAction action = new FocusMeteringAction
+                    .Builder(point, FocusMeteringAction.FLAG_AF | FocusMeteringAction.FLAG_AE)
+                    .build();
+
+            cameraControl.startFocusAndMetering(action);
         } catch (Exception e) {
             FileLog.e(e);
         }
     }
 
-    private static Display getDefaultDisplay() {
-        DisplayManager manager = (DisplayManager) ApplicationLoader.applicationContext
-                .getSystemService(Context.DISPLAY_SERVICE);
-        return manager != null ? manager.getDisplay(Display.DEFAULT_DISPLAY) : null;
+    public int getDisplayOrientation() {
+        int rotation = Surface.ROTATION_0;
+        Display display = getDefaultDisplay();
+        if (display != null) {
+            rotation = display.getRotation();
+        }
+        return switch (rotation) {
+            case Surface.ROTATION_90 -> 90;
+            case Surface.ROTATION_180 -> 180;
+            case Surface.ROTATION_270 -> 270;
+            default -> 0;
+        };
     }
 
-    // ---- Поверхность ----
+    // UTILS
 
-    /**
-     * Мост между CameraX и текстурой GL-потока: CameraX сам просит поверхность, мы
-     * отдаём ему {@link SurfaceTexture} кружка и сообщаем наверх итоговый размер —
-     * сперва запрошенный, потом уточнённый по кадрированию.
-     */
-    public static Preview.SurfaceProvider createSurfaceProvider(final Context context,
-                                                                final SurfaceTexture surfaceTexture,
-                                                                final PreviewSizeListener listener) {
-        return request -> {
-            try {
-                final Size resolution = request.getResolution();
-                listener.onPreviewSize(resolution.getWidth(), resolution.getHeight());
-                request.setTransformationInfoListener(ContextCompat.getMainExecutor(context), info -> {
-                    Rect crop = info.getCropRect();
-                    listener.onPreviewSize(
-                            crop.width() > 0 ? crop.width() : resolution.getWidth(),
-                            crop.height() > 0 ? crop.height() : resolution.getHeight());
-                });
-                surfaceTexture.setDefaultBufferSize(resolution.getWidth(), resolution.getHeight());
-                final Surface surface = new Surface(surfaceTexture);
-                request.provideSurface(surface, ContextCompat.getMainExecutor(context), result -> {
-                    request.clearTransformationInfoListener();
-                    surface.release();
-                });
-            } catch (Exception e) {
-                FileLog.e(e);
-                request.willNotProvideSurface();
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    private Size getSensorAspect(CameraSelector selector) {
+        try {
+            if (provider != null && selector != null && provider.hasCamera(selector)) {
+                Rect activeArray = Camera2CameraInfo.from(provider.getCameraInfo(selector))
+                        .getCameraCharacteristic(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+                if (activeArray != null && activeArray.width() > 0 && activeArray.height() > 0) {
+                    return new Size(activeArray.width(), activeArray.height());
+                }
             }
-        };
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return FALLBACK_SENSOR_ASPECT;
+    }
+
+    @OptIn(markerClass = ExperimentalCamera2Interop.class)
+    private Set<Size> get60FpsCapableSizes(CameraSelector selector) {
+        var sizes = new HashSet<Size>();
+        try {
+            if (provider == null || selector == null || !provider.hasCamera(selector)) {
+                return sizes;
+            }
+            StreamConfigurationMap map = Camera2CameraInfo.from(provider.getCameraInfo(selector))
+                    .getCameraCharacteristic(CameraCharacteristics.SCALER_STREAM_CONFIGURATION_MAP);
+            Size[] outputSizes = map != null ? map.getOutputSizes(SurfaceTexture.class) : null;
+            if (outputSizes == null) {
+                return sizes;
+            }
+            for (Size size : outputSizes) {
+                long minFrameDurationNs = map.getOutputMinFrameDuration(SurfaceTexture.class, size);
+                if (minFrameDurationNs > 0 && minFrameDurationNs <= MAX_60_FPS_FRAME_DURATION_NS) {
+                    sizes.add(size);
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return sizes;
+    }
+
+    private static List<Size> sortRoundPreviewSizes(List<Size> supportedSizes, Size sensorAspect,
+                                                    Set<Size> sixtyFpsSizes) {
+        ArrayList<Size> sortedSizes = new ArrayList<>(supportedSizes);
+        int minimumShortEdge = SystemUtils.getRoundVideoResolution();
+        int idealShortEdge = Math.min(MAX_PREFERRED_PREVIEW_SHORT_EDGE,
+                Math.max(PREFERRED_PREVIEW_SHORT_EDGE, minimumShortEdge * 2));
+        double sensorRatio = aspectRatioOf(sensorAspect);
+        boolean requireSixtyFps = !sixtyFpsSizes.isEmpty();
+        sortedSizes.sort(Comparator
+                .comparingInt((Size size) ->
+                        previewTier(size, minimumShortEdge, requireSixtyFps, sixtyFpsSizes))
+                .thenComparingDouble(size -> previewScore(size, sensorRatio, idealShortEdge))
+                .thenComparingLong(size -> (long) size.getWidth() * size.getHeight()));
+        return sortedSizes;
+    }
+
+    private static int previewTier(Size size, int minimumShortEdge, boolean requireSixtyFps,
+                                   Set<Size> sixtyFpsSizes) {
+        int shortEdge = Math.min(size.getWidth(), size.getHeight());
+        if (shortEdge < minimumShortEdge) {
+            return 3;
+        }
+        int longEdge = Math.max(size.getWidth(), size.getHeight());
+        if (longEdge > MAX_PREVIEW_LONG_EDGE
+                || (long) size.getWidth() * size.getHeight() > MAX_PREVIEW_AREA) {
+            return 2;
+        }
+        return requireSixtyFps && !sixtyFpsSizes.contains(size) ? 1 : 0;
+    }
+
+    private static double previewScore(Size size, double sensorRatio, int idealShortEdge) {
+        int shortEdge = Math.min(size.getWidth(), size.getHeight());
+        int longEdge = Math.max(size.getWidth(), size.getHeight());
+        if (shortEdge <= 0 || longEdge <= 0 || idealShortEdge <= 0) {
+            return Double.MAX_VALUE;
+        }
+        double fieldOfView = Math.max(0.0, (double) longEdge / shortEdge - sensorRatio) / sensorRatio;
+        double resolution = Math.abs(shortEdge - idealShortEdge) / (double) idealShortEdge;
+        double cropWaste = 1.0 - (double) shortEdge / longEdge;
+        return FIELD_OF_VIEW_WEIGHT * fieldOfView
+                + RESOLUTION_WEIGHT * resolution
+                + CROP_WASTE_WEIGHT * cropWaste;
+    }
+
+    private static double aspectRatioOf(Size size) {
+        int shortEdge = Math.min(size.getWidth(), size.getHeight());
+        int longEdge = Math.max(size.getWidth(), size.getHeight());
+        return shortEdge > 0 ? (double) longEdge / shortEdge : 4.0 / 3.0;
+    }
+
+    private static Display getDefaultDisplay() {
+        DisplayManager displayManager = (DisplayManager) ApplicationLoader.applicationContext.getSystemService(Context.DISPLAY_SERVICE);
+        return displayManager != null ? displayManager.getDisplay(Display.DEFAULT_DISPLAY) : null;
+    }
+
+    public static boolean isRoundDualAvailable(Context context) {
+        return DualCameraView.roundDualAvailableStatic(context) && isSeamlessSwitchingAvailable(context);
+    }
+
+    public static boolean isSeamlessSwitchingAvailable(Context context) {
+        if (seamlessSwitchingAvailableCache != null) {
+            return seamlessSwitchingAvailableCache;
+        }
+        seamlessSwitchingAvailableCache =
+                SharedConfig.getDevicePerformanceClass() >= SharedConfig.PERFORMANCE_CLASS_AVERAGE &&
+                SharedConfig.allowPreparingHevcPlayers() &&
+                hasConcurrentFrontBackPair(context);
+        return seamlessSwitchingAvailableCache;
+    }
+
+    private static boolean hasConcurrentFrontBackPair(Context context) {
+        if (context == null || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) {
+            return false;
+        }
+        PackageManager packageManager = context.getPackageManager();
+        if (packageManager == null || !packageManager.hasSystemFeature(PackageManager.FEATURE_CAMERA_CONCURRENT)) {
+            return false;
+        }
+        CameraManager cameraManager = context.getSystemService(CameraManager.class);
+        if (cameraManager == null) {
+            return false;
+        }
+        try {
+            for (Set<String> combination : cameraManager.getConcurrentCameraIds()) {
+                boolean hasFront = false;
+                boolean hasBack = false;
+                for (String cameraId : combination) {
+                    Integer lensFacing = cameraManager.getCameraCharacteristics(cameraId).get(CameraCharacteristics.LENS_FACING);
+                    if (lensFacing == null) {
+                        continue;
+                    }
+                    if (lensFacing == CameraCharacteristics.LENS_FACING_FRONT) {
+                        hasFront = true;
+                    } else if (lensFacing == CameraCharacteristics.LENS_FACING_BACK) {
+                        hasBack = true;
+                    }
+                }
+                if (hasFront && hasBack) {
+                    return true;
+                }
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+        }
+        return false;
     }
 }

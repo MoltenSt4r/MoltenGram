@@ -7,6 +7,11 @@ import android.view.TextureView;
 import android.view.View;
 import android.widget.FrameLayout;
 
+import com.exteragram.messenger.CameraType;
+import com.exteragram.messenger.ExteraConfig;
+
+import app.exteraless.camera.InstantCameraZoomSlider;
+
 import org.telegram.messenger.AppGlobalConfig;
 import org.telegram.messenger.ImageReceiver;
 import org.telegram.messenger.UserConfig;
@@ -50,7 +55,9 @@ public abstract class InstantCameraViewBase extends FrameLayout {
             Theme.ResourcesProvider resourcesProvider,
             boolean isNewDesign
     ) {
-        return new InstantCameraView2(context, delegate, resourcesProvider, isNewDesign);
+        return isCamera2Enabled(UserConfig.selectedAccount) && ExteraConfig.getCameraType() != CameraType.CAMERA_1
+                ? new InstantCameraView2(context, delegate, resourcesProvider, isNewDesign)
+                : new InstantCameraView(context, delegate, resourcesProvider, isNewDesign);
     }
 
     /** Returns whether the Camera2 implementation is used: the local choice, else the server flag. */
@@ -108,6 +115,17 @@ public abstract class InstantCameraViewBase extends FrameLayout {
 
     /** Applies the bottom inset used by the host layout. */
     public abstract void setInternalPadding(int padding);
+
+    public void setFrontface(boolean frontface) {
+    }
+
+    public boolean isCameraReady() {
+        return false;
+    }
+
+    public InstantCameraZoomSlider getZoomSlider() {
+        return null;
+    }
 
     /** Releases camera, playback and recording resources. */
     public abstract void destroy(boolean async);

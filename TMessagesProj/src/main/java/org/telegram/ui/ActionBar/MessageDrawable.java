@@ -109,6 +109,7 @@ public class MessageDrawable extends Drawable {
     private int overrideRoundRadius;
     private float overrideRounding;
     public boolean forceInvalidatePath;
+    private boolean forceRemoveMessageTail;
 
     public MessageDrawable(int type, boolean out, boolean selected) {
         this(type, out, selected, null);
@@ -572,14 +573,36 @@ public class MessageDrawable extends Drawable {
         }
     }
 
+    public void drawCached(Canvas canvas, PathDrawParams patchDrawCacheParams, Paint paintToUse, boolean forceRemoveMessageTail) {
+        this.forceRemoveMessageTail = forceRemoveMessageTail;
+        try {
+            drawCached(canvas, patchDrawCacheParams, paintToUse);
+        } finally {
+            this.forceRemoveMessageTail = false;
+        }
+    }
+
     public void drawCached(Canvas canvas, PathDrawParams patchDrawCacheParams) {
         drawCached(canvas, patchDrawCacheParams, null);
+    }
+
+    public void drawCached(Canvas canvas, PathDrawParams patchDrawCacheParams, boolean forceRemoveMessageTail) {
+        drawCached(canvas, patchDrawCacheParams, null, forceRemoveMessageTail);
+    }
+
+    public void draw(Canvas canvas, boolean forceRemoveMessageTail) {
+        this.forceRemoveMessageTail = forceRemoveMessageTail;
+        try {
+            draw(canvas);
+        } finally {
+            this.forceRemoveMessageTail = false;
+        }
     }
 
     @Override
     public void draw(Canvas canvas) {
         if (crossfadeFromDrawable != null) {
-            crossfadeFromDrawable.draw(canvas);
+            crossfadeFromDrawable.draw(canvas, forceRemoveMessageTail);
             setAlpha((int) (255 * crossfadeProgress));
             draw(canvas, null);
             setAlpha(255);
@@ -593,7 +616,7 @@ public class MessageDrawable extends Drawable {
             return;
         }
         Rect bounds = getBounds();
-        if (!oeRemoveMessageTail() && paintToUse == null && paint.getStyle() == Paint.Style.FILL && gradientShader == null && overrideRoundRadius == 0 && overrideRounding <= 0) {
+        if (!shouldRemoveMessageTail() && paintToUse == null && paint.getStyle() == Paint.Style.FILL && gradientShader == null && overrideRoundRadius == 0 && overrideRounding <= 0) {
             Drawable background = getBackgroundDrawable();
             if (background != null) {
                 background.setBounds(bounds);
@@ -642,7 +665,7 @@ public class MessageDrawable extends Drawable {
         boolean invalidatePath;
         if (pathDrawCacheParams != null) {
             path = pathDrawCacheParams.path;
-            invalidatePath = pathDrawCacheParams.invalidatePath(bounds, drawFullBottom, drawFullTop);
+            invalidatePath = pathDrawCacheParams.invalidatePath(bounds, drawFullBottom, drawFullTop, rad, nearRad, smallRad, shouldRemoveMessageTail());
         } else {
             path = this.path;
             invalidatePath = true;
@@ -695,7 +718,7 @@ public class MessageDrawable extends Drawable {
         boolean invalidatePath;
         if (pathDrawCacheParams != null) {
             path = pathDrawCacheParams.path;
-            invalidatePath = pathDrawCacheParams.invalidatePath(bounds, drawFullBottom, drawFullTop);
+            invalidatePath = pathDrawCacheParams.invalidatePath(bounds, drawFullBottom, drawFullTop, rad, nearRad, smallRad, shouldRemoveMessageTail());
         } else {
             path = this.path;
             invalidatePath = true;
@@ -712,7 +735,7 @@ public class MessageDrawable extends Drawable {
         if (rad > heightHalf) {
             rad = heightHalf;
         }
-        final boolean oeNoTail = oeRemoveMessageTail();
+        final boolean oeNoTail = shouldRemoveMessageTail();
         if (isOut) {
             // LEFT-BOTTOM <- RIGHT-BOTTOM
             if (drawFullBubble || currentType == TYPE_PREVIEW || customPaint || drawFullBottom) {
@@ -917,20 +940,28 @@ public class MessageDrawable extends Drawable {
         }
     }
 
+    private boolean shouldRemoveMessageTail() {
+        return forceRemoveMessageTail || oeRemoveMessageTail();
+    }
+
     public static class PathDrawParams {
         Path path = new Path();
         Rect lastRect = new Rect();
         boolean lastDrawFullTop;
         boolean lastDrawFullBottom;
-        /** openExtera: чтобы кэш пути сбрасывался при переключении «убрать хвостик». */
-        boolean lastNoTail = oeRemoveMessageTail();
+        int lastRad;
+        int lastNearRad;
+        int lastSmallRad;
+        boolean lastRemoveMessageTail = oeRemoveMessageTail();
 
-        public boolean invalidatePath(Rect bounds, boolean drawFullBottom, boolean drawFullTop) {
-            boolean oeNoTail = oeRemoveMessageTail();
-            boolean invalidate = lastNoTail != oeNoTail || lastRect.isEmpty() || lastRect.top != bounds.top || lastRect.bottom != bounds.bottom || lastRect.right != bounds.right || lastRect.left != bounds.left || lastDrawFullTop != drawFullTop || lastDrawFullBottom != drawFullBottom || !drawFullTop || !drawFullBottom;
-            lastNoTail = oeNoTail;
+        public boolean invalidatePath(Rect bounds, boolean drawFullBottom, boolean drawFullTop, int rad, int nearRad, int smallRad, boolean removeMessageTail) {
+            boolean invalidate = lastRect.isEmpty() || lastRect.top != bounds.top || lastRect.bottom != bounds.bottom || lastRect.right != bounds.right || lastRect.left != bounds.left || lastDrawFullTop != drawFullTop || lastDrawFullBottom != drawFullBottom || lastRad != rad || lastNearRad != nearRad || lastSmallRad != smallRad || lastRemoveMessageTail != removeMessageTail || !drawFullTop || !drawFullBottom;
             lastDrawFullTop = drawFullTop;
             lastDrawFullBottom = drawFullBottom;
+            lastRad = rad;
+            lastNearRad = nearRad;
+            lastSmallRad = smallRad;
+            lastRemoveMessageTail = removeMessageTail;
             lastRect.set(bounds);
             return invalidate;
         }

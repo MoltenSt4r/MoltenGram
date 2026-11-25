@@ -3141,6 +3141,10 @@ public class AndroidUtilities {
         return minSide <= 690;
     }
 
+    public static boolean isTabletTwoPane() {
+        return !isInMultiwindow && (!isSmallTablet() || displaySize.x > displaySize.y);
+    }
+
     public static int getMinTabletSide() {
         if (!isSmallTablet()) {
             final int smallSide = Math.min(displaySize.x, displaySize.y);

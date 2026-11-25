@@ -24,8 +24,11 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
         void onError(@NonNull Exception error);
     }
 
+    interface AmplitudeListener {
+        void onAudioAmplitude(double amplitude);
+    }
+
     private static final int AUDIO_SAMPLE_RATE = 48_000;
-    private static final int AUDIO_BIT_RATE = 64_000;
     private static final int AUDIO_BYTES_PER_FRAME = 2;
     private static final int AUDIO_FRAMES_PER_INPUT = 1024;
     private static final int AUDIO_BYTES_PER_INPUT =
@@ -40,9 +43,11 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
     private final long timelineOffsetUs;
     private final int outputSize;
     private final int videoBitrate;
+    private final int audioBitrate;
     private final int videoFrameRate;
     private final RoundVideoDiagnostics diagnostics;
     private final ErrorListener errorListener;
+    private final AmplitudeListener amplitudeListener;
     private final ErrorListener segmentRejectedListener;
     private final AtomicBoolean errorReported = new AtomicBoolean();
     private final ArrayList<PendingAudioSample> pendingAudioSamples = new ArrayList<>();
@@ -98,18 +103,22 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
             long timelineOffsetUs,
             int outputSize,
             int videoBitrate,
+            int audioBitrate,
             int videoFrameRate,
             @NonNull RoundVideoDiagnostics diagnostics,
             @NonNull ErrorListener errorListener,
+            @NonNull AmplitudeListener amplitudeListener,
             @NonNull ErrorListener segmentRejectedListener
     ) {
         this.writer = writer;
         this.timelineOffsetUs = timelineOffsetUs;
         this.outputSize = outputSize;
         this.videoBitrate = videoBitrate;
+        this.audioBitrate = audioBitrate;
         this.videoFrameRate = videoFrameRate;
         this.diagnostics = diagnostics;
         this.errorListener = errorListener;
+        this.amplitudeListener = amplitudeListener;
         this.segmentRejectedListener = segmentRejectedListener;
     }
 
@@ -329,7 +338,7 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
         int audioBufferSize = Math.max(minBufferSize * 4, 16_384);
         MediaFormat format = MediaFormat.createAudioFormat(MediaFormat.MIMETYPE_AUDIO_AAC, AUDIO_SAMPLE_RATE, 1);
         format.setInteger(MediaFormat.KEY_AAC_PROFILE, MediaCodecInfo.CodecProfileLevel.AACObjectLC);
-        format.setInteger(MediaFormat.KEY_BIT_RATE, AUDIO_BIT_RATE);
+        format.setInteger(MediaFormat.KEY_BIT_RATE, audioBitrate);
         format.setInteger(MediaFormat.KEY_MAX_INPUT_SIZE, audioBufferSize);
         audioCodec = MediaCodec.createEncoderByType(MediaFormat.MIMETYPE_AUDIO_AAC);
         diagnostics.log("audio encoder configure: codec=" + audioCodec.getName()
@@ -379,6 +388,7 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
         MediaCodec.BufferInfo info = new MediaCodec.BufferInfo();
         long submittedFrames = 0;
         long audioBasePtsUs = Long.MIN_VALUE;
+        int audioReads = 0;
         boolean inputEnded = false;
         boolean outputEnded = false;
         try {
@@ -417,6 +427,9 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
                             : audioBasePtsUs + framesToDurationUs(submittedFrames);
                     audioCodec.queueInputBuffer(index, 0, 0, ptsUs, 0);
                     continue;
+                }
+                if ((audioReads++ & 1) == 0) {
+                    amplitudeListener.onAudioAmplitude(computeAmplitude(buffer, bytesRead));
                 }
                 int framesRead = bytesRead / AUDIO_BYTES_PER_FRAME;
                 if (audioBasePtsUs == Long.MIN_VALUE) {
@@ -781,6 +794,15 @@ final class RoundVideoCodecRecorder implements RoundVideoGlProcessor.FrameTiming
         releaseCodec(audioCodec);
         videoCodec = audioCodec = null;
         videoDrainThread = audioThread = null;
+    }
+
+    private static double computeAmplitude(@NonNull ByteBuffer buffer, int bytesRead) {
+        double sum = 0;
+        for (int i = 0; i + 1 < bytesRead; i += 2) {
+            short sample = (short) ((buffer.get(i) & 0xff) | (buffer.get(i + 1) << 8));
+            sum += sample * sample;
+        }
+        return Math.sqrt(sum / bytesRead / 2);
     }
 
     private static long framesToDurationUs(long frames) { return frames * 1_000_000L / AUDIO_SAMPLE_RATE; }

@@ -58,7 +58,7 @@ class ChatMessageBotButtons {
         this.cell = cell;
     }
 
-    void layoutButtons(MessageObject messageObject, BotInlineKeyboard.Source inlineButtons, int separatorHeight, boolean drawAvatar) {
+    void layoutButtons(MessageObject messageObject, BotInlineKeyboard.Source inlineButtons, int separatorHeight, boolean drawAvatar, boolean groupedMedia) {
         int rows, separators;
 
         if (inlineButtons != null) {
@@ -74,16 +74,19 @@ class ChatMessageBotButtons {
             separators = 0;
         }
         cell.substractBackgroundHeight = cell.keyboardHeight = dp(44 + 4) * rows + dp(1) + separatorHeight * separators;
-        cell.widthForButtons = cell.backgroundWidth - dp(cell.mediaBackground ? 0 : 9);
+        int botButtonsBackgroundWidth = cell.isWidePostsBackground() && !groupedMedia
+                ? cell.getWidePostsBubbleWidth()
+                : cell.backgroundWidth;
+        cell.widthForButtons = botButtonsBackgroundWidth - dp(cell.mediaBackground ? 0 : 9);
         boolean fullWidth = false;
-        if (!messageObject.isWideChannelPost() && messageObject.wantedBotKeyboardWidth > cell.widthForButtons) {
+        if (messageObject.wantedBotKeyboardWidth > cell.widthForButtons) {
             int maxButtonWidth = -dp(10 + (cell.isSideMenued ? ChatActivity.SIDE_MENU_WIDTH : drawAvatar ? 52 : 0));
             if (AndroidUtilities.isTablet()) {
                 maxButtonWidth += AndroidUtilities.getMinTabletSide();
             } else {
-                maxButtonWidth += Math.min(cell.getParentWidth(), AndroidUtilities.displaySize.y) - dp(5);
+                maxButtonWidth += Math.min(cell.getBotButtonsParentWidth(), AndroidUtilities.displaySize.y) - dp(5);
             }
-            cell.widthForButtons = Math.max(cell.backgroundWidth, Math.min(messageObject.wantedBotKeyboardWidth, maxButtonWidth));
+            cell.widthForButtons = Math.max(botButtonsBackgroundWidth, Math.min(messageObject.wantedBotKeyboardWidth, maxButtonWidth));
         }
         if (cell.isCompactLayout()) {
             // compact: under bare media the buttons match the media, otherwise they span the text width

@@ -1,10 +1,15 @@
 package com.exteragram.messenger.utils.chats;
 
+import android.text.SpannableStringBuilder;
+import android.text.Spanned;
+
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.UserConfig;
 import org.telegram.messenger.Utilities;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.ActionBar.Theme;
+import org.telegram.ui.Components.ColoredImageSpan;
 
 import java.util.concurrent.atomic.AtomicReferenceArray;
 
@@ -26,6 +31,7 @@ public final class ChatUtils {
 
     private static final AtomicReferenceArray<ChatUtils> instances =
             new AtomicReferenceArray<>(UserConfig.MAX_ACCOUNT_COUNT);
+    private static SpannableStringBuilder channelIcon;
 
     private final int currentAccount;
 
@@ -49,6 +55,14 @@ public final class ChatUtils {
             }
         }
         return local;
+    }
+
+    public static CharSequence getChannelIcon() {
+        if (channelIcon == null) {
+            channelIcon = new SpannableStringBuilder("\u200D");
+            channelIcon.setSpan(new ColoredImageSpan(Theme.chat_channelIconDrawable), 0, 1, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+        }
+        return channelIcon;
     }
 
     public static String getDCName(int dc) {

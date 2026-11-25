@@ -1,3 +1,17 @@
+/*
+
+ This is the source code of exteraGram for Android.
+
+ We do not and cannot prevent the use of our code,
+ but be respectful and credit the original author.
+
+ Copyright @exteraGram, 2022-2026
+
+ Licensed under the GNU GPL v. 3 or later, with the additional terms
+ in ADDITIONAL_TERMS.md at the root of the repository.
+
+*/
+
 package app.exteraless.camera;
 
 import android.content.Context;
@@ -8,139 +22,446 @@ import android.os.Build;
 import android.util.Size;
 import android.util.SizeF;
 
+import androidx.annotation.RequiresApi;
+
 import org.telegram.messenger.FileLog;
+import org.telegram.messenger.Utilities;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Set;
 
 public final class CameraLensStops {
 
+    private static final float EPSILON = 0.0001f;
     private static final float[] NO_RATIOS = new float[0];
-    private static final float[] SNAP_RATIOS = {1f, 2f, 3f, 4f, 5f, 6f, 7f, 8f, 10f, 12f, 15f, 20f};
-    private static final float[] ROUND_RATIOS = {1.5f, 2f, 3f, 5f, 10f, 15f, 20f, 30f};
-    private static final float[] RULER_LADDER = {1f, 2f, 5f, 10f, 30f};
-    private static final float EPSILON = 1.0E-4f;
-    private static final Map<String, float[]> RATIO_CACHE = new HashMap<>();
+
+    private static final float[] SNAP_RATIOS = {
+            1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f, 7.0f, 8.0f, 10.0f, 12.0f, 15.0f, 20.0f
+    };
+    private static final float[] MARKETED_RATIOS = {2.0f, 3.0f, 5.0f, 10.0f};
+    private static final float[] ROUND_RATIOS = {1.5f, 2.0f, 3.0f, 5.0f, 10.0f, 15.0f, 20.0f, 30.0f};
+    private static final float[] RULER_LADDER = {1.0f, 2.0f, 5.0f, 10.0f, 30.0f};
+
+    private static final float SNAP_TOLERANCE_BELOW = 0.03f;
+    private static final float SNAP_TOLERANCE_ABOVE = 0.10f;
+    private static final float MARKETED_TOLERANCE = 0.12f;
+    private static final float[] GOOGLE_MARKETED_RATIOS = {5.0f};
+    private static final float DEVICE_MARKETED_TOLERANCE = 0.20f;
+    private static final float SAME_LENS_FOCAL_TOLERANCE = 0.01f;
+    private static final float LENS_SWITCH_TOLERANCE = 0.01f;
+    private static final float MAIN_LENS_TOLERANCE = 0.12f;
+    private static final float RESCALE_TRIGGER = 1.25f;
+    private static final float MIN_TELEPHOTO_RATIO = 1.15f;
+    private static final float REACH_FACTOR = 2.0f;
+    private static final double MIN_GAP_OCTAVES = 2.0;
+    private static final double MIN_RULER_OCTAVES = 0.55;
+    private static final int TARGET_TOGGLE_STOPS = 4;
+    private static final int MAX_TOGGLE_STOPS = 5;
+
+    private static final Map<String, LensSet> LENS_CACHE = new HashMap<>();
+
+    public static final class LensSet {
+
+        public static final LensSet EMPTY = new LensSet(NO_RATIOS, NO_RATIOS, new String[0][]);
+
+        private final float[] ratios;
+        private final float[] lensRatios;
+        private final String[][] physicalCameraIds;
+
+        private LensSet(float[] ratios, float[] lensRatios, String[][] physicalCameraIds) {
+            this.ratios = ratios;
+            this.lensRatios = lensRatios;
+            this.physicalCameraIds = physicalCameraIds;
+        }
+
+        public float[] getRatios() {
+            return Arrays.copyOf(ratios, ratios.length);
+        }
+
+        public boolean isExpectedLens(float zoom, String activePhysicalCameraId) {
+            int active = activeLensIndex(activePhysicalCameraId);
+            if (active < 0) {
+                return true;
+            }
+            int expected = lensIndexAt(zoom * (1.0f + LENS_SWITCH_TOLERANCE));
+            return active == expected || active == expected - 1 && zoom < ratios[expected];
+        }
+
+        float limitZoom(float zoom, int activeLens, int reach) {
+            return lensIndexAt(zoom) < activeLens - reach ? lensRatios[activeLens - reach] : zoom;
+        }
+
+        int activeLensIndex(String activePhysicalCameraId) {
+            if (activePhysicalCameraId == null || ratios.length < 2) {
+                return -1;
+            }
+            for (int i = 0; i < physicalCameraIds.length; i++) {
+                for (String physicalCameraId : physicalCameraIds[i]) {
+                    if (physicalCameraId.equals(activePhysicalCameraId)) {
+                        return i;
+                    }
+                }
+            }
+            return -1;
+        }
+
+        int lensIndexAt(float zoom) {
+            int index = 0;
+            for (int i = 1; i < lensRatios.length; i++) {
+                if (lensRatios[i] <= zoom) {
+                    index = i;
+                }
+            }
+            return index;
+        }
+    }
 
     private CameraLensStops() {
     }
 
-    public static float[] opticalZoomRatios(Context context, String cameraId, float minZoom) {
-        if (context == null || cameraId == null || Build.VERSION.SDK_INT < 28) {
-            return NO_RATIOS;
+    public static LensSet lensSet(Context context, String logicalCameraId, float minZoom) {
+        if (context == null || logicalCameraId == null
+                || Build.VERSION.SDK_INT < Build.VERSION_CODES.P) {
+            return LensSet.EMPTY;
         }
-        float[] ratios;
-        synchronized (RATIO_CACHE) {
-            ratios = RATIO_CACHE.get(cameraId);
+        LensSet cached;
+        synchronized (LENS_CACHE) {
+            cached = LENS_CACHE.get(logicalCameraId);
         }
-        if (ratios == null) {
-            ratios = readOpticalZoomRatios(context, cameraId);
-            synchronized (RATIO_CACHE) {
-                RATIO_CACHE.put(cameraId, ratios);
+        if (cached == null) {
+            cached = readLensSet(context, logicalCameraId);
+            synchronized (LENS_CACHE) {
+                LENS_CACHE.put(logicalCameraId, cached);
             }
         }
-        return normalizeRatios(ratios, minZoom);
+        return normalizeLensSet(cached, minZoom);
     }
 
-    public static float[] buildToggleStops(float min, float max, float[] opticalRatios) {
-        float[] telephoto = telephotoRatios(opticalRatios, max);
-        if (telephoto.length == 0) {
-            return null;
+    private static LensSet normalizeLensSet(LensSet raw, float minZoom) {
+        float[] rawRatios = raw.ratios;
+        if (rawRatios.length < 2) {
+            return LensSet.EMPTY;
         }
-        ArrayList<Float> stops = new ArrayList<>(6);
-        if (min < 0.9999f) {
+        float scale = 1.0f;
+        if (minZoom > 0.0f && rawRatios[0] > minZoom * RESCALE_TRIGGER) {
+            scale = minZoom / rawRatios[0];
+        }
+        float mainLens = 0.0f;
+        double mainLensDistance = Double.MAX_VALUE;
+        for (float rawRatio : rawRatios) {
+            double distance = Math.abs(octaves(1.0f, rawRatio * scale));
+            if (distance < mainLensDistance) {
+                mainLensDistance = distance;
+                mainLens = rawRatio * scale;
+            }
+        }
+        if (Math.abs(mainLens - 1.0f) > MAIN_LENS_TOLERANCE) {
+            return LensSet.EMPTY;
+        }
+        float[] deviceRatios = deviceMarketedRatios();
+        ArrayList<Float> ratios = new ArrayList<>(rawRatios.length);
+        ArrayList<Float> lensRatios = new ArrayList<>(rawRatios.length);
+        ArrayList<String[]> physicalCameraIds = new ArrayList<>(rawRatios.length);
+        for (int i = 0; i < rawRatios.length; i++) {
+            float lensRatio = rawRatios[i] * scale / mainLens;
+            addLens(ratios, lensRatios, physicalCameraIds,
+                    snapToNiceRatio(lensRatio, deviceRatios), lensRatio, raw.physicalCameraIds[i]);
+        }
+        return new LensSet(toArray(ratios), toArray(lensRatios),
+                physicalCameraIds.toArray(new String[0][]));
+    }
+
+    @RequiresApi(Build.VERSION_CODES.P)
+    private static LensSet readLensSet(Context context, String logicalCameraId) {
+        CameraManager manager;
+        CameraCharacteristics logical;
+        Set<String> physicalIds;
+        float reference;
+        try {
+            manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
+            if (manager == null) {
+                return LensSet.EMPTY;
+            }
+            logical = manager.getCameraCharacteristics(logicalCameraId);
+            physicalIds = logical.getPhysicalCameraIds();
+            if (physicalIds == null || physicalIds.size() < 2) {
+                return LensSet.EMPTY;
+            }
+            reference = halfFieldOfViewTangent(logical);
+            if (reference <= 0.0f) {
+                return LensSet.EMPTY;
+            }
+        } catch (Exception e) {
+            FileLog.e(e);
+            return LensSet.EMPTY;
+        }
+        ArrayList<Float> lensFocalLengths = new ArrayList<>(physicalIds.size());
+        ArrayList<Float> lensTangents = new ArrayList<>(physicalIds.size());
+        ArrayList<String[]> lensCameraIds = new ArrayList<>(physicalIds.size());
+        for (String physicalId : physicalIds) {
+            try {
+                CameraCharacteristics physical = manager.getCameraCharacteristics(physicalId);
+                float tangent = halfFieldOfViewTangent(physical);
+                if (tangent <= 0.0f) {
+                    continue;
+                }
+                float focalLength = physical.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS)[0];
+                int sameLens = -1;
+                for (int i = 0; i < lensFocalLengths.size(); i++) {
+                    if (Math.abs(lensFocalLengths.get(i) - focalLength) <= focalLength * SAME_LENS_FOCAL_TOLERANCE) {
+                        sameLens = i;
+                        break;
+                    }
+                }
+                if (sameLens < 0) {
+                    lensFocalLengths.add(focalLength);
+                    lensTangents.add(tangent);
+                    lensCameraIds.add(new String[]{physicalId});
+                } else {
+                    lensTangents.set(sameLens, Math.max(tangent, lensTangents.get(sameLens)));
+                    lensCameraIds.set(sameLens, join(lensCameraIds.get(sameLens), new String[]{physicalId}));
+                }
+            } catch (Exception e) {
+                FileLog.e(e);
+            }
+        }
+        ArrayList<Float> ratios = new ArrayList<>(lensTangents.size());
+        ArrayList<Float> lensRatios = new ArrayList<>(lensTangents.size());
+        ArrayList<String[]> physicalCameraIds = new ArrayList<>(lensTangents.size());
+        for (int i = 0; i < lensTangents.size(); i++) {
+            float ratio = reference / lensTangents.get(i);
+            addLens(ratios, lensRatios, physicalCameraIds, ratio, ratio, lensCameraIds.get(i));
+        }
+        float[] rawRatios = toArray(ratios);
+        return new LensSet(rawRatios, rawRatios, physicalCameraIds.toArray(new String[0][]));
+    }
+
+    private static void addLens(ArrayList<Float> ratios, ArrayList<Float> lensRatios,
+                                ArrayList<String[]> physicalCameraIds,
+                                float ratio, float lensRatio, String[] cameraIds) {
+        if (ratio <= 0.0f || !Float.isFinite(ratio) || lensRatio <= 0.0f || !Float.isFinite(lensRatio)) {
+            return;
+        }
+        int index = 0;
+        while (index < ratios.size() && ratios.get(index) < ratio - EPSILON) {
+            index++;
+        }
+        if (index < ratios.size() && Math.abs(ratios.get(index) - ratio) <= EPSILON) {
+            physicalCameraIds.set(index, join(physicalCameraIds.get(index), cameraIds));
+        } else {
+            ratios.add(index, ratio);
+            lensRatios.add(index, lensRatio);
+            physicalCameraIds.add(index, cameraIds);
+        }
+    }
+
+    private static String[] join(String[] first, String[] second) {
+        String[] joined = Arrays.copyOf(first, first.length + second.length);
+        System.arraycopy(second, 0, joined, first.length, second.length);
+        return joined;
+    }
+
+    private static float halfFieldOfViewTangent(CameraCharacteristics characteristics) {
+        float[] focalLengths = characteristics.get(
+                CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
+        SizeF physicalSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
+        Rect activeArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
+        Size pixelArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
+        Integer sensorOrientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
+        if (focalLengths == null || focalLengths.length == 0 || physicalSize == null
+                || activeArray == null || pixelArray == null || sensorOrientation == null) {
+            return 0.0f;
+        }
+        float sensorLength;
+        float activeLength;
+        float pixelLength;
+        if (sensorOrientation % 180 == 90) {
+            sensorLength = physicalSize.getHeight();
+            activeLength = activeArray.height();
+            pixelLength = pixelArray.getHeight();
+        } else {
+            sensorLength = physicalSize.getWidth();
+            activeLength = activeArray.width();
+            pixelLength = pixelArray.getWidth();
+        }
+        float focalLength = focalLengths[0];
+        if (focalLength <= 0.0f || sensorLength <= 0.0f
+                || activeLength <= 0.0f || pixelLength <= 0.0f) {
+            return 0.0f;
+        }
+        return sensorLength * activeLength / pixelLength / (2.0f * focalLength);
+    }
+
+    public static float[] buildToggleStops(boolean front, float min, float max, float[] opticalRatios) {
+        float[] telephotoRatios = telephotoRatios(opticalRatios, max);
+        if (telephotoRatios.length == 0) {
+            return boundStops(
+                    front ? new float[]{min, 1.0f, 2.0f} : new float[]{min, 1.0f, 2.0f, 5.0f},
+                    min, max, false);
+        }
+        ArrayList<Float> stops = new ArrayList<>(MAX_TOGGLE_STOPS + 1);
+        if (min < 1.0f - EPSILON) {
             addDistinctStop(stops, min);
         }
-        addDistinctStop(stops, clamp(1f, min, max));
-        for (float ratio : telephoto) {
+        addDistinctStop(stops, Utilities.clamp(1.0f, max, min));
+        for (float ratio : telephotoRatios) {
             addDistinctStop(stops, ratio);
         }
         fillWideGaps(stops);
-        addReachStop(stops, telephoto[telephoto.length - 1], max);
+        addReachStop(stops, telephotoRatios[telephotoRatios.length - 1], max);
         dropCrowdedStops(stops);
         return toArray(stops);
     }
 
-    public static float[] buildRulerStops(float min, float max, float[] toggles) {
-        ArrayList<Float> stops = new ArrayList<>(toggles.length + RULER_LADDER.length + 2);
+    public static float[] buildRulerStops(float min, float max, float[] toggleStops) {
+        ArrayList<Float> stops = new ArrayList<>(toggleStops.length + RULER_LADDER.length + 2);
         addDistinctStop(stops, min);
-        for (float toggle : toggles) {
-            addDistinctStop(stops, clamp(toggle, min, max));
+        for (float stop : toggleStops) {
+            addDistinctStop(stops, Utilities.clamp(stop, max, min));
         }
         addDistinctStop(stops, max);
-        for (float step : RULER_LADDER) {
-            if (step >= min - EPSILON && step <= max + EPSILON && nearestOctaveDistance(stops, step) >= 0.55) {
-                addDistinctStop(stops, step);
+        for (float candidate : RULER_LADDER) {
+            if (candidate < min - EPSILON || candidate > max + EPSILON) {
+                continue;
             }
+            if (nearestOctaveDistance(stops, candidate) < MIN_RULER_OCTAVES) {
+                continue;
+            }
+            addDistinctStop(stops, candidate);
         }
         return toArray(stops);
     }
 
-    private static float clamp(float value, float min, float max) {
-        return Math.max(min, Math.min(max, value));
-    }
-
-    private static double octaves(float from, float to) {
-        if (from <= 0f || to <= 0f) {
-            return 0;
-        }
-        return Math.log(to / from) / Math.log(2);
-    }
-
-    private static void addDistinctStop(ArrayList<Float> stops, float value) {
-        if (value <= 0f || !Float.isFinite(value)) {
-            return;
-        }
-        for (int i = 0; i < stops.size(); i++) {
-            float existing = stops.get(i);
-            if (Math.abs(existing - value) <= EPSILON) {
-                return;
-            }
-            if (existing > value) {
-                stops.add(i, value);
-                return;
-            }
-        }
-        stops.add(value);
-    }
-
-    private static float[] toArray(ArrayList<Float> stops) {
-        float[] result = new float[stops.size()];
-        for (int i = 0; i < result.length; i++) {
-            result[i] = stops.get(i);
-        }
-        return result;
-    }
-
-    private static float snapToNiceRatio(float value) {
-        if (!Float.isFinite(value) || value <= 0f) {
-            return 0f;
-        }
-        float best = 0f;
-        float bestDistance = Float.MAX_VALUE;
-        for (float nice : SNAP_RATIOS) {
-            float distance = (nice - value) / value;
-            if (distance >= -0.03f && distance <= 0.1f && Math.abs(distance) < bestDistance) {
-                best = nice;
-                bestDistance = Math.abs(distance);
-            }
-        }
-        return best > 0f ? best : Math.round(value * 10f) / 10f;
-    }
-
-    private static float[] telephotoRatios(float[] ratios, float max) {
-        if (ratios == null || ratios.length == 0) {
+    private static float[] telephotoRatios(float[] opticalRatios, float max) {
+        if (opticalRatios == null || opticalRatios.length == 0) {
             return NO_RATIOS;
         }
-        ArrayList<Float> result = new ArrayList<>(ratios.length);
-        for (float ratio : ratios) {
-            if (ratio >= 1.15f && ratio <= max + EPSILON) {
-                addDistinctStop(result, ratio);
+        ArrayList<Float> ratios = new ArrayList<>(opticalRatios.length);
+        for (float ratio : opticalRatios) {
+            if (ratio >= MIN_TELEPHOTO_RATIO && ratio <= max + EPSILON) {
+                addDistinctStop(ratios, ratio);
             }
         }
-        return toArray(result);
+        return toArray(ratios);
+    }
+
+    private static void fillWideGaps(ArrayList<Float> stops) {
+        while (stops.size() < TARGET_TOGGLE_STOPS) {
+            int widestIndex = -1;
+            double widestGap = MIN_GAP_OCTAVES;
+            for (int i = 1; i < stops.size(); i++) {
+                double gap = octaves(stops.get(i - 1), stops.get(i));
+                if (gap > widestGap) {
+                    widestGap = gap;
+                    widestIndex = i;
+                }
+            }
+            if (widestIndex < 0) {
+                return;
+            }
+            float candidate = chooseRoundRatio(stops.get(widestIndex - 1), stops.get(widestIndex));
+            if (candidate <= 0.0f) {
+                return;
+            }
+            int size = stops.size();
+            addDistinctStop(stops, candidate);
+            if (stops.size() == size) {
+                return;
+            }
+        }
+    }
+
+    private static float chooseRoundRatio(float lower, float upper) {
+        double target = Math.sqrt((double) lower * upper);
+        float best = 0.0f;
+        double bestDistance = Double.MAX_VALUE;
+        for (float candidate : ROUND_RATIOS) {
+            if (candidate <= lower + EPSILON || candidate >= upper - EPSILON) {
+                continue;
+            }
+            double distance = Math.abs(octaves(candidate, (float) target));
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best;
+    }
+
+    private static void addReachStop(ArrayList<Float> stops, float topTelephoto, float max) {
+        if (stops.size() >= TARGET_TOGGLE_STOPS || stops.isEmpty()) {
+            return;
+        }
+        float reach = snapToNiceRatio(topTelephoto * REACH_FACTOR, NO_RATIOS);
+        if (reach > max + EPSILON || reach <= stops.get(stops.size() - 1) + EPSILON) {
+            return;
+        }
+        addDistinctStop(stops, reach);
+    }
+
+    private static void dropCrowdedStops(ArrayList<Float> stops) {
+        while (stops.size() > MAX_TOGGLE_STOPS) {
+            int tightestIndex = -1;
+            double tightestGap = Double.MAX_VALUE;
+            for (int i = 1; i < stops.size() - 1; i++) {
+                double gap = octaves(stops.get(i - 1), stops.get(i));
+                if (gap < tightestGap) {
+                    tightestGap = gap;
+                    tightestIndex = i;
+                }
+            }
+            if (tightestIndex < 0) {
+                return;
+            }
+            stops.remove(tightestIndex);
+        }
+    }
+
+    private static float[] deviceMarketedRatios() {
+        return "Google".equalsIgnoreCase(Build.MANUFACTURER) ? GOOGLE_MARKETED_RATIOS : NO_RATIOS;
+    }
+
+    private static float snapToNiceRatio(float ratio, float[] deviceRatios) {
+        if (!Float.isFinite(ratio) || ratio <= 0.0f) {
+            return 0.0f;
+        }
+        float best = 0.0f;
+        float bestDistance = Float.MAX_VALUE;
+        for (float candidate : deviceRatios) {
+            float distance = Math.abs(candidate - ratio) / ratio;
+            if (distance <= DEVICE_MARKETED_TOLERANCE && distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        if (best > 0.0f) {
+            return best;
+        }
+        for (float candidate : MARKETED_RATIOS) {
+            float distance = Math.abs(candidate - ratio) / ratio;
+            if (distance <= MARKETED_TOLERANCE && distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        if (best > 0.0f) {
+            return best;
+        }
+        for (float candidate : SNAP_RATIOS) {
+            float offset = (candidate - ratio) / ratio;
+            if (offset < -SNAP_TOLERANCE_BELOW || offset > SNAP_TOLERANCE_ABOVE) {
+                continue;
+            }
+            float distance = Math.abs(offset);
+            if (distance < bestDistance) {
+                bestDistance = distance;
+                best = candidate;
+            }
+        }
+        return best > 0.0f ? best : Math.round(ratio * 10.0f) / 10.0f;
     }
 
     private static double nearestOctaveDistance(ArrayList<Float> stops, float value) {
@@ -151,152 +472,58 @@ public final class CameraLensStops {
         return nearest;
     }
 
-    private static float chooseRoundRatio(float from, float to) {
-        double middle = Math.sqrt(from * to);
-        float best = 0f;
-        double bestDistance = Double.MAX_VALUE;
-        for (float round : ROUND_RATIOS) {
-            if (round > from + EPSILON && round < to - EPSILON) {
-                double distance = Math.abs(octaves(round, (float) middle));
-                if (distance < bestDistance) {
-                    best = round;
-                    bestDistance = distance;
+    private static double octaves(float from, float to) {
+        if (from <= 0.0f || to <= 0.0f) {
+            return 0.0;
+        }
+        return Math.log((double) to / from) / Math.log(2.0);
+    }
+
+    private static float[] boundStops(float[] source, float min, float max, boolean includeEndpoints) {
+        ArrayList<Float> result = new ArrayList<>(source.length + 2);
+        if (includeEndpoints) {
+            addDistinctStop(result, min);
+        }
+        for (float value : source) {
+            if (value <= 0.0f || !Float.isFinite(value)) {
+                continue;
+            }
+            if (value < min - EPSILON) {
+                if (!includeEndpoints) {
+                    addDistinctStop(result, min);
                 }
+            } else if (value <= max + EPSILON) {
+                addDistinctStop(result, Utilities.clamp(value, max, min));
             }
         }
-        return best;
-    }
-
-    private static void fillWideGaps(ArrayList<Float> stops) {
-        while (stops.size() < 4) {
-            int widest = -1;
-            double widestGap = 2;
-            for (int i = 1; i < stops.size(); i++) {
-                double gap = octaves(stops.get(i - 1), stops.get(i));
-                if (gap > widestGap) {
-                    widest = i;
-                    widestGap = gap;
-                }
-            }
-            if (widest < 0) {
-                return;
-            }
-            float round = chooseRoundRatio(stops.get(widest - 1), stops.get(widest));
-            if (round <= 0f) {
-                return;
-            }
-            int size = stops.size();
-            addDistinctStop(stops, round);
-            if (stops.size() == size) {
-                return;
-            }
-        }
-    }
-
-    private static void addReachStop(ArrayList<Float> stops, float longestLens, float max) {
-        if (stops.size() >= 4 || stops.isEmpty()) {
-            return;
-        }
-        float reach = snapToNiceRatio(longestLens * 2f);
-        if (reach > max + EPSILON || reach <= stops.get(stops.size() - 1) + EPSILON) {
-            return;
-        }
-        addDistinctStop(stops, reach);
-    }
-
-    private static void dropCrowdedStops(ArrayList<Float> stops) {
-        while (stops.size() > 5) {
-            int crowded = -1;
-            double smallestGap = Double.MAX_VALUE;
-            for (int i = 1; i < stops.size() - 1; i++) {
-                double gap = octaves(stops.get(i - 1), stops.get(i));
-                if (gap < smallestGap) {
-                    crowded = i;
-                    smallestGap = gap;
-                }
-            }
-            if (crowded < 0) {
-                return;
-            }
-            stops.remove(crowded);
-        }
-    }
-
-    private static float[] normalizeRatios(float[] ratios, float minZoom) {
-        if (ratios.length < 2) {
-            return NO_RATIOS;
-        }
-        float scale = minZoom > 0f && ratios[0] > minZoom * 1.25f ? minZoom / ratios[0] : 1f;
-        float base = 0f;
-        double baseDistance = Double.MAX_VALUE;
-        for (float ratio : ratios) {
-            float scaled = ratio * scale;
-            double distance = Math.abs(octaves(1f, scaled));
-            if (distance < baseDistance) {
-                base = scaled;
-                baseDistance = distance;
-            }
-        }
-        if (Math.abs(base - 1f) > 0.12f) {
-            return NO_RATIOS;
-        }
-        ArrayList<Float> result = new ArrayList<>(ratios.length);
-        for (float ratio : ratios) {
-            addDistinctStop(result, snapToNiceRatio(ratio * scale / base));
+        if (includeEndpoints) {
+            addDistinctStop(result, max);
         }
         return toArray(result);
     }
 
-    private static float halfFieldOfViewTangent(CameraCharacteristics characteristics) {
-        float[] focalLengths = characteristics.get(CameraCharacteristics.LENS_INFO_AVAILABLE_FOCAL_LENGTHS);
-        SizeF physicalSize = characteristics.get(CameraCharacteristics.SENSOR_INFO_PHYSICAL_SIZE);
-        Rect activeArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_ACTIVE_ARRAY_SIZE);
-        Size pixelArray = characteristics.get(CameraCharacteristics.SENSOR_INFO_PIXEL_ARRAY_SIZE);
-        Integer orientation = characteristics.get(CameraCharacteristics.SENSOR_ORIENTATION);
-        if (focalLengths == null || focalLengths.length == 0 || physicalSize == null || activeArray == null || pixelArray == null || orientation == null) {
-            return 0f;
+    private static void addDistinctStop(ArrayList<Float> values, float value) {
+        if (value <= 0.0f || !Float.isFinite(value)) {
+            return;
         }
-        boolean rotated = orientation % 180 == 90;
-        float sensorWidth = rotated ? physicalSize.getHeight() : physicalSize.getWidth();
-        float activeWidth = rotated ? activeArray.height() : activeArray.width();
-        float pixelWidth = rotated ? pixelArray.getHeight() : pixelArray.getWidth();
-        float focalLength = focalLengths[0];
-        if (focalLength <= 0f || sensorWidth <= 0f || activeWidth <= 0f || pixelWidth <= 0f) {
-            return 0f;
+        for (int i = 0; i < values.size(); i++) {
+            float existing = values.get(i);
+            if (Math.abs(existing - value) <= EPSILON) {
+                return;
+            }
+            if (existing > value) {
+                values.add(i, value);
+                return;
+            }
         }
-        return sensorWidth * activeWidth / pixelWidth / (focalLength * 2f);
+        values.add(value);
     }
 
-    private static float[] readOpticalZoomRatios(Context context, String cameraId) {
-        try {
-            CameraManager manager = (CameraManager) context.getSystemService(Context.CAMERA_SERVICE);
-            if (manager == null) {
-                return NO_RATIOS;
-            }
-            CameraCharacteristics logical = manager.getCameraCharacteristics(cameraId);
-            Set<String> physicalIds = logical.getPhysicalCameraIds();
-            if (physicalIds == null || physicalIds.size() < 2) {
-                return NO_RATIOS;
-            }
-            float logicalTangent = halfFieldOfViewTangent(logical);
-            if (logicalTangent <= 0f) {
-                return NO_RATIOS;
-            }
-            ArrayList<Float> ratios = new ArrayList<>(physicalIds.size());
-            for (String physicalId : physicalIds) {
-                try {
-                    float tangent = halfFieldOfViewTangent(manager.getCameraCharacteristics(physicalId));
-                    if (tangent > 0f) {
-                        addDistinctStop(ratios, logicalTangent / tangent);
-                    }
-                } catch (Exception e) {
-                    FileLog.e(e);
-                }
-            }
-            return toArray(ratios);
-        } catch (Exception e) {
-            FileLog.e(e);
-            return NO_RATIOS;
+    private static float[] toArray(ArrayList<Float> values) {
+        float[] result = new float[values.size()];
+        for (int i = 0; i < result.length; i++) {
+            result[i] = values.get(i);
         }
+        return result;
     }
 }

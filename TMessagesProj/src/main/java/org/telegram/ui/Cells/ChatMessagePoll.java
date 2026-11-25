@@ -155,10 +155,11 @@ class ChatMessagePoll {
         cell.drawName = true;
         cell.drawForwardedName = !cell.isRepliesChat;
         cell.drawPhotoImage = false;
-        int maxMessageWidth = messageObject.getMaxMessageTextWidth();
-        int wideBackgroundWidth = cell.getWideChannelPostBackgroundWidth(messageObject);
-        int maxWidth = wideBackgroundWidth != 0 ? wideBackgroundWidth - dp(31) : Math.min(dp(500), maxMessageWidth);
-        cell.backgroundWidth = wideBackgroundWidth != 0 ? wideBackgroundWidth : maxWidth + dp(31);
+        int maxWidth = messageObject.getMaxMessageTextWidth();
+        if (!cell.isWidePostsBackground()) {
+            maxWidth = Math.min(dp(500), maxWidth);
+        }
+        cell.backgroundWidth = maxWidth + dp(31);
 
         TLRPC.MessageMedia m = MessageObject.getMedia(messageObject.messageOwner);
         TLRPC.TL_textWithEntities title;

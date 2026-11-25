@@ -137,6 +137,7 @@ import org.telegram.messenger.MediaController;
 import org.telegram.messenger.MediaDataController;
 import app.exteraless.chats.WideChannelPostLayout;
 import app.exteraless.feed.FeedMessageUtils;
+import com.exteragram.messenger.utils.chats.WidePosts;
 import org.telegram.messenger.MessageObject;
 import org.telegram.messenger.MessagesController;
 import org.telegram.messenger.MessagesStorage;
@@ -1349,6 +1350,13 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
     private Drawable nameStatusSelector;
     private boolean nameStatusPressed;
 
+    // WidePosts 13.2.2 — name header extras
+    TLRPC.Chat feedDisplayChannel;
+    final RectF nameAvatarBounds = new RectF();
+    private int nameBadgeSelectorColor;
+    private Drawable nameBadgeSelector;
+    private boolean currentNameBotVerificationIsBadge;
+
     private RoundVideoPlayingDrawable roundVideoPlayingDrawable;
 
     StaticLayout docTitleLayout;
@@ -1879,7 +1887,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     StaticLayout nameLayout;
     private int nameLayoutWidth;
-    boolean adminLayoutIsAdmin, adminLayoutIsOwner, adminLayoutIsTag;
+    boolean adminLayoutIsAdmin, adminLayoutIsOwner, adminLayoutIsTag, adminLayoutIsEmbeddedCommentsChannelIcon;
     private StaticLayout adminLayout;
     private RectF adminLayoutRect = new RectF();
     private ButtonBounce adminLayoutBounce;
@@ -6835,6 +6843,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             flipImage = false;
             isThreadPost = isThreadChat && messageObject.messageOwner.fwd_from != null && messageObject.messageOwner.fwd_from.channel_post != 0 && messageObject.messageOwner.reply_to == null;
             final boolean wideChannelPostHeader = messageObject.hasWideChannelPostHeader() && !messageObject.isOutOwner();
+            feedDisplayChannel = FeedMessageUtils.resolveDisplayChannel(messageObject);
             isAvatarVisible = !wideChannelPostHeader && needDrawAvatar() && (currentPosition == null || currentPosition.edge);
             boolean drawAvatar = !wideChannelPostHeader && needDrawAvatar();
             if (messageObject != null && messageObject.searchType == 4 && app.exteraless.appearance.AppearanceConfig.hideFeedChannelAvatars()) {
@@ -6900,7 +6909,7 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
             adminLayout = null;
             ephemeralLayout = null;
             ephemeralWidth = 0;
-            adminLayoutIsAdmin = adminLayoutIsOwner = adminLayoutIsTag = false;
+            adminLayoutIsAdmin = adminLayoutIsOwner = adminLayoutIsTag = adminLayoutIsEmbeddedCommentsChannelIcon = false;
             boostCounterBounds = null;
             boostCounterSpan = null;
             checkOnlyButtonPressed = false;
@@ -12968,6 +12977,51 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
 
     public boolean isUpdating() {
         return isUpdating;
+    }
+
+    // WidePosts 13.2.2 compatibility helpers — delegate to existing WideChannelPost* infrastructure
+
+    /** Whether this message should be rendered as a wide post with its own background bubble. */
+    boolean isWidePostsBackground() {
+        return currentMessageObject != null
+                && currentMessageObject.isWideChannelPost()
+                && WidePosts.shouldDrawBackground(currentMessageObject);
+    }
+
+    /** Width of the wide-posts bubble background. */
+    int getWidePostsBubbleWidth() {
+        return getWideChannelPostBackgroundWidth(currentMessageObject);
+    }
+
+    /** Whether the external avatar on the left should be suppressed (embedded in the header instead). */
+    private boolean isWidePostsExternalAvatarSuppressed() {
+        return WidePosts.shouldSuppressExternalAvatar(currentMessageObject);
+    }
+
+    /** Whether this is a sponsored wide post (hides share/go-to buttons). */
+    private boolean isWidePostsSponsored() {
+        return isWidePostsBackground() && currentMessageObject != null && currentMessageObject.isSponsored();
+    }
+
+    /** Whether the wide-post profile header is embedded above a media message (no separate bubble). */
+    boolean isWidePostsMediaProfileHeader() {
+        return WidePosts.isEmbeddedProfileAvatarMessageWithoutBackground(currentMessageObject);
+    }
+
+    /** Minimal refresh stub — invalidates the cell so the name header is redrawn with updated data. */
+    private void refreshAuthorHeader() {
+        if (currentMessageObject != null) {
+            feedDisplayChannel = FeedMessageUtils.resolveDisplayChannel(currentMessageObject);
+        }
+        invalidate();
+    }
+
+    /**
+     * Width available to bot-button rows.  For wide posts the bubble spans to the right edge of
+     * the viewport; for regular messages it's the cell width.
+     */
+    protected int getBotButtonsParentWidth() {
+        return isWidePostsBackground() ? getWidePostsBubbleWidth() : getMeasuredWidth();
     }
 
     int getExtraTextX() {

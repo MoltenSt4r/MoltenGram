@@ -167,6 +167,8 @@ public final class RoundVideoSession {
 
         /** Called after an unrecoverable camera, codec, playback or file error. */
         default void onError(@NonNull Exception error) {}
+
+        default void onAudioAmplitude(double amplitude) {}
     }
 
     /** Receives stable ranges of the growing MP4 output. */
@@ -222,6 +224,10 @@ public final class RoundVideoSession {
         private Listener listener;
         private OutputListener outputListener;
         private ScreenFlashController screenFlashController;
+        private boolean cameraXEnabled;
+        private int outputSize;
+        private int audioBitrate = DEFAULT_AUDIO_BITRATE;
+        private boolean dualCameraEnabled = true;
 
         /** Creates a builder attached to a UI-owned preview TextureView. */
         public Builder(@NonNull Context context, @NonNull TextureView previewView) {
@@ -292,6 +298,26 @@ public final class RoundVideoSession {
         /** Sets the optional host implementation of the front-camera screen flash. */
         public @NonNull Builder setScreenFlashController(@Nullable ScreenFlashController value) {
             screenFlashController = value;
+            return this;
+        }
+
+        public @NonNull Builder setCameraXEnabled(boolean enabled) {
+            cameraXEnabled = enabled;
+            return this;
+        }
+
+        public @NonNull Builder setOutputSize(int size) {
+            outputSize = size;
+            return this;
+        }
+
+        public @NonNull Builder setAudioBitrate(int bitrate) {
+            audioBitrate = bitrate;
+            return this;
+        }
+
+        public @NonNull Builder setDualCameraEnabled(boolean enabled) {
+            dualCameraEnabled = enabled;
             return this;
         }
 
@@ -404,6 +430,7 @@ public final class RoundVideoSession {
         private final FrameRate activeFrameRate;
         private final FlashType flashType;
         private final float maximumZoomRatio;
+        private final String activeCameraId;
 
         private CameraCapabilities(
                 CameraFacing requestedFacing,
@@ -413,7 +440,8 @@ public final class RoundVideoSession {
                 FrameRate requestedFrameRate,
                 FrameRate activeFrameRate,
                 FlashType flashType,
-                float maximumZoomRatio
+                float maximumZoomRatio,
+                String activeCameraId
         ) {
             this.requestedFacing = requestedFacing;
             this.activeFacing = activeFacing;
@@ -423,6 +451,7 @@ public final class RoundVideoSession {
             this.activeFrameRate = activeFrameRate;
             this.flashType = flashType;
             this.maximumZoomRatio = maximumZoomRatio;
+            this.activeCameraId = activeCameraId;
         }
 
         /** Returns the camera requested for the current or next segment. */
@@ -451,6 +480,8 @@ public final class RoundVideoSession {
 
         /** Returns whether the configured camera supports zoom. */
         public boolean isZoomSupported() { return maximumZoomRatio > 1f; }
+
+        public @Nullable String getActiveCameraId() { return activeCameraId; }
     }
 
     /** Immutable description of the completed output file. */
@@ -492,6 +523,7 @@ public final class RoundVideoSession {
     }
 
     private static final long DEFAULT_MAXIMUM_DURATION_MS = 60_000L;
+    private static final int DEFAULT_AUDIO_BITRATE = 64_000;
     private static final long MINIMUM_TRIM_DURATION_MS = 800L;
     private static final long PREVIEW_PROGRESS_DELAY_MS = 33L;
 
@@ -510,9 +542,10 @@ public final class RoundVideoSession {
     private final ExecutorService outputExecutor = Executors.newSingleThreadExecutor(
             runnable -> new Thread(runnable, "RoundVideoOutput")
     );
-    private final RoundVideoCameraController cameraController;
+    private final RoundVideoCamera cameraController;
     private final RoundVideoDiagnostics diagnostics;
     private final OutputResolution outputResolution;
+    private final int outputSize;
     private final int videoBitrate;
     private final CameraResolution requestedCameraResolution;
     private final FrameRate requestedFrameRate;
@@ -522,6 +555,7 @@ public final class RoundVideoSession {
     private State state = State.IDLE;
     private CameraFacing requestedFacing;
     private CameraFacing activeFacing;
+    private String activeCameraId;
     private CameraResolution activeCameraResolution;
     private FrameRate activeFrameRate;
     private FlashType flashType = FlashType.NONE;
@@ -537,6 +571,8 @@ public final class RoundVideoSession {
     private boolean pauseAfterRecordingStarts;
     private boolean cameraStopPending;
     private boolean cleanupStarted;
+    /** The host released the session while FINISHING; resources go once the output completes. */
+    private boolean releaseAfterCompletion;
     private volatile boolean cancelRequested;
     private long recordedDurationMs;
     private long recordingStartedAtRealtimeMs;
@@ -583,6 +619,7 @@ public final class RoundVideoSession {
                 : builder.outputDirectory;
         requestedFacing = builder.initialFacing;
         outputResolution = builder.outputResolution;
+        outputSize = builder.outputSize > 0 ? builder.outputSize : outputResolution.getSize();
         videoBitrate = builder.videoBitrate;
         requestedCameraResolution = builder.cameraResolution;
         requestedFrameRate = builder.frameRate;
@@ -594,24 +631,42 @@ public final class RoundVideoSession {
         diagnostics = new RoundVideoDiagnostics();
         diagnostics.log("session created: device=" + Build.MANUFACTURER + " " + Build.MODEL
                 + ", sdk=" + Build.VERSION.SDK_INT
-                + ", output=" + outputResolution.getSize() + "x" + outputResolution.getSize()
+                + ", output=" + outputSize + "x" + outputSize
                 + ", bitrate=" + videoBitrate
+                + ", audioBitrate=" + builder.audioBitrate
+                + ", dualCamera=" + builder.dualCameraEnabled
                 + ", cameraMode=" + requestedCameraResolution
                 + ", fps=" + requestedFrameRate.getValue()
                 + ", composition=" + compositionEnabled
                 + ", facing=" + requestedFacing
                 + ", maxDurationMs=" + maximumDurationMs);
-        cameraController = new RoundVideoCameraController(
-                this.context,
-                previewView,
-                outputResolution,
-                videoBitrate,
-                requestedCameraResolution,
-                requestedFrameRate,
-                compositionEnabled,
-                diagnostics,
-                cameraCallback
-        );
+        cameraController = builder.cameraXEnabled
+                ? new RoundVideoCameraXController(
+                        this.context,
+                        previewView,
+                        outputSize,
+                        videoBitrate,
+                        builder.audioBitrate,
+                        builder.dualCameraEnabled,
+                        requestedCameraResolution,
+                        compositionEnabled,
+                        diagnostics,
+                        cameraCallback
+                )
+                : new RoundVideoCameraController(
+                        this.context,
+                        previewView,
+                        outputResolution,
+                        outputSize,
+                        videoBitrate,
+                        builder.audioBitrate,
+                        builder.dualCameraEnabled,
+                        requestedCameraResolution,
+                        requestedFrameRate,
+                        compositionEnabled,
+                        diagnostics,
+                        cameraCallback
+                );
     }
 
     /** Opens the requested camera and starts recording after its first frame arrives. */
@@ -750,6 +805,22 @@ public final class RoundVideoSession {
         return cameraController.setZoom(zoomProgress);
     }
 
+    @MainThread
+    public boolean setZoomRatio(float ratio) {
+        requireMainThread();
+        if (state != State.STARTING && state != State.RECORDING && state != State.RESUMING) {
+            return false;
+        }
+        return cameraController.setZoomRatio(ratio);
+    }
+
+    @MainThread
+    public boolean setFocusPoint(float x, float y) {
+        requireMainThread();
+        if (state != State.RECORDING || cameraSwitching) return false;
+        return cameraController.setFocusPoint(x, y);
+    }
+
     /** Enables the rear torch or requests front-camera screen flash. */
     @MainThread
     public boolean setFlashEnabled(boolean enabled) {
@@ -814,12 +885,24 @@ public final class RoundVideoSession {
         return true;
     }
 
-    /** Releases UI, camera and playback resources. Active recordings are cancelled. */
+    /**
+     * Releases UI, camera and playback resources. Active recordings are cancelled. A release
+     * while the final output is being produced keeps finishing detached from the host, so the
+     * completed output is still delivered, and releases the session right after that.
+     */
     @MainThread
     public void release() {
         requireMainThread();
         if (state == State.RELEASED) {
             if (!cleanupStarted) finishCancellation();
+            return;
+        }
+        if (state == State.FINISHING) {
+            if (releaseAfterCompletion) return;
+            releaseAfterCompletion = true;
+            diagnostics.log("release deferred: output is still finishing");
+            disableCameraEffects();
+            releasePlayer();
             return;
         }
         if (state != State.COMPLETED) {
@@ -852,6 +935,10 @@ public final class RoundVideoSession {
     /** Returns the immutable encoded output resolution. */
     public @NonNull OutputResolution getOutputResolution() {
         return outputResolution;
+    }
+
+    public int getOutputSize() {
+        return outputSize;
     }
 
     /** Returns the immutable AVC bitrate in bits per second. */
@@ -917,6 +1004,13 @@ public final class RoundVideoSession {
                 }
 
                 @Override
+                public void onAudioAmplitude(double amplitude) {
+                    mainHandler.post(() -> {
+                        if (state == State.RECORDING) listener.onAudioAmplitude(amplitude);
+                    });
+                }
+
+                @Override
                 public void onSegmentInterrupted(@NonNull Exception error) {
                     mainHandler.post(() -> handleSegmentInterrupted(error));
                 }
@@ -933,6 +1027,7 @@ public final class RoundVideoSession {
     ) {
         if (isTerminalState()) return;
         activeFacing = info.facing;
+        activeCameraId = info.cameraId;
         activeCameraResolution = info.cameraResolution;
         activeFrameRate = info.frameRate;
         maximumZoomRatio = info.maximumZoomRatio;
@@ -942,7 +1037,6 @@ public final class RoundVideoSession {
         notifyCapabilities();
         diagnostics.log("camera configured: facing=" + info.facing
                 + ", mode=" + info.cameraResolution
-                + ", preview=" + info.previewSize
                 + ", recording=" + info.recordingSize
                 + ", fps=" + info.frameRate.getValue()
                 + ", maxZoom=" + maximumZoomRatio
@@ -1318,6 +1412,7 @@ public final class RoundVideoSession {
                         hasAudio,
                         activeFrameRate == null ? FrameRate.FPS_30 : activeFrameRate
                 ));
+                if (releaseAfterCompletion) release();
             });
         });
     }
@@ -1334,7 +1429,7 @@ public final class RoundVideoSession {
             outputGeneration = generation;
             writer = new RoundVideoMp4Writer(
                     file,
-                    outputResolution.getSize(),
+                    outputSize,
                     includeAudio,
                     diagnostics,
                     availableSize -> {
@@ -1420,7 +1515,8 @@ public final class RoundVideoSession {
                 requestedFrameRate,
                 activeFrameRate,
                 flashType,
-                maximumZoomRatio
+                maximumZoomRatio,
+                activeCameraId
         ));
     }
 

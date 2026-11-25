@@ -93,31 +93,31 @@ public class GroupMedia {
         }
         layout.medias.clear();
         layout.medias.addAll(paidMedia.extended_media);
-        layout.calculate(messageObject.isWideChannelPost());
+        layout.calculate(!cell.isProfileAvatarEmbedded());
 
         if (overrideWidth > 0) {
             maxWidth = overrideWidth;
         } else {
-            int wideChannelWidth = cell.getWideChannelPostMediaWidth(messageObject);
-            if (wideChannelWidth != 0) {
-                maxWidth = wideChannelWidth;
-            } else if (AndroidUtilities.isTablet()) {
+            if (AndroidUtilities.isTablet()) {
                 maxWidth = AndroidUtilities.getMinTabletSide() - AndroidUtilities.dp(122);
             } else {
                 maxWidth = Math.min(cell.getParentWidth(), AndroidUtilities.displaySize.y) - AndroidUtilities.dp(64 + (cell.checkNeedDrawShareButton(messageObject) ? 10 : 0));
             }
-            if (wideChannelWidth == 0 && cell.needDrawAvatar()) {
+            if (cell.needDrawAvatarOutside()) {
                 maxWidth -= dp(52);
             }
         }
 
+        float widthScale = overrideWidth > 0 && layout.width > 0
+                ? 1000f / layout.width
+                : 1f;
         for (int i = 0; i < paidMedia.extended_media.size(); ++i) {
             final TLRPC.MessageExtendedMedia media = paidMedia.extended_media.get(i);
+            final GroupedMessagePosition pos = layout.getPosition(media);
+            final int w = (int) (pos.pw / 1000f * widthScale * maxWidth);
+            final int h = (int) (pos.ph * layout.maxSizeHeight);
             MediaHolder holder = i >= holders.size() ? null : holders.get(i);
             if (holder == null) {
-                final GroupedMessagePosition pos = layout.getPosition(media);
-                final int w = (int) (pos.pw / 1000f * maxWidth);
-                final int h = (int) (pos.ph * layout.maxSizeHeight);
                 holder = new MediaHolder(cell, messageObject, media, paidMedia.extended_media.size() != 1, w, h);
                 if (media.attachPath != null) {
                     holder.attachPath = media.attachPath;
@@ -213,15 +213,12 @@ public class GroupMedia {
             f = 1000f / layout.width;
             maxWidth = overrideWidth;
         } else {
-            int wideChannelWidth = cell.getWideChannelPostMediaWidth(messageObject);
-            if (wideChannelWidth != 0) {
-                maxWidth = wideChannelWidth;
-            } else if (AndroidUtilities.isTablet()) {
+            if (AndroidUtilities.isTablet()) {
                 maxWidth = AndroidUtilities.getMinTabletSide() - AndroidUtilities.dp(122);
             } else {
                 maxWidth = Math.min(cell.getParentWidth(), AndroidUtilities.displaySize.y) - AndroidUtilities.dp(64 + (cell.checkNeedDrawShareButton(messageObject) ? 10 : 0));
             }
-            if (wideChannelWidth == 0 && cell.needDrawAvatar()) {
+            if (cell.needDrawAvatarOutside()) {
                 maxWidth -= dp(52);
             }
         }
@@ -912,7 +909,7 @@ public class GroupMedia {
 
         public int maxSizeWidth = 800;
         public float maxSizeHeight = 814;
-        private boolean wideChannelPost;
+        private boolean applyAvatarOffset = true;
 
         public final GroupedMessages.TransitionParams transitionParams = new GroupedMessages.TransitionParams();
 
@@ -945,8 +942,12 @@ public class GroupMedia {
             return maxSizeWidth / sum;
         }
 
-        public void calculate(boolean wideChannelPost) {
-            this.wideChannelPost = wideChannelPost;
+        public void calculate() {
+            calculate(true);
+        }
+
+        private void calculate(boolean applyAvatarOffset) {
+            this.applyAvatarOffset = applyAvatarOffset;
             posArray.clear();
             positions.clear();
 
@@ -958,8 +959,8 @@ public class GroupMedia {
                 maxY = 0;
                 return;
             }
-            maxSizeWidth = wideChannelPost ? 1000 : 800;
-            int firstSpanAdditionalSize = 1000 - maxSizeWidth;
+            maxSizeWidth = 800;
+            int firstSpanAdditionalSize = 200;
 
             StringBuilder proportions = new StringBuilder();
             float averageAspectRatio = 1.0f;
@@ -1053,10 +1054,7 @@ public class GroupMedia {
             if (count == 1) {
                 GroupedMessagePosition position1 = posArray.get(0);
                 float w, h;
-                if (wideChannelPost) {
-                    w = maxSizeWidth;
-                    h = Math.min(maxSizeHeight, w / position1.aspectRatio);
-                } else if (position1.aspectRatio >= 1) {
+                if (position1.aspectRatio >= 1) {
                     w = maxSizeWidth;
                     h = w / position1.aspectRatio / maxSizeWidth * maxSizeHeight;
                 } else {
@@ -1311,7 +1309,7 @@ public class GroupMedia {
                     y += lineHeight;
                 }
             }
-            int avatarOffset = 108;
+            int avatarOffset = MessageObject.GroupedMessages.GROUPED_AVATAR_OFFSET;
             for (int a = 0; a < count; a++) {
                 GroupedMessagePosition pos = posArray.get(a);
                 if (isOut) {
@@ -1330,7 +1328,7 @@ public class GroupMedia {
                     }
                 }
                 TLRPC.MessageExtendedMedia media = medias.get(a);
-                if (!wideChannelPost && !isOut) {
+                if (!isOut && applyAvatarOffset) {
                     if (pos.edge) {
                         if (pos.spanSize != 1000) {
                             pos.spanSize += avatarOffset;
@@ -1451,7 +1449,7 @@ public class GroupMedia {
 
         public TLRPC.MessageExtendedMedia findMediaWithFlags(int flags) {
             if (!medias.isEmpty() && positions.isEmpty()) {
-                calculate(wideChannelPost);
+                calculate(applyAvatarOffset);
             }
             for (int i = 0; i < medias.size(); i++) {
                 TLRPC.MessageExtendedMedia media = medias.get(i);
