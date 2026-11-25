@@ -6871,10 +6871,10 @@ public class ChatMessageCell extends BaseCell implements SeekBar.SeekBarDelegate
                 drawAvatar = true;
             }
             boolean groupedMedia = WidePosts.isWideGroupedMedia(groupedMessages);
-            int wideContentWidth = widePosts && WidePosts.shouldDrawBackground(messageObject) && !groupedMedia
+            int widePostsTextWidth = widePosts && WidePosts.shouldDrawBackground(messageObject) && !groupedMedia
                     ? WideChannelPostLayout.messageTextWidth(getGroupPhotosBaseWidth(messageObject), getWideChannelPostLeadingInset(messageObject))
                     : 0;
-            messageObject.setWidePostsTextWidth(wideContentWidth);
+            messageObject.setWidePostsTextWidth(widePostsTextWidth);
             wasLayout = false;
             groupPhotoInvisible = false;
             animatingDrawVideoImageButton = 0;
