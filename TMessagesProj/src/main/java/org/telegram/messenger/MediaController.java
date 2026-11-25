@@ -3640,7 +3640,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
     public void setPlaybackPitch(float pitch) {
         currentMusicPlaybackPitch = pitch;
         if (audioPlayer != null) {
-            audioPlayer.setPlaybackSpeed(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, false);
+            audioPlayer.setPlaybackParameters(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, pitch);
         }
         MessagesController.getGlobalMainSettings().edit().putFloat("musicPlaybackPitch", pitch).commit();
         NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.messagePlayingSpeedChanged);
@@ -4317,7 +4317,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
                         shouldSavePositionForCurrentAudio = name;
                     }
                     if ((messageObject.getDuration() >= 10 * 60 || app.exteraless.player.Md3Player.enabled()) && (Math.abs(currentMusicPlaybackSpeed - 1.0f) > 0.001f || Math.abs(currentMusicPlaybackPitch - 1.0f) > 0.001f)) {
-                        audioPlayer.setPlaybackSpeed(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, false);
+                        audioPlayer.setPlaybackParameters(Math.round(currentMusicPlaybackSpeed * 10f) / 10f, currentMusicPlaybackPitch);
                     }
                 }
                 if (messageObject.forceSeekTo >= 0) {

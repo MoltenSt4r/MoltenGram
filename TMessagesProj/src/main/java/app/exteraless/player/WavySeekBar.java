@@ -400,10 +400,16 @@ public class WavySeekBar extends View {
                 canvas.drawCircle(x, cy, thumbRadius, fillPaint);
             }
         }
-        // MD3 Expressive stop dot at the right end of the track
-        if (stopX > restX + dp(1)) {
+        // MD3 Expressive stop dot at the right end of the track — fades out smoothly as thumb approaches
+        float dotGap = stopX - restX;
+        if (dotGap > 0f) {
             float dotRadius = strokeW < dp(4) ? Math.min(dpf2(2f), strokeW * 0.35f) : dpf2(2f);
+            // Fade out over the last dp(10) of travel before the dot disappears
+            float dotAlpha = Math.min(1f, dotGap / dp(10));
+            int savedAlpha = fillPaint.getAlpha();
+            fillPaint.setAlpha(Math.round(savedAlpha * dotAlpha));
             canvas.drawCircle(stopX, cy, dotRadius, fillPaint);
+            fillPaint.setAlpha(savedAlpha);
         }
 
         if (!frozen && (amplitude > 0f || targetAmp != amplitude)) {
