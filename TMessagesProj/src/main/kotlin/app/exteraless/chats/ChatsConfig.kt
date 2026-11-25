@@ -573,6 +573,38 @@ object ChatsConfig {
         return voiceChangerGlitchRepeats.Int()
     }
 
+    // ---- Swipe Actions (13.2.2 backport) ----
+
+    /** Comma-separated list of enabled swipe action IDs (DoubleTapUtils.ACTION_*). */
+    @JvmField
+    val swipeActions = addConfig("OEChatsSwipeActions", ConfigItem.configTypeString, "2")
+
+    /** Whether the swipe action list loops. */
+    @JvmField
+    val swipeActionsLoop = addConfig("OEChatsSwipeActionsLoop", ConfigItem.configTypeBool, false)
+
+    /** Whether the swipe action list is reversed (right-to-left). */
+    @JvmField
+    val swipeActionsReversed = addConfig("OEChatsSwipeActionsReversed", ConfigItem.configTypeBool, false)
+
+    @JvmStatic
+    fun swipeActions(): String {
+        ensureLoaded()
+        return swipeActions.String() ?: "2"
+    }
+
+    @JvmStatic
+    fun swipeActionsLoop(): Boolean {
+        ensureLoaded()
+        return swipeActionsLoop.Bool()
+    }
+
+    @JvmStatic
+    fun swipeActionsReversed(): Boolean {
+        ensureLoaded()
+        return swipeActionsReversed.Bool()
+    }
+
     /** Сбрасывает настройки экрана «Chats» к значениям по умолчанию. */
     @JvmStatic
     fun reset() {

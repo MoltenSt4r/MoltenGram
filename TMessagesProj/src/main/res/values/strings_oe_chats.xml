@@ -274,4 +274,15 @@
 <string name="OEBotProfileSyncRequired">Enable and configure sync bot first</string>
 <string name="OEBotLiveStreamOn">Live typing stream enabled</string>
 <string name="OEBotLiveStreamOff">Live typing stream disabled</string>
+<string name="SwipeActions">Swipe Actions</string>
+<string name="SwipeActionsInfo">Swipe a message to the left and, without lifting your finger, move up or down to pick an action.</string>
+<string name="SwipeActionsBehavior">Behavior</string>
+<string name="SwipeActionsLoop">Loop Actions</string>
+<string name="SwipeActionsReversed">Reverse Scrolling</string>
+<string name="SwipeActionsBehaviorInfo">With looping, the first action comes right after the last one. Reverse scrolling makes the list move with your finger.</string>
+<string name="SwipeActionsEnabled">Actions</string>
+<string name="SwipeActionsDisabled">Disabled</string>
+<string name="SwipeActionsOrderInfo">Tap an action to turn it on or off, drag to reorder. The topmost action runs on a plain swipe.</string>
+<string name="SwipeActionsPreviewReply">what if i slip and delete it?</string>
+<string name="SwipeActionsPreviewMessage">fear is the mind-killer. drag slower</string>
 </resources>

@@ -219,6 +219,14 @@ public abstract class FeedMessageUtils {
                 || actionId == DOUBLE_TAP_ACTION_TRANSLATE_LLM;
     }
 
+    public static boolean isAllowedSwipeAction(int actionId) {
+        return actionId == com.exteragram.messenger.utils.chats.DoubleTapUtils.ACTION_REPLY
+                || actionId == com.exteragram.messenger.utils.chats.DoubleTapUtils.ACTION_COPY
+                || actionId == com.exteragram.messenger.utils.chats.DoubleTapUtils.ACTION_FORWARD
+                || actionId == com.exteragram.messenger.utils.chats.DoubleTapUtils.ACTION_SAVE
+                || actionId == com.exteragram.messenger.utils.chats.DoubleTapUtils.ACTION_TRANSLATE;
+    }
+
     public static boolean isAllowedFeedOption(int option) {
         switch (option) {
             case ChatActivity.OPTION_FORWARD:

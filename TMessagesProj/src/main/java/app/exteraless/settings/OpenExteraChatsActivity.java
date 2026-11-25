@@ -161,6 +161,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
     private int doubleTapIncomingRow;
     private int doubleTapOutgoingRow;
     private int doubleTapReactionRow;
+    private int swipeActionsRow;
     private int doubleTapDividerRow;
 
     // Chats
@@ -413,6 +414,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
         } else {
             doubleTapReactionRow = -1;
         }
+        swipeActionsRow = addRow("swipeActions");
         doubleTapDividerRow = addRow();
 
         chatsHeaderRow = addRow("chatsHeader");
@@ -1578,6 +1580,9 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             return;
         } else if (position == doubleTapReactionRow) {
             DoubleTapCell.SetReactionCell.showSelectStatusDialog((DoubleTapCell.SetReactionCell) view, this);
+            return;
+        } else if (position == swipeActionsRow) {
+            presentFragment(new SwipeActionsPreferencesActivity());
             return;
         } else if (position == bottomButtonRow) {
             showOptions(view, bottomButtonOptions(), index -> {
@@ -2824,6 +2829,8 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             } else if (position == feedSettingsRow) {
                 cell.setTextAndIcon(getString(R.string.FeedSettings), R.drawable.ic_feed, false);
                 cell.setSubtitle(getString(R.string.FeedChannelsInfo));
+            } else if (position == swipeActionsRow) {
+                cell.setTextAndIcon(getString(R.string.SwipeActions), R.drawable.msg_forward, false);
             }
             // Обе строки двухстрочные: подпись под заголовком, высота 64,
             // отступ текста от иконки 60. Ставится после setTextAndIcon —
@@ -2941,7 +2948,7 @@ public class OpenExteraChatsActivity extends BaseNekoSettingsActivity {
             if (position == chatsMoreRow || position == messagesMoreRow) return TYPE_COLLAPSIBLE_HEADER;
             if (isHeader(position)) return TYPE_HEADER;
             if (isDivider(position)) return TYPE_INFO_PRIVACY;
-            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow) return TYPE_TEXT;
+            if (position == aiChatRow || position == openClipRow || position == chatSettingsRow || position == feedSettingsRow || position == swipeActionsRow) return TYPE_TEXT;
             if (isGroupHeader(position)) return TYPE_EXPANDABLE_SWITCH;
             if (groupHeaderFor(position) != -1) return TYPE_ROUND_CHECK;
             if (isSettings(position)) return TYPE_SETTINGS;

@@ -866,6 +866,38 @@ public final class ExteraConfig {
         ChatsConfig.wideChannelPosts.setConfigBool(value);
     }
 
+    // ---- Swipe Actions (13.2.2 backport) ----
+
+    public static String getSwipeActions() {
+        ensureLoaded();
+        return ChatsConfig.swipeActions();
+    }
+
+    public static void setSwipeActions(String value) {
+        ensureLoaded();
+        ChatsConfig.swipeActions.setConfigString(value);
+    }
+
+    public static boolean getSwipeActionsLoop() {
+        ensureLoaded();
+        return ChatsConfig.swipeActionsLoop();
+    }
+
+    public static void setSwipeActionsLoop(boolean value) {
+        ensureLoaded();
+        ChatsConfig.swipeActionsLoop.setConfigBool(value);
+    }
+
+    public static boolean getSwipeActionsReversed() {
+        ensureLoaded();
+        return ChatsConfig.swipeActionsReversed();
+    }
+
+    public static void setSwipeActionsReversed(boolean value) {
+        ensureLoaded();
+        ChatsConfig.swipeActionsReversed.setConfigBool(value);
+    }
+
     public static boolean getTelegramAiEditor() {
         ensureLoaded();
         return !AppearanceConfig.hideAiEditor.Bool();

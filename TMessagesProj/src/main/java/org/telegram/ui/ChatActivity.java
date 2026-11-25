@@ -16,6 +16,8 @@ import app.exteraless.feed.FeedChatIntegration;
 import app.exteraless.feed.FeedController;
 import app.exteraless.feed.FeedMessageUtils;
 import com.exteragram.messenger.utils.chats.WidePosts;
+import com.exteragram.messenger.utils.chats.SwipeAction;
+import com.exteragram.messenger.utils.chats.SwipeActionsHelper;
 import app.exteraless.appearance.AppearanceConfig;
 import app.exteraless.chats.ChatsConfig;
 import app.exteraless.components.ActionRow;
@@ -1329,6 +1331,148 @@ public class ChatActivity extends BaseFragment implements
     private float topicsPanelSwipeX, topicsPanelSwipeY;
     private VelocityTracker topicsPanelVelocityTracker;
     private boolean startedTrackingSlidingView;
+    private SwipeActionsHelper swipeActionsHelper;
+
+    private List<SwipeAction> collectSwipeActions(MessageObject message, boolean canReply) {
+        final List<SwipeAction> enabled = SwipeAction.enabled();
+        final ReactionsLayoutInBubble.VisibleReaction quickReaction = enabled.contains(SwipeAction.REACTION) ? getQuickReaction(message) : null;
+        final boolean noforwards = (currentChat != null && getMessagesController().isChatNoForwards(currentChat))
+                || (message != null && (message.messageOwner.noforwards || message.isSecret() || message.isSponsored()));
+        final List<SwipeAction> result = new ArrayList<>();
+        for (SwipeAction action : enabled) {
+            if (isFeedSearch() && !FeedMessageUtils.isAllowedSwipeAction(action.actionId)) {
+                continue;
+            }
+            boolean allowed;
+            switch (action) {
+                case REPLY:
+                    allowed = canReply;
+                    break;
+                case REACTION:
+                    allowed = quickReaction != null && canReactToMessage(message);
+                    break;
+                case COPY:
+                    allowed = message != null && !message.needDrawBluredPreview()
+                            && (!TextUtils.isEmpty(message.messageText) || !TextUtils.isEmpty(message.caption));
+                    break;
+                case FORWARD:
+                    allowed = message != null && !noforwards && !message.isSending() && !message.isEditing();
+                    break;
+                case EDIT:
+                    allowed = message != null && message.canEditMessage(currentChat);
+                    break;
+                case SAVE:
+                    allowed = message != null && !noforwards && !message.isSending();
+                    break;
+                case REPEAT:
+                    allowed = message != null && !message.isSecret() && !message.isSponsored() && !message.isSending();
+                    break;
+                case DELETE:
+                    allowed = message != null && message.canDeleteMessage(false, currentChat);
+                    break;
+                case TRANSLATE:
+                    allowed = message != null && (!TextUtils.isEmpty(message.messageText) || !TextUtils.isEmpty(message.caption));
+                    break;
+                default:
+                    allowed = false;
+                    break;
+            }
+            if (allowed) {
+                result.add(action);
+            }
+        }
+        if (quickReaction != null && result.contains(SwipeAction.REACTION) && swipeActionsHelper != null) {
+            swipeActionsHelper.setReaction(currentAccount, quickReaction.emojicon, quickReaction.documentId);
+        }
+        return result;
+    }
+
+    private boolean canReactToMessage(MessageObject messageObject) {
+        return messageObject != null && messageObject.canSetReaction() && !messageObject.isSecret() && !messageObject.isSponsored()
+                && !messageObject.isDateObject && !messageObject.isSending() && !messageObject.isEditing()
+                && !messageObject.isExpiredStory() && messageObject.type != MessageObject.TYPE_JOINED_CHANNEL
+                && !isSecretChat() && !isInScheduleMode() && !actionBar.isActionModeShowed()
+                && (currentChat == null || ChatObject.isChannelAndNotMegaGroup(currentChat) || ChatObject.canUserDoAction(currentChat, ChatObject.ACTION_SEND_REACTIONS));
+    }
+
+    private ReactionsLayoutInBubble.VisibleReaction getQuickReaction(MessageObject message) {
+        final String reaction = SwipeAction.quickReactionEmoticon(currentAccount);
+        return reaction != null && isReactionAvailable(message, reaction) ? ReactionsLayoutInBubble.VisibleReaction.fromEmojicon(reaction) : null;
+    }
+
+    private void performSwipeAction(SwipeAction action, MessageObject message) {
+        if (action == null || message == null) {
+            return;
+        }
+        if (action == SwipeAction.REACTION) {
+            final ReactionsLayoutInBubble.VisibleReaction reaction = getQuickReaction(message);
+            if (reaction != null) {
+                ReactionsEffectOverlay.removeCurrent(false);
+                selectReaction(slidingView, message, null, null, 0, 0, reaction, true, false, false, false);
+            }
+            return;
+        }
+        if (action != SwipeAction.REPLY) {
+            selectedObjectGroup = getValidGroupedMessage(selectedObject = message);
+            switch (action) {
+                case COPY:
+                    processSelectedOption(OPTION_COPY);
+                    break;
+                case FORWARD:
+                    processSelectedOption(OPTION_FORWARD);
+                    break;
+                case EDIT:
+                    processSelectedOption(message.isTodo() ? OPTION_EDIT_TODO : OPTION_EDIT);
+                    break;
+                case SAVE:
+                    processSelectedOption(nkbtn_savemessage);
+                    break;
+                case REPEAT:
+                    processSelectedOption(nkbtn_repeat);
+                    break;
+                case DELETE:
+                    processSelectedOption(OPTION_DELETE);
+                    break;
+                case TRANSLATE:
+                    MessageTransKt.translateMessages(ChatActivity.this);
+                    break;
+            }
+            return;
+        }
+        final boolean allowReplyOnOpenTopic = canSendMessageToTopic(message);
+        if (
+            bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE && !(bottomOverlayChatWaitsReply && allowReplyOnOpenTopic || message.wasJustSent) ||
+            currentChat != null && (
+                ChatObject.isNotInChat(currentChat) && !isThreadChat() ||
+                ChatObject.isChannel(currentChat) && !ChatObject.canPost(currentChat) && !currentChat.megagroup ||
+                !ChatObject.canSendMessages(currentChat)
+            )
+        ) {
+            if (message.getGroupId() != 0) {
+                MessageObject.GroupedMessages group = getGroup(message.getGroupId());
+                if (group != null && group.captionMessage != null) {
+                    message = group.captionMessage;
+                }
+            }
+            replyingMessageObject = message;
+            Bundle args = new Bundle();
+            args.putBoolean("onlySelect", true);
+            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
+            args.putBoolean("quote", true);
+            args.putBoolean("reply_to", true);
+            final long author = DialogObject.getPeerDialogId(message.getFromPeer());
+            if (author != 0 && author != getDialogId() && author != getUserConfig().getClientUserId() && author > 0) {
+                args.putLong("reply_to_author", author);
+            }
+            args.putInt("messagesCount", 1);
+            args.putBoolean("canSelectTopics", true);
+            DialogsActivity fragment = new DialogsActivity(args);
+            fragment.setDelegate(this);
+            presentFragment(fragment);
+            return;
+        }
+        showFieldPanelForReply(message);
+    }
 
     private boolean canShowPagedownButton;
     private TextSelectionHint textSelectionHint;
@@ -3839,6 +3983,9 @@ public class ChatActivity extends BaseFragment implements
         if (chatActivityEnterView != null) {
             chatActivityEnterView.onDestroy();
         }
+        if (swipeActionsHelper != null) {
+            swipeActionsHelper.detach();
+        }
         if (avatarContainer != null) {
             avatarContainer.onDestroy();
         }
@@ -5501,6 +5648,27 @@ public class ChatActivity extends BaseFragment implements
                 isSkeletonVisible();
             }
 
+            private float getSlidingBubbleRight() {
+                if (slidingView instanceof ChatActionCell) {
+                    return ((ChatActionCell) slidingView).getMeasuredWidth() / 2f;
+                }
+                if (!(slidingView instanceof ChatMessageCell)) {
+                    return 0;
+                }
+                ChatMessageCell view = (ChatMessageCell) slidingView;
+                float right = view.getBackgroundDrawableRight();
+                final MessageObject.GroupedMessages group = view.getCurrentMessagesGroup();
+                if (group != null) {
+                    for (int a = 0, count = getChildCount(); a < count; a++) {
+                        View child = getChildAt(a);
+                        if (child instanceof ChatMessageCell && ((ChatMessageCell) child).getCurrentMessagesGroup() == group) {
+                            right = Math.max(right, ((ChatMessageCell) child).getBackgroundDrawableRight());
+                        }
+                    }
+                }
+                return right;
+            }
+
             private void setGroupTranslationX(ChatMessageCell view, float dx) {
                 MessageObject.GroupedMessages group = view.getCurrentMessagesGroup();
                 if (group == null) {
@@ -5861,13 +6029,24 @@ public class ChatActivity extends BaseFragment implements
                         }
                         if (
                             chatMode != 0 && chatMode != MODE_QUICK_REPLIES && chatMode != MODE_SUGGESTIONS && (chatMode != MODE_SAVED || threadMessageId != getUserConfig().getClientUserId()) ||
-                            threadMessageObjects != null && threadMessageObjects.contains(message) ||
                             getMessageType(message) == MESSAGE_TYPE_SERVICE && (message.getDialogId() == mergeDialogId || message.needDrawBluredPreview()) ||
                             currentEncryptedChat == null && message.getId() < 0 ||
-                            currentChat != null && ChatObject.isForum(currentChat) && !allowReplyOnOpenTopic ||
                             hasTextSelection() ||
                             message.isEphemeral() && message.isOut()
                         ) {
+                            slidingViewSetOffset(0);
+                            slidingView = null;
+                            return;
+                        }
+                        boolean canReply = !(
+                            threadMessageObjects != null && threadMessageObjects.contains(message) ||
+                            currentChat != null && ChatObject.isForum(currentChat) && !allowReplyOnOpenTopic
+                        );
+                        if (swipeActionsHelper == null) {
+                            swipeActionsHelper = new SwipeActionsHelper(this, themeDelegate);
+                        }
+                        swipeActionsHelper.start(collectSwipeActions(message, canReply));
+                        if (swipeActionsHelper.size() == 0) {
                             slidingViewSetOffset(0);
                             slidingView = null;
                             return;
@@ -5893,7 +6072,7 @@ public class ChatActivity extends BaseFragment implements
                             getParent().requestDisallowInterceptTouchEvent(true);
                         }
                     } else if (startedTrackingSlidingView) {
-                        if (Math.abs(dx) >= AndroidUtilities.dp(50)) {
+                        if (Math.abs(dx) >= AndroidUtilities.dp(SwipeActionsHelper.TRIGGER_DP)) {
                             if (!wasTrackingVibrate) {
                                 try {
                                     if (!NekoConfig.disableVibration.Bool()) performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP, HapticFeedbackConstants.FLAG_IGNORE_GLOBAL_SETTING);
@@ -5904,6 +6083,9 @@ public class ChatActivity extends BaseFragment implements
                             wasTrackingVibrate = false;
                         }
                         slidingViewSetOffset(dx);
+                        if (swipeActionsHelper != null) {
+                            swipeActionsHelper.update(dx, e.getX(), e.getY());
+                        }
                         MessageObject messageObject = getSlidingMessageObject();
                         if (messageObject != null && (messageObject.isRoundVideo() || messageObject.isVideo())) {
                             updateTextureViewPosition(false, false);
@@ -5914,40 +6096,9 @@ public class ChatActivity extends BaseFragment implements
                         invalidate();
                     }
                 } else if (slidingView != null && (e == null || e.getPointerId(0) == startedTrackingPointerId && (e.getAction() == MotionEvent.ACTION_CANCEL || e.getAction() == MotionEvent.ACTION_UP || e.getAction() == MotionEvent.ACTION_POINTER_UP))) {
-                    if (e != null && e.getAction() != MotionEvent.ACTION_CANCEL && Math.abs(getSlidingNonAnimationTranslationX(false)) >= AndroidUtilities.dp(50)) {
-                        MessageObject message = getSlidingMessageObject();
-                        final boolean allowReplyOnOpenTopic = canSendMessageToTopic(message);
-                        if (
-                            bottomChannelButtonsLayout != null && bottomChannelButtonsLayout.getVisibility() == View.VISIBLE && !(bottomOverlayChatWaitsReply && allowReplyOnOpenTopic || message.wasJustSent) ||
-                            currentChat != null && (
-                                ChatObject.isNotInChat(currentChat) && !isThreadChat() ||
-                                ChatObject.isChannel(currentChat) && !ChatObject.canPost(currentChat) && !currentChat.megagroup ||
-                                !ChatObject.canSendMessages(currentChat)
-                            )
-                        ) {
-                            if (message.getGroupId() != 0) {
-                                MessageObject.GroupedMessages group = getGroup(message.getGroupId());
-                                if (group != null && group.captionMessage != null) {
-                                    message = group.captionMessage;
-                                }
-                            }
-                            replyingMessageObject = message;
-                            Bundle args = new Bundle();
-                            args.putBoolean("onlySelect", true);
-                            args.putInt("dialogsType", DialogsActivity.DIALOGS_TYPE_FORWARD);
-                            args.putBoolean("quote", true);
-                            args.putBoolean("reply_to", true);
-                            final long author = DialogObject.getPeerDialogId(message.getFromPeer());
-                            if (author != 0 && author != getDialogId() && author != getUserConfig().getClientUserId() && author > 0) {
-                                args.putLong("reply_to_author", author);
-                            }
-                            args.putInt("messagesCount", 1);
-                            args.putBoolean("canSelectTopics", true);
-                            final DialogsActivity fragment = new DialogsActivity(args);
-                            fragment.setDelegate(ChatActivity.this);
-                            presentFragment(fragment);
-                        } else {
-                            showFieldPanelForReply(getSlidingMessageObject());
+                    if (e != null && e.getAction() != MotionEvent.ACTION_CANCEL && Math.abs(getSlidingNonAnimationTranslationX(false)) >= AndroidUtilities.dp(SwipeActionsHelper.TRIGGER_DP)) {
+                        if (swipeActionsHelper != null) {
+                            performSwipeAction(swipeActionsHelper.getSelected(), getSlidingMessageObject());
                         }
                     }
                     endTrackingX = slidingViewGetOffsetX();
@@ -6112,7 +6263,16 @@ public class ChatActivity extends BaseFragment implements
                         }
                         invalidate();
                     }
-                    drawReplyButton(c);
+                    if (swipeActionsHelper != null && (swipeActionsHelper.size() > 1 || (swipeActionsHelper.size() == 1 && swipeActionsHelper.getSelected() != SwipeAction.REPLY))) {
+                        final MessageObject slidingMessage = getSlidingMessageObject();
+                        final float slidingTranslationX = getSlidingNonAnimationTranslationX(false);
+                        swipeActionsHelper.draw(c, slidingTranslationX,
+                                slidingMessage != null && slidingMessage.isOut(),
+                                slidingView.getTop() + slidingView.getMeasuredHeight() / 2f,
+                                getSlidingBubbleRight() + slidingTranslationX);
+                    } else {
+                        drawReplyButton(c);
+                    }
                 }
 
                 if (chatsHelper.allowSwipeToNext(isTopic) && pullingDownOffset != 0 && !isInPreviewMode() && !isInsideContainer && chatMode != MODE_SAVED && chatMode != MODE_SCHEDULED) {

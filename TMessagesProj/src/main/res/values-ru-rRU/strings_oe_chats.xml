@@ -271,4 +271,15 @@
 <string name="OEBotProfileSyncRequired">Сначала включите и настройте бота-синхронизатора</string>
 <string name="OEBotLiveStreamOn">Live-печать включена</string>
 <string name="OEBotLiveStreamOff">Live-печать выключена</string>
+<string name="SwipeActions">Действия свайпом</string>
+<string name="SwipeActionsInfo">Проведите по сообщению влево и, не отпуская палец, ведите вверх или вниз, чтобы выбрать действие.</string>
+<string name="SwipeActionsBehavior">Поведение</string>
+<string name="SwipeActionsLoop">Зацикливание</string>
+<string name="SwipeActionsReversed">Обратная прокрутка</string>
+<string name="SwipeActionsBehaviorInfo">С зацикливанием после последнего действия снова идёт первое. При обратной прокрутке список движется вслед за пальцем.</string>
+<string name="SwipeActionsEnabled">Действия</string>
+<string name="SwipeActionsDisabled">Отключённые</string>
+<string name="SwipeActionsOrderInfo">Нажмите на действие, чтобы включить или выключить, перетащите — чтобы изменить порядок. Верхнее срабатывает при обычном свайпе.</string>
+<string name="SwipeActionsPreviewReply">а если промахнусь и удалю?</string>
+<string name="SwipeActionsPreviewMessage">страх убивает разум. веди палец медленнее</string>
 </resources>
