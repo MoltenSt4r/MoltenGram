@@ -316,7 +316,7 @@ public class PluginsActivity extends BaseFragment {
         if (controller.isSafeMode()) {
             items.add(UItem.asButtonWithSubtext(ID_SAFE_MODE_BANNER, R.drawable.msg_info,
                     getString(R.string.PluginsSafeMode),
-                    getString(R.string.PluginsSafeModeEnabledNow), 16, 0).red());
+                    getString(R.string.PluginsSafeModeBannerSub), 64, 60).red());
         }
         items.add(UItem.asSpace(dp(8)));
 

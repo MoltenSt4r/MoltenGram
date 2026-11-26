@@ -218,6 +218,7 @@ Source:
     <string name="PluginOverlayOpen">Open settings</string>
     <string name="PluginsSafeModeEnabledNow">Safe mode is on, all plugins are turned off.</string>
     <string name="PluginsSafeModeDisabledNow">Safe mode is off, plugins are loading.</string>
+    <string name="PluginsSafeModeBannerSub">Plugins paused · Tap to disable</string>
 <string name="PluginsStoreTitle">Plugin Store</string>
 <string name="PluginsStoreSubtitle">Verified community plugins &amp; channels</string>
 <string name="PluginsStoreSearch">Search plugins…</string>

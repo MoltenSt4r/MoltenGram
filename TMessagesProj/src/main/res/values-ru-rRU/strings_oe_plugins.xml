@@ -210,6 +210,7 @@
     <string name="PluginOverlayOpen">Открыть настройки</string>
     <string name="PluginsSafeModeEnabledNow">Безопасный режим включён, все плагины выключены.</string>
     <string name="PluginsSafeModeDisabledNow">Безопасный режим выключен, плагины загружаются.</string>
+    <string name="PluginsSafeModeBannerSub">Плагины остановлены · Нажмите для выхода</string>
 <string name="PluginsStoreTitle">Магазин плагинов</string>
 <string name="PluginsStoreSubtitle">Проверенные плагины и доверенные каналы</string>
 <string name="PluginsStoreSearch">Поиск плагинов…</string>

@@ -145,9 +145,11 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (!isEngineEnabled()) {
             return;
         }
-        if (isSafeMode() && preferences.contains(PluginsConstants.KEY_SAFE_MODE_STAMP)) {
+        if (isSafeMode()) {
+            boolean hasStamp = preferences.contains(PluginsConstants.KEY_SAFE_MODE_STAMP);
+            boolean auto = preferences.getBoolean(PluginsConstants.KEY_SAFE_MODE_AUTO, false);
             long stamp = installStamp();
-            if (preferences.getLong(PluginsConstants.KEY_SAFE_MODE_STAMP, 0) != stamp) {
+            if ((auto && !hasStamp) || (hasStamp && preferences.getLong(PluginsConstants.KEY_SAFE_MODE_STAMP, 0) != stamp)) {
                 preferences.edit()
                         .remove(PluginsConstants.KEY_SAFE_MODE)
                         .remove(PluginsConstants.KEY_SAFE_MODE_AUTO)
