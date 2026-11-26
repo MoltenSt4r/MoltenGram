@@ -43,7 +43,7 @@ public class PyMethodReplacement extends XC_MethodHook {
     }
 
     @Override
-    protected void beforeHookedMethod(MethodHookParam param) {
+    public void beforeHookedMethod(MethodHookParam param) {
         if (!HookFilter.evaluateAll(beforeFilters, param, false)) {
             return;
         }

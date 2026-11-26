@@ -583,13 +583,13 @@ public final class EnergyProfiler {
         try {
             final XC_MethodHook acquire = new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                public void afterHookedMethod(MethodHookParam param) {
                     onAcquired(param.thisObject);
                 }
             };
             final XC_MethodHook release = new XC_MethodHook() {
                 @Override
-                protected void afterHookedMethod(MethodHookParam param) {
+                public void afterHookedMethod(MethodHookParam param) {
                     onReleased(param.thisObject);
                 }
             };

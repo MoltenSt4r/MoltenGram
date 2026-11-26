@@ -153,7 +153,7 @@ public final class PluginSinkGate {
     private static int hookDeny(Class<?> owner, String methodName, String what, String category) {
         return hookAll(owner, methodName, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -171,7 +171,7 @@ public final class PluginSinkGate {
     private static int hookNetwork(Class<?> owner, String methodName, String what) {
         return hookAll(owner, methodName, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -207,7 +207,7 @@ public final class PluginSinkGate {
     private static int hookClassResolution() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 if (param.args == null || param.args.length == 0
                         || !(param.args[0] instanceof String)) {
                     return;
@@ -227,7 +227,7 @@ public final class PluginSinkGate {
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            public void afterHookedMethod(MethodHookParam param) {
                 if (!(param.getThrowable() instanceof ClassNotFoundException)
                         || param.args == null || param.args.length == 0
                         || !(param.args[0] instanceof String)) {
@@ -305,7 +305,7 @@ public final class PluginSinkGate {
     private static int hookNativeLoad() {
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -441,7 +441,7 @@ public final class PluginSinkGate {
         }
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 if (param.args == null || param.args.length == 0) {
                     return;
                 }
@@ -505,7 +505,7 @@ public final class PluginSinkGate {
                     app.exteraless.plugins.xposed.HookGate.prewarm(constructor);
                     XposedBridge.hookMethod(constructor, new XC_MethodHook() {
                         @Override
-                        protected void beforeHookedMethod(MethodHookParam param) {
+                        public void beforeHookedMethod(MethodHookParam param) {
                             String pluginId = enterCheck();
                             if (pluginId == null) {
                                 return;
@@ -567,7 +567,7 @@ public final class PluginSinkGate {
         }
         return hookMembers(targets, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -606,7 +606,7 @@ public final class PluginSinkGate {
         }
         XC_MethodHook hook = new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -641,7 +641,7 @@ public final class PluginSinkGate {
         }
         return hookAll(owner, "addView", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 if (!isSystemWindow(param)) {
                     return;
                 }
@@ -697,7 +697,7 @@ public final class PluginSinkGate {
         if (downloads != null) {
             count += hookAll(downloads, "enqueue", new XC_MethodHook() {
                 @Override
-                protected void beforeHookedMethod(MethodHookParam param) {
+                public void beforeHookedMethod(MethodHookParam param) {
                     String pluginId = enterCheck();
                     if (pluginId == null) {
                         return;
@@ -730,7 +730,7 @@ public final class PluginSinkGate {
         }
         return hookAll(owner, methodName, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -858,7 +858,7 @@ public final class PluginSinkGate {
         }
         return hookAll(owner, methodName, new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;
@@ -899,12 +899,12 @@ public final class PluginSinkGate {
     private static int hookPythonCallbacks() {
         return hookAll(com.chaquo.python.PyInvocationHandler.class, "invoke", new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 PluginRuntime.enterPython();
             }
 
             @Override
-            protected void afterHookedMethod(MethodHookParam param) {
+            public void afterHookedMethod(MethodHookParam param) {
                 PluginRuntime.exitPython();
                 Throwable error = param.getThrowable();
                 if (error == null) {
@@ -1011,7 +1011,7 @@ public final class PluginSinkGate {
     private static XC_MethodHook pathHook(String event, String what, PathOf pathOf) {
         return new XC_MethodHook() {
             @Override
-            protected void beforeHookedMethod(MethodHookParam param) {
+            public void beforeHookedMethod(MethodHookParam param) {
                 String pluginId = enterCheck();
                 if (pluginId == null) {
                     return;

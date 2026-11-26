@@ -66,7 +66,7 @@ public class PyMethodHook extends XC_MethodHook {
     }
 
     @Override
-    protected void beforeHookedMethod(MethodHookParam param) {
+    public void beforeHookedMethod(MethodHookParam param) {
         if (hasAfter && param.thisObject instanceof ActionBar.UnreadImageView
                 && param.method != null && "onDraw".equals(param.method.getName())
                 && HookFilter.evaluateAll(afterFilters, param, false)
@@ -86,7 +86,7 @@ public class PyMethodHook extends XC_MethodHook {
     }
 
     @Override
-    protected void afterHookedMethod(MethodHookParam param) {
+    public void afterHookedMethod(MethodHookParam param) {
         try {
             if (hasAfter && HookFilter.evaluateAll(afterFilters, param, true)) {
                 XposedHooks.callPython(pluginId, handler, "after_hooked_method", param);
