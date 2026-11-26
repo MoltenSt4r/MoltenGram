@@ -18,4 +18,4 @@
 @keyframes grow{from{transform:scaleX(0)}to{transform:scaleX(1)}}
 @keyframes wght{from{font-variation-settings:'ROND' 100,'wght' 400}to{font-variation-settings:'ROND' 100,'wght' 760}}
 @keyframes wave{from{transform:translateX(0)}to{transform:translateX(-48px)}}
-@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style><rect x="0.75" y="0.75" width="140.5" height="38.5" rx="20" fill="#1B6EC2" stroke="none" stroke-width="1.5"/><text x="71.0" y="25" fill="#FFFFFF" text-anchor="middle" style="font-size:13.5px;font-weight:700;">Beta Channel</text></svg>
+@media (prefers-reduced-motion:reduce){*{animation:none!important}}</style><rect x="0.75" y="0.75" width="140.5" height="38.5" rx="20" fill="#C84630" stroke="none" stroke-width="1.5"/><text x="71.0" y="25" fill="#FFFFFF" text-anchor="middle" style="font-size:13.5px;font-weight:700;">Beta Channel</text></svg>
