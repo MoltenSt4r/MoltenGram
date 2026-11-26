@@ -14,6 +14,8 @@ import android.animation.AnimatorSet;
 import android.animation.ObjectAnimator;
 import android.annotation.SuppressLint;
 import android.app.Activity;
+import android.content.ClipData;
+import android.content.ClipboardManager;
 import android.content.Context;
 import android.content.Intent;
 import android.content.SharedPreferences;
@@ -31,6 +33,7 @@ import android.graphics.RectF;
 import android.graphics.Shader;
 import android.graphics.SweepGradient;
 import android.graphics.drawable.Drawable;
+import android.graphics.drawable.GradientDrawable;
 import android.os.Build;
 import androidx.annotation.Keep;
 import androidx.annotation.NonNull;
@@ -55,8 +58,10 @@ import android.view.WindowManager;
 import android.view.animation.DecelerateInterpolator;
 import android.view.inputmethod.EditorInfo;
 import android.widget.FrameLayout;
+import android.widget.HorizontalScrollView;
 import android.widget.ImageView;
 import android.widget.LinearLayout;
+import android.widget.ScrollView;
 import android.widget.TextView;
 
 import org.telegram.messenger.AndroidUtilities;
@@ -66,6 +71,7 @@ import org.telegram.messenger.LocaleController;
 import org.telegram.messenger.R;
 import org.telegram.messenger.Utilities;
 import org.telegram.ui.ActionBar.ActionBar;
+import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.INavigationLayout;
@@ -73,7 +79,10 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.ActionBar.ThemeColors;
 import org.telegram.ui.ActionBar.ThemeDescription;
+import java.util.Collections;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Locale;
 import org.telegram.ui.Cells.TextColorThemeCell;
 import org.telegram.ui.LaunchActivity;
 
@@ -224,6 +233,7 @@ public class ThemeEditorView {
         private int scrollOffsetY;
         private int topBeforeSwitch;
         private int previousScrollPosition;
+        private int currentPickerTopOffset;
 
         private boolean animationInProgress;
 
@@ -231,24 +241,40 @@ public class ThemeEditorView {
         private boolean startedColorChange;
         private boolean ignoreTextChange;
 
+        private ThemeKeyCatalog.EditorPalette palette;
+        private boolean isRuUi;
+        private ThemeKeyCatalog.Category activeCategory = ThemeKeyCatalog.Category.ALL;
+        private HorizontalScrollView chipsScrollView;
+        private LinearLayout chipsContainer;
+        private final HashMap<ThemeKeyCatalog.Category, TextView> chipButtons = new HashMap<>();
+        private ColorGroup currentGroup;
+        private final ArrayList<Integer> themePaletteColors = new ArrayList<>();
+        private TextView closeEditorButton;
+        private TextView saveThemeButton;
+        private TextView cancelPickerButton;
+        private TextView defaultPickerButton;
+
+        private static final int HEADER_HEIGHT_DP = 104;
+
         private class SearchField extends FrameLayout {
 
             private ImageView clearSearchImageView;
             private EditTextBoldCursor searchEditText;
-            private View backgroundView;
+            private ImageView searchIconImageView;
+            private View searchBackground;
 
             public SearchField(Context context) {
                 super(context);
 
-                View searchBackground = new View(context);
-                searchBackground.setBackgroundDrawable(Theme.createRoundRectDrawable(AndroidUtilities.dp(18), 0xfff2f4f5));
-                addView(searchBackground, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 36, Gravity.LEFT | Gravity.TOP, 14, 11, 14, 0));
+                searchBackground = new View(context);
+                searchBackground.setBackground(ThemeKeyCatalog.createRoundedRect(palette.surfaceElevated, 20, 0, 0));
+                addView(searchBackground, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 40, Gravity.LEFT | Gravity.TOP, 14, 10, 14, 0));
 
-                ImageView searchIconImageView = new ImageView(context);
+                searchIconImageView = new ImageView(context);
                 searchIconImageView.setScaleType(ImageView.ScaleType.CENTER);
                 searchIconImageView.setImageResource(R.drawable.smiles_inputsearch);
-                searchIconImageView.setColorFilter(new PorterDuffColorFilter(0xffa1a8af, PorterDuff.Mode.MULTIPLY));
-                addView(searchIconImageView, LayoutHelper.createFrame(36, 36, Gravity.LEFT | Gravity.TOP, 16, 11, 0, 0));
+                searchIconImageView.setColorFilter(new PorterDuffColorFilter(palette.textSecondary, PorterDuff.Mode.MULTIPLY));
+                addView(searchIconImageView, LayoutHelper.createFrame(38, 40, Gravity.LEFT | Gravity.TOP, 16, 10, 0, 0));
 
                 clearSearchImageView = new ImageView(context);
                 clearSearchImageView.setScaleType(ImageView.ScaleType.CENTER);
@@ -256,14 +282,14 @@ public class ThemeEditorView {
                 clearSearchImageView.setImageDrawable(progressDrawable = new CloseProgressDrawable2() {
                     @Override
                     public int getCurrentColor() {
-                        return 0xffa1a8af;
+                        return palette.textSecondary;
                     }
                 });
                 progressDrawable.setSide(AndroidUtilities.dp(7));
                 clearSearchImageView.setScaleX(0.1f);
                 clearSearchImageView.setScaleY(0.1f);
                 clearSearchImageView.setAlpha(0.0f);
-                addView(clearSearchImageView, LayoutHelper.createFrame(36, 36, Gravity.RIGHT | Gravity.TOP, 14, 11, 14, 0));
+                addView(clearSearchImageView, LayoutHelper.createFrame(38, 40, Gravity.RIGHT | Gravity.TOP, 14, 10, 14, 0));
                 clearSearchImageView.setOnClickListener(v -> {
                     searchEditText.setText("");
                     AndroidUtilities.showKeyboard(searchEditText);
@@ -282,29 +308,27 @@ public class ThemeEditorView {
                         return super.dispatchTouchEvent(event);
                     }
                 };
-                searchEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
-                searchEditText.setHintTextColor(0xff98a0a7);
-                searchEditText.setTextColor(0xff222222);
+                searchEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                searchEditText.setHintTextColor(palette.textMuted);
+                searchEditText.setTextColor(palette.textPrimary);
                 searchEditText.setBackgroundDrawable(null);
                 searchEditText.setPadding(0, 0, 0, 0);
                 searchEditText.setMaxLines(1);
                 searchEditText.setLines(1);
                 searchEditText.setSingleLine(true);
                 searchEditText.setImeOptions(EditorInfo.IME_ACTION_SEARCH | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-                searchEditText.setHint(LocaleController.getString(R.string.Search));
-                searchEditText.setCursorColor(0xff50a8eb);
-                searchEditText.setCursorSize(AndroidUtilities.dp(20));
+                searchEditText.setHint(isRuUi ? "Поиск: название, ключ или #HEX" : "Search title, key or #HEX");
+                searchEditText.setCursorColor(palette.accent);
+                searchEditText.setCursorSize(AndroidUtilities.dp(19));
                 searchEditText.setCursorWidth(1.5f);
-                addView(searchEditText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 40, Gravity.LEFT | Gravity.TOP, 16 + 38, 9, 16 + 30, 0));
+                addView(searchEditText, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 40, Gravity.LEFT | Gravity.TOP, 16 + 38, 10, 16 + 34, 0));
                 searchEditText.addTextChangedListener(new TextWatcher() {
                     @Override
                     public void beforeTextChanged(CharSequence s, int start, int count, int after) {
-
                     }
 
                     @Override
                     public void onTextChanged(CharSequence s, int start, int before, int count) {
-
                     }
 
                     @Override
@@ -327,10 +351,10 @@ public class ThemeEditorView {
                         } else {
                             if (listView.getAdapter() != listAdapter) {
                                 int top = getCurrentTop();
-                                searchEmptyView.setText(LocaleController.getString(R.string.NoChats));
+                                searchEmptyView.setText(isRuUi ? "Нет элементов в этой категории" : "No colors in this category");
                                 searchEmptyView.showTextView();
                                 listView.setAdapter(listAdapter);
-                                listAdapter.notifyDataSetChanged();
+                                listAdapter.rebuild();
                                 if (top > 0) {
                                     layoutManager.scrollToPositionWithOffset(0, -top);
                                 }
@@ -347,6 +371,20 @@ public class ThemeEditorView {
                     }
                     return false;
                 });
+            }
+
+            public void setQuery(String query) {
+                if (query == null) {
+                    query = "";
+                }
+                searchEditText.setText(query);
+                searchEditText.setSelection(searchEditText.length());
+            }
+
+            public void clearQuerySilent() {
+                if (searchEditText.length() > 0) {
+                    searchEditText.setText("");
+                }
             }
 
             public void hideKeyboard() {
@@ -366,89 +404,631 @@ public class ThemeEditorView {
 
         private class ColorPicker extends FrameLayout {
 
-            private LinearLayout linearLayout;
+            private final ScrollView scrollView;
+            private final LinearLayout contentLayout;
+            private final WheelAndSlidersView wheelView;
+            private final TextView titleView;
+            private final TextView keyView;
+            private final TextView wallpaperBtn;
+            private final SwatchView beforeSwatch;
+            private final TextView beforeHexView;
+            private final SwatchView afterSwatch;
+            private final TextView afterHexView;
+            private final EditTextBoldCursor hexEditText;
+            private final LinearLayout paletteSection;
+            private final LinearLayout paletteRow;
+            private final LinearLayout rgbaContainer;
+            private final FrameLayout alphaCard;
+            private final EditTextBoldCursor[] colorEditText = new EditTextBoldCursor[4];
 
-            private final int paramValueSliderWidth = AndroidUtilities.dp(20);
+            private int editingKey = -1;
+            private String editingRawKey = "";
+            private int beforeColor;
+            private boolean hasBeforeColor;
+            private boolean forceOpaque;
+            private boolean updatingFromHex;
 
-            private Paint colorWheelPaint;
-            private Paint valueSliderPaint;
-            private Paint circlePaint;
-            private Drawable circleDrawable;
-
-            private Bitmap colorWheelBitmap;
-
-            private EditTextBoldCursor[] colorEditText = new EditTextBoldCursor[4];
-
-            private int colorWheelRadius;
-
-            private float[] colorHSV = new float[] { 0.0f, 0.0f, 1.0f };
+            private float[] colorHSV = new float[]{0.0f, 0.0f, 1.0f};
             private float alpha = 1.0f;
-
-            private float[] hsvTemp = new float[3];
+            private final float[] hsvTemp = new float[3];
             private LinearGradient colorGradient;
             private LinearGradient alphaGradient;
 
-            private boolean circlePressed;
-            private boolean colorPressed;
-            private boolean alphaPressed;
+            private final DecelerateInterpolator decelerateInterpolator = new DecelerateInterpolator();
 
-            private DecelerateInterpolator decelerateInterpolator = new DecelerateInterpolator();
+            private class SwatchView extends View {
+                private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint checkerLight = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint checkerDark = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final android.graphics.Path clipPath = new android.graphics.Path();
+                private final RectF bounds = new RectF();
+                private int swatchColor;
+                private final boolean circle;
+                private final float cornerDp;
+
+                SwatchView(Context context, boolean circle, float cornerDp) {
+                    super(context);
+                    this.circle = circle;
+                    this.cornerDp = cornerDp;
+                    strokePaint.setStyle(Paint.Style.STROKE);
+                    strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
+                    strokePaint.setColor(palette.dark ? 0x3CFFFFFF : 0x28000000);
+                    checkerLight.setColor(palette.dark ? 0xFF3A404A : 0xFFFFFFFF);
+                    checkerDark.setColor(palette.dark ? 0xFF282D35 : 0xFFD8DEE6);
+                }
+
+                void setSwatchColor(int color) {
+                    swatchColor = color;
+                    invalidate();
+                }
+
+                @Override
+                protected void onDraw(@NonNull Canvas canvas) {
+                    int w = getWidth();
+                    int h = getHeight();
+                    if (w <= 0 || h <= 0) {
+                        return;
+                    }
+                    float rad = circle ? Math.min(w, h) / 2f : AndroidUtilities.dpf2(cornerDp);
+                    bounds.set(0, 0, w, h);
+                    if (Color.alpha(swatchColor) < 255) {
+                        canvas.save();
+                        clipPath.reset();
+                        if (circle) {
+                            clipPath.addCircle(w / 2f, h / 2f, rad, android.graphics.Path.Direction.CW);
+                        } else {
+                            clipPath.addRoundRect(bounds, rad, rad, android.graphics.Path.Direction.CW);
+                        }
+                        canvas.clipPath(clipPath);
+                        float cell = AndroidUtilities.dpf2(4.5f);
+                        int rows = (int) Math.ceil(h / cell);
+                        int cols = (int) Math.ceil(w / cell);
+                        for (int r = 0; r < rows; r++) {
+                            for (int c = 0; c < cols; c++) {
+                                canvas.drawRect(c * cell, r * cell, (c + 1) * cell, (r + 1) * cell, ((r + c) & 1) == 0 ? checkerLight : checkerDark);
+                            }
+                        }
+                        canvas.restore();
+                    }
+                    fillPaint.setColor(swatchColor);
+                    if (circle) {
+                        canvas.drawCircle(w / 2f, h / 2f, rad, fillPaint);
+                        canvas.drawCircle(w / 2f, h / 2f, rad - AndroidUtilities.dpf2(0.6f), strokePaint);
+                    } else {
+                        canvas.drawRoundRect(bounds, rad, rad, fillPaint);
+                        bounds.inset(AndroidUtilities.dpf2(0.6f), AndroidUtilities.dpf2(0.6f));
+                        canvas.drawRoundRect(bounds, rad, rad, strokePaint);
+                    }
+                }
+            }
+
+            private class WheelAndSlidersView extends View {
+                private final int sliderGap = AndroidUtilities.dp(18);
+                private final int barWidth = AndroidUtilities.dp(12);
+                private final Paint colorWheelPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+                private final Paint valueSliderPaint = new Paint(Paint.ANTI_ALIAS_FLAG | Paint.DITHER_FLAG);
+                private final Paint circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint checkerLight = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint checkerDark = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Drawable circleDrawable;
+                private final android.graphics.Path sliderClip = new android.graphics.Path();
+                private final RectF sliderRect = new RectF();
+                private Bitmap colorWheelBitmap;
+                private int colorWheelRadius;
+                private int wheelCenterX;
+                private int wheelCenterY;
+                private int valueBarX;
+                private int alphaBarX;
+
+                private boolean circlePressed;
+                private boolean colorPressed;
+                private boolean alphaPressed;
+
+                WheelAndSlidersView(Context context) {
+                    super(context);
+                    circleDrawable = context.getResources().getDrawable(R.drawable.knob_shadow).mutate();
+                    checkerLight.setColor(palette.dark ? 0xFF3A404A : 0xFFFFFFFF);
+                    checkerDark.setColor(palette.dark ? 0xFF282D35 : 0xFFD8DEE6);
+                }
+
+                @Override
+                protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                    int w = MeasureSpec.getSize(widthMeasureSpec);
+                    int targetH = Math.min(Math.max(AndroidUtilities.dp(176), w - AndroidUtilities.dp(136)), AndroidUtilities.dp(224));
+                    setMeasuredDimension(w, targetH);
+                }
+
+                @Override
+                protected void onSizeChanged(int width, int height, int oldw, int oldh) {
+                    if (width <= 0 || height <= 0) {
+                        return;
+                    }
+                    int slidersTotalW = sliderGap + barWidth + sliderGap + barWidth + AndroidUtilities.dp(16);
+                    int maxRFromW = (width - slidersTotalW - AndroidUtilities.dp(24)) / 2;
+                    int maxRFromH = height / 2 - AndroidUtilities.dp(12);
+                    colorWheelRadius = Math.max(AndroidUtilities.dp(40), Math.min(maxRFromW, maxRFromH));
+                    int groupWidth = colorWheelRadius * 2 + sliderGap + barWidth + sliderGap + barWidth;
+                    wheelCenterX = (width - groupWidth) / 2 + colorWheelRadius;
+                    wheelCenterY = height / 2;
+                    valueBarX = wheelCenterX + colorWheelRadius + sliderGap;
+                    alphaBarX = valueBarX + barWidth + sliderGap;
+                    colorWheelBitmap = createColorWheelBitmap(colorWheelRadius * 2, colorWheelRadius * 2);
+                    colorGradient = null;
+                    alphaGradient = null;
+                }
+
+                private Bitmap createColorWheelBitmap(int width, int height) {
+                    Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
+                    int colorCount = 12;
+                    int colorAngleStep = 360 / colorCount;
+                    int[] colors = new int[colorCount + 1];
+                    float[] hsv = new float[]{0.0f, 1.0f, 1.0f};
+                    for (int i = 0; i < colors.length; i++) {
+                        hsv[0] = (i * colorAngleStep + 180) % 360;
+                        colors[i] = Color.HSVToColor(hsv);
+                    }
+                    colors[colorCount] = colors[0];
+                    SweepGradient sweepGradient = new SweepGradient(width / 2f, height / 2f, colors, null);
+                    RadialGradient radialGradient = new RadialGradient(width / 2f, height / 2f, colorWheelRadius, 0xffffffff, 0x00ffffff, Shader.TileMode.CLAMP);
+                    ComposeShader composeShader = new ComposeShader(sweepGradient, radialGradient, PorterDuff.Mode.SRC_OVER);
+                    colorWheelPaint.setShader(composeShader);
+                    Canvas canvas = new Canvas(bitmap);
+                    canvas.drawCircle(width / 2f, height / 2f, colorWheelRadius, colorWheelPaint);
+                    return bitmap;
+                }
+
+                @Override
+                protected void onDraw(@NonNull Canvas canvas) {
+                    if (colorWheelBitmap == null || colorWheelRadius <= 0) {
+                        return;
+                    }
+                    canvas.drawBitmap(colorWheelBitmap, wheelCenterX - colorWheelRadius, wheelCenterY - colorWheelRadius, null);
+
+                    float hueAngle = (float) Math.toRadians(colorHSV[0]);
+                    int colorPointX = (int) (-Math.cos(hueAngle) * colorHSV[1] * colorWheelRadius) + wheelCenterX;
+                    int colorPointY = (int) (-Math.sin(hueAngle) * colorHSV[1] * colorWheelRadius) + wheelCenterY;
+
+                    hsvTemp[0] = colorHSV[0];
+                    hsvTemp[1] = colorHSV[1];
+                    hsvTemp[2] = 1.0f;
+                    drawPointerArrow(canvas, colorPointX, colorPointY, Color.HSVToColor(hsvTemp));
+
+                    int y = wheelCenterY - colorWheelRadius;
+                    int h = colorWheelRadius * 2;
+                    float rad = barWidth / 2f;
+
+                    if (colorGradient == null) {
+                        colorGradient = new LinearGradient(valueBarX, y, valueBarX, y + h, new int[]{Color.BLACK, Color.HSVToColor(hsvTemp)}, null, Shader.TileMode.CLAMP);
+                    }
+                    valueSliderPaint.setShader(colorGradient);
+                    sliderRect.set(valueBarX, y, valueBarX + barWidth, y + h);
+                    canvas.drawRoundRect(sliderRect, rad, rad, valueSliderPaint);
+                    drawPointerArrow(canvas, valueBarX + barWidth / 2, (int) (y + colorHSV[2] * h), Color.HSVToColor(colorHSV));
+
+                    // Checkerboard behind alpha gradient bar
+                    sliderRect.set(alphaBarX, y, alphaBarX + barWidth, y + h);
+                    canvas.save();
+                    sliderClip.reset();
+                    sliderClip.addRoundRect(sliderRect, rad, rad, android.graphics.Path.Direction.CW);
+                    canvas.clipPath(sliderClip);
+                    float cell = barWidth / 2f;
+                    int rows = (int) Math.ceil(h / cell);
+                    for (int r = 0; r < rows; r++) {
+                        for (int c = 0; c < 2; c++) {
+                            canvas.drawRect(alphaBarX + c * cell, y + r * cell, alphaBarX + (c + 1) * cell, y + (r + 1) * cell, ((r + c) & 1) == 0 ? checkerLight : checkerDark);
+                        }
+                    }
+                    canvas.restore();
+
+                    if (alphaGradient == null) {
+                        int color = Color.HSVToColor(hsvTemp);
+                        alphaGradient = new LinearGradient(alphaBarX, y, alphaBarX, y + h, new int[]{color, color & 0x00ffffff}, null, Shader.TileMode.CLAMP);
+                    }
+                    valueSliderPaint.setShader(alphaGradient);
+                    valueSliderPaint.setAlpha(forceOpaque ? 90 : 255);
+                    canvas.drawRoundRect(sliderRect, rad, rad, valueSliderPaint);
+                    valueSliderPaint.setAlpha(255);
+                    float shownAlpha = forceOpaque ? 1.0f : alpha;
+                    drawPointerArrow(canvas, alphaBarX + barWidth / 2, (int) (y + (1.0f - shownAlpha) * h), (Color.HSVToColor(colorHSV) & 0x00ffffff) | ((int) (255 * shownAlpha) << 24));
+                }
+
+                private void drawPointerArrow(Canvas canvas, int x, int y, int color) {
+                    int side = AndroidUtilities.dp(12);
+                    circleDrawable.setBounds(x - side, y - side, x + side, y + side);
+                    circleDrawable.draw(canvas);
+                    circlePaint.setColor(0xffffffff);
+                    canvas.drawCircle(x, y, AndroidUtilities.dp(10), circlePaint);
+                    circlePaint.setColor(color);
+                    canvas.drawCircle(x, y, AndroidUtilities.dp(8), circlePaint);
+                }
+
+                @Override
+                public boolean onTouchEvent(MotionEvent event) {
+                    int action = event.getAction();
+                    switch (action) {
+                        case MotionEvent.ACTION_DOWN:
+                        case MotionEvent.ACTION_MOVE:
+                            int x = (int) event.getX();
+                            int y = (int) event.getY();
+                            int cx = x - wheelCenterX;
+                            int cy = y - wheelCenterY;
+                            double d = Math.sqrt(cx * cx + cy * cy);
+                            int hitPad = AndroidUtilities.dp(12);
+
+                            if (circlePressed || (!alphaPressed && !colorPressed && d <= colorWheelRadius + hitPad / 2f && x < valueBarX - AndroidUtilities.dp(4))) {
+                                if (d > colorWheelRadius) {
+                                    d = colorWheelRadius;
+                                }
+                                circlePressed = true;
+                                colorHSV[0] = (float) (Math.toDegrees(Math.atan2(cy, cx)) + 180.0f);
+                                colorHSV[1] = Math.max(0.0f, Math.min(1.0f, (float) (d / colorWheelRadius)));
+                                colorGradient = null;
+                                alphaGradient = null;
+                            } else if (colorPressed || (!circlePressed && !alphaPressed && x >= valueBarX - hitPad && x <= valueBarX + barWidth + hitPad && y >= wheelCenterY - colorWheelRadius - hitPad && y <= wheelCenterY + colorWheelRadius + hitPad)) {
+                                float value = (y - (wheelCenterY - colorWheelRadius)) / (colorWheelRadius * 2.0f);
+                                colorHSV[2] = Math.max(0.0f, Math.min(1.0f, value));
+                                colorPressed = true;
+                            } else if (!forceOpaque && (alphaPressed || (!circlePressed && !colorPressed && x >= alphaBarX - hitPad && x <= alphaBarX + barWidth + hitPad && y >= wheelCenterY - colorWheelRadius - hitPad && y <= wheelCenterY + colorWheelRadius + hitPad))) {
+                                float a = 1.0f - (y - (wheelCenterY - colorWheelRadius)) / (colorWheelRadius * 2.0f);
+                                alpha = Math.max(0.0f, Math.min(1.0f, a));
+                                alphaPressed = true;
+                            }
+
+                            if (alphaPressed || colorPressed || circlePressed) {
+                                if (getParent() != null) {
+                                    getParent().requestDisallowInterceptTouchEvent(true);
+                                }
+                                startColorChange(true);
+                                int color = getColor();
+                                if (forceOpaque) {
+                                    color |= 0xff000000;
+                                    alpha = 1.0f;
+                                }
+                                syncUiFromColor(color, false);
+                                applyColorToDescriptions(color);
+                                invalidate();
+                                return true;
+                            }
+                            break;
+                        case MotionEvent.ACTION_UP:
+                        case MotionEvent.ACTION_CANCEL:
+                            if (getParent() != null) {
+                                getParent().requestDisallowInterceptTouchEvent(false);
+                            }
+                            alphaPressed = false;
+                            colorPressed = false;
+                            circlePressed = false;
+                            startColorChange(false);
+                            break;
+                    }
+                    return action == MotionEvent.ACTION_DOWN && (circlePressed || colorPressed || alphaPressed) || super.onTouchEvent(event);
+                }
+            }
 
             public ColorPicker(Context context) {
                 super(context);
                 setWillNotDraw(false);
 
-                circlePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
-                circleDrawable = context.getResources().getDrawable(R.drawable.knob_shadow).mutate();
+                scrollView = new ScrollView(context);
+                scrollView.setVerticalScrollBarEnabled(false);
+                scrollView.setClipToPadding(false);
+                addView(scrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP));
 
-                colorWheelPaint = new Paint();
-                colorWheelPaint.setAntiAlias(true);
-                colorWheelPaint.setDither(true);
+                contentLayout = new LinearLayout(context);
+                contentLayout.setOrientation(LinearLayout.VERTICAL);
+                contentLayout.setPadding(AndroidUtilities.dp(16), AndroidUtilities.dp(4), AndroidUtilities.dp(16), AndroidUtilities.dp(14));
+                scrollView.addView(contentLayout, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
 
-                valueSliderPaint = new Paint();
-                valueSliderPaint.setAntiAlias(true);
-                valueSliderPaint.setDither(true);
+                // 1. Header row: human title + raw key + optional wallpaper image trigger
+                LinearLayout headerRow = new LinearLayout(context);
+                headerRow.setOrientation(LinearLayout.HORIZONTAL);
+                headerRow.setGravity(Gravity.CENTER_VERTICAL);
+                contentLayout.addView(headerRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 8));
 
-                linearLayout = new LinearLayout(context);
-                linearLayout.setOrientation(LinearLayout.HORIZONTAL);
-                addView(linearLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL | Gravity.TOP));
+                LinearLayout headerTexts = new LinearLayout(context);
+                headerTexts.setOrientation(LinearLayout.VERTICAL);
+                headerRow.addView(headerTexts, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+
+                titleView = new TextView(context);
+                titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                titleView.setTypeface(AndroidUtilities.bold());
+                titleView.setTextColor(palette.textPrimary);
+                titleView.setLines(1);
+                titleView.setSingleLine(true);
+                titleView.setEllipsize(TextUtils.TruncateAt.END);
+                headerTexts.addView(titleView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                keyView = new TextView(context);
+                keyView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11.5f);
+                keyView.setTextColor(palette.textSecondary);
+                keyView.setLines(1);
+                keyView.setSingleLine(true);
+                keyView.setEllipsize(TextUtils.TruncateAt.END);
+                keyView.setOnClickListener(v -> {
+                    if (!TextUtils.isEmpty(editingRawKey)) {
+                        AndroidUtilities.addToClipboard(editingRawKey);
+                        BulletinFactory.of(container, resourcesProvider).createCopyBulletin((isRuUi ? "Ключ скопирован: " : "Key copied: ") + editingRawKey).show();
+                    }
+                });
+                headerTexts.addView(keyView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 1, 0, 0));
+
+                wallpaperBtn = new TextView(context);
+                wallpaperBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+                wallpaperBtn.setTypeface(AndroidUtilities.bold());
+                wallpaperBtn.setTextColor(palette.accent);
+                wallpaperBtn.setText(isRuUi ? "Обои / Фото" : "Wallpaper");
+                wallpaperBtn.setBackground(ThemeKeyCatalog.createRoundedRect(palette.chipSelectedBg, 14, 0, 0));
+                wallpaperBtn.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(6), AndroidUtilities.dp(10), AndroidUtilities.dp(6));
+                wallpaperBtn.setVisibility(GONE);
+                wallpaperBtn.setOnClickListener(v -> {
+                    if (wallpaperUpdater != null) {
+                        wallpaperUpdater.showAlert(true);
+                    }
+                });
+                headerRow.addView(wallpaperBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 8, 0, 0, 0));
+
+                // 2. Before -> After bar
+                LinearLayout compareBar = new LinearLayout(context);
+                compareBar.setOrientation(LinearLayout.HORIZONTAL);
+                compareBar.setGravity(Gravity.CENTER_VERTICAL);
+                compareBar.setBackground(ThemeKeyCatalog.createRoundedRect(palette.surfaceElevated, 12, 0, 0));
+                compareBar.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(7), AndroidUtilities.dp(10), AndroidUtilities.dp(7));
+                contentLayout.addView(compareBar, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+                LinearLayout beforeBox = new LinearLayout(context);
+                beforeBox.setOrientation(LinearLayout.HORIZONTAL);
+                beforeBox.setGravity(Gravity.CENTER_VERTICAL);
+                beforeBox.setBackground(Theme.createSelectorDrawable(palette.selector, 2));
+                beforeBox.setPadding(AndroidUtilities.dp(4), AndroidUtilities.dp(2), AndroidUtilities.dp(6), AndroidUtilities.dp(2));
+                beforeSwatch = new SwatchView(context, false, 6);
+                beforeBox.addView(beforeSwatch, LayoutHelper.createLinear(22, 22, 0, 0, 8, 0));
+                LinearLayout beforeTextCol = new LinearLayout(context);
+                beforeTextCol.setOrientation(LinearLayout.VERTICAL);
+                TextView beforeCap = new TextView(context);
+                beforeCap.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
+                beforeCap.setTextColor(palette.textMuted);
+                beforeCap.setText(isRuUi ? "Было (нажми чтобы вернуть)" : "Before (tap to revert)");
+                beforeTextCol.addView(beforeCap);
+                beforeHexView = new TextView(context);
+                beforeHexView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+                beforeHexView.setTypeface(AndroidUtilities.bold());
+                beforeHexView.setTextColor(palette.textSecondary);
+                beforeTextCol.addView(beforeHexView);
+                beforeBox.addView(beforeTextCol, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
+                beforeBox.setOnClickListener(v -> {
+                    if (hasBeforeColor) {
+                        int revert = forceOpaque ? (0xff000000 | beforeColor) : beforeColor;
+                        setColor(revert);
+                        applyColorToDescriptions(revert);
+                    }
+                });
+                compareBar.addView(beforeBox, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
+
+                TextView arrowView = new TextView(context);
+                arrowView.setText("→");
+                arrowView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                arrowView.setTextColor(palette.textMuted);
+                arrowView.setPadding(AndroidUtilities.dp(6), 0, AndroidUtilities.dp(6), 0);
+                compareBar.addView(arrowView);
+
+                LinearLayout afterBox = new LinearLayout(context);
+                afterBox.setOrientation(LinearLayout.HORIZONTAL);
+                afterBox.setGravity(Gravity.CENTER_VERTICAL | Gravity.RIGHT);
+                LinearLayout afterTextCol = new LinearLayout(context);
+                afterTextCol.setOrientation(LinearLayout.VERTICAL);
+                afterTextCol.setGravity(Gravity.RIGHT);
+                TextView afterCap = new TextView(context);
+                afterCap.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
+                afterCap.setTextColor(palette.textMuted);
+                afterCap.setText(isRuUi ? "Стало" : "Current");
+                afterTextCol.addView(afterCap);
+                afterHexView = new TextView(context);
+                afterHexView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+                afterHexView.setTypeface(AndroidUtilities.bold());
+                afterHexView.setTextColor(palette.textPrimary);
+                afterTextCol.addView(afterHexView);
+                afterBox.addView(afterTextCol, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+                afterSwatch = new SwatchView(context, false, 6);
+                afterBox.addView(afterSwatch, LayoutHelper.createLinear(22, 22));
+                compareBar.addView(afterBox, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 0.72f));
+
+                // 3. Wheel & Sliders
+                wheelView = new WheelAndSlidersView(context);
+                contentLayout.addView(wheelView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 6));
+
+                // 4. HEX Row: input + Copy + Paste
+                LinearLayout hexRow = new LinearLayout(context);
+                hexRow.setOrientation(LinearLayout.HORIZONTAL);
+                hexRow.setGravity(Gravity.CENTER_VERTICAL);
+                contentLayout.addView(hexRow, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 8));
+
+                LinearLayout hexInputBox = new LinearLayout(context);
+                hexInputBox.setOrientation(LinearLayout.HORIZONTAL);
+                hexInputBox.setGravity(Gravity.CENTER_VERTICAL);
+                hexInputBox.setBackground(ThemeKeyCatalog.createRoundedRect(palette.surfaceElevated, 10, 0, 0));
+                hexInputBox.setPadding(AndroidUtilities.dp(10), AndroidUtilities.dp(2), AndroidUtilities.dp(10), AndroidUtilities.dp(2));
+                hexRow.addView(hexInputBox, LayoutHelper.createLinear(0, 38, 1f, 0, 0, 8, 0));
+
+                TextView hexLabel = new TextView(context);
+                hexLabel.setText("HEX");
+                hexLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
+                hexLabel.setTypeface(AndroidUtilities.bold());
+                hexLabel.setTextColor(palette.textSecondary);
+                hexInputBox.addView(hexLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 8, 0));
+
+                hexEditText = new EditTextBoldCursor(context);
+                hexEditText.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+                hexEditText.setTypeface(AndroidUtilities.bold());
+                hexEditText.setTextColor(palette.textPrimary);
+                hexEditText.setHintTextColor(palette.textMuted);
+                hexEditText.setCursorColor(palette.accent);
+                hexEditText.setCursorSize(AndroidUtilities.dp(18));
+                hexEditText.setCursorWidth(1.5f);
+                hexEditText.setBackground(null);
+                hexEditText.setPadding(0, 0, 0, 0);
+                hexEditText.setMaxLines(1);
+                hexEditText.setSingleLine(true);
+                hexEditText.setHint("#RRGGBB");
+                hexEditText.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS);
+                hexEditText.setImeOptions(EditorInfo.IME_ACTION_DONE | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
+                hexEditText.setFilters(new InputFilter[]{new InputFilter.LengthFilter(9)});
+                hexEditText.addTextChangedListener(new TextWatcher() {
+                    @Override
+                    public void beforeTextChanged(CharSequence s, int start, int count, int after) {
+                    }
+
+                    @Override
+                    public void onTextChanged(CharSequence s, int start, int before, int count) {
+                    }
+
+                    @Override
+                    public void afterTextChanged(Editable s) {
+                        if (ignoreTextChange) {
+                            return;
+                        }
+                        String raw = s.toString().trim();
+                        if (raw.startsWith("#")) {
+                            raw = raw.substring(1);
+                        }
+                        if (raw.length() != 6 && raw.length() != 8) {
+                            return;
+                        }
+                        Integer parsed = ThemeKeyCatalog.parseHex(raw);
+                        if (parsed == null) {
+                            return;
+                        }
+                        int color = forceOpaque ? (0xff000000 | parsed) : parsed;
+                        updatingFromHex = true;
+                        setColor(color);
+                        applyColorToDescriptions(color);
+                        updatingFromHex = false;
+                    }
+                });
+                hexEditText.setOnEditorActionListener((tv, actionId, event) -> {
+                    if (actionId == EditorInfo.IME_ACTION_DONE) {
+                        Integer parsed = ThemeKeyCatalog.parseHex(hexEditText.getText().toString());
+                        if (parsed != null) {
+                            int color = forceOpaque ? (0xff000000 | parsed) : parsed;
+                            setColor(color);
+                            applyColorToDescriptions(color);
+                        }
+                        AndroidUtilities.hideKeyboard(hexEditText);
+                        return true;
+                    }
+                    return false;
+                });
+                hexInputBox.addView(hexEditText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT));
+
+                ImageView copyHexBtn = new ImageView(context);
+                copyHexBtn.setScaleType(ImageView.ScaleType.CENTER);
+                copyHexBtn.setImageResource(R.drawable.msg_copy);
+                copyHexBtn.setColorFilter(new PorterDuffColorFilter(palette.textPrimary, PorterDuff.Mode.MULTIPLY));
+                copyHexBtn.setBackground(ThemeKeyCatalog.createRoundedRect(palette.surfaceElevated, 10, 0, 0));
+                copyHexBtn.setContentDescription("Copy HEX");
+                copyHexBtn.setOnClickListener(v -> {
+                    String hex = ThemeKeyCatalog.formatHex(getColor(), !forceOpaque && Color.alpha(getColor()) < 255);
+                    AndroidUtilities.addToClipboard(hex);
+                    BulletinFactory.of(container, resourcesProvider).createCopyBulletin((isRuUi ? "Скопировано: " : "Copied: ") + hex).show();
+                });
+                hexRow.addView(copyHexBtn, LayoutHelper.createLinear(40, 38, 0, 0, 6, 0));
+
+                TextView pasteHexBtn = new TextView(context);
+                pasteHexBtn.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
+                pasteHexBtn.setTypeface(AndroidUtilities.bold());
+                pasteHexBtn.setGravity(Gravity.CENTER);
+                pasteHexBtn.setTextColor(palette.accent);
+                pasteHexBtn.setText(isRuUi ? "Вставить" : "Paste");
+                pasteHexBtn.setBackground(ThemeKeyCatalog.createRoundedRect(palette.chipSelectedBg, 10, 0, 0));
+                pasteHexBtn.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
+                pasteHexBtn.setOnClickListener(v -> {
+                    ClipboardManager cm = (ClipboardManager) context.getSystemService(Context.CLIPBOARD_SERVICE);
+                    ClipData clip = cm != null ? cm.getPrimaryClip() : null;
+                    if (clip != null && clip.getItemCount() > 0) {
+                        CharSequence txt = clip.getItemAt(0).coerceToText(context);
+                        Integer parsed = ThemeKeyCatalog.parseHex(txt != null ? txt.toString() : null);
+                        if (parsed != null) {
+                            int color = forceOpaque ? (0xff000000 | parsed) : parsed;
+                            setColor(color);
+                            applyColorToDescriptions(color);
+                            return;
+                        }
+                    }
+                    BulletinFactory.of(container, resourcesProvider).createSimpleBulletin(R.raw.error, isRuUi ? "В буфере нет HEX-цвета" : "No valid HEX in clipboard").show();
+                });
+                hexRow.addView(pasteHexBtn, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 38));
+
+                // 5. Theme Palette Quick Swatches
+                paletteSection = new LinearLayout(context);
+                paletteSection.setOrientation(LinearLayout.VERTICAL);
+                contentLayout.addView(paletteSection, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 8));
+
+                TextView paletteLabel = new TextView(context);
+                paletteLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11.5f);
+                paletteLabel.setTypeface(AndroidUtilities.bold());
+                paletteLabel.setTextColor(palette.textSecondary);
+                paletteLabel.setText(isRuUi ? "Цвета этой темы (нажмите для подстановки)" : "Theme palette (tap to reuse)");
+                paletteSection.addView(paletteLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 0, 0, 6));
+
+                HorizontalScrollView paletteScroll = new HorizontalScrollView(context);
+                paletteScroll.setHorizontalScrollBarEnabled(false);
+                paletteSection.addView(paletteScroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 34));
+
+                paletteRow = new LinearLayout(context);
+                paletteRow.setOrientation(LinearLayout.HORIZONTAL);
+                paletteRow.setGravity(Gravity.CENTER_VERTICAL);
+                paletteScroll.addView(paletteRow, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                // 6. Labeled R / G / B / A cards
+                rgbaContainer = new LinearLayout(context);
+                rgbaContainer.setOrientation(LinearLayout.HORIZONTAL);
+                contentLayout.addView(rgbaContainer, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                String[] labels = new String[]{"R", "G", "B", "A"};
+                FrameLayout builtAlphaCard = null;
                 for (int a = 0; a < 4; a++) {
+                    FrameLayout card = new FrameLayout(context);
+                    card.setBackground(ThemeKeyCatalog.createRoundedRect(palette.surfaceElevated, 10, 0, 0));
+                    card.setPadding(AndroidUtilities.dp(6), AndroidUtilities.dp(4), AndroidUtilities.dp(6), AndroidUtilities.dp(4));
+
+                    LinearLayout col = new LinearLayout(context);
+                    col.setOrientation(LinearLayout.VERTICAL);
+                    col.setGravity(Gravity.CENTER_HORIZONTAL);
+                    card.addView(col, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+                    TextView chLabel = new TextView(context);
+                    chLabel.setText(labels[a]);
+                    chLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10.5f);
+                    chLabel.setTypeface(AndroidUtilities.bold());
+                    chLabel.setTextColor(palette.textSecondary);
+                    chLabel.setGravity(Gravity.CENTER);
+                    col.addView(chLabel, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
                     colorEditText[a] = new EditTextBoldCursor(context);
                     colorEditText[a].setInputType(InputType.TYPE_CLASS_NUMBER);
-                    colorEditText[a].setTextColor(0xff212121);
-                    colorEditText[a].setCursorColor(0xff212121);
-                    colorEditText[a].setCursorSize(AndroidUtilities.dp(20));
+                    colorEditText[a].setTextColor(palette.textPrimary);
+                    colorEditText[a].setCursorColor(palette.accent);
+                    colorEditText[a].setCursorSize(AndroidUtilities.dp(18));
                     colorEditText[a].setCursorWidth(1.5f);
-                    colorEditText[a].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 18);
+                    colorEditText[a].setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+                    colorEditText[a].setTypeface(AndroidUtilities.bold());
                     colorEditText[a].setBackground(null);
-                    ThemeBind.lineColors(colorEditText[a], Theme.key_dialogInputField, Theme.key_dialogInputFieldActivated, Theme.key_text_RedBold);
+                    colorEditText[a].setPadding(0, 0, 0, 0);
                     colorEditText[a].setMaxLines(1);
                     colorEditText[a].setTag(a);
                     colorEditText[a].setGravity(Gravity.CENTER);
-                    if (a == 0) {
-                        colorEditText[a].setHint("red");
-                    } else if (a == 1) {
-                        colorEditText[a].setHint("green");
-                    } else if (a == 2) {
-                        colorEditText[a].setHint("blue");
-                    } else if (a == 3) {
-                        colorEditText[a].setHint("alpha");
-                    }
+                    colorEditText[a].setHint("255");
+                    colorEditText[a].setHintTextColor(palette.textMuted);
                     colorEditText[a].setImeOptions((a == 3 ? EditorInfo.IME_ACTION_DONE : EditorInfo.IME_ACTION_NEXT) | EditorInfo.IME_FLAG_NO_EXTRACT_UI);
-                    InputFilter[] inputFilters = new InputFilter[1];
-                    inputFilters[0] = new InputFilter.LengthFilter(3);
-                    colorEditText[a].setFilters(inputFilters);
+                    colorEditText[a].setFilters(new InputFilter[]{new InputFilter.LengthFilter(3)});
                     final int num = a;
-                    linearLayout.addView(colorEditText[a], LayoutHelper.createLinear(55, 36, 0, 0, a != 3 ? 16 : 0, 0));
                     colorEditText[a].addTextChangedListener(new TextWatcher() {
                         @Override
-                        public void beforeTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
+                        public void beforeTextChanged(CharSequence s, int i, int i2, int i3) {
                         }
 
                         @Override
-                        public void onTextChanged(CharSequence charSequence, int i, int i2, int i3) {
-
+                        public void onTextChanged(CharSequence s, int i, int i2, int i3) {
                         }
 
                         @Override
@@ -456,33 +1036,38 @@ public class ThemeEditorView {
                             if (ignoreTextChange) {
                                 return;
                             }
+                            if (num == 3 && forceOpaque) {
+                                return;
+                            }
+                            int val = Utilities.parseInt(editable.toString());
+                            boolean clamped = false;
+                            if (val < 0) {
+                                val = 0;
+                                clamped = true;
+                            } else if (val > 255) {
+                                val = 255;
+                                clamped = true;
+                            }
                             ignoreTextChange = true;
-                            int color = Utilities.parseInt(editable.toString());
-                            if (color < 0) {
-                                color = 0;
-                                colorEditText[num].setText("" + color);
-                                colorEditText[num].setSelection(colorEditText[num].length());
-                            } else if (color > 255) {
-                                color = 255;
-                                colorEditText[num].setText("" + color);
+                            if (clamped) {
+                                colorEditText[num].setText(String.valueOf(val));
                                 colorEditText[num].setSelection(colorEditText[num].length());
                             }
                             int currentColor = getColor();
                             if (num == 2) {
-                                currentColor = (currentColor & 0xffffff00) | (color & 0xff);
+                                currentColor = (currentColor & 0xffffff00) | (val & 0xff);
                             } else if (num == 1) {
-                                currentColor = (currentColor & 0xffff00ff) | ((color & 0xff) << 8);
+                                currentColor = (currentColor & 0xffff00ff) | ((val & 0xff) << 8);
                             } else if (num == 0) {
-                                currentColor = (currentColor & 0xff00ffff) | ((color & 0xff) << 16);
+                                currentColor = (currentColor & 0xff00ffff) | ((val & 0xff) << 16);
                             } else if (num == 3) {
-                                currentColor = (currentColor & 0x00ffffff) | ((color & 0xff) << 24);
+                                currentColor = (currentColor & 0x00ffffff) | ((val & 0xff) << 24);
                             }
-                            setColor(currentColor);
-                            for (int a = 0; a < currentThemeDesription.size(); a++) {
-                                currentThemeDesription.get(a).setColor(getColor(), false);
+                            if (forceOpaque) {
+                                currentColor |= 0xff000000;
                             }
-                            onThemeColorEdited();
-
+                            syncUiFromColor(currentColor, true);
+                            applyColorToDescriptions(currentColor);
                             ignoreTextChange = false;
                         }
                     });
@@ -493,101 +1078,108 @@ public class ThemeEditorView {
                         }
                         return false;
                     });
+                    col.addView(colorEditText[a], LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 30));
+
+                    rgbaContainer.addView(card, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f, 0, 0, a != 3 ? 6 : 0, 0));
+                    if (a == 3) {
+                        builtAlphaCard = card;
+                    }
                 }
+                alphaCard = builtAlphaCard;
             }
 
-            @Override
-            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
-                int widthSize = MeasureSpec.getSize(widthMeasureSpec);
-                int heightSize = MeasureSpec.getSize(heightMeasureSpec);
-                int size = Math.min(widthSize, heightSize);
-                measureChild(linearLayout, widthMeasureSpec, heightMeasureSpec);
-                setMeasuredDimension(size, size);
-            }
+            public void bindSelection(ThemeKeyCatalog.EntryInfo info, int key, int initialColor, List<Integer> swatches) {
+                editingKey = key;
+                editingRawKey = info != null ? info.rawKey : ThemeColors.getStringName(key);
+                forceOpaque = ThemeKeyCatalog.isOpaqueRequiredKey(key);
+                beforeColor = forceOpaque ? (0xff000000 | initialColor) : initialColor;
+                hasBeforeColor = true;
 
-            @Override
-            protected void onDraw(Canvas canvas) {
-                int centerX = getWidth() / 2 - paramValueSliderWidth * 2;
-                int centerY = getHeight() / 2 - AndroidUtilities.dp(8);
+                titleView.setText(info != null && !TextUtils.isEmpty(info.title) ? info.title : editingRawKey);
+                keyView.setText(editingRawKey);
+                wallpaperBtn.setVisibility(key == Theme.key_chat_wallpaper && wallpaperUpdater != null ? VISIBLE : GONE);
 
-                canvas.drawBitmap(colorWheelBitmap, centerX - colorWheelRadius, centerY - colorWheelRadius, null);
+                beforeSwatch.setSwatchColor(beforeColor);
+                beforeHexView.setText(ThemeKeyCatalog.formatHex(beforeColor, false));
 
-                float hueAngle = (float) Math.toRadians(colorHSV[0]);
-                int colorPointX = (int) (-Math.cos(hueAngle) * colorHSV[1] * colorWheelRadius) + centerX;
-                int colorPointY = (int) (-Math.sin(hueAngle) * colorHSV[1] * colorWheelRadius) + centerY;
-
-                float pointerRadius = 0.075f * colorWheelRadius;
-
-                hsvTemp[0] = colorHSV[0];
-                hsvTemp[1] = colorHSV[1];
-                hsvTemp[2] = 1.0f;
-
-                drawPointerArrow(canvas, colorPointX, colorPointY, Color.HSVToColor(hsvTemp));
-
-                int x = centerX + colorWheelRadius + paramValueSliderWidth;
-                int y = centerY - colorWheelRadius;
-                int width = AndroidUtilities.dp(9);
-                int height = colorWheelRadius * 2;
-                if (colorGradient == null) {
-                    colorGradient = new LinearGradient(x, y, x + width, y + height, new int[]{Color.BLACK, Color.HSVToColor(hsvTemp)}, null, Shader.TileMode.CLAMP);
+                if (alphaCard != null) {
+                    alphaCard.setAlpha(forceOpaque ? 0.45f : 1.0f);
+                    colorEditText[3].setEnabled(!forceOpaque);
                 }
-                valueSliderPaint.setShader(colorGradient);
-                canvas.drawRect(x, y, x + width, y + height, valueSliderPaint);
-                drawPointerArrow(canvas, x + width / 2, (int) (y + colorHSV[2] * height), Color.HSVToColor(colorHSV));
 
-                x += paramValueSliderWidth * 2;
-                if (alphaGradient == null) {
-                    int color = Color.HSVToColor(hsvTemp);
-                    alphaGradient = new LinearGradient(x, y, x + width, y + height, new int[]{color, color & 0x00ffffff}, null, Shader.TileMode.CLAMP);
+                paletteRow.removeAllViews();
+                if (swatches == null || swatches.isEmpty()) {
+                    paletteSection.setVisibility(GONE);
+                } else {
+                    paletteSection.setVisibility(VISIBLE);
+                    for (int i = 0; i < swatches.size(); i++) {
+                        final int swatchColor = swatches.get(i);
+                        SwatchView sv = new SwatchView(getContext(), true, 0);
+                        sv.setSwatchColor(swatchColor);
+                        sv.setOnClickListener(v -> {
+                            int targetColor = forceOpaque ? (0xff000000 | swatchColor) : swatchColor;
+                            setColor(targetColor);
+                            applyColorToDescriptions(targetColor);
+                        });
+                        paletteRow.addView(sv, LayoutHelper.createLinear(28, 28, 0, 0, i != swatches.size() - 1 ? 8 : 0, 0));
+                    }
                 }
-                valueSliderPaint.setShader(alphaGradient);
-                canvas.drawRect(x, y, x + width, y + height, valueSliderPaint);
-                drawPointerArrow(canvas, x + width / 2, (int) (y + (1.0f - alpha) * height), (Color.HSVToColor(colorHSV) & 0x00ffffff) | ((int) (255 * alpha) << 24));
+                scrollView.scrollTo(0, 0);
             }
 
-            private void drawPointerArrow(Canvas canvas, int x, int y, int color) {
-                int side = AndroidUtilities.dp(13);
-                circleDrawable.setBounds(x - side, y - side, x + side, y + side);
-                circleDrawable.draw(canvas);
-
-                circlePaint.setColor(0xffffffff);
-                canvas.drawCircle(x, y, AndroidUtilities.dp(11), circlePaint);
-                circlePaint.setColor(color);
-                canvas.drawCircle(x, y, AndroidUtilities.dp(9), circlePaint);
-            }
-
-            @Override
-            protected void onSizeChanged(int width, int height, int oldw, int oldh) {
-                colorWheelRadius = Math.max(1, width / 2 - paramValueSliderWidth * 2 - AndroidUtilities.dp(20));
-                colorWheelBitmap = createColorWheelBitmap(colorWheelRadius * 2, colorWheelRadius * 2);
-                //linearLayout.setTranslationY(colorWheelRadius * 2 + AndroidUtilities.dp(20));
-                colorGradient = null;
-                alphaGradient = null;
-            }
-
-            private Bitmap createColorWheelBitmap(int width, int height) {
-                Bitmap bitmap = Bitmap.createBitmap(width, height, Bitmap.Config.ARGB_8888);
-
-                int colorCount = 12;
-                int colorAngleStep = 360 / 12;
-                int[] colors = new int[colorCount + 1];
-                float[] hsv = new float[]{0.0f, 1.0f, 1.0f};
-                for (int i = 0; i < colors.length; i++) {
-                    hsv[0] = (i * colorAngleStep + 180) % 360;
-                    colors[i] = Color.HSVToColor(hsv);
+            private void applyColorToDescriptions(int color) {
+                if (currentThemeDesription == null) {
+                    return;
                 }
-                colors[colorCount] = colors[0];
+                for (int a = 0; a < currentThemeDesription.size(); a++) {
+                    ThemeDescription description = currentThemeDesription.get(a);
+                    int key = description.getCurrentKey();
+                    int applied = color;
+                    if (a == 0 && ThemeKeyCatalog.isOpaqueRequiredKey(key)) {
+                        applied = 0xff000000 | color;
+                    }
+                    description.setColor(applied, false);
+                }
+                onThemeColorEdited();
+            }
 
-                SweepGradient sweepGradient = new SweepGradient(width / 2, height / 2, colors, null);
-                RadialGradient radialGradient = new RadialGradient(width / 2, height / 2, colorWheelRadius, 0xffffffff, 0x00ffffff, Shader.TileMode.CLAMP);
-                ComposeShader composeShader = new ComposeShader(sweepGradient, radialGradient, PorterDuff.Mode.SRC_OVER);
+            private void syncUiFromColor(int color, boolean fromRgbaEditText) {
+                int red = Color.red(color);
+                int green = Color.green(color);
+                int blue = Color.blue(color);
+                int a = forceOpaque ? 255 : Color.alpha(color);
 
-                colorWheelPaint.setShader(composeShader);
+                if (!fromRgbaEditText) {
+                    boolean prevIgnore = ignoreTextChange;
+                    ignoreTextChange = true;
+                    colorEditText[0].setText(String.valueOf(red));
+                    colorEditText[1].setText(String.valueOf(green));
+                    colorEditText[2].setText(String.valueOf(blue));
+                    colorEditText[3].setText(String.valueOf(a));
+                    for (int b = 0; b < 4; b++) {
+                        colorEditText[b].setSelection(colorEditText[b].length());
+                    }
+                    ignoreTextChange = prevIgnore;
+                }
 
-                Canvas canvas = new Canvas(bitmap);
-                canvas.drawCircle(width / 2, height / 2, colorWheelRadius, colorWheelPaint);
+                String hex = ThemeKeyCatalog.formatHex(color, false);
+                afterSwatch.setSwatchColor(color);
+                afterHexView.setText(hex);
+                if (!updatingFromHex) {
+                    boolean prevIgnore = ignoreTextChange;
+                    ignoreTextChange = true;
+                    hexEditText.setText(hex);
+                    hexEditText.setSelection(hexEditText.length());
+                    ignoreTextChange = prevIgnore;
+                }
 
-                return bitmap;
+                if (fromRgbaEditText || updatingFromHex) {
+                    alphaGradient = null;
+                    colorGradient = null;
+                    alpha = a / 255.0f;
+                    Color.colorToHSV(color, colorHSV);
+                    wheelView.invalidate();
+                }
             }
 
             private void startColorChange(boolean start) {
@@ -608,122 +1200,48 @@ public class ThemeEditorView {
             }
 
             @Override
-            public boolean onTouchEvent(MotionEvent event) {
-                int action = event.getAction();
-                switch (action) {
-                    case MotionEvent.ACTION_DOWN:
-                    case MotionEvent.ACTION_MOVE:
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                int widthSize = MeasureSpec.getSize(widthMeasureSpec);
+                int heightSize = MeasureSpec.getSize(heightMeasureSpec);
+                int visibleHeight = Math.max(AndroidUtilities.dp(180), heightSize - currentPickerTopOffset - AndroidUtilities.dp(52));
+                measureChild(scrollView,
+                        MeasureSpec.makeMeasureSpec(widthSize, MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(visibleHeight, MeasureSpec.EXACTLY));
+                setMeasuredDimension(widthSize, visibleHeight);
+            }
 
-                        int x = (int) event.getX();
-                        int y = (int) event.getY();
-                        int centerX = getWidth() / 2 - paramValueSliderWidth * 2;
-                        int centerY = getHeight() / 2 - AndroidUtilities.dp(8);
-                        int cx = x - centerX;
-                        int cy = y - centerY;
-                        double d = Math.sqrt(cx * cx + cy * cy);
-
-                        if (circlePressed || !alphaPressed && !colorPressed && d <= colorWheelRadius) {
-                            if (d > colorWheelRadius) {
-                                d = colorWheelRadius;
-                            }
-                            circlePressed = true;
-                            colorHSV[0] = (float) (Math.toDegrees(Math.atan2(cy, cx)) + 180.0f);
-                            colorHSV[1] = Math.max(0.0f, Math.min(1.0f, (float) (d / colorWheelRadius)));
-                            colorGradient = null;
-                            alphaGradient = null;
-                        }
-                        if (colorPressed || !circlePressed && !alphaPressed && x >= centerX + colorWheelRadius + paramValueSliderWidth && x <= centerX + colorWheelRadius + paramValueSliderWidth * 2 && y >= centerY - colorWheelRadius && y <= centerY + colorWheelRadius) {
-                            float value = (y - (centerY - colorWheelRadius)) / (colorWheelRadius * 2.0f);
-                            if (value < 0.0f) {
-                                value = 0.0f;
-                            } else if (value > 1.0f) {
-                                value = 1.0f;
-                            }
-                            colorHSV[2] = value;
-                            colorPressed = true;
-                        }
-                        if (alphaPressed || !circlePressed && !colorPressed && x >= centerX + colorWheelRadius + paramValueSliderWidth * 3 && x <= centerX + colorWheelRadius + paramValueSliderWidth * 4 && y >= centerY - colorWheelRadius && y <= centerY + colorWheelRadius) {
-                            alpha = 1.0f - (y - (centerY - colorWheelRadius)) / (colorWheelRadius * 2.0f);
-                            if (alpha < 0.0f) {
-                                alpha = 0.0f;
-                            } else if (alpha > 1.0f) {
-                                alpha = 1.0f;
-                            }
-                            alphaPressed = true;
-                        }
-                        if (alphaPressed || colorPressed || circlePressed) {
-                            startColorChange(true);
-                            int color = getColor();
-                            for (int a = 0; a < currentThemeDesription.size(); a++) {
-                                ThemeDescription description = currentThemeDesription.get(a);
-                                int key = description.getCurrentKey();
-                                if (a == 0 && key == Theme.key_chat_wallpaper || key == Theme.key_chat_wallpaper_gradient_to1 || key == Theme.key_chat_wallpaper_gradient_to2 || key == Theme.key_chat_wallpaper_gradient_to3 || key == Theme.key_windowBackgroundWhite || key == Theme.key_windowBackgroundGray) {
-                                    color = 0xff000000 | color;
-                                }
-                                currentThemeDesription.get(a).setColor(color, false);
-                            }
-                            onThemeColorEdited();
-                            int red = Color.red(color);
-                            int green = Color.green(color);
-                            int blue = Color.blue(color);
-                            int a = Color.alpha(color);
-                            if (!ignoreTextChange) {
-                                ignoreTextChange = true;
-                                colorEditText[0].setText("" + red);
-                                colorEditText[1].setText("" + green);
-                                colorEditText[2].setText("" + blue);
-                                colorEditText[3].setText("" + a);
-                                for (int b = 0; b < 4; b++) {
-                                    colorEditText[b].setSelection(colorEditText[b].length());
-                                }
-                                ignoreTextChange = false;
-                            }
-                            invalidate();
-                        }
-
-                        return true;
-                    case MotionEvent.ACTION_UP:
-                        alphaPressed = false;
-                        colorPressed = false;
-                        circlePressed = false;
-                        startColorChange(false);
-                        break;
-                }
-                return super.onTouchEvent(event);
+            @Override
+            protected void onLayout(boolean changed, int left, int top, int right, int bottom) {
+                scrollView.layout(0, 0, right - left, bottom - top);
             }
 
             public void setColor(int color) {
-                int red = Color.red(color);
-                int green = Color.green(color);
-                int blue = Color.blue(color);
-                int a = Color.alpha(color);
-                if (!ignoreTextChange) {
-                    ignoreTextChange = true;
-                    colorEditText[0].setText("" + red);
-                    colorEditText[1].setText("" + green);
-                    colorEditText[2].setText("" + blue);
-                    colorEditText[3].setText("" + a);
-                    for (int b = 0; b < 4; b++) {
-                        colorEditText[b].setSelection(colorEditText[b].length());
-                    }
-                    ignoreTextChange = false;
+                if (forceOpaque) {
+                    color |= 0xff000000;
                 }
                 alphaGradient = null;
                 colorGradient = null;
-                alpha = a / 255.0f;
+                alpha = forceOpaque ? 1.0f : (Color.alpha(color) / 255.0f);
                 Color.colorToHSV(color, colorHSV);
-                invalidate();
+                syncUiFromColor(color, false);
+                wheelView.invalidate();
             }
 
             public int getColor() {
-                return (Color.HSVToColor(colorHSV) & 0x00ffffff) | ((int) (alpha * 255) << 24);
+                int a = forceOpaque ? 255 : (int) (alpha * 255);
+                return (Color.HSVToColor(colorHSV) & 0x00ffffff) | (a << 24);
             }
         }
 
         public EditorAlert(final Context context, ArrayList<ThemeDescription> items) {
             super(context, true);
 
+            palette = ThemeKeyCatalog.EditorPalette.captureCurrentTheme();
+            isRuUi = ThemeKeyCatalog.isRussianUi(context);
+
             shadowDrawable = context.getResources().getDrawable(R.drawable.sheet_shadow_round).mutate();
+            shadowDrawable.setColorFilter(new PorterDuffColorFilter(palette.background, PorterDuff.Mode.MULTIPLY));
+            fixNavigationBar(palette.background);
 
             containerView = new FrameLayout(context) {
 
@@ -754,15 +1272,14 @@ public class ThemeEditorView {
                         ignoreLayout = false;
                     }
 
-                    int pickerSize = Math.min(width, height - (Build.VERSION.SDK_INT >= 21 ? AndroidUtilities.statusBarHeight : 0));
-
-                    int padding = height - (Build.VERSION.SDK_INT >= 21 ? AndroidUtilities.statusBarHeight : 0) + AndroidUtilities.dp(8) - pickerSize;
+                    int availHeight = height - (Build.VERSION.SDK_INT >= 21 ? AndroidUtilities.statusBarHeight : 0);
+                    int desiredSheetHeight = Math.min(availHeight - AndroidUtilities.dp(48), Math.max(width, AndroidUtilities.dp(510)));
+                    int padding = Math.max(AndroidUtilities.dp(16), availHeight - desiredSheetHeight);
+                    currentPickerTopOffset = padding;
                     if (listView.getPaddingTop() != padding) {
                         ignoreLayout = true;
-                        int previousPadding = listView.getPaddingTop();
-                        listView.setPadding(0, padding, 0, AndroidUtilities.dp(48));
+                        listView.setPadding(0, padding, 0, AndroidUtilities.dp(52));
                         if (colorPicker.getVisibility() == VISIBLE) {
-                            //previousScrollPosition += previousPadding;
                             setScrollOffsetY(listView.getPaddingTop());
                             previousScrollPosition = 0;
                         }
@@ -812,19 +1329,19 @@ public class ThemeEditorView {
                     shadowDrawable.draw(canvas);
 
                     if (radProgress != 1.0f) {
-                        Theme.dialogs_onlineCirclePaint.setColor(0xffffffff);
+                        Theme.dialogs_onlineCirclePaint.setColor(palette.background);
                         rect1.set(backgroundPaddingLeft, backgroundPaddingTop + top, getMeasuredWidth() - backgroundPaddingLeft, backgroundPaddingTop + top + AndroidUtilities.dp(24));
                         canvas.drawRoundRect(rect1, AndroidUtilities.dp(12) * radProgress, AndroidUtilities.dp(12) * radProgress, Theme.dialogs_onlineCirclePaint);
                     }
 
                     int w = AndroidUtilities.dp(36);
                     rect1.set((getMeasuredWidth() - w) / 2, y, (getMeasuredWidth() + w) / 2, y + AndroidUtilities.dp(4));
-                    Theme.dialogs_onlineCirclePaint.setColor(0xffe1e4e8);
-                    Theme.dialogs_onlineCirclePaint.setAlpha((int) (255 * listView.getAlpha()));
+                    Theme.dialogs_onlineCirclePaint.setColor(palette.handleColor);
+                    Theme.dialogs_onlineCirclePaint.setAlpha((int) (Color.alpha(palette.handleColor) * Math.max(listView.getAlpha(), colorPicker.getAlpha())));
                     canvas.drawRoundRect(rect1, AndroidUtilities.dp(2), AndroidUtilities.dp(2), Theme.dialogs_onlineCirclePaint);
 
                     if (statusBarHeight > 0) {
-                        Theme.dialogs_onlineCirclePaint.setColor(Theme.getColor(Theme.key_dialogBackground));
+                        Theme.dialogs_onlineCirclePaint.setColor(palette.background);
                         canvas.drawRect(backgroundPaddingLeft, AndroidUtilities.statusBarHeight - statusBarHeight, getMeasuredWidth() - backgroundPaddingLeft, AndroidUtilities.statusBarHeight, Theme.dialogs_onlineCirclePaint);
                     }
                     updateLightStatusBar(statusBarHeight > AndroidUtilities.statusBarHeight / 2);
@@ -835,7 +1352,7 @@ public class ThemeEditorView {
                     if (statusBarOpen != null && statusBarOpen == open) {
                         return;
                     }
-                    boolean openBgLight = AndroidUtilities.computePerceivedBrightness(getThemedColor(Theme.key_dialogBackground)) > .721f;
+                    boolean openBgLight = !palette.dark;
                     boolean closedBgLight = AndroidUtilities.computePerceivedBrightness(Theme.blendOver(getThemedColor(Theme.key_actionBarDefault), 0x33000000)) > .721f;
                     boolean isLight = (statusBarOpen = open) ? openBgLight : closedBgLight;
                     AndroidUtilities.setLightStatusBar(getWindow(), isLight);
@@ -845,20 +1362,30 @@ public class ThemeEditorView {
             containerView.setPadding(backgroundPaddingLeft, 0, backgroundPaddingLeft, 0);
 
             frameLayout = new FrameLayout(context);
-            frameLayout.setBackgroundColor(0xffffffff);
+            frameLayout.setBackgroundColor(palette.background);
 
             searchField = new SearchField(context);
-            frameLayout.addView(searchField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
+            frameLayout.addView(searchField, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 54, Gravity.TOP | Gravity.LEFT));
+
+            chipsScrollView = new HorizontalScrollView(context);
+            chipsScrollView.setHorizontalScrollBarEnabled(false);
+            chipsScrollView.setClipToPadding(false);
+            chipsScrollView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), 0);
+            frameLayout.addView(chipsScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.TOP | Gravity.LEFT, 0, 56, 0, 0));
+
+            chipsContainer = new LinearLayout(context);
+            chipsContainer.setOrientation(LinearLayout.HORIZONTAL);
+            chipsContainer.setGravity(Gravity.CENTER_VERTICAL);
+            chipsScrollView.addView(chipsContainer, new FrameLayout.LayoutParams(ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.MATCH_PARENT));
 
             listView = new RecyclerListView(context) {
                 @Override
                 protected boolean allowSelectChildAtPosition(float x, float y) {
-                    // Pixel 9+ may report abnormally large top insets; cap it to keep the first row clickable.
-                    return y >= scrollOffsetY + AndroidUtilities.dp(48) + Math.min(AndroidUtilities.statusBarHeight, AndroidUtilities.dp(32));
+                    return y >= scrollOffsetY + AndroidUtilities.dp(HEADER_HEIGHT_DP);
                 }
             };
-            listView.setSelectorDrawableColor(0x0f000000);
-            listView.setPadding(0, 0, 0, AndroidUtilities.dp(48));
+            listView.setSelectorDrawableColor(palette.selector);
+            listView.setPadding(0, 0, 0, AndroidUtilities.dp(52));
             listView.setClipToPadding(false);
             listView.setLayoutManager(layoutManager = new LinearLayoutManager(getContext()));
             listView.setHorizontalScrollBarEnabled(false);
@@ -866,19 +1393,23 @@ public class ThemeEditorView {
             containerView.addView(listView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
             listView.setAdapter(listAdapter = new ListAdapter(context, items));
             searchAdapter = new SearchAdapter(context);
-            listView.setGlowColor(0xfff5f6f7);
+            listView.setGlowColor(palette.glow);
             listView.setItemAnimator(null);
             listView.setLayoutAnimation(null);
+
+            rebuildFilterChips();
+
             listView.setOnItemClickListener((view, position) -> {
-                if (position == 0) {
+                ColorGroup group = listView.getAdapter() == listAdapter
+                        ? listAdapter.getGroupAtPosition(position)
+                        : searchAdapter.getGroupAtPosition(position);
+                if (group == null || group.descriptions.isEmpty()) {
                     return;
                 }
-                if (listView.getAdapter() == listAdapter) {
-                    currentThemeDesription = listAdapter.getItem(position - 1);
-                } else {
-                    currentThemeDesription = searchAdapter.getItem(position - 1);
-                }
+                currentGroup = group;
+                currentThemeDesription = group.descriptions;
                 currentThemeDesriptionPosition = position;
+                int initialColor = 0;
                 for (int a = 0; a < currentThemeDesription.size(); a++) {
                     ThemeDescription description = currentThemeDesription.get(a);
                     if (description.getCurrentKey() == Theme.key_chat_wallpaper) {
@@ -887,10 +1418,22 @@ public class ThemeEditorView {
                     }
                     description.startEditing();
                     if (a == 0) {
-                        colorPicker.setColor(description.getCurrentColor());
+                        initialColor = description.getCurrentColor();
+                        colorPicker.setColor(initialColor);
                     }
                 }
+                colorPicker.bindSelection(group.info, group.key, initialColor, themePaletteColors);
                 setColorPickerVisible(true);
+            });
+            listView.setOnItemLongClickListener((view, position) -> {
+                ColorGroup group = listView.getAdapter() == listAdapter
+                        ? listAdapter.getGroupAtPosition(position)
+                        : searchAdapter.getGroupAtPosition(position);
+                if (group == null || group.descriptions.isEmpty()) {
+                    return false;
+                }
+                showGroupQuickActions(group);
+                return true;
             });
             listView.setOnScrollListener(new RecyclerView.OnScrollListener() {
                 @Override
@@ -902,55 +1445,56 @@ public class ThemeEditorView {
             searchEmptyView = new EmptyTextProgressView(context);
             searchEmptyView.setShowAtCenter(true);
             searchEmptyView.showTextView();
+            searchEmptyView.setTextColor(palette.textSecondary);
             searchEmptyView.setText(LocaleController.getString(R.string.NoResult));
             listView.setEmptyView(searchEmptyView);
-            containerView.addView(searchEmptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, 52, 0, 0));
+            containerView.addView(searchEmptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, HEADER_HEIGHT_DP, 0, 52));
 
             FrameLayout.LayoutParams frameLayoutParams = new FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, AndroidUtilities.getShadowHeight(), Gravity.TOP | Gravity.LEFT);
-            frameLayoutParams.topMargin = AndroidUtilities.dp(58);
+            frameLayoutParams.topMargin = AndroidUtilities.dp(HEADER_HEIGHT_DP);
             shadow[0] = new View(context);
-            shadow[0].setBackgroundColor(0x12000000);
+            shadow[0].setBackgroundColor(palette.divider);
             shadow[0].setAlpha(0.0f);
             shadow[0].setTag(1);
             containerView.addView(shadow[0], frameLayoutParams);
 
-            containerView.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 58, Gravity.LEFT | Gravity.TOP));
+            containerView.addView(frameLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, HEADER_HEIGHT_DP, Gravity.LEFT | Gravity.TOP));
 
             colorPicker = new ColorPicker(context);
             colorPicker.setVisibility(View.GONE);
-            containerView.addView(colorPicker, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_HORIZONTAL));
+            containerView.addView(colorPicker, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.TOP | Gravity.CENTER_HORIZONTAL));
 
             frameLayoutParams = new FrameLayout.LayoutParams(LayoutHelper.MATCH_PARENT, AndroidUtilities.getShadowHeight(), Gravity.BOTTOM | Gravity.LEFT);
-            frameLayoutParams.bottomMargin = AndroidUtilities.dp(48);
+            frameLayoutParams.bottomMargin = AndroidUtilities.dp(52);
             shadow[1] = new View(context);
-            shadow[1].setBackgroundColor(0x12000000);
+            shadow[1].setBackgroundColor(palette.divider);
             containerView.addView(shadow[1], frameLayoutParams);
 
             bottomSaveLayout = new FrameLayout(context);
-            bottomSaveLayout.setBackgroundColor(0xffffffff);
-            containerView.addView(bottomSaveLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.BOTTOM));
+            bottomSaveLayout.setBackgroundColor(palette.background);
+            containerView.addView(bottomSaveLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 52, Gravity.LEFT | Gravity.BOTTOM));
 
-            TextView closeButton = new TextView(context);
-            closeButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            closeButton.setTextColor(0xff19a7e8);
-            closeButton.setGravity(Gravity.CENTER);
-            closeButton.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_AUDIO_SELECTOR_COLOR, 0));
-            closeButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
-            closeButton.setText(LocaleController.getString(R.string.CloseEditor).toUpperCase());
-            closeButton.setTypeface(AndroidUtilities.bold());
-            bottomSaveLayout.addView(closeButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
-            closeButton.setOnClickListener(v -> dismiss());
+            closeEditorButton = new TextView(context);
+            closeEditorButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            closeEditorButton.setTextColor(palette.textSecondary);
+            closeEditorButton.setGravity(Gravity.CENTER);
+            closeEditorButton.setBackground(Theme.createSelectorDrawable(palette.selector, 2));
+            closeEditorButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
+            closeEditorButton.setText(LocaleController.getString(R.string.CloseEditor));
+            closeEditorButton.setTypeface(AndroidUtilities.bold());
+            bottomSaveLayout.addView(closeEditorButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 4, 0, 0, 0));
+            closeEditorButton.setOnClickListener(v -> dismiss());
 
-            TextView saveButton = new TextView(context);
-            saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            saveButton.setTextColor(0xff19a7e8);
-            saveButton.setGravity(Gravity.CENTER);
-            saveButton.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_AUDIO_SELECTOR_COLOR, 0));
-            saveButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
-            saveButton.setText(LocaleController.getString(R.string.SaveTheme).toUpperCase());
-            saveButton.setTypeface(AndroidUtilities.bold());
-            bottomSaveLayout.addView(saveButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.RIGHT));
-            saveButton.setOnClickListener(v -> {
+            saveThemeButton = new TextView(context);
+            saveThemeButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            saveThemeButton.setTextColor(palette.onAccent);
+            saveThemeButton.setGravity(Gravity.CENTER);
+            saveThemeButton.setBackground(ThemeKeyCatalog.createRoundedRect(palette.accent, 18, 0, 0));
+            saveThemeButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
+            saveThemeButton.setText(LocaleController.getString(R.string.SaveTheme));
+            saveThemeButton.setTypeface(AndroidUtilities.bold());
+            bottomSaveLayout.addView(saveThemeButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, 36, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 14, 0));
+            saveThemeButton.setOnClickListener(v -> {
                 Theme.saveCurrentTheme(themeInfo, true, false, false);
                 setOnDismissListener((OnDismissListener) null);
                 dismiss();
@@ -959,57 +1503,176 @@ public class ThemeEditorView {
 
             bottomLayout = new FrameLayout(context);
             bottomLayout.setVisibility(View.GONE);
-            bottomLayout.setBackgroundColor(0xffffffff);
-            containerView.addView(bottomLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 48, Gravity.LEFT | Gravity.BOTTOM));
+            bottomLayout.setBackgroundColor(palette.background);
+            containerView.addView(bottomLayout, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 52, Gravity.LEFT | Gravity.BOTTOM));
 
-            TextView cancelButton = new TextView(context);
-            cancelButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            cancelButton.setTextColor(0xff19a7e8);
-            cancelButton.setGravity(Gravity.CENTER);
-            cancelButton.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_AUDIO_SELECTOR_COLOR, 0));
-            cancelButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
-            cancelButton.setText(LocaleController.getString(R.string.Cancel).toUpperCase());
-            cancelButton.setTypeface(AndroidUtilities.bold());
-            bottomLayout.addView(cancelButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
-            cancelButton.setOnClickListener(v -> {
-                for (int a = 0; a < currentThemeDesription.size(); a++) {
-                    currentThemeDesription.get(a).setPreviousColor();
+            cancelPickerButton = new TextView(context);
+            cancelPickerButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+            cancelPickerButton.setTextColor(palette.textSecondary);
+            cancelPickerButton.setGravity(Gravity.CENTER);
+            cancelPickerButton.setBackground(Theme.createSelectorDrawable(palette.selector, 2));
+            cancelPickerButton.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            cancelPickerButton.setText(LocaleController.getString(R.string.Cancel));
+            cancelPickerButton.setTypeface(AndroidUtilities.bold());
+            bottomLayout.addView(cancelPickerButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL | Gravity.LEFT, 4, 0, 0, 0));
+            cancelPickerButton.setOnClickListener(v -> {
+                if (currentThemeDesription != null) {
+                    for (int a = 0; a < currentThemeDesription.size(); a++) {
+                        currentThemeDesription.get(a).setPreviousColor();
+                    }
+                    onThemeColorEdited();
                 }
-                onThemeColorEdited();
                 setColorPickerVisible(false);
             });
 
             LinearLayout linearLayout = new LinearLayout(context);
             linearLayout.setOrientation(LinearLayout.HORIZONTAL);
-            bottomLayout.addView(linearLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.RIGHT));
+            linearLayout.setGravity(Gravity.CENTER_VERTICAL);
+            bottomLayout.addView(linearLayout, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL | Gravity.RIGHT, 0, 0, 14, 0));
 
-            TextView defaultButtom = new TextView(context);
-            defaultButtom.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            defaultButtom.setTextColor(0xff19a7e8);
-            defaultButtom.setGravity(Gravity.CENTER);
-            defaultButtom.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_AUDIO_SELECTOR_COLOR, 0));
-            defaultButtom.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
-            defaultButtom.setText(LocaleController.getString(R.string.Default).toUpperCase());
-            defaultButtom.setTypeface(AndroidUtilities.bold());
-            linearLayout.addView(defaultButtom, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
-            defaultButtom.setOnClickListener(v -> {
+            defaultPickerButton = new TextView(context);
+            defaultPickerButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
+            defaultPickerButton.setTextColor(palette.accent);
+            defaultPickerButton.setGravity(Gravity.CENTER);
+            defaultPickerButton.setBackground(ThemeKeyCatalog.createRoundedRect(palette.chipSelectedBg, 18, 0, 0));
+            defaultPickerButton.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), 0);
+            defaultPickerButton.setText(LocaleController.getString(R.string.Default));
+            defaultPickerButton.setTypeface(AndroidUtilities.bold());
+            linearLayout.addView(defaultPickerButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 36, 0, 0, 8, 0));
+            defaultPickerButton.setOnClickListener(v -> {
+                if (currentThemeDesription == null || currentThemeDesription.isEmpty()) {
+                    return;
+                }
                 for (int a = 0; a < currentThemeDesription.size(); a++) {
                     currentThemeDesription.get(a).setDefaultColor();
                 }
                 onThemeColorEdited();
-                setColorPickerVisible(false);
+                int key = currentThemeDesription.get(0).getCurrentKey();
+                int defColor = key >= 0 ? Theme.getDefaultColor(key) : currentThemeDesription.get(0).getSetColor();
+                colorPicker.setColor(defColor);
             });
 
             saveButton = new TextView(context);
-            saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
-            saveButton.setTextColor(0xff19a7e8);
+            saveButton.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13.5f);
+            saveButton.setTextColor(palette.onAccent);
             saveButton.setGravity(Gravity.CENTER);
-            saveButton.setBackgroundDrawable(Theme.createSelectorDrawable(Theme.ACTION_BAR_AUDIO_SELECTOR_COLOR, 0));
-            saveButton.setPadding(AndroidUtilities.dp(18), 0, AndroidUtilities.dp(18), 0);
-            saveButton.setText(LocaleController.getString(R.string.Save).toUpperCase());
+            saveButton.setBackground(ThemeKeyCatalog.createRoundedRect(palette.accent, 18, 0, 0));
+            saveButton.setPadding(AndroidUtilities.dp(16), 0, AndroidUtilities.dp(16), 0);
+            saveButton.setText(LocaleController.getString(R.string.Save));
             saveButton.setTypeface(AndroidUtilities.bold());
-            linearLayout.addView(saveButton, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT));
+            linearLayout.addView(saveButton, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 36));
             saveButton.setOnClickListener(v -> setColorPickerVisible(false));
+        }
+
+        private void showGroupQuickActions(ColorGroup group) {
+            ThemeDescription desc = group.descriptions.get(0);
+            int curColor = group.key == Theme.key_chat_wallpaper
+                    ? Theme.getColor(Theme.key_chat_wallpaper)
+                    : desc.getSetColor();
+            int defColor = Theme.getDefaultColor(group.key);
+            String curHex = ThemeKeyCatalog.formatHex(curColor, false);
+            String matchHex = ThemeKeyCatalog.formatHex(0xFF000000 | curColor, false);
+            String defHex = ThemeKeyCatalog.formatHex(defColor, false);
+            boolean canReset = group.key != Theme.key_chat_wallpaper && curColor != defColor;
+
+            ArrayList<String> labels = new ArrayList<>();
+            labels.add((isRuUi ? "Копировать HEX (" : "Copy HEX (") + curHex + ")");
+            labels.add((isRuUi ? "Найти похожий цвет (" : "Find matching (") + matchHex + ")");
+            if (canReset) {
+                labels.add((isRuUi ? "Сбросить к стандарту (" : "Reset to default (") + defHex + ")");
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), resourcesProvider);
+            builder.setTitle(group.info.title);
+            builder.setItems(labels.toArray(new CharSequence[0]), (dialog, which) -> {
+                if (which == 0) {
+                    AndroidUtilities.addToClipboard(curHex);
+                    BulletinFactory.of(container, resourcesProvider).createCopyBulletin((isRuUi ? "Скопировано: " : "Copied: ") + curHex).show();
+                } else if (which == 1) {
+                    searchField.setQuery(matchHex);
+                } else if (which == 2 && canReset) {
+                    for (int a = 0; a < group.descriptions.size(); a++) {
+                        ThemeDescription d = group.descriptions.get(a);
+                        d.startEditing();
+                        d.setDefaultColor();
+                    }
+                    onThemeColorEdited();
+                    if (parentActivity instanceof LaunchActivity) {
+                        ((LaunchActivity) parentActivity).rebuildAllFragments(false);
+                    }
+                    Theme.saveCurrentTheme(themeInfo, false, false, false);
+                    refreshAfterColorEdit();
+                }
+            });
+            builder.show();
+        }
+
+        private void rebuildFilterChips() {
+            chipsContainer.removeAllViews();
+            chipButtons.clear();
+            int modifiedCount = listAdapter.countModified();
+            ThemeKeyCatalog.Category[] cats = ThemeKeyCatalog.Category.values();
+            for (ThemeKeyCatalog.Category cat : cats) {
+                int count;
+                if (cat == ThemeKeyCatalog.Category.ALL) {
+                    count = listAdapter.allGroups.size();
+                } else if (cat == ThemeKeyCatalog.Category.MODIFIED) {
+                    count = modifiedCount;
+                    if (count == 0 && activeCategory != ThemeKeyCatalog.Category.MODIFIED) {
+                        continue;
+                    }
+                } else {
+                    count = listAdapter.countForCategory(cat);
+                    if (count == 0) {
+                        continue;
+                    }
+                }
+                TextView chip = new TextView(getContext());
+                chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
+                chip.setTypeface(AndroidUtilities.bold());
+                chip.setGravity(Gravity.CENTER);
+                chip.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+                chip.setText(cat.getLabel(isRuUi) + " · " + count);
+                chip.setOnClickListener(v -> {
+                    activeCategory = cat;
+                    searchField.clearQuerySilent();
+                    if (listView.getAdapter() != listAdapter) {
+                        listView.setAdapter(listAdapter);
+                    }
+                    listAdapter.rebuild();
+                    updateChipStyles();
+                    layoutManager.scrollToPositionWithOffset(0, 0);
+                });
+                chipsContainer.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 8, 0));
+                chipButtons.put(cat, chip);
+            }
+            updateChipStyles();
+        }
+
+        private void updateChipStyles() {
+            int modifiedCount = listAdapter.countModified();
+            for (HashMap.Entry<ThemeKeyCatalog.Category, TextView> entry : chipButtons.entrySet()) {
+                ThemeKeyCatalog.Category cat = entry.getKey();
+                TextView chip = entry.getValue();
+                boolean selected = cat == activeCategory;
+                if (cat == ThemeKeyCatalog.Category.MODIFIED) {
+                    chip.setText(cat.getLabel(isRuUi) + " · " + modifiedCount);
+                }
+                chip.setTextColor(selected ? palette.chipSelectedText : palette.chipText);
+                chip.setBackground(ThemeKeyCatalog.createRoundedRect(
+                        selected ? palette.chipSelectedBg : palette.chipBg,
+                        16,
+                        selected ? 1 : 0,
+                        selected ? Theme.multAlpha(palette.accent, 0.45f) : 0
+                ));
+            }
+        }
+
+        private void refreshAfterColorEdit() {
+            listAdapter.refreshPaletteCache();
+            listAdapter.rebuild();
+            searchAdapter.notifyDataSetChanged();
+            rebuildFilterChips();
         }
 
         private void runShadowAnimation(final int num, final boolean show) {
@@ -1056,6 +1719,16 @@ public class ThemeEditorView {
 
         private void setColorPickerVisible(boolean visible) {
             if (visible) {
+                if (currentThemeDesription != null && !currentThemeDesription.isEmpty()) {
+                    ThemeDescription first = currentThemeDesription.get(0);
+                    int key = first.getCurrentKey();
+                    if (colorPicker.editingKey != key) {
+                        ThemeKeyCatalog.EntryInfo info = currentGroup != null && currentGroup.key == key
+                                ? currentGroup.info
+                                : ThemeKeyCatalog.lookup(key, isRuUi);
+                        colorPicker.bindSelection(info, key, colorPicker.getColor(), themePaletteColors);
+                    }
+                }
                 animationInProgress = true;
                 colorPicker.setVisibility(View.VISIBLE);
                 bottomLayout.setVisibility(View.VISIBLE);
@@ -1079,7 +1752,7 @@ public class ThemeEditorView {
                     @Override
                     public void onAnimationEnd(Animator animation) {
                         listView.setVisibility(View.INVISIBLE);
-                        searchField.setVisibility(View.INVISIBLE);
+                        frameLayout.setVisibility(View.INVISIBLE);
                         bottomSaveLayout.setVisibility(View.INVISIBLE);
                         animationInProgress = false;
                     }
@@ -1090,13 +1763,11 @@ public class ThemeEditorView {
                     ((LaunchActivity) parentActivity).rebuildAllFragments(false);
                 }
                 Theme.saveCurrentTheme(themeInfo, false, false, false);
-                if (listView.getAdapter() == listAdapter) {
-                    AndroidUtilities.hideKeyboard(getCurrentFocus());
-                }
+                AndroidUtilities.hideKeyboard(getCurrentFocus());
                 animationInProgress = true;
                 listView.setVisibility(View.VISIBLE);
                 bottomSaveLayout.setVisibility(View.VISIBLE);
-                searchField.setVisibility(View.VISIBLE);
+                frameLayout.setVisibility(View.VISIBLE);
                 listView.setAlpha(0.0f);
                 AnimatorSet animatorSet = new AnimatorSet();
                 animatorSet.playTogether(
@@ -1116,13 +1787,14 @@ public class ThemeEditorView {
                         if (listView.getAdapter() == searchAdapter) {
                             searchField.showKeyboard();
                         }
+                        colorPicker.editingKey = -1;
                         colorPicker.setVisibility(View.GONE);
                         bottomLayout.setVisibility(View.GONE);
                         animationInProgress = false;
                     }
                 });
                 animatorSet.start();
-                listView.getAdapter().notifyItemChanged(currentThemeDesriptionPosition);
+                refreshAfterColorEdit();
             }
         }
 
@@ -1177,18 +1849,91 @@ public class ThemeEditorView {
         public void setScrollOffsetY(int value) {
             listView.setTopGlowOffset(scrollOffsetY = value);
             frameLayout.setTranslationY(scrollOffsetY);
+            shadow[0].setTranslationY(scrollOffsetY);
             colorPicker.setTranslationY(scrollOffsetY);
             searchEmptyView.setTranslationY(scrollOffsetY);
             containerView.invalidate();
         }
 
+        private class ColorGroup {
+            final int key;
+            final String rawKey;
+            final ThemeKeyCatalog.EntryInfo info;
+            final ArrayList<ThemeDescription> descriptions;
+
+            ColorGroup(int key, String rawKey, ThemeKeyCatalog.EntryInfo info, ArrayList<ThemeDescription> descriptions) {
+                this.key = key;
+                this.rawKey = rawKey;
+                this.info = info;
+                this.descriptions = descriptions;
+            }
+        }
+
+        private class ListRow {
+            static final int TYPE_ITEM = 0;
+            static final int TYPE_SPACER = 1;
+            static final int TYPE_HEADER = 2;
+
+            final int viewType;
+            final String headerTitle;
+            final ColorGroup group;
+            final boolean needDivider;
+
+            ListRow(int viewType, String headerTitle, ColorGroup group, boolean needDivider) {
+                this.viewType = viewType;
+                this.headerTitle = headerTitle;
+                this.group = group;
+                this.needDivider = needDivider;
+            }
+        }
+
+        private class SectionHeaderCell extends FrameLayout {
+            private final TextView titleView;
+
+            SectionHeaderCell(Context context) {
+                super(context);
+                titleView = new TextView(context);
+                titleView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
+                titleView.setTypeface(AndroidUtilities.bold());
+                titleView.setTextColor(palette.accent);
+                titleView.setSingleLine(true);
+                titleView.setEllipsize(TextUtils.TruncateAt.END);
+                titleView.setGravity((LocaleController.isRTL ? Gravity.RIGHT : Gravity.LEFT) | Gravity.CENTER_VERTICAL);
+                addView(titleView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.CENTER_VERTICAL, 18, 10, 18, 2));
+            }
+
+            void setText(String text) {
+                titleView.setText(text);
+            }
+
+            @Override
+            protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+                super.onMeasure(
+                        MeasureSpec.makeMeasureSpec(MeasureSpec.getSize(widthMeasureSpec), MeasureSpec.EXACTLY),
+                        MeasureSpec.makeMeasureSpec(AndroidUtilities.dp(34), MeasureSpec.EXACTLY)
+                );
+            }
+        }
+
+        private class SearchEntry {
+            final ColorGroup group;
+            final CharSequence displayTitle;
+            final CharSequence displayKey;
+            final int color;
+
+            SearchEntry(ColorGroup group, CharSequence displayTitle, CharSequence displayKey, int color) {
+                this.group = group;
+                this.displayTitle = displayTitle;
+                this.displayKey = displayKey;
+                this.color = color;
+            }
+        }
+
         public class SearchAdapter extends RecyclerListView.SelectionAdapter {
 
-            private Context context;
+            private final Context context;
             private int lastSearchId;
-            private int currentCount;
-            private ArrayList<ArrayList<ThemeDescription>> searchResult = new ArrayList<>();
-            private ArrayList<CharSequence> searchNames = new ArrayList<>();
+            private ArrayList<SearchEntry> searchResult = new ArrayList<>();
             private Runnable searchRunnable;
             private String lastSearchText;
 
@@ -1196,84 +1941,90 @@ public class ThemeEditorView {
                 this.context = context;
             }
 
-            public CharSequence generateSearchName(String name, String q) {
-                if (TextUtils.isEmpty(name)) {
-                    return "";
+            public CharSequence highlightMatch(String text, String q) {
+                if (TextUtils.isEmpty(text) || TextUtils.isEmpty(q)) {
+                    return text != null ? text : "";
                 }
-                SpannableStringBuilder builder = new SpannableStringBuilder();
-                String wholeString = name.trim();
-                String lower = wholeString.toLowerCase();
-
-                int index;
-                int lastIndex = 0;
-                while ((index = lower.indexOf(q, lastIndex)) != -1) {
-                    int end = q.length() + index;
-
-                    if (lastIndex != 0 && lastIndex != index + 1) {
-                        builder.append(wholeString.substring(lastIndex, index));
-                    } else if (lastIndex == 0 && index != 0) {
-                        builder.append(wholeString.substring(0, index));
-                    }
-
-                    String query = wholeString.substring(index, Math.min(wholeString.length(), end));
-                    if (query.startsWith(" ")) {
-                        builder.append(" ");
-                    }
-                    query = query.trim();
-
-                    int start = builder.length();
-                    builder.append(query);
-                    builder.setSpan(new ForegroundColorSpan(0xff4d83b3), start, start + query.length(), Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
-
-                    lastIndex = end;
+                SpannableStringBuilder builder = new SpannableStringBuilder(text);
+                String lower = text.toLowerCase(Locale.US);
+                int index = 0;
+                while ((index = lower.indexOf(q, index)) != -1) {
+                    int end = Math.min(text.length(), index + q.length());
+                    builder.setSpan(new ForegroundColorSpan(palette.accent), index, end, Spanned.SPAN_EXCLUSIVE_EXCLUSIVE);
+                    index = end;
                 }
-
-                if (lastIndex != -1 && lastIndex < wholeString.length()) {
-                    builder.append(wholeString.substring(lastIndex));
-                }
-
                 return builder;
             }
 
-            private void searchDialogsInternal(final String query, final int searchId) {
+            private void searchDialogsInternal(final String query, final ArrayList<ColorGroup> groupsSnapshot, final int[] colorsSnapshot, final int searchId) {
                 try {
-                    String search1 = query.trim().toLowerCase();
+                    String search1 = query.trim().toLowerCase(Locale.US);
                     if (search1.length() == 0) {
                         lastSearchId = -1;
-                        updateSearchResults(new ArrayList<>(), new ArrayList<>(), lastSearchId);
+                        updateSearchResults(new ArrayList<>(), lastSearchId);
                         return;
                     }
                     String search2 = LocaleController.getInstance().getTranslitString(search1);
                     if (search1.equals(search2) || search2.length() == 0) {
                         search2 = null;
                     }
-                    String[] search = new String[1 + (search2 != null ? 1 : 0)];
-                    search[0] = search1;
+                    String[] queries = new String[1 + (search2 != null ? 1 : 0)];
+                    queries[0] = search1;
                     if (search2 != null) {
-                        search[1] = search2;
+                        queries[1] = search2.toLowerCase(Locale.US);
                     }
 
-                    ArrayList<ArrayList<ThemeDescription>> searchResults = new ArrayList<>();
-                    ArrayList<CharSequence> names = new ArrayList<>();
-                    for (int a = 0, N = listAdapter.items.size(); a < N; a++) {
-                        ArrayList<ThemeDescription> themeDescriptions = listAdapter.items.get(a);
-                        String key = ThemeColors.getStringName(themeDescriptions.get(0).getCurrentKey());
-                        String name = key.toLowerCase();
-                        for (String q : search) {
-                            if (name.contains(q)) {
-                                searchResults.add(themeDescriptions);
-                                names.add(generateSearchName(key, q));
+                    ArrayList<SearchEntry> results = new ArrayList<>();
+                    for (int a = 0, N = groupsSnapshot.size(); a < N; a++) {
+                        ColorGroup group = groupsSnapshot.get(a);
+                        int color = colorsSnapshot[a];
+                        String title = group.info.title != null ? group.info.title : "";
+                        String rawKey = group.rawKey != null ? group.rawKey : "";
+                        String hex6 = ThemeKeyCatalog.formatHex(0xFF000000 | color, false).toLowerCase(Locale.US);
+                        String hex8 = ThemeKeyCatalog.formatHex(color, true).toLowerCase(Locale.US);
+
+                        String titleLower = title.toLowerCase(Locale.US);
+                        String rawLower = rawKey.toLowerCase(Locale.US);
+
+                        String matchedTitleQ = null;
+                        String matchedKeyQ = null;
+                        boolean matchedHex = false;
+
+                        for (String q : queries) {
+                            if (titleLower.contains(q)) {
+                                matchedTitleQ = q;
+                            }
+                            if (rawLower.contains(q)) {
+                                matchedKeyQ = q;
+                            }
+                            if (hex6.contains(q) || hex8.contains(q)) {
+                                matchedHex = true;
+                            }
+                            if (matchedTitleQ != null || matchedKeyQ != null || matchedHex) {
                                 break;
                             }
                         }
+                        if (matchedTitleQ != null || matchedKeyQ != null || matchedHex) {
+                            CharSequence displayTitle = matchedTitleQ != null ? highlightMatch(title, matchedTitleQ) : title;
+                            CharSequence displayKey = matchedKeyQ != null ? highlightMatch(rawKey, matchedKeyQ) : rawKey;
+                            results.add(new SearchEntry(group, displayTitle, displayKey, color));
+                        }
                     }
-                    updateSearchResults(searchResults, names, searchId);
+
+                    Collections.sort(results, (a, b) -> {
+                        if (a.group.info.essential != b.group.info.essential) {
+                            return a.group.info.essential ? -1 : 1;
+                        }
+                        return a.group.info.title.compareToIgnoreCase(b.group.info.title);
+                    });
+
+                    updateSearchResults(results, searchId);
                 } catch (Exception e) {
                     FileLog.e(e);
                 }
             }
 
-            private void updateSearchResults(final ArrayList<ArrayList<ThemeDescription>> result, ArrayList<CharSequence> names, final int searchId) {
+            private void updateSearchResults(final ArrayList<SearchEntry> result, final int searchId) {
                 AndroidUtilities.runOnUIThread(() -> {
                     if (searchId != lastSearchId) {
                         return;
@@ -1289,7 +2040,6 @@ public class ThemeEditorView {
                         topBeforeSwitch = getCurrentTop();
                     }
                     searchResult = result;
-                    searchNames = names;
                     notifyDataSetChanged();
                     if (!isEmpty && !becomeEmpty && topBeforeSwitch > 0) {
                         layoutManager.scrollToPositionWithOffset(0, -topBeforeSwitch);
@@ -1315,8 +2065,16 @@ public class ThemeEditorView {
                     notifyDataSetChanged();
                 } else {
                     final int searchId = ++lastSearchId;
-                    searchRunnable = () -> searchDialogsInternal(query, searchId);
-                    Utilities.searchQueue.postRunnable(searchRunnable, 300);
+                    final ArrayList<ColorGroup> groupsSnapshot = new ArrayList<>(listAdapter.allGroups);
+                    final int[] colorsSnapshot = new int[groupsSnapshot.size()];
+                    for (int i = 0; i < groupsSnapshot.size(); i++) {
+                        ColorGroup g = groupsSnapshot.get(i);
+                        colorsSnapshot[i] = g.key == Theme.key_chat_wallpaper
+                                ? Theme.getColor(Theme.key_chat_wallpaper)
+                                : g.descriptions.get(0).getSetColor();
+                    }
+                    searchRunnable = () -> searchDialogsInternal(query, groupsSnapshot, colorsSnapshot, searchId);
+                    Utilities.searchQueue.postRunnable(searchRunnable, 180);
                 }
             }
 
@@ -1325,16 +2083,17 @@ public class ThemeEditorView {
                 return searchResult.isEmpty() ? 0 : (searchResult.size() + 1);
             }
 
-            public ArrayList<ThemeDescription> getItem(int i) {
-                if (i < 0 || i >= searchResult.size()) {
+            public ColorGroup getGroupAtPosition(int position) {
+                int idx = position - 1;
+                if (idx < 0 || idx >= searchResult.size()) {
                     return null;
                 }
-                return searchResult.get(i);
+                return searchResult.get(idx).group;
             }
 
             @Override
             public boolean isEnabled(RecyclerView.ViewHolder holder) {
-                return true;
+                return holder.getItemViewType() == 0;
             }
 
             @Override
@@ -1342,13 +2101,15 @@ public class ThemeEditorView {
                 View view;
                 switch (viewType) {
                     case 0:
-                        view = new TextColorThemeCell(context);
-                        view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                        TextColorThemeCell cell = new TextColorThemeCell(context);
+                        cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
+                        cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                        view = cell;
                         break;
                     case 1:
                     default:
                         view = new View(context);
-                        view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(56)));
+                        view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(HEADER_HEIGHT_DP)));
                         break;
                 }
                 return new RecyclerListView.Holder(view);
@@ -1357,36 +2118,35 @@ public class ThemeEditorView {
             @Override
             public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
                 if (holder.getItemViewType() == 0) {
-                    ArrayList<ThemeDescription> arrayList = searchResult.get(position - 1);
-                    ThemeDescription description = arrayList.get(0);
-                    int color;
-                    if (description.getCurrentKey() == Theme.key_chat_wallpaper) {
-                        color = 0;
-                    } else {
-                        color = description.getSetColor();
-                    }
-                    ((TextColorThemeCell) holder.itemView).setTextAndColor(searchNames.get(position - 1), color);
+                    int idx = position - 1;
+                    SearchEntry entry = searchResult.get(idx);
+                    int color = entry.group.key == Theme.key_chat_wallpaper
+                            ? Theme.getColor(Theme.key_chat_wallpaper)
+                            : entry.group.descriptions.get(0).getSetColor();
+                    boolean modified = entry.group.key != Theme.key_chat_wallpaper
+                            && ThemeKeyCatalog.isModifiedFromDefault(entry.group.key, color);
+                    TextColorThemeCell cell = (TextColorThemeCell) holder.itemView;
+                    cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
+                    cell.setThemeEntry(entry.displayTitle, entry.displayKey, color, modified, idx < searchResult.size() - 1);
                 }
             }
 
             @Override
             public int getItemViewType(int i) {
-                if (i == 0) {
-                    return 1;
-                }
-                return 0;
+                return i == 0 ? 1 : 0;
             }
         }
 
         private class ListAdapter extends RecyclerListView.SelectionAdapter {
 
-            private Context context;
-            private int currentCount;
-            private ArrayList<ArrayList<ThemeDescription>> items = new ArrayList<>();
+            private final Context context;
+            private final ArrayList<ColorGroup> allGroups = new ArrayList<>();
+            private final ArrayList<ListRow> rows = new ArrayList<>();
 
             public ListAdapter(Context context, ArrayList<ThemeDescription> descriptions) {
                 this.context = context;
                 HashMap<Integer, ArrayList<ThemeDescription>> itemsMap = new HashMap<>();
+                ArrayList<Integer> orderedKeys = new ArrayList<>();
                 for (int a = 0, N = descriptions.size(); a < N; a++) {
                     ThemeDescription description = descriptions.get(a);
                     int key = description.getCurrentKey();
@@ -1394,72 +2154,221 @@ public class ThemeEditorView {
                     if (arrayList == null) {
                         arrayList = new ArrayList<>();
                         itemsMap.put(key, arrayList);
-                        items.add(arrayList);
+                        orderedKeys.add(key);
                     }
                     arrayList.add(description);
                 }
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O && !itemsMap.containsKey(Theme.key_windowBackgroundGray)) {
-                    final ArrayList<ThemeDescription> arrayList = new ArrayList<>();
+                    ArrayList<ThemeDescription> arrayList = new ArrayList<>();
                     arrayList.add(new ThemeDescription(null, 0, null, null, null, null, Theme.key_windowBackgroundGray));
-                    items.add(arrayList);
+                    itemsMap.put(Theme.key_windowBackgroundGray, arrayList);
+                    orderedKeys.add(Theme.key_windowBackgroundGray);
                 }
+                for (int i = 0; i < orderedKeys.size(); i++) {
+                    int key = orderedKeys.get(i);
+                    String rawKey = ThemeColors.getStringName(key);
+                    ThemeKeyCatalog.EntryInfo info = ThemeKeyCatalog.lookup(key, isRuUi);
+                    allGroups.add(new ColorGroup(key, rawKey, info, itemsMap.get(key)));
+                }
+                refreshPaletteCache();
+                rebuild();
+            }
+
+            void refreshPaletteCache() {
+                ArrayList<Integer> rawColors = new ArrayList<>(allGroups.size());
+                for (int i = 0; i < allGroups.size(); i++) {
+                    ColorGroup g = allGroups.get(i);
+                    if (g.key == Theme.key_chat_wallpaper) {
+                        continue;
+                    }
+                    rawColors.add(g.descriptions.get(0).getSetColor());
+                }
+                themePaletteColors.clear();
+                themePaletteColors.addAll(ThemeKeyCatalog.extractDistinctPalette(rawColors, 14));
+            }
+
+            int countForCategory(ThemeKeyCatalog.Category cat) {
+                int count = 0;
+                for (int i = 0; i < allGroups.size(); i++) {
+                    ColorGroup g = allGroups.get(i);
+                    if (cat == ThemeKeyCatalog.Category.ESSENTIAL) {
+                        if (g.info.essential) {
+                            count++;
+                        }
+                    } else if (g.info.category == cat) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            int countModified() {
+                int count = 0;
+                for (int i = 0; i < allGroups.size(); i++) {
+                    ColorGroup g = allGroups.get(i);
+                    if (g.key == Theme.key_chat_wallpaper) {
+                        continue;
+                    }
+                    int cur = g.descriptions.get(0).getSetColor();
+                    if (ThemeKeyCatalog.isModifiedFromDefault(g.key, cur)) {
+                        count++;
+                    }
+                }
+                return count;
+            }
+
+            void rebuild() {
+                rows.clear();
+                ArrayList<ColorGroup> matched = new ArrayList<>();
+                if (activeCategory == ThemeKeyCatalog.Category.ALL) {
+                    ArrayList<ColorGroup> essentials = new ArrayList<>();
+                    for (int i = 0; i < allGroups.size(); i++) {
+                        ColorGroup g = allGroups.get(i);
+                        if (g.info.essential) {
+                            essentials.add(g);
+                        }
+                    }
+                    Collections.sort(essentials, (a, b) -> {
+                        if (a.info.category != b.info.category) {
+                            return Integer.compare(a.info.category.ordinal(), b.info.category.ordinal());
+                        }
+                        return a.info.title.compareToIgnoreCase(b.info.title);
+                    });
+
+                    ThemeKeyCatalog.Category[] sections = new ThemeKeyCatalog.Category[]{
+                            ThemeKeyCatalog.Category.CHAT,
+                            ThemeKeyCatalog.Category.CHATS,
+                            ThemeKeyCatalog.Category.CHROME,
+                            ThemeKeyCatalog.Category.DIALOGS,
+                            ThemeKeyCatalog.Category.CONTROLS,
+                            ThemeKeyCatalog.Category.MEDIA
+                    };
+
+                    ArrayList<ArrayList<ColorGroup>> sectionLists = new ArrayList<>();
+                    ArrayList<String> sectionTitles = new ArrayList<>();
+                    if (!essentials.isEmpty()) {
+                        sectionLists.add(essentials);
+                        sectionTitles.add((isRuUi ? "Основное · частые" : "Essential · Most Used") + " (" + essentials.size() + ")");
+                    }
+                    for (ThemeKeyCatalog.Category sec : sections) {
+                        ArrayList<ColorGroup> list = new ArrayList<>();
+                        for (int i = 0; i < allGroups.size(); i++) {
+                            ColorGroup g = allGroups.get(i);
+                            if (!g.info.essential && g.info.category == sec) {
+                                list.add(g);
+                            }
+                        }
+                        if (!list.isEmpty()) {
+                            Collections.sort(list, (a, b) -> a.info.title.compareToIgnoreCase(b.info.title));
+                            sectionLists.add(list);
+                            sectionTitles.add(sec.getLabel(isRuUi) + " (" + list.size() + ")");
+                        }
+                    }
+
+                    if (!sectionLists.isEmpty()) {
+                        rows.add(new ListRow(ListRow.TYPE_SPACER, null, null, false));
+                        for (int s = 0; s < sectionLists.size(); s++) {
+                            rows.add(new ListRow(ListRow.TYPE_HEADER, sectionTitles.get(s), null, false));
+                            ArrayList<ColorGroup> list = sectionLists.get(s);
+                            for (int i = 0; i < list.size(); i++) {
+                                rows.add(new ListRow(ListRow.TYPE_ITEM, null, list.get(i), i < list.size() - 1));
+                            }
+                        }
+                    }
+                } else {
+                    for (int i = 0; i < allGroups.size(); i++) {
+                        ColorGroup g = allGroups.get(i);
+                        if (activeCategory == ThemeKeyCatalog.Category.ESSENTIAL) {
+                            if (g.info.essential) {
+                                matched.add(g);
+                            }
+                        } else if (activeCategory == ThemeKeyCatalog.Category.MODIFIED) {
+                            if (g.key != Theme.key_chat_wallpaper
+                                    && ThemeKeyCatalog.isModifiedFromDefault(g.key, g.descriptions.get(0).getSetColor())) {
+                                matched.add(g);
+                            }
+                        } else if (g.info.category == activeCategory) {
+                            matched.add(g);
+                        }
+                    }
+                    Collections.sort(matched, (a, b) -> {
+                        if (a.info.essential != b.info.essential) {
+                            return a.info.essential ? -1 : 1;
+                        }
+                        return a.info.title.compareToIgnoreCase(b.info.title);
+                    });
+                    if (!matched.isEmpty()) {
+                        rows.add(new ListRow(ListRow.TYPE_SPACER, null, null, false));
+                        for (int i = 0; i < matched.size(); i++) {
+                            rows.add(new ListRow(ListRow.TYPE_ITEM, null, matched.get(i), i < matched.size() - 1));
+                        }
+                    }
+                }
+                if (searchEmptyView != null && TextUtils.isEmpty(searchField.searchEditText.getText())) {
+                    searchEmptyView.setText(activeCategory == ThemeKeyCatalog.Category.MODIFIED
+                            ? (isRuUi ? "Пока нет изменённых цветов" : "No modified colors yet")
+                            : (isRuUi ? "Нет элементов в этой категории" : "No colors in this category"));
+                }
+                notifyDataSetChanged();
             }
 
             @Override
             public int getItemCount() {
-                return items.isEmpty() ? 0 : (items.size() + 1);
+                return rows.size();
             }
 
-            public ArrayList<ThemeDescription> getItem(int i) {
-                if (i < 0 || i >= items.size()) {
+            public ColorGroup getGroupAtPosition(int position) {
+                if (position < 0 || position >= rows.size()) {
                     return null;
                 }
-                return items.get(i);
+                return rows.get(position).group;
             }
 
             @Override
             public boolean isEnabled(RecyclerView.ViewHolder holder) {
-                return true;
+                return holder.getItemViewType() == ListRow.TYPE_ITEM;
             }
 
             @Override
             public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
                 View view;
-                switch (viewType) {
-                    case 0:
-                        view = new TextColorThemeCell(context);
-                        view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
-                        break;
-                    case 1:
-                    default:
-                        view = new View(context);
-                        view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(56)));
-                        break;
+                if (viewType == ListRow.TYPE_ITEM) {
+                    TextColorThemeCell cell = new TextColorThemeCell(context);
+                    cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
+                    cell.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                    view = cell;
+                } else if (viewType == ListRow.TYPE_HEADER) {
+                    SectionHeaderCell header = new SectionHeaderCell(context);
+                    header.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, RecyclerView.LayoutParams.WRAP_CONTENT));
+                    view = header;
+                } else {
+                    view = new View(context);
+                    view.setLayoutParams(new RecyclerView.LayoutParams(RecyclerView.LayoutParams.MATCH_PARENT, AndroidUtilities.dp(HEADER_HEIGHT_DP)));
                 }
                 return new RecyclerListView.Holder(view);
             }
 
             @Override
             public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
-                if (holder.getItemViewType() == 0) {
-                    ArrayList<ThemeDescription> arrayList = items.get(position - 1);
-                    ThemeDescription description = arrayList.get(0);
-                    int color;
-                    if (description.getCurrentKey() == Theme.key_chat_wallpaper) {
-                        color = 0;
-                    } else {
-                        color = description.getSetColor();
-                    }
-                    ((TextColorThemeCell) holder.itemView).setTextAndColor(description.getTitle(), color);
+                ListRow row = rows.get(position);
+                if (row.viewType == ListRow.TYPE_ITEM && row.group != null) {
+                    ColorGroup g = row.group;
+                    int color = g.key == Theme.key_chat_wallpaper
+                            ? Theme.getColor(Theme.key_chat_wallpaper)
+                            : g.descriptions.get(0).getSetColor();
+                    boolean modified = g.key != Theme.key_chat_wallpaper
+                            && ThemeKeyCatalog.isModifiedFromDefault(g.key, color);
+                    TextColorThemeCell cell = (TextColorThemeCell) holder.itemView;
+                    cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
+                    cell.setThemeEntry(g.info.title, g.rawKey, color, modified, row.needDivider);
+                } else if (row.viewType == ListRow.TYPE_HEADER) {
+                    ((SectionHeaderCell) holder.itemView).setText(row.headerTitle);
                 }
             }
 
             @Override
             public int getItemViewType(int i) {
-                if (i == 0) {
-                    return 1;
-                }
-                return 0;
+                return rows.get(i).viewType;
             }
         }
     }
