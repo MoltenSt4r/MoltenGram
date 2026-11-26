@@ -662,12 +662,7 @@ public class MoltenGramOtaManager {
         }
         int curBuild = BuildConfig.VERSION_CODE;
         if (remoteBuild > 0 && curBuild > 0) {
-            if (remoteBuild > curBuild) {
-                return true;
-            }
-            if (remoteBuild < curBuild) {
-                return false;
-            }
+            return remoteBuild > curBuild;
         }
 
         String currentCommit = BuildConfig.BUILD_COMMIT_ID != null ? BuildConfig.BUILD_COMMIT_ID.trim() : "";

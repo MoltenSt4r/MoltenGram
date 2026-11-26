@@ -346,7 +346,7 @@ public final class GitHubUpdater {
             return versionOrder > 0;
         }
         int remoteBuild = extractApkBuildCode(release.apkName);
-        if (remoteBuild > 0 && BuildConfig.VERSION_CODE > 0 && remoteBuild != BuildConfig.VERSION_CODE) {
+        if (remoteBuild > 0 && BuildConfig.VERSION_CODE > 0) {
             return remoteBuild > BuildConfig.VERSION_CODE;
         }
         String commit = BuildConfig.BUILD_COMMIT_ID;
