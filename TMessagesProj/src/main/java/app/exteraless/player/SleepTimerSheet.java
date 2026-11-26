@@ -95,7 +95,7 @@ public class SleepTimerSheet extends BottomSheet {
         title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
         title.setTextColor(textColor);
         titles.addView(title, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
-        header.addView(titles, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL));
+        header.addView(titles, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 0, 0, 48, 0));
 
         ImageView moon = new ImageView(context);
         PlayerIcon moonIcon = PlayerIcon.stroke(PlayerIcon.SLEEP, 20);
@@ -237,10 +237,25 @@ public class SleepTimerSheet extends BottomSheet {
         texts.addView(s);
         row.addView(texts, LayoutHelper.createLinear(0, LayoutHelper.WRAP_CONTENT, 1f));
 
-        Switch sw = new Switch(context, rp);
+        Theme.ResourcesProvider switchRp = new Theme.ResourcesProvider() {
+            @Override
+            public int getColor(int key) {
+                if (key == Theme.key_switchTrackChecked || key == Theme.key_switch2TrackChecked || key == Theme.key_dialogRoundCheckBox) {
+                    return accent;
+                }
+                if (key == Theme.key_switchTrack) {
+                    return Theme.multAlpha(textColor, 0.35f);
+                }
+                if (key == Theme.key_windowBackgroundWhite) {
+                    return bgColor;
+                }
+                return rp != null ? rp.getColor(key) : Theme.getColor(key);
+            }
+        };
+        Switch sw = new Switch(context, switchRp);
         sw.setColors(Theme.key_switchTrack, Theme.key_switchTrackChecked, Theme.key_windowBackgroundWhite, Theme.key_windowBackgroundWhite);
         sw.setChecked(checked, false);
-        row.addView(sw, LayoutHelper.createLinear(37, 40));
+        row.addView(sw, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT));
         row.setOnClickListener(v -> {
             boolean nv = !sw.isChecked();
             sw.setChecked(nv, true);

@@ -3617,7 +3617,7 @@ public class MediaController implements AudioManager.OnAudioFocusChangeListener,
         }
         if (audioPlayer != null) {
             if (music) {
-                audioPlayer.setPlaybackSpeed(Math.round(speed * 10f) / 10f, false);
+                audioPlayer.setPlaybackParameters(Math.round(speed * 10f) / 10f, currentMusicPlaybackPitch);
             } else {
                 audioPlayer.setPlaybackSpeed(Math.round(speed * 10f) / 10f);
             }

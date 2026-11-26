@@ -247,16 +247,50 @@ public final class GitHubUpdater {
             release.apkUrl = asset.optString("browser_download_url");
             release.apkName = asset.optString("name");
             release.apkSize = asset.optLong("size");
-            release.published = parseDate(item.optString("published_at"));
+            long assetTime = parseDate(asset.optString("updated_at", asset.optString("created_at")));
+            long relTime = parseDate(item.optString("published_at"));
+            release.published = assetTime > 0 ? assetTime : relTime;
             return release;
         }
         return null;
+    }
+
+    private static int extractApkBuildCode(String name) {
+        if (TextUtils.isEmpty(name)) {
+            return 0;
+        }
+        Matcher m = Pattern.compile("(?:^|[^0-9])(\\d{6,10})(?:\\.apk|[^0-9]|$)").matcher(name);
+        int best = 0;
+        while (m.find()) {
+            try {
+                int v = Integer.parseInt(m.group(1));
+                if (v > best) {
+                    best = v;
+                }
+            } catch (Exception ignored) {}
+        }
+        return best;
+    }
+
+    private static boolean isBetterAsset(JSONObject cand, JSONObject current) {
+        if (current == null) {
+            return true;
+        }
+        int candBuild = extractApkBuildCode(cand.optString("name"));
+        int curBuild = extractApkBuildCode(current.optString("name"));
+        if (candBuild != curBuild) {
+            return candBuild > curBuild;
+        }
+        long candTime = parseDate(cand.optString("updated_at", cand.optString("created_at")));
+        long curTime = parseDate(current.optString("updated_at", current.optString("created_at")));
+        return candTime > curTime;
     }
 
     private static JSONObject pickAsset(JSONArray assets) {
         if (assets == null) {
             return null;
         }
+        JSONObject abiMatch = null;
         JSONObject universal = null;
         JSONObject any = null;
         String abi = Build.SUPPORTED_ABIS.length > 0 ? Build.SUPPORTED_ABIS[0] : "";
@@ -266,17 +300,17 @@ public final class GitHubUpdater {
             if (!name.endsWith(".apk")) {
                 continue;
             }
-            if (!abi.isEmpty() && name.contains(abi.toLowerCase(Locale.ROOT))) {
-                return asset;
+            if (!abi.isEmpty() && name.contains(abi.toLowerCase(Locale.ROOT)) && isBetterAsset(asset, abiMatch)) {
+                abiMatch = asset;
             }
-            if (name.contains("universal") && universal == null) {
+            if (name.contains("universal") && isBetterAsset(asset, universal)) {
                 universal = asset;
             }
-            if (any == null && !name.contains("armeabi") && !name.contains("x86")) {
+            if (!name.contains("armeabi") && !name.contains("x86") && isBetterAsset(asset, any)) {
                 any = asset;
             }
         }
-        return universal != null ? universal : any;
+        return abiMatch != null ? abiMatch : (universal != null ? universal : any);
     }
 
     private static int[] version(String... sources) {
@@ -310,6 +344,10 @@ public final class GitHubUpdater {
         Integer versionOrder = compareVersion(release);
         if (versionOrder != null && versionOrder != 0) {
             return versionOrder > 0;
+        }
+        int remoteBuild = extractApkBuildCode(release.apkName);
+        if (remoteBuild > 0 && BuildConfig.VERSION_CODE > 0 && remoteBuild != BuildConfig.VERSION_CODE) {
+            return remoteBuild > BuildConfig.VERSION_CODE;
         }
         String commit = BuildConfig.BUILD_COMMIT_ID;
         if (!TextUtils.isEmpty(commit)) {

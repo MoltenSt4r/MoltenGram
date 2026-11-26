@@ -349,7 +349,9 @@ public class MoltenGramOtaManager {
                                 bestAssetVer = assetVer;
                             } else {
                                 int verCmp = compareSemver(assetVer, bestAssetVer);
-                                if (verCmp > 0 || (verCmp == 0 && assetTime > bestAssetTime)) {
+                                int candBuild = extractBuildCode(name);
+                                int bestBuild = extractBuildCode(apkAsset.optString("name", ""));
+                                if (verCmp > 0 || (verCmp == 0 && (candBuild > bestBuild || (candBuild == bestBuild && assetTime > bestAssetTime)))) {
                                     apkAsset = ast;
                                     bestAssetTime = assetTime;
                                     bestAssetVer = assetVer;
@@ -577,6 +579,21 @@ public class MoltenGramOtaManager {
     public static int extractBuildCode(String text) {
         if (TextUtils.isEmpty(text)) {
             return 0;
+        }
+        // Prefer 6-10 digit Android versionCode (e.g. MoltenGram-v13.2.2-build0314-9584937.apk -> 9584937)
+        // before falling back to CI run numbers like build0314.
+        java.util.regex.Matcher vc = java.util.regex.Pattern.compile("(?:^|[^0-9])(\\d{6,10})(?:\\.apk|\\)|[^0-9]|$)").matcher(text);
+        int bestVc = 0;
+        while (vc.find()) {
+            try {
+                int val = Integer.parseInt(vc.group(1));
+                if (val > bestVc) {
+                    bestVc = val;
+                }
+            } catch (Exception ignored) {}
+        }
+        if (bestVc > 0) {
+            return bestVc;
         }
         java.util.regex.Matcher m = java.util.regex.Pattern.compile("(?:\\(|\\bb|build|#|\\.)(\\d{4,10})(?:\\)|\\b|\\.apk)", java.util.regex.Pattern.CASE_INSENSITIVE).matcher(text);
         if (m.find()) {

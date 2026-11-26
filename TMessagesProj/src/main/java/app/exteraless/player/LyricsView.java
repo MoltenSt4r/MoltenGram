@@ -574,7 +574,8 @@ public class LyricsView extends FrameLayout {
             }
             layoutWidth = width;
             paint.setTextSize(textSize());
-            int textWidth = Math.max(1, (int) (width / ACTIVE_SCALE));
+            int glowPad = dp(8);
+            int textWidth = Math.max(1, (int) ((width - glowPad * 2) / ACTIVE_SCALE));
 
             int alignMode = app.exteraless.appearance.AppearanceConfig.playerLyricsAlignment();
             Layout.Alignment alignment;
@@ -659,8 +660,9 @@ public class LyricsView extends FrameLayout {
             boolean live = role == ROLE_ACTIVE && !plain;
             float progress = live ? lineProgress() : 0f;
             int pad = plain ? dp(6) : dp(10);
+            int glowPad = dp(8);
             canvas.save();
-            canvas.translate(0, pad);
+            canvas.translate(glowPad, pad);
             float pivotY = (getHeight() - pad * 2) / 2f;
             canvas.scale(scale.value, scale.value, 0, pivotY);
             if (isInterlude()) {
