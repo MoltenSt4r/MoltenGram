@@ -307,8 +307,12 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
             org.telegram.ui.ActionBar.Theme.reloadMonetThemes();
         }
         try {
-            Class.forName("com.exteragram.hook.ExteraHook").getMethod("useEmbeddedRuntime").invoke(null);
-        } catch (Throwable ignored) {
+            com.exteragram.hook.ExteraHook.useEmbeddedRuntime();
+            if (!com.exteragram.hook.ExteraHook.initialize()) {
+                FileLog.e("ExteraHook.initialize() returned false");
+            }
+        } catch (Throwable t) {
+            FileLog.e("ExteraHook embedded init failed", t);
         }
         app.exteraless.plugins.PluginsController.getInstance().init(applicationContext);
         app.exteraless.appearance.ChipFoldersController.getInstance().init();

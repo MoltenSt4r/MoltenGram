@@ -1,5 +1,7 @@
 cmake_minimum_required(VERSION 3.16)
 
+set(EXTERA_HOOK_EMBEDDED OFF CACHE BOOL "Embed exteraHook sources into tmessages")
+
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
@@ -168,6 +170,12 @@ include(${CMAKE_HOME_DIRECTORY}/voip/CMakeLists.txt)
 include_directories(${ANDROID_NDK}/sources/android/cpufeatures)
 add_library(cpufeatures ${ANDROID_NDK}/sources/android/cpufeatures/cpu-features.c)
 
+if (EXTERA_HOOK_EMBEDDED AND (ANDROID_ABI STREQUAL "arm64-v8a" OR ANDROID_ABI STREQUAL "armeabi-v7a"))
+    find_package(lsplant REQUIRED CONFIG)
+    find_package(shadowhook REQUIRED CONFIG)
+    find_package(exterahook REQUIRED CONFIG)
+endif()
+
 set(NATIVE_LIB "tmessages.49")
 
 #tmessages
@@ -188,6 +196,10 @@ add_library(${NATIVE_LIB} SHARED
         secureid_ocr.cpp
         tde2e/bridge.cpp
 )
+
+if (EXTERA_HOOK_EMBEDDED AND (ANDROID_ABI STREQUAL "arm64-v8a" OR ANDROID_ABI STREQUAL "armeabi-v7a"))
+    target_compile_definitions(${NATIVE_LIB} PRIVATE EXTERA_HOOK_EMBEDDED=1)
+endif()
 
 include(twidget/twidget.cmake)
 twidget_target_sources(${NATIVE_LIB})
@@ -344,6 +356,14 @@ target_link_libraries(${NATIVE_LIB}
         android
         OpenSLES
         cpufeatures)
+
+if (EXTERA_HOOK_EMBEDDED AND (ANDROID_ABI STREQUAL "arm64-v8a" OR ANDROID_ABI STREQUAL "armeabi-v7a"))
+    target_link_libraries(${NATIVE_LIB}
+            exterahook::exterahook
+            lsplant::lsplant
+            lsplant::dex_builder_static
+            shadowhook::shadowhook)
+endif()
 
 #if (${ANDROID_ABI} STREQUAL "x86" OR ${ANDROID_ABI} STREQUAL "x86_64")
 #    target_link_libraries(${NATIVE_LIB}

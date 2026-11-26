@@ -12,6 +12,10 @@
 #include <time.h>
 #include "twidget/twidget-bridge.h"
 
+#ifdef EXTERA_HOOK_EMBEDDED
+#include "exterahook.h"
+#endif
+
 int registerNativeTgNetFunctions(JavaVM *vm, JNIEnv *env);
 int videoOnJNILoad(JavaVM *vm, JNIEnv *env);
 int tgvoipOnJNILoad(JavaVM *vm, JNIEnv *env);
@@ -24,6 +28,12 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 	if ((*vm)->GetEnv(vm, (void **) &env, JNI_VERSION_1_6) != JNI_OK) {
 		return -1;
 	}
+
+#ifdef EXTERA_HOOK_EMBEDDED
+    if (ExteraHookJniOnLoad(vm) != JNI_VERSION_1_6) {
+        return -1;
+    }
+#endif
 
     if (videoOnJNILoad(vm, env) != JNI_TRUE) {
         return -1;
@@ -48,7 +58,9 @@ jint JNI_OnLoad(JavaVM *vm, void *reserved) {
 }
 
 void JNI_OnUnload(JavaVM *vm, void *reserved) {
-
+#ifdef EXTERA_HOOK_EMBEDDED
+    ExteraHookJniOnUnload(vm);
+#endif
 }
 
 JNIEXPORT void Java_org_telegram_messenger_Utilities_aesIgeEncryption(JNIEnv *env, jclass class, jobject buffer, jbyteArray key, jbyteArray iv, jboolean encrypt, jint offset, jint length) {

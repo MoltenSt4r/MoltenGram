@@ -143,21 +143,27 @@ public final class XposedHooks {
                         .commit();
             }
             try {
-                if (!XposedBridge.disableHiddenApiRestrictions()) {
-                    // Не фатально: для методов самого приложения restrictions не мешают.
-                    FileLog.e("XposedHooks: disableHiddenApiRestrictions() returned false");
+                com.exteragram.hook.ExteraHook.useEmbeddedRuntime();
+                if (!com.exteragram.hook.ExteraHook.initialize()) {
+                    FileLog.e("XposedHooks: ExteraHook.initialize() returned false, method hooks disabled");
+                    initOk = false;
+                } else {
+                    if (!XposedBridge.disableHiddenApiRestrictions()) {
+                        // Не фатально: для методов самого приложения restrictions не мешают.
+                        FileLog.e("XposedHooks: disableHiddenApiRestrictions() returned false");
+                    }
+                    // ART Profile Saver со временем перекомпилирует методы и сбивает
+                    // уже поставленные хуки. Гасим всегда: сюда попадают только те
+                    // запуски, где плагин действительно загружается, а хук, который
+                    // отваливается через несколько минут, неотличим от сломанного.
+                    boolean profileSaverOff = XposedBridge.disableProfileSaver();
+                    FileLog.d("XposedHooks: disableProfileSaver() -> " + profileSaverOff);
+                    initOk = true;
+                    HookGate.guardBridge();
                 }
-                // ART Profile Saver со временем перекомпилирует методы и сбивает
-                // уже поставленные хуки. Гасим всегда: сюда попадают только те
-                // запуски, где плагин действительно загружается, а хук, который
-                // отваливается через несколько минут, неотличим от сломанного.
-                boolean profileSaverOff = XposedBridge.disableProfileSaver();
-                FileLog.d("XposedHooks: disableProfileSaver() -> " + profileSaverOff);
-                initOk = true;
-                HookGate.guardBridge();
             } catch (Throwable t) {
                 initOk = false;
-                FileLog.e("XposedHooks: Aliuhook init failed, method hooks disabled", t);
+                FileLog.e("XposedHooks: exteraHook init failed, method hooks disabled", t);
             }
             if (preferences != null) {
                 final SharedPreferences.Editor editor = preferences.edit().remove(PluginsConstants.KEY_NATIVE_HOOKS_PENDING);

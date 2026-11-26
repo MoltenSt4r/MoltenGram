@@ -112,9 +112,14 @@ android {
             useLegacyPackaging = true
             pickFirsts += [
                 '**/libc++_shared.so',
-                '**/libonnxruntime.so'
+                '**/libonnxruntime.so',
+                '**/libshadowhook.so'
             ]
         }
+    }
+
+    buildFeatures {
+        prefab = true
     }
 
     // Целевые ABI. Ограничение живёт в ndk.abiFilters — этого требует Chaquopy;
@@ -220,7 +225,7 @@ android {
 
         externalNativeBuild {
             cmake {
-                arguments '-DANDROID_STL=c++_static', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', '-DCMAKE_BUILD_TYPE=Release'
+                arguments '-DANDROID_STL=c++_shared', '-DANDROID_PLATFORM=android-27', '-DANDROID_SUPPORT_FLEXIBLE_PAGE_SIZES=ON', '-DCMAKE_BUILD_TYPE=Release', '-DEXTERA_HOOK_EMBEDDED=ON'
                 System.getenv('PATH').split(File.pathSeparator).any { path ->
                     var file = Paths.get("${path}${File.separator}ccache${if (OperatingSystem.current().windows) ".exe" else ""}").toFile()
                     if (file.exists()) {
@@ -442,6 +447,7 @@ dependencies {
     // plugins engine: exteraHook + LSPlant 6.4 (Android 14/15/16 + 16KB), MVEL-фильтры, генерация классов
     implementation 'com.exteragram.hook:hook-core:1.0.0'
     implementation 'com.exteragram.hook.thirdparty:lsplant:6.4-extera.8'
+    implementation 'com.bytedance.android:shadowhook:2.0.1'
     implementation 'org.mvel:mvel2:2.5.2.Final'
     implementation 'com.linkedin.dexmaker:dexmaker:2.28.6'
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'
