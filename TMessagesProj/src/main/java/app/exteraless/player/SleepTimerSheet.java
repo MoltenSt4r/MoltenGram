@@ -77,7 +77,12 @@ public class SleepTimerSheet extends BottomSheet {
 
         LinearLayout root = new LinearLayout(context);
         root.setOrientation(LinearLayout.VERTICAL);
-        root.setPadding(dp(18), dp(8), dp(18), dp(12));
+        root.setPadding(dp(20), dp(8), dp(20), dp(16));
+
+        // ---- Drag handle ----
+        View handle = new View(context);
+        handle.setBackground(Theme.createRoundRectDrawable(dp(2), Theme.multAlpha(textColor, 0.28f)));
+        root.addView(handle, LayoutHelper.createLinear(36, 4, Gravity.CENTER_HORIZONTAL, 0, 2, 0, 12));
 
         // ---- Header ----
         FrameLayout header = new FrameLayout(context);
@@ -85,59 +90,59 @@ public class SleepTimerSheet extends BottomSheet {
         titles.setOrientation(LinearLayout.VERTICAL);
         TextView overline = new TextView(context);
         overline.setText(getString(R.string.OESleepPlayback).toUpperCase(Locale.getDefault()));
-        overline.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 10);
+        overline.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 11);
         overline.setLetterSpacing(0.12f);
         overline.setTypeface(AndroidUtilities.bold());
         overline.setTextColor(subColor);
         titles.addView(overline);
         TextView title = new TextView(context);
         title.setText(getString(R.string.OEAppearancePlayerSleepTimer));
-        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 22);
+        title.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 24);
         title.setTextColor(textColor);
         titles.addView(title, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 0));
-        header.addView(titles, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 0, 0, 48, 0));
+        header.addView(titles, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, Gravity.LEFT | Gravity.CENTER_VERTICAL, 0, 0, 52, 0));
 
         ImageView moon = new ImageView(context);
-        PlayerIcon moonIcon = PlayerIcon.stroke(PlayerIcon.SLEEP, 20);
+        PlayerIcon moonIcon = PlayerIcon.stroke(PlayerIcon.SLEEP, 22);
         moonIcon.setColor(textColor);
         moon.setImageDrawable(moonIcon);
         moon.setScaleType(ImageView.ScaleType.CENTER);
-        moon.setBackground(Theme.createCircleDrawable(dp(40), Theme.multAlpha(textColor, 0.08f)));
-        header.addView(moon, LayoutHelper.createFrame(40, 40, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
-        root.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 4, 0, 10));
+        moon.setBackground(Theme.createCircleDrawable(dp(44), Theme.multAlpha(textColor, 0.08f)));
+        header.addView(moon, LayoutHelper.createFrame(44, 44, Gravity.RIGHT | Gravity.CENTER_VERTICAL));
+        root.addView(header, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, 2, 0, 12));
 
         // ---- Dial ----
         FrameLayout dialFrame = new FrameLayout(context);
         dial = new DialView(context);
-        dialFrame.addView(dial, LayoutHelper.createFrame(200, 200, Gravity.CENTER));
+        dialFrame.addView(dial, LayoutHelper.createFrame(228, 228, Gravity.CENTER));
 
         LinearLayout center = new LinearLayout(context);
         center.setOrientation(LinearLayout.VERTICAL);
         center.setGravity(Gravity.CENTER_HORIZONTAL);
         valueText = new AnimatedTextView(context, false, true, true);
         valueText.setAnimationProperties(0.6f, 0, 320, CubicBezierInterpolator.EASE_OUT_QUINT);
-        valueText.setTextSize(dp(44));
+        valueText.setTextSize(dp(54));
         valueText.setTypeface(AndroidUtilities.bold());
         valueText.setTextColor(textColor);
         valueText.setGravity(Gravity.CENTER);
-        center.addView(valueText, LayoutHelper.createLinear(120, 52, Gravity.CENTER_HORIZONTAL));
+        center.addView(valueText, LayoutHelper.createLinear(140, 62, Gravity.CENTER_HORIZONTAL));
         TextView minLabel = new TextView(context);
         minLabel.setText(getString(R.string.OESleepMin));
         minLabel.setTypeface(Typeface.MONOSPACE);
-        minLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+        minLabel.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
         minLabel.setTextColor(subColor);
         center.addView(minLabel, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER_HORIZONTAL));
         dialFrame.addView(center, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.CENTER));
-        root.addView(dialFrame, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 210, 0, 0, 0, 0));
+        root.addView(dialFrame, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 236, 0, 0, 0, 0));
 
         // ---- Stops at ----
         stopsAtText = new AnimatedTextView(context, false, true, false);
         stopsAtText.setAnimationProperties(0.4f, 0, 260, CubicBezierInterpolator.EASE_OUT_QUINT);
-        stopsAtText.setTextSize(dp(11));
+        stopsAtText.setTextSize(dp(12));
         stopsAtText.setTypeface(Typeface.MONOSPACE);
         stopsAtText.setTextColor(subColor);
         stopsAtText.setGravity(Gravity.CENTER);
-        root.addView(stopsAtText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 20, 0, 6, 0, 12));
+        root.addView(stopsAtText, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 22, 0, 8, 0, 16));
 
         // ---- Chips ----
         HorizontalScrollView scroll = new HorizontalScrollView(context);
@@ -150,25 +155,25 @@ public class SleepTimerSheet extends BottomSheet {
             TextView chip = new TextView(context);
             chip.setText(value >= 60 && value % 60 == 0 ? (value / 60) + "h" : value + "m");
             chip.setTypeface(Typeface.MONOSPACE);
-            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12);
+            chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
             chip.setGravity(Gravity.CENTER);
-            chip.setPadding(dp(12), 0, dp(12), 0);
+            chip.setPadding(dp(16), 0, dp(16), 0);
             chip.setOnClickListener(v -> {
                 v.performHapticFeedback(HapticFeedbackConstants.KEYBOARD_TAP);
                 setMinutes(value, true);
             });
             chips[i] = chip;
-            chipRow.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 6, 0));
+            chipRow.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 38, 0, 0, 8, 0));
         }
         scroll.addView(chipRow);
-        root.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 32, 0, 0, 0, 14));
+        root.addView(scroll, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 38, 0, 0, 0, 18));
 
         // ---- Toggles ----
         root.addView(toggleRow(context, rp, PlayerIcon.NOTE, getString(R.string.OESleepFinishSong), getString(R.string.OESleepFinishSongDesc),
-                timer.isFinishSong(), timer::setFinishSong), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 52, 0, 0, 0, 4));
+                timer.isFinishSong(), timer::setFinishSong), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 62, 0, 0, 0, 8));
         root.addView(toggleRow(context, rp, "M11 5L6 9H2v6h4l5 4V5zM15.5 8.5a5 5 0 0 1 0 7M19 5a10 10 0 0 1 0 14",
                 getString(R.string.OESleepFadeOut), getString(R.string.OESleepFadeOutDesc),
-                timer.isFadeOut(), timer::setFadeOut), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 52, 0, 0, 0, 14));
+                timer.isFadeOut(), timer::setFadeOut), LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 62, 0, 0, 0, 18));
 
         // ---- Buttons ----
         LinearLayout buttons = new LinearLayout(context);
@@ -186,9 +191,9 @@ public class SleepTimerSheet extends BottomSheet {
             SleepTimer.getInstance().start(minutes);
             dismiss();
         });
-        buttons.addView(cancel, LayoutHelper.createLinear(0, 44, 1f, 0, 0, 6, 0));
-        buttons.addView(start, LayoutHelper.createLinear(0, 44, 1f, 6, 0, 0, 0));
-        root.addView(buttons, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 44));
+        buttons.addView(cancel, LayoutHelper.createLinear(0, 50, 1f, 0, 0, 5, 0));
+        buttons.addView(start, LayoutHelper.createLinear(0, 50, 1f, 5, 0, 0, 0));
+        root.addView(buttons, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, 50));
 
         setCustomView(root);
         setBackgroundColor(bgColor);
@@ -208,19 +213,19 @@ public class SleepTimerSheet extends BottomSheet {
         LinearLayout row = new LinearLayout(context);
         row.setOrientation(LinearLayout.HORIZONTAL);
         row.setGravity(Gravity.CENTER_VERTICAL);
-        row.setPadding(dp(10), 0, dp(12), 0);
+        row.setPadding(dp(14), 0, dp(14), 0);
         GradientDrawable bg = new GradientDrawable();
         bg.setColor(Theme.multAlpha(textColor, 0.05f));
-        bg.setCornerRadius(dp(16));
+        bg.setCornerRadius(dp(20));
         row.setBackground(bg);
 
         ImageView icon = new ImageView(context);
-        PlayerIcon d = PlayerIcon.stroke(iconPath, 16);
+        PlayerIcon d = PlayerIcon.stroke(iconPath, 18);
         d.setColor(textColor);
         icon.setImageDrawable(d);
         icon.setScaleType(ImageView.ScaleType.CENTER);
-        icon.setBackground(Theme.createCircleDrawable(dp(32), Theme.multAlpha(textColor, 0.08f)));
-        row.addView(icon, LayoutHelper.createLinear(32, 32, 0, 0, 12, 0));
+        icon.setBackground(Theme.createCircleDrawable(dp(38), Theme.multAlpha(textColor, 0.08f)));
+        row.addView(icon, LayoutHelper.createLinear(38, 38, 0, 0, 14, 0));
 
         LinearLayout texts = new LinearLayout(context);
         texts.setOrientation(LinearLayout.VERTICAL);
@@ -268,10 +273,10 @@ public class SleepTimerSheet extends BottomSheet {
         TextView tv = new TextView(context);
         tv.setText(text);
         tv.setGravity(Gravity.CENTER);
-        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 14);
+        tv.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
         tv.setTypeface(AndroidUtilities.bold());
         tv.setTextColor(fg);
-        tv.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(22), bg, Theme.multAlpha(fg, 0.15f)));
+        tv.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(25), bg, Theme.multAlpha(fg, 0.15f)));
         return tv;
     }
 
@@ -289,7 +294,7 @@ public class SleepTimerSheet extends BottomSheet {
         for (int i = 0; i < chips.length; i++) {
             boolean sel = PRESETS[i] == value;
             chips[i].setTextColor(sel ? onAccent : textColor);
-            chips[i].setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(16), sel ? accent : Theme.multAlpha(textColor, 0.06f), Theme.multAlpha(textColor, 0.12f)));
+            chips[i].setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(19), sel ? accent : Theme.multAlpha(textColor, 0.06f), Theme.multAlpha(textColor, 0.12f)));
         }
         dial.setValue(value, animated);
     }
@@ -309,15 +314,14 @@ public class SleepTimerSheet extends BottomSheet {
         DialView(Context context) {
             super(context);
             trackPaint.setStyle(Paint.Style.STROKE);
-            trackPaint.setStrokeWidth(dp(4));
-            trackPaint.setColor(Theme.multAlpha(textColor, 0.12f));
+            trackPaint.setStrokeWidth(dp(8));
+            trackPaint.setColor(Theme.multAlpha(textColor, 0.14f));
             activePaint.setStyle(Paint.Style.STROKE);
-            activePaint.setStrokeWidth(dp(4));
+            activePaint.setStrokeWidth(dp(8));
             activePaint.setStrokeCap(Paint.Cap.ROUND);
             activePaint.setColor(accent);
-            tickPaint.setStrokeWidth(dp(1.2f));
             tickPaint.setStrokeCap(Paint.Cap.ROUND);
-            labelPaint.setTextSize(dp(8));
+            labelPaint.setTextSize(dp(10));
             labelPaint.setTypeface(Typeface.MONOSPACE);
             labelPaint.setTextAlign(Paint.Align.CENTER);
             labelPaint.setColor(subColor);
@@ -342,7 +346,7 @@ public class SleepTimerSheet extends BottomSheet {
                 shown = target;
             }
             float cx = getWidth() / 2f, cy = getHeight() / 2f;
-            float r = Math.min(cx, cy) - dp(12);
+            float r = Math.min(cx, cy) - dp(16);
             arc.set(cx - r, cy - r, cx + r, cy + r);
             canvas.drawCircle(cx, cy, r, trackPaint);
 
@@ -350,8 +354,9 @@ public class SleepTimerSheet extends BottomSheet {
             for (int m = 0; m < MAX_MIN; m += 5) {
                 double a = Math.toRadians(m * 3 - 90);
                 boolean major = m % 15 == 0;
-                float r1 = r - dp(9), r2 = r - dp(major ? 16 : 13);
-                tickPaint.setColor(Theme.multAlpha(textColor, major ? 0.45f : 0.22f));
+                float r1 = r - dp(10), r2 = r - dp(major ? 18 : 15);
+                tickPaint.setStrokeWidth(dp(major ? 1.8f : 1.2f));
+                tickPaint.setColor(Theme.multAlpha(textColor, major ? 0.50f : 0.25f));
                 canvas.drawLine(cx + (float) Math.cos(a) * r1, cy + (float) Math.sin(a) * r1,
                         cx + (float) Math.cos(a) * r2, cy + (float) Math.sin(a) * r2, tickPaint);
             }
@@ -367,13 +372,13 @@ public class SleepTimerSheet extends BottomSheet {
             canvas.drawArc(arc, -90, sweep, false, activePaint);
             double ta = Math.toRadians(sweep - 90);
             float tx = cx + (float) Math.cos(ta) * r, ty = cy + (float) Math.sin(ta) * r;
-            canvas.drawCircle(tx, ty, dp(tracking ? 11 : 9), thumbPaint);
-            canvas.drawCircle(tx, ty, dp(3), thumbDotPaint);
+            canvas.drawCircle(tx, ty, dp(tracking ? 13 : 11), thumbPaint);
+            canvas.drawCircle(tx, ty, dp(3.5f), thumbDotPaint);
         }
 
         private void drawLabel(Canvas canvas, float cx, float cy, float r, int m, String text) {
             double a = Math.toRadians(m * 3 - 90);
-            float lr = r - dp(m == 0 || m == 5 ? 24 : 26);
+            float lr = r - dp(m == 0 || m == 5 ? 27 : 29);
             float x = cx + (float) Math.cos(a) * lr;
             float y = cy + (float) Math.sin(a) * lr - (labelPaint.descent() + labelPaint.ascent()) / 2f;
             if (m == 0) x -= dp(6);
