@@ -53,6 +53,12 @@ public final class HookGate {
             return available;
         }
         try {
+            Class.forName("com.exteragram.hook.ExteraHook");
+            available = false;
+            return false;
+        } catch (ClassNotFoundException ignored) {
+        }
+        try {
             Class<?> bridge = Class.forName("de.robv.android.xposed.XposedBridge");
             Class<?> hookInfo = Class.forName("de.robv.android.xposed.XposedBridge$HookInfo");
             Class<?> callbackSet = Class.forName("de.robv.android.xposed.XposedBridge$CopyOnWriteSortedSet");

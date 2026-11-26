@@ -306,6 +306,10 @@ public class ApplicationLoader extends Application implements CameraXConfig.Prov
             // умолчанию — патчим assetName после инициализации конфигов.
             org.telegram.ui.ActionBar.Theme.reloadMonetThemes();
         }
+        try {
+            Class.forName("com.exteragram.hook.ExteraHook").getMethod("useEmbeddedRuntime").invoke(null);
+        } catch (Throwable ignored) {
+        }
         app.exteraless.plugins.PluginsController.getInstance().init(applicationContext);
         app.exteraless.appearance.ChipFoldersController.getInstance().init();
         app.exteraless.chats.TextAnimationController.getInstance().init();

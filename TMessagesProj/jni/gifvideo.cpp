@@ -36,6 +36,11 @@ static const std::string av_make_error_str(int errnum) {
 #define av_err2str(errnum) av_make_error_str(errnum).c_str()
 #define FFMPEG_AVSEEK_SIZE 0x10000
 
+// AnimatedFileDrawable.java
+// metaData[0] > 3840 || metaData[1] > 3840
+// 3840 * 3840 * 4 = 58982400; round up to 60MB
+#define MALLOC_LIMIT 60 * 1024 * 1024
+
 jclass jclass_AnimatedFileDrawableStream;
 jmethodID jclass_AnimatedFileDrawableStream_read;
 jmethodID jclass_AnimatedFileDrawableStream_cancel;
@@ -544,6 +549,10 @@ extern "C" JNIEXPORT jlong JNICALL Java_org_telegram_ui_Components_AnimatedFileN
         info->fd = open(info->src, O_RDONLY, S_IRUSR);
 
         info->ioBuffer = (unsigned char *) av_malloc(64 * 1024);
+        if (info->ioBuffer == nullptr) {
+            delete info;
+            return 0;
+        }
         info->ioContext = avio_alloc_context(info->ioBuffer, 64 * 1024, 0, info, readCallback, nullptr, seekCallback);
         if (info->ioContext == nullptr) {
             // avio didn't take ownership of the buffer; free it here. After a
@@ -1002,6 +1011,7 @@ extern "C" JNIEXPORT jint JNICALL Java_org_telegram_ui_Components_AnimatedFileNa
 
 extern "C" jint videoOnJNILoad(JavaVM *vm, JNIEnv *env) {
     //av_log_set_callback(custom_log);
+    av_max_alloc(MALLOC_LIMIT);
     DEBUG_REF("gifvideo.cpp AnimatedFileDrawableStream ref");
     jclass_AnimatedFileDrawableStream = (jclass) env->NewGlobalRef(env->FindClass("org/telegram/messenger/AnimatedFileDrawableStream"));
     if (jclass_AnimatedFileDrawableStream == 0) {

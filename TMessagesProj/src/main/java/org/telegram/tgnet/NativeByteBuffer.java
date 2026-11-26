@@ -6,6 +6,7 @@ import org.telegram.messenger.Utilities;
 
 import java.nio.ByteBuffer;
 import java.nio.ByteOrder;
+import java.nio.charset.StandardCharsets;
 import java.util.LinkedList;
 
 public class NativeByteBuffer extends AbstractSerializedData {
@@ -16,7 +17,8 @@ public class NativeByteBuffer extends AbstractSerializedData {
     private int len;
     public boolean reused = true;
 
-    private static final ThreadLocal<LinkedList<NativeByteBuffer>> addressWrappers = new ThreadLocal<LinkedList<NativeByteBuffer>>() {
+    private static final int MAX_POOLED_WRAPPERS = 64;
+    private static final ThreadLocal<LinkedList<NativeByteBuffer>> addressWrappers = new ThreadLocal<>() {
         @Override
         protected LinkedList<NativeByteBuffer> initialValue() {
             return new LinkedList<>();
@@ -544,7 +546,7 @@ public class NativeByteBuffer extends AbstractSerializedData {
                 buffer.get();
                 i++;
             }
-            return new String(b, "UTF-8");
+            return new String(b, StandardCharsets.UTF_8);
         } catch (Exception e) {
             if (exception) {
                 throw new RuntimeException("read string error", e);
@@ -648,8 +650,19 @@ public class NativeByteBuffer extends AbstractSerializedData {
     }
 
     public void reuse() {
+        reuse(false);
+    }
+
+    public void reuse(boolean fromFinalize) {
         if (address != 0) {
-            addressWrappers.get().add(this);
+            // we don't want to store instances inside thread_local
+            // of the FinalizerThread, because they won't ever be used
+            if (!fromFinalize) {
+                LinkedList<NativeByteBuffer> queue = addressWrappers.get();
+                if (queue.size() < MAX_POOLED_WRAPPERS) {
+                    queue.add(this);
+                }
+            }
             reused = true;
             native_reuse(address);
         }
@@ -663,7 +676,7 @@ public class NativeByteBuffer extends AbstractSerializedData {
     @Override
     protected void finalize() throws Throwable {
         if (!reused) {
-            reuse();
+            reuse(true);
         }
         super.finalize();
     }

@@ -218,6 +218,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             PythonPluginsEngine.getInstance().ensureStarted(appContext, ok -> {
                 if (ok) {
                     rescanAndLoadEnabled();
+                    executeOnAppEvent(PluginsConstants.EVENT_APP_START);
                 }
             });
         } else if (!enabled) {
@@ -894,7 +895,12 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             return true;
         }
         if (enabled && !p.loaded && !isSafeMode()) {
-            return loadPluginInternal(p);
+            boolean loaded = loadPluginInternal(p);
+            if (!loaded) {
+                p.enabled = false;
+                preferences.edit().putBoolean(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX + id, false).apply();
+            }
+            return loaded;
         } else if (!enabled && p.loaded) {
             unregisterPluginHooks(id);
             final PluginToggleTrace trace = PluginToggleTrace.current();

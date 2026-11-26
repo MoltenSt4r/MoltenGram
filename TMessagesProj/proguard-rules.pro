@@ -225,6 +225,7 @@
 -keep interface app.exteraless.appearance.AltSeekbar$OnDrag { *; }
 -keep class com.exteragram.messenger.** { *; }
 -keep class de.robv.android.xposed.** { *; }
+-keep class com.exteragram.hook.** { *; }
 -keep class kotlin.** { *; }
 -keep class com.google.android.material.** { *; }
 -keep class com.google.zxing.** { *; }

@@ -129,7 +129,7 @@ void Connection::onReceivedData(NativeByteBuffer *buffer) {
             currentDatacenter->storeCurrentAddressAndPortNum();
             isTryingNextPort = false;
             if (connectionType == ConnectionTypeProxy) {
-                setTimeout(10);
+                setTimeout(5);
             } else if (connectionType == ConnectionTypePush) {
                 setTimeout(60 * 15);
             } else if (connectionType == ConnectionTypeUpload) {
@@ -366,7 +366,7 @@ void Connection::connect() {
     hasSomeDataSinceLastConnect = false;
     openConnection(hostAddress, hostPort, secret, ipv6 != 0, ConnectionsManager::getInstance(currentDatacenter->instanceNum).currentNetworkType);
     if (connectionType == ConnectionTypeProxy) {
-        setTimeout(10);
+        setTimeout(5);
     } else if (connectionType == ConnectionTypePush) {
         if (isTryingNextPort) {
             setTimeout(20);
@@ -700,13 +700,18 @@ void Connection::onDisconnectedInternal(int32_t reason, int32_t error) {
                 failedConnectionCount = 0;
             }
         }
-        if (error == 0x68 || error == 0x71) {
+        if (error == 0x68 || error == 0x71 || error == 0x6f) {
             if (connectionType != ConnectionTypeProxy) {
                 waitForReconnectTimer = true;
                 reconnectTimer->setTimeout(lastReconnectTimeout, false);
                 lastReconnectTimeout *= 2;
                 if (lastReconnectTimeout > 400) {
                     lastReconnectTimeout = 400;
+                }
+                auto isProxy = !overrideProxyAddress.empty() || !ConnectionsManager::getInstance(currentDatacenter->instanceNum).proxyAddress.empty();
+                if (isProxy && error == 0x6f) {
+                    lastReconnectTimeout *= 3;
+                    if (LOGS_ENABLED) DEBUG_E("connection(%p, account%u, dc%u, type %d, error 0x%x) proxy is unreachable, sleeping for %ums", this, currentDatacenter->instanceNum, currentDatacenter->getDatacenterId(), connectionType, error, lastReconnectTimeout);
                 }
                 reconnectTimer->start();
             }

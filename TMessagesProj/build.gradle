@@ -439,8 +439,9 @@ dependencies {
     // translator from nekogram
     implementation 'app.nekogram.translator:translator:1.6.1'
 
-    // plugins engine: Xposed-совместимые хуки (LSPlant), MVEL-фильтры, генерация классов
-    implementation 'com.aliucord:Aliuhook:1.1.4'
+    // plugins engine: exteraHook + LSPlant 6.4 (Android 14/15/16 + 16KB), MVEL-фильтры, генерация классов
+    implementation 'com.exteragram.hook:hook-core:1.0.0'
+    implementation 'com.exteragram.hook.thirdparty:lsplant:6.4-extera.8'
     implementation 'org.mvel:mvel2:2.5.2.Final'
     implementation 'com.linkedin.dexmaker:dexmaker:2.28.6'
     implementation 'org.lsposed.hiddenapibypass:hiddenapibypass:6.1'

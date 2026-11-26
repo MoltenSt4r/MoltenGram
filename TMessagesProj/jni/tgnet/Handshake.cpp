@@ -653,7 +653,9 @@ void Handshake::processHandshakeResponse_serverDHParams(TLObject *message, int64
         bool error = false;
         NativeByteBuffer *answerWithHash = new NativeByteBuffer(result->encrypted_answer->bytes + SHA_DIGEST_LENGTH, result->encrypted_answer->length - SHA_DIGEST_LENGTH);
         uint32_t constructor = answerWithHash->readUint32(&error);
-        TL_server_DH_inner_data *dhInnerData = TL_server_DH_inner_data::TLdeserialize(answerWithHash, constructor, currentDatacenter->instanceNum, error);
+        // fix official memory leak
+        // TLdeserialize allocates new pointer, we have to either delete it explicitly or simply wrap to unique_ptr
+        std::unique_ptr<TL_server_DH_inner_data> dhInnerData(TL_server_DH_inner_data::TLdeserialize(answerWithHash, constructor, currentDatacenter->instanceNum, error));
         delete answerWithHash;
 
         if (error || dhInnerData == nullptr) {
