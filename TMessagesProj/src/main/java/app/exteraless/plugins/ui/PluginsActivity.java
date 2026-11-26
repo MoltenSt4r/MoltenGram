@@ -72,6 +72,7 @@ public class PluginsActivity extends BaseFragment {
     private static final int REQUEST_CODE_IMPORT_PLUGINS = 9801;
 
     private static final int ID_ENGINE_TOGGLE = -1;
+    private static final int ID_SAFE_MODE_BANNER = -2;
 
     private static final int REQUEST_CODE_PICK_PLUGIN = 9781;
 
@@ -312,6 +313,11 @@ public class PluginsActivity extends BaseFragment {
         if (!engineEnabled) {
             return;
         }
+        if (controller.isSafeMode()) {
+            items.add(UItem.asButtonWithSubtext(ID_SAFE_MODE_BANNER, R.drawable.msg_info,
+                    getString(R.string.PluginsSafeMode),
+                    getString(R.string.PluginsSafeModeEnabledNow), 16, 0).red());
+        }
         items.add(UItem.asSpace(dp(8)));
 
         List<Plugin> visible = visiblePlugins();
@@ -494,9 +500,8 @@ public class PluginsActivity extends BaseFragment {
         }
         controller.setPluginEnabled(plugin.id, !plugin.enabled, failedId -> {
             Plugin updated = controller.getPlugin(plugin.id);
-            boolean enabled = updated != null && updated.enabled;
             updateRows();
-            if (enabled && updated.loadError != null && getParentActivity() != null) {
+            if (failedId != null && updated != null && updated.loadError != null && getParentActivity() != null) {
                 showPluginInfo(updated);
             }
         });
@@ -530,6 +535,30 @@ public class PluginsActivity extends BaseFragment {
                             }
                         }));
             }
+            return;
+        }
+        if (item.id == ID_SAFE_MODE_BANNER) {
+            controller.setSafeMode(false);
+            updateRows();
+            PythonPluginsEngine engine = PythonPluginsEngine.getInstance();
+            engine.ensureStarted(
+                    org.telegram.messenger.ApplicationLoader.applicationContext,
+                    ok -> engine.runOnEngine(() -> {
+                        if (ok) {
+                            controller.rescanAndLoadEnabled();
+                            controller.executeOnAppEvent(app.exteraless.plugins.PluginsConstants.EVENT_APP_START);
+                        }
+                        AndroidUtilities.runOnUIThread(() -> {
+                            if (getParentActivity() != null) {
+                                refreshPlugins(false);
+                                updateRows();
+                                BulletinFactory.of(this)
+                                        .createSimpleBulletin(R.raw.contact_check,
+                                                getString(R.string.PluginsSafeModeDisabledNow))
+                                        .show();
+                            }
+                        });
+                    }));
             return;
         }
         // По карточке кликов не ждём: у неё свои кнопки и свой тумблер.

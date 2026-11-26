@@ -145,6 +145,17 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (!isEngineEnabled()) {
             return;
         }
+        if (isSafeMode() && preferences.contains(PluginsConstants.KEY_SAFE_MODE_STAMP)) {
+            long stamp = installStamp();
+            if (preferences.getLong(PluginsConstants.KEY_SAFE_MODE_STAMP, 0) != stamp) {
+                preferences.edit()
+                        .remove(PluginsConstants.KEY_SAFE_MODE)
+                        .remove(PluginsConstants.KEY_SAFE_MODE_AUTO)
+                        .remove(PluginsConstants.KEY_SAFE_MODE_STAMP)
+                        .apply();
+                FileLog.w("PluginsController: app was updated, clearing auto safe mode");
+            }
+        }
         String crashed = watchdog.recoverAfterCrash();
         if (crashed != null) {
             FileLog.e("PluginsController: disabled crashed plugin " + crashed);
@@ -153,6 +164,7 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
             preferences.edit()
                     .putBoolean(PluginsConstants.KEY_SAFE_MODE, true)
                     .putBoolean(PluginsConstants.KEY_SAFE_MODE_AUTO, true)
+                    .putLong(PluginsConstants.KEY_SAFE_MODE_STAMP, installStamp())
                     .apply();
             FileLog.e("PluginsController: repeated crashes right after launch, starting in safe mode");
         }
@@ -234,7 +246,19 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         if (PluginSinkGate.refuseFromPlugin("setSafeMode", false)) {
             return;
         }
-        preferences.edit().putBoolean(PluginsConstants.KEY_SAFE_MODE, safeMode).apply();
+        preferences.edit()
+                .putBoolean(PluginsConstants.KEY_SAFE_MODE, safeMode)
+                .remove(PluginsConstants.KEY_SAFE_MODE_AUTO)
+                .remove(PluginsConstants.KEY_SAFE_MODE_STAMP)
+                .apply();
+    }
+
+    private long installStamp() {
+        try {
+            return appContext.getPackageManager().getPackageInfo(appContext.getPackageName(), 0).lastUpdateTime;
+        } catch (Throwable t) {
+            return 0;
+        }
     }
 
     public boolean isUnsafeMode() {
@@ -891,8 +915,20 @@ public class PluginsController extends com.exteragram.messenger.plugins.PluginsC
         }
         preferences.edit().putBoolean(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX + id, enabled).apply();
         p.enabled = enabled;
-        if (!PythonPluginsEngine.getInstance().isStarted()) {
-            return true;
+        PythonPluginsEngine engine = PythonPluginsEngine.getInstance();
+        if (!engine.isStarted()) {
+            if (!enabled) {
+                return true;
+            }
+            if (!engine.isEngineThread() && !engine.isStartFailed()) {
+                awaitEngineStarted();
+            }
+            if (!engine.isStarted()) {
+                p.enabled = false;
+                p.loadError = "Python engine failed to start";
+                preferences.edit().putBoolean(PluginsConstants.KEY_PLUGIN_ENABLED_PREFIX + id, false).apply();
+                return false;
+            }
         }
         if (enabled && !p.loaded && !isSafeMode()) {
             boolean loaded = loadPluginInternal(p);

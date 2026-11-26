@@ -59,9 +59,11 @@ public class PythonPluginsEngine extends com.exteragram.messenger.plugins.Python
         return instance;
     }
 
+    private volatile Thread engineThread;
     private final ExecutorService executor = Executors.newSingleThreadExecutor(r -> {
         Thread t = new Thread(r, "plugins-engine");
         t.setPriority(Thread.NORM_PRIORITY - 1);
+        engineThread = t;
         return t;
     });
 
@@ -78,6 +80,14 @@ public class PythonPluginsEngine extends com.exteragram.messenger.plugins.Python
 
     public boolean isStarted() {
         return started;
+    }
+
+    public boolean isStartFailed() {
+        return startFailed;
+    }
+
+    public boolean isEngineThread() {
+        return Thread.currentThread() == engineThread;
     }
 
     /**
