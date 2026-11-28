@@ -266,8 +266,11 @@
 -keep class org.telegram.ui.Components.EditTextBoldCursor** { *; }
 -keep class org.telegram.ui.Components.EditTextEffects** { *; }
 -keep class org.telegram.ui.Components.EditTextCaption** { *; }
--keep class org.telegram.ui.Components.ChatActivityEditTextCaption** { *; }
+-keep class org.telegram.ui.Components.ChatActivityEnterView$ChatActivityEditTextCaption** { *; }
 -keep class org.telegram.ui.DialogsActivity** { *; }
+-keep class org.telegram.ui.ActionBar.Theme { *; }
+-keep class org.telegram.ui.ActionBar.MonetAccentHelper { *; }
+-keep class com.exteragram.messenger.utils.ui.MonetUtils { *; }
 
 # Extera / MoltenGram custom features (Player, Plugins, Appearance)
 -keep class app.exteraless.** { *; }

@@ -7665,6 +7665,7 @@ public class LaunchActivity extends BasePermissionsActivity implements INavigati
         }
         // Check Monet color changes
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+            com.exteragram.messenger.utils.ui.MonetUtils.registerReceiver(this);
             MonetHelper.registerOverlayReceiver();
             MonetHelper.refreshMonetThemeIfChanged();
         }

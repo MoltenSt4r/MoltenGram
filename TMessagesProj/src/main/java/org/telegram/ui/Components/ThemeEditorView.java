@@ -48,6 +48,7 @@ import android.text.Spanned;
 import android.text.TextUtils;
 import android.text.TextWatcher;
 import android.text.style.ForegroundColorSpan;
+import android.util.SparseIntArray;
 import android.util.TypedValue;
 import android.view.Gravity;
 import android.view.KeyEvent;
@@ -182,6 +183,18 @@ public class ThemeEditorView {
     private EditorAlert editorAlert;
 
     private Theme.ThemeInfo themeInfo;
+    private final SparseIntArray sessionInitialColors = new SparseIntArray();
+
+    private boolean isSessionModified(int key, int currentColor) {
+        if (key < 0 || key == Theme.key_chat_wallpaper) {
+            return false;
+        }
+        int idx = sessionInitialColors.indexOfKey(key);
+        if (idx < 0) {
+            return false;
+        }
+        return sessionInitialColors.valueAt(idx) != currentColor;
+    }
 
     @SuppressLint("StaticFieldLeak")
     private static volatile ThemeEditorView Instance = null;
@@ -190,6 +203,7 @@ public class ThemeEditorView {
     }
 
     public void destroy() {
+        sessionInitialColors.clear();
         wallpaperUpdater.cleanup();
         if (parentActivity == null || windowView == null) {
             return;
@@ -351,7 +365,7 @@ public class ThemeEditorView {
                         } else {
                             if (listView.getAdapter() != listAdapter) {
                                 int top = getCurrentTop();
-                                searchEmptyView.setText(isRuUi ? "Нет элементов в этой категории" : "No colors in this category");
+                                updateCategoryEmptyViewText();
                                 searchEmptyView.showTextView();
                                 listView.setAdapter(listAdapter);
                                 listAdapter.rebuild();
@@ -439,6 +453,7 @@ public class ThemeEditorView {
             private class SwatchView extends View {
                 private final Paint fillPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+                private final Paint innerRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
                 private final Paint checkerLight = new Paint(Paint.ANTI_ALIAS_FLAG);
                 private final Paint checkerDark = new Paint(Paint.ANTI_ALIAS_FLAG);
                 private final android.graphics.Path clipPath = new android.graphics.Path();
@@ -452,8 +467,11 @@ public class ThemeEditorView {
                     this.circle = circle;
                     this.cornerDp = cornerDp;
                     strokePaint.setStyle(Paint.Style.STROKE);
-                    strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
-                    strokePaint.setColor(palette.dark ? 0x3CFFFFFF : 0x28000000);
+                    strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1.1f));
+                    innerRingPaint.setStyle(Paint.Style.STROKE);
+                    innerRingPaint.setStrokeWidth(AndroidUtilities.dpf2(0.95f));
+                    strokePaint.setColor(palette.dark ? 0x4EFFFFFF : 0x2E000000);
+                    innerRingPaint.setColor(palette.dark ? 0x3C000000 : 0x4CFFFFFF);
                     checkerLight.setColor(palette.dark ? 0xFF3A404A : 0xFFFFFFFF);
                     checkerDark.setColor(palette.dark ? 0xFF282D35 : 0xFFD8DEE6);
                 }
@@ -494,11 +512,17 @@ public class ThemeEditorView {
                     fillPaint.setColor(swatchColor);
                     if (circle) {
                         canvas.drawCircle(w / 2f, h / 2f, rad, fillPaint);
-                        canvas.drawCircle(w / 2f, h / 2f, rad - AndroidUtilities.dpf2(0.6f), strokePaint);
+                        canvas.drawCircle(w / 2f, h / 2f, rad - AndroidUtilities.dpf2(1.4f), innerRingPaint);
+                        canvas.drawCircle(w / 2f, h / 2f, rad - AndroidUtilities.dpf2(0.5f), strokePaint);
                     } else {
                         canvas.drawRoundRect(bounds, rad, rad, fillPaint);
-                        bounds.inset(AndroidUtilities.dpf2(0.6f), AndroidUtilities.dpf2(0.6f));
-                        canvas.drawRoundRect(bounds, rad, rad, strokePaint);
+                        bounds.inset(AndroidUtilities.dpf2(1.4f), AndroidUtilities.dpf2(1.4f));
+                        float innerRad = Math.max(1f, rad - AndroidUtilities.dpf2(1.4f));
+                        canvas.drawRoundRect(bounds, innerRad, innerRad, innerRingPaint);
+                        bounds.set(0, 0, w, h);
+                        bounds.inset(AndroidUtilities.dpf2(0.5f), AndroidUtilities.dpf2(0.5f));
+                        float outerRad = Math.max(1f, rad - AndroidUtilities.dpf2(0.5f));
+                        canvas.drawRoundRect(bounds, outerRad, outerRad, strokePaint);
                     }
                 }
             }
@@ -1369,6 +1393,9 @@ public class ThemeEditorView {
 
             chipsScrollView = new HorizontalScrollView(context);
             chipsScrollView.setHorizontalScrollBarEnabled(false);
+            chipsScrollView.setHorizontalFadingEdgeEnabled(true);
+            chipsScrollView.setFadingEdgeLength(AndroidUtilities.dp(20));
+            chipsScrollView.setOverScrollMode(View.OVER_SCROLL_NEVER);
             chipsScrollView.setClipToPadding(false);
             chipsScrollView.setPadding(AndroidUtilities.dp(14), 0, AndroidUtilities.dp(14), 0);
             frameLayout.addView(chipsScrollView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, 44, Gravity.TOP | Gravity.LEFT, 0, 56, 0, 0));
@@ -1446,7 +1473,7 @@ public class ThemeEditorView {
             searchEmptyView.setShowAtCenter(true);
             searchEmptyView.showTextView();
             searchEmptyView.setTextColor(palette.textSecondary);
-            searchEmptyView.setText(LocaleController.getString(R.string.NoResult));
+            updateCategoryEmptyViewText();
             listView.setEmptyView(searchEmptyView);
             containerView.addView(searchEmptyView, LayoutHelper.createFrame(LayoutHelper.MATCH_PARENT, LayoutHelper.MATCH_PARENT, Gravity.TOP | Gravity.LEFT, 0, HEADER_HEIGHT_DP, 0, 52));
 
@@ -1573,24 +1600,43 @@ public class ThemeEditorView {
             String curHex = ThemeKeyCatalog.formatHex(curColor, false);
             String matchHex = ThemeKeyCatalog.formatHex(0xFF000000 | curColor, false);
             String defHex = ThemeKeyCatalog.formatHex(defColor, false);
+            boolean sessionChanged = isSessionModified(group.key, curColor);
             boolean canReset = group.key != Theme.key_chat_wallpaper && curColor != defColor;
 
             ArrayList<String> labels = new ArrayList<>();
+            ArrayList<Runnable> actions = new ArrayList<>();
+
             labels.add((isRuUi ? "Копировать HEX (" : "Copy HEX (") + curHex + ")");
+            actions.add(() -> {
+                AndroidUtilities.addToClipboard(curHex);
+                BulletinFactory.of(container, resourcesProvider).createCopyBulletin((isRuUi ? "Скопировано: " : "Copied: ") + curHex).show();
+            });
+
             labels.add((isRuUi ? "Найти похожий цвет (" : "Find matching (") + matchHex + ")");
-            if (canReset) {
-                labels.add((isRuUi ? "Сбросить к стандарту (" : "Reset to default (") + defHex + ")");
+            actions.add(() -> searchField.setQuery(matchHex));
+
+            if (sessionChanged) {
+                int initialColor = sessionInitialColors.get(group.key);
+                String initialHex = ThemeKeyCatalog.formatHex(initialColor, false);
+                labels.add((isRuUi ? "Отменить правку (" : "Revert edit (") + initialHex + ")");
+                actions.add(() -> {
+                    for (int a = 0; a < group.descriptions.size(); a++) {
+                        ThemeDescription d = group.descriptions.get(a);
+                        d.startEditing();
+                        d.setColor(initialColor, false);
+                    }
+                    onThemeColorEdited();
+                    if (parentActivity instanceof LaunchActivity) {
+                        ((LaunchActivity) parentActivity).rebuildAllFragments(false);
+                    }
+                    Theme.saveCurrentTheme(themeInfo, false, false, false);
+                    refreshAfterColorEdit();
+                });
             }
 
-            AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), resourcesProvider);
-            builder.setTitle(group.info.title);
-            builder.setItems(labels.toArray(new CharSequence[0]), (dialog, which) -> {
-                if (which == 0) {
-                    AndroidUtilities.addToClipboard(curHex);
-                    BulletinFactory.of(container, resourcesProvider).createCopyBulletin((isRuUi ? "Скопировано: " : "Copied: ") + curHex).show();
-                } else if (which == 1) {
-                    searchField.setQuery(matchHex);
-                } else if (which == 2 && canReset) {
+            if (canReset) {
+                labels.add((isRuUi ? "Сбросить к стандарту (" : "Reset to default (") + defHex + ")");
+                actions.add(() -> {
                     for (int a = 0; a < group.descriptions.size(); a++) {
                         ThemeDescription d = group.descriptions.get(a);
                         d.startEditing();
@@ -1602,55 +1648,103 @@ public class ThemeEditorView {
                     }
                     Theme.saveCurrentTheme(themeInfo, false, false, false);
                     refreshAfterColorEdit();
+                });
+            }
+
+            AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), resourcesProvider);
+            builder.setTitle(group.info.title);
+            builder.setItems(labels.toArray(new CharSequence[0]), (dialog, which) -> {
+                if (which >= 0 && which < actions.size()) {
+                    actions.get(which).run();
                 }
             });
             builder.show();
         }
 
+        private void updateCategoryEmptyViewText() {
+            if (searchEmptyView == null) {
+                return;
+            }
+            searchEmptyView.setText(activeCategory == ThemeKeyCatalog.Category.MODIFIED
+                    ? (isRuUi ? "Пока нет изменённых цветов" : "No modified colors yet")
+                    : (isRuUi ? "Нет элементов в этой категории" : "No colors in this category"));
+        }
+
         private void rebuildFilterChips() {
             chipsContainer.removeAllViews();
             chipButtons.clear();
-            int modifiedCount = listAdapter.countModified();
+
             ThemeKeyCatalog.Category[] cats = ThemeKeyCatalog.Category.values();
+            int[] counts = new int[cats.length];
+            int essentialCount = 0;
+            int modifiedCount = 0;
+            for (int i = 0, n = listAdapter.allGroups.size(); i < n; i++) {
+                ColorGroup g = listAdapter.allGroups.get(i);
+                counts[g.info.category.ordinal()]++;
+                if (g.info.essential) {
+                    essentialCount++;
+                }
+                if (g.key != Theme.key_chat_wallpaper
+                        && isSessionModified(g.key, g.descriptions.get(0).getSetColor())) {
+                    modifiedCount++;
+                }
+            }
+            counts[ThemeKeyCatalog.Category.ALL.ordinal()] = listAdapter.allGroups.size();
+            counts[ThemeKeyCatalog.Category.ESSENTIAL.ordinal()] = essentialCount;
+            counts[ThemeKeyCatalog.Category.MODIFIED.ordinal()] = modifiedCount;
+
+            TextView lastChip = null;
             for (ThemeKeyCatalog.Category cat : cats) {
-                int count;
-                if (cat == ThemeKeyCatalog.Category.ALL) {
-                    count = listAdapter.allGroups.size();
-                } else if (cat == ThemeKeyCatalog.Category.MODIFIED) {
-                    count = modifiedCount;
+                int count = counts[cat.ordinal()];
+                if (cat == ThemeKeyCatalog.Category.MODIFIED) {
                     if (count == 0 && activeCategory != ThemeKeyCatalog.Category.MODIFIED) {
                         continue;
                     }
-                } else {
-                    count = listAdapter.countForCategory(cat);
-                    if (count == 0) {
-                        continue;
-                    }
+                } else if (cat != ThemeKeyCatalog.Category.ALL && count == 0) {
+                    continue;
                 }
                 TextView chip = new TextView(getContext());
                 chip.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 12.5f);
                 chip.setTypeface(AndroidUtilities.bold());
                 chip.setGravity(Gravity.CENTER);
-                chip.setPadding(AndroidUtilities.dp(12), AndroidUtilities.dp(6), AndroidUtilities.dp(12), AndroidUtilities.dp(6));
+                chip.setSingleLine(true);
+                chip.setLines(1);
+                chip.setMaxLines(1);
+                chip.setIncludeFontPadding(false);
+                chip.setPadding(AndroidUtilities.dp(12), 0, AndroidUtilities.dp(12), 0);
                 chip.setText(cat.getLabel(isRuUi) + " · " + count);
                 chip.setOnClickListener(v -> {
+                    boolean leaveEmptyModified = activeCategory == ThemeKeyCatalog.Category.MODIFIED
+                            && cat != ThemeKeyCatalog.Category.MODIFIED
+                            && listAdapter.countModified() == 0;
                     activeCategory = cat;
                     searchField.clearQuerySilent();
                     if (listView.getAdapter() != listAdapter) {
                         listView.setAdapter(listAdapter);
                     }
                     listAdapter.rebuild();
-                    updateChipStyles();
+                    if (leaveEmptyModified) {
+                        rebuildFilterChips();
+                    } else {
+                        updateChipStyles();
+                    }
                     layoutManager.scrollToPositionWithOffset(0, 0);
                 });
-                chipsContainer.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 8, 0));
+                chipsContainer.addView(chip, LayoutHelper.createLinear(LayoutHelper.WRAP_CONTENT, 32, 0, 0, 6, 0));
                 chipButtons.put(cat, chip);
+                lastChip = chip;
             }
-            updateChipStyles();
+            if (lastChip != null && lastChip.getLayoutParams() instanceof LinearLayout.LayoutParams) {
+                ((LinearLayout.LayoutParams) lastChip.getLayoutParams()).rightMargin = 0;
+            }
+            updateChipStyles(modifiedCount);
         }
 
         private void updateChipStyles() {
-            int modifiedCount = listAdapter.countModified();
+            updateChipStyles(listAdapter.countModified());
+        }
+
+        private void updateChipStyles(int modifiedCount) {
             for (HashMap.Entry<ThemeKeyCatalog.Category, TextView> entry : chipButtons.entrySet()) {
                 ThemeKeyCatalog.Category cat = entry.getKey();
                 TextView chip = entry.getValue();
@@ -2123,8 +2217,7 @@ public class ThemeEditorView {
                     int color = entry.group.key == Theme.key_chat_wallpaper
                             ? Theme.getColor(Theme.key_chat_wallpaper)
                             : entry.group.descriptions.get(0).getSetColor();
-                    boolean modified = entry.group.key != Theme.key_chat_wallpaper
-                            && ThemeKeyCatalog.isModifiedFromDefault(entry.group.key, color);
+                    boolean modified = isSessionModified(entry.group.key, color);
                     TextColorThemeCell cell = (TextColorThemeCell) holder.itemView;
                     cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
                     cell.setThemeEntry(entry.displayTitle, entry.displayKey, color, modified, idx < searchResult.size() - 1);
@@ -2170,8 +2263,21 @@ public class ThemeEditorView {
                     ThemeKeyCatalog.EntryInfo info = ThemeKeyCatalog.lookup(key, isRuUi);
                     allGroups.add(new ColorGroup(key, rawKey, info, itemsMap.get(key)));
                 }
+                snapshotInitialColorsIfAbsent(allGroups);
                 refreshPaletteCache();
                 rebuild();
+            }
+
+            private void snapshotInitialColorsIfAbsent(ArrayList<ColorGroup> groups) {
+                for (int i = 0, n = groups.size(); i < n; i++) {
+                    ColorGroup g = groups.get(i);
+                    if (g.key < 0 || g.key == Theme.key_chat_wallpaper) {
+                        continue;
+                    }
+                    if (sessionInitialColors.indexOfKey(g.key) < 0) {
+                        sessionInitialColors.put(g.key, g.descriptions.get(0).getSetColor());
+                    }
+                }
             }
 
             void refreshPaletteCache() {
@@ -2210,7 +2316,7 @@ public class ThemeEditorView {
                         continue;
                     }
                     int cur = g.descriptions.get(0).getSetColor();
-                    if (ThemeKeyCatalog.isModifiedFromDefault(g.key, cur)) {
+                    if (isSessionModified(g.key, cur)) {
                         count++;
                     }
                 }
@@ -2284,7 +2390,7 @@ public class ThemeEditorView {
                             }
                         } else if (activeCategory == ThemeKeyCatalog.Category.MODIFIED) {
                             if (g.key != Theme.key_chat_wallpaper
-                                    && ThemeKeyCatalog.isModifiedFromDefault(g.key, g.descriptions.get(0).getSetColor())) {
+                                    && isSessionModified(g.key, g.descriptions.get(0).getSetColor())) {
                                 matched.add(g);
                             }
                         } else if (g.info.category == activeCategory) {
@@ -2305,9 +2411,7 @@ public class ThemeEditorView {
                     }
                 }
                 if (searchEmptyView != null && TextUtils.isEmpty(searchField.searchEditText.getText())) {
-                    searchEmptyView.setText(activeCategory == ThemeKeyCatalog.Category.MODIFIED
-                            ? (isRuUi ? "Пока нет изменённых цветов" : "No modified colors yet")
-                            : (isRuUi ? "Нет элементов в этой категории" : "No colors in this category"));
+                    updateCategoryEmptyViewText();
                 }
                 notifyDataSetChanged();
             }
@@ -2356,8 +2460,7 @@ public class ThemeEditorView {
                     int color = g.key == Theme.key_chat_wallpaper
                             ? Theme.getColor(Theme.key_chat_wallpaper)
                             : g.descriptions.get(0).getSetColor();
-                    boolean modified = g.key != Theme.key_chat_wallpaper
-                            && ThemeKeyCatalog.isModifiedFromDefault(g.key, color);
+                    boolean modified = isSessionModified(g.key, color);
                     TextColorThemeCell cell = (TextColorThemeCell) holder.itemView;
                     cell.setThemeColors(palette.textPrimary, palette.textSecondary, palette.background, palette.accent, palette.dark);
                     cell.setThemeEntry(g.info.title, g.rawKey, color, modified, row.needDivider);
@@ -2379,6 +2482,7 @@ public class ThemeEditorView {
         }
         hidden = false;
         themeInfo = theme;
+        sessionInitialColors.clear();
         windowView = new FrameLayout(activity) {
 
             private float startX;
@@ -2611,6 +2715,7 @@ public class ThemeEditorView {
     }
 
     public void close() {
+        sessionInitialColors.clear();
         try {
             windowManager.removeView(windowView);
         } catch (Exception e) {

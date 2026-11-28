@@ -4,17 +4,15 @@ import static org.telegram.ui.Components.Switch.SWITCH_STYLE_MD3;
 
 import android.app.WallpaperColors;
 import android.app.WallpaperManager;
-import android.content.BroadcastReceiver;
 import android.content.Context;
-import android.content.Intent;
-import android.content.IntentFilter;
+import android.content.res.Configuration;
 import android.graphics.Color;
 import android.os.Build;
-import android.os.PatternMatcher;
 
 import androidx.annotation.RequiresApi;
 import androidx.core.graphics.ColorUtils;
 
+import com.exteragram.messenger.utils.ui.MonetUtils;
 import com.google.android.material.color.utilities.Blend;
 import com.google.android.material.color.utilities.Hct;
 
@@ -279,15 +277,15 @@ public class MonetHelper {
     }};
 
     private static final Pattern MODIFIER_PATTERN = Pattern.compile("^([^(]+)\\(([^)]+)\\)?$");
-    private static final String ACTION_OVERLAY_CHANGED = "android.intent.action.OVERLAY_CHANGED";
     private static final HashMap<String, Integer> tokenCache = new HashMap<>();
-    private static final OverlayChangeReceiver overlayChangeReceiver = new OverlayChangeReceiver();
     private static int lastMonetColor = 0;
 
     public static int getColor(String color) {
         Integer resolved = getColorOrNull(color);
         if (resolved == null) {
-            FileLog.e("Error loading color " + color);
+            if (color != null && !color.isEmpty() && !isSignedNumber(color.trim()) && color.trim().charAt(0) != '#') {
+                FileLog.e("Error loading color " + color);
+            }
             return 0;
         }
         return resolved;
@@ -298,6 +296,14 @@ public class MonetHelper {
             String rawColor = color == null ? "" : color.trim();
             if (rawColor.isEmpty()) {
                 return null;
+            }
+            char first = rawColor.charAt(0);
+            if (first == '#' || isSignedNumber(rawColor)) {
+                return null;
+            }
+
+            if (isDirectMonetUtilsToken(rawColor)) {
+                return MonetUtils.getColorOrNull(rawColor);
             }
 
             int saturation = 100;
@@ -360,14 +366,61 @@ public class MonetHelper {
     }
 
     public static void invalidateCache() {
+        clearCachesOnly();
+        MonetUtils.invalidateCache();
+    }
+
+    public static void clearCachesOnly() {
         synchronized (tokenCache) {
             tokenCache.clear();
         }
         invalidateRoleTrust();
+        lastMonetColor = 0;
+    }
+
+    private static boolean isCurrentThemeDarkSafe() {
+        Theme.ThemeInfo active = Theme.getActiveTheme();
+        if (active != null) {
+            return active.isDark();
+        }
+        Context context = ApplicationLoader.applicationContext;
+        return context != null && (context.getResources().getConfiguration().uiMode
+                & Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES;
+    }
+
+    private static boolean isSignedNumber(String s) {
+        int start = (s.charAt(0) == '-') ? 1 : 0;
+        if (start >= s.length()) {
+            return false;
+        }
+        int end = s.length();
+        char last = s.charAt(end - 1);
+        if ((last == 'h' || last == '!') && end - start > 1) {
+            end--;
+        }
+        for (int i = start; i < end; i++) {
+            if (!Character.isDigit(s.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean isDirectMonetUtilsToken(String raw) {
+        if (!MonetUtils.isSupported()) {
+            return false;
+        }
+        int paren = raw.indexOf('(');
+        String head = (paren > 0 ? raw.substring(0, paren) : raw).trim();
+        return head.startsWith("a1_") || head.startsWith("a2_") || head.startsWith("a3_")
+                || head.startsWith("n1_") || head.startsWith("n2_")
+                || "mBlack".equals(head) || "mWhite".equals(head)
+                || "black".equals(head) || "white".equals(head)
+                || head.startsWith("mRed") || head.startsWith("mGreen");
     }
 
     private static Integer resolveToken(String token) {
-        String cacheKey = (Theme.isCurrentThemeDark() ? "d:" : "l:") + token;
+        String cacheKey = (isCurrentThemeDarkSafe() ? "d:" : "l:") + token;
         synchronized (tokenCache) {
             Integer cached = tokenCache.get(cacheKey);
             if (cached != null) {
@@ -463,7 +516,7 @@ public class MonetHelper {
             if (fixed != null) {
                 return resolveRoleTone(fixed);
             }
-            mode = Theme.isCurrentThemeDark() ? "dark" : "light";
+            mode = isCurrentThemeDarkSafe() ? "dark" : "light";
         }
 
         String role = token.endsWith("_" + mode)
@@ -736,9 +789,7 @@ public class MonetHelper {
     }
 
     public static int harmonizeColor(int baseColor) {
-        int accentColor = ApplicationLoader.applicationContext.getColor(
-                android.R.color.system_accent1_600);
-        return Blend.harmonize(baseColor, accentColor);
+        return MonetUtils.harmonize(baseColor);
     }
 
     private static int softenColorForDarkText(int color) {
@@ -779,43 +830,10 @@ public class MonetHelper {
         try {
             Context context = ApplicationLoader.applicationContext;
             if (context != null) {
-                overlayChangeReceiver.register(context);
+                MonetUtils.registerReceiver(context);
             }
         } catch (Exception e) {
             FileLog.e(e);
-        }
-    }
-
-    private static class OverlayChangeReceiver extends BroadcastReceiver {
-        private boolean registered;
-
-        @Override
-        public void onReceive(Context context, Intent intent) {
-            if (intent == null || !ACTION_OVERLAY_CHANGED.equals(intent.getAction())) {
-                return;
-            }
-            invalidateCache();
-            lastMonetColor = 0;
-            Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
-            if (activeTheme == null || !activeTheme.isMonet()) {
-                return;
-            }
-            boolean isNight = Theme.isCurrentThemeNight();
-            Theme.applyTheme(activeTheme, isNight);
-            NotificationCenter.getGlobalInstance().postNotificationName(
-                    NotificationCenter.needSetDayNightTheme, activeTheme, isNight, null, -1
-            );
-        }
-
-        void register(Context context) {
-            if (registered) {
-                return;
-            }
-            IntentFilter filter = new IntentFilter(ACTION_OVERLAY_CHANGED);
-            filter.addDataScheme("package");
-            filter.addDataSchemeSpecificPart("android", PatternMatcher.PATTERN_LITERAL);
-            context.registerReceiver(this, filter);
-            registered = true;
         }
     }
 
@@ -824,29 +842,29 @@ public class MonetHelper {
      * Called in LaunchActivity.onResume()
      */
     public static void refreshMonetThemeIfChanged() {
-        // Quick check: if the current theme is not a Monet theme, return directly
         Theme.ThemeInfo activeTheme = Theme.getActiveTheme();
-        if (activeTheme == null || !activeTheme.isMonet()) {
-            lastMonetColor = 0; // Reset to detect correctly when switching back to Monet theme
+        if (activeTheme == null || (!activeTheme.isMonet() && !Theme.isCurrentAccentMonet())) {
+            lastMonetColor = 0;
             return;
         }
 
-        int currentColor = getColor("a1_600");
+        int currentColor = MonetUtils.getColor("a1_600");
+        if (currentColor == 0) {
+            currentColor = getColor("a1_600");
+        }
 
-        // Record the color only on the first call, do not trigger refresh
         if (lastMonetColor == 0) {
             lastMonetColor = currentColor;
             return;
         }
 
-        // Return directly if the color has not changed
         if (lastMonetColor == currentColor) {
             return;
         }
 
         invalidateCache();
+        Theme.refreshMonetColors();
 
-        // Refresh theme
         boolean isNight = Theme.isCurrentThemeNight();
         Theme.applyTheme(activeTheme, isNight);
         NotificationCenter.getGlobalInstance().postNotificationName(

@@ -149,6 +149,8 @@ import java.util.Objects;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.TimeUnit;
 
+import com.exteragram.messenger.utils.ui.MonetUtils;
+
 import tw.nekomimi.nekogram.helpers.MonetHelper;
 import tw.nekomimi.nekogram.utils.AndroidUtil;
 import xyz.nextalone.nagram.NaConfig;
@@ -236,7 +238,7 @@ public class Theme {
                 }
                 for (int a = 0, N = info.themeAccents.size(); a < N; a++) {
                     ThemeAccent accent = info.themeAccents.get(a);
-                    if (accent.id == DEFALT_THEME_ACCENT_ID || TextUtils.isEmpty(accent.patternSlug)) {
+                    if (accent.id == DEFALT_THEME_ACCENT_ID || !MonetAccentHelper.hasRemotePatternWallpaper(accent)) {
                         continue;
                     }
                     if (accentsToLoad == null) {
@@ -265,6 +267,9 @@ public class Theme {
                     }
                     if (slugs == null) {
                         slugs = new ArrayList<>();
+                    }
+                    if (!MonetAccentHelper.hasRemotePatternWallpaper(accent)) {
+                        continue;
                     }
                     if (slugs.contains(accent.patternSlug)) {
                         continue;
@@ -1856,6 +1861,7 @@ public class Theme {
                 themeAccents.add(themeAccent);
             }
             accentBaseColor = themeAccentsMap.get(0).accentColor;
+            MonetAccentHelper.appendAccentOptions(this);
         }
 
         @UiThread
@@ -4181,9 +4187,9 @@ public class Theme {
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet Light";
             themeInfo.assetName = monetAssetName("monet_light");
-            themeInfo.previewBackgroundColor = MonetHelper.getColor("surface_light");
-            themeInfo.previewInColor = MonetHelper.getColor("neutral_95");
-            themeInfo.previewOutColor = MonetHelper.getColor("primary_container_light");
+            themeInfo.previewBackgroundColor = MonetUtils.getColor("n1_10");
+            themeInfo.previewInColor = MonetUtils.getColor("n1_50");
+            themeInfo.previewOutColor = MonetUtils.getColor("a1_600");
             themeInfo.sortIndex = 6;
             themes.add(themeInfo);
             themesDict.put("Monet Light", themeInfo);
@@ -4191,9 +4197,9 @@ public class Theme {
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet Dark";
             themeInfo.assetName = monetAssetName("monet_dark");
-            themeInfo.previewBackgroundColor = MonetHelper.getColor("surface_dark");
-            themeInfo.previewInColor = MonetHelper.getColor("neutral_20");
-            themeInfo.previewOutColor = MonetHelper.getColor("primary_dark");
+            themeInfo.previewBackgroundColor = MonetUtils.getColor("n1_900");
+            themeInfo.previewInColor = MonetUtils.getColor("n1_800");
+            themeInfo.previewOutColor = MonetUtils.getColor("a1_200");
             themeInfo.sortIndex = 7;
             themes.add(themeInfo);
             themesDict.put("Monet Dark", themeInfo);
@@ -4201,9 +4207,9 @@ public class Theme {
             themeInfo = new ThemeInfo();
             themeInfo.name = "Monet AMOLED";
             themeInfo.assetName = monetAssetName("monet_amoled");
-            themeInfo.previewBackgroundColor = MonetHelper.getColor("black");
-            themeInfo.previewInColor = MonetHelper.getColor("neutral_10");
-            themeInfo.previewOutColor = MonetHelper.getColor("primary_dark");
+            themeInfo.previewBackgroundColor = MonetUtils.getColor("mBlack");
+            themeInfo.previewInColor = MonetUtils.getColor("n1_800");
+            themeInfo.previewOutColor = MonetUtils.getColor("a1_200");
             themeInfo.sortIndex = 8;
             themes.add(themeInfo);
             themesDict.put("Monet AMOLED", themeInfo);
@@ -4533,6 +4539,14 @@ public class Theme {
 
     private static void sortAccents(ThemeInfo info) {
         Collections.sort(info.themeAccents, (o1, o2) -> {
+            boolean o1Monet = MonetAccentHelper.isMonetAccent(o1);
+            boolean o2Monet = MonetAccentHelper.isMonetAccent(o2);
+            if (o1Monet != o2Monet) {
+                return o1Monet ? -1 : 1;
+            }
+            if (o1Monet) {
+                return Integer.compare(o2.id, o1.id);
+            }
             if (isHome(o1)) {
                 return -1;
             }
@@ -5872,6 +5886,7 @@ public class Theme {
                 continue;
             }
             info.assetName = monetAssetName(pair[1]);
+            MonetAccentHelper.refresh(info);
             if (info == currentTheme) {
                 current = true;
             }
@@ -6730,6 +6745,28 @@ public class Theme {
 
     public static boolean isCurrentThemeMonet() {
         return currentTheme != null && currentTheme.isMonet();
+    }
+
+    public static boolean isCurrentAccentMonet() {
+        return MonetAccentHelper.isMonetAccent(currentTheme != null ? currentTheme.getAccent(false) : null);
+    }
+
+    public static void refreshMonetColors() {
+        if (Build.VERSION.SDK_INT < Build.VERSION_CODES.S || themes == null) {
+            return;
+        }
+        boolean reloadPatterns = false;
+        for (int i = 0, size = themes.size(); i < size; i++) {
+            ThemeInfo themeInfo = themes.get(i);
+            if (themeInfo == null) {
+                continue;
+            }
+            reloadPatterns |= MonetAccentHelper.refresh(themeInfo);
+        }
+        if (reloadPatterns) {
+            PatternsLoader.createLoader(true);
+        }
+        NotificationCenter.getGlobalInstance().postNotificationName(NotificationCenter.themeListUpdated);
     }
 
     public static ThemeInfo getActiveTheme() {
@@ -7906,17 +7943,34 @@ public class Theme {
                                 String key = line.substring(0, idx).trim();
                                 String param = line.substring(idx + 1).trim();
                                 int value;
+                                boolean harmonize = false;
+                                if ((param.endsWith("h") || param.endsWith("!")) && param.length() > 1) {
+                                    harmonize = true;
+                                    param = param.substring(0, param.length() - 1).trim();
+                                }
                                 if (param.length() > 0 && param.charAt(0) == '#') {
                                     try {
                                         value = Color.parseColor(param);
                                     } catch (Exception ignore) {
                                         value = Utilities.parseInt(param);
                                     }
-                                } else {
-                                    Integer monetValue = Build.VERSION.SDK_INT >= Build.VERSION_CODES.S
-                                            ? MonetHelper.getColorOrNull(param)
+                                } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                    Integer monetValue = (param.startsWith("a1_") || param.startsWith("a2_") || param.startsWith("a3_")
+                                            || param.startsWith("n1_") || param.startsWith("n2_")
+                                            || "mBlack".equals(param) || "mWhite".equals(param)
+                                            || param.startsWith("mRed") || param.startsWith("mGreen")
+                                            || (param.contains("(") && (param.startsWith("a") || param.startsWith("n") || param.startsWith("m"))))
+                                            ? MonetUtils.getColorOrNull(param)
                                             : null;
+                                    if (monetValue == null) {
+                                        monetValue = MonetHelper.getColorOrNull(param);
+                                    }
                                     value = monetValue != null ? monetValue : Utilities.parseInt(param);
+                                } else {
+                                    value = Utilities.parseInt(param);
+                                }
+                                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S && harmonize) {
+                                    value = MonetUtils.harmonize(value);
                                 }
                                 int keyFromString = ThemeColors.stringKeyToInt(key);
                                 if (keyFromString >= 0) {
@@ -9905,6 +9959,16 @@ public class Theme {
             int gradientToColor3 = currentColors.get(key_chat_wallpaper_gradient_to3);
             int gradientToColor2 = currentColors.get(key_chat_wallpaper_gradient_to2);
             int gradientToColor1 = currentColors.get(key_chat_wallpaper_gradient_to1);
+            ThemeAccent accent = currentTheme.getAccent(false);
+
+            if (backgroundColor != 0 && MonetAccentHelper.isFallbackPattern(accent)) {
+                int rotation = currentColors.get(key_chat_wallpaper_gradient_rotation, 45);
+                settings.wallpaper = MonetAccentHelper.createFallbackPatternDrawable(backgroundColor, gradientToColor1, gradientToColor2, gradientToColor3, rotation, intensity, false, previousPhase);
+                settings.isWallpaperMotion = wallpaperMotion;
+                settings.isPatternWallpaper = true;
+                settings.isCustomTheme = true;
+                return settings;
+            }
 
             boolean bitmapCreated = false;
             if (wallpaperFile != null && wallpaperFile.exists()) {
@@ -10226,10 +10290,17 @@ public class Theme {
             if (rotation == -1) {
                 rotation = 45;
             }
+            ThemeAccent accent = currentTheme.getAccent(false);
+            int patternIntensity = accent != null ? (int) (accent.patternIntensity * 100) : 34;
             if (gradientToColor1 == 0) {
+                if (MonetAccentHelper.isFallbackPattern(accent) && previousTheme == null) {
+                    return MonetAccentHelper.createFallbackPatternDrawable(backgroundColor, 0, 0, 0, rotation, patternIntensity, true, 0);
+                }
                 return new ColorDrawable(backgroundColor);
             } else {
-                ThemeAccent accent = currentTheme.getAccent(false);
+                if (MonetAccentHelper.isFallbackPattern(accent) && previousTheme == null) {
+                    return MonetAccentHelper.createFallbackPatternDrawable(backgroundColor, gradientToColor1, gradientToColor2, gradientToColor3, rotation, patternIntensity, true, 0);
+                }
                 if (accent != null && !TextUtils.isEmpty(accent.patternSlug) && previousTheme == null) {
                     File wallpaperFile = accent.getPathToWallpaper();
                     if (wallpaperFile != null && wallpaperFile.exists()) {

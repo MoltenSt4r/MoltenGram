@@ -52,6 +52,7 @@ public class M3CircularProgress {
     private float waveAmplitude;
     private float waveLength;
     private float waveSpeed;
+    private float amplitudeRampProgressMin = 0.08f;
 
     public M3CircularProgress() {
         trackPaint.setStyle(Paint.Style.STROKE);
@@ -105,6 +106,10 @@ public class M3CircularProgress {
      * @param sweepAngle  длина дуги в градусах
      * @param paint       кисть индикатора (цвет/альфа/толщина берутся из неё)
      */
+    public void setAmplitudeRampProgressMin(float min) {
+        amplitudeRampProgressMin = Math.max(0.01f, Math.min(0.45f, min));
+    }
+
     public void draw(Canvas canvas, RectF oval, float startAngle, float sweepAngle, Paint paint) {
         final float radius = Math.min(oval.width(), oval.height()) / 2f;
         if (radius <= 0) {
@@ -126,15 +131,28 @@ public class M3CircularProgress {
             }
         }
 
-        if (isWavy()) {
-            buildWavePath(oval, radius, startAngle, sweep);
-            canvas.drawPath(path, paint);
-        } else {
-            canvas.drawArc(oval, startAngle, sweep, false, paint);
+        if (isWavy() && Math.abs(sweep) < 359.5f) {
+            final float progressFraction = Math.min(1f, Math.abs(sweep) / 360f);
+            final float ramp = Math.max(0.08f, amplitudeRampProgressMin);
+            float ampScale = 1f;
+            if (progressFraction < ramp) {
+                ampScale = progressFraction / ramp;
+            } else if (progressFraction > 1f - ramp) {
+                ampScale = (1f - progressFraction) / ramp;
+            }
+            ampScale = Math.max(0f, Math.min(1f, ampScale));
+            ampScale = ampScale * ampScale * (3f - 2f * ampScale);
+            final float effectiveAmplitude = waveAmplitude * ampScale;
+            if (effectiveAmplitude > 0.05f) {
+                buildWavePath(oval, radius, startAngle, sweep, effectiveAmplitude);
+                canvas.drawPath(path, paint);
+                return;
+            }
         }
+        canvas.drawArc(oval, startAngle, sweep, false, paint);
     }
 
-    private void buildWavePath(RectF oval, float radius, float startAngle, float sweepAngle) {
+    private void buildWavePath(RectF oval, float radius, float startAngle, float sweepAngle, float amplitude) {
         path.reset();
         final float cx = oval.centerX();
         final float cy = oval.centerY();
@@ -143,17 +161,17 @@ public class M3CircularProgress {
             return;
         }
 
-        // Quantize wave length to an integer number of waves across the full circumference,
-        // ensuring seamless continuity without crooked or discontinuous endpoints.
+        // Quantize wave length to an integer number of waves (>= 4) across the full circumference,
+        // ensuring uniform periodic geometry without pinched seams.
         final float fullCircumference = (float) (2 * Math.PI * radius);
-        final int waveCount = Math.max(1, Math.round(fullCircumference / waveLength));
+        final int waveCount = Math.max(4, Math.round(fullCircumference / waveLength));
         final float effectiveWaveLength = fullCircumference / waveCount;
 
         final int steps = Math.max(64, Math.min(720, (int) Math.max(Math.abs(sweepAngle) * 2f, (arcLength / effectiveWaveLength) * 32f)));
         final float phase = waveSpeed <= 0 ? 0 : (SystemClock.elapsedRealtime() % 100000L) / 1000f * waveSpeed;
 
-        // Taper wave amplitude to 0 at both arc ends so the stroke cap smoothly joins the circle track
-        final float rampDist = Math.min(effectiveWaveLength, arcLength * 0.5f);
+        // Taper wave amplitude at the ends of open arcs so round stroke caps meet the circle track smoothly.
+        final float rampDist = Math.abs(sweepAngle) >= 350f ? 0f : Math.min(effectiveWaveLength, arcLength * 0.45f);
 
         for (int i = 0; i <= steps; i++) {
             final float t = i / (float) steps;
@@ -171,7 +189,7 @@ public class M3CircularProgress {
                 }
             }
 
-            final float offset = (float) (waveAmplitude * envelope * Math.sin(2 * Math.PI * along / effectiveWaveLength));
+            final float offset = (float) (amplitude * envelope * Math.sin(2 * Math.PI * along / effectiveWaveLength));
             final double rad = Math.toRadians(angle);
             final float r = radius + offset;
             final float x = cx + (float) (r * Math.cos(rad));

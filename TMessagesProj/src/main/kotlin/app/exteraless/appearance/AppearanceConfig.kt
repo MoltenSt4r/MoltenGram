@@ -137,7 +137,7 @@ object AppearanceConfig {
      */
     @JvmField
     val monetStyle =
-        addConfig("OEAppearanceMonetStyle", ConfigItem.configTypeInt, MONET_STYLE_TELEMONE)
+        addConfig("OEAppearanceMonetStyle", ConfigItem.configTypeInt, MONET_STYLE_CLASSIC)
 
     /** Суффикс файла темы для выбранного набора: пустой для Telemone. */
     @JvmStatic
@@ -1379,6 +1379,17 @@ object AppearanceConfig {
         ensureLoaded()
         val d = playerCrossfadeFadeInDuration.Int()
         return if (d in 0..12) d else 3
+    }
+
+    /** Стиль текста песни: 0 — Стандартный, 1 — Выразительная волна (Google Sans Flex). */
+    @JvmField
+    val playerLyricsStyle =
+        addConfig("OEAppearancePlayerLyricsStyle", ConfigItem.configTypeInt, 1)
+
+    @JvmStatic
+    fun playerLyricsStyle(): Int {
+        ensureLoaded()
+        return playerLyricsStyle.Int()
     }
 
     /** Размер шрифта текста песни: 0 — Нормальный (22sp), 1 — Крупный (26sp), 2 — Огромный (32sp). */

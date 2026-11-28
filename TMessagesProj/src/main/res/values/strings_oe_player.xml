@@ -89,6 +89,11 @@
 <string name="OEAppearancePlayerResumeOnBluetooth">Resume on Bluetooth</string>
 <string name="OEAppearancePlayerResumeOnBluetoothDesc">Automatically resume playback when Bluetooth headset connects</string>
 <string name="OEAppearancePlayerLyricsHeader">Lyrics &amp; Karaoke</string>
+<string name="OEAppearancePlayerLyricsStyle">Lyrics text style</string>
+<string name="OEAppearancePlayerLyricsStyleDesc">Expressive Wave works on English/Latin lyrics and automatically falls back to Default for other scripts</string>
+<string name="OEAppearancePlayerLyricsStyleStandard">Default (Standard)</string>
+<string name="OEAppearancePlayerLyricsStyleExpressive">Expressive Wave (Google Sans Flex)</string>
+<string name="OEPlayerLyricsRecenter">Return to active line</string>
 <string name="OEAppearancePlayerLyricsTextSize">Lyrics text size</string>
 <string name="OEAppearancePlayerLyricsTextSizeNormal">Normal</string>
 <string name="OEAppearancePlayerLyricsTextSizeLarge">Large</string>

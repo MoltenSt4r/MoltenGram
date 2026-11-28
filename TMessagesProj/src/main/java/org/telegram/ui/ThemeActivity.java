@@ -76,6 +76,7 @@ import org.telegram.ui.ActionBar.AlertDialog;
 import org.telegram.ui.ActionBar.BaseFragment;
 import org.telegram.ui.ActionBar.BottomSheet;
 import org.telegram.ui.ActionBar.EmojiThemes;
+import org.telegram.ui.ActionBar.MonetAccentHelper;
 import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.ActionBar.ThemeBind;
 import org.telegram.ui.ActionBar.ThemeColors;
@@ -210,84 +211,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     @Keep
     private int bubbleRadiusRow;
     private int monetStyleRow;
-    private int monetPaletteRow;
-
-    private void showMonetPaletteOptions(View anchor) {
-        int current = AppearanceConfig.monetPaletteStyle();
-        ItemOptions.makeOptions(this, anchor)
-                .add(current == AppearanceConfig.MONET_PALETTE_FOLLOW_THEME ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteFollowTheme),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FOLLOW_THEME))
-                .add(current == AppearanceConfig.MONET_PALETTE_TONAL_SPOT ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteTonalSpot),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_TONAL_SPOT))
-                .add(current == AppearanceConfig.MONET_PALETTE_NEUTRAL ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteNeutral),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_NEUTRAL))
-                .add(current == AppearanceConfig.MONET_PALETTE_VIBRANT ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteVibrant),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_VIBRANT))
-                .add(current == AppearanceConfig.MONET_PALETTE_EXPRESSIVE ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteExpressive),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_EXPRESSIVE))
-                .add(current == AppearanceConfig.MONET_PALETTE_RAINBOW ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteRainbow),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_RAINBOW))
-                .add(current == AppearanceConfig.MONET_PALETTE_FRUIT_SALAD ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteFruitSalad),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FRUIT_SALAD))
-                .add(current == AppearanceConfig.MONET_PALETTE_MONOCHROME ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteMonochrome),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_MONOCHROME))
-                .add(current == AppearanceConfig.MONET_PALETTE_FIDELITY ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteFidelity),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_FIDELITY))
-                .add(current == AppearanceConfig.MONET_PALETTE_CONTENT ? R.drawable.msg_select : 0,
-                        getString(R.string.MonetPaletteContent),
-                        () -> applyMonetPalette(AppearanceConfig.MONET_PALETTE_CONTENT))
-                .setGravity(Gravity.RIGHT)
-                .show();
-    }
-
-    private void applyMonetPalette(int palette) {
-        if (AppearanceConfig.monetPaletteStyle() == palette) {
-            return;
-        }
-        AppearanceConfig.monetPaletteStyle.setConfigInt(palette);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-            tw.nekomimi.nekogram.helpers.MonetHelper.invalidateCache();
-        }
-        Theme.reloadMonetThemes();
-        if (listAdapter != null) {
-            listAdapter.notifyItemChanged(monetPaletteRow);
-        }
-        app.exteraless.player.PlayerMiniView.styleChanged();
-    }
-
-    private static int monetPaletteName() {
-        switch (AppearanceConfig.monetPaletteStyle()) {
-            case AppearanceConfig.MONET_PALETTE_FOLLOW_THEME:
-                return R.string.MonetPaletteFollowTheme;
-            case AppearanceConfig.MONET_PALETTE_NEUTRAL:
-                return R.string.MonetPaletteNeutral;
-            case AppearanceConfig.MONET_PALETTE_VIBRANT:
-                return R.string.MonetPaletteVibrant;
-            case AppearanceConfig.MONET_PALETTE_EXPRESSIVE:
-                return R.string.MonetPaletteExpressive;
-            case AppearanceConfig.MONET_PALETTE_RAINBOW:
-                return R.string.MonetPaletteRainbow;
-            case AppearanceConfig.MONET_PALETTE_FRUIT_SALAD:
-                return R.string.MonetPaletteFruitSalad;
-            case AppearanceConfig.MONET_PALETTE_MONOCHROME:
-                return R.string.MonetPaletteMonochrome;
-            case AppearanceConfig.MONET_PALETTE_FIDELITY:
-                return R.string.MonetPaletteFidelity;
-            case AppearanceConfig.MONET_PALETTE_CONTENT:
-                return R.string.MonetPaletteContent;
-            default:
-                return R.string.MonetPaletteTonalSpot;
-        }
-    }
 
     private void showMonetStyleOptions(View anchor) {
         int current = AppearanceConfig.monetStyle.Int();
@@ -793,7 +716,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         bubbleRadiusHeaderRow = -1;
         bubbleRadiusRow = -1;
         monetStyleRow = -1;
-        monetPaletteRow = -1;
         bubbleRadiusInfoRow = -1;
         chatListHeaderRow = -1;
         chatListRow = -1;
@@ -883,13 +805,12 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 monetStyleRow = rowCount++;
-                monetPaletteRow = rowCount++;
             }
             bubbleRadiusInfoRow = rowCount++;
 
             Theme.ThemeInfo themeInfo = Theme.getCurrentTheme();
             Theme.ThemeAccent accent = themeInfo.getAccent(false);
-            if (themeInfo.themeAccents != null && !themeInfo.themeAccents.isEmpty() && accent != null && accent.id >= 100) {
+            if (themeInfo.themeAccents != null && !themeInfo.themeAccents.isEmpty() && MonetAccentHelper.canEditAccent(accent)) {
                 editThemeRow = rowCount++;
             }
             createNewThemeRow = rowCount++;
@@ -1361,8 +1282,6 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         listView.setOnItemClickListener((view, position, x, y) -> {
             if (position == monetStyleRow) {
                 showMonetStyleOptions(view);
-            } else if (position == monetPaletteRow) {
-                showMonetPaletteOptions(view);
             } else if (position == enableAnimationsRow) {
                 SharedPreferences preferences = MessagesController.getGlobalMainSettings();
                 boolean animations = preferences.getBoolean("view_animations", true);
@@ -1791,7 +1710,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
     private void editTheme() {
         Theme.ThemeInfo currentTheme = Theme.getCurrentTheme();
         Theme.ThemeAccent accent = currentTheme.getAccent(false);
-        presentFragment(new ThemePreviewActivity(currentTheme, false, ThemePreviewActivity.SCREEN_TYPE_ACCENT_COLOR, accent.id >= 100, currentType == THEME_TYPE_NIGHT));
+        presentFragment(new ThemePreviewActivity(currentTheme, false, ThemePreviewActivity.SCREEN_TYPE_ACCENT_COLOR, MonetAccentHelper.canEditAccent(accent), currentType == THEME_TYPE_NIGHT));
     }
 
     private void createNewTheme() {
@@ -1932,7 +1851,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         }
         Theme.ThemeInfo themeInfo = Theme.getCurrentTheme();
         Theme.ThemeAccent accent = themeInfo.getAccent(false);
-        if (themeInfo.themeAccents != null && !themeInfo.themeAccents.isEmpty() && accent != null && accent.id >= 100) {
+        if (themeInfo.themeAccents != null && !themeInfo.themeAccents.isEmpty() && MonetAccentHelper.canEditAccent(accent)) {
             menuItem.showSubItem(share_theme);
             menuItem.showSubItem(edit_theme);
         } else {
@@ -2242,11 +2161,36 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         }
     }
 
+    private static class AccentDividerView extends View {
+        AccentDividerView(Context context) {
+            super(context);
+            setWillNotDraw(false);
+        }
+
+        @Override
+        protected void onMeasure(int widthMeasureSpec, int heightMeasureSpec) {
+            super.onMeasure(
+                    MeasureSpec.makeMeasureSpec(dp(12), MeasureSpec.EXACTLY),
+                    MeasureSpec.makeMeasureSpec(dp(62), MeasureSpec.EXACTLY)
+            );
+        }
+
+        @Override
+        protected void onDraw(Canvas canvas) {
+            float x = getMeasuredWidth() / 2f;
+            canvas.drawLine(x, dp(14), x, getMeasuredHeight() - dp(14), Theme.dividerPaint);
+        }
+    }
+
     private class ThemeAccentsListAdapter extends RecyclerListView.SelectionAdapter {
+        private static final int VIEW_TYPE_ACCENT = 0;
+        private static final int VIEW_TYPE_CUSTOM = 1;
+        private static final int VIEW_TYPE_DIVIDER = 2;
 
         private Context mContext;
         private Theme.ThemeInfo currentTheme;
         private ArrayList<Theme.ThemeAccent> themeAccents;
+        private int monetAccentsCount;
 
         ThemeAccentsListAdapter(Context context) {
             mContext = context;
@@ -2257,6 +2201,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         public void notifyDataSetChanged() {
             currentTheme = currentType == THEME_TYPE_NIGHT ? Theme.getCurrentNightTheme() : Theme.getCurrentTheme();
             themeAccents = new ArrayList<>(currentTheme.themeAccents);
+            monetAccentsCount = MonetAccentHelper.countLeadingMonetAccents(themeAccents);
             super.notifyDataSetChanged();
         }
 
@@ -2267,16 +2212,25 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
 
         @Override
         public int getItemViewType(int position) {
-            return position == getItemCount() - 1 ? 1 : 0;
+            if (position == getCustomAccentPosition()) {
+                return VIEW_TYPE_CUSTOM;
+            }
+            if (isDividerPosition(position)) {
+                return VIEW_TYPE_DIVIDER;
+            }
+            return VIEW_TYPE_ACCENT;
         }
 
         @Override
         public RecyclerView.ViewHolder onCreateViewHolder(ViewGroup parent, int viewType) {
             switch (viewType) {
-                case 0: {
+                case VIEW_TYPE_ACCENT: {
                     return new RecyclerListView.Holder(new InnerAccentView(mContext));
                 }
-                case 1:
+                case VIEW_TYPE_DIVIDER: {
+                    return new RecyclerListView.Holder(new AccentDividerView(mContext));
+                }
+                case VIEW_TYPE_CUSTOM:
                 default: {
                     return new RecyclerListView.Holder(new InnerCustomAccentView(mContext));
                 }
@@ -2286,26 +2240,52 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
         @Override
         public void onBindViewHolder(RecyclerView.ViewHolder holder, int position) {
             switch (getItemViewType(position)) {
-                case 0: {
+                case VIEW_TYPE_ACCENT: {
                     InnerAccentView view = (InnerAccentView) holder.itemView;
-                    view.setThemeAndColor(currentTheme, themeAccents.get(position));
+                    view.setThemeAndColor(currentTheme, getAccent(position));
                     break;
                 }
-                case 1: {
+                case VIEW_TYPE_CUSTOM: {
                     InnerCustomAccentView view = (InnerCustomAccentView) holder.itemView;
                     view.setTheme(currentTheme);
                     break;
                 }
+                case VIEW_TYPE_DIVIDER:
+                default:
+                    break;
             }
         }
 
         @Override
         public int getItemCount() {
-            return themeAccents.isEmpty() ? 0 : themeAccents.size() + 1;
+            return themeAccents.isEmpty() ? 0 : themeAccents.size() + 1 + (hasDivider() ? 1 : 0);
         }
 
         private int findCurrentAccent() {
-            return themeAccents.indexOf(currentTheme.getAccent(false));
+            int index = themeAccents.indexOf(currentTheme.getAccent(false));
+            if (index == -1) {
+                return -1;
+            }
+            if (hasDivider() && index >= monetAccentsCount) {
+                index++;
+            }
+            return index;
+        }
+
+        private boolean hasDivider() {
+            return monetAccentsCount > 0 && monetAccentsCount < themeAccents.size();
+        }
+
+        private boolean isDividerPosition(int position) {
+            return hasDivider() && position == monetAccentsCount;
+        }
+
+        private int getCustomAccentPosition() {
+            return getItemCount() - 1;
+        }
+
+        private Theme.ThemeAccent getAccent(int position) {
+            return themeAccents.get(position - (hasDivider() && position > monetAccentsCount ? 1 : 0));
         }
     }
 
@@ -2424,7 +2404,8 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                             }
                         }
                     } else if (themeInfo.assetName != null) {
-                        currentFile = Theme.getAssetFile(themeInfo.assetName);
+                        Theme.ThemeAccent accent = themeInfo.getAccent(false);
+                        currentFile = MonetAccentHelper.canEditAccent(accent) ? accent.saveToFile() : Theme.getAssetFile(themeInfo.assetName);
                     } else {
                         currentFile = new File(themeInfo.pathToFile);
                     }
@@ -2586,12 +2567,14 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                     accentsListView.setAdapter(accentsAdapter);
                     accentsListView.setOnItemClickListener((view1, position) -> {
                         Theme.ThemeInfo currentTheme = currentType == THEME_TYPE_NIGHT ? Theme.getCurrentNightTheme() : Theme.getCurrentTheme();
-                        if (position == accentsAdapter.getItemCount() - 1) {
+                        if (position == accentsAdapter.getCustomAccentPosition()) {
                             presentFragment(new ThemePreviewActivity(currentTheme, false, ThemePreviewActivity.SCREEN_TYPE_ACCENT_COLOR, false, currentType == THEME_TYPE_NIGHT));
+                        } else if (accentsAdapter.isDividerPosition(position)) {
+                            return;
                         } else {
-                            Theme.ThemeAccent accent = accentsAdapter.themeAccents.get(position);
+                            Theme.ThemeAccent accent = accentsAdapter.getAccent(position);
 
-                            if (!TextUtils.isEmpty(accent.patternSlug) && accent.id != Theme.DEFALT_THEME_ACCENT_ID) {
+                            if (MonetAccentHelper.hasRemotePatternWallpaper(accent) && accent.id != Theme.DEFALT_THEME_ACCENT_ID) {
                                 Theme.PatternsLoader.createLoader(false);
                             }
 
@@ -2600,7 +2583,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                                 EmojiThemes.saveCustomTheme(currentTheme, accent.id);
                                 Theme.turnOffAutoNight(ThemeActivity.this);
                             } else {
-                                presentFragment(new ThemePreviewActivity(currentTheme, false, ThemePreviewActivity.SCREEN_TYPE_ACCENT_COLOR, accent.id >= 100, currentType == THEME_TYPE_NIGHT));
+                                presentFragment(new ThemePreviewActivity(currentTheme, false, ThemePreviewActivity.SCREEN_TYPE_ACCENT_COLOR, MonetAccentHelper.canEditAccent(accent), currentType == THEME_TYPE_NIGHT));
                             }
                         }
 
@@ -2622,11 +2605,11 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                         }
                     });
                     accentsListView.setOnItemLongClickListener((view12, position) -> {
-                        if (position < 0 || position >= accentsAdapter.themeAccents.size()) {
+                        if (position < 0 || position == accentsAdapter.getCustomAccentPosition() || accentsAdapter.isDividerPosition(position)) {
                             return false;
                         }
-                        Theme.ThemeAccent accent = accentsAdapter.themeAccents.get(position);
-                        if (accent.id >= 100 && !accent.isDefault) {
+                        Theme.ThemeAccent accent = accentsAdapter.getAccent(position);
+                        if (MonetAccentHelper.canEditAccent(accent)) {
                             AlertDialog.Builder builder = new AlertDialog.Builder(getParentActivity());
                             CharSequence[] items = new CharSequence[]{
                                     getString("OpenInEditor", R.string.OpenInEditor),
@@ -2949,13 +2932,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
                         cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
                                 Theme.key_windowBackgroundWhiteBlackText);
                         cell.setTextAndValue(getString(R.string.MonetStyleHeader),
-                                getString(monetStyleName()), true);
-                    } else if (position == monetPaletteRow) {
-                        cell.setSubtitle(getString(R.string.MonetPaletteSubHeader));
-                        cell.setColors(Theme.key_windowBackgroundWhiteGrayIcon,
-                                Theme.key_windowBackgroundWhiteBlackText);
-                        cell.setTextAndValue(getString(R.string.MonetPaletteHeader),
-                                getString(monetPaletteName()), false);
+                                getString(monetStyleName()), false);
                     } else if (position == backgroundRow) {
                         cell.setSubtitle(null);
                         cell.setColors(Theme.key_windowBackgroundWhiteBlueText4, Theme.key_windowBackgroundWhiteBlueText4);
@@ -3056,7 +3033,7 @@ public class ThemeActivity extends BaseFragment implements NotificationCenter.No
             } else if (position == bubbleRadiusRow) {
                 return TYPE_BUBBLE_RADIUS;
             } else if (position == backgroundRow || position == editThemeRow || position == createNewThemeRow ||
-                        position == liteModeRow || position == stickersRow || position == monetStyleRow || position == monetPaletteRow) {
+                        position == liteModeRow || position == stickersRow || position == monetStyleRow) {
                 return TYPE_TEXT_PREFERENCE;
             } else if (position == swipeGestureRow) {
                 return TYPE_SWIPE_GESTURE;

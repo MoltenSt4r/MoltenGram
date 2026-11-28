@@ -419,7 +419,7 @@ public class RadialProgressView extends View implements Drawable.Callback, Theme
         if (currentStyle != M3CircularProgress.STYLE_WAVY || m3 == null) {
             return;
         }
-        // amplitudeRampProgressMin у exteraGram относится к MDC-спеку; в ручной отрисовке не участвует
+        m3.setAmplitudeRampProgressMin(amplitudeRampProgressMin);
         m3.setWavyValues(wavelength, amplitude, speed);
     }
 

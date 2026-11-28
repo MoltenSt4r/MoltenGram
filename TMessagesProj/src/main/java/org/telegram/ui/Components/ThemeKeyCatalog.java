@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.Locale;
 import java.util.Map;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 
 /**
  * Human-readable catalog, categorization, HEX helpers, and contrast-safe editor palette
@@ -130,14 +131,14 @@ public final class ThemeKeyCatalog {
 
     public enum Category {
         ALL("Все", "All"),
-        ESSENTIAL("Основное", "Essential"),
-        CHAT("Чат", "Chats"),
-        CHATS("Список чатов", "Chat List"),
-        CHROME("Фоны и шапка", "Screens & Bar"),
-        DIALOGS("Меню и окна", "Dialogs & Menus"),
-        CONTROLS("Кнопки и переключатели", "Controls"),
-        MEDIA("Медиа, звонки и профиль", "Media & Profile"),
-        MODIFIED("Изменённые", "Modified");
+        ESSENTIAL("Основное", "Essentials"),
+        CHAT("Чат", "Chat"),
+        CHATS("Чаты", "Chats"),
+        CHROME("Фоны", "UI"),
+        DIALOGS("Окна", "Dialogs"),
+        CONTROLS("Кнопки", "Controls"),
+        MEDIA("Медиа", "Media"),
+        MODIFIED("Изм.", "Edited");
 
         public final String labelRu;
         public final String labelEn;
@@ -183,6 +184,8 @@ public final class ThemeKeyCatalog {
     private static final Map<String, Spec> EXACT_SPECS = new HashMap<>();
     private static final Map<String, String> TOKEN_RU = new HashMap<>();
     private static final Map<String, String> TOKEN_EN = new HashMap<>();
+    private static final ConcurrentHashMap<String, EntryInfo> LOOKUP_CACHE_RU = new ConcurrentHashMap<>();
+    private static final ConcurrentHashMap<String, EntryInfo> LOOKUP_CACHE_EN = new ConcurrentHashMap<>();
 
     static {
         // Essential / Chrome & Window
@@ -599,13 +602,22 @@ public final class ThemeKeyCatalog {
         if (rawKey == null) {
             rawKey = "";
         }
-        Spec spec = EXACT_SPECS.get(rawKey);
-        if (spec != null) {
-            return new EntryInfo(spec.category, ru ? spec.titleRu : spec.titleEn, rawKey, spec.essential);
+        ConcurrentHashMap<String, EntryInfo> cache = ru ? LOOKUP_CACHE_RU : LOOKUP_CACHE_EN;
+        EntryInfo cached = cache.get(rawKey);
+        if (cached != null) {
+            return cached;
         }
-        Category cat = inferCategory(rawKey);
-        String human = humanizeRawKey(rawKey, cat, ru);
-        return new EntryInfo(cat, human, rawKey, false);
+        Spec spec = EXACT_SPECS.get(rawKey);
+        EntryInfo computed;
+        if (spec != null) {
+            computed = new EntryInfo(spec.category, ru ? spec.titleRu : spec.titleEn, rawKey, spec.essential);
+        } else {
+            Category cat = inferCategory(rawKey);
+            String human = humanizeRawKey(rawKey, cat, ru);
+            computed = new EntryInfo(cat, human, rawKey, false);
+        }
+        EntryInfo existing = cache.putIfAbsent(rawKey, computed);
+        return existing != null ? existing : computed;
     }
 
     public static Category inferCategory(String rawKey) {

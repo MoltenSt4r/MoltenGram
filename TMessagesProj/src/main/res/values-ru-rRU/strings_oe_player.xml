@@ -89,6 +89,11 @@
 <string name="OEAppearancePlayerResumeOnBluetooth">Возобновлять при подключении Bluetooth</string>
 <string name="OEAppearancePlayerResumeOnBluetoothDesc">Автоматически возобновлять воспроизведение при подключении Bluetooth-наушников</string>
 <string name="OEAppearancePlayerLyricsHeader">Текст песни и караоке</string>
+<string name="OEAppearancePlayerLyricsStyle">Стиль текста песни</string>
+<string name="OEAppearancePlayerLyricsStyleDesc">Выразительная волна работает для английского и латиницы; для других языков автоматически включается стиль по умолчанию</string>
+<string name="OEAppearancePlayerLyricsStyleStandard">По умолчанию (Стандартный)</string>
+<string name="OEAppearancePlayerLyricsStyleExpressive">Выразительная волна (Google Sans Flex)</string>
+<string name="OEPlayerLyricsRecenter">Вернуться к текущей строке</string>
 <string name="OEAppearancePlayerLyricsTextSize">Размер шрифта текста</string>
 <string name="OEAppearancePlayerLyricsTextSizeNormal">Стандартный</string>
 <string name="OEAppearancePlayerLyricsTextSizeLarge">Крупный</string>

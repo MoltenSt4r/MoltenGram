@@ -42,6 +42,9 @@ public final class PlayerStyle {
     public static final int MINI_PROGRESS_NONE = 2;
     public static final int MINI_PROGRESS_BORDER = 3;
 
+    public static final int LYRICS_STYLE_STANDARD = 0;
+    public static final int LYRICS_STYLE_EXPRESSIVE = 1;
+
     public static final int COVER_SIZE_MIN = 60;
     public static final int COVER_SIZE_MAX = 100;
     public static final int COVER_RADIUS_MAX = 48;
@@ -185,6 +188,85 @@ public final class PlayerStyle {
     public static int background() {
         int value = item(AppearanceConfig.playerBackground).Int();
         return value < BACKGROUND_SOLID || value > BACKGROUND_BLUR ? BACKGROUND_SOLID : value;
+    }
+
+    public static int lyricsStyle() {
+        int value = item(AppearanceConfig.playerLyricsStyle).Int();
+        return value == LYRICS_STYLE_STANDARD ? LYRICS_STYLE_STANDARD : LYRICS_STYLE_EXPRESSIVE;
+    }
+
+    public static boolean isExpressiveLyrics() {
+        return lyricsStyle() == LYRICS_STYLE_EXPRESSIVE;
+    }
+
+    private static final float LATIN_MIN_RATIO = 0.85f;
+
+    public static boolean isLatinLyrics(Lyrics lyrics) {
+        if (lyrics == null || lyrics.lines == null || lyrics.lines.isEmpty()) {
+            return true;
+        }
+        int totalLetters = 0;
+        int latinLetters = 0;
+        for (int i = 0; i < lyrics.lines.size(); i++) {
+            Lyrics.Line line = lyrics.lines.get(i);
+            if (line == null || TextUtils.isEmpty(line.text)) {
+                continue;
+            }
+            int[] counts = countScriptLetters(line.text);
+            totalLetters += counts[0];
+            latinLetters += counts[1];
+        }
+        if (totalLetters == 0) {
+            return true;
+        }
+        return (latinLetters / (float) totalLetters) >= LATIN_MIN_RATIO;
+    }
+
+    public static boolean isLatinText(CharSequence text) {
+        if (TextUtils.isEmpty(text)) {
+            return true;
+        }
+        int[] counts = countScriptLetters(text);
+        if (counts[0] == 0) {
+            return true;
+        }
+        return (counts[1] / (float) counts[0]) >= LATIN_MIN_RATIO;
+    }
+
+    private static int[] countScriptLetters(CharSequence s) {
+        int total = 0;
+        int latin = 0;
+        int len = s.length();
+        int bracketDepth = 0;
+        int braceDepth = 0;
+        int i = 0;
+        while (i < len) {
+            int cp = Character.codePointAt(s, i);
+            i += Character.charCount(cp);
+            if (cp == '[') {
+                bracketDepth++;
+                continue;
+            } else if (cp == ']' && bracketDepth > 0) {
+                bracketDepth--;
+                continue;
+            } else if (cp == '{') {
+                braceDepth++;
+                continue;
+            } else if (cp == '}' && braceDepth > 0) {
+                braceDepth--;
+                continue;
+            }
+            if (bracketDepth > 0 || braceDepth > 0) {
+                continue;
+            }
+            if (Character.isLetter(cp)) {
+                total++;
+                if (Character.UnicodeScript.of(cp) == Character.UnicodeScript.LATIN) {
+                    latin++;
+                }
+            }
+        }
+        return new int[]{total, latin};
     }
 
     private static int choice(ConfigItem item, int max) {

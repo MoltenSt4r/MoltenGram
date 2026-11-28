@@ -42,6 +42,7 @@ import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.CheckBoxCell;
 import org.telegram.ui.Cells.SlideIntChooseView;
 import org.telegram.ui.Cells.TextCheckCell;
+import org.telegram.ui.Cells.TextDetailSettingsCell;
 import org.telegram.ui.Components.RecyclerListView;
 import org.telegram.ui.Cells.TextSettingsCell;
 import org.telegram.ui.Components.BulletinFactory;
@@ -86,6 +87,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     private int appearanceShadowRow;
 
     private int lyricsHeaderRow;
+    private int lyricsStyleRow;
     private int lyricsPreviewRow;
     private int lyricsAudioRecognitionRow;
     private int songrecFetchCoverRow;
@@ -164,6 +166,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
 
         // Lyrics
         lyricsHeaderRow = addRow("lyricsHeader");
+        lyricsStyleRow = addRow("lyricsStyle");
         lyricsAudioRecognitionRow = addRow("lyricsAudioRecognition");
         lyricsSourcesRow = addRow("lyricsSources");
         lyricsTranslateRow = addRow("lyricsTranslate");
@@ -446,11 +449,14 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerKeepScreenOn());
             }
+        } else if (position == lyricsStyleRow) {
+            showLyricsStyleDialog();
         } else if (position == lyricsExperimentalRow) {
             AppearanceConfig.playerLyricsExperimental.setConfigBool(!AppearanceConfig.playerLyricsExperimental());
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsExperimental());
             }
+            refreshPlayerUi();
         } else if (position == lyricsSourcesRow) {
             showLyricsSourcesDialog();
         } else if (position == lyricsPriorityRow) {
@@ -460,6 +466,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsTranslate());
             }
+            refreshPlayerUi();
         } else if (position == lyricsAlignmentRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsAlignmentCenter),
@@ -467,6 +474,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerLyricsAlignment), options, which -> {
                 AppearanceConfig.playerLyricsAlignment.setConfigInt(which);
+                refreshPlayerUi();
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsAlignmentRow);
             });
         } else if (position == lyricsAutoscrollRow) {
@@ -474,6 +482,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             if (view instanceof TextCheckCell) {
                 ((TextCheckCell) view).setChecked(AppearanceConfig.playerLyricsAutoScroll());
             }
+            refreshPlayerUi();
         } else if (position == lyricsTextSizeRow) {
             CharSequence[] options = {
                     getString(R.string.OEAppearancePlayerLyricsTextSizeNormal),
@@ -482,6 +491,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
             };
             showSelector(getString(R.string.OEAppearancePlayerLyricsTextSize), options, which -> {
                 AppearanceConfig.playerLyricsTextSize.setConfigInt(which);
+                refreshPlayerUi();
                 if (listAdapter != null) listAdapter.notifyItemChanged(lyricsTextSizeRow);
             });
         } else if (position == crossfadeRow) {
@@ -517,7 +527,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
         @Override
         public boolean isEnabled(RecyclerView.ViewHolder holder) {
             int type = holder.getItemViewType();
-            return type == TYPE_CHECK || type == TYPE_SETTINGS || type == TYPE_COLLAPSIBLE_HEADER || super.isEnabled(holder);
+            return type == TYPE_CHECK || type == TYPE_SETTINGS || type == TYPE_DETAIL_SETTINGS || type == TYPE_COLLAPSIBLE_HEADER || super.isEnabled(holder);
         }
 
         @Override
@@ -526,6 +536,8 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                 return TYPE_HEADER;
             } else if (position == appearanceMoreRow || position == lyricsMoreRow) {
                 return TYPE_COLLAPSIBLE_HEADER;
+            } else if (position == lyricsStyleRow) {
+                return TYPE_DETAIL_SETTINGS;
             } else if (position == seekbarThicknessRow || position == seekbarWaveAmplitudeRow || position == seekbarWaveSpeedRow) {
                 return TYPE_SLIDER;
             } else if (position == swipeTrackRow || position == cropCoverRow || position == keepScreenOnRow
@@ -749,8 +761,101 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
                     String timerStatus = timer.isRunning() ? timer.getFormattedRemaining() : getString(R.string.OEAppearancePlayerSleepTimerOff);
                     cell.setTextAndValue(getString(R.string.OEAppearancePlayerSleepTimer), timerStatus, true);
                 }
+            } else if (type == TYPE_DETAIL_SETTINGS) {
+                TextDetailSettingsCell cell = (TextDetailSettingsCell) holder.itemView;
+                if (position == lyricsStyleRow) {
+                    cell.setMultilineDetail(true);
+                    String styleName = PlayerStyle.isExpressiveLyrics()
+                            ? getString(R.string.OEAppearancePlayerLyricsStyleExpressive)
+                            : getString(R.string.OEAppearancePlayerLyricsStyleStandard);
+                    String detail = styleName + " · " + getString(R.string.OEAppearancePlayerLyricsStyleDesc);
+                    cell.setTextAndValue(getString(R.string.OEAppearancePlayerLyricsStyle), detail, true);
+                }
             }
         }
+    }
+
+    private void showLyricsStyleDialog() {
+        if (getContext() == null) return;
+        AlertDialog.Builder builder = new AlertDialog.Builder(getContext(), getResourceProvider());
+        builder.setTitle(getString(R.string.OEAppearancePlayerLyricsStyle));
+
+        LinearLayout container = new LinearLayout(getContext());
+        container.setOrientation(LinearLayout.VERTICAL);
+        container.setPadding(dp(20), dp(4), dp(20), dp(8));
+
+        TextView descView = new TextView(getContext());
+        descView.setText(getString(R.string.OEAppearancePlayerLyricsStyleDesc));
+        descView.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 13);
+        descView.setLineSpacing(0, 1.2f);
+        descView.setTextColor(Theme.getColor(Theme.key_dialogTextGray2, getResourceProvider()));
+        descView.setPadding(dp(4), 0, dp(4), dp(12));
+        container.addView(descView, LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT));
+
+        int currentStyle = PlayerStyle.lyricsStyle();
+        int accent = Theme.getColor(Theme.key_featuredStickers_addButton, getResourceProvider());
+        int textColor = Theme.getColor(Theme.key_dialogTextBlack, getResourceProvider());
+        boolean isDark = Theme.isCurrentThemeDark();
+        String[] labels = {
+                getString(R.string.OEAppearancePlayerLyricsStyleStandard),
+                getString(R.string.OEAppearancePlayerLyricsStyleExpressive)
+        };
+        int[] values = {
+                PlayerStyle.LYRICS_STYLE_STANDARD,
+                PlayerStyle.LYRICS_STYLE_EXPRESSIVE
+        };
+
+        final AlertDialog[] dialogRef = new AlertDialog[1];
+        for (int i = 0; i < labels.length; i++) {
+            final int styleValue = values[i];
+            boolean selected = currentStyle == styleValue;
+            LinearLayout row = new LinearLayout(getContext());
+            row.setOrientation(LinearLayout.HORIZONTAL);
+            row.setGravity(Gravity.CENTER_VERTICAL);
+            row.setPadding(dp(14), dp(12), dp(14), dp(12));
+            int rowBgColor = selected
+                    ? ColorUtils.setAlphaComponent(accent, isDark ? 44 : 28)
+                    : Theme.multAlpha(textColor, 0.05f);
+            row.setBackground(Theme.createSimpleSelectorRoundRectDrawable(dp(14), rowBgColor, Theme.multAlpha(accent, 0.16f)));
+
+            TextView label = new TextView(getContext());
+            label.setText(labels[i]);
+            label.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 15);
+            if (selected) {
+                label.setTypeface(AndroidUtilities.bold());
+            }
+            label.setTextColor(selected ? accent : textColor);
+            row.addView(label, new LinearLayout.LayoutParams(0, LinearLayout.LayoutParams.WRAP_CONTENT, 1f));
+
+            if (selected) {
+                TextView check = new TextView(getContext());
+                check.setText("✓");
+                check.setTextSize(TypedValue.COMPLEX_UNIT_DIP, 16);
+                check.setTypeface(AndroidUtilities.bold());
+                check.setTextColor(accent);
+                check.setPadding(dp(8), 0, 0, 0);
+                row.addView(check, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.WRAP_CONTENT, LinearLayout.LayoutParams.WRAP_CONTENT));
+            }
+
+            row.setOnClickListener(v -> {
+                AppearanceConfig.playerLyricsStyle.setConfigInt(styleValue);
+                refreshPlayerUi();
+                if (listAdapter != null) {
+                    listAdapter.notifyItemChanged(lyricsStyleRow);
+                }
+                if (dialogRef[0] != null) {
+                    dialogRef[0].dismiss();
+                }
+            });
+
+            LinearLayout.LayoutParams rowLp = LayoutHelper.createLinear(LayoutHelper.MATCH_PARENT, LayoutHelper.WRAP_CONTENT, 0, i == 0 ? 0 : 6, 0, 0);
+            container.addView(row, rowLp);
+        }
+
+        builder.setView(container);
+        builder.setNegativeButton(getString(R.string.Cancel), null);
+        dialogRef[0] = builder.create();
+        showDialog(dialogRef[0]);
     }
 
     private void showLyricsSourcesDialog() {
@@ -1051,6 +1156,7 @@ public class PlayerSettingsActivity extends BaseNekoSettingsActivity {
     }
 
     private void refreshPlayerUi() {
+        PlayerSheet.onLyricsSettingsChanged();
         org.telegram.messenger.MessageObject mo = org.telegram.messenger.MediaController.getInstance().getPlayingMessageObject();
         org.telegram.messenger.NotificationCenter nc = org.telegram.messenger.NotificationCenter.getInstance(currentAccount);
         nc.postNotificationName(org.telegram.messenger.NotificationCenter.audioInfoLoaded, mo);

@@ -248,7 +248,7 @@ public class SettingsHelper {
         NAGRAM_ROWS.put("Md3AvatarShapesReset", "avatar_shapes");
         NAGRAM_ROWS.put("avatar_shapes", "avatar_shapes");
         NAGRAM_ROWS.put("md3_avatar_shapes", "avatar_shapes");
-        NAGRAM_ROWS.put("monetPalette", "appearance");
+        NAGRAM_ROWS.put("monetPalette", "player_settings");
         NAGRAM_ROWS.put("OEChatsMd3ChatInput", "chats");
         NAGRAM_ROWS.put("OEChatsIncomingMessageAnimation", "chats");
         NAGRAM_ROWS.put("OEShizukuInstall", "other");

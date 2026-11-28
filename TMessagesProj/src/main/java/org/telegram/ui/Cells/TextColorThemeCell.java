@@ -40,10 +40,12 @@ public class TextColorThemeCell extends FrameLayout {
 
     private final Paint colorPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint strokePaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint innerRingPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint checkerLightPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint checkerDarkPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint hexBgPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint modifiedDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
+    private final Paint modifiedBorderPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint bgDotPaint = new Paint(Paint.ANTI_ALIAS_FLAG);
     private final Paint dividerPaint = new Paint();
     private final Path circleClipPath = new Path();
@@ -59,7 +61,11 @@ public class TextColorThemeCell extends FrameLayout {
         super(context);
 
         strokePaint.setStyle(Paint.Style.STROKE);
-        strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1.2f));
+        strokePaint.setStrokeWidth(AndroidUtilities.dpf2(1.1f));
+        innerRingPaint.setStyle(Paint.Style.STROKE);
+        innerRingPaint.setStrokeWidth(AndroidUtilities.dpf2(0.95f));
+        modifiedBorderPaint.setStyle(Paint.Style.STROKE);
+        modifiedBorderPaint.setStrokeWidth(AndroidUtilities.dpf2(0.75f));
         checkerLightPaint.setColor(0xFFFFFFFF);
         checkerDarkPaint.setColor(0xFFCBD2DA);
 
@@ -129,6 +135,22 @@ public class TextColorThemeCell extends FrameLayout {
         setThemeColors(fg, sub, bg, accent, dark);
     }
 
+    private void updateSwatchContrastPaints() {
+        int effective = Color.alpha(currentColor) < 255
+                ? Theme.blendOver(surfaceColor, currentColor)
+                : (0xFF000000 | currentColor);
+        float swatchLum = AndroidUtilities.computePerceivedBrightness(effective);
+        float surfaceLum = AndroidUtilities.computePerceivedBrightness(surfaceColor);
+        boolean lowContrast = hasColor && Math.abs(swatchLum - surfaceLum) < 0.14f;
+        if (darkTheme) {
+            strokePaint.setColor(lowContrast ? 0x62FFFFFF : 0x46FFFFFF);
+            innerRingPaint.setColor(0x3C000000);
+        } else {
+            strokePaint.setColor(lowContrast ? 0x3C000000 : 0x2A000000);
+            innerRingPaint.setColor(0x4CFFFFFF);
+        }
+    }
+
     public void setThemeColors(int textColor, int subTextColor, int surfaceColor, int accentColor, boolean dark) {
         this.textColor = textColor;
         this.subTextColor = subTextColor;
@@ -140,12 +162,14 @@ public class TextColorThemeCell extends FrameLayout {
         subtitleView.setTextColor(subTextColor);
         hexView.setTextColor(dark ? Theme.multAlpha(textColor, 0.88f) : Theme.multAlpha(textColor, 0.78f));
         hexBgPaint.setColor(dark ? 0x16FFFFFF : 0x0E000000);
-        strokePaint.setColor(dark ? 0x38FFFFFF : 0x26000000);
-        modifiedDotPaint.setColor(accentColor);
+        int tonedAccent = Theme.blendOver(surfaceColor, Theme.multAlpha(accentColor, dark ? 0.78f : 0.84f));
+        modifiedDotPaint.setColor(tonedAccent);
+        modifiedBorderPaint.setColor(dark ? 0x42FFFFFF : 0x26000000);
         bgDotPaint.setColor(surfaceColor);
         dividerPaint.setColor(dark ? 0x18FFFFFF : 0x12000000);
         checkerLightPaint.setColor(dark ? 0xFF3A404A : 0xFFFFFFFF);
         checkerDarkPaint.setColor(dark ? 0xFF282D35 : 0xFFD8DEE6);
+        updateSwatchContrastPaints();
         invalidate();
     }
 
@@ -181,6 +205,7 @@ public class TextColorThemeCell extends FrameLayout {
         hasColor = true;
         isModified = modified;
         needDivider = divider;
+        updateSwatchContrastPaints();
 
         String hex = ThemeKeyCatalog.formatHex(color, false);
         hexView.setText(hex);
@@ -231,13 +256,15 @@ public class TextColorThemeCell extends FrameLayout {
 
             colorPaint.setColor(currentColor);
             canvas.drawCircle(cx, cy, radius, colorPaint);
+            canvas.drawCircle(cx, cy, radius - AndroidUtilities.dpf2(1.45f), innerRingPaint);
             canvas.drawCircle(cx, cy, radius - AndroidUtilities.dpf2(0.5f), strokePaint);
 
             if (isModified) {
-                float dx = LocaleController.isRTL ? cx - radius * 0.72f : cx + radius * 0.72f;
-                float dy = cy - radius * 0.72f;
-                canvas.drawCircle(dx, dy, AndroidUtilities.dpf2(4.5f), bgDotPaint);
-                canvas.drawCircle(dx, dy, AndroidUtilities.dpf2(3.0f), modifiedDotPaint);
+                float dx = LocaleController.isRTL ? cx - radius * 0.76f : cx + radius * 0.76f;
+                float dy = cy - radius * 0.76f;
+                canvas.drawCircle(dx, dy, AndroidUtilities.dpf2(3.7f), bgDotPaint);
+                canvas.drawCircle(dx, dy, AndroidUtilities.dpf2(2.35f), modifiedDotPaint);
+                canvas.drawCircle(dx, dy, AndroidUtilities.dpf2(2.35f), modifiedBorderPaint);
             }
         }
 

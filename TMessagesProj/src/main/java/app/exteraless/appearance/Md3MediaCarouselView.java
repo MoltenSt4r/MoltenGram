@@ -2,6 +2,7 @@ package app.exteraless.appearance;
 
 import android.content.Context;
 import android.graphics.Color;
+import android.graphics.RectF;
 import android.graphics.drawable.GradientDrawable;
 import android.text.TextUtils;
 import android.util.TypedValue;
@@ -40,8 +41,10 @@ import org.telegram.messenger.SendMessagesHelper;
 import org.telegram.messenger.UserConfig;
 import org.telegram.tgnet.TLObject;
 import org.telegram.tgnet.TLRPC;
+import org.telegram.ui.ActionBar.Theme;
 import org.telegram.ui.Cells.ChatMessageCell;
 import org.telegram.ui.Components.BackupImageView;
+import org.telegram.ui.Components.CheckBox2;
 import org.telegram.ui.Components.LayoutHelper;
 import org.telegram.ui.Components.RadialProgressView;
 
@@ -260,6 +263,19 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                 if (pos >= 0 && pos < messages.size()) {
                     ((CarouselViewHolder) vh).bind(messages.get(pos));
                 }
+            }
+        }
+    }
+
+    public void updateSelectionStates(boolean animated) {
+        if (recyclerView == null) {
+            return;
+        }
+        for (int i = 0; i < recyclerView.getChildCount(); i++) {
+            View child = recyclerView.getChildAt(i);
+            RecyclerView.ViewHolder vh = recyclerView.getChildViewHolder(child);
+            if (vh instanceof CarouselViewHolder) {
+                ((CarouselViewHolder) vh).updateSelectionState(animated);
             }
         }
     }
@@ -701,14 +717,35 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
 
             frameLayout.addView(videoBadge, LayoutHelper.createFrame(LayoutHelper.WRAP_CONTENT, LayoutHelper.WRAP_CONTENT, Gravity.BOTTOM | Gravity.START, 8, 0, 0, 8));
 
-            RadialProgressView progressView = new RadialProgressView(parent.getContext());
-            progressView.setSize(AndroidUtilities.dp(36));
-            progressView.setProgressColor(Color.WHITE);
-            progressView.setBackgroundResource(R.drawable.circle_big);
-            progressView.setNoProgress(true);
-            frameLayout.addView(progressView, LayoutHelper.createFrame(48, 48, Gravity.CENTER));
+            FrameLayout progressContainer = new FrameLayout(parent.getContext());
+            progressContainer.setImportantForAccessibility(View.IMPORTANT_FOR_ACCESSIBILITY_NO);
+            GradientDrawable progressBg = new GradientDrawable();
+            progressBg.setShape(GradientDrawable.OVAL);
+            progressBg.setColor(0x80000000);
+            progressContainer.setBackground(progressBg);
+            progressContainer.setVisibility(View.GONE);
 
-            return new CarouselViewHolder(frameLayout, imageView, videoBadge, durationText, progressView);
+            RadialProgressView progressView = new RadialProgressView(parent.getContext());
+            progressView.setSize(AndroidUtilities.dp(30));
+            progressView.setStrokeWidth(2.5f);
+            progressView.setStyle(M3CircularProgress.STYLE_CIRCULAR);
+            progressView.setProgressColor(Color.WHITE);
+            progressView.setNoProgress(true);
+            progressView.setVisibility(View.GONE);
+            progressContainer.addView(progressView, LayoutHelper.createFrame(44, 44, Gravity.CENTER));
+            frameLayout.addView(progressContainer, LayoutHelper.createFrame(44, 44, Gravity.CENTER));
+
+            CheckBox2 selectionCheckBox = new CheckBox2(parent.getContext(), 21);
+            selectionCheckBox.getCheckBoxBase().setUseDefaultCheck(true);
+            selectionCheckBox.setDrawBackgroundAsArc(0);
+            selectionCheckBox.setDrawUnchecked(true);
+            selectionCheckBox.setColor(Theme.key_checkbox, Theme.key_chat_serviceBackground, Theme.key_checkboxCheck);
+            selectionCheckBox.setVisibility(View.GONE);
+            frameLayout.addView(selectionCheckBox, LayoutHelper.createFrame(24, 24, Gravity.TOP | Gravity.END, 0, 8, 8, 0));
+
+            CarouselViewHolder holder = new CarouselViewHolder(frameLayout, imageView, videoBadge, durationText, progressContainer, progressView, selectionCheckBox);
+            frameLayout.setOnMaskChangedListener(holder::onMaskChanged);
+            return holder;
         }
 
         @Override
@@ -729,23 +766,40 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
         private final BackupImageView imageView;
         private final View videoBadge;
         private final TextView durationText;
+        private final View progressContainer;
         private final RadialProgressView progressView;
+        private final CheckBox2 selectionCheckBox;
         private MessageObject currentMessage;
         private String currentFileName;
+        private boolean isHidingProgress;
+        private boolean isHidingCheckBox;
 
-        public CarouselViewHolder(@NonNull View itemView, BackupImageView imageView, View videoBadge, TextView durationText, RadialProgressView progressView) {
+        public CarouselViewHolder(@NonNull View itemView, BackupImageView imageView, View videoBadge, TextView durationText, View progressContainer, RadialProgressView progressView, CheckBox2 selectionCheckBox) {
             super(itemView);
             this.imageView = imageView;
             this.videoBadge = videoBadge;
             this.durationText = durationText;
+            this.progressContainer = progressContainer;
             this.progressView = progressView;
+            this.selectionCheckBox = selectionCheckBox;
+
+            itemView.addOnLayoutChangeListener((v, left, top, right, bottom, oldLeft, oldTop, oldRight, oldBottom) -> {
+                if (v instanceof MaskableFrameLayout) {
+                    onMaskChanged(((MaskableFrameLayout) v).getMaskRectF());
+                }
+            });
 
             itemView.setOnClickListener(v -> {
                 int pos = getAdapterPosition();
                 if (pos >= 0 && pos < messages.size()) {
                     MessageObject msg = messages.get(pos);
+                    if (parentCell != null && parentCell.isCarouselSelectionActive()) {
+                        parentCell.didToggleCarouselItemSelection(msg);
+                        return;
+                    }
                     int account = parentCell != null ? parentCell.currentAccount : UserConfig.selectedAccount;
-                    if (!isMediaLoaded(msg, account)) {
+                    boolean isSending = msg != null && msg.isOut() && (msg.isSending() || msg.isEditing()) && !msg.isSendError();
+                    if (!isSending && !isMediaLoaded(msg, account)) {
                         startMediaDownload(msg, account);
                         updateLoadingState();
                     }
@@ -756,8 +810,9 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
             });
 
             itemView.setOnLongClickListener(v -> {
-                if (!isScrollingOrDragging() && parentCell != null) {
-                    return parentCell.performLongClick();
+                int pos = getAdapterPosition();
+                if (!isScrollingOrDragging() && parentCell != null && pos >= 0 && pos < messages.size()) {
+                    return parentCell.didLongPressCarouselItem(messages.get(pos), v);
                 }
                 return false;
             });
@@ -769,85 +824,235 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
             });
         }
 
-        public boolean matchesFileName(String fileName) {
-            if (fileName == null) {
+        void onMaskChanged(RectF maskRect) {
+            int viewWidth = itemView.getWidth();
+            if (viewWidth <= 0 || maskRect == null || maskRect.isEmpty()) {
+                if (progressContainer != null) {
+                    progressContainer.setTranslationX(0f);
+                    progressContainer.setScaleX(1f);
+                    progressContainer.setScaleY(1f);
+                    progressContainer.setAlpha(1f);
+                }
+                if (videoBadge != null) {
+                    videoBadge.setTranslationX(0f);
+                    videoBadge.setAlpha(1f);
+                }
+                if (selectionCheckBox != null) {
+                    selectionCheckBox.setTranslationX(0f);
+                    selectionCheckBox.setScaleX(1f);
+                    selectionCheckBox.setScaleY(1f);
+                    selectionCheckBox.setAlpha(1f);
+                }
+                return;
+            }
+
+            float maskWidth = maskRect.width();
+            if (progressContainer != null) {
+                progressContainer.setTranslationX(maskRect.centerX() - (viewWidth / 2f));
+                float fullThreshold = AndroidUtilities.dp(64);
+                float hideThreshold = AndroidUtilities.dp(36);
+                if (maskWidth >= fullThreshold) {
+                    progressContainer.setScaleX(1f);
+                    progressContainer.setScaleY(1f);
+                    progressContainer.setAlpha(1f);
+                } else if (maskWidth <= hideThreshold) {
+                    progressContainer.setScaleX(0.65f);
+                    progressContainer.setScaleY(0.65f);
+                    progressContainer.setAlpha(0f);
+                } else {
+                    float t = (maskWidth - hideThreshold) / (fullThreshold - hideThreshold);
+                    float scale = 0.65f + 0.35f * t;
+                    progressContainer.setScaleX(scale);
+                    progressContainer.setScaleY(scale);
+                    progressContainer.setAlpha(t);
+                }
+            }
+
+            if (videoBadge != null) {
+                videoBadge.setTranslationX(maskRect.left);
+                int badgeMeasured = videoBadge.getMeasuredWidth();
+                float badgeMinFull = (badgeMeasured > 0 ? badgeMeasured : AndroidUtilities.dp(52)) + AndroidUtilities.dp(16);
+                float badgeHide = badgeMinFull - AndroidUtilities.dp(16);
+                if (maskWidth >= badgeMinFull) {
+                    videoBadge.setAlpha(1f);
+                } else if (maskWidth <= badgeHide) {
+                    videoBadge.setAlpha(0f);
+                } else {
+                    videoBadge.setAlpha((maskWidth - badgeHide) / (badgeMinFull - badgeHide));
+                }
+            }
+
+            if (selectionCheckBox != null) {
+                selectionCheckBox.setTranslationX(maskRect.right - viewWidth);
+                float fullThreshold = AndroidUtilities.dp(52);
+                float hideThreshold = AndroidUtilities.dp(28);
+                if (maskWidth >= fullThreshold) {
+                    selectionCheckBox.setScaleX(1f);
+                    selectionCheckBox.setScaleY(1f);
+                    selectionCheckBox.setAlpha(1f);
+                } else if (maskWidth <= hideThreshold) {
+                    selectionCheckBox.setScaleX(0.65f);
+                    selectionCheckBox.setScaleY(0.65f);
+                    selectionCheckBox.setAlpha(0f);
+                } else {
+                    float t = (maskWidth - hideThreshold) / (fullThreshold - hideThreshold);
+                    float scale = 0.65f + 0.35f * t;
+                    selectionCheckBox.setScaleX(scale);
+                    selectionCheckBox.setScaleY(scale);
+                    selectionCheckBox.setAlpha(t);
+                }
+            }
+        }
+
+        public void updateSelectionState(boolean animated) {
+            if (selectionCheckBox == null) {
+                return;
+            }
+            boolean selectionActive = parentCell != null && parentCell.isCarouselSelectionActive();
+            boolean itemSelected = selectionActive && currentMessage != null && parentCell.isCarouselMessageSelected(currentMessage);
+            if (selectionActive) {
+                boolean wasHidden = selectionCheckBox.getVisibility() != View.VISIBLE || isHidingCheckBox;
+                if (wasHidden) {
+                    isHidingCheckBox = false;
+                    selectionCheckBox.animate().cancel();
+                    selectionCheckBox.setVisibility(View.VISIBLE);
+                    if (animated && selectionCheckBox.isAttachedToWindow()) {
+                        selectionCheckBox.setAlpha(0f);
+                        selectionCheckBox.setScaleX(0.6f);
+                        selectionCheckBox.setScaleY(0.6f);
+                        selectionCheckBox.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(150).start();
+                    } else {
+                        selectionCheckBox.setAlpha(1f);
+                        selectionCheckBox.setScaleX(1f);
+                        selectionCheckBox.setScaleY(1f);
+                    }
+                    if (itemView instanceof MaskableFrameLayout) {
+                        onMaskChanged(((MaskableFrameLayout) itemView).getMaskRectF());
+                    }
+                }
+                selectionCheckBox.setChecked(itemSelected, animated && !wasHidden && selectionCheckBox.isAttachedToWindow());
+            } else {
+                selectionCheckBox.setChecked(false, false);
+                if (selectionCheckBox.getVisibility() != View.GONE && !isHidingCheckBox) {
+                    selectionCheckBox.animate().cancel();
+                    if (animated && selectionCheckBox.isAttachedToWindow()) {
+                        isHidingCheckBox = true;
+                        selectionCheckBox.animate()
+                                .alpha(0f)
+                                .scaleX(0.6f)
+                                .scaleY(0.6f)
+                                .setDuration(150)
+                                .withEndAction(() -> {
+                                    isHidingCheckBox = false;
+                                    selectionCheckBox.setVisibility(View.GONE);
+                                    selectionCheckBox.setAlpha(1f);
+                                    selectionCheckBox.setScaleX(1f);
+                                    selectionCheckBox.setScaleY(1f);
+                                })
+                                .start();
+                    } else {
+                        isHidingCheckBox = false;
+                        selectionCheckBox.setVisibility(View.GONE);
+                        selectionCheckBox.setAlpha(1f);
+                        selectionCheckBox.setScaleX(1f);
+                        selectionCheckBox.setScaleY(1f);
+                    }
+                }
+            }
+        }
+
+        private boolean matchesSinglePath(String candidate, String target) {
+            if (TextUtils.isEmpty(candidate) || TextUtils.isEmpty(target)) {
                 return false;
             }
-            if (currentFileName != null && (fileName.equals(currentFileName) || fileName.endsWith(currentFileName) || currentFileName.endsWith(fileName))) {
+            return candidate.equals(target)
+                    || candidate.endsWith("/" + target)
+                    || target.endsWith("/" + candidate);
+        }
+
+        public boolean matchesFileName(String fileName) {
+            if (TextUtils.isEmpty(fileName)) {
+                return false;
+            }
+            if (matchesSinglePath(fileName, currentFileName)) {
                 return true;
             }
             if (currentMessage != null && currentMessage.messageOwner != null && !TextUtils.isEmpty(currentMessage.messageOwner.attachPath)) {
-                String attachPath = currentMessage.messageOwner.attachPath;
-                return fileName.equals(attachPath) || fileName.endsWith(attachPath) || attachPath.endsWith(fileName);
+                return matchesSinglePath(fileName, currentMessage.messageOwner.attachPath);
             }
             return false;
         }
 
         private void showProgress(boolean animated) {
-            if (progressView == null) {
+            if (progressView == null || progressContainer == null) {
                 return;
             }
-            progressView.animate().cancel();
-            if (progressView.getVisibility() != View.VISIBLE) {
+            if (progressView.getVisibility() != View.VISIBLE || progressContainer.getVisibility() != View.VISIBLE || isHidingProgress) {
+                isHidingProgress = false;
+                progressView.animate().cancel();
+                progressContainer.animate().cancel();
+                progressContainer.setVisibility(View.VISIBLE);
                 progressView.setVisibility(View.VISIBLE);
-                if (animated && progressView.isAttachedToWindow()) {
-                    progressView.setAlpha(0f);
-                    progressView.setScaleX(0.75f);
-                    progressView.setScaleY(0.75f);
-                    progressView.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).start();
+                if (animated && progressContainer.isAttachedToWindow()) {
+                    progressContainer.setAlpha(0f);
+                    progressContainer.setScaleX(0.75f);
+                    progressContainer.setScaleY(0.75f);
+                    progressContainer.animate().alpha(1f).scaleX(1f).scaleY(1f).setDuration(180).start();
                 } else {
-                    progressView.setAlpha(1f);
-                    progressView.setScaleX(1f);
-                    progressView.setScaleY(1f);
+                    progressContainer.setAlpha(1f);
+                    progressContainer.setScaleX(1f);
+                    progressContainer.setScaleY(1f);
                 }
-            } else {
-                progressView.setAlpha(1f);
-                progressView.setScaleX(1f);
-                progressView.setScaleY(1f);
+                if (itemView instanceof MaskableFrameLayout) {
+                    onMaskChanged(((MaskableFrameLayout) itemView).getMaskRectF());
+                }
             }
         }
 
         private void hideProgress(boolean animated) {
-            if (progressView == null || progressView.getVisibility() == View.GONE) {
+            if (progressView == null || progressContainer == null || (progressContainer.getVisibility() == View.GONE && progressView.getVisibility() == View.GONE) || isHidingProgress) {
                 return;
             }
             progressView.animate().cancel();
-            if (animated && progressView.isAttachedToWindow()) {
-                progressView.animate()
+            progressContainer.animate().cancel();
+            if (animated && progressContainer.isAttachedToWindow()) {
+                isHidingProgress = true;
+                progressContainer.animate()
                         .alpha(0f)
                         .scaleX(0.65f)
                         .scaleY(0.65f)
                         .setDuration(200)
                         .withEndAction(() -> {
+                            isHidingProgress = false;
                             progressView.setVisibility(View.GONE);
-                            progressView.setAlpha(1f);
-                            progressView.setScaleX(1f);
-                            progressView.setScaleY(1f);
+                            progressContainer.setVisibility(View.GONE);
+                            progressContainer.setAlpha(1f);
+                            progressContainer.setScaleX(1f);
+                            progressContainer.setScaleY(1f);
                         })
                         .start();
             } else {
+                isHidingProgress = false;
                 progressView.setVisibility(View.GONE);
-                progressView.setAlpha(1f);
-                progressView.setScaleX(1f);
-                progressView.setScaleY(1f);
+                progressContainer.setVisibility(View.GONE);
+                progressContainer.setAlpha(1f);
+                progressContainer.setScaleX(1f);
+                progressContainer.setScaleY(1f);
             }
         }
 
         public void setProgress(float progress) {
             if (progressView != null) {
+                float clamped = Math.max(0f, Math.min(0.99f, progress));
                 showProgress(true);
                 progressView.setNoProgress(false);
-                progressView.setProgress(progress);
+                progressView.setProgress(clamped);
                 progressView.invalidate();
             }
         }
 
         public void onDownloadFinished() {
             if (progressView != null) {
-                if (progressView.getVisibility() == View.VISIBLE) {
-                    progressView.setNoProgress(false);
-                    progressView.setProgress(1f);
-                }
                 hideProgress(true);
             }
             if (currentMessage != null) {
@@ -856,7 +1061,7 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
         }
 
         private void updateLoadingState() {
-            if (currentMessage == null) {
+            if (currentMessage == null || currentMessage.isSendError()) {
                 hideProgress(false);
                 return;
             }
@@ -868,10 +1073,7 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                 showProgress(true);
                 if (progress != null) {
                     progressView.setNoProgress(false);
-                    progressView.setProgress(DownloadController.getProgress(progress));
-                } else if (SendMessagesHelper.getInstance(account).isSendingMessage(currentMessage.getId())) {
-                    progressView.setNoProgress(false);
-                    progressView.setProgress(1f);
+                    progressView.setProgress(Math.min(0.99f, DownloadController.getProgress(progress)));
                 } else {
                     progressView.setNoProgress(true);
                 }
@@ -879,27 +1081,27 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                 return;
             }
 
+            boolean isVideo = currentMessage.isVideo();
             boolean isDownloading = !TextUtils.isEmpty(currentFileName) && FileLoader.getInstance(account).isLoadingFile(currentFileName);
-            boolean loaded = !isDownloading && (isMediaLoaded(currentMessage, account) || imageView.getImageReceiver().hasNotThumb());
+            boolean mediaLoaded = isMediaLoaded(currentMessage, account);
+            boolean loaded = !isDownloading && (mediaLoaded || (!isVideo && imageView.getImageReceiver().hasNotThumb()));
             if (loaded) {
-                if (progressView != null && progressView.getVisibility() == View.VISIBLE) {
-                    progressView.setNoProgress(false);
-                    progressView.setProgress(1f);
-                }
                 hideProgress(true);
             } else if (isDownloading) {
                 long[] progress = ImageLoader.getInstance().getFileProgressSizes(currentFileName);
                 showProgress(true);
                 if (progress != null) {
                     progressView.setNoProgress(false);
-                    progressView.setProgress(DownloadController.getProgress(progress));
+                    progressView.setProgress(Math.min(0.99f, DownloadController.getProgress(progress)));
                 } else {
                     progressView.setNoProgress(true);
                 }
                 progressView.invalidate();
-            } else {
+            } else if (isVideo) {
                 showProgress(true);
                 progressView.setNoProgress(true);
+            } else {
+                hideProgress(false);
             }
         }
 
@@ -913,13 +1115,22 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                     currentMessage.getId() == message.getId() ||
                     sameAttach
             );
+            String prevFileName = this.currentFileName;
             this.currentMessage = message;
 
             if (!sameItem && progressView != null) {
+                isHidingProgress = false;
+                if (progressContainer != null) {
+                    progressContainer.animate().cancel();
+                    progressContainer.setVisibility(View.GONE);
+                    progressContainer.setAlpha(1f);
+                    progressContainer.setScaleX(1f);
+                    progressContainer.setScaleY(1f);
+                }
                 progressView.animate().cancel();
-                progressView.setAlpha(1f);
-                progressView.setScaleX(1f);
-                progressView.setScaleY(1f);
+                progressView.setVisibility(View.GONE);
+                progressView.setProgressImmediate(0f);
+                progressView.setNoProgress(true);
             }
 
             ArrayList<TLRPC.PhotoSize> thumbs = message != null ? message.photoThumbs : null;
@@ -964,27 +1175,31 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                 imageView.getImageReceiver().setCrossfadeWithOldImage(false);
             }
 
-            if (imageLocation != null || thumbLocation != null || (message != null && message.strippedThumb != null)) {
-                int cacheType = message != null && message.shouldEncryptPhotoOrVideo() ? ImageLoader.CACHE_TYPE_ENCRYPTED : ImageLoader.CACHE_TYPE_NONE;
-                long imageSize = photoSize != null ? (photoSize.size == 0 && message != null && !message.isVideo() ? -1 : photoSize.size) : 0;
-                String imageFilter = needBlur ? "200_200_b2" : null;
-                String thumbFilter = needBlur ? "200_200_b2" : (thumbLocation != null ? "200_200_b" : null);
-                imageView.setImage(
-                        imageLocation,
-                        imageFilter,
-                        thumbLocation,
-                        thumbFilter,
-                        message != null ? message.strippedThumb : null,
-                        null,
-                        imageSize,
-                        cacheType,
-                        message
-                );
-            } else {
-                imageView.setImageBitmap(null);
+            boolean alreadyLoadedSame = sameItem && !needBlur && TextUtils.equals(prevFileName, this.currentFileName) && imageView.getImageReceiver().hasNotThumb();
+            if (!alreadyLoadedSame) {
+                if (imageLocation != null || thumbLocation != null || (message != null && message.strippedThumb != null)) {
+                    int cacheType = message != null && message.shouldEncryptPhotoOrVideo() ? ImageLoader.CACHE_TYPE_ENCRYPTED : ImageLoader.CACHE_TYPE_NONE;
+                    long imageSize = photoSize != null ? (photoSize.size == 0 && message != null && !message.isVideo() ? -1 : photoSize.size) : 0;
+                    String imageFilter = needBlur ? "200_200_b2" : null;
+                    String thumbFilter = needBlur ? "200_200_b2" : null;
+                    imageView.setImage(
+                            imageLocation,
+                            imageFilter,
+                            thumbLocation,
+                            thumbFilter,
+                            message != null ? message.strippedThumb : null,
+                            null,
+                            imageSize,
+                            cacheType,
+                            message
+                    );
+                } else {
+                    imageView.setImageBitmap(null);
+                }
             }
 
             updateLoadingState();
+            updateSelectionState(false);
 
             if (message != null && message.isVideo()) {
                 videoBadge.setVisibility(View.VISIBLE);
@@ -994,6 +1209,10 @@ public class Md3MediaCarouselView extends FrameLayout implements NotificationCen
                 durationText.setText(String.format(Locale.US, "%d:%02d", minutes, seconds));
             } else {
                 videoBadge.setVisibility(View.GONE);
+            }
+
+            if (itemView instanceof MaskableFrameLayout) {
+                onMaskChanged(((MaskableFrameLayout) itemView).getMaskRectF());
             }
         }
     }

@@ -8,6 +8,7 @@
 
 package org.telegram.ui.Components;
 
+import app.exteraless.chats.TextAnimationEngine;
 import app.exteraless.math.InlineMathController;
 import static org.telegram.messenger.AndroidUtilities.dp;
 
@@ -717,6 +718,7 @@ public class EditTextBoldCursor extends EditTextEffects {
         } catch (Exception e) {
             FileLog.e(e);
         }
+        TextAnimationEngine.onFocusChanged(this, focused);
         checkHeaderVisibility(true);
     }
 
@@ -791,6 +793,7 @@ public class EditTextBoldCursor extends EditTextEffects {
         if (event.getAction() == MotionEvent.ACTION_DOWN) {
             lastTouchX = (int) event.getX();
         }
+        TextAnimationEngine.onTouch(this, event);
         return super.onTouchEvent(event);
     }
 
@@ -941,7 +944,19 @@ public class EditTextBoldCursor extends EditTextEffects {
         if (inlineMath != null) {
             inlineMath.clipReplacedParagraph(canvas, mathTop);
         }
+        int voffsetText = 0;
+        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
+            if (getVerticalOffsetMethod != null) {
+                try {
+                    voffsetText = (int) getVerticalOffsetMethod.invoke(this, true);
+                } catch (Exception ignore) {
+                }
+            } else {
+                voffsetText = getTotalPaddingTop() - getExtendedPaddingTop();
+            }
+        }
         canvas.translate(0, topPadding);
+        boolean animClipped = TextAnimationEngine.beforeSuperDraw(this, canvas, getCompoundPaddingLeft(), voffsetText);
         try {
             drawInMaim = true;
             super.onDraw(canvas);
@@ -951,6 +966,10 @@ public class EditTextBoldCursor extends EditTextEffects {
                 throw new RuntimeException(e);
             }
         }
+        if (animClipped) {
+            canvas.restore();
+        }
+        TextAnimationEngine.afterSuperDraw(this, canvas, getCompoundPaddingLeft(), voffsetText);
         if (mScrollYField != null && scrollY != Integer.MAX_VALUE) {
             try {
                 mScrollYField.set(this, scrollY);
@@ -961,7 +980,11 @@ public class EditTextBoldCursor extends EditTextEffects {
             }
         }
         canvas.restore();
-        if (cursorDrawable == null) {
+        if (allowDrawCursor && !forceCursorEnd && TextAnimationEngine.isCustomCursorActive(this)) {
+            int voffsetCursor = getVerticalCursorOffset();
+            TextAnimationEngine.drawCustomCursor(this, canvas, cursorColor, cursorWidth, voffsetCursor, cursorShiftX, cursorShiftY);
+            cursorDrawn = false;
+        } else if (cursorDrawable == null) {
             try {
                 boolean showCursor;
                 if (mShowCursorField != null && editor != null) {
@@ -973,16 +996,7 @@ public class EditTextBoldCursor extends EditTextEffects {
                 }
                 if (allowDrawCursor && showCursor && !hasSelection()) {
                     canvas.save();
-                    int voffsetCursor = 0;
-                    if (getVerticalOffsetMethod != null) {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = (int) getVerticalOffsetMethod.invoke(this, true);
-                        }
-                    } else {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = getTotalPaddingTop() - getExtendedPaddingTop();
-                        }
-                    }
+                    int voffsetCursor = getVerticalCursorOffset();
                     canvas.translate(getPaddingLeft() + cursorShiftX, getExtendedPaddingTop() + voffsetCursor + cursorShiftY);
                     Layout layout = getLayout();
                     int line = layout.getLineForOffset(getSelectionStart());
@@ -1011,16 +1025,7 @@ public class EditTextBoldCursor extends EditTextEffects {
             if (cursorDrawn && allowDrawCursor && !hasSelection()) {
                 try {
                     canvas.save();
-                    int voffsetCursor = 0;
-                    if (getVerticalOffsetMethod != null) {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = (int) getVerticalOffsetMethod.invoke(this, true);
-                        }
-                    } else {
-                        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) != Gravity.TOP) {
-                            voffsetCursor = getTotalPaddingTop() - getExtendedPaddingTop();
-                        }
-                    }
+                    int voffsetCursor = getVerticalCursorOffset();
                     canvas.translate(getPaddingLeft() + cursorShiftX, getExtendedPaddingTop() + voffsetCursor + cursorShiftY);
                     Layout layout = getLayout();
                     int line = layout.getLineForOffset(getSelectionStart());
@@ -1119,6 +1124,23 @@ public class EditTextBoldCursor extends EditTextEffects {
             errorLayout.draw(canvas);
             canvas.restore();
         }*/
+    }
+
+    private int getVerticalCursorOffset() {
+        if ((getGravity() & Gravity.VERTICAL_GRAVITY_MASK) == Gravity.TOP) {
+            return 0;
+        }
+        if (getVerticalOffsetMethod != null) {
+            try {
+                return (int) getVerticalOffsetMethod.invoke(this, true);
+            } catch (Throwable exception) {
+                if (BuildVars.DEBUG_PRIVATE_VERSION) {
+                    throw new RuntimeException(exception);
+                }
+                return 0;
+            }
+        }
+        return getTotalPaddingTop() - getExtendedPaddingTop();
     }
 
     protected void drawCursor(Canvas canvas, GradientDrawable drawable) {

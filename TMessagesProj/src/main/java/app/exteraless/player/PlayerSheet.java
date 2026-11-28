@@ -1230,6 +1230,12 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
     }
 
+    public static void onLyricsSettingsChanged() {
+        if (instance != null && instance.lyricsView != null) {
+            instance.lyricsView.refreshStyle();
+        }
+    }
+
     @Override
     public void didReceivedNotification(int id, int account, Object... args) {
         if (id == NotificationCenter.messagePlayingDidStart) {
@@ -1265,6 +1271,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
                 }
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
+                lyricsView.refreshStyle();
                 if (lyricsMode && lyricsView.getState() != LyricsView.STATE_LYRICS && lyricsView.getState() != LyricsView.STATE_INSTRUMENTAL) {
                     refreshLyricsIfNeeded(mo);
                 }
@@ -1275,6 +1282,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
             if (mo != null && mo.getDocument() != null && TextUtils.equals((String) args[0], FileLoader.getAttachFileName(mo.getDocument()))) {
                 cover.setMessage(mo);
                 smallCover.setMessage(mo);
+                lyricsView.refreshStyle();
                 if (lyricsMode && lyricsView.getState() != LyricsView.STATE_LYRICS && lyricsView.getState() != LyricsView.STATE_INSTRUMENTAL) {
                     refreshLyricsIfNeeded(mo);
                 }
@@ -1943,6 +1951,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         controls.setPlaying(playing, animated);
         controls.play.setContentDescription(getString(playing ? R.string.AccActionPause : R.string.AccActionPlay));
         seekBar.setPlaying(playing);
+        lyricsView.setPlaying(playing);
         float scale = playing ? 1f : 0.92f;
         if (cover.getScaleX() != scale) {
             if (animated) {
@@ -2033,6 +2042,8 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         lyricsButton.setActive(value, animated);
         lyricsButton.setRadius(dp(value ? 26 : 8), animated);
         if (value) {
+            lyricsView.refreshStyle();
+            lyricsView.setPlaying(!MediaController.getInstance().isMessagePaused());
             loadLyrics();
             MessageObject mo = current;
             if (mo != null) {
@@ -2363,6 +2374,7 @@ public class PlayerSheet extends BottomSheet implements NotificationCenter.Notif
         }
         updateKeepScreenOn();
         updatePlayState(false);
+        lyricsView.refreshStyle();
         setLyricsFraction(lyricsFraction);
         layout.requestLayout();
         layout.invalidate();

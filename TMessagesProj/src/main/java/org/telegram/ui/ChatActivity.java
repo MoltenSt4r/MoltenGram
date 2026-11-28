@@ -22834,30 +22834,34 @@ public class ChatActivity extends BaseFragment implements
                 if (messageObject != null) {
                     MessageObject message = cell.getMessageObject();
                     if (message != null && (message.getId() == messageObject.getId() || cell.containsCarouselMessage(messageObject))) {
-                        int effectiveIndex = index;
                         if (cell.isMediaCarouselMessage()) {
                             int carouselIdx = cell.getCarouselMessageIndex(messageObject);
-                            if (carouselIdx >= 0) {
-                                effectiveIndex = carouselIdx;
+                            if (carouselIdx < 0) {
+                                continue;
                             }
-                        }
-                        if (message.pollMediaMapping != null && effectiveIndex >= 0 && effectiveIndex < message.pollMediaMapping.size()) {
-                            imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(effectiveIndex));
+                            imageReceiver = cell.getPhotoImage(carouselIdx);
+                            if (imageReceiver == null) {
+                                continue;
+                            }
+                            index = carouselIdx;
                         } else {
-                            imageReceiver = cell.getPhotoImage(effectiveIndex);
-                        }
-                        if (imageReceiver != null) {
-                            index = effectiveIndex;
+                            if (message.pollMediaMapping != null && index >= 0 && index < message.pollMediaMapping.size()) {
+                                imageReceiver = cell.getPhotoImage(message.pollMediaMapping.get(index));
+                            } else {
+                                imageReceiver = cell.getPhotoImage(index);
+                            }
                         }
                     }
                 } else if (fileLocation != null && cell.isMediaCarouselMessage()) {
                     int carouselIdx = cell.getCarouselMessageIndex(fileLocation);
-                    if (carouselIdx >= 0) {
-                        imageReceiver = cell.getPhotoImage(carouselIdx);
-                        if (imageReceiver != null) {
-                            index = carouselIdx;
-                        }
+                    if (carouselIdx < 0) {
+                        continue;
                     }
+                    imageReceiver = cell.getPhotoImage(carouselIdx);
+                    if (imageReceiver == null) {
+                        continue;
+                    }
+                    index = carouselIdx;
                 }
             } else if (view instanceof ChatActionCell) {
                 ChatActionCell cell = (ChatActionCell) view;
@@ -39302,6 +39306,25 @@ public class ChatActivity extends BaseFragment implements
                     if (messageObject != null && selectedMessagesIds[idx].indexOfKey(messageObject.getId()) >= 0) {
                         setCellSelectionBackground(messageObject, cell, idx, true);
                         selected = true;
+                    } else if (cell.isMediaCarouselMessage() && messageObject != null) {
+                        boolean anySelected = false;
+                        boolean allSelected = false;
+                        MessageObject.GroupedMessages group = getValidGroupedMessage(messageObject);
+                        if (group != null && group.messages != null && !group.messages.isEmpty()) {
+                            allSelected = true;
+                            for (int k = 0; k < group.messages.size(); k++) {
+                                MessageObject gm = group.messages.get(k);
+                                int gIdx = gm.getDialogId() == dialog_id ? 0 : 1;
+                                if (selectedMessagesIds[gIdx].indexOfKey(gm.getId()) >= 0) {
+                                    anySelected = true;
+                                } else {
+                                    allSelected = false;
+                                }
+                            }
+                        }
+                        cell.setDrawSelectionBackground(allSelected);
+                        cell.setChecked(anySelected, allSelected, true);
+                        selected = allSelected;
                     } else {
                         cell.setDrawSelectionBackground(false);
                         cell.setChecked(false, false, true);
@@ -46085,6 +46108,49 @@ public class ChatActivity extends BaseFragment implements
         public void didLongPress(ChatMessageCell cell, float x, float y) {
             createMenu(cell, false, false, x, y, false);
             startMultiselect(chatListView.getChildAdapterPosition(cell));
+        }
+
+        @Override
+        public boolean isSelectionModeActive() {
+            return actionBar != null && actionBar.isActionModeShowed() || isReport();
+        }
+
+        @Override
+        public boolean isMessageSelected(MessageObject message) {
+            if (message == null) {
+                return false;
+            }
+            int idx = message.getDialogId() == dialog_id ? 0 : 1;
+            return selectedMessagesIds[idx].indexOfKey(message.getId()) >= 0;
+        }
+
+        @Override
+        public void didToggleCarouselItemSelection(ChatMessageCell cell, MessageObject message) {
+            if (message == null || inPreviewMode || isInsideContainer) {
+                return;
+            }
+            int type = getMessageType(message);
+            if (message.isAnyGift() || type < MESSAGE_TYPE_MEDIA || type == MESSAGE_TYPE_SEND_ERROR_TEXT ||
+                    type == MessageObject.TYPE_SUGGEST_PHOTO || message.type == MessageObject.TYPE_JOINED_CHANNEL ||
+                    message.type == MessageObject.TYPE_GIFT_STARS || message.isWallpaperAction() ||
+                    message.isSponsored() || message.isEphemeral()) {
+                return;
+            }
+            addToSelectedMessages(message, false);
+            updateActionModeTitle();
+            updateVisibleRows();
+        }
+
+        @Override
+        public void didLongPressCarouselItem(ChatMessageCell cell, MessageObject message, float x, float y) {
+            if (message == null || inPreviewMode || isInsideContainer) {
+                return;
+            }
+            if (actionBar.isActionModeShowed() || isReport()) {
+                didToggleCarouselItemSelection(cell, message);
+                return;
+            }
+            createMenu(cell, false, false, x, y, false);
         }
 
         @Override
