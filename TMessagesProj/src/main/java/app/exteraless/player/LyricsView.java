@@ -301,7 +301,7 @@ public class LyricsView extends FrameLayout {
 
         recenterArrowPaint.setStyle(Paint.Style.STROKE);
         recenterArrowPaint.setStrokeCap(Paint.Cap.ROUND);
-        recenterArrowPaint.setStrokeJoin(Paint.Cap.ROUND);
+        recenterArrowPaint.setStrokeJoin(Paint.Join.ROUND);
         recenterArrowPaint.setStrokeWidth(dp(1.8f));
         recenterArrow = new View(context) {
             @Override
